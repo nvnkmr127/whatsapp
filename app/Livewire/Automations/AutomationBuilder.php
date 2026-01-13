@@ -53,31 +53,40 @@ class AutomationBuilder extends Component
     public function save()
     {
         $this->validate([
-            'name' => 'required',
-            'triggerKeyword' => 'required',
+            'name' => 'required|string|max:255',
+            'triggerKeyword' => 'required|string|max:50',
+            'nodes' => 'required|array|min:1',
+        ], [
+            'nodes.required' => 'The automation flow cannot be empty.',
+            'nodes.min' => 'Please add at least one node to the automation.',
         ]);
 
-        $data = [
-            'team_id' => Auth::user()->currentTeam->id,
-            'name' => $this->name,
-            'is_active' => true,
-            'trigger_type' => 'keyword',
-            'trigger_config' => ['keywords' => [strtolower($this->triggerKeyword)]],
-            'flow_data' => [
-                'nodes' => $this->nodes,
-                'edges' => $this->edges
-            ]
-        ];
+        try {
+            $data = [
+                'team_id' => Auth::user()->currentTeam->id,
+                'name' => $this->name,
+                'is_active' => true,
+                'trigger_type' => 'keyword',
+                'trigger_config' => ['keywords' => [strtolower($this->triggerKeyword)]],
+                'flow_data' => [
+                    'nodes' => $this->nodes,
+                    'edges' => $this->edges
+                ]
+            ];
 
-        if ($this->automationId) {
-            $automation = Automation::find($this->automationId);
-            $automation->update($data);
-        } else {
-            $automation = Automation::create($data);
-            $this->automationId = $automation->id;
+            if ($this->automationId) {
+                $automation = Automation::find($this->automationId);
+                $automation->update($data);
+            } else {
+                $automation = Automation::create($data);
+                $this->automationId = $automation->id;
+            }
+
+            session()->flash('success', 'Automation saved successfully!');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Automation Save Error: ' . $e->getMessage());
+            $this->addError('base', 'An error occurred while saving the automation. Please try again.');
         }
-
-        session()->flash('success', 'Automation saved successfully!');
     }
 
     public function addNode($type)

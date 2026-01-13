@@ -274,11 +274,10 @@
                                                 }
                                             })
                                             .catch(function (error) {
-                                                console.error(error);
                                                 alert('System error during token exchange');
                                             });
                                     } else {
-                                        console.log('User cancelled login or did not fully authorize.');
+                                        // User cancelled login or did not fully authorize.
                                     }
                                 }, {
                                     scope: 'whatsapp_business_management, whatsapp_business_messaging',
