@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Auth;
 
 class ContactManager extends Component
 {
+
     use WithPagination;
+    use \Livewire\WithFileUploads;
 
     public $search = '';
     public $filterTag = '';
@@ -29,6 +31,21 @@ class ContactManager extends Component
     public $language = 'en';
     public $opt_in_status = 'OPT_IN';
     public $selectedTags = [];
+    public $customAttributes = []; // For holding dynamic field values
+
+    // Import State
+    public $isImportModalOpen = false;
+    public $importFile;
+    public $csvHeaders = [];
+    public $columnMapping = []; // csv_header => system_field
+    public $importResult = null;
+
+    // Custom Fields State
+    public $isFieldModalOpen = false;
+    public $fieldId;
+    public $fieldLabel;
+    public $fieldType = 'text';
+    public $fieldOptions = ''; // Comma separated for editing
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -42,6 +59,7 @@ class ContactManager extends Component
         'language' => 'required|string|max:10',
         'opt_in_status' => 'required|in:opted_in,opted_out',
         'selectedTags' => 'array',
+        'customAttributes' => 'array',
     ];
 
     #[Layout('components.layouts.app')]
@@ -69,8 +87,9 @@ class ContactManager extends Component
 
         $contacts = $query->with('tags')->latest()->paginate(15);
         $tags = ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
+        $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
 
-        return view('livewire.contacts.contact-manager', compact('contacts', 'tags'));
+        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields'));
     }
 
     public function create()
@@ -79,8 +98,28 @@ class ContactManager extends Component
         $this->openModal();
     }
 
+    // View Modal State
+    public $isViewModalOpen = false;
+    public $viewingContact = null;
+
+    public function viewContact($id)
+    {
+        $this->viewingContact = Contact::with('tags')->where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $this->isViewModalOpen = true;
+    }
+
+    public function closeViewModal()
+    {
+        $this->isViewModalOpen = false;
+        $this->viewingContact = null;
+    }
+
     public function edit($id)
     {
+        // Close view modal if open
+        $this->isViewModalOpen = false;
+        $this->viewingContact = null;
+
         $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $this->contactId = $id;
         $this->name = $contact->name;
@@ -89,6 +128,7 @@ class ContactManager extends Component
         $this->language = $contact->language;
         $this->opt_in_status = $contact->opt_in_status;
         $this->selectedTags = $contact->tags->pluck('id')->toArray();
+        $this->customAttributes = $contact->custom_attributes ?? [];
         $this->openModal();
     }
 
@@ -96,16 +136,22 @@ class ContactManager extends Component
     {
         $this->validate();
 
+        $data = [
+            'team_id' => Auth::user()->currentTeam->id,
+            'name' => $this->name,
+            'phone_number' => $this->phone_number,
+            'email' => $this->email,
+            'language' => $this->language,
+            'opt_in_status' => $this->opt_in_status,
+            'custom_attributes' => $this->customAttributes,
+        ];
+
+        // Use service if available or direct update (sticking to direct as per original code style but enhancing)
+        // Original code used updateOrCreate, let's stick to that but handle custom_attributes properly
+
         $contact = Contact::updateOrCreate(
             ['id' => $this->contactId],
-            [
-                'team_id' => Auth::user()->currentTeam->id,
-                'name' => $this->name,
-                'phone_number' => $this->phone_number,
-                'email' => $this->email,
-                'language' => $this->language,
-                'opt_in_status' => $this->opt_in_status,
-            ]
+            $data
         );
 
         $contact->tags()->sync($this->selectedTags);
@@ -189,6 +235,146 @@ class ContactManager extends Component
         }
     }
 
+    // Custom Fields Management
+    public function openFieldModal()
+    {
+        $this->resetFieldInput();
+        $this->isFieldModalOpen = true;
+    }
+
+    public function editField($id)
+    {
+        $field = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $this->fieldId = $id;
+        $this->fieldLabel = $field->label;
+        $this->fieldType = $field->type;
+        $this->fieldOptions = $field->options ? implode(', ', $field->options) : '';
+        $this->isFieldModalOpen = true;
+    }
+
+    public function storeField()
+    {
+        $this->validate([
+            'fieldLabel' => 'required|string|max:50',
+            'fieldType' => 'required|in:text,number,date,select',
+        ]);
+
+        $key = \Illuminate\Support\Str::slug($this->fieldLabel, '_');
+        $options = $this->fieldType === 'select' ? array_map('trim', explode(',', $this->fieldOptions)) : null;
+
+        \App\Models\ContactField::updateOrCreate(
+            ['id' => $this->fieldId],
+            [
+                'team_id' => Auth::user()->currentTeam->id,
+                'label' => $this->fieldLabel,
+                'key' => $this->fieldId ? \App\Models\ContactField::find($this->fieldId)->key : $key, // Don't change key on edit
+                'type' => $this->fieldType,
+                'options' => $options,
+            ]
+        );
+
+        $this->isFieldModalOpen = false;
+        $this->resetFieldInput();
+        session()->flash('field_message', 'Custom Field saved successfully.');
+    }
+
+    public function deleteField($id)
+    {
+        \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->where('id', $id)->delete();
+        session()->flash('field_message', 'Custom Field deleted.');
+    }
+
+    public function closeFieldModal()
+    {
+        $this->isFieldModalOpen = false;
+        $this->resetFieldInput();
+    }
+
+    private function resetFieldInput()
+    {
+        $this->fieldId = null;
+        $this->fieldLabel = '';
+        $this->fieldType = 'text';
+        $this->fieldOptions = '';
+    }
+
+    // Import Management
+    public function openImportModal()
+    {
+        $this->isImportModalOpen = true;
+        $this->importResult = null;
+        $this->importFile = null;
+        $this->csvHeaders = [];
+        $this->columnMapping = [];
+    }
+
+    public function closeImportModal()
+    {
+        $this->isImportModalOpen = false;
+    }
+
+    public function updatedImportFile()
+    {
+        $this->validate([
+            'importFile' => 'required|mimes:csv,txt|max:10240',
+        ]);
+
+        $csv = \League\Csv\Reader::createFromPath($this->importFile->getRealPath(), 'r');
+        $csv->setHeaderOffset(0);
+        $this->csvHeaders = $csv->getHeader();
+
+        // Auto-map common fields
+        foreach ($this->csvHeaders as $header) {
+            $lowerHeader = strtolower($header);
+            if (in_array($lowerHeader, ['name', 'phone', 'phone_number', 'email', 'tags'])) {
+                $target = $lowerHeader === 'phone' ? 'phone_number' : $lowerHeader;
+                $this->columnMapping[$header] = $target;
+            }
+        }
+    }
+
+    public function importContacts()
+    {
+        $this->validate([
+            'importFile' => 'required',
+            'columnMapping' => 'required|array',
+        ]);
+
+        $importService = new \App\Services\ContactImportService(Auth::user()->currentTeam);
+        $result = $importService->import($this->importFile->getRealPath(), $this->columnMapping);
+
+        $this->importResult = $result;
+
+        if ($result['success_count'] > 0) {
+            session()->flash('import_message', "Imported {$result['success_count']} contacts successfully.");
+        }
+    }
+
+    public function downloadSampleCsv()
+    {
+        $headers = ['Name', 'Phone', 'Email', 'Tags'];
+        $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
+
+        foreach ($customFields as $field) {
+            $headers[] = $field->key;
+        }
+
+        $callback = function () use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+
+            // Add a sample row
+            $row = ['John Doe', '1234567890', 'john@example.com', 'VIP,Lead'];
+            // Fill custom fields with blanks or sample data if needed
+            // For now, leave custom fields blank in sample to avoid confusion
+
+            fputcsv($file, $row);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'sample_contacts.csv');
+    }
+
     private function resetInputFields()
     {
         $this->name = '';
@@ -197,6 +383,7 @@ class ContactManager extends Component
         $this->language = 'en';
         $this->opt_in_status = 'opted_in';
         $this->selectedTags = [];
+        $this->customAttributes = [];
         $this->contactId = null;
     }
 }

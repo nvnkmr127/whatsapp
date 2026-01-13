@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Chat;
 
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ChatDashboard extends Component
@@ -9,6 +10,12 @@ class ChatDashboard extends Component
     public $activeConversationId = null;
 
     protected $queryString = ['activeConversationId' => ['except' => '']];
+
+    #[On('conversationSelected')]
+    public function loadConversation($id)
+    {
+        $this->activeConversationId = $id;
+    }
 
     public function render()
     {

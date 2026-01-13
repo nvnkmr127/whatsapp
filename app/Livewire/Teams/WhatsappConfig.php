@@ -31,15 +31,17 @@ class WhatsappConfig extends Component
     public $wm_messaging_limit;
     public $wm_quality_rating;
     public $wm_phone_display;
+    public $wm_verified_name;
 
     public $token_info = [];
     public $wm_test_message;
 
     protected $rules = [
-        'wm_fb_app_id' => 'required',
-        'wm_fb_app_secret' => 'required',
+        'wm_fb_app_id' => 'nullable',
+        'wm_fb_app_secret' => 'nullable',
         'wm_business_account_id' => 'required',
         'wm_access_token' => 'required',
+        'wm_default_phone_number_id' => 'nullable',
     ];
 
     public function mount()
@@ -49,15 +51,22 @@ class WhatsappConfig extends Component
 
     public function loadSettings()
     {
+        $team = auth()->user()->currentTeam;
+
+        // Load from Team Model first, fallback to settings if empty (migration path)
+        // Actually, App ID might be global for the SaaS unless white-labeled. 
+        // Let's stick to global for App ID if it's not in Team. 
+        // But WABA, Token, PhoneID ARE in Team.
+
         $this->wm_fb_app_id = get_setting('whatsapp_wm_fb_app_id');
         $this->wm_fb_app_secret = get_setting('whatsapp_wm_fb_app_secret');
-        $this->wm_business_account_id = get_setting('whatsapp_wm_business_account_id');
-        $this->wm_access_token = get_setting('whatsapp_wm_access_token');
-        $this->outbound_webhook_url = get_setting('whatsapp_outbound_webhook_url');
 
-        $this->is_webhook_connected = (bool) get_setting('whatsapp_is_webhook_connected');
+        $this->wm_business_account_id = $team->whatsapp_business_account_id ?? get_setting('whatsapp_wm_business_account_id');
+        $this->wm_access_token = $team->whatsapp_access_token ?? get_setting('whatsapp_wm_access_token');
+        $this->outbound_webhook_url = $team->outbound_webhook_url ?? get_setting('whatsapp_outbound_webhook_url');
 
-        $this->is_whatsmark_connected = (bool) get_setting('whatsapp_is_whatsmark_connected');
+        $this->is_webhook_connected = (bool) get_setting('whatsapp_is_webhook_connected'); // Still keeping global connection flag? Or derive from fields?
+        $this->is_whatsmark_connected = !empty($this->wm_access_token) && !empty($this->wm_business_account_id);
 
         $this->webhook_verify_token = get_setting('whatsapp_webhook_verify_token');
         if (empty($this->webhook_verify_token)) {
@@ -66,27 +75,74 @@ class WhatsappConfig extends Component
         }
 
         $this->wm_default_phone_number = get_setting('whatsapp_wm_default_phone_number');
-        $this->wm_default_phone_number_id = get_setting('whatsapp_wm_default_phone_number_id');
+        $this->wm_default_phone_number_id = $team->whatsapp_phone_number_id ?? get_setting('whatsapp_wm_default_phone_number_id');
 
         $this->wm_messaging_limit = get_setting('whatsapp_wm_messaging_limit');
         $this->wm_quality_rating = get_setting('whatsapp_wm_quality_rating');
         $this->wm_phone_display = get_setting('whatsapp_wm_phone_display');
+        $this->wm_verified_name = get_setting('whatsapp_wm_verified_name');
     }
 
     public function connect()
     {
         $this->validate();
 
-        // Save Settings
+        $team = auth()->user()->currentTeam;
+
+        // Save Global Settings (App ID/Secret might be shared?)
         set_setting('whatsapp_wm_fb_app_id', $this->wm_fb_app_id);
         set_setting('whatsapp_wm_fb_app_secret', $this->wm_fb_app_secret);
+
+        // Save Team Settings
+        $team->forceFill([
+            'whatsapp_business_account_id' => $this->wm_business_account_id,
+            'whatsapp_access_token' => $this->wm_access_token,
+            // Save Manual Phone ID immediately if provided
+            'whatsapp_phone_number_id' => $this->wm_default_phone_number_id,
+        ])->save();
+
+
+        // Also update legacy settings just in case to avoid regression elsewhere
         set_setting('whatsapp_wm_business_account_id', $this->wm_business_account_id);
         set_setting('whatsapp_wm_access_token', $this->wm_access_token);
+        if ($this->wm_default_phone_number_id) {
+            set_setting('whatsapp_wm_default_phone_number_id', $this->wm_default_phone_number_id);
+        }
 
         // Try to sync Templates to verify connection
         $response = $this->loadTemplatesFromWhatsApp();
 
         if ($response['status']) {
+            // Handle Phone Numbers (Only overwrite if we didn't have one and API returned one, or force update?)
+            // Logic: If user entered one, stick with it unless they cleared it. 
+            // Actually, if API returns phones, those are likely the correct ones. 
+            // But if API fails to return phones (e.g. empty list), we keep manual.
+            if (!empty($response['phone_numbers'])) {
+                $firstPhone = $response['phone_numbers'][0];
+
+                // If manual ID is empty OR matches one of the returned, or we just trust API? 
+                // Use case: User entered ID X. API returns [Y, Z]. We should probably warn or let user choose.
+                // For now, if manual is empty, we use API. If manual is set, we use manual.
+
+                if (empty($this->wm_default_phone_number_id)) {
+                    $this->wm_default_phone_number_id = $firstPhone['id'];
+                    $this->wm_phone_display = $firstPhone['display_phone_number'] ?? '';
+
+                    // Helper: Save to Team
+                    $team->forceFill([
+                        'whatsapp_phone_number_id' => $this->wm_default_phone_number_id
+                    ])->save();
+
+                    set_setting('whatsapp_wm_default_phone_number_id', $this->wm_default_phone_number_id);
+                    set_setting('whatsapp_wm_phone_display', $this->wm_phone_display);
+                }
+            }
+
+            // Ensure we sync detailed stats for the active Phone ID
+            if ($this->wm_default_phone_number_id) {
+                $this->syncInfo();
+            }
+
             set_setting('whatsapp_is_whatsmark_connected', 1);
             $this->is_whatsmark_connected = true;
 
@@ -97,7 +153,7 @@ class WhatsappConfig extends Component
             set_setting('whatsapp_is_webhook_connected', 1); // Mock success for dev
             $this->is_webhook_connected = true;
 
-            $this->dispatch('notify', 'Connected successfully! Templates synced.');
+            $this->dispatch('notify', 'Connected successfully! Phone & Templates synced.');
         } else {
             $this->dispatch('notify', 'Connection failed: ' . $response['message']);
         }
@@ -112,6 +168,14 @@ class WhatsappConfig extends Component
         $this->is_whatsmark_connected = false;
         $this->is_webhook_connected = false;
         $this->wm_access_token = '';
+
+        if (auth()->user()->currentTeam) {
+            auth()->user()->currentTeam->forceFill([
+                'whatsapp_access_token' => null,
+                'whatsapp_business_account_id' => null,
+                'whatsapp_phone_number_id' => null,
+            ])->save();
+        }
 
         $this->dispatch('notify', 'Disconnected successfully.');
     }
@@ -164,11 +228,13 @@ class WhatsappConfig extends Component
             $this->wm_messaging_limit = $data['messaging_limit_tier'];
             $this->wm_quality_rating = $data['quality_rating'];
             $this->wm_phone_display = $data['display_phone_number'];
+            $this->wm_verified_name = $data['verified_name'] ?? '';
 
             // Persist
             set_setting('whatsapp_wm_messaging_limit', $this->wm_messaging_limit);
             set_setting('whatsapp_wm_quality_rating', $this->wm_quality_rating);
             set_setting('whatsapp_wm_phone_display', $this->wm_phone_display);
+            set_setting('whatsapp_wm_verified_name', $this->wm_verified_name);
 
             // Also update the original phone number setting if we got a display number
             if ($this->wm_phone_display) {
@@ -179,6 +245,27 @@ class WhatsappConfig extends Component
             $this->dispatch('notify', 'Account info synced successfully!');
         } else {
             $this->dispatch('notify', 'Sync failed: ' . $result['message']);
+        }
+    }
+
+    public function registerNumber()
+    {
+        if (!$this->wm_default_phone_number_id) {
+            $this->dispatch('notify', 'No Phone Number ID found.');
+            return;
+        }
+
+        // Default PIN as per request
+        $pin = '123456';
+
+        $result = $this->registerPhone($this->wm_default_phone_number_id, $pin);
+
+        if ($result['status']) {
+            $this->dispatch('notify', 'Phone number registered successfully (PIN: 123456).');
+            // Re-sync info after registration just in case
+            $this->syncInfo();
+        } else {
+            $this->dispatch('notify', 'Registration failed: ' . $result['message']);
         }
     }
 

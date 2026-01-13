@@ -1,10 +1,12 @@
-<div class="flex flex-col h-full bg-slate-50 dark:bg-slate-900/50">
+<div class="flex flex-col h-full bg-transparent">
     <!-- Header -->
-    <div
-        class="px-6 py-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900">
-        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Chats</h2>
+    <div class="px-6 py-6 border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center">
+        <div>
+            <h2 class="font-black text-xs text-slate-400 uppercase tracking-[0.2em] mb-1">Comms Uplink</h2>
+            <h1 class="font-black text-xl text-slate-900 dark:text-white uppercase tracking-tight">Active Channels</h1>
+        </div>
         <div class="flex gap-2">
-            <button class="p-2 text-slate-400 hover:text-wa-green transition-colors">
+            <button class="p-2 text-slate-400 hover:text-wa-teal transition-colors hover:bg-wa-teal/10 rounded-lg">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -13,13 +15,14 @@
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="px-4 py-4">
+    <!-- Frequency Scanner (Search) -->
+    <div class="px-6 py-4">
         <div class="relative group">
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search customer..."
-                class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:ring-2 focus:ring-wa-green/20 focus:border-wa-green transition-all shadow-sm group-hover:shadow-md">
+            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Scan frequencies..."
+                class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400 transition-all shadow-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="h-4 w-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -27,69 +30,69 @@
         </div>
     </div>
 
-    <!-- List -->
-    <div class="flex-1 overflow-y-auto space-y-1 px-2 pb-4">
+    <!-- Channel List -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar space-y-2 px-4 pb-4">
         @forelse($conversations as $conversation)
             @php
                 $initials = substr($conversation->contact->name ?? '?', 0, 1);
-                $bgColors = ['bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-teal-500', 'bg-pink-500'];
-                $bgColor = $bgColors[ord($initials) % count($bgColors)];
+                $isActive = $activeConversationId == $conversation->id;
             @endphp
             <div wire:click="selectConversation({{ $conversation->id }}); mobilePane = 'messages'"
-                class="flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-200 group {{ $activeConversationId == $conversation->id ? 'bg-white dark:bg-slate-800 shadow-md ring-1 ring-slate-200 dark:ring-slate-700' : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/30' }}">
+                wire:key="{{ $conversation->id }}"
+                class="group flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent {{ $isActive ? 'bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 border-slate-100 dark:border-slate-700 relative z-10 scale-[1.02]' : 'hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-slate-100 dark:hover:border-slate-800' }}">
 
-                <!-- Avatar -->
+                <!-- Avatar Status -->
                 <div class="flex-shrink-0 mr-4 relative">
                     <div
-                        class="h-14 w-14 rounded-2xl {{ $bgColor }} flex items-center justify-center text-white font-black text-xl shadow-lg transform group-hover:scale-105 transition-transform">
+                        class="h-12 w-12 rounded-xl {{ $isActive ? 'bg-wa-teal text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400' }} flex items-center justify-center font-black text-lg shadow-sm transition-colors duration-300">
                         {{ $initials }}
                     </div>
                     @if($conversation->status === 'open')
                         <div
-                            class="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-wa-green border-4 border-white dark:border-slate-800 shadow-sm">
+                            class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-wa-green border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
                         </div>
                     @endif
                 </div>
 
-                <!-- Info -->
+                <!-- Channel Info -->
                 <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-baseline mb-0.5">
-                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight">
+                    <div class="flex justify-between items-center mb-1">
+                        <h3
+                            class="text-xs font-black {{ $isActive ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400' }} truncate tracking-tight uppercase group-hover:text-wa-teal transition-colors">
                             {{ $conversation->contact->name ?? $conversation->contact->phone_number }}
                         </h3>
-                        <span class="text-[10px] uppercase font-bold text-slate-400">
+                        <span class="text-[9px] font-mono font-bold text-slate-400">
                             {{ $conversation->last_message_at ? $conversation->last_message_at->format('H:i') : '' }}
                         </span>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
-                        {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? '[Media]', 40) : 'Start chatting...' }}
+                    <p
+                        class="text-[11px] font-medium {{ $isActive ? 'text-slate-500 dark:text-slate-300' : 'text-slate-400' }} truncate">
+                        {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? '[MEDIA PACKET]', 35) : 'Initialize link...' }}
                     </p>
                 </div>
 
-                <!-- Right Side Actions/Badges -->
-                <div class="ml-2 flex flex-col items-end gap-2">
-                    @if($conversation->assignee)
-                        <img src="{{ $conversation->assignee->profile_photo_url }}"
-                            class="h-5 w-5 rounded-full ring-2 ring-white dark:ring-slate-700 shadow-sm grayscale group-hover:grayscale-0 transition-all">
-                    @endif
-
-                    @if($conversation->status === 'closed')
-                        <span
-                            class="text-[9px] font-black uppercase text-slate-400 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Closed</span>
-                    @endif
-                </div>
+                <!-- Indicators -->
+                @if($conversation->assignee || $conversation->status === 'closed')
+                    <div class="ml-2 flex flex-col items-end gap-1">
+                        @if($conversation->assignee)
+                            <div class="w-1.5 h-1.5 rounded-full bg-indigo-500" title="Assigned"></div>
+                        @endif
+                        @if($conversation->status === 'closed')
+                            <div class="w-1.5 h-1.5 rounded-full bg-slate-300" title="Closed"></div>
+                        @endif
+                    </div>
+                @endif
             </div>
         @empty
             <div
-                class="p-8 text-center bg-white/50 dark:bg-slate-800/50 rounded-2xl m-4 border border-dashed border-slate-300 dark:border-slate-700">
+                class="p-8 text-center bg-slate-100/50 dark:bg-slate-800/30 rounded-[2rem] m-4 border border-dashed border-slate-200 dark:border-slate-700">
                 <div class="text-slate-300 dark:text-slate-600 mb-3 flex justify-center">
-                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
                 </div>
-                <p class="text-sm font-bold text-slate-500">No active chats</p>
-                <p class="text-xs text-slate-400 mt-1">They'll appear here when you get a message.</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Signals Intercepted</p>
             </div>
         @endforelse
     </div>

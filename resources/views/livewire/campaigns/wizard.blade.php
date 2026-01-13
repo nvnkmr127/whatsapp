@@ -34,7 +34,7 @@
 
     <!-- Main Wizard Card -->
     <div
-        class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+        class="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
         <div class="p-8 md:p-12">
 
             <!-- Step 1: Details -->
@@ -46,11 +46,51 @@
                             placeholder="e.g. Summer Promo" />
                         <x-input-error for="name" class="mt-2" />
                     </div>
+                    <!-- Scheduling Options -->
                     <div>
-                        <x-label for="scheduled_at" value="Schedule Time" />
-                        <x-input id="scheduled_at" type="datetime-local" wire:model="scheduled_at" class="w-full mt-1" />
-                        <x-input-error for="scheduled_at" class="mt-2" />
+                        <x-label value="Sending Time" class="mb-2" />
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Send Now -->
+                            <div class="cursor-pointer relative rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-all {{ $scheduleMode === 'now' ? 'border-wa-green bg-wa-green/5' : 'border-slate-200' }}"
+                                 wire:click="$set('scheduleMode', 'now')">
+                                <div class="w-10 h-10 rounded-full bg-wa-green/10 text-wa-green flex items-center justify-center mb-1">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                </div>
+                                <h3 class="font-bold text-slate-900 dark:text-white">Send Immediately</h3>
+                                <p class="text-xs text-slate-500 text-center">Launch campaign right after review.</p>
+                                
+                                @if($scheduleMode === 'now')
+                                    <div class="absolute top-3 right-3 text-wa-green">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- Schedule Later -->
+                            <div class="cursor-pointer relative rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-all {{ $scheduleMode === 'later' ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200' }}"
+                                 wire:click="$set('scheduleMode', 'later')">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <h3 class="font-bold text-slate-900 dark:text-white">Schedule for Later</h3>
+                                <p class="text-xs text-slate-500 text-center">Pick a specific date and time.</p>
+
+                                @if($scheduleMode === 'later')
+                                    <div class="absolute top-3 right-3 text-blue-500">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
                     </div>
+
+                    @if($scheduleMode === 'later')
+                        <div class="animate-fadeIn">
+                            <x-label for="scheduled_at" value="Select Date & Time" />
+                            <x-input id="scheduled_at" type="datetime-local" wire:model="scheduled_at" class="w-full mt-1" />
+                            <x-input-error for="scheduled_at" class="mt-2" />
+                        </div>
+                    @endif
 
                     <div class="flex justify-end pt-4">
                         <x-button wire:click="$set('step', 2)" wire:loading.attr="disabled" class="bg-blue-600 text-white">
@@ -121,34 +161,82 @@
                     </div>
 
                     @if($selectedTemplateId)
-                        @php $t = $this->templates->find($selectedTemplateId); @endphp
-                        <div class="border p-4 rounded bg-gray-50">
-                            <p class="font-bold text-xs uppercase text-gray-500 mb-2">Preview</p>
-                            <p class="text-sm whitespace-pre-wrap">{{ $t->body_text ?? 'Template body here' }}</p>
-                        </div>
+                        @php
+                            $t = $this->templates->find($selectedTemplateId);
+                            $components = $t->components ?? [];
+                            $headerType = 'NONE';
+                            $headerText = '';
+                            $bodyText = '';
+                            $footerText = '';
 
-                        <!-- Variable Mapping -->
-                        <!-- Naive implementation: assume template variables if any -->
-                        <!-- Ideally parse body_text for {{1}}, {{2}} -->
-                        <div class="mt-6">
-                            <p class="font-black text-[10px] uppercase tracking-widest text-slate-400 mb-3">Variables Mapping
-                                (Optional)</p>
-                            <p class="text-[10px] font-bold text-wa-green mb-4">USE @{{name}} TO INSERT CONTACT NAME DATA.</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="relative">
-                                    <span
-                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase">Var
-                                        1</span>
-                                    <input type="text" wire:model="templateVars.0" placeholder="Parameter value"
-                                        class="w-full pl-16 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 focus:ring-2 focus:ring-wa-green/20 transition-all font-bold text-sm">
+                            foreach($components as $c) {
+                                if(($c['type'] ?? '') === 'HEADER') {
+                                    $headerType = $c['format'] ?? 'TEXT';
+                                    if($headerType === 'TEXT') $headerText = $c['text'] ?? '';
+                                }
+                                if(($c['type'] ?? '') === 'BODY') $bodyText = $c['text'] ?? '';
+                                if(($c['type'] ?? '') === 'FOOTER') $footerText = $c['text'] ?? '';
+                            }
+                        @endphp
+
+                        <div class="space-y-6">
+                            <!-- Template Body Text -->
+                            <div class="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 rounded-xl">
+                                <h3 class="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2">Message Body</h3>
+                                <div class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                                    {{ $bodyText }}
                                 </div>
-                                <div class="relative">
-                                    <span
-                                        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase">Var
-                                        2</span>
-                                    <input type="text" wire:model="templateVars.1" placeholder="Parameter value"
-                                        class="w-full pl-16 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 focus:ring-2 focus:ring-wa-green/20 transition-all font-bold text-sm">
+                            </div>
+                            
+                            <!-- Media Header Input -->
+                            @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
+                                <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl mb-4">
+                                    <h3 class="font-bold text-sm text-indigo-700 dark:text-indigo-300 mb-2 uppercase tracking-wider">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                            Media Header Required
+                                        </div>
+                                    </h3>
+                                    <p class="text-xs text-indigo-600/80 dark:text-indigo-400 mb-3">
+                                        This template requires a <strong>{{ strtolower($headerType) }}</strong> URL.
+                                    </p>
+                                    <x-input type="url" wire:model="headerMediaUrl" 
+                                        class="w-full" 
+                                        placeholder="https://example.com/image.jpg" />
                                 </div>
+                            @endif
+
+                            <!-- Variables -->
+                            <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300 mb-4 uppercase tracking-wider">Variables Mapping</h3>
+                                
+                                <p class="text-[10px] font-bold text-wa-green mb-4 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Use @{{name}} to insert contact name.
+                                </p>
+
+                                <!-- Regex to find params count -->
+                                @php
+                                    preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
+                                    $paramCount = count(array_unique($matches[1] ?? []));
+                                @endphp
+
+                                @if($paramCount > 0)
+                                    <div class="space-y-3">
+                                        @for($i = 1; $i <= $paramCount; $i++)
+                                            <div class="relative group">
+                                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase group-focus-within:text-indigo-500 transition-colors">
+                                                    Var {{ $i }}
+                                                </span>
+                                                <input type="text" wire:model.live="templateVars.{{ $i-1 }}" 
+                                                    placeholder="Value for {{ '{'.'{'.$i.'}'.'}' }}"
+                                                    class="w-full pl-16 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium text-sm">
+                                            </div>
+                                        @endfor
+                                    </div>
+                                @else
+                                    <div class="text-sm text-slate-400 italic">No variables in this template body.</div>
+                                @endif
                             </div>
                         </div>
                     @endif

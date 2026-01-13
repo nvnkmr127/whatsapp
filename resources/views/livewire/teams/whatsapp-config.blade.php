@@ -158,6 +158,47 @@
                 </p>
             </div>
 
+            <!-- Registration & Business Details -->
+            <div class="px-6 py-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+                <h4 class="text-sm font-medium text-slate-900 dark:text-white mb-3">Registration & Business Details</h4>
+
+                <div class="mt-4 flex items-center justify-between gap-4">
+                    <div class="flex gap-4">
+                        <x-button wire:click="syncInfo" wire:loading.attr="disabled">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                </path>
+                            </svg>
+                            Sync Info
+                        </x-button>
+
+                        <a href="https://business.facebook.com/wa/manage/home/?waba_id={{ $wm_business_account_id }}"
+                            target="_blank"
+                            class="inline-flex items-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-semibold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-widest shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 offset-2 disabled:opacity-25 transition ease-in-out duration-150">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                            </svg>
+                            Check Business Details
+                        </a>
+                    </div>
+
+                    <div class="flex flex-col items-end">
+                        <x-button wire:click="registerNumber" wire:loading.attr="disabled"
+                            class="bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500"
+                            wire:confirm="Please only register if you have changed your phone number or display name. If you have not made any changes, there is no need to register again. We auto-register during the connection process. The default PIN is 123456. Are you sure you want to register?">
+                            Register Phone
+                        </x-button>
+                        <span class="text-[10px] text-slate-400 mt-1 max-w-xs text-right">
+                            Only required if Display Name changed. <br>PIN: 123456
+                        </span>
+                    </div>
+                </div>
+            </div>
+
         </div>
     @else
         <!-- Connect Form -->
@@ -207,12 +248,12 @@
                     <form wire:submit.prevent="connect" class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <x-label for="wm_fb_app_id" value="Meta App ID *" />
+                                <x-label for="wm_fb_app_id" value="Meta App ID (Optional)" />
                                 <x-input id="wm_fb_app_id" type="text" wire:model="wm_fb_app_id" class="w-full mt-1" />
                                 <x-input-error for="wm_fb_app_id" class="mt-2" />
                             </div>
                             <div>
-                                <x-label for="wm_fb_app_secret" value="Meta App Secret *" />
+                                <x-label for="wm_fb_app_secret" value="Meta App Secret (Optional)" />
                                 <x-input id="wm_fb_app_secret" type="password" wire:model="wm_fb_app_secret"
                                     class="w-full mt-1" />
                                 <x-input-error for="wm_fb_app_secret" class="mt-2" />
@@ -233,6 +274,14 @@
                             <x-input-error for="wm_access_token" class="mt-2" />
                             <p class="text-xs text-slate-500 mt-2">Make sure the token has `whatsapp_business_management`
                                 and `whatsapp_business_messaging` permissions.</p>
+                        </div>
+
+                        <div>
+                            <x-label for="wm_default_phone_number_id" value="Phone Number ID (Optional)" />
+                            <x-input id="wm_default_phone_number_id" type="text" wire:model="wm_default_phone_number_id"
+                                class="w-full mt-1" placeholder="Auto-detected if left blank" />
+                            <x-input-error for="wm_default_phone_number_id" class="mt-2" />
+                            <p class="text-xs text-slate-500 mt-2">Enter manually if you know it, or leave blank to auto-fetch.</p>
                         </div>
 
                         <script>

@@ -22,15 +22,12 @@ trait WhatsApp
 
     private function getToken(): string
     {
-        // Ideally fetch from DB settings
-        return config('services.whatsapp.access_token') ?? '';
-        // For now, returning empty string or mocking. 
-        // Real implementation needs to fetch from Settings table if standard.
+        return get_setting('whatsapp_wm_access_token') ?? config('services.whatsapp.access_token') ?? '';
     }
 
     private function getAccountID(): string
     {
-        return config('services.whatsapp.account_id') ?? '';
+        return get_setting('whatsapp_wm_business_account_id') ?? config('services.whatsapp.account_id') ?? '';
     }
 
     public function loadTemplatesFromWhatsApp(): array
@@ -59,7 +56,7 @@ trait WhatsApp
                 return ['status' => false, 'message' => 'No templates found.'];
             }
 
-            $existingTemplateIds = WhatsappTemplate::pluck('template_id')->toArray();
+            $existingTemplateIds = WhatsappTemplate::pluck('whatsapp_template_id')->toArray();
             $apiTemplateIds = [];
 
             foreach ($messageTemplates as $templateData) {
@@ -87,26 +84,30 @@ trait WhatsApp
                 }
 
                 WhatsappTemplate::updateOrCreate(
-                    ['template_id' => $templateData['id']],
+                    ['whatsapp_template_id' => $templateData['id']],
                     [
-                        'template_name' => $templateData['name'],
+                        'name' => $templateData['name'], // Field is 'name' in DB, 'template_name' was wrong in code? No, DB has 'name'. check update array
                         'language' => $templateData['language'],
                         'status' => $templateData['status'],
                         'category' => $templateData['category'],
-                        'header_data_text' => $components['HEADER'] ?? null,
-                        'body_data' => $components['BODY'] ?? null,
-                        'footer_data' => $components['FOOTER'] ?? null,
-                        'header_params_count' => $headerParamsCount,
-                        'body_params_count' => $bodyParamsCount,
-                        'footer_params_count' => $footerParamsCount,
+                        // DB has 'components' json column, but code tries mapping unrelated fields.
+                        // Migration shows: table->json('components');
+                        // Code tries: header_data_text, body_data... those columns DO NOT EXIST in migration!
+                        // MAJOR MISMATCH detected between Trait and Migration.
+                        // I must also fix the update array to match migration columns.
+                        'components' => $templateData['components'], // Save raw components as JSON
+                        'team_id' => auth()->user()->currentTeam->id ?? \App\Models\Team::first()->id, // Needs team_id as per migration
                     ]
                 );
             }
 
+            $phoneNumbers = $response->json('phone_numbers.data');
+
             return [
                 'status' => true,
                 'message' => 'Templates synced successfully',
-                'count' => count($apiTemplateIds)
+                'count' => count($apiTemplateIds),
+                'phone_numbers' => $phoneNumbers ?? []
             ];
 
         } catch (\Throwable $e) {
@@ -150,6 +151,34 @@ trait WhatsApp
 
         } catch (\Throwable $e) {
             Log::error("WhatsApp Phone Details Error: " . $e->getMessage());
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function registerPhone(string $phoneNumberId, string $pin): array
+    {
+        try {
+            $token = $this->getToken();
+
+            if (empty($token)) {
+                return ['status' => false, 'message' => 'Access token not configured.'];
+            }
+
+            $url = self::getBaseUrl() . "{$phoneNumberId}/register";
+
+            $response = Http::withToken($token)->post($url, [
+                'messaging_product' => 'whatsapp',
+                'pin' => $pin
+            ]);
+
+            if ($response->failed()) {
+                return ['status' => false, 'message' => $response->json('error.message') ?? 'Registration Failed'];
+            }
+
+            return ['status' => true, 'message' => 'Phone number registered successfully'];
+
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Register Phone Error: " . $e->getMessage());
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }

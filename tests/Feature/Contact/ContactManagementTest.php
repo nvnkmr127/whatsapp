@@ -65,4 +65,18 @@ class ContactManagementTest extends TestCase
         $this->assertTrue($contact->tags->contains('name', 'VIP'));
         $this->assertTrue($contact->tags->contains('name', 'Lead'));
     }
+    public function test_can_view_contact_details()
+    {
+        $team = Team::factory()->create();
+        $this->actingAs($team->owner);
+
+        $contact = Contact::factory()->create(['team_id' => $team->id, 'name' => 'John Doe']);
+
+        $component = \Livewire\Livewire::test(\App\Livewire\Contacts\ContactManager::class);
+
+        $component->call('viewContact', $contact->id)
+            ->assertSet('isViewModalOpen', true)
+            ->assertSet('viewingContact.id', $contact->id)
+            ->assertSee('John Doe');
+    }
 }

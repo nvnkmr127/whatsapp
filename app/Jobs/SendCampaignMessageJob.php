@@ -27,7 +27,6 @@ class SendCampaignMessageJob implements ShouldQueue
             return;
 
         $waService = new \App\Services\WhatsAppService();
-        $waService->setTeam($campaign->team);
 
         $vars = $campaign->template_variables ?? [];
 
@@ -37,6 +36,7 @@ class SendCampaignMessageJob implements ShouldQueue
         }, $vars);
 
         try {
+            $waService->setTeam($campaign->team);
             $response = $waService->sendTemplate(
                 $contact->phone_number,
                 $campaign->template_name,
@@ -70,6 +70,21 @@ class SendCampaignMessageJob implements ShouldQueue
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Campaign {$campaign->id} Send Failed to {$contact->id}: " . $e->getMessage());
+
+            \App\Models\Message::create([
+                'team_id' => $campaign->team_id,
+                'contact_id' => $contact->id,
+                'campaign_id' => $campaign->id,
+                'conversation_id' => $contact->activeConversation->id ?? (new \App\Services\ConversationService())->ensureActiveConversation($contact)->id,
+                'whatsapp_message_id' => 'failed_' . uniqid(),
+                'direction' => 'outbound',
+                'type' => 'template',
+                'status' => 'failed',
+                'content' => "Template: {$campaign->template_name} (Failed)",
+                'sent_at' => now(),
+                'metadata' => json_encode(['error' => $e->getMessage()])
+            ]);
+
             // Optionally increment 'failed_count' if column exists
         }
     }

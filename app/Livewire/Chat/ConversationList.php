@@ -4,10 +4,12 @@ namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Modelable;
 use Livewire\Component;
 
 class ConversationList extends Component
 {
+    #[Modelable]
     public $activeConversationId;
     public $search = '';
 

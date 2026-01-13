@@ -121,6 +121,74 @@ class WhatsAppService
      */
     public function sendTemplate($to, $templateName, $language = 'en_US', $variables = [])
     {
+        // Fetch Template first to understand structure
+        $tpl = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
+            ->where('name', $templateName)
+            ->where('language', $language)
+            ->first();
+
+        // Language Fallback
+        if (!$tpl) {
+            $fallback = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
+                ->where('name', $templateName)
+                ->where('language', 'en_US')
+                ->first();
+            if ($fallback) {
+                $tpl = $fallback;
+                $language = 'en_US';
+            }
+        }
+
+        // Logic to split variables into Header vs Body
+        // If template has Header params (IMAGE, VIDEO, DOCUMENT), we assume the FIRST variable is the media link.
+        // This is a heuristic until we have a proper UI map.
+        $components = [];
+        $headerVars = null;
+        $bodyVars = $variables;
+
+        if ($tpl && !empty($tpl->components)) {
+            $componentData = $tpl->components; // Encrypted/Json? It's cast to array in model.
+
+            // Check for HEADER with format IMAGE/VIDEO/DOCUMENT
+            $headerComponent = collect($componentData)->firstWhere('type', 'HEADER');
+            if ($headerComponent && in_array($headerComponent['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+                $format = $headerComponent['format'];
+                $mediaLink = array_shift($bodyVars) ?? 'https://via.placeholder.com/150'; // Shift first var as media, or fallback
+
+                // If the shifted var is NOT a URL, put it back? No, valid variables are strings. 
+                // We will assume logic: If Media Header exists, Var1 = MediaURL.
+
+                if (!filter_var($mediaLink, FILTER_VALIDATE_URL)) {
+                    // Log warning, use fallback
+                    Log::warning("Expected URL for {$format} header, got '{$mediaLink}'. Using placeholder.");
+                    // Depending on strictness, we might put it back to body if we think logic is wrong.
+                    // But for 'channel_partnerv2' which failed, it expects IMAGE.
+                    $mediaLink = 'https://placehold.co/600x400.png?text=Image';
+                    array_unshift($bodyVars, $variables[0]); // Put original back to body if it wasn't a URL? 
+                    // Actually, if the user didn't provide a URL, they probably provided body text.
+                }
+
+                $manualType = strtolower($format); // image, video, document
+                $components[] = [
+                    'type' => 'header',
+                    'parameters' => [
+                        [
+                            'type' => $manualType,
+                            $manualType => ['link' => $mediaLink]
+                        ]
+                    ]
+                ];
+            }
+        }
+
+        // Add Body Component
+        if (!empty($bodyVars)) {
+            $components[] = [
+                'type' => 'body',
+                'parameters' => $this->formatTemplateVariables($bodyVars)[0]['parameters']
+            ];
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
@@ -128,34 +196,9 @@ class WhatsAppService
             'template' => [
                 'name' => $templateName,
                 'language' => ['code' => $language],
-                'components' => $this->formatTemplateVariables($variables)
+                'components' => $components
             ]
         ];
-
-        // --- BILLING & PLAN CHECK ---
-        // 1. Check Team Context
-        if (!isset($this->team)) {
-            $this->team = auth()->user()->currentTeam ?? Team::first(); // Fallback/Error handle
-        }
-
-        // 2. Find Template Category & Language Check (Local DB)
-        $tpl = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
-            ->where('name', $templateName)
-            ->where('language', $language)
-            ->first();
-
-        // Language Fallback: If not found in requested lang, try en_US
-        if (!$tpl) {
-            $fallback = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
-                ->where('name', $templateName)
-                ->where('language', 'en_US')
-                ->first();
-
-            if ($fallback) {
-                $tpl = $fallback;
-                $language = 'en_US'; // Switch to fallback
-            }
-        }
 
         $category = $tpl ? strtolower($tpl->category) : 'marketing';
 
@@ -191,7 +234,7 @@ class WhatsAppService
         }
         // ---------------------
 
-        return $this->sendRequest('POST', 'messages', $payload);
+        return $this->sendRequest('messages', $payload);
     }
 
     /**

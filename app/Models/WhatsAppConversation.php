@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WhatsAppConversation extends Model
 {
+    protected $table = 'whatsapp_conversations'; // Explicitly define table name
+
     protected $guarded = [];
 
     protected $casts = [

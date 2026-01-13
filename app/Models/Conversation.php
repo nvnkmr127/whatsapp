@@ -37,6 +37,11 @@ class Conversation extends Model
         return $this->hasMany(Message::class);
     }
 
+    public function lastMessage()
+    {
+        return $this->hasOne(Message::class)->latestOfMany();
+    }
+
     public function notes()
     {
         return $this->hasMany(InternalNote::class)->orderBy('created_at', 'desc');

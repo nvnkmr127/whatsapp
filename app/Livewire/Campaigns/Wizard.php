@@ -12,6 +12,7 @@ class Wizard extends Component
     // Step 1: Details
     public $name;
     public $scheduled_at;
+    public $scheduleMode = 'now'; // 'now' or 'later'
 
     // Step 2: Audience
     public $audienceType = 'tags'; // 'all' or 'tags'
@@ -21,6 +22,7 @@ class Wizard extends Component
     // Step 3: Message
     public $selectedTemplateId;
     public $templateVars = []; // ['{{1}}' => 'value'] or simple index array
+    public $headerMediaUrl; // For IMAGE/VIDEO/DOCUMENT headers
 
     public function getStepsProperty()
     {
@@ -76,10 +78,23 @@ class Wizard extends Component
         $this->validate([
             'name' => 'required',
             'selectedTemplateId' => 'required',
-            'audienceCount' => 'numeric|min:1'
+            'audienceCount' => 'numeric|min:1',
+            'scheduled_at' => $this->scheduleMode === 'later' ? 'required|date|after:now' : 'nullable'
         ]);
 
+        if ($this->scheduleMode === 'now') {
+            $this->scheduled_at = now();
+        }
+
         $template = \App\Models\WhatsappTemplate::find($this->selectedTemplateId);
+
+        // Prepare variables (Prepend Media Link if exists)
+        $finalVars = $this->templateVars;
+        if (!empty($this->headerMediaUrl)) {
+            array_unshift($finalVars, $this->headerMediaUrl);
+        }
+        // Ensure array is indexed correctly for JSON storage
+        $finalVars = array_values($finalVars);
 
         $campaign = \App\Models\Campaign::create([
             'team_id' => auth()->user()->currentTeam->id,
@@ -88,7 +103,7 @@ class Wizard extends Component
             'template_id' => $template->id,
             'template_name' => $template->name,
             'template_language' => $template->language,
-            'template_variables' => $this->templateVars,
+            'template_variables' => $finalVars,
             'audience_filters' => [
                 'type' => $this->audienceType,
                 'tags' => $this->selectedTags,
@@ -107,7 +122,7 @@ class Wizard extends Component
 
         \App\Jobs\ProcessCampaignJob::dispatch($campaign->id)->delay($delaySeconds);
 
-        return redirect()->route('campaigns')->with('message', 'Campaign Launched!');
+        return redirect()->route('campaigns.index')->with('message', 'Campaign Launched!');
     }
 
     #[Layout('components.layouts.app')]
