@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Livewire\Campaigns;
+
+use App\Models\Campaign;
+use App\Models\ContactTag;
+use Livewire\Component;
+use Livewire\WithPagination;
+use App\Services\BroadcastService;
+
+class CampaignManager extends Component
+{
+    use WithPagination;
+
+    public $showCreateModal = false;
+
+    // Form Config
+    public $name;
+    public $templateName;
+    public $selectedTags = []; // IDs
+    public $sendNow = true;
+    public $scheduledAt;
+
+    // Loaded Data
+    public $availableTemplates = [];
+    public $availableTags = [];
+
+    public function mount()
+    {
+        $this->availableTags = ContactTag::where('team_id', auth()->user()->currentTeam->id)->get();
+        // Templates should come from DB or API
+        $this->availableTemplates = \App\Models\WhatsAppTemplate::where('team_id', auth()->user()->currentTeam->id)
+            ->where('status', 'APPROVED')
+            ->get();
+    }
+
+    public function create()
+    {
+        $this->validate([
+            'name' => 'required',
+            'templateName' => 'required',
+        ]);
+
+        $segmentConfig = [
+            'tags' => $this->selectedTags
+        ];
+
+        $campaign = Campaign::create([
+            'team_id' => auth()->user()->currentTeam->id,
+            'name' => $this->name,
+            'template_name' => $this->templateName,
+            'segment_config' => $segmentConfig,
+            'status' => 'draft',
+            'scheduled_at' => $this->sendNow ? now() : $this->scheduledAt,
+        ]);
+
+        if ($this->sendNow) {
+            (new BroadcastService())->launch($campaign);
+            session()->flash('message', 'Campaign launched successfully!');
+        } else {
+            $campaign->update(['status' => 'scheduled']);
+            session()->flash('message', 'Campaign scheduled!');
+        }
+
+        $this->showCreateModal = false;
+        $this->reset(['name', 'templateName', 'selectedTags']);
+    }
+
+    public function render()
+    {
+        $campaigns = Campaign::where('team_id', auth()->user()->currentTeam->id)->latest()->paginate(10);
+        return view('livewire.campaigns.campaign-manager', ['campaigns' => $campaigns]);
+    }
+}

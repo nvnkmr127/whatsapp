@@ -1,0 +1,49 @@
+{
+  "node_modules/intl-tel-input/build/img/flags.webp": {
+    "file": "assets/flags-Cx4r8tdH.webp",
+    "src": "node_modules/intl-tel-input/build/img/flags.webp"
+  },
+  "node_modules/intl-tel-input/build/img/flags@2x.webp": {
+    "file": "assets/flags@2x-CiSx7kJd.webp",
+    "src": "node_modules/intl-tel-input/build/img/flags@2x.webp"
+  },
+  "node_modules/intl-tel-input/build/img/globe.webp": {
+    "file": "assets/globe-CKC-qWvL.webp",
+    "src": "node_modules/intl-tel-input/build/img/globe.webp"
+  },
+  "node_modules/intl-tel-input/build/img/globe@2x.webp": {
+    "file": "assets/globe@2x-CEs4Xftd.webp",
+    "src": "node_modules/intl-tel-input/build/img/globe@2x.webp"
+  },
+  "node_modules/intl-tel-input/build/js/utils.js": {
+    "file": "assets/utils-O8eG5BJT.js",
+    "name": "utils",
+    "src": "node_modules/intl-tel-input/build/js/utils.js",
+    "isDynamicEntry": true
+  },
+  "public/img/chat/whatsapp_dark_bg.png": {
+    "file": "assets/whatsapp_dark_bg-CWfmzOL5.png",
+    "src": "public/img/chat/whatsapp_dark_bg.png"
+  },
+  "public/img/chat/whatsapp_light_bg.png": {
+    "file": "assets/whatsapp_light_bg-DxGV9uq9.png",
+    "src": "public/img/chat/whatsapp_light_bg.png"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DCmwJW0f.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-skI-BEOK.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "node_modules/intl-tel-input/build/js/utils.js"
+    ],
+    "css": [
+      "assets/app-B5lP5HlF.css"
+    ]
+  }
+}
