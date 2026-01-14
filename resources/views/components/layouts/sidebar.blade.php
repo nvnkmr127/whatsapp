@@ -77,6 +77,32 @@
             </div>
         @endcan
 
+        <!-- Settings -->
+        @can('manage-settings')
+            <div>
+                <div class="px-4 mb-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.25em]">
+                    Settings
+                </div>
+                <div class="space-y-1">
+                    @foreach($settingsLinks as $link)
+                        @php $isActive = request()->routeIs($link['route']); @endphp
+                        <a href="{{ route($link['route']) }}"
+                            class="group relative flex items-center px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-300 {{ $isActive ? 'bg-slate-800 text-white shadow-xl ring-1 ring-white/10' : 'text-slate-400 hover:text-white hover:bg-slate-900/50' }}">
+                            @if($isActive)
+                                <div class="absolute left-0 w-1 h-6 bg-white rounded-r-full"></div>
+                            @endif
+                            <svg class="mr-4 h-5 w-5 transition-transform duration-300 {{ $isActive ? 'text-white' : 'text-slate-500 group-hover:scale-110 group-hover:text-slate-300' }}"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="{{ $link['icon'] }}" />
+                            </svg>
+                            {{ $link['label'] }}
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endcan
+
         <!-- Super Admin -->
         @if(auth()->user()->is_super_admin)
             <div>

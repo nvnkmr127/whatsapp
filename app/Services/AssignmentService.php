@@ -18,9 +18,12 @@ class AssignmentService
             return;
         }
 
-        // 2. Get eligible agents (Owner + Users)
-        // ideally filter by 'online' status or roles, but for MVP we take all team members
-        $agents = $team->allUsers();
+        // 2. Get eligible agents who have "receives_tickets" enabled
+        $agents = $team->users()->wherePivot('receives_tickets', true)->get();
+
+        // Also add the owner if they should receive tickets (Jetstream teams usually have users + owner)
+        // However, in many implementations, the owner is also in the users() list if it's a personal team or they joined.
+        // Let's stick to the users() for now based on the UI.
 
         if ($agents->isEmpty()) {
             return;
@@ -33,6 +36,7 @@ class AssignmentService
         foreach ($agents as $agent) {
             $load = Contact::where('team_id', $team->id)
                 ->where('assigned_to', $agent->id)
+                ->whereNotIn('status', ['resolved', 'closed']) // Only count open/pending
                 ->count();
 
             if ($load < $minLoad) {
@@ -40,6 +44,7 @@ class AssignmentService
                 $bestAgent = $agent;
             }
         }
+
 
         // 4. Assign
         if ($bestAgent) {

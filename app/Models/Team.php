@@ -14,6 +14,19 @@ class Team extends JetstreamTeam
     use HasFactory;
 
     /**
+     * Get all of the users that belong to the team.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, \Laravel\Jetstream\Jetstream::membershipModel())
+            ->withPivot('role', 'receives_tickets')
+            ->withTimestamps()
+            ->as('membership');
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -25,6 +38,14 @@ class Team extends JetstreamTeam
         'whatsapp_business_account_id',
         'whatsapp_access_token',
         'outbound_webhook_url',
+        'opt_in_keywords',
+        'opt_out_keywords',
+        'opt_in_message',
+        'opt_out_message',
+        'opt_in_message_enabled',
+        'opt_out_message_enabled',
+        'chat_assignment_config',
+        'chat_status_rules',
     ];
 
     /**
@@ -49,8 +70,19 @@ class Team extends JetstreamTeam
             'personal_team' => 'boolean',
             'whatsapp_connected' => 'boolean',
             'away_message_enabled' => 'boolean',
+            'read_receipts_enabled' => 'boolean',
+            'welcome_message_enabled' => 'boolean',
+            'ai_auto_reply_enabled' => 'boolean',
             'business_hours' => 'array',
+            'welcome_message_config' => 'array',
+            'away_message_config' => 'array',
             'whatsapp_access_token' => 'encrypted',
+            'opt_in_keywords' => 'array',
+            'opt_out_keywords' => 'array',
+            'opt_in_message_enabled' => 'boolean',
+            'opt_out_message_enabled' => 'boolean',
+            'chat_assignment_config' => 'array',
+            'chat_status_rules' => 'array',
         ];
     }
 

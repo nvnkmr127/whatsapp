@@ -87,10 +87,52 @@ class WhatsAppService
     }
 
     /**
+     * Send a media message (Image, Video, Audio, Document).
+     */
+    public function sendMedia($to, $type, $link, $caption = null)
+    {
+        // Find contact to check policy
+        $contact = \App\Models\Contact::where('phone_number', $to)
+            ->where('team_id', $this->team->id ?? null)
+            ->first();
+
+        // Enforce 24h Policy for Free Messages (Media is a free message)
+        $policy = new PolicyService();
+        if ($contact && !$policy->canSendFreeMessage($contact)) {
+            Log::warning("Blocked media message to {$to}. 24h Window Closed or Opt-out.");
+            throw new \Exception("Cannot send media. 24-hour window is closed or User opted out. Please use a Template.");
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => $type,
+            $type => [
+                'link' => $link,
+                'caption' => $caption
+            ]
+        ];
+
+        return $this->sendRequest('messages', $payload);
+    }
+
+    /**
      * Send interactive buttons.
      */
     public function sendInteractiveButtons($to, $text, array $buttons)
     {
+        // Find contact to check policy
+        $contact = \App\Models\Contact::where('phone_number', $to)
+            ->where('team_id', $this->team->id ?? null)
+            ->first();
+
+        // Enforce 24h Policy for Free Messages (Interactive is a free message)
+        $policy = new PolicyService();
+        if ($contact && !$policy->canSendFreeMessage($contact)) {
+            Log::warning("Blocked interactive message to {$to}. 24h Window Closed or Opt-out.");
+            throw new \Exception("Cannot send interactive buttons. 24-hour window is closed or User opted out. Please use a Template.");
+        }
+
         $buttonObjects = [];
         foreach ($buttons as $id => $title) {
             $buttonObjects[] = [
@@ -256,7 +298,9 @@ class WhatsAppService
      */
     public function getBusinessProfile()
     {
-        return $this->sendRequest('whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical', [], 'get');
+        return $this->sendRequest('whatsapp_business_profile', [
+            'fields' => 'about,address,description,email,profile_picture_url,websites,vertical'
+        ], 'get');
     }
 
     /**
@@ -352,6 +396,7 @@ class WhatsAppService
             // Return validation errors if present
             return ['success' => false, 'error' => $response->json()];
         }
+
 
         return ['success' => true, 'data' => $response->json()];
     }

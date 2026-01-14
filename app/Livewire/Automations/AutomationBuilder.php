@@ -11,7 +11,10 @@ class AutomationBuilder extends Component
 {
     public $automationId;
     public $name;
-    public $triggerKeyword;
+    // Trigger Properties
+    public $triggerType = 'keyword';
+    public $triggerConfig = [];
+
     public $nodes = []; // [ {id, type, x, y, data} ]
     public $edges = []; // [ {source, target} ]
 
@@ -30,14 +33,35 @@ class AutomationBuilder extends Component
     public $nodeOptions = [];
     public $newOption = '';
 
+    // Advanced Node properties
+    public $nodeHeaders = []; // [['key' => '', 'value' => '']]
+    public $nodeJson = '';
+    public $nodeModel = 'gpt-4o';
+
+    // Text Node specific
+    public $nodeTyping = false;
+    public $nodeDelaySeconds = 0;
+    public $nodeDelayMinutes = 0;
+    public $nodeDelayHours = 0;
+
+    public $availableTags = [];
+
     public function mount($id = null)
     {
+        $this->availableTags = \App\Models\ContactTag::where('team_id', Auth::user()->currentTeam->id)->get()->toArray();
+
         if ($id) {
             $automation = Automation::find($id);
             $this->automationId = $automation->id;
             $this->name = $automation->name;
-            // Assuming trigger_config is { "keywords": ["hi"] }
-            $this->triggerKeyword = $automation->trigger_config['keywords'][0] ?? '';
+
+            $this->triggerType = $automation->trigger_type ?? 'keyword';
+            $this->triggerConfig = $automation->trigger_config ?? [];
+
+            // Backward compatibility
+            if ($this->triggerType === 'keyword' && empty($this->triggerConfig['keywords']) && !empty($automation->trigger_config['keywords'])) {
+                $this->triggerConfig = $automation->trigger_config;
+            }
 
             $flowData = $automation->flow_data ?? ['nodes' => [], 'edges' => []];
             $this->nodes = $flowData['nodes'] ?? [];
@@ -47,6 +71,8 @@ class AutomationBuilder extends Component
             $this->nodes = [
                 ['id' => 'Start', 'type' => 'trigger', 'x' => 50, 'y' => 50, 'data' => ['label' => 'Start']]
             ];
+            // Default Trigger Config
+            $this->triggerConfig = ['keywords' => [], 'is_regex' => false];
         }
     }
 
@@ -54,7 +80,6 @@ class AutomationBuilder extends Component
     {
         $this->validate([
             'name' => 'required|string|max:255',
-            'triggerKeyword' => 'required|string|max:50',
             'nodes' => 'required|array|min:1',
         ], [
             'nodes.required' => 'The automation flow cannot be empty.',
@@ -66,8 +91,8 @@ class AutomationBuilder extends Component
                 'team_id' => Auth::user()->currentTeam->id,
                 'name' => $this->name,
                 'is_active' => true,
-                'trigger_type' => 'keyword',
-                'trigger_config' => ['keywords' => [strtolower($this->triggerKeyword)]],
+                'trigger_type' => $this->triggerType,
+                'trigger_config' => $this->triggerConfig,
                 'flow_data' => [
                     'nodes' => $this->nodes,
                     'edges' => $this->edges
@@ -219,12 +244,20 @@ class AutomationBuilder extends Component
 
                 if ($type === 'text') {
                     $this->nodeText = $data['text'] ?? '';
+                    $this->nodeTyping = $data['typing'] ?? false;
+                    $this->nodeDelaySeconds = $data['delay_seconds'] ?? 0;
+                    $this->nodeDelayMinutes = $data['delay_minutes'] ?? 0;
+                    $this->nodeDelayHours = $data['delay_hours'] ?? 0;
+                } elseif ($type === 'trigger') {
+                    // Start Node - Trigger Config
+                    // The properties are on the Component itself ($this->triggerType, $this->triggerConfig)
+                    // But we might want to populate local state if we use it for editing
                 } elseif (in_array($type, ['image', 'video', 'audio', 'file'])) {
                     $this->nodeUrl = $data['url'] ?? '';
                     $this->nodeText = $data['caption'] ?? '';
                 } elseif ($type === 'interactive_button') {
                     $this->nodeText = $data['text'] ?? '';
-                    // Flatten buttons for simple UI editor (complex object editing needed for real app)
+                    // Flatten buttons for simple UI editor
                     $this->nodeOptions = collect($data['buttons'] ?? [])->pluck('title')->toArray();
                 } elseif ($type === 'interactive_list') {
                     $this->nodeText = $data['text'] ?? '';
@@ -234,11 +267,14 @@ class AutomationBuilder extends Component
                 } elseif ($type === 'openai') {
                     $this->nodeText = $data['prompt'] ?? '';
                     $this->nodeSaveTo = $data['save_to'] ?? '';
+                    $this->nodeModel = $data['model'] ?? 'gpt-4o';
                 } elseif ($type === 'template') {
                     $this->nodeText = $data['template_name'] ?? '';
                 } elseif ($type === 'webhook') {
                     $this->nodeUrl = $data['url'] ?? '';
                     $this->nodeMethod = $data['method'] ?? 'POST';
+                    $this->nodeHeaders = $data['headers'] ?? [];
+                    $this->nodeJson = $data['json_body'] ?? '';
                 } elseif ($type === 'delay') {
                     $this->nodeText = $data['value'] ?? '5';
                 }
@@ -253,8 +289,14 @@ class AutomationBuilder extends Component
             if ($node['id'] === $this->selectedNodeId) {
                 $type = $node['type'];
 
-                if ($type === 'text') {
+                if ($type === 'trigger') {
+                    $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)) . ' Trigger';
+                } elseif ($type === 'text') {
                     $node['data']['text'] = $this->nodeText;
+                    $node['data']['typing'] = $this->nodeTyping;
+                    $node['data']['delay_seconds'] = $this->nodeDelaySeconds;
+                    $node['data']['delay_minutes'] = $this->nodeDelayMinutes;
+                    $node['data']['delay_hours'] = $this->nodeDelayHours;
                 } elseif (in_array($type, ['image', 'video', 'audio', 'file'])) {
                     $node['data']['url'] = $this->nodeUrl;
                     $node['data']['caption'] = $this->nodeText;
@@ -272,9 +314,12 @@ class AutomationBuilder extends Component
                 } elseif ($type === 'openai') {
                     $node['data']['prompt'] = $this->nodeText;
                     $node['data']['save_to'] = $this->nodeSaveTo;
+                    $node['data']['model'] = $this->nodeModel;
                 } elseif ($type === 'webhook') {
                     $node['data']['url'] = $this->nodeUrl;
                     $node['data']['method'] = $this->nodeMethod;
+                    $node['data']['headers'] = $this->nodeHeaders;
+                    $node['data']['json_body'] = $this->nodeJson;
                 } elseif ($type === 'template') {
                     $node['data']['template_name'] = $this->nodeText;
                 } elseif ($type === 'delay') {
@@ -320,6 +365,69 @@ class AutomationBuilder extends Component
                 $newNode['y'] += 50;
                 $this->nodes[] = $newNode;
             }
+        }
+    }
+
+    public function addHeader()
+    {
+        $this->nodeHeaders[] = ['key' => '', 'value' => ''];
+        $this->updateNodeData();
+    }
+
+    public function removeHeader($index)
+    {
+        if (isset($this->nodeHeaders[$index])) {
+            unset($this->nodeHeaders[$index]);
+            $this->nodeHeaders = array_values($this->nodeHeaders);
+            $this->updateNodeData();
+        }
+    }
+
+    public function addTriggerKeyword()
+    {
+        if (!isset($this->triggerConfig['keywords'])) {
+            $this->triggerConfig['keywords'] = [];
+        }
+        $this->triggerConfig['keywords'][] = '';
+    }
+
+    public function removeTriggerKeyword($index)
+    {
+        if (isset($this->triggerConfig['keywords'][$index])) {
+            unset($this->triggerConfig['keywords'][$index]);
+            $this->triggerConfig['keywords'] = array_values($this->triggerConfig['keywords']);
+        }
+    }
+
+    public function addStartTag()
+    {
+        if (!isset($this->triggerConfig['add_tags'])) {
+            $this->triggerConfig['add_tags'] = [];
+        }
+        $this->triggerConfig['add_tags'][] = '';
+    }
+
+    public function removeStartTag($index)
+    {
+        if (isset($this->triggerConfig['add_tags'][$index])) {
+            unset($this->triggerConfig['add_tags'][$index]);
+            $this->triggerConfig['add_tags'] = array_values($this->triggerConfig['add_tags']);
+        }
+    }
+
+    public function addRemoveTag()
+    {
+        if (!isset($this->triggerConfig['remove_tags'])) {
+            $this->triggerConfig['remove_tags'] = [];
+        }
+        $this->triggerConfig['remove_tags'][] = '';
+    }
+
+    public function removeRemoveTag($index)
+    {
+        if (isset($this->triggerConfig['remove_tags'][$index])) {
+            unset($this->triggerConfig['remove_tags'][$index]);
+            $this->triggerConfig['remove_tags'] = array_values($this->triggerConfig['remove_tags']);
         }
     }
 

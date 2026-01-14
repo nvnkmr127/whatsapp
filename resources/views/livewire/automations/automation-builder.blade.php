@@ -15,17 +15,22 @@
                 edges: @entangle('edges'),
                 selectedId: null,
                 selectedEdgeIndex: null,
-                
-                panX: 0, panY: 0, scale: 1, isPanning: false, panStart: { x: 0, y: 0 },
-                draggingNodeId: null, drawing: false, connectSourceId: null, mouse: { x: 0, y: 0 }, ctx: null,
+                animationOffset: 0,
 
                 init() {
                     const canvas = this.$refs.canvas;
                     this.ctx = canvas.getContext('2d');
-                    this.$watch('nodes', () => this.drawEdges());
-                    this.$watch('edges', () => this.drawEdges());
-                    const animate = () => { this.drawEdges(); requestAnimationFrame(animate); };
+                    
+                    // Animation Loop
+                    const animate = () => {
+                        this.animationOffset = (this.animationOffset - 1) % 40; // Speed of animation
+                        this.updateCanvas();
+                        requestAnimationFrame(animate);
+                    };
                     requestAnimationFrame(animate);
+
+                    this.$watch('nodes', () => this.updateCanvas());
+                    this.$watch('edges', () => this.updateCanvas());
                 },
 
                 // Removed refreshAlpine() as entangle handles sync
@@ -59,7 +64,7 @@
                      this.$wire.deleteNode(id); // entangle will update nodes automatically
                 },
 
-                drawEdges() {
+                updateCanvas() {
                     if (!this.$refs.canvas) return; 
                     const canvas = this.$refs.canvas;
                     if (canvas.width !== 10000) canvas.width = 10000;
@@ -78,6 +83,7 @@
                             const startX = source.x + 288 + 16 + 5000; 
                             const startY = source.y + 48 + 5000;     
                             
+                            
                             const endX = target.x - 16 + 5000;       
                             const endY = target.y + 48 + 5000;
 
@@ -88,7 +94,15 @@
                             
                             this.ctx.strokeStyle = (this.selectedEdgeIndex === index) ? '#25D366' : '#94a3b8';
                             this.ctx.lineWidth = 3;
+                            
+                            // ANIMATION
+                            this.ctx.setLineDash([8, 6]);
+                            this.ctx.lineDashOffset = this.animationOffset;
+                            
                             this.ctx.stroke();
+                            
+                            // Reset dash for text background
+                            this.ctx.setLineDash([]);
 
                             if (edge.condition || this.selectedEdgeIndex === index) {
                                 const midX = (startX + endX) / 2;
@@ -219,7 +233,7 @@
                     {{ $name ?? 'Untitled Automation' }}
                 </h1>
                 <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-                    {{ $triggerKeyword ? 'Keyword: ' . $triggerKeyword : 'Draft' }}
+                    {{ $triggerType === 'keyword' ? 'Keywords: ' . implode(', ', $triggerConfig['keywords'] ?? []) : ucfirst(str_replace('_', ' ', $triggerType)) }}
                 </span>
             </div>
         </div>
@@ -245,6 +259,8 @@
 
     <!-- Workspace -->
     <div class="flex-1 flex overflow-hidden relative">
+
+
 
         <!-- Left Sidebar: Component Palette -->
         <div class="w-72 flex-none bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-40 transition-all duration-300"
@@ -311,6 +327,29 @@
                 <!-- Center: Infinite Canvas -->
         <div class="flex-1 bg-slate-50 dark:bg-slate-950 relative overflow-hidden cursor-grab active:cursor-grabbing" id="canvas-container"
              @mousedown="startPan($event)" @mousemove="pan($event)" @mouseup="endPan()" @mouseleave="endPan()" @wheel="zoom($event)">
+             
+             <!-- Canvas Controls -->
+            <div class="absolute bottom-6 right-6 flex items-center gap-2 z-50">
+                <div class="flex items-center bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-slate-200 dark:border-slate-800 p-1">
+                    <button @click="scale = Math.min(scale + 0.1, 2)" 
+                        class="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors" title="Zoom In">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                    </button>
+                    <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                    <button @click="scale = Math.max(scale - 0.1, 0.5)" 
+                        class="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors" title="Zoom Out">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                    </button>
+                    <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                    <button @click="panX = 0; panY = 0; scale = 1" 
+                        class="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors" title="Fit to Center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                    </button>
+                </div>
+                <div class="bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 font-mono">
+                    <span x-text="Math.round(scale * 100) + '%'"></span>
+                </div>
+            </div>
             
                 <!-- Canvas Grid -->
             <div id="canvas" class="absolute inset-0 origin-top-left" wire:ignore
@@ -430,17 +469,234 @@
                             <!-- Debug Info (Optional, remove later) -->
                             <!-- <div class="text-[10px] text-slate-400">Type: <span x-text="selectedNode.type"></span></div> -->
 
+                            <!-- Trigger Configuration -->
+                            <div x-show="selectedNode.type === 'trigger'">
+                                <div class="space-y-4">
+                                     <!-- Trigger Type Dropdown -->
+                                    <div class="space-y-1">
+                                        <label class="block text-xs font-bold text-slate-500 uppercase">Trigger Event</label>
+                                        <select wire:model.live="triggerType" wire:change="updateNodeData"
+                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200">
+                                            <option value="keyword">Keyword/Regex Match</option>
+                                            <option value="user_starts_conversation">User Starts Conversation</option>
+                                            <option value="template_selected">Template Selected</option>
+                                            <option value="template_delivered">WhatsApp Template Delivered</option>
+                                            <option value="contact_added">Contact Added</option>
+                                            <option value="added_to_list">Contact Added to Contact List</option>
+                                            <option value="custom_field_updated">Custom Field Updated</option>
+                                            <option value="tag_assigned">Tag Assigned</option>
+                                            <option value="payment_capture">Payment Capture</option>
+                                            <option value="order_received">Order Received</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Keyword Match Config -->
+                                    <div x-show="['keyword'].includes($wire.triggerType)" class="space-y-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <div class="space-y-1">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Keywords (Comma separated)</label>
+                                            <!-- We bind to a specific sub-item of triggerConfig via livewire array notation, or handle json_encode manual if needed. 
+                                                 Livewire supports array binding: triggerConfig.keywords 
+                                                 But since it's an array of strings, we might need a textual input that splits on comma? 
+                                                 Or just an array input. Let's assume standard textual input for now or tags. 
+                                                 Actually, let's use a textarea for simple comma separation. -->
+                                            
+                                            <!-- Since triggerConfig is an array, we can't wire:model="triggerConfig.keywords" directly if it's meant to be an array in PHP? 
+                                                 Let's assume we create a helper property "triggerKeywords" string in PHP or just handle it here. 
+                                                 Actually, let's just stick to a text area and let the user type lines or commas. 
+                                                 Wait, I should create a computed property or updated hook in PHP to parse this. 
+                                                 For now, I'll bind to a temporary live property or use a simple hack.
+                                                 
+                                                 Plan: Bind to triggerConfig.keywords directly as array? No, HTML input doesn't support array. 
+                                                 Better Plan: Use a text input and I'll add a 'updatedTriggerConfig' hook in PHP later if needed?
+                                                 
+                                                 Let's rely on Alpine or just use a simple text field that users enter "hi, hello" and we save it as ["hi", "hello"] in PHP updated hook.
+                                                 Actually, for this step, let's assume the user edits `triggerConfig.keywords` as a string for now? No, PHP typed it as array.
+                                                 
+                                                 Let's use a dedicated method: `addTriggerKeyword` similar to headers. -->
+                                        </div>
+                                         <div class="space-y-2">
+                                            @foreach($triggerConfig['keywords'] ?? [] as $index => $kw)
+                                                <div class="flex items-center gap-2">
+                                                    <input type="text" wire:model.blur="triggerConfig.keywords.{{ $index }}" 
+                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
+                                                        placeholder="Keyword">
+                                                    <button wire:click="removeTriggerKeyword({{ $index }})" class="text-slate-400 hover:text-rose-500">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                             <button wire:click="addTriggerKeyword"
+                                                class="text-xs font-bold text-wa-green hover:underline">+ Add Keyword</button>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                                            <span class="text-[10px] font-bold uppercase text-slate-500">Regex Mode</span>
+                                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                                <input type="checkbox" wire:model.live="triggerConfig.is_regex" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                                <label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                                            </div>
+                                        </div>
+                                        <p class="text-[9px] text-slate-400">If enabled, keywords are treated as Regular Expressions.</p>
+                                    </div>
+
+                                    <!-- User Starts Conversation -->
+                                    <div x-show="['user_starts_conversation'].includes($wire.triggerType)" class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 rounded-xl text-xs">
+                                        This flow triggers when a user sends the first message or a message after 24h window expiry.
+                                    </div>
+
+                                     <!-- Template Selected -->
+                                    <div x-show="['template_selected'].includes($wire.triggerType)" class="space-y-3">
+                                        <label class="block text-xs font-bold text-slate-500 uppercase">Template</label>
+                                        <!-- Ideally a Select from DB, but text for now -->
+                                        <input type="text" wire:model.blur="triggerConfig.template_id" placeholder="Template ID / Name"
+                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                                        
+                                        <label class="block text-xs font-bold text-slate-500 uppercase mt-2">Button Payload</label>
+                                        <input type="text" wire:model.blur="triggerConfig.button_payload" placeholder="Button ID"
+                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                                    </div>
+
+                                    <!-- Tag Assigned -->
+                                    <div x-show="['tag_assigned'].includes($wire.triggerType)" class="space-y-1">
+                                        <label class="block text-xs font-bold text-slate-500 uppercase">Tag Name</label>
+                                        <input type="text" wire:model.blur="triggerConfig.tag_name" placeholder="e.g. VVIP"
+                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                                    </div>
+
+                                    <!-- Contact List -->
+                                    <div x-show="['added_to_list'].includes($wire.triggerType)" class="space-y-1">
+                                        <label class="block text-xs font-bold text-slate-500 uppercase">List ID</label>
+                                        <input type="text" wire:model.blur="triggerConfig.list_id" placeholder="List ID"
+                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                                    </div>
+                                    
+                                    <!-- START NODE ACTIONS -->
+                                    <div class="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                        <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider">Start Actions</h4>
+                                        
+                                        <!-- Add Tags -->
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <label class="text-[10px] font-bold text-slate-500 uppercase">Add Tags</label>
+                                                <button wire:click="addStartTag" class="text-[10px] uppercase font-bold text-wa-green hover:underline">+ Add</button>
+                                            </div>
+                                            @foreach($triggerConfig['add_tags'] ?? [] as $index => $tag)
+                                                <div class="flex items-center gap-2">
+                                                    <select wire:model.blur="triggerConfig.add_tags.{{ $index }}" 
+                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5 appearance-none">
+                                                        <option value="">Select Tag...</option>
+                                                        @foreach($availableTags as $availableTag)
+                                                            <option value="{{ $availableTag['name'] }}">{{ $availableTag['name'] }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button wire:click="removeStartTag({{ $index }})" class="text-slate-400 hover:text-rose-500">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                        <!-- Remove Tags -->
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <label class="text-[10px] font-bold text-slate-500 uppercase">Remove Tags</label>
+                                                <button wire:click="addRemoveTag" class="text-[10px] uppercase font-bold text-wa-green hover:underline">+ Add</button>
+                                            </div>
+                                            @foreach($triggerConfig['remove_tags'] ?? [] as $index => $tag)
+                                                <div class="flex items-center gap-2">
+                                                     <select wire:model.blur="triggerConfig.remove_tags.{{ $index }}" 
+                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5 appearance-none">
+                                                        <option value="">Select Tag...</option>
+                                                        @foreach($availableTags as $availableTag)
+                                                            <option value="{{ $availableTag['name'] }}">{{ $availableTag['name'] }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button wire:click="removeRemoveTag({{ $index }})" class="text-slate-400 hover:text-rose-500">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                        <!-- Webhook -->
+                                        <div class="space-y-1">
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase">Start Webhook URL</label>
+                                            <input type="text" wire:model.blur="triggerConfig.webhook_url" placeholder="https://api.example.com/start"
+                                                class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
                             <!-- Text / Content -->
-                            <div class="space-y-1" x-show="['text', 'interactive_button', 'interactive_list', 'user_input', 'openai', 'template', 'delay'].includes(selectedNode.type)">
-                                <label class="block text-xs font-bold text-slate-500 uppercase" x-text="
+                            <div x-show="['text', 'interactive_button', 'interactive_list', 'user_input', 'openai', 'template', 'delay'].includes(selectedNode.type)">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2" x-text="
                                     selectedNode.type === 'user_input' ? 'Question' : 
                                     (selectedNode.type === 'openai' ? 'Prompt' : 
-                                    (selectedNode.type === 'delay' ? 'Seconds' : 'Text / Content'))
+                                    (selectedNode.type === 'delay' ? 'Seconds' : 'Please provide your reply message'))
                                 "></label>
-                                <textarea wire:model.blur="nodeText" wire:change="updateNodeData" rows="4"
-                                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200"
-                                    :placeholder="selectedNode.type === 'openai' ? 'Enter system instructions...' : 'Enter message text...'"></textarea>
-                                <p class="text-[10px] text-slate-400">Markdown enabled. Use @{{variable}} for dynamic data.</p>
+                                
+                                <div class="relative">
+                                    <textarea wire:model.blur="nodeText" wire:change="updateNodeData" rows="6"
+                                        class="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200 p-4 leading-relaxed"
+                                        :placeholder="selectedNode.type === 'openai' ? 'Enter system instructions...' : 'WhatsApp text message limit is 4096 characters.'"></textarea>
+                                     <div class="absolute top-3 right-3 text-slate-400">
+                                         <svg class="w-5 h-5 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                     </div>
+                                </div>
+                                <p class="text-[10px] text-slate-400 mt-1" x-show="selectedNode.type !== 'text'">Markdown enabled. Use @{{variable}} for dynamic data.</p>
+                            </div>
+                            
+                            <!-- Typing and Delay (Text Node Only) -->
+                             <div x-show="selectedNode.type === 'text'" class="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                 <!-- Typing Toggle -->
+                                 <div class="flex items-center justify-between">
+                                     <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Typing on display</span>
+                                     <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+                                        <input type="checkbox" wire:model.live="nodeTyping" wire:change="updateNodeData" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                        <label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 dark:bg-slate-700 cursor-pointer"></label>
+                                    </div>
+                                 </div>
+
+                                 <!-- Delay Sliders -->
+                                 <div>
+                                     <label class="block text-xs font-bold text-slate-500 uppercase mb-4">Delay in reply</label>
+                                     
+                                     <!-- Seconds -->
+                                     <div class="space-y-2 mb-4">
+                                         <div class="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                                             <span>sec: {{ $nodeDelaySeconds }}</span>
+                                         </div>
+                                         <input type="range" min="0" max="60" wire:model.live="nodeDelaySeconds" wire:change="updateNodeData" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-wa-green">
+                                     </div>
+
+                                      <!-- Minutes -->
+                                     <div class="space-y-2 mb-4">
+                                         <div class="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                                             <span>minutes: {{ $nodeDelayMinutes }}</span>
+                                         </div>
+                                         <input type="range" min="0" max="60" wire:model.live="nodeDelayMinutes" wire:change="updateNodeData" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-wa-green">
+                                     </div>
+
+                                      <!-- Hours -->
+                                     <div class="space-y-2">
+                                         <div class="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                                             <span>hours: {{ $nodeDelayHours }}</span>
+                                         </div>
+                                         <input type="range" min="0" max="24" wire:model.live="nodeDelayHours" wire:change="updateNodeData" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-wa-green">
+                                     </div>
+                                 </div>
+                             </div>
+
+                            <!-- OpenAI Model -->
+                            <div class="space-y-1" x-show="['openai'].includes(selectedNode.type)">
+                                <label class="block text-xs font-bold text-slate-500 uppercase">AI Model</label>
+                                <select wire:model.blur="nodeModel" wire:change="updateNodeData"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200">
+                                    <option value="gpt-4o">GPT-4o (Smartest)</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini (Fastest)</option>
+                                </select>
                             </div>
 
                             <!-- URL / Resource -->
@@ -460,6 +716,35 @@
                                     <option value="POST">POST</option>
                                     <option value="PUT">PUT</option>
                                 </select>
+                            </div>
+
+                            <!-- Webhook Headers -->
+                            <div class="space-y-2" x-show="['webhook'].includes(selectedNode.type)">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Headers</label>
+                                    <button wire:click="addHeader" class="text-[10px] uppercase font-bold text-wa-green hover:underline">+ Add</button>
+                                </div>
+                                <div class="space-y-2">
+                                    @foreach($nodeHeaders as $index => $header)
+                                        <div class="flex gap-2">
+                                            <input type="text" wire:model.blur="nodeHeaders.{{ $index }}.key" wire:change="updateNodeData" placeholder="Key"
+                                                class="flex-1 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono">
+                                            <input type="text" wire:model.blur="nodeHeaders.{{ $index }}.value" wire:change="updateNodeData" placeholder="Value"
+                                                class="flex-1 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono">
+                                            <button wire:click="removeHeader({{ $index }})" class="text-slate-400 hover:text-red-500">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                             <!-- Webhook JSON Body -->
+                            <div class="space-y-1" x-show="['webhook'].includes(selectedNode.type) && nodeMethod !== 'GET'">
+                                <label class="block text-xs font-bold text-slate-500 uppercase">JSON Body</label>
+                                <textarea wire:model.blur="nodeJson" wire:change="updateNodeData" rows="6"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200"
+                                    placeholder='{"key": "value"}'></textarea>
                             </div>
 
                             <!-- Save Response To -->

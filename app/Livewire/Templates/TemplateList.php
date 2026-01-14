@@ -25,15 +25,21 @@ class TemplateList extends Component
     public $headerText = '';
     public $body = '';
     public $footer = '';
+    public $buttons = [];
+    public $exampleMediaUrl = '';
 
     protected $listeners = ['refreshComponent' => '$refresh'];
 
     protected $rules = [
-        'name' => 'required|regex:/^[a-z0-9_]+$/',
-        'category' => 'required',
-        'language' => 'required',
-        'body' => 'required',
-        'headerText' => 'required_if:headerType,TEXT',
+        'name' => 'required|regex:/^[a-z0-9_]+$/|max:512',
+        'category' => 'required|in:UTILITY,MARKETING,AUTHENTICATION',
+        'language' => 'required|string',
+        'body' => 'required|max:1024',
+        'headerText' => 'required_if:headerType,TEXT|max:60',
+        'footer' => 'nullable|max:60',
+        'buttons.*.text' => 'required|string|max:25',
+        'buttons.*.url' => 'required_if:buttons.*.type,URL',
+        'buttons.*.phoneNumber' => 'required_if:buttons.*.type,PHONE_NUMBER',
     ];
 
     // Reset pagination when searching
@@ -58,8 +64,21 @@ class TemplateList extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['name', 'category', 'language', 'headerType', 'headerText', 'body', 'footer']);
+        $this->reset(['name', 'category', 'language', 'headerType', 'headerText', 'body', 'footer', 'buttons']);
         $this->showCreateModal = true;
+    }
+
+    public function addButton()
+    {
+        if (count($this->buttons) >= 3)
+            return;
+        $this->buttons[] = ['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phoneNumber' => ''];
+    }
+
+    public function removeButton($index)
+    {
+        unset($this->buttons[$index]);
+        $this->buttons = array_values($this->buttons);
     }
 
     public function viewTemplate($id)
@@ -79,12 +98,13 @@ class TemplateList extends Component
         $this->headerText = '';
         $this->body = '';
         $this->footer = '';
+        $this->buttons = [];
 
         if (is_array($components)) {
             foreach ($components as $component) {
                 if ($component['type'] === 'HEADER') {
-                    if (($component['format'] ?? '') === 'TEXT') {
-                        $this->headerType = 'TEXT';
+                    $this->headerType = $component['format'] ?? 'NONE';
+                    if ($this->headerType === 'TEXT') {
                         $this->headerText = $component['text'] ?? '';
                     }
                 }
@@ -94,25 +114,46 @@ class TemplateList extends Component
                 if ($component['type'] === 'FOOTER') {
                     $this->footer = $component['text'] ?? '';
                 }
+                if ($component['type'] === 'BUTTONS') {
+                    foreach ($component['buttons'] as $btn) {
+                        $this->buttons[] = [
+                            'type' => $btn['type'],
+                            'text' => $btn['text'],
+                            'url' => $btn['url'] ?? '',
+                            'phoneNumber' => $btn['phone_number'] ?? '',
+                        ];
+                    }
+                }
             }
         }
 
         $this->showViewModal = true;
     }
 
-    public function createTemplate()
+    public function createTemplate(\App\Services\WhatsAppService $whatsapp)
     {
         $this->validate();
 
         $components = [];
 
         // Header
-        if ($this->headerType === 'TEXT' && $this->headerText) {
-            $components[] = [
+        if ($this->headerType !== 'NONE') {
+            $header = [
                 'type' => 'HEADER',
-                'format' => 'TEXT',
-                'text' => $this->headerText
+                'format' => $this->headerType,
             ];
+
+            if ($this->headerType === 'TEXT') {
+                $header['text'] = $this->headerText;
+            } else {
+                // Media headers need examples
+                $header['example'] = [
+                    'header_handle' => [
+                        $this->exampleMediaUrl ?: 'https://scontent.xx.fbcdn.net/v/...'
+                    ]
+                ];
+            }
+            $components[] = $header;
         }
 
         // Body
@@ -129,6 +170,35 @@ class TemplateList extends Component
             ];
         }
 
+        // Buttons
+        if (!empty($this->buttons)) {
+            $buttonComponents = [];
+            foreach ($this->buttons as $btn) {
+                if ($btn['type'] === 'QUICK_REPLY') {
+                    $buttonComponents[] = [
+                        'type' => 'QUICK_REPLY',
+                        'text' => $btn['text']
+                    ];
+                } elseif ($btn['type'] === 'URL') {
+                    $buttonComponents[] = [
+                        'type' => 'URL',
+                        'text' => $btn['text'],
+                        'url' => $btn['url']
+                    ];
+                } elseif ($btn['type'] === 'PHONE_NUMBER') {
+                    $buttonComponents[] = [
+                        'type' => 'PHONE_NUMBER',
+                        'text' => $btn['text'],
+                        'phone_number' => $btn['phoneNumber']
+                    ];
+                }
+            }
+            $components[] = [
+                'type' => 'BUTTONS',
+                'buttons' => $buttonComponents
+            ];
+        }
+
         $payload = [
             'name' => $this->name,
             'category' => $this->category,
@@ -136,32 +206,45 @@ class TemplateList extends Component
             'components' => $components,
         ];
 
-        // Use Trait to create on Meta
-        $response = $this->createWhatsAppTemplate($payload);
+        try {
+            $whatsapp->setTeam(auth()->user()->currentTeam);
+            $response = $whatsapp->createTemplate($payload);
 
-        if ($response['status']) {
-            $this->showCreateModal = false;
-            $this->syncTemplates(); // Re-sync to save to DB
-            $this->dispatch('notify', 'Template created successfully!');
-        } else {
-            $this->dispatch('notify', 'Meta Error: ' . $response['message']);
+            if ($response['success']) {
+                $this->showCreateModal = false;
+                $this->syncTemplates();
+                $this->dispatch('notify', 'Template created successfully!');
+            } else {
+                $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
+                $this->dispatch('notify', 'Meta Error: ' . $errorMsg);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', 'Error: ' . $e->getMessage());
         }
     }
 
-    public function deleteTemplate($id)
+    public function deleteTemplate($id, \App\Services\WhatsAppService $whatsapp)
     {
         $template = WhatsappTemplate::find($id);
         if (!$template)
             return;
 
-        // Delete from Meta
-        $response = $this->deleteWhatsAppTemplate($template->name);
+        try {
+            // Delete from Meta
+            $whatsapp->setTeam(auth()->user()->currentTeam);
+            $response = $whatsapp->deleteTemplate($template->name);
 
-        if ($response['status']) {
-            $template->delete();
-            $this->dispatch('notify', 'Template deleted successfully.');
-        } else {
-            $this->dispatch('notify', 'Meta Error: ' . $response['message']);
+            if ($response['success']) {
+                $template->delete();
+                $this->dispatch('notify', 'Template deleted successfully.');
+            } else {
+                // If template not found on Meta, maybe just delete local?
+                // For now, respect error.
+                $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
+                $this->dispatch('notify', 'Meta Error: ' . $errorMsg);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', 'Error: ' . $e->getMessage());
         }
     }
 

@@ -25,44 +25,30 @@ class SendOutboundWebhook implements ShouldQueue
     public function handle(MessageReceived $event): void
     {
         $message = $event->message;
-        $team = $message->team; // Assumes Message belongsTo Team
+        $team = $message->team;
 
-        if (!$team || empty($team->outbound_webhook_url)) {
+        if (!$team) {
             return;
         }
 
-        try {
-            $payload = [
-                'event' => 'message.received',
-                'data' => [
-                    'id' => $message->id,
-                    'whatsapp_message_id' => $message->whatsapp_message_id,
-                    'contact' => [
-                        'id' => $message->contact_id,
-                        'phone_number' => $message->contact->phone_number,
-                        'name' => $message->contact->name,
-                        'custom_attributes' => $message->contact->custom_attributes,
-                    ],
-                    'content' => $message->content,
-                    'media_url' => $message->media_url ?? null,
-                    'type' => $message->type,
-                    'timestamp' => $message->created_at->toIso8601String(),
-                ]
-            ];
+        // Use the new WebhookService
+        $webhookService = new \App\Services\WebhookService();
 
-            // Send webhook with a timeout
-            $response = Http::timeout(5)
-                ->post($team->outbound_webhook_url, $payload);
+        $data = [
+            'id' => $message->id,
+            'whatsapp_message_id' => $message->whatsapp_message_id,
+            'contact' => [
+                'id' => $message->contact_id,
+                'phone_number' => $message->contact->phone_number,
+                'name' => $message->contact->name,
+                'custom_attributes' => $message->contact->custom_attributes,
+            ],
+            'content' => $message->content,
+            'media_url' => $message->media_url ?? null,
+            'type' => $message->type,
+            'timestamp' => $message->created_at->toIso8601String(),
+        ];
 
-            if ($response->failed()) {
-                Log::warning("Outbound Webhook Failed for Team {$team->id}: " . $response->status());
-                // Throwing exception triggers existing retry logic for queued listeners
-                throw new \Exception("Webhook failed with status " . $response->status());
-            }
-
-        } catch (\Exception $e) {
-            Log::error("Outbound Webhook Error for Team {$team->id}: " . $e->getMessage());
-            $this->release(30); // Retry in 30 seconds
-        }
+        $webhookService->dispatch($team->id, 'message.received', $data);
     }
 }

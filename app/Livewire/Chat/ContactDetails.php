@@ -56,6 +56,20 @@ class ContactDetails extends Component
         }
     }
 
+    public function toggleOptIn(\App\Services\ConsentService $consentService)
+    {
+        if (!$this->conversation || !$this->contact)
+            return;
+
+        if ($this->contact->opt_in_status === 'opted_in') {
+            $consentService->optOut($this->contact, 'MANUAL_AGENT', 'Agent toggled status in chat interface.');
+        } else {
+            $consentService->optIn($this->contact, 'MANUAL_AGENT', 'Agent toggled status in chat interface.');
+        }
+
+        $this->loadData();
+    }
+
     public function render()
     {
         return view('livewire.chat.contact-details');

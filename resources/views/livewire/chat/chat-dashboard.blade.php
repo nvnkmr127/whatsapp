@@ -1,9 +1,9 @@
-<div x-data="{ mobilePane: 'list' }"
+<div x-data="{ mobilePane: 'list', showDetails: true }" @toggle-details.window="showDetails = !showDetails"
     class="h-[calc(100vh-theme(spacing.32))] flex overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 relative z-0">
 
     <!-- Left Sidebar: Active Channels -->
     <div :class="{ 'hidden': mobilePane !== 'list', 'flex': mobilePane === 'list' }"
-        class="w-full lg:w-80 xl:w-96 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 lg:flex flex-col z-10">
+        class="w-full lg:w-80 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 lg:flex flex-col z-10">
         <livewire:chat.conversation-list wire:model="activeConversationId" />
     </div>
 
@@ -41,10 +41,12 @@
 
     <!-- Right Sidebar: Intelligence Profile -->
     @if($activeConversationId)
-        <div
-            class="hidden xl:flex w-96 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col overflow-y-auto z-10">
-            <livewire:chat.contact-details :conversation-id="$activeConversationId" :key="'details-' . $activeConversationId" />
-        </div>
+        <template x-if="showDetails">
+            <div
+                class="hidden xl:flex w-72 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
+                <livewire:chat.contact-details :conversation-id="$activeConversationId" :key="'details-' . $activeConversationId" />
+            </div>
+        </template>
     @endif
 
     <script>

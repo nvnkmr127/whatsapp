@@ -1,9 +1,16 @@
 <div class="flex flex-col h-full bg-transparent">
     <!-- Header -->
-    <div class="px-6 py-6 border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center">
-        <div>
-            <h2 class="font-black text-xs text-slate-400 uppercase tracking-[0.2em] mb-1">Comms Uplink</h2>
-            <h1 class="font-black text-xl text-slate-900 dark:text-white uppercase tracking-tight">Active Channels</h1>
+    <!-- Header -->
+    <div class="px-6 py-6 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="p-1.5 bg-wa-teal/10 text-wa-teal rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+            </div>
+            <h1 class="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">Inbox <span
+                    class="text-wa-teal">Center</span></h1>
         </div>
         <div class="flex gap-2">
             <button class="p-2 text-slate-400 hover:text-wa-teal transition-colors hover:bg-wa-teal/10 rounded-lg">
@@ -16,17 +23,73 @@
     </div>
 
     <!-- Frequency Scanner (Search) -->
-    <div class="px-6 py-4">
-        <div class="relative group">
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Scan frequencies..."
-                class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400 transition-all shadow-sm">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-4 w-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+    <div class="px-6 py-4 space-y-3" x-data="{ showFilters: false }">
+        <div class="flex gap-2">
+            <div class="relative group flex-1">
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search conversations..."
+                    class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400 transition-all shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
             </div>
+            <button @click="showFilters = !showFilters"
+                :class="showFilters ? 'bg-wa-teal text-white shadow-wa-teal/20' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-wa-teal'"
+                class="p-3 rounded-xl shadow-sm transition-all hover:shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Filter Panel -->
+        <div x-show="showFilters" x-collapse
+            class="bg-white dark:bg-slate-950 rounded-2xl p-4 shadow-xl border border-slate-50 dark:border-slate-800 space-y-4 relative z-20">
+            <div class="grid grid-cols-1 gap-3">
+                <!-- Read Status -->
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Signal Status</label>
+                    <select wire:model.live="filterReadStatus"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
+                        <option value="all">All Signals</option>
+                        <option value="unread">Unread</option>
+                        <option value="read">Read</option>
+                    </select>
+                </div>
+
+                <!-- Opt-In -->
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Consent
+                        Protocol</label>
+                    <select wire:model.live="filterOptIn"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
+                        <option value="all">Any Status</option>
+                        <option value="yes">Subscribed (Opt-In)</option>
+                        <option value="no">Unsubscribed</option>
+                    </select>
+                </div>
+
+                <!-- Blocked -->
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Transmission
+                        Line</label>
+                    <select wire:model.live="filterBlocked"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
+                        <option value="all">All Lines</option>
+                        <option value="no">Active Only</option>
+                        <option value="yes">Blocked/Terminated</option>
+                    </select>
+                </div>
+            </div>
+
+            <button wire:click="resetFilters"
+                class="w-full py-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors">
+                Reset Protocols
+            </button>
         </div>
     </div>
 
@@ -43,10 +106,10 @@
 
                 <!-- Avatar Status -->
                 <div class="flex-shrink-0 mr-4 relative">
-                    <div
-                        class="h-12 w-12 rounded-xl {{ $isActive ? 'bg-wa-teal text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400' }} flex items-center justify-center font-black text-lg shadow-sm transition-colors duration-300">
-                        {{ $initials }}
-                    </div>
+                    <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
+                        alt="{{ $conversation->contact->name ?? 'Unknown' }}"
+                        class="h-12 w-12 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-sm transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy">
                     @if($conversation->status === 'open')
                         <div
                             class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-wa-green border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">

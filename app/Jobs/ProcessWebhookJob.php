@@ -206,24 +206,44 @@ class ProcessWebhookJob implements ShouldQueue
         // 5. Bot Engine Check
         // Only if "Human Inbox" is not specifically overtaking (but typically bots run alongside unless conversation is assigned to human?)
         // Let's assume Bots run unless Stopped.
-        $botService = new \App\Services\AutomationService(new \App\Services\WhatsAppService());
+        $processed = false;
+        $triggered = false;
+
         $input = $this->extractContent($msgData);
 
-        // Try processing active session
-        $processed = $botService->handleReply($contact, $input);
+        if ($team->ai_auto_reply_enabled) {
+            $botService = new \App\Services\AutomationService(new \App\Services\WhatsAppService());
 
-        // If not processed, check strictly for Trigger Keywords
-        $triggered = false;
-        if (!$processed) {
-            $triggered = $botService->checkTriggers($contact, trim($input));
+            // Try processing active session
+            $processed = $botService->handleReply($contact, $input);
+
+            // If not processed, check strictly for Trigger Keywords
+            if (!$processed) {
+                $triggered = $botService->checkTriggers($contact, trim($input));
+            }
         }
 
-        // 6. Business Hours Auto-Reply (Only if Bot didn't handle it)
+        // 6. Business Hours & Welcome Messages
         if (!$processed && !$triggered) {
-            if ($team->away_message_enabled && !$team->isWithinBusinessHours()) {
+            $waService = new \App\Services\WhatsAppService();
+            $waService->setTeam($team);
+
+            // A. Welcome Message (First Interaction)
+            if ($team->welcome_message_enabled && $contact->messages()->where('direction', 'inbound')->count() === 1) {
+                try {
+                    $this->sendAutoReply($waService, $contact->phone_number, $team->welcome_message, $team->welcome_message_config);
+                    return; // Exit after welcome message
+                } catch (\Exception $e) {
+                    Log::error("Welcome Message Failed: " . $e->getMessage());
+                }
+            }
+
+            // B. Business Hours / Away Message
+            $isWithinHours = $team->isWithinBusinessHours(); // Uses the new array format
+
+            if ($team->away_message_enabled && !$isWithinHours) {
                 // Throttle: Don't spam. Check last outbound message time?
                 // For MVP: Check if we sent an away message in last 24h?
-                // Or just check if conversation has recent outbound?
                 $recentOutbound = $conversation->messages()
                     ->where('direction', 'outbound')
                     ->where('created_at', '>', now()->subHours(24))
@@ -231,14 +251,7 @@ class ProcessWebhookJob implements ShouldQueue
 
                 if (!$recentOutbound) {
                     try {
-                        $waService = new \App\Services\WhatsAppService();
-                        $waService->setTeam($team);
-                        $waService->sendText($contact->phone_number, $team->away_message ?? 'We are currently closed.');
-
-                        // Log it as system message? Or regular outbound?
-                        // WhatsAppService likely creates a Message record? 
-                        // Check sendText implementation.
-                        // If not, we should create one to show in UI.
+                        $this->sendAutoReply($waService, $contact->phone_number, $team->away_message, $team->away_message_config);
                     } catch (\Exception $e) {
                         Log::error("Away Message Failed: " . $e->getMessage());
                     }
@@ -248,6 +261,15 @@ class ProcessWebhookJob implements ShouldQueue
 
         // Broadcast
         \App\Events\MessageReceived::dispatch($message);
+
+        // 7. Mark as Read (If Enabled)
+        if ($team->read_receipts_enabled) {
+            try {
+                (new \App\Services\WhatsAppService())->setTeam($team)->markRead($msgData['id']);
+            } catch (\Exception $e) {
+                Log::warning("Failed to mark message as read: " . $e->getMessage());
+            }
+        }
     }
 
     protected function processStatusUpdate(array $statusData)
@@ -301,14 +323,49 @@ class ProcessWebhookJob implements ShouldQueue
     {
         $type = $interactive['type'];
 
-        if ($type === 'button_reply') {
-            return $interactive['button_reply']['title'] ?? '[Button Reply]';
-        }
-
         if ($type === 'list_reply') {
             return $interactive['list_reply']['title'] ?? '[List Reply]';
         }
 
         return "[Interactive: $type]";
+    }
+
+    /**
+     * Helper to send auto-replies supporting Rich Configuration
+     */
+    protected function sendAutoReply(\App\Services\WhatsAppService $waService, $to, $legacyText, $config)
+    {
+        // Fallback to legacy text if no config or config empty
+        if (empty($config)) {
+            $waService->sendText($to, $legacyText ?? 'Auto-reply');
+            return;
+        }
+
+        $type = $config['type'] ?? 'regular';
+
+        if ($type === 'regular') {
+            $regularType = $config['regular_type'] ?? 'text';
+            $content = $config['text'] ?? '';
+            $mediaUrl = $config['media_url'] ?? null;
+            $caption = $config['caption'] ?? null;
+
+            if ($regularType === 'text') {
+                $waService->sendText($to, $content);
+            } elseif (in_array($regularType, ['image', 'video', 'audio', 'document'])) {
+                if ($mediaUrl) {
+                    $waService->sendMedia($to, $regularType, $mediaUrl, $caption);
+                } else {
+                    Log::warning("Auto-reply media URL missing for type $regularType");
+                }
+            }
+        } elseif ($type === 'template') {
+            $name = $config['template_name'] ?? null;
+            $lang = $config['language'] ?? 'en_US';
+
+            if ($name) {
+                // Assuming no variables for simple auto-replies for now
+                $waService->sendTemplate($to, $name, $lang, []);
+            }
+        }
     }
 }

@@ -25,9 +25,17 @@ Route::middleware([
         return view('teams.whatsapp-config');
     })->name('teams.whatsapp_config')->middleware('can:manage-settings');
 
+    Route::get('/whatsapp/inbox', function () {
+        return view('teams.inbox-settings');
+    })->name('teams.inbox_settings')->middleware('can:manage-settings');
+
+    Route::get('/whatsapp/opt-in', \App\Livewire\Teams\OptInManagement::class)->name('teams.whatsapp_opt_in')->middleware('can:manage-settings');
+
     Route::post('/whatsapp/onboard/exchange', [\App\Http\Controllers\WhatsAppOnboardingController::class, 'exchangeToken'])
         ->name('whatsapp.onboard.exchange')
         ->middleware('can:manage-settings');
+
+    Route::get('/team/members', \App\Livewire\Teams\MembersManager::class)->name('teams.members');
 
     // Super Admin Routes
     Route::middleware([\App\Http\Middleware\EnsureUserIsSuperAdmin::class])->group(function () {
@@ -73,6 +81,11 @@ Route::middleware([
     Route::get('/activity', function () {
         return view('activity.index');
     })->name('activity.index')->middleware('can:manage-settings');
+
+    // Developer Portal
+    Route::get('/developer', \App\Livewire\Developer\DeveloperOverview::class)->name('developer.overview')->middleware('can:manage-settings');
+    Route::get('/developer/webhooks', \App\Livewire\Developer\WebhookManager::class)->name('developer.webhooks')->middleware('can:manage-settings');
+    Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs');
 });
 
 // Embed Routes (Publicly accessible but Token protected internally)

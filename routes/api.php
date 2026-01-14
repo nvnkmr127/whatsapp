@@ -9,17 +9,30 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/webhooks/trigger/{id}', [\App\Http\Controllers\Api\WebhookTriggerController::class, 'trigger'])->middleware('auth:sanctum');
 
-Route::group(['middleware' => ['auth:sanctum', 'throttle:api']], function () {
-    Route::post('/v1/contacts', [\App\Http\Controllers\ExternalContactController::class, 'store']);
-    Route::post('/v1/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
+Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'], function () {
+    // Contacts
+    Route::get('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'index']);
+    Route::post('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'store']);
 
-    // Conversation API
-    Route::get('/v1/conversations/{phone}', [\App\Http\Controllers\ExternalConversationController::class, 'index']);
-    Route::post('/v1/messages', [\App\Http\Controllers\ExternalConversationController::class, 'send']);
+    // Templates
+    Route::get('/templates', [\App\Http\Controllers\Api\ExternalTemplateController::class, 'index']);
+
+    // Conversations
+    Route::get('/conversations/{phone}', [\App\Http\Controllers\ExternalConversationController::class, 'index']);
+
+    // Messages
+    Route::post('/messages', [\App\Http\Controllers\ExternalConversationController::class, 'send']);
+
+    // Inbound Webhooks (receive from external software)
+    Route::post('/webhooks/inbound', [\App\Http\Controllers\Api\InboundWebhookController::class, 'handle']);
+    Route::get('/webhooks/inbound/url', [\App\Http\Controllers\Api\InboundWebhookController::class, 'getUrl']);
+
+    // Embed Token (if needed)
+    Route::post('/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
 });
 
 use App\Http\Controllers\WhatsAppWebhookController;
 
-Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.webhook');
+Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('api.webhook.whatsapp');
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])
     ->middleware(\App\Http\Middleware\VerifyWhatsAppSignature::class);

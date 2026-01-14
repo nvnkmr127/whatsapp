@@ -17,6 +17,17 @@ class WhatsappConfig extends Component
     public $wm_access_token;
     public $outbound_webhook_url;
 
+    // Business Profile Fields
+    public $profile_about;
+    public $profile_address;
+    public $profile_description;
+    public $profile_email;
+    public $profile_vertical;
+    public $profile_websites = [];
+    public $profile_picture_url;
+    public $is_editing_profile = false;
+
+
 
 
     // Status
@@ -34,6 +45,8 @@ class WhatsappConfig extends Component
     public $wm_verified_name;
 
     public $token_info = [];
+    public $credits = 0;
+    public $credits_total = 1000;
     public $wm_test_message;
 
     protected $rules = [
@@ -47,7 +60,11 @@ class WhatsappConfig extends Component
     public function mount()
     {
         $this->loadSettings();
+        if ($this->is_whatsmark_connected) {
+            $this->loadBusinessProfile();
+        }
     }
+
 
     public function loadSettings()
     {
@@ -81,6 +98,13 @@ class WhatsappConfig extends Component
         $this->wm_quality_rating = get_setting('whatsapp_wm_quality_rating');
         $this->wm_phone_display = get_setting('whatsapp_wm_phone_display');
         $this->wm_verified_name = get_setting('whatsapp_wm_verified_name');
+
+        // Fetch Real Billing Data
+        $wallet = \App\Models\TeamWallet::firstOrCreate(['team_id' => $team->id]);
+        $this->credits = $wallet->balance;
+
+        $plan = \App\Models\Plan::where('name', $team->subscription_plan)->first();
+        $this->credits_total = $plan ? $plan->message_limit : 1000;
     }
 
     public function connect()
@@ -152,6 +176,8 @@ class WhatsappConfig extends Component
 
             set_setting('whatsapp_is_webhook_connected', 1); // Mock success for dev
             $this->is_webhook_connected = true;
+
+            $this->loadBusinessProfile();
 
             $this->dispatch('notify', 'Connected successfully! Phone & Templates synced.');
         } else {
@@ -242,6 +268,9 @@ class WhatsappConfig extends Component
                 $this->wm_default_phone_number = $this->wm_phone_display;
             }
 
+            // Also reload business profile details
+            $this->loadBusinessProfile();
+
             $this->dispatch('notify', 'Account info synced successfully!');
         } else {
             $this->dispatch('notify', 'Sync failed: ' . $result['message']);
@@ -268,6 +297,89 @@ class WhatsappConfig extends Component
             $this->dispatch('notify', 'Registration failed: ' . $result['message']);
         }
     }
+
+    public function loadBusinessProfile()
+    {
+        try {
+            $team = auth()->user()->currentTeam->fresh();
+            if (!$team->whatsapp_access_token || !$team->whatsapp_phone_number_id) {
+                return;
+            }
+
+            $service = app(\App\Services\WhatsAppService::class);
+            $service->setTeam($team);
+            $response = $service->getBusinessProfile();
+
+            if (isset($response['data']['data'][0])) {
+                $profile = $response['data']['data'][0];
+                $this->profile_about = $profile['about'] ?? '';
+                $this->profile_address = $profile['address'] ?? '';
+                $this->profile_description = $profile['description'] ?? '';
+                $this->profile_email = $profile['email'] ?? '';
+                $this->profile_vertical = $profile['vertical'] ?? '';
+                $this->profile_websites = $profile['websites'] ?? [];
+                $this->profile_picture_url = $profile['profile_picture_url'] ?? '';
+
+                $this->dispatch('notify', 'Business profile data fetched from WhatsApp!');
+            } elseif (isset($response['error'])) {
+                \Illuminate\Support\Facades\Log::error("WhatsApp Profile API Error: " . json_encode($response['error']));
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to load WhatsApp Business Profile: " . $e->getMessage());
+        }
+    }
+
+    public function updateBusinessProfile()
+    {
+        try {
+            $service = app(\App\Services\WhatsAppService::class);
+            $service->setTeam(auth()->user()->currentTeam);
+
+            $data = [
+                'about' => $this->profile_about,
+                'address' => $this->profile_address,
+                'description' => $this->profile_description,
+                'email' => $this->profile_email,
+                'vertical' => $this->profile_vertical,
+                'websites' => $this->profile_websites,
+            ];
+
+            $response = $service->updateBusinessProfile($data);
+
+            if (isset($response['success']) && $response['success']) {
+                $this->is_editing_profile = false;
+                $this->dispatch('notify', 'Business profile updated successfully!');
+            } else {
+                $error = $response['error']['message'] ?? 'Unknown error';
+                $this->dispatch('notify', 'Failed to update profile: ' . $error);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function addWebsite()
+    {
+        $this->profile_websites[] = '';
+    }
+
+    public function removeWebsite($index)
+    {
+        unset($this->profile_websites[$index]);
+        $this->profile_websites = array_values($this->profile_websites);
+    }
+
+    public function editProfile()
+    {
+        $this->is_editing_profile = true;
+    }
+
+    public function cancelEdit()
+    {
+        $this->is_editing_profile = false;
+        $this->loadBusinessProfile(); // Revert changes by reloading
+    }
+
 
 
     public function render()
