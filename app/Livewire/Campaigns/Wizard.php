@@ -2,11 +2,21 @@
 
 namespace App\Livewire\Campaigns;
 
+use App\Models\Contact;
+use App\Models\ContactTag;
+use App\Models\WhatsappTemplate;
+use App\Models\Campaign;
+use App\Jobs\ProcessCampaignJob;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Computed;
+use Carbon\Carbon;
 
 class Wizard extends Component
 {
+    use WithFileUploads;
+
     public $step = 1;
 
     // Step 1: Details
@@ -15,22 +25,28 @@ class Wizard extends Component
     public $scheduleMode = 'now'; // 'now' or 'later'
 
     // Step 2: Audience
-    public $audienceType = 'tags'; // 'all' or 'tags'
+    public $audienceType = 'tags'; // 'tags', 'contacts', or 'all'
     public $selectedTags = [];
+    public $selectedContacts = [];
     public $audienceCount = 0;
 
     // Step 3: Message
     public $selectedTemplateId;
-    public $templateVars = []; // ['{{1}}' => 'value'] or simple index array
-    public $headerMediaUrl; // For IMAGE/VIDEO/DOCUMENT headers
+    public $templateVars = []; // ['{{1}}' => 'value']
+    public $headerMediaFile; // For IMAGE/VIDEO/DOCUMENT headers (Upload)
+    public $headerMediaUrl; // For IMAGE/VIDEO/DOCUMENT headers (URL fallback)
+    public $headerTextVar; // For TEXT header variable
+
+    // UI Helpers
+    public $isUploading = false;
 
     public function getStepsProperty()
     {
         return [
-            1 => 'Configuration',
-            2 => 'Target Audience',
-            3 => 'Mission Message',
-            4 => 'Final Review',
+            1 => 'Setup',
+            2 => 'Audience',
+            3 => 'Message',
+            4 => 'Review',
         ];
     }
 
@@ -40,19 +56,26 @@ class Wizard extends Component
         $this->scheduled_at = now()->addMinutes(5)->format('Y-m-d\TH:i');
     }
 
-    public function getTemplatesProperty()
+    #[Computed]
+    public function templates()
     {
-        return \App\Models\WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->get();
+        return WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+            ->where('status', 'APPROVED')
+            ->get();
     }
 
-    public function getTagsProperty()
+    #[Computed]
+    public function tags()
     {
-        return \App\Models\ContactTag::where('team_id', auth()->user()->currentTeam->id)->get();
+        return ContactTag::where('team_id', auth()->user()->currentTeam->id)->get();
     }
 
-    public function updatedSelectedTags()
+    #[Computed]
+    public function contacts()
     {
-        $this->calculateAudience();
+        return Contact::where('team_id', auth()->user()->currentTeam->id)
+            ->orderBy('name')
+            ->get();
     }
 
     public function updatedAudienceType()
@@ -60,23 +83,70 @@ class Wizard extends Component
         $this->calculateAudience();
     }
 
+    public function updatedSelectedTags()
+    {
+        $this->calculateAudience();
+    }
+
+    public function updatedSelectedContacts()
+    {
+        $this->calculateAudience();
+    }
+
     public function calculateAudience()
     {
-        $query = \App\Models\Contact::where('team_id', auth()->user()->currentTeam->id);
+        $query = Contact::where('team_id', auth()->user()->currentTeam->id);
 
         if ($this->audienceType === 'tags' && !empty($this->selectedTags)) {
             $query->whereHas('tags', function ($q) {
                 $q->whereIn('contact_tags.id', $this->selectedTags);
             });
+        } elseif ($this->audienceType === 'contacts' && !empty($this->selectedContacts)) {
+            $query->whereIn('id', $this->selectedContacts);
+        } elseif ($this->audienceType === 'all') {
+            // Keep all
+        } else {
+            // No selection
+            if ($this->audienceType !== 'all') {
+                $this->audienceCount = 0;
+                return;
+            }
         }
 
         $this->audienceCount = $query->count();
     }
 
+    public function updatedSelectedTemplateId($value)
+    {
+        $this->templateVars = [];
+        $this->headerMediaFile = null;
+        $this->headerMediaUrl = null;
+        $this->headerTextVar = null;
+
+        if ($value) {
+            $template = WhatsappTemplate::find($value);
+            if ($template) {
+                // Initialize variables based on body params count
+                $bodyText = '';
+                foreach ($template->components ?? [] as $c) {
+                    if (($c['type'] ?? '') === 'BODY') {
+                        $bodyText = $c['text'] ?? '';
+                    }
+                }
+                preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
+                $paramCount = count(array_unique($matches[1] ?? []));
+
+                for ($i = 1; $i <= $paramCount; $i++) {
+                    $this->templateVars[$i - 1] = '';
+                }
+            }
+        }
+    }
+
     public function launch()
     {
         $this->validate([
-            'name' => 'required',
+            'name' => 'required|min:3',
             'selectedTemplateId' => 'required',
             'audienceCount' => 'numeric|min:1',
             'scheduled_at' => $this->scheduleMode === 'later' ? 'required|date|after:now' : 'nullable'
@@ -86,17 +156,30 @@ class Wizard extends Component
             $this->scheduled_at = now();
         }
 
-        $template = \App\Models\WhatsappTemplate::find($this->selectedTemplateId);
+        $template = WhatsappTemplate::find($this->selectedTemplateId);
 
-        // Prepare variables (Prepend Media Link if exists)
-        $finalVars = $this->templateVars;
-        if (!empty($this->headerMediaUrl)) {
-            array_unshift($finalVars, $this->headerMediaUrl);
+        // Handle Media Header
+        $finalHeaderMedia = null;
+        if ($this->headerMediaFile) {
+            $finalHeaderMedia = $this->headerMediaFile->store('campaigns/headers', 'public');
+            $finalHeaderMedia = asset('storage/' . $finalHeaderMedia);
+        } elseif ($this->headerMediaUrl) {
+            $finalHeaderMedia = $this->headerMediaUrl;
         }
-        // Ensure array is indexed correctly for JSON storage
-        $finalVars = array_values($finalVars);
 
-        $campaign = \App\Models\Campaign::create([
+        // Prepare variables
+        $finalVars = array_values($this->templateVars);
+
+        // If there's a header media, it usually goes as the first variable in some implementations, 
+        // but let's check how the backend expects it. 
+        // Based on previous code: if (!empty($this->headerMediaUrl)) { array_unshift($finalVars, $this->headerMediaUrl); }
+        if ($finalHeaderMedia) {
+            // In some cases, we might want to store the media path separately in the DB 
+            // but for current ProcessCampaignJob logic, we'll stick to prepending.
+            // array_unshift($finalVars, $finalHeaderMedia);
+        }
+
+        $campaign = Campaign::create([
             'team_id' => auth()->user()->currentTeam->id,
             'name' => $this->name,
             'campaign_name' => $this->name,
@@ -104,23 +187,23 @@ class Wizard extends Component
             'template_name' => $template->name,
             'template_language' => $template->language,
             'template_variables' => $finalVars,
+            'header_params' => $finalHeaderMedia ? [$finalHeaderMedia] : ($this->headerTextVar ? [$this->headerTextVar] : []),
             'audience_filters' => [
                 'type' => $this->audienceType,
                 'tags' => $this->selectedTags,
+                'contacts' => $this->selectedContacts,
                 'all' => $this->audienceType === 'all'
             ],
             'scheduled_at' => $this->scheduled_at,
-            'status' => 'scheduled'
+            'status' => 'scheduled',
+            'filename' => $finalHeaderMedia // Store file path for reference
         ]);
 
-        // Dispatch Job
-        // If scheduled for future, we might use Laravel Scheduler to pick it up?
-        // Or using `dispatch()->delay(...)`.
-        $delay = \Carbon\Carbon::parse($this->scheduled_at);
+        $delay = Carbon::parse($this->scheduled_at);
         $seconds = now()->diffInSeconds($delay, false);
         $delaySeconds = $seconds > 0 ? $seconds : 0;
 
-        \App\Jobs\ProcessCampaignJob::dispatch($campaign->id)->delay($delaySeconds);
+        ProcessCampaignJob::dispatch($campaign->id)->delay($delaySeconds);
 
         return redirect()->route('campaigns.index')->with('message', 'Campaign Launched!');
     }
@@ -131,3 +214,4 @@ class Wizard extends Component
         return view('livewire.campaigns.wizard');
     }
 }
+

@@ -36,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendOutboundWebhook::class
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderStatusUpdated::class,
+            \App\Listeners\SendOrderLifecycleNotification::class
+        );
+
         $permissions = [
             'manage-settings',
             'manage-billing',

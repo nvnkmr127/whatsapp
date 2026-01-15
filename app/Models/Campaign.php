@@ -11,6 +11,9 @@ class Campaign extends Model
     protected $casts = [
         'template_variables' => 'array',
         'audience_filters' => 'array',
+        'header_params' => 'array',
+        'body_params' => 'array',
+        'footer_params' => 'array',
         'scheduled_at' => 'datetime',
     ];
 

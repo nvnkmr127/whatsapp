@@ -46,6 +46,7 @@ class Team extends JetstreamTeam
         'opt_out_message_enabled',
         'chat_assignment_config',
         'chat_status_rules',
+        'commerce_config',
     ];
 
     /**
@@ -83,6 +84,7 @@ class Team extends JetstreamTeam
             'opt_out_message_enabled' => 'boolean',
             'chat_assignment_config' => 'array',
             'chat_status_rules' => 'array',
+            'commerce_config' => 'array',
         ];
     }
 

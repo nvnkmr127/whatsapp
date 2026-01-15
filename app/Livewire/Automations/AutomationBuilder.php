@@ -190,6 +190,10 @@ class AutomationBuilder extends Component
                 $data['time_unit'] = 'seconds';
                 $data['value'] = 5;
                 break;
+            case 'send_flow':
+                $data['flow_id'] = '';
+                $data['text'] = 'Open Form';
+                break;
         }
 
         $this->nodes[] = [
@@ -277,6 +281,9 @@ class AutomationBuilder extends Component
                     $this->nodeJson = $data['json_body'] ?? '';
                 } elseif ($type === 'delay') {
                     $this->nodeText = $data['value'] ?? '5';
+                } elseif ($type === 'send_flow') {
+                    $this->nodeSaveTo = $data['flow_id'] ?? '';
+                    $this->nodeText = $data['text'] ?? 'Open Form';
                 }
                 break;
             }
@@ -324,6 +331,9 @@ class AutomationBuilder extends Component
                     $node['data']['template_name'] = $this->nodeText;
                 } elseif ($type === 'delay') {
                     $node['data']['value'] = $this->nodeText;
+                } elseif ($type === 'send_flow') {
+                    $node['data']['flow_id'] = $this->nodeSaveTo;
+                    $node['data']['text'] = $this->nodeText;
                 }
             }
         }

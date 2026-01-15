@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Developer\KnowledgeBaseManager;
+use App\Livewire\Settings\AiSettings;
 
 Route::get('/', function () {
     return view('welcome');
@@ -17,7 +19,9 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 
-    Route::get('/webhook-workflows', \App\Livewire\Webhooks\WorkflowList::class)->name('webhooks.index');
+    // Webhooks
+    Route::get('/webhooks', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhooks.index');
+    Route::get('/webhooks/logs', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware('can:manage-settings');
     Route::get('/webhook-workflows/{workflowId}/report', \App\Livewire\Webhooks\WebhookReport::class)->name('webhooks.report');
 
     // WhatsApp Config (Admins Only)
@@ -30,6 +34,10 @@ Route::middleware([
     })->name('teams.inbox_settings')->middleware('can:manage-settings');
 
     Route::get('/whatsapp/opt-in', \App\Livewire\Teams\OptInManagement::class)->name('teams.whatsapp_opt_in')->middleware('can:manage-settings');
+
+    // AI Business Brain
+    Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware('can:manage-settings');
+    Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware('can:manage-settings');
 
     Route::post('/whatsapp/onboard/exchange', [\App\Http\Controllers\WhatsAppOnboardingController::class, 'exchangeToken'])
         ->name('whatsapp.onboard.exchange')
@@ -69,12 +77,11 @@ Route::middleware([
 
     Route::get('/automations', \App\Livewire\Automations\AutomationList::class)->name('automations.index')->middleware('can:manage-campaigns');
 
-    Route::get('/webhooks', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware('can:manage-settings');
-
-
-
-
     Route::get('/automations/builder/{automationId?}', \App\Livewire\Automations\AutomationBuilder::class)->name('automations.builder')->middleware('can:manage-campaigns');
+
+    // WhatsApp Flows
+    Route::get('/flows', \App\Livewire\Flows\FlowManager::class)->name('flows.index')->middleware('can:manage-campaigns');
+    Route::get('/flows/builder/{flowId?}', \App\Livewire\Flows\FlowBuilder::class)->name('flows.builder')->middleware('can:manage-campaigns');
 
     Route::get('/analytics', \App\Livewire\Analytics\Dashboard::class)->name('analytics')->middleware('can:manage-settings');
 
@@ -85,7 +92,16 @@ Route::middleware([
     // Developer Portal
     Route::get('/developer', \App\Livewire\Developer\DeveloperOverview::class)->name('developer.overview')->middleware('can:manage-settings');
     Route::get('/developer/webhooks', \App\Livewire\Developer\WebhookManager::class)->name('developer.webhooks')->middleware('can:manage-settings');
+    Route::get('/developer/webhook-sources', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhook-sources.index')->middleware('can:manage-settings');
+    Route::get('/developer/api-tokens', \App\Livewire\Developer\ApiTokenManager::class)->name('developer.api-tokens')->middleware('can:manage-settings');
     Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs');
+    // Commerce
+    // Commerce
+    Route::get('/commerce', \App\Livewire\Commerce\Dashboard::class)->name('commerce.dashboard')->middleware('can:manage-campaigns');
+    Route::get('/commerce/orders', \App\Livewire\Commerce\OrderManager::class)->name('commerce.orders')->middleware('can:manage-campaigns');
+    Route::get('/commerce/products', \App\Livewire\Commerce\ProductManager::class)->name('commerce.products')->middleware('can:manage-campaigns');
+    Route::get('/commerce/settings', \App\Livewire\Commerce\CommerceSettings::class)->name('commerce.settings')->middleware('can:manage-settings');
+    Route::get('/integrations/ecommerce', \App\Livewire\Integrations\EcommerceIntegrations::class)->name('integrations.ecommerce')->middleware('can:manage-settings');
 });
 
 // Embed Routes (Publicly accessible but Token protected internally)

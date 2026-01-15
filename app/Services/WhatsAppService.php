@@ -161,7 +161,7 @@ class WhatsAppService
     /**
      * Send a template message.
      */
-    public function sendTemplate($to, $templateName, $language = 'en_US', $variables = [])
+    public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [])
     {
         // Fetch Template first to understand structure
         $tpl = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
@@ -181,36 +181,44 @@ class WhatsAppService
             }
         }
 
-        // Logic to split variables into Header vs Body
-        // If template has Header params (IMAGE, VIDEO, DOCUMENT), we assume the FIRST variable is the media link.
-        // This is a heuristic until we have a proper UI map.
         $components = [];
-        $headerVars = null;
-        $bodyVars = $variables;
 
-        if ($tpl && !empty($tpl->components)) {
-            $componentData = $tpl->components; // Encrypted/Json? It's cast to array in model.
+        // Handle Header
+        if (!empty($headerParams)) {
+            $headerComponent = collect($tpl->components ?? [])->firstWhere('type', 'HEADER');
+            $headerType = 'text';
+            if ($headerComponent && in_array($headerComponent['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+                $headerType = strtolower($headerComponent['format']);
+            }
 
-            // Check for HEADER with format IMAGE/VIDEO/DOCUMENT
-            $headerComponent = collect($componentData)->firstWhere('type', 'HEADER');
+            $hParams = [];
+            foreach ($headerParams as $hp) {
+                if ($headerType === 'text') {
+                    $hParams[] = ['type' => 'text', 'text' => $hp];
+                } else {
+                    $hParams[] = ['type' => $headerType, $headerType => ['link' => $hp]];
+                }
+            }
+
+            if (!empty($hParams)) {
+                $components[] = [
+                    'type' => 'header',
+                    'parameters' => $hParams
+                ];
+            }
+        } elseif ($tpl && !empty($tpl->components)) {
+            // BACKWARD COMPATIBILITY: Auto-detect header if not provided
+            $headerComponent = collect($tpl->components)->firstWhere('type', 'HEADER');
             if ($headerComponent && in_array($headerComponent['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
                 $format = $headerComponent['format'];
-                $mediaLink = array_shift($bodyVars) ?? 'https://via.placeholder.com/150'; // Shift first var as media, or fallback
-
-                // If the shifted var is NOT a URL, put it back? No, valid variables are strings. 
-                // We will assume logic: If Media Header exists, Var1 = MediaURL.
+                $mediaLink = array_shift($bodyParams) ?? 'https://via.placeholder.com/150';
 
                 if (!filter_var($mediaLink, FILTER_VALIDATE_URL)) {
-                    // Log warning, use fallback
-                    Log::warning("Expected URL for {$format} header, got '{$mediaLink}'. Using placeholder.");
-                    // Depending on strictness, we might put it back to body if we think logic is wrong.
-                    // But for 'channel_partnerv2' which failed, it expects IMAGE.
+                    Log::warning("Expected URL for {$format} header. Using placeholder.");
                     $mediaLink = 'https://placehold.co/600x400.png?text=Image';
-                    array_unshift($bodyVars, $variables[0]); // Put original back to body if it wasn't a URL? 
-                    // Actually, if the user didn't provide a URL, they probably provided body text.
                 }
 
-                $manualType = strtolower($format); // image, video, document
+                $manualType = strtolower($format);
                 $components[] = [
                     'type' => 'header',
                     'parameters' => [
@@ -224,10 +232,18 @@ class WhatsAppService
         }
 
         // Add Body Component
-        if (!empty($bodyVars)) {
+        if (!empty($bodyParams)) {
             $components[] = [
                 'type' => 'body',
-                'parameters' => $this->formatTemplateVariables($bodyVars)[0]['parameters']
+                'parameters' => $this->formatTemplateVariables($bodyParams)[0]['parameters']
+            ];
+        }
+
+        // Add Footer Component (if any)
+        if (!empty($footerParams)) {
+            $components[] = [
+                'type' => 'footer',
+                'parameters' => $this->formatTemplateVariables($footerParams)[0]['parameters']
             ];
         }
 
@@ -260,8 +276,9 @@ class WhatsAppService
         // 4. Validate Variables
         if ($tpl) {
             $tplService = new TemplateService();
-            if (!$tplService->validateVariables($tpl, $variables)) {
-                Log::error("Template Validation Failed for {$to}", ['template' => $templateName, 'vars' => $variables]);
+            $allVars = array_merge($headerParams, $bodyParams, $footerParams);
+            if (!$tplService->validateVariables($tpl, $allVars)) {
+                Log::error("Template Validation Failed for {$to}", ['template' => $templateName, 'vars' => $allVars]);
                 return ['success' => false, 'error' => 'Template Variable Mismatch'];
             }
         }

@@ -28,12 +28,13 @@ class SendCampaignMessageJob implements ShouldQueue
 
         $waService = new \App\Services\WhatsAppService();
 
-        $vars = $campaign->template_variables ?? [];
+        $bodyVars = $campaign->template_variables ?? [];
+        $headerVars = $campaign->header_params ?? [];
 
         // Simple personalization (Support {{name}} in variables)
-        $vars = array_map(function ($v) use ($contact) {
+        $bodyVars = array_map(function ($v) use ($contact) {
             return str_replace('{{name}}', $contact->name, $v);
-        }, $vars);
+        }, $bodyVars);
 
         try {
             $waService->setTeam($campaign->team);
@@ -41,7 +42,8 @@ class SendCampaignMessageJob implements ShouldQueue
                 $contact->phone_number,
                 $campaign->template_name,
                 $campaign->template_language,
-                $vars
+                $bodyVars,
+                $headerVars
             );
 
             if (!empty($response['success']) && $response['success']) {

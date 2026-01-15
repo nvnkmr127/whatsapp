@@ -283,6 +283,7 @@
                         ['type' => 'template', 'label' => 'WhatsApp Template', 'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', 'color' => 'text-green-500', 'bg' => 'bg-green-50 dark:bg-green-900/20'],
                         ['type' => 'interactive_button', 'label' => 'Reply Buttons', 'icon' => 'M13 10V3L4 14h7v7l9-11h-7z', 'color' => 'text-orange-500', 'bg' => 'bg-orange-50 dark:bg-orange-900/20'],
                         ['type' => 'interactive_list', 'label' => 'List Menu', 'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h16', 'color' => 'text-orange-500', 'bg' => 'bg-orange-50 dark:bg-orange-900/20'],
+                        ['type' => 'send_flow', 'label' => 'Send Flow', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 'color' => 'text-indigo-500', 'bg' => 'bg-indigo-50 dark:bg-indigo-900/20'],
                         ['type' => 'location_request', 'label' => 'Location Request', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z', 'color' => 'text-red-500', 'bg' => 'bg-red-50 dark:bg-red-900/20'],
                         ['type' => 'contact', 'label' => 'Send Contact', 'icon' => 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4', 'color' => 'text-blue-500', 'bg' => 'bg-blue-50 dark:bg-blue-900/20'],
                     ],
@@ -748,14 +749,22 @@
                             </div>
 
                             <!-- Save Response To -->
-                             <div class="space-y-1" x-show="['user_input', 'openai'].includes(selectedNode.type)">
-                                <label class="block text-xs font-bold text-slate-500 uppercase">Save Variable</label>
+                             <div class="space-y-1" x-show="['user_input', 'openai', 'send_flow'].includes(selectedNode.type)">
+                                <label class="block text-xs font-bold text-slate-500 uppercase" x-text="selectedNode.type === 'send_flow' ? 'Flow Name / ID' : 'Save Variable'"></label>
                                  <div class="flex items-center gap-2">
-                                    <span class="text-slate-400 font-mono text-sm">@</span>
+                                    <span class="text-slate-400 font-mono text-sm" x-show="selectedNode.type !== 'send_flow'">@</span>
                                     <input type="text" wire:model.blur="nodeSaveTo" wire:change="updateNodeData"
                                         class="flex-1 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200"
-                                        placeholder="variable_name">
+                                        :placeholder="selectedNode.type === 'send_flow' ? 'Flow ID (e.g. 123456...)' : 'variable_name'">
                                  </div>
+                            </div>
+                            
+                            <!-- Send Flow Button Text -->
+                            <div class="space-y-1" x-show="selectedNode.type === 'send_flow'">
+                                <label class="block text-xs font-bold text-slate-500 uppercase">Button Text</label>
+                                <input type="text" wire:model.blur="nodeText" wire:change="updateNodeData"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-green focus:border-wa-green text-slate-700 dark:text-slate-200"
+                                    placeholder="e.g. Open Form">
                             </div>
 
                             <!-- Options / Buttons List -->

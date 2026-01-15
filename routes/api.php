@@ -27,6 +27,10 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
     Route::post('/webhooks/inbound', [\App\Http\Controllers\Api\InboundWebhookController::class, 'handle']);
     Route::get('/webhooks/inbound/url', [\App\Http\Controllers\Api\InboundWebhookController::class, 'getUrl']);
 
+    // Source-specific webhook endpoints (no auth required - verified by source config)
+    Route::post('/webhooks/inbound/{source}', [\App\Http\Controllers\Api\InboundWebhookController::class, 'handleSource'])->withoutMiddleware(['auth:sanctum']);
+    Route::get('/webhooks/sources/{source}/url', [\App\Http\Controllers\Api\InboundWebhookController::class, 'getSourceUrl']);
+
     // Embed Token (if needed)
     Route::post('/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
 });
@@ -36,3 +40,9 @@ use App\Http\Controllers\WhatsAppWebhookController;
 Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('api.webhook.whatsapp');
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])
     ->middleware(\App\Http\Middleware\VerifyWhatsAppSignature::class);
+Route::post('/whatsapp/flow', [App\Http\Controllers\WhatsAppFlowController::class, 'handle']);
+
+// Commerce Webhooks
+Route::post('/webhooks/shopify/orders', [\App\Http\Controllers\Webhooks\ShopifyWebhookController::class, 'handle']);
+Route::post('/webhooks/woocommerce/orders', [\App\Http\Controllers\Webhooks\WooCommerceWebhookController::class, 'handle']);
+Route::post('/webhooks/custom/orders', [\App\Http\Controllers\Webhooks\CustomSiteWebhookController::class, 'handle']);

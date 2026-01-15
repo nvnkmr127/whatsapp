@@ -54,9 +54,9 @@
                             d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                     </svg>
                 </div>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Workflows</span>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Inbound Sources</span>
             </div>
-            <div class="text-3xl font-bold text-slate-900 dark:text-white">{{ $stats['webhook_workflows'] }}</div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white">{{ $stats['webhook_sources'] }}</div>
         </div>
 
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-slate-50 dark:border-slate-800">
@@ -75,8 +75,8 @@
     </div>
 
     <!-- Quick Links -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <a href="{{ route('profile.show') }}"
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="{{ route('developer.api-tokens') }}"
             class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 transition-all">
             <div class="flex items-center gap-4 mb-4">
                 <div
@@ -90,6 +90,23 @@
                 <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">API Tokens</h3>
             </div>
             <p class="text-sm text-slate-500 font-medium">Manage your API authentication tokens</p>
+        </a>
+
+        <a href="{{ route('webhooks.index') }}"
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 transition-all">
+            <div class="flex items-center gap-4 mb-4">
+                <div
+                    class="p-3 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-2xl text-fuchsia-600 group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Inbound Sources
+                </h3>
+            </div>
+            <p class="text-sm text-slate-500 font-medium">Setup webhooks to receive data</p>
         </a>
 
         <a href="{{ route('developer.webhooks') }}"

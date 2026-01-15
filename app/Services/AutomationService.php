@@ -262,6 +262,113 @@ class AutomationService
                     $this->moveToNextNode($run);
                 }
                 break;
+
+            case 'openai':
+                $teamId = $run->automation->team_id;
+                $service = new KnowledgeBaseService();
+
+                // 1. Get Settings
+                $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_$teamId")->value('value');
+                $model = \App\Models\Setting::where('key', "ai_openai_model_$teamId")->value('value') ?: 'gpt-4o';
+                $persona = \App\Models\Setting::where('key', "ai_persona_$teamId")->value('value') ?: "You are a helpful business assistant.";
+
+                $temperature = (float) \App\Models\Setting::where('key', "ai_temperature_$teamId")->value('value') ?: 0.7;
+                $showHeader = (bool) \App\Models\Setting::where('key', "ai_show_header_$teamId")->value('value');
+                $showFooter = (bool) \App\Models\Setting::where('key', "ai_show_footer_$teamId")->value('value');
+                $header = \App\Models\Setting::where('key', "ai_header_$teamId")->value('value');
+                $footer = \App\Models\Setting::where('key', "ai_footer_$teamId")->value('value');
+
+                $showStop = (bool) \App\Models\Setting::where('key', "ai_show_stop_$teamId")->value('value');
+                $stopWords = \App\Models\Setting::where('key', "ai_stop_keywords_$teamId")->value('value');
+
+                $showRetry = (bool) \App\Models\Setting::where('key', "ai_show_retry_$teamId")->value('value');
+                $retries = (int) \App\Models\Setting::where('key', "ai_retry_$teamId")->value('value') ?: 1;
+
+                $showFallback = (bool) \App\Models\Setting::where('key', "ai_show_fallback_$teamId")->value('value');
+                $fallback = \App\Models\Setting::where('key', "ai_fallback_$teamId")->value('value') ?: "I'm sorry, I'm having trouble processing that right now.";
+
+                if (!$apiKey) {
+                    Log::error("OpenAI API Key missing for team $teamId");
+                    $this->moveToNextNode($run);
+                    break;
+                }
+
+                // 2. Prepare Context
+                $userPrompt = $node['data']['prompt'] ?? '';
+
+                // Variable substitution in prompt
+                $vars = $run->state_data['variables'] ?? [];
+                foreach ($vars as $k => $v) {
+                    $userPrompt = str_replace('{{' . $k . '}}', (string) $v, $userPrompt);
+                }
+
+                $context = $service->searchContext($teamId, $userPrompt);
+
+                $finalSystemPrompt = $persona . "\n\nBusiness Context:\n" . $context;
+
+                // 3. Call OpenAI with Retries
+                $aiResult = null;
+                $success = false;
+                $attempt = 0;
+                $maxAttempts = $showRetry ? ($retries + 1) : 1;
+
+                while ($attempt < $maxAttempts && !$success) {
+                    $attempt++;
+                    try {
+                        $payload = [
+                            'model' => $model,
+                            'messages' => [
+                                ['role' => 'system', 'content' => $finalSystemPrompt],
+                                ['role' => 'user', 'content' => $userPrompt],
+                            ],
+                            'temperature' => $temperature,
+                        ];
+
+                        if ($showStop && !empty($stopWords)) {
+                            // Split by comma and trim
+                            $stopArray = array_map('trim', explode(',', $stopWords));
+                            $payload['stop'] = array_slice($stopArray, 0, 4); // OpenAI limit is 4
+                        }
+
+                        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                            ->timeout(30)
+                            ->post('https://api.openai.com/v1/chat/completions', $payload);
+
+                        if ($response->successful()) {
+                            $aiResult = $response->json('choices.0.message.content');
+
+                            // Apply Header/Footer
+                            if ($showHeader && !empty($header)) {
+                                $aiResult = $header . "\n" . $aiResult;
+                            }
+                            if ($showFooter && !empty($footer)) {
+                                $aiResult = $aiResult . "\n" . $footer;
+                            }
+
+                            $success = true;
+                        } else {
+                            Log::error("OpenAI API Error (Attempt $attempt): " . $response->body());
+                            if ($attempt >= $maxAttempts && $showFallback) {
+                                $aiResult = $fallback;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("Automation OpenAI Error (Attempt $attempt): " . $e->getMessage());
+                        if ($attempt >= $maxAttempts && $showFallback) {
+                            $aiResult = $fallback;
+                        }
+                    }
+                }
+
+                if ($aiResult !== null) {
+                    $saveTo = $node['data']['save_to'] ?? 'ai_response';
+                    $vars = $run->state_data['variables'] ?? [];
+                    $vars[$saveTo] = $aiResult;
+                    $run->update(['state_data' => array_merge($run->state_data, ['variables' => $vars])]);
+                }
+
+                $this->moveToNextNode($run);
+                break;
         }
     }
 

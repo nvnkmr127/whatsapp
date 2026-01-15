@@ -37,6 +37,8 @@ class ProcessCampaignJob implements ShouldQueue
             $query->whereHas('tags', function ($q) use ($filters) {
                 $q->whereIn('contact_tags.id', $filters['tags']);
             });
+        } elseif (!empty($filters['contacts'])) {
+            $query->whereIn('id', $filters['contacts']);
         } elseif (!empty($filters['all']) && $filters['all'] === true) {
             // target all
         } else {

@@ -147,11 +147,6 @@ class WebhookManager extends Component
             ->latest()
             ->paginate(10);
 
-        $workflows = \App\Models\WebhookWorkflow::where('team_id', $team->id)
-            ->with('template')
-            ->latest()
-            ->get();
-
-        return view('livewire.developer.webhook-manager', compact('subscriptions', 'workflows'));
+        return view('livewire.developer.webhook-manager', compact('subscriptions'));
     }
 }

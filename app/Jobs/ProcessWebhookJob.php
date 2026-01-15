@@ -192,6 +192,28 @@ class ProcessWebhookJob implements ShouldQueue
             'caption' => $caption,
         ]);
 
+        // 4.5 AI Assistant Check (Shop-by-Chat)
+        $commerceConfig = $team->commerce_config ?? [];
+        if (($commerceConfig['ai_assistant_enabled'] ?? false) && $msgData['type'] === 'text') {
+            try {
+                Log::debug("AI Assistant Check: Team={$team->id}, AI_Enabled=" . ($commerceConfig['ai_assistant_enabled'] ? 'YES' : 'NO'));
+                $waService = new \App\Services\WhatsAppService(); // Helper
+                $aiService = new \App\Services\AiCommerceService($waService);
+
+                $input = $this->extractContent($msgData);
+                Log::debug("AI Assistant Input: " . $input);
+                $handled = $aiService->handle($contact, $input);
+
+                if ($handled) {
+                    Log::info("AI Assistant handled message from {$contact->phone_number}");
+                    return; // Stop further processing (Bots/Auto-replies)
+                }
+            } catch (\Exception $e) {
+                Log::error("AI Assistant Logic Failed: " . $e->getMessage());
+                // Fallthrough to normal bot/auto-reply
+            }
+        }
+
         // Detect Keywords
         $content = strtoupper(trim($this->extractContent($msgData)));
 
