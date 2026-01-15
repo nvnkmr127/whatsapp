@@ -9,7 +9,14 @@ use Illuminate\Support\Facades\Log;
 
 class TemplateService
 {
-    protected $baseUrl = 'https://graph.facebook.com/v21.0';
+    protected $baseUrl;
+    protected $team;
+
+    public function __construct(Team $team = null)
+    {
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->team = $team;
+    }
 
     /**
      * Sync Templates from Meta for a Team using its WABA ID.

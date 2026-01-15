@@ -34,6 +34,8 @@ class Team extends JetstreamTeam
     protected $fillable = [
         'name',
         'personal_team',
+        'logo_path',
+        'timezone',
         'whatsapp_phone_number_id',
         'whatsapp_business_account_id',
         'whatsapp_access_token',

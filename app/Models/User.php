@@ -66,4 +66,67 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    /**
+     * Get all of the teams the user belongs to or owns.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function allTeams()
+    {
+        if ($this->is_super_admin) {
+            return \App\Models\Team::all();
+        }
+
+        return $this->ownedTeams->merge($this->teams)->sortBy('name');
+    }
+
+    /**
+     * Determine if the user belongs to the given team.
+     *
+     * @param  mixed  $team
+     * @return bool
+     */
+    public function belongsToTeam($team)
+    {
+        if ($this->is_super_admin) {
+            return true;
+        }
+
+        if (is_null($team)) {
+            return false;
+        }
+
+        return $this->ownsTeam($team) || $this->teams->contains(function ($t) use ($team) {
+            return $t->id === $team->id;
+        });
+    }
+
+    /**
+     * Get the role that the user has on the team.
+     *
+     * @param  mixed  $team
+     * @return \Laravel\Jetstream\Role|null
+     */
+    public function teamRole($team)
+    {
+        if ($this->is_super_admin) {
+            return new \Laravel\Jetstream\Role(
+                'admin',
+                'Administrator',
+                ['*']
+            );
+        }
+
+        if ($this->ownsTeam($team)) {
+            return new \Laravel\Jetstream\OwnerRole;
+        }
+
+        if (!$this->belongsToTeam($team)) {
+            return;
+        }
+
+        $role = $team->users->where('id', $this->id)->first()->membership->role;
+
+        return \Laravel\Jetstream\Jetstream::findRole($role);
+    }
 }

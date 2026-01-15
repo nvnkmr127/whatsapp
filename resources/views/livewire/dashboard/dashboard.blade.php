@@ -93,6 +93,76 @@
         @endforeach
     </div>
 
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <a href="{{ route('campaigns.create') }}"
+            class="group bg-slate-900 dark:bg-wa-green p-6 rounded-[2rem] shadow-xl hover:scale-[1.02] transition-all">
+            <div class="flex flex-col h-full justify-between">
+                <div class="p-3 w-fit rounded-2xl bg-white/10 text-white dark:text-slate-900 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-white dark:text-slate-900 uppercase tracking-tight">New Broadcast
+                    </h3>
+                    <p class="text-white/60 dark:text-slate-900/60 text-xs font-bold uppercase tracking-widest mt-1">
+                        Start Campaign</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ route('commerce.orders') }}"
+            class="group bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-50 dark:border-slate-800 hover:scale-[1.02] transition-all">
+            <div class="flex flex-col h-full justify-between">
+                <div class="p-3 w-fit rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Manage Orders
+                    </h3>
+                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Sales Hub</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ route('knowledge-base.index') }}"
+            class="group bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-50 dark:border-slate-800 hover:scale-[1.02] transition-all">
+            <div class="flex flex-col h-full justify-between">
+                <div class="p-3 w-fit rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Train AI</h3>
+                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Knowledge Base</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ route('teams.whatsapp_config') }}"
+            class="group bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-50 dark:border-slate-800 hover:scale-[1.02] transition-all">
+            <div class="flex flex-col h-full justify-between">
+                <div class="p-3 w-fit rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Account Hub
+                    </h3>
+                    <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Configure Setup</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
     <!-- Analytics Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main Message Stats Chart -->

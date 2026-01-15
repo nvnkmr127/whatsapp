@@ -101,16 +101,9 @@
                                 </span>
                             </td>
                             <td class="px-8 py-6 text-center">
-                                @php
-                                    $components = is_array($template->components) ? $template->components : json_decode($template->components, true);
-                                    $hType = 'NONE';
-                                    foreach($components ?? [] as $c) {
-                                        if(($c['type'] ?? '') === 'HEADER') $hType = $c['format'] ?? 'TEXT';
-                                    }
-                                @endphp
-                                <span class="text-[10px] font-black uppercase tracking-widest {{ $hType !== 'NONE' ? 'text-wa-teal' : 'text-slate-400' }}">
-                                    {{ $hType }}
-                                </span>
+                                <span class="text-[10px] font-black uppercase tracking-widest {{ $this->getHeaderType($template) !== 'NONE' ? 'text-wa-teal' : 'text-slate-400' }}">
+                                     {{ $this->getHeaderType($template) }}
+                                 </span>
                             </td>
                             <td class="px-8 py-6 text-center">
                                 <span class="text-xs font-black text-slate-500 uppercase">{{ $template->language }}</span>

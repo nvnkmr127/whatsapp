@@ -1,96 +1,174 @@
-<div class="py-12">
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-                Commerce Dashboard
-            </h2>
-            <p class="mt-1 text-sm text-gray-500">Manage your products, orders, and store settings from one place.</p>
+<div class="space-y-10 pb-20">
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="p-2 bg-wa-teal/10 text-wa-teal rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Commerce <span
+                        class="text-wa-teal">Insights</span></h1>
+            </div>
+            <p class="text-slate-500 font-medium">Real-time performance overview of your WhatsApp store.</p>
         </div>
 
-        <!-- Stats Grid -->
-        <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-4 mb-8">
-            <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                <dt class="truncate text-sm font-medium text-gray-500">Total Revenue</dt>
-                <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                    ${{ number_format($stats['total_revenue'], 2) }}
-                </dd>
-            </div>
-            <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                <dt class="truncate text-sm font-medium text-gray-500">Total Orders</dt>
-                <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ $stats['total_orders'] }}</dd>
-            </div>
-            <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                <dt class="truncate text-sm font-medium text-gray-500">Pending Orders</dt>
-                <dd class="mt-1 text-3xl font-semibold tracking-tight text-indigo-600">{{ $stats['pending_orders'] }}
-                </dd>
-            </div>
-            <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                <dt class="truncate text-sm font-medium text-gray-500">Total Products</dt>
-                <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ $stats['total_products'] }}</dd>
-            </div>
-        </dl>
+        <div class="flex items-center gap-4">
+            <a href="{{ route('commerce.settings') }}"
+                class="p-3 bg-white dark:bg-slate-900 text-slate-400 hover:text-wa-teal rounded-2xl shadow-xl shadow-slate-900/5 dark:shadow-none border border-slate-50 dark:border-slate-800 transition-all">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </a>
 
-        <!-- Quick Actions / Sub-Modules -->
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <button
+                class="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02]">
+                Refresh Stats
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Revenue Card -->
+        <div class="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group shadow-2xl">
+            <div
+                class="absolute -right-10 -top-10 w-32 h-32 bg-wa-teal/20 blur-3xl rounded-full group-hover:bg-wa-teal/30 transition-colors">
+            </div>
+            <div class="relative z-10 space-y-2">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-wa-teal/70">Total Revenue</span>
+                <div class="text-4xl font-black tracking-tight">${{ number_format($stats['total_revenue'], 2) }}</div>
+                <div class="flex items-center gap-2 text-wa-green text-xs font-bold pt-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                            d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                    <span>Store Performance</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Card -->
+        <div
+            class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-50 dark:border-slate-800 space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Orders</span>
+            <div class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">{{ $stats['total_orders'] }}
+            </div>
+            <p class="text-slate-500 text-xs font-bold pt-2">Across all campaigns</p>
+        </div>
+
+        <!-- Pending Card -->
+        <div
+            class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-50 dark:border-slate-800 space-y-2">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pending Orders</span>
+                <span class="flex h-2 w-2 rounded-full bg-wa-orange animate-pulse"></span>
+            </div>
+            <div class="text-4xl font-black tracking-tight text-wa-orange">{{ $stats['pending_orders'] }}</div>
+            <p class="text-slate-500 text-xs font-bold pt-2">Requires Attention</p>
+        </div>
+
+        <!-- Products Card -->
+        <div
+            class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-50 dark:border-slate-800 space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Stock Items</span>
+            <div class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                {{ $stats['total_products'] }}
+            </div>
+            <p class="text-slate-500 text-xs font-bold pt-2">Active in Catalog</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="space-y-6">
+        <h3 class="text-xs font-black uppercase tracking-[0.3em] text-slate-400 ml-4">Command Center</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <!-- Order Management -->
             <a href="{{ route('commerce.orders') }}"
-                class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400 hover:bg-gray-50 transition">
-                <div class="flex-shrink-0">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600">
-                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                class="group relative bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal/30 transition-all duration-500">
+                <div class="flex items-center justify-between mb-6">
+                    <div
+                        class="p-4 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                    </div>
+                    <div
+                        class="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>
                     </div>
                 </div>
-                <div class="min-w-0 flex-1">
-                    <span class="absolute inset-0" aria-hidden="true"></span>
-                    <p class="text-sm font-medium text-gray-900">Order Management</p>
-                    <p class="truncate text-sm text-gray-500">View and update customer orders</p>
-                </div>
+                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Order
+                    Manager</h4>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed">Process shipments, track fulfillment, and
+                    manage cancellations.</p>
             </a>
 
-            <!-- Product Catalog -->
+            <!-- Product Management -->
             <a href="{{ route('commerce.products') }}"
-                class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400 hover:bg-gray-50 transition">
-                <div class="flex-shrink-0">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-600">
-                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                class="group relative bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal/30 transition-all duration-500">
+                <div class="flex items-center justify-between mb-6">
+                    <div
+                        class="p-4 bg-pink-50 dark:bg-pink-500/10 text-pink-600 rounded-2xl group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                    </div>
+                    <div
+                        class="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>
                     </div>
                 </div>
-                <div class="min-w-0 flex-1">
-                    <span class="absolute inset-0" aria-hidden="true"></span>
-                    <p class="text-sm font-medium text-gray-900">Product Catalog</p>
-                    <p class="truncate text-sm text-gray-500">Manage products, prices, and stock</p>
-                </div>
+                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Product
+                    Catalog</h4>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed">Sync inventory, update pricing, and curate
+                    your WhatsApp shop vitals.</p>
             </a>
 
-            <!-- Store Settings -->
-            <a href="{{ route('commerce.settings') }}"
-                class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400 hover:bg-gray-50 transition">
-                <div class="flex-shrink-0">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-600">
-                        <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+            <!-- AI Engine -->
+            <div
+                class="group relative bg-slate-900 dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-2xl overflow-hidden hover:scale-[1.02] transition-all duration-500">
+                <div class="absolute -right-20 -bottom-20 w-60 h-60 bg-wa-teal/10 blur-[100px] rounded-full"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="p-4 bg-wa-teal/20 text-wa-teal rounded-2xl">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div
+                            class="px-3 py-1 bg-wa-teal text-slate-900 text-[10px] font-black uppercase tracking-tighter rounded-full shadow-lg shadow-wa-teal/30">
+                            Active</div>
                     </div>
+                    <h4 class="text-xl font-black text-white uppercase tracking-tight mb-2">AI Shop Assistant</h4>
+                    <p class="text-slate-400 text-sm font-medium leading-relaxed mb-6">Autonomous recommendation engine
+                        handling customer inquiries.</p>
+
+                    <a href="{{ route('settings.ai') }}"
+                        class="inline-flex items-center gap-2 text-wa-teal text-xs font-black uppercase tracking-widest group-hover:gap-4 transition-all">
+                        Configure Brain
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                    </a>
                 </div>
-                <div class="min-w-0 flex-1">
-                    <span class="absolute inset-0" aria-hidden="true"></span>
-                    <p class="text-sm font-medium text-gray-900">Store Settings</p>
-                    <p class="truncate text-sm text-gray-500">Configure currency, checkout, and alerts</p>
-                </div>
-            </a>
+            </div>
         </div>
     </div>
 </div>

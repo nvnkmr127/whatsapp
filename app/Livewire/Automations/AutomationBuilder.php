@@ -48,10 +48,11 @@ class AutomationBuilder extends Component
 
     public function mount($id = null)
     {
+        \Illuminate\Support\Facades\Gate::authorize('chat-access'); // Using chat-access as proxy for automation access
         $this->availableTags = \App\Models\ContactTag::where('team_id', Auth::user()->currentTeam->id)->get()->toArray();
 
         if ($id) {
-            $automation = Automation::find($id);
+            $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
             $this->automationId = $automation->id;
             $this->name = $automation->name;
 
@@ -100,7 +101,7 @@ class AutomationBuilder extends Component
             ];
 
             if ($this->automationId) {
-                $automation = Automation::find($this->automationId);
+                $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
                 $automation->update($data);
             } else {
                 $automation = Automation::create($data);

@@ -83,7 +83,7 @@ class Cart extends Model
             $items->push($newItem);
         }
 
-        $this->items = $items->map->toArray()->values()->all();
+        $this->items = $items->map(fn($item) => $item->toArray())->values()->all();
         $this->save();
     }
 
@@ -94,7 +94,7 @@ class Cart extends Model
             return $item->product_id == $productId;
         });
 
-        $this->items = $items->map->toArray()->values()->all();
+        $this->items = $items->map(fn($item) => $item->toArray())->values()->all();
         $this->save();
     }
 

@@ -58,7 +58,38 @@ class OrderManager extends Component
         session()->flash('flash.bannerStyle', 'success');
     }
 
-    #[Layout('components.layouts.app')]
+    public function getOrderStatsProperty()
+    {
+        return [
+            'pending' => Order::where('team_id', Auth::user()->currentTeam->id)
+                ->where('status', 'pending')
+                ->whereDate('created_at', today())
+                ->count(),
+            'shipped' => Order::where('team_id', Auth::user()->currentTeam->id)
+                ->where('status', 'shipped')
+                ->whereDate('created_at', today())
+                ->count(),
+            'cancelled' => Order::where('team_id', Auth::user()->currentTeam->id)
+                ->where('status', 'cancelled')
+                ->whereDate('created_at', today())
+                ->count(),
+        ];
+    }
+
+    public function getStatusColor($status)
+    {
+        $statusColors = [
+            'paid' => 'bg-wa-green/10 text-wa-green',
+            'delivered' => 'bg-wa-green/10 text-wa-green',
+            'cancelled' => 'bg-rose-500/10 text-rose-500',
+            'pending' => 'bg-wa-orange/10 text-wa-orange',
+            'shipped' => 'bg-wa-teal/10 text-wa-teal',
+        ];
+
+        return $statusColors[$status] ?? 'bg-slate-500/10 text-slate-500';
+    }
+
+    #[Layout('layouts.app')]
     public function render()
     {
         $query = Order::where('team_id', Auth::user()->currentTeam->id);

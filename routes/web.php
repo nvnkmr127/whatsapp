@@ -38,6 +38,7 @@ Route::middleware([
     // AI Business Brain
     Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware('can:manage-settings');
     Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware('can:manage-settings');
+    Route::get('/settings/system', \App\Livewire\Settings\SystemSettings::class)->name('settings.system')->middleware('can:manage-settings');
 
     Route::post('/whatsapp/onboard/exchange', [\App\Http\Controllers\WhatsAppOnboardingController::class, 'exchangeToken'])
         ->name('whatsapp.onboard.exchange')
@@ -50,6 +51,10 @@ Route::middleware([
         Route::get('/admin', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/admin/tenants/create', [\App\Http\Controllers\SuperAdminController::class, 'create'])->name('admin.tenants.create');
         Route::post('/admin/tenants', [\App\Http\Controllers\SuperAdminController::class, 'store'])->name('admin.tenants.store');
+        Route::get('/admin/tenants/{id}/edit', [\App\Http\Controllers\SuperAdminController::class, 'edit'])->name('admin.tenants.edit');
+        Route::put('/admin/tenants/{id}', [\App\Http\Controllers\SuperAdminController::class, 'update'])->name('admin.tenants.update');
+        Route::delete('/admin/tenants/{id}', [\App\Http\Controllers\SuperAdminController::class, 'destroy'])->name('admin.tenants.destroy');
+        Route::get('/admin/plans', \App\Livewire\Admin\PlanManager::class)->name('admin.plans');
     });
 
     // Agent Console (Agents, Managers, Admins)
@@ -60,12 +65,12 @@ Route::middleware([
         return view('contacts.index');
     })->name('contacts.index')->middleware('can:manage-contacts');
 
-    // Marketing & Funnels (Managers, Admins)
-    Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware('can:manage-campaigns');
+    // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
+    Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
-    Route::get('/campaigns/create', \App\Livewire\Campaigns\Wizard::class)->name('campaigns.create')->middleware('can:manage-campaigns');
+    Route::get('/campaigns/create', \App\Livewire\Campaigns\Wizard::class)->name('campaigns.create')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
-    Route::get('/campaigns/{campaignId}', \App\Livewire\Campaigns\Show::class)->name('campaigns.show')->middleware('can:manage-campaigns');
+    Route::get('/campaigns/{campaignId}', \App\Livewire\Campaigns\Show::class)->name('campaigns.show')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
     Route::get('/templates', function () {
         return view('templates.index');
@@ -75,15 +80,18 @@ Route::middleware([
     Route::get('/compliance/logs', [\App\Http\Controllers\ComplianceController::class, 'logs'])->name('compliance.logs')->middleware('can:manage-settings');
     Route::get('/compliance/registry', [\App\Http\Controllers\ComplianceController::class, 'registry'])->name('compliance.registry')->middleware('can:manage-settings');
 
-    Route::get('/automations', \App\Livewire\Automations\AutomationList::class)->name('automations.index')->middleware('can:manage-campaigns');
+    Route::get('/automations', \App\Livewire\Automations\AutomationList::class)->name('automations.index')->middleware(['can:manage-campaigns', 'plan_feature:automations']);
 
-    Route::get('/automations/builder/{automationId?}', \App\Livewire\Automations\AutomationBuilder::class)->name('automations.builder')->middleware('can:manage-campaigns');
+    Route::get('/automations/builder/{automationId?}', \App\Livewire\Automations\AutomationBuilder::class)->name('automations.builder')->middleware(['can:manage-campaigns', 'plan_feature:automations']);
 
     // WhatsApp Flows
     Route::get('/flows', \App\Livewire\Flows\FlowManager::class)->name('flows.index')->middleware('can:manage-campaigns');
     Route::get('/flows/builder/{flowId?}', \App\Livewire\Flows\FlowBuilder::class)->name('flows.builder')->middleware('can:manage-campaigns');
 
-    Route::get('/analytics', \App\Livewire\Analytics\Dashboard::class)->name('analytics')->middleware('can:manage-settings');
+    Route::get('/analytics', \App\Livewire\Analytics\AnalyticsDashboard::class)->name('analytics')->middleware(['can:manage-settings', 'plan_feature:analytics']);
+
+    // Billing Dashboard
+    Route::get('/billing', \App\Livewire\Billing\BillingDashboard::class)->name('billing');
 
     Route::get('/activity', function () {
         return view('activity.index');
@@ -96,12 +104,12 @@ Route::middleware([
     Route::get('/developer/api-tokens', \App\Livewire\Developer\ApiTokenManager::class)->name('developer.api-tokens')->middleware('can:manage-settings');
     Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs');
     // Commerce
-    // Commerce
-    Route::get('/commerce', \App\Livewire\Commerce\Dashboard::class)->name('commerce.dashboard')->middleware('can:manage-campaigns');
-    Route::get('/commerce/orders', \App\Livewire\Commerce\OrderManager::class)->name('commerce.orders')->middleware('can:manage-campaigns');
-    Route::get('/commerce/products', \App\Livewire\Commerce\ProductManager::class)->name('commerce.products')->middleware('can:manage-campaigns');
-    Route::get('/commerce/settings', \App\Livewire\Commerce\CommerceSettings::class)->name('commerce.settings')->middleware('can:manage-settings');
-    Route::get('/integrations/ecommerce', \App\Livewire\Integrations\EcommerceIntegrations::class)->name('integrations.ecommerce')->middleware('can:manage-settings');
+    // Commerce - Requires 'commerce' feature
+    Route::get('/commerce', \App\Livewire\Commerce\Dashboard::class)->name('commerce.dashboard')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);
+    Route::get('/commerce/orders', \App\Livewire\Commerce\OrderManager::class)->name('commerce.orders')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);
+    Route::get('/commerce/products', \App\Livewire\Commerce\ProductManager::class)->name('commerce.products')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);
+    Route::get('/commerce/settings', \App\Livewire\Commerce\CommerceSettings::class)->name('commerce.settings')->middleware(['can:manage-settings', 'plan_feature:commerce']);
+    Route::get('/integrations/ecommerce', \App\Livewire\Integrations\EcommerceIntegrations::class)->name('integrations.ecommerce')->middleware(['can:manage-settings', 'plan_feature:commerce']);
 });
 
 // Embed Routes (Publicly accessible but Token protected internally)

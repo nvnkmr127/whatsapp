@@ -37,6 +37,7 @@ class TemplateManager extends Component
 
     public function mount()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-templates');
         $this->loadTemplates();
     }
 
@@ -60,6 +61,7 @@ class TemplateManager extends Component
 
     public function syncTemplates(WhatsAppService $whatsapp)
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-templates');
         try {
             $whatsapp->setTeam(Auth::user()->currentTeam);
             $response = $whatsapp->getTemplates();
@@ -93,6 +95,7 @@ class TemplateManager extends Component
 
     public function createTemplate(WhatsAppService $whatsapp)
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-templates');
         $this->validate();
 
         $components = [];

@@ -1,5 +1,4 @@
 <div class="h-full flex flex-col bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100"
-<div class="h-full flex flex-col bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100"
     x-data="flowBuilder">
 
     <!-- ... (Keep Toolbar same) ... -->

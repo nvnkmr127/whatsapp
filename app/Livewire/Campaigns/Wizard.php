@@ -124,7 +124,7 @@ class Wizard extends Component
         $this->headerTextVar = null;
 
         if ($value) {
-            $template = WhatsappTemplate::find($value);
+            $template = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->find($value);
             if ($template) {
                 // Initialize variables based on body params count
                 $bodyText = '';
@@ -156,7 +156,7 @@ class Wizard extends Component
             $this->scheduled_at = now();
         }
 
-        $template = WhatsappTemplate::find($this->selectedTemplateId);
+        $template = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->findOrFail($this->selectedTemplateId);
 
         // Handle Media Header
         $finalHeaderMedia = null;
@@ -205,7 +205,50 @@ class Wizard extends Component
 
         ProcessCampaignJob::dispatch($campaign->id)->delay($delaySeconds);
 
-        return redirect()->route('campaigns.index')->with('message', 'Campaign Launched!');
+        session()->flash('success', 'Campaign Launched Successfully!');
+        return redirect()->route('campaigns.index');
+    }
+
+    #[Computed]
+    public function templateInfo()
+    {
+        if (!$this->selectedTemplateId) {
+            return null;
+        }
+
+        $template = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->find($this->selectedTemplateId);
+        if (!$template) {
+            return null;
+        }
+
+        $components = $template->components ?? [];
+        $info = [
+            'headerType' => 'NONE',
+            'headerText' => '',
+            'bodyText' => '',
+            'footerText' => '',
+            'paramCount' => 0,
+        ];
+
+        foreach ($components as $c) {
+            if (($c['type'] ?? '') === 'HEADER') {
+                $info['headerType'] = $c['format'] ?? 'TEXT';
+                if ($info['headerType'] === 'TEXT') {
+                    $info['headerText'] = $c['text'] ?? '';
+                }
+            }
+            if (($c['type'] ?? '') === 'BODY') {
+                $info['bodyText'] = $c['text'] ?? '';
+            }
+            if (($c['type'] ?? '') === 'FOOTER') {
+                $info['footerText'] = $c['text'] ?? '';
+            }
+        }
+
+        preg_match_all('/{{(\d+)}}/', $info['bodyText'], $matches);
+        $info['paramCount'] = count(array_unique($matches[1] ?? []));
+
+        return $info;
     }
 
     #[Layout('components.layouts.app')]

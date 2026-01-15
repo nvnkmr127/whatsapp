@@ -249,7 +249,7 @@ class WebhookSourceManager extends Component
      */
     public function getRecentPayloads($sourceId)
     {
-        $source = WebhookSource::find($sourceId);
+        $source = WebhookSource::where('team_id', auth()->user()->currentTeam->id)->find($sourceId);
         if (!$source) {
             return [];
         }
@@ -402,7 +402,7 @@ class WebhookSourceManager extends Component
         $this->testResult = null;
 
         // Load sample payload based on platform
-        $source = WebhookSource::find($id);
+        $source = WebhookSource::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
         $this->testPayload = $this->getSamplePayload($source->platform);
     }
 
@@ -569,7 +569,7 @@ class WebhookSourceManager extends Component
         // Get template parameters for selected template
         $templateParams = [];
         if ($this->selectedTemplateId) {
-            $template = WhatsappTemplate::find($this->selectedTemplateId);
+            $template = WhatsappTemplate::where('team_id', $team->id)->find($this->selectedTemplateId);
             if ($template && $template->components) {
                 foreach ($template->components as $component) {
                     if (isset($component['type']) && $component['type'] === 'BODY') {

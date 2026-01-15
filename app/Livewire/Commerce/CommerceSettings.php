@@ -3,9 +3,11 @@
 namespace App\Livewire\Commerce;
 
 use Livewire\Component;
+use Livewire\Attributes\Layout;
 use App\Models\WhatsAppTemplate;
 use Illuminate\Support\Facades\Log;
 
+#[Layout('layouts.app')]
 class CommerceSettings extends Component
 {
     public $team;
@@ -101,6 +103,6 @@ class CommerceSettings extends Component
 
         return view('livewire.commerce.commerce-settings', [
             'availableTemplates' => $templates
-        ])->layout('layouts.app');
+        ]);
     }
 }

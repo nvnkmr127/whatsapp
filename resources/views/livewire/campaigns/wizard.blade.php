@@ -291,32 +291,15 @@
                             </select>
                         </div>
 
-                        @if($selectedTemplateId)
+                        @if($this->templateInfo)
                             @php
-                                $t = $this->templates->find($selectedTemplateId);
-                                $components = $t->components ?? [];
-                                $headerType = 'NONE';
-                                $headerText = '';
-                                $bodyText = '';
-                                $footerText = '';
-
-                                foreach($components as $c) {
-                                    if(($c['type'] ?? '') === 'HEADER') {
-                                        $headerType = $c['format'] ?? 'TEXT';
-                                        if($headerType === 'TEXT') $headerText = $c['text'] ?? '';
-                                    }
-                                    if(($c['type'] ?? '') === 'BODY') $bodyText = $c['text'] ?? '';
-                                    if(($c['type'] ?? '') === 'FOOTER') $footerText = $c['text'] ?? '';
-                                }
-                                
-                                preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
-                                $paramCount = count(array_unique($matches[1] ?? []));
+                                $info = $this->templateInfo;
                             @endphp
 
                             {{-- Media & Header --}}
-                            @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
+                            @if(in_array($info['headerType'], ['IMAGE', 'VIDEO', 'DOCUMENT']))
                                 <div class="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Media Header ({{ $headerType }})</label>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Media Header ({{ $info['headerType'] }})</label>
                                     
                                     <div class="grid grid-cols-1 gap-4">
                                         <div class="relative group">
@@ -325,7 +308,7 @@
                                                 <div class="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center mb-4">
                                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                                 </div>
-                                                <p class="text-sm font-bold text-slate-900 dark:text-white">Upload {{ strtolower($headerType) }}</p>
+                                                <p class="text-sm font-bold text-slate-900 dark:text-white">Upload {{ strtolower($info['headerType']) }}</p>
                                                 <p class="text-[10px] font-medium text-slate-500">Drag and drop or click to browse</p>
                                                 
                                                 @if($headerMediaFile)
@@ -346,11 +329,11 @@
                             @endif
 
                             {{-- Variables --}}
-                            @if($paramCount > 0)
+                            @if($info['paramCount'] > 0)
                                 <div class="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Variables Mapping</label>
                                     <div class="space-y-3">
-                                        @for($i = 1; $i <= $paramCount; $i++)
+                                        @for($i = 1; $i <= $info['paramCount']; $i++)
                                             <div class="relative group">
                                                 <span class="absolute left-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase group-focus-within:text-orange-500 transition-colors">Var {{ $i }}</span>
                                                 <input type="text" wire:model.live="templateVars.{{ $i-1 }}" 
@@ -377,10 +360,10 @@
                              <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-20"></div>
 
                              <div class="relative z-10 space-y-2 mt-4 min-h-[400px]">
-                                 @if($selectedTemplateId)
+                                 @if($this->templateInfo)
                                      <div class="bg-white dark:bg-slate-900 rounded-xl rounded-tl-none shadow-sm p-3 max-w-[90%] animate-in zoom-in-95 duration-300">
                                          {{-- Preview Header --}}
-                                         @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
+                                         @if(in_array($info['headerType'], ['IMAGE', 'VIDEO', 'DOCUMENT']))
                                              <div class="bg-slate-100 dark:bg-slate-800 rounded-lg aspect-video mb-3 flex items-center justify-center overflow-hidden">
                                                  @if($headerMediaFile)
                                                      <img src="{{ $headerMediaFile->temporaryUrl() }}" class="w-full h-full object-cover">
@@ -390,14 +373,14 @@
                                                      <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                                  @endif
                                              </div>
-                                         @elseif($headerType === 'TEXT')
-                                             <p class="text-xs font-black text-slate-900 dark:text-white mb-2">{{ $headerText }}</p>
+                                         @elseif($info['headerType'] === 'TEXT')
+                                             <p class="text-xs font-black text-slate-900 dark:text-white mb-2">{{ $info['headerText'] }}</p>
                                          @endif
 
                                          {{-- Preview Body --}}
                                          <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                                              @php
-                                                 $previewText = $bodyText;
+                                                 $previewText = $info['bodyText'];
                                                  foreach($templateVars as $key => $val) {
                                                      $previewText = str_replace('{{'.($key+1).'}}', '<span class="text-wa-green font-black">'.($val ?: '...').'</span>', $previewText);
                                                  }
@@ -406,8 +389,8 @@
                                          </p>
 
                                          {{-- Preview Footer --}}
-                                         @if($footerText)
-                                             <p class="text-[10px] text-slate-400 mt-2">{{ $footerText }}</p>
+                                         @if($info['footerText'])
+                                             <p class="text-[10px] text-slate-400 mt-2">{{ $info['footerText'] }}</p>
                                          @endif
                                      </div>
                                  @else

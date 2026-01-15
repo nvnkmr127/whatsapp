@@ -23,7 +23,7 @@ class WebhookLogs extends Component
 
     public function viewDetails($id)
     {
-        $this->selectedPayload = WebhookPayload::find($id);
+        $this->selectedPayload = WebhookPayload::where('waba_id', auth()->user()->currentTeam->whatsapp_business_account_id)->find($id);
         $this->showDetailsModal = true;
     }
 
@@ -36,7 +36,7 @@ class WebhookLogs extends Component
     #[Layout('components.layouts.app')]
     public function render()
     {
-        $query = WebhookPayload::query()
+        $query = WebhookPayload::where('waba_id', auth()->user()->currentTeam->whatsapp_business_account_id)
             ->latest();
 
         if ($this->search) {

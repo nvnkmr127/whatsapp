@@ -10,7 +10,12 @@ use Illuminate\Support\Str;
 
 class MediaService
 {
-    protected $baseUrl = 'https://graph.facebook.com/v21.0';
+    protected $baseUrl;
+
+    public function __construct()
+    {
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+    }
 
     /**
      * Download media from WhatsApp API and store locally.

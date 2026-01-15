@@ -8,10 +8,18 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
-    protected $baseUrl = 'https://graph.facebook.com/v21.0';
+    protected $baseUrl;
     protected $token;
     protected $phoneId;
     protected $team;
+
+    public function __construct(Team $team = null)
+    {
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        if ($team) {
+            $this->setTeam($team);
+        }
+    }
 
     /**
      * Set the context for a specific team.
@@ -23,7 +31,8 @@ class WhatsAppService
         $this->phoneId = $team->whatsapp_phone_number_id;
 
         if (!$this->token || !$this->phoneId) {
-            throw new \Exception("WhatsApp credentials not configured for team: {$team->name}");
+            // Log warning instead of throwing if we're just initializing
+            Log::warning("WhatsApp credentials not configured for team: {$team->name}");
         }
 
         return $this;
@@ -179,6 +188,11 @@ class WhatsAppService
                 $tpl = $fallback;
                 $language = 'en_US';
             }
+        }
+
+        if (!$tpl) {
+            Log::error("Template not found for team {$this->team->id}", ['name' => $templateName, 'lang' => $language]);
+            return ['success' => false, 'error' => 'Template not found in local database. Please sync templates.'];
         }
 
         $components = [];

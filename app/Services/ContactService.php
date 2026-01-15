@@ -18,10 +18,16 @@ class ContactService
         $teamId = $data['team_id'];
         $phone = $data['phone_number']; // formatting logic could go here
 
-        $contact = Contact::firstOrNew([
-            'team_id' => $teamId,
-            'phone_number' => $phone,
-        ]);
+        if (isset($data['id'])) {
+            $contact = Contact::where('team_id', $teamId)->find($data['id']);
+        }
+
+        if (!isset($contact) || !$contact) {
+            $contact = Contact::firstOrNew([
+                'team_id' => $teamId,
+                'phone_number' => $phone,
+            ]);
+        }
 
         // Merge Attributes
         if (isset($data['custom_attributes']) && is_array($data['custom_attributes'])) {

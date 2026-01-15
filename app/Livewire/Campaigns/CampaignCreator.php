@@ -52,10 +52,7 @@ class CampaignCreator extends Component
 
     public function mount()
     {
-        // Permission Check (using global helper if available, else simple auth check)
-        if (!function_exists('checkPermission') || !checkPermission('manage-campaigns')) {
-            // Log or handle denial if strict, but for now allow if auth
-        }
+        \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
 
         $this->scheduled_send_time = now()->format('Y-m-d H:i');
 
@@ -87,7 +84,7 @@ class CampaignCreator extends Component
 
     public function updatedTemplateId($value)
     {
-        $template = WhatsappTemplate::find($value);
+        $template = WhatsappTemplate::where('team_id', auth()->user()->current_team_id)->find($value);
 
         if ($template) {
             $this->headerInputs = array_fill(0, $template->header_params_count ?? 0, '');
@@ -101,7 +98,7 @@ class CampaignCreator extends Component
     #[Computed]
     public function templates()
     {
-        return WhatsappTemplate::where('status', 'APPROVED')->get();
+        return WhatsappTemplate::where('team_id', auth()->user()->current_team_id)->where('status', 'APPROVED')->get();
     }
 
     // Toggle "Select All"
@@ -125,6 +122,7 @@ class CampaignCreator extends Component
 
     public function save()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
         $this->validate([
             'campaign_name' => 'required|min:3',
             'template_id' => 'required',
@@ -133,7 +131,7 @@ class CampaignCreator extends Component
         ]);
 
         try {
-            $template = WhatsappTemplate::findOrFail($this->template_id);
+            $template = WhatsappTemplate::where('team_id', auth()->user()->current_team_id)->findOrFail($this->template_id);
             $headerFormat = $template->header_data_format ?? 'TEXT';
 
             // Handle File

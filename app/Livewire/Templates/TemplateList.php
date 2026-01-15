@@ -55,9 +55,9 @@ class TemplateList extends Component
         $response = $this->loadTemplatesFromWhatsApp();
 
         if ($response['status']) {
-            $this->dispatch('notify', 'Templates synced: ' . ($response['count'] ?? 0));
+            $this->dispatch('notify', message: 'Templates synced: ' . ($response['count'] ?? 0), type: 'success');
         } else {
-            $this->dispatch('notify', 'Sync failed: ' . ($response['message'] ?? 'Unknown error'));
+            $this->dispatch('notify', message: 'Sync failed: ' . ($response['message'] ?? 'Unknown error'), type: 'error');
         }
         $this->syncing = false;
     }
@@ -213,10 +213,10 @@ class TemplateList extends Component
             if ($response['success']) {
                 $this->showCreateModal = false;
                 $this->syncTemplates();
-                $this->dispatch('notify', 'Template created successfully!');
+                $this->dispatch('notify', message: 'Template created successfully!', type: 'success');
             } else {
                 $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
-                $this->dispatch('notify', 'Meta Error: ' . $errorMsg);
+                $this->dispatch('notify', message: 'Meta Error: ' . $errorMsg, type: 'error');
             }
         } catch (\Exception $e) {
             $this->dispatch('notify', 'Error: ' . $e->getMessage());
@@ -236,16 +236,27 @@ class TemplateList extends Component
 
             if ($response['success']) {
                 $template->delete();
-                $this->dispatch('notify', 'Template deleted successfully.');
+                $this->dispatch('notify', message: 'Template deleted successfully.', type: 'success');
             } else {
                 // If template not found on Meta, maybe just delete local?
                 // For now, respect error.
                 $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
-                $this->dispatch('notify', 'Meta Error: ' . $errorMsg);
+                $this->dispatch('notify', message: 'Meta Error: ' . $errorMsg, type: 'error');
             }
         } catch (\Exception $e) {
             $this->dispatch('notify', 'Error: ' . $e->getMessage());
         }
+    }
+
+    public function getHeaderType($template)
+    {
+        $components = is_array($template->components) ? $template->components : json_decode($template->components, true);
+        foreach ($components ?? [] as $c) {
+            if (($c['type'] ?? '') === 'HEADER') {
+                return $c['format'] ?? 'TEXT';
+            }
+        }
+        return 'NONE';
     }
 
     public function render()

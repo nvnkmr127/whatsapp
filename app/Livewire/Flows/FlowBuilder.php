@@ -222,7 +222,7 @@ class FlowBuilder extends Component
         ];
 
         if ($this->flowId) {
-            $flow = WhatsAppFlow::find($this->flowId);
+            $flow = WhatsAppFlow::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->flowId);
             $flow->update($data);
         } else {
             $flow = WhatsAppFlow::create($data);
@@ -235,7 +235,7 @@ class FlowBuilder extends Component
     public function deploy()
     {
         $this->save();
-        $flow = WhatsAppFlow::find($this->flowId);
+        $flow = WhatsAppFlow::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->flowId);
 
         try {
             $service = new WhatsAppFlowService();

@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class AnalyticsDashboard extends Component
 {
-    public $dateRange = '30_days'; // 'today', '7_days', '30_days'
+    public $dateRange = 30; // days
+    public $chartData = [];
 
     public function render()
     {
@@ -44,6 +45,8 @@ class AnalyticsDashboard extends Component
             ->take(10)
             ->get();
 
+        $this->loadChartData($teamId);
+
         return view('livewire.analytics.analytics-dashboard', [
             'wallet' => $wallet,
             'msgSent' => $msgSent,
@@ -53,6 +56,49 @@ class AnalyticsDashboard extends Component
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())
                 ->where('report_type', 'monthly_usage')->exists()
         ]);
+    }
+
+    protected function loadChartData($teamId)
+    {
+        $startDate = now()->subDays($this->dateRange);
+
+        $raw = Message::where('team_id', $teamId)
+            ->where('created_at', '>=', $startDate)
+            ->selectRaw('DATE(created_at) as date, direction, count(*) as count')
+            ->groupBy('date', 'direction')
+            ->orderBy('date')
+            ->get();
+
+        $dates = [];
+        for ($i = $this->dateRange - 1; $i >= 0; $i--) {
+            $d = now()->subDays($i)->format('Y-m-d');
+            $dates[$d] = ['inbound' => 0, 'outbound' => 0];
+        }
+
+        foreach ($raw as $r) {
+            $d = $r->date;
+            if (isset($dates[$d])) {
+                $dates[$d][$r->direction] = $r->count;
+            }
+        }
+
+        $this->chartData = [
+            'labels' => array_keys($dates),
+            'datasets' => [
+                [
+                    'label' => 'Sent',
+                    'data' => array_column($dates, 'outbound'),
+                    'borderColor' => '#22c55e',
+                    'backgroundColor' => 'rgba(34, 197, 94, 0.4)',
+                ],
+                [
+                    'label' => 'Received',
+                    'data' => array_column($dates, 'inbound'),
+                    'borderColor' => '#14b8a6',
+                    'backgroundColor' => 'rgba(20, 184, 166, 0.4)',
+                ]
+            ]
+        ];
     }
 
     public function exportTransactions()

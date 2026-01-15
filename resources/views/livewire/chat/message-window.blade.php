@@ -215,19 +215,6 @@
                 this.showEmoji = false;
             }
          }">
-        @if (session()->has('error'))
-            <div
-                class="mb-3 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-xl flex items-center gap-3">
-                <div class="p-1 bg-rose-500 rounded-full text-white">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </div>
-                <p class="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">
-                    {{ session('error') }}
-                </p>
-            </div>
-        @endif
 
         @if($isSessionOpen)
 
@@ -516,11 +503,10 @@
                             </h3>
                             
                             @php
-                                $header = collect($selectedTemplate->components)->firstWhere('type', 'HEADER');
-                                $hasMediaHeader = $header && in_array($header['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT']);
+                                $header = $this->getTemplateComponent('HEADER');
                             @endphp
 
-                            @if($hasMediaHeader)
+                            @if($this->hasMediaHeader)
                                 <div class="space-y-4">
                                     <div class="p-4 bg-wa-teal/5 border border-wa-teal/10 rounded-2xl">
                                         <label class="block text-xs font-black text-wa-teal uppercase tracking-widest mb-2">
@@ -586,7 +572,7 @@
                                 <!-- Message Bubble -->
                                 <div class="bg-white dark:bg-[#202c33] p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[95%] self-start relative border border-white dark:border-slate-800">
                                     <!-- Header Media Preview -->
-                                    @if($hasMediaHeader)
+                                    @if($this->hasMediaHeader)
                                         <div class="mb-2 shrink-0">
                                             @if($templateMediaUrl)
                                                 @if($header['format'] === 'IMAGE')
@@ -614,8 +600,7 @@
                                     </p>
 
                                     <!-- Footer -->
-                                    @php $footerComp = collect($selectedTemplate->components)->firstWhere('type', 'FOOTER'); @endphp
-                                    @if($footerComp)
+                                    @if($footerComp = $this->getTemplateComponent('FOOTER'))
                                         <p class="text-[9px] text-slate-400 mt-2 italic border-t border-slate-50 dark:border-slate-800 pt-1">{{ $footerComp['text'] }}</p>
                                     @endif
 
@@ -625,8 +610,7 @@
                                 </div>
 
                                 <!-- Buttons Preview -->
-                                @php $buttonComp = collect($selectedTemplate->components)->firstWhere('type', 'BUTTONS'); @endphp
-                                @if($buttonComp)
+                                @if($buttonComp = $this->getTemplateComponent('BUTTONS'))
                                     <div class="mt-2 space-y-1 w-full max-w-[95%]">
                                         @foreach($buttonComp['buttons'] as $btn)
                                             <div class="bg-white/90 dark:bg-[#202c33]/90 rounded-xl py-2 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-800 shadow-sm backdrop-blur-sm">

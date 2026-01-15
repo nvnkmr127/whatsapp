@@ -9,10 +9,18 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppFlowService
 {
-    protected $baseUrl = 'https://graph.facebook.com/v21.0';
+    protected $baseUrl;
     protected $team;
     protected $token;
     protected $wabaId;
+
+    public function __construct(Team $team = null)
+    {
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        if ($team) {
+            $this->setTeam($team);
+        }
+    }
 
     public const CATEGORIES = [
         'SIGN_UP',

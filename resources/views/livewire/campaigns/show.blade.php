@@ -1,9 +1,10 @@
 @php
-    /** @var \App\Models\Campaign $campaign */
     /** @var \Illuminate\Pagination\LengthAwarePaginator $messages */
+    $campaign = $this->campaign;
+    $stats = $this->campaignStats;
 @endphp
-<div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true"
-    x-data x-on:keydown.escape.window="window.location.href='{{ route('campaigns.index') }}'">
+<div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-data
+    x-on:keydown.escape.window="window.location.href='{{ route('campaigns.index') }}'">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
@@ -56,7 +57,8 @@
                         <div>
                             <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Template</p>
                             <p class="text-base font-bold text-gray-900 dark:text-white mt-0.5">
-                                {{ $campaign->template_name }}</p>
+                                {{ $campaign->template_name }}
+                            </p>
                         </div>
                     </div>
 
@@ -139,7 +141,7 @@
                             <div class="text-sm font-bold text-gray-400 uppercase tracking-wide">Delivery Rate</div>
                         </div>
                         <div class="text-3xl font-black text-gray-900 dark:text-white">
-                            {{ $stats['sent'] > 0 ? round(($stats['delivered'] / $stats['sent']) * 100) : 0 }}%
+                            {{ $stats['delivery_rate'] }}%
                         </div>
                     </div>
                 </div>
@@ -186,11 +188,12 @@
                         <div>
                             <div class="text-xs font-bold text-green-600 mb-1">Delivered</div>
                             <div class="text-xs text-gray-400 mb-2">
-                                {{ $stats['sent'] > 0 ? round(($stats['delivered'] / $stats['sent']) * 100) : 0 }}% of
-                                Sent</div>
+                                {{ $stats['delivery_rate'] }}% of
+                                Sent
+                            </div>
                             <div class="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div class="h-full bg-green-500 rounded-full"
-                                    style="width: {{ $stats['sent'] > 0 ? ($stats['delivered'] / $stats['sent']) * 100 : 0 }}%">
+                                    style="width: {{ $stats['delivery_rate'] }}%">
                                 </div>
                             </div>
                         </div>
@@ -214,11 +217,12 @@
                         <div>
                             <div class="text-xs font-bold text-yellow-600 mb-1">Opened</div>
                             <div class="text-xs text-gray-400 mb-2">
-                                {{ $stats['delivered'] > 0 ? round(($stats['read'] / $stats['delivered']) * 100) : 0 }}%
-                                of Delivered</div>
+                                {{ $stats['read_rate'] }}%
+                                of Delivered
+                            </div>
                             <div class="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div class="h-full bg-yellow-400 rounded-full"
-                                    style="width: {{ $stats['delivered'] > 0 ? ($stats['read'] / $stats['delivered']) * 100 : 0 }}%">
+                                    style="width: {{ $stats['read_rate'] }}%">
                                 </div>
                             </div>
                         </div>
@@ -293,7 +297,7 @@
                                                                 <td class="px-8 py-4">
                                                                     <span
                                                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                                            {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
+                                                                                                        {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
                                     ($msg->status == 'delivered' ? 'bg-blue-100 text-blue-800' :
                                         ($msg->status == 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
                                                                         {{ $msg->status }}

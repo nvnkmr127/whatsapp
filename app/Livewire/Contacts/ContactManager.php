@@ -65,6 +65,7 @@ class ContactManager extends Component
     #[Layout('components.layouts.app')]
     public function render()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $query = Contact::where('team_id', Auth::user()->currentTeam->id);
 
         if ($this->search) {
@@ -94,6 +95,7 @@ class ContactManager extends Component
 
     public function create()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->resetInputFields();
         $this->openModal();
     }
@@ -106,6 +108,19 @@ class ContactManager extends Component
     {
         $this->viewingContact = Contact::with('tags')->where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $this->isViewModalOpen = true;
+    }
+
+    public function getConversationRoute($contactId)
+    {
+        $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->find($contactId);
+        if (!$contact)
+            return route('chat');
+
+        $conversationId = $contact->conversations->first()?->id;
+
+        return $conversationId
+            ? route('chat', ['activeConversationId' => $conversationId])
+            : route('chat');
     }
 
     public function closeViewModal()
@@ -134,6 +149,7 @@ class ContactManager extends Component
 
     public function store()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->validate();
 
         $data = [
@@ -146,13 +162,12 @@ class ContactManager extends Component
             'custom_attributes' => $this->customAttributes,
         ];
 
-        // Use service if available or direct update (sticking to direct as per original code style but enhancing)
-        // Original code used updateOrCreate, let's stick to that but handle custom_attributes properly
+        if ($this->contactId) {
+            $data['id'] = $this->contactId;
+        }
 
-        $contact = Contact::updateOrCreate(
-            ['id' => $this->contactId],
-            $data
-        );
+        $contactService = new \App\Services\ContactService();
+        $contact = $contactService->createOrUpdate($data);
 
         $contact->tags()->sync($this->selectedTags);
 
@@ -335,6 +350,7 @@ class ContactManager extends Component
 
     public function importContacts()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->validate([
             'importFile' => 'required',
             'columnMapping' => 'required|array',

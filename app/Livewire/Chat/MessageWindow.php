@@ -51,7 +51,7 @@ class MessageWindow extends Component
                 $q->orderBy('created_at', 'asc');
             },
             'contact'
-        ])->find($this->conversationId);
+        ])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
 
         // Mark as read logic could go here
     }
@@ -184,7 +184,7 @@ class MessageWindow extends Component
 
     public function selectTemplate($templateId)
     {
-        $this->selectedTemplate = \App\Models\WhatsappTemplate::find($templateId);
+        $this->selectedTemplate = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->find($templateId);
 
         if ($this->selectedTemplate) {
             $this->templateVariables = [];
@@ -233,9 +233,28 @@ class MessageWindow extends Component
             ->get();
     }
 
+    public function getHasMediaHeaderProperty()
+    {
+        if (!$this->selectedTemplate)
+            return false;
+        $header = $this->getTemplateComponent('HEADER');
+        return $header && in_array($header['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT']);
+    }
+
+    public function getTemplateComponent($type)
+    {
+        if (!$this->selectedTemplate)
+            return null;
+        return collect($this->selectedTemplate->components)->firstWhere('type', $type);
+    }
+
     public function getLivePreviewTextProperty()
     {
-        $text = $this->templatePreviewText; // This holds the raw body from parseTemplateVariables
+        if (!$this->selectedTemplate)
+            return '';
+
+        $body = $this->getTemplateComponent('BODY');
+        $text = $body['text'] ?? '';
 
         if (!empty($this->templateVariables)) {
             foreach ($this->templateVariables as $key => $value) {

@@ -17,6 +17,11 @@ class CampaignList extends Component
 
     protected $listeners = ['refreshComponent' => '$refresh'];
 
+    public function mount()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
+    }
+
     public function updatingSearch()
     {
         $this->resetPage();
@@ -30,7 +35,8 @@ class CampaignList extends Component
 
     public function delete()
     {
-        $campaign = Campaign::find($this->campaignIdToDelete);
+        \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
+        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->find($this->campaignIdToDelete);
         if ($campaign) {
             $campaign->delete();
             $this->dispatch('notify', 'Campaign deleted successfully.');

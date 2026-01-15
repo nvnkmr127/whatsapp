@@ -47,17 +47,6 @@
         </button>
     </div>
 
-    @if (session()->has('message'))
-        <div
-            class="animate-in slide-in-from-top-4 duration-500 p-4 bg-wa-green/10 border border-wa-green/20 text-wa-green rounded-2xl flex items-center gap-3">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clip-rule="evenodd" />
-            </svg>
-            <span class="font-bold text-sm">{{ session('message') }}</span>
-        </div>
-    @endif
 
     <!-- Filters & Table Card -->
     <div
@@ -764,11 +753,7 @@
                         Edit Profile
                     </button>
 
-                    @php
-                        $conversationId = $viewingContact->conversations->first()?->id;
-                    @endphp
-
-                    <a href="{{ $conversationId ? route('chat', ['activeConversationId' => $conversationId]) : route('chat') }}"
+                    <a href="{{ $this->getConversationRoute($viewingContact->id) }}"
                         class="flex items-center gap-2 px-8 py-3 bg-wa-teal hover:bg-emerald-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] transition-all">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path

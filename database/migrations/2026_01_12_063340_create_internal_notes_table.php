@@ -12,10 +12,12 @@ return new class extends Migration {
     {
         Schema::create('internal_notes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('conversation_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('conversation_id')->nullable();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->text('content');
             $table->timestamps();
+
+            $table->index('conversation_id');
         });
     }
 

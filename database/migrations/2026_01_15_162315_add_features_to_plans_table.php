@@ -10,8 +10,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->decimal('total_amount', 10, 2)->nullable()->change();
+        Schema::table('plans', function (Blueprint $table) {
+            $table->json('features')->nullable()->after('agent_limit');
         });
     }
 
@@ -20,8 +20,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            //
+        Schema::table('plans', function (Blueprint $table) {
+            $table->dropColumn('features');
         });
     }
 };

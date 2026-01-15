@@ -1,96 +1,139 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Add New Company Workspace') }}
-        </h2>
-    </x-slot>
+    <div class="py-12 bg-slate-50/50 dark:bg-slate-900/50 min-h-screen">
+        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="md:grid md:grid-cols-3 md:gap-6">
-                <div class="md:col-span-1">
-                    <div class="px-4 sm:px-0">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Company Details</h3>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            Create a new isolated workspace for a client. This will check "Tenant Isolation" and create
-                            a new Super User for them.
-                        </p>
-                    </div>
-                </div>
+            <!-- Page Header -->
+            <div class="mb-8">
+                <a href="{{ route('admin.dashboard') }}"
+                    class="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors mb-4">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Dashboard
+                </a>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                    New <span class="text-wa-green">Workspace</span>
+                </h1>
+                <p class="text-slate-500 font-medium">Create a new isolated environment for a client company.</p>
+            </div>
 
-                <div class="mt-5 md:mt-0 md:col-span-2">
-                    <div class="shadow sm:rounded-md sm:overflow-hidden">
-                        <form action="{{ route('admin.tenants.store') }}" method="POST">
-                            @csrf
-                            <div class="px-4 py-5 bg-white dark:bg-gray-800 space-y-6 sm:p-6">
+            <!-- Form Card -->
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+                <form action="{{ route('admin.tenants.store') }}" method="POST">
+                    @csrf
 
-                                <div class="grid grid-cols-6 gap-6">
-                                    <!-- Company Name -->
-                                    <div class="col-span-6 sm:col-span-4">
-                                        <label for="company_name"
-                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company
-                                            Name</label>
-                                        <input type="text" name="company_name" id="company_name"
-                                            class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md">
-                                    </div>
+                    <div class="p-8 md:p-10 space-y-8">
+                        <!-- Company Details -->
+                        <div class="space-y-6">
+                            <h3
+                                class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                                Company Information</h3>
 
-                                    <!-- Plan -->
-                                    <div class="col-span-6 sm:col-span-3">
-                                        <label for="plan"
-                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subscription
-                                            Plan</label>
-                                        <select id="plan" name="plan"
-                                            class="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:text-white">
-                                            <option value="basic">Basic</option>
-                                            <option value="pro">Pro (Recommended)</option>
-                                            <option value="enterprise">Enterprise</option>
-                                        </select>
-                                    </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-500">Company Name
+                                    <span class="text-rose-500">*</span></label>
+                                <input type="text" name="company_name" value="{{ old('company_name') }}" required
+                                    class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-green/20 transition-all"
+                                    placeholder="e.g. Acme Corp">
+                                @error('company_name') <span
+                                class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
+                            </div>
 
-                                    <div class="col-span-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-                                        <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100">Owner Account
-                                        </h4>
-                                        <p class="text-xs text-gray-500 mb-4">This user will be the Administrator of the
-                                            new company.</p>
-                                    </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-500">Subscription
+                                    Plan <span class="text-rose-500">*</span></label>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="plan" value="basic" class="peer hidden" {{ old('plan') === 'basic' ? 'checked' : '' }}>
+                                        <div
+                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center">
+                                            <div class="font-black text-slate-900 dark:text-white">Basic</div>
+                                            <div class="text-xs font-bold text-slate-400">Starter features</div>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="plan" value="pro" class="peer hidden" {{ old('plan', 'pro') === 'pro' ? 'checked' : '' }}>
+                                        <div
+                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center">
+                                            <div
+                                                class="absolute -top-2 right-4 px-2 py-0.5 bg-wa-green text-white text-[10px] font-black uppercase rounded-full">
+                                                Recommended</div>
+                                            <div class="font-black text-slate-900 dark:text-white">Pro</div>
+                                            <div class="text-xs font-bold text-slate-400">Most popular</div>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="plan" value="enterprise" class="peer hidden" {{ old('plan') === 'enterprise' ? 'checked' : '' }}>
+                                        <div
+                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center">
+                                            <div class="font-black text-slate-900 dark:text-white">Enterprise</div>
+                                            <div class="text-xs font-bold text-slate-400">Full power</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                @error('plan') <span
+                                class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
 
-                                    <!-- Owner Name -->
-                                    <div class="col-span-6 sm:col-span-3">
-                                        <label for="owner_name"
-                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Owner
-                                            Name</label>
-                                        <input type="text" name="owner_name" id="owner_name"
-                                            class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md">
-                                    </div>
+                        <!-- Owner Account -->
+                        <div class="space-y-6 pt-4">
+                            <h3
+                                class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                                Administrator Account</h3>
+                            <p class="text-xs font-medium text-slate-500">This user will be the Super Admin of the new
+                                workspace.</p>
 
-                                    <!-- Owner Email -->
-                                    <div class="col-span-6 sm:col-span-3">
-                                        <label for="owner_email"
-                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Owner
-                                            Email</label>
-                                        <input type="email" name="owner_email" id="owner_email"
-                                            class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md">
-                                    </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black uppercase tracking-widest text-slate-500">Owner
+                                        Name <span class="text-rose-500">*</span></label>
+                                    <input type="text" name="owner_name" value="{{ old('owner_name') }}" required
+                                        class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-green/20 transition-all"
+                                        placeholder="Full Name">
+                                    @error('owner_name') <span
+                                        class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span>
+                                    @enderror
+                                </div>
 
-                                    <!-- Password -->
-                                    <div class="col-span-6 sm:col-span-4">
-                                        <label for="owner_password"
-                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Temporary
-                                            Password</label>
-                                        <input type="password" name="owner_password" id="owner_password"
-                                            class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md">
-                                    </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black uppercase tracking-widest text-slate-500">Owner
+                                        Email <span class="text-rose-500">*</span></label>
+                                    <input type="email" name="owner_email" value="{{ old('owner_email') }}" required
+                                        class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-green/20 transition-all"
+                                        placeholder="email@company.com">
+                                    @error('owner_email') <span
+                                        class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span>
+                                    @enderror
                                 </div>
                             </div>
-                            <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 text-right sm:px-6">
-                                <button type="submit"
-                                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                    Create Workspace
-                                </button>
+
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-500">Temporary
+                                    Password <span class="text-rose-500">*</span></label>
+                                <input type="password" name="owner_password" required minlength="8"
+                                    class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-green/20 transition-all"
+                                    placeholder="Minimum 8 characters">
+                                @error('owner_password') <span
+                                class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
                             </div>
-                        </form>
+                        </div>
                     </div>
-                </div>
+
+                    <div
+                        class="p-8 md:p-10 bg-slate-50/50 dark:bg-slate-800/50 flex justify-end gap-4 border-t border-slate-50 dark:border-slate-800">
+                        <a href="{{ route('admin.dashboard') }}"
+                            class="px-8 py-4 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                            class="px-10 py-4 bg-wa-green text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-green/20 hover:scale-[1.02] active:scale-95 transition-all">
+                            Create Workspace
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
