@@ -3,7 +3,7 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                         d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
                     </path>
@@ -11,7 +11,7 @@
             </div>
             <div>
                 <h1 class="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                    API <span class="text-blue-500">TOKENS</span>
+                    API <span class="text-wa-teal">TOKENS</span>
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 font-medium">Manage authentication tokens for programmatic
                     access</p>
@@ -19,7 +19,7 @@
         </div>
         <div class="flex items-center gap-6">
             <a href="{{ route('developer.docs') }}"
-                class="text-sm font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors flex items-center gap-2">
+                class="text-sm font-bold text-wa-teal hover:text-blue-700 uppercase tracking-widest transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -54,7 +54,7 @@
                         <x-label value="Token Name"
                             class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
                         <x-input wire:model="name" type="text"
-                            class="w-full !rounded-2xl border-2 border-slate-50 dark:border-slate-800 focus:border-blue-500/30 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                            class="w-full !rounded-2xl border-2 border-slate-50 dark:border-slate-800 focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all"
                             placeholder="e.g. Mobile App" />
                         <x-input-error for="name" />
                     </div>
@@ -67,9 +67,9 @@
                                 <label
                                     class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors group">
                                     <input type="checkbox" wire:model="permissions" value="{{ $permission }}"
-                                        class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                        class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal">
                                     <span
-                                        class="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 transition-colors">{{ $permission }}</span>
+                                        class="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-wa-teal transition-colors">{{ $permission }}</span>
                                 </label>
                             @endforeach
                         </div>
@@ -119,7 +119,7 @@
                                         <div class="flex flex-wrap gap-1 mt-2">
                                             @foreach($token->abilities as $ability)
                                                 <span
-                                                    class="text-[8px] font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded uppercase tracking-tighter">{{ $ability }}</span>
+                                                    class="text-[8px] font-black bg-blue-50 dark:bg-blue-900/20 text-wa-teal dark:text-blue-400 px-2 py-0.5 rounded uppercase tracking-tighter">{{ $ability }}</span>
                                             @endforeach
                                         </div>
                                     </td>

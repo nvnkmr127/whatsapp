@@ -141,6 +141,20 @@ class ProcessWebhookJob implements ShouldQueue
         // Update Interaction Time
         $contact->update(['last_interaction_at' => now()]);
 
+        // 1.5 COMPLIANCE: Detect Keywords (Priority)
+        $content = $this->extractContent($msgData);
+        $cleanContent = strtoupper(trim($content));
+
+        if ($cleanContent === 'STOP') {
+            (new \App\Services\ConsentService())->optOut($contact);
+            Log::info("Contact {$contact->phone_number} opted out via STOP keyword.");
+            // We should still log the message, but maybe skip AI/Bots?
+            // Usually, STOP should stop everything immediately.
+        } elseif ($cleanContent === 'START') {
+            (new \App\Services\ConsentService())->optIn($contact, 'START_KEYWORD');
+            Log::info("Contact {$contact->phone_number} opted in via START keyword.");
+        }
+
         // 2. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
         $conversation = $conversationService->ensureActiveConversation($contact);
@@ -214,17 +228,6 @@ class ProcessWebhookJob implements ShouldQueue
             }
         }
 
-        // Detect Keywords
-        $content = strtoupper(trim($this->extractContent($msgData)));
-
-        if ($content === 'STOP') {
-            (new \App\Services\ConsentService())->optOut($contact);
-            Log::info("Contact {$contact->phone_number} opted out via STOP keyword.");
-        } elseif ($content === 'START') {
-            (new \App\Services\ConsentService())->optIn($contact, 'START_KEYWORD');
-            Log::info("Contact {$contact->phone_number} opted in via START keyword.");
-        }
-
         // 5. Bot Engine Check
         // Only if "Human Inbox" is not specifically overtaking (but typically bots run alongside unless conversation is assigned to human?)
         // Let's assume Bots run unless Stopped.
@@ -236,12 +239,24 @@ class ProcessWebhookJob implements ShouldQueue
         if ($team->ai_auto_reply_enabled) {
             $botService = new \App\Services\AutomationService(new \App\Services\WhatsAppService());
 
-            // Try processing active session
-            $processed = $botService->handleReply($contact, $input);
+            // 5a. Check for "User Starts Conversation" (First inbound message)
+            if ($contact->messages()->where('direction', 'inbound')->count() === 1) {
+                $triggered = $botService->checkSpecialTriggers($contact, 'user_starts_conversation');
+            }
 
-            // If not processed, check strictly for Trigger Keywords
-            if (!$processed) {
+            // 5b. Try processing active session
+            if (!$triggered) {
+                $processed = $botService->handleReply($contact, $input);
+            }
+
+            // 5c. If not processed, check strictly for Trigger Keywords
+            if (!$processed && !$triggered) {
                 $triggered = $botService->checkTriggers($contact, trim($input));
+            }
+
+            // 5d. Check for Template Response (Quick Reply Buttons)
+            if (!$processed && !$triggered && in_array($msgData['type'], ['button', 'interactive'])) {
+                $triggered = $botService->checkTemplateTriggers($contact, $input);
             }
         }
 
@@ -304,8 +319,18 @@ class ProcessWebhookJob implements ShouldQueue
 
             if ($message) {
                 $updateData = ['status' => $newStatus];
-                if ($newStatus === 'delivered')
+                if ($newStatus === 'delivered') {
                     $updateData['delivered_at'] = now();
+
+                    // Trigger Automation if it's a template
+                    if ($message->type === 'template') {
+                        $templateName = $message->metadata['template_name'] ?? null;
+                        if ($templateName) {
+                            $botService = new \App\Services\AutomationService(new \App\Services\WhatsAppService());
+                            $botService->checkStatusTriggers($message->contact, $templateName, 'delivered');
+                        }
+                    }
+                }
                 if ($newStatus === 'read')
                     $updateData['read_at'] = now();
                 if ($newStatus === 'failed')

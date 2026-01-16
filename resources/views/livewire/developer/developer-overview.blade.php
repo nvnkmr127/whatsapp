@@ -2,15 +2,15 @@
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div class="flex items-center gap-4">
-            <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
-                <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-3 bg-wa-teal dark:bg-wa-teal/30 rounded-2xl">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                         d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
                 </svg>
             </div>
             <div>
                 <h1 class="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                    DEVELOPER <span class="text-purple-500">PORTAL</span>
+                    DEVELOPER <span class="text-wa-teal">PORTAL</span>
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 font-medium">API Keys, Webhooks, and Integration Tools</p>
             </div>
@@ -48,7 +48,7 @@
 
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-slate-50 dark:border-slate-800">
             <div class="flex items-center justify-between mb-4">
-                <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600">
+                <div class="p-2 bg-wa-teal dark:bg-wa-teal/30 rounded-xl text-white">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
@@ -77,7 +77,7 @@
     <!-- Quick Links -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <a href="{{ route('developer.api-tokens') }}"
-            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 transition-all">
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center gap-4 mb-4">
                 <div
                     class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform">
@@ -93,7 +93,7 @@
         </a>
 
         <a href="{{ route('webhooks.index') }}"
-            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 transition-all">
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center gap-4 mb-4">
                 <div
                     class="p-3 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-2xl text-fuchsia-600 group-hover:scale-110 transition-transform">
@@ -110,7 +110,7 @@
         </a>
 
         <a href="{{ route('developer.webhooks') }}"
-            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 transition-all">
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center gap-4 mb-4">
                 <div
                     class="p-3 bg-green-100 dark:bg-green-900/30 rounded-2xl text-green-600 group-hover:scale-110 transition-transform">
@@ -126,10 +126,10 @@
         </a>
 
         <a href="{{ route('developer.docs') }}"
-            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 transition-all">
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center gap-4 mb-4">
                 <div
-                    class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl text-purple-600 group-hover:scale-110 transition-transform">
+                    class="p-3 bg-wa-teal dark:bg-wa-teal/30 rounded-2xl text-white group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">

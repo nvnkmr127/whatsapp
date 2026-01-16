@@ -8,6 +8,7 @@ class Product extends Model
 {
     protected $fillable = [
         'team_id',
+        'category_id',
         'name',
         'description',
         'price',
@@ -22,5 +23,10 @@ class Product extends Model
     public function team()
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }

@@ -4,7 +4,7 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
             <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                Console <span class="text-wa-green">Overview</span>
+                Console <span class="text-wa-teal">Overview</span>
             </h1>
             <p class="mt-2 text-slate-500 font-medium">
                 Welcome back, <span
@@ -30,7 +30,7 @@
                 $colorClasses = [
                     'blue' => 'from-blue-500 to-indigo-600 shadow-blue-500/10 text-blue-500',
                     'purple' => 'from-purple-500 to-fuchsia-600 shadow-purple-500/10 text-purple-500',
-                    'green' => 'from-wa-green to-wa-teal shadow-green-500/10 text-wa-green',
+                    'green' => 'from-wa-teal to-wa-teal shadow-green-500/10 text-wa-teal',
                     'orange' => 'from-orange-400 to-rose-500 shadow-orange-500/10 text-orange-500',
                 ];
                 $colorClass = $colorClasses[$stat['color']] ?? $colorClasses['green'];
@@ -96,7 +96,7 @@
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <a href="{{ route('campaigns.create') }}"
-            class="group bg-slate-900 dark:bg-wa-green p-6 rounded-[2rem] shadow-xl hover:scale-[1.02] transition-all">
+            class="group bg-slate-900 dark:bg-wa-teal p-6 rounded-[2rem] shadow-xl hover:scale-[1.02] transition-all">
             <div class="flex flex-col h-full justify-between">
                 <div class="p-3 w-fit rounded-2xl bg-white/10 text-white dark:text-slate-900 mb-4">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +169,7 @@
         <div
             class="lg:col-span-3 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8 sm:p-10 relative overflow-hidden">
             <!-- Decorative Elements -->
-            <div class="absolute top-0 right-0 w-64 h-64 bg-wa-green/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
 
             <div class="relative">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
@@ -182,7 +182,7 @@
 
                     <div class="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-slate-400">
                         <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-wa-green shadow-lg shadow-wa-green/20"></span> Inbound
+                            <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Inbound
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="w-3 h-3 rounded-full bg-wa-blue shadow-lg shadow-wa-blue/20"></span> Outbound
@@ -192,7 +192,7 @@
 
                 <div wire:loading.flex class="h-[400px] w-full items-center justify-center">
                     <div class="relative">
-                        <div class="w-16 h-16 border-4 border-wa-green/20 border-t-wa-green rounded-full animate-spin">
+                        <div class="w-16 h-16 border-4 border-wa-teal/20 border-t-wa-teal rounded-full animate-spin">
                         </div>
                     </div>
                 </div>

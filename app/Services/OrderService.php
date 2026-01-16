@@ -45,6 +45,16 @@ class OrderService
         // Clear Cart
         $cart->clear();
 
+        // Trigger automation for order received
+        try {
+            $whatsappService = new WhatsAppService();
+            $automationService = new AutomationService($whatsappService);
+            $automationService->checkSpecialTriggers($cart->contact, 'order_received');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Order Received Automation Trigger Failed: ' . $e->getMessage());
+            // Don't throw - order creation should succeed even if automation fails
+        }
+
         // Dispatch Event
         OrderStatusUpdated::dispatch($order, 'placed');
 

@@ -24,7 +24,7 @@ class AutomationService
     {
         $messageContent = strtolower(trim($messageContent));
 
-        // Fetch all Keyword automations for this team
+        // 1. Keyword Triggers
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
             ->where('trigger_type', 'keyword')
@@ -33,11 +33,80 @@ class AutomationService
         foreach ($automations as $automation) {
             $keywords = $automation->trigger_config['keywords'] ?? [];
             foreach ($keywords as $keyword) {
-                // If message contains the keyword (e.g. "pricing" in "tell me pricing")
                 if (str_contains($messageContent, strtolower($keyword))) {
                     $this->start($automation, $contact);
                     return true;
                 }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check for special event-based triggers.
+     */
+    public function checkSpecialTriggers(Contact $contact, $type)
+    {
+        $automations = Automation::where('team_id', $contact->team_id)
+            ->where('is_active', true)
+            ->where('trigger_type', $type)
+            ->get();
+
+        foreach ($automations as $automation) {
+            $this->start($automation, $contact);
+            return true; // Trigger first matching automation
+        }
+
+        return false;
+    }
+
+    /**
+     * Check for triggers based on template button responses.
+     */
+    public function checkTemplateTriggers(Contact $contact, $buttonText)
+    {
+        $buttonText = strtolower(trim($buttonText));
+
+        $automations = Automation::where('team_id', $contact->team_id)
+            ->where('is_active', true)
+            ->where('trigger_type', 'template_response')
+            ->get();
+
+        foreach ($automations as $automation) {
+            $config = $automation->trigger_config ?? [];
+            $matchText = strtolower(trim($config['button_text'] ?? ''));
+
+            if ($buttonText === $matchText && !empty($matchText)) {
+                $this->start($automation, $contact);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check for triggers based on message status updates (e.g. Delivered).
+     */
+    public function checkStatusTriggers(Contact $contact, $templateName, $status)
+    {
+        if ($status !== 'delivered') {
+            return false;
+        }
+
+        $automations = Automation::where('team_id', $contact->team_id)
+            ->where('is_active', true)
+            ->where('trigger_type', 'template_delivered')
+            ->get();
+
+        foreach ($automations as $automation) {
+            $config = $automation->trigger_config ?? [];
+            $matchTemplate = $config['template_name'] ?? null;
+
+            if ($templateName === $matchTemplate && !empty($matchTemplate)) {
+                $this->start($automation, $contact);
+                return true;
             }
         }
 
@@ -128,6 +197,43 @@ class AutomationService
             case 'message':
                 $this->whatsapp->setTeam($run->automation->team);
                 $this->whatsapp->sendText($run->contact->phone_number, $node['data']['text'] ?? '');
+                $this->moveToNextNode($run);
+                break;
+
+            case 'template':
+                $this->whatsapp->setTeam($run->automation->team);
+                $templateName = $node['data']['template_name'] ?? null;
+                $language = $node['data']['language'] ?? 'en_US';
+
+                if ($templateName) {
+                    $response = $this->whatsapp->sendTemplate(
+                        $run->contact->phone_number,
+                        $templateName,
+                        $language
+                    );
+
+                    if ($response['success'] ?? false) {
+                        $wamid = $response['data']['messages'][0]['id'] ?? null;
+                        if ($wamid) {
+                            \App\Models\Message::create([
+                                'team_id' => $run->automation->team_id,
+                                'contact_id' => $run->contact_id,
+                                'conversation_id' => $run->contact->activeConversation->id ?? (new \App\Services\ConversationService())->ensureActiveConversation($run->contact)->id,
+                                'whatsapp_message_id' => $wamid,
+                                'direction' => 'outbound',
+                                'type' => 'template',
+                                'status' => 'sent',
+                                'content' => "Template: {$templateName}",
+                                'sent_at' => now(),
+                                'metadata' => [
+                                    'template_name' => $templateName,
+                                    'automation_id' => $run->automation_id,
+                                    'run_id' => $run->id
+                                ]
+                            ]);
+                        }
+                    }
+                }
                 $this->moveToNextNode($run);
                 break;
 

@@ -26,7 +26,7 @@
                 class="p-6 flex flex-col items-center bg-slate-50/30 dark:bg-slate-900/20 border-b border-slate-100/50 dark:border-slate-900">
                 <div class="relative group">
                     <div
-                        class="absolute -inset-2 bg-gradient-to-tr from-wa-green to-wa-teal rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity">
+                        class="absolute -inset-2 bg-gradient-to-tr from-wa-teal to-wa-teal rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity">
                     </div>
                     <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $contact->name ?? 'Unknown' }}"
                         alt="{{ $contact->name }}"
@@ -41,10 +41,10 @@
 
                 <div class="mt-3 flex items-center gap-2">
                     <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                            {{ $contact->opt_in_status === 'opted_in'
-            ? 'bg-wa-green/10 text-wa-green border-wa-green/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-green/10 hover:text-wa-green hover:border-wa-green/20' 
-                            }}">
+                                {{ $contact->opt_in_status === 'opted_in'
+            ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
+                                }}">
                         <!-- Default Text -->
                         <span class="block {{ $contact->opt_in_status === 'opted_in' ? 'group-hover:hidden' : '' }}">
                             {{ $contact->opt_in_status === 'opted_in' ? 'OPTED IN' : 'OPTED OUT' }}
@@ -54,7 +54,7 @@
                         <!-- Actually, let's keep it simple: Status is button. Click to toggle. -->
                     </button>
                     <span
-                        class="w-1.5 h-1.5 rounded-full {{ $contact->opt_in_status === 'opted_in' ? 'bg-wa-green animate-pulse' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
+                        class="w-1.5 h-1.5 rounded-full {{ $contact->opt_in_status === 'opted_in' ? 'bg-wa-teal animate-pulse' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
                 </div>
             </div>
 

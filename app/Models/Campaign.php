@@ -43,4 +43,35 @@ class Campaign extends Model
     {
         return $this->hasMany(Message::class);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors
+    |--------------------------------------------------------------------------
+    */
+
+    public function getStatusStyleAttribute()
+    {
+        return match ($this->status) {
+            'completed', 'sent' => 'bg-wa-green/10 text-wa-green border-wa-green/20',
+            'processing', 'sending' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20',
+            'scheduled' => 'bg-wa-orange/10 text-wa-orange border-wa-orange/20',
+            'failed' => 'bg-rose-50 text-rose-600 border-rose-100',
+            default => 'bg-slate-50 text-slate-500 border-slate-200',
+        };
+    }
+
+    public function getDeliveryPercentageAttribute()
+    {
+        if (($this->total_contacts ?? 0) <= 0)
+            return 0;
+        return ($this->sent_count / $this->total_contacts) * 100;
+    }
+
+    public function getReadPercentageAttribute()
+    {
+        if (($this->sent_count ?? 0) <= 0)
+            return 0;
+        return ($this->read_count / $this->sent_count) * 100;
+    }
 }

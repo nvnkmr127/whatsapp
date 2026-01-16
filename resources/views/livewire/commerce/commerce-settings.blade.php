@@ -16,7 +16,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <x-action-message class="text-wa-green font-bold text-xs uppercase" on="saved">
+            <x-action-message class="text-wa-teal font-bold text-xs uppercase" on="saved">
                 Configuration Saved
             </x-action-message>
 
@@ -32,7 +32,7 @@
 
     @if (session()->has('message'))
         <div
-            class="animate-in slide-in-from-top-4 duration-500 p-4 bg-wa-green/10 border border-wa-green/20 text-wa-green rounded-2xl flex items-center gap-3">
+            class="animate-in slide-in-from-top-4 duration-500 p-4 bg-wa-teal/10 border border-wa-teal/20 text-wa-teal rounded-2xl flex items-center gap-3">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -161,7 +161,8 @@
                         </svg>
                     </div>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">WhatsApp
-                        <span class="text-wa-teal">Alerts</span></h2>
+                        <span class="text-wa-teal">Alerts</span>
+                    </h2>
                 </div>
 
                 <div class="p-8 space-y-6 max-h-[500px] overflow-y-auto">

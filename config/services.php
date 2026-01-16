@@ -37,6 +37,7 @@ return [
 
     'whatsapp' => [
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN', 'my-secret-token'),
+        'client_secret' => env('WHATSAPP_APP_SECRET'),
         'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
         'base_url' => env('WHATSAPP_BASE_URL', 'https://graph.facebook.com'),
     ],

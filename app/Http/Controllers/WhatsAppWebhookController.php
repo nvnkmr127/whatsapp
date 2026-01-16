@@ -32,18 +32,15 @@ class WhatsAppWebhookController extends Controller
     /**
      * Handle incoming events (POST).
      */
-    /**
-     * Handle incoming events (POST).
-     */
     public function handle(Request $request)
     {
-        $body = $request->all(); // Array
+        $data = $request->all();
         $signature = $request->header('X-Hub-Signature-256');
 
         // Store Raw Payload
         try {
             $payloadRecord = \App\Models\WebhookPayload::create([
-                'payload' => $body, // Casts to JSON automatically if model has cast
+                'payload' => $data,
                 'signature' => $signature,
                 'status' => 'pending',
             ]);
@@ -53,8 +50,6 @@ class WhatsAppWebhookController extends Controller
 
         } catch (\Exception $e) {
             Log::error("Failed to store webhook: " . $e->getMessage());
-            // Even if internal storage fails, we might want to return 200 to Meta to stop retries if it's a DB issue?
-            // No, if DB fails, let Meta retry later.
             return response('Internal Error', 500);
         }
 

@@ -61,3 +61,9 @@ if (!function_exists('whatsapp_log')) {
         \Illuminate\Support\Facades\Log::channel('daily')->log($level, "WA API: " . $message, $context);
     }
 }
+if (!function_exists('audit')) {
+    function audit(string $action, ?string $description = null, ?\Illuminate\Database\Eloquent\Model $subject = null, ?array $properties = [])
+    {
+        return (new \App\Services\AuditService())->log($action, $description, $subject, $properties);
+    }
+}

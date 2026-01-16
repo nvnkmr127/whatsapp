@@ -26,10 +26,54 @@ class AutomationList extends Component
 
     public function delete()
     {
-        \App\Models\Automation::findOrFail($this->deletionId)->delete();
-        $this->confirmingDeletion = false;
-        $this->deletionId = null;
-        $this->dispatch('notify', 'Automation deleted successfully.');
+        try {
+            \App\Models\Automation::findOrFail($this->deletionId)->delete();
+            $this->confirmingDeletion = false;
+            $this->deletionId = null;
+            $this->dispatch('notify', 'Automation deleted successfully.');
+        } catch (\Exception $e) {
+            $this->confirmingDeletion = false;
+            $this->addError('base', 'Unable to delete automation: ' . $e->getMessage());
+        }
+    }
+
+    public function duplicate($id)
+    {
+        try {
+            $original = \App\Models\Automation::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
+            $clone = $original->replicate();
+            $clone->name = $original->name . ' (Copy)';
+            $clone->is_active = false; // Default to inactive for safety
+            $clone->save();
+
+            $this->dispatch('notify', 'Automation duplicated successfully.');
+        } catch (\Exception $e) {
+            $this->addError('base', 'Unable to duplicate: ' . $e->getMessage());
+        }
+    }
+
+    public function export($id)
+    {
+        try {
+            $automation = \App\Models\Automation::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
+
+            // Format matching the user's example structure or cleaner
+            $exportData = [
+                'name' => $automation->name,
+                'trigger_type' => $automation->trigger_type,
+                'trigger_config' => $automation->trigger_config,
+                'flow_data' => $automation->flow_data,
+                'exported_at' => now()->toIso8601String(),
+                'version' => '1.0'
+            ];
+
+            return response()->streamDownload(function () use ($exportData) {
+                echo json_encode($exportData, JSON_PRETTY_PRINT);
+            }, \Illuminate\Support\Str::slug($automation->name) . '-export.json');
+
+        } catch (\Exception $e) {
+            $this->addError('base', 'Unable to export: ' . $e->getMessage());
+        }
     }
 
     #[Layout('components.layouts.app')]

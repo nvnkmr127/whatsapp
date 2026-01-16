@@ -54,4 +54,9 @@ class Contact extends Model
             ->whereIn('status', ['new', 'open', 'waiting_reply'])
             ->latest();
     }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 }

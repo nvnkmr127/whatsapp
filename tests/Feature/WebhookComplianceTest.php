@@ -54,11 +54,21 @@ class WebhookComplianceTest extends TestCase
             ]
         ];
 
-        // 3. Send Webhook Request
-        $this->postJson('/api/webhook/whatsapp', $payload);
+        // Send Webhook Request
+        $secret = 'test-secret';
+        \Illuminate\Support\Facades\Config::set('services.whatsapp.client_secret', $secret);
+
+        $payloadJson = json_encode($payload);
+        $signature = 'sha256=' . hash_hmac('sha256', $payloadJson, $secret);
+
+        $response = $this->withHeaders([
+            'X-Hub-Signature-256' => $signature,
+        ])->postJson('/api/webhook/whatsapp', $payload);
+
+        $response->assertStatus(200);
 
         // 4. Assertions
-        $contact->refresh();
+        $contact = Contact::find($contact->id);
         $this->assertEquals('opted_out', $contact->opt_in_status);
 
         $this->assertDatabaseHas('consent_logs', [

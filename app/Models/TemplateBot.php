@@ -19,6 +19,7 @@ class TemplateBot extends Model
         'filename',
         'trigger',
         'reply_type',
+        'addedfrom',
         'is_bot_active',
         'sending_count'
     ];

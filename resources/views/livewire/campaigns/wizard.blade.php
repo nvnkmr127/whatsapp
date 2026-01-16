@@ -2,7 +2,7 @@
     {{-- Page Header --}}
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div class="flex items-center gap-4">
-            <div class="p-3 bg-wa-green/10 dark:bg-wa-green/20 rounded-2xl text-wa-green">
+            <div class="p-3 bg-wa-teal/10 dark:bg-wa-teal/20 rounded-2xl text-wa-teal">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                         d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -10,7 +10,7 @@
             </div>
             <div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    Campaign <span class="text-wa-green">Creator</span>
+                    Campaign <span class="text-wa-teal">Creator</span>
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 font-medium tracking-tight">
                     Step {{ $step }} of 4: {{ $this->steps[$step] ?? 'Unknown' }}
@@ -23,13 +23,13 @@
             @for ($i = 1; $i <= 4; $i++)
                 <div class="flex items-center">
                     <div
-                        class="w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 {{ $step >= $i ? 'bg-wa-green text-white shadow-xl shadow-wa-green/20 scale-110' : 'bg-white dark:bg-slate-800 text-slate-400 border border-slate-100 dark:border-slate-700' }}">
+                        class="w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 {{ $step >= $i ? 'bg-wa-teal text-white shadow-xl shadow-wa-teal/20 scale-110' : 'bg-white dark:bg-slate-800 text-slate-400 border border-slate-100 dark:border-slate-700' }}">
                         {{ $i }}
                     </div>
                     @if ($i < 4)
                         <div
                             class="w-6 h-1 mx-1 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                            <div class="h-full bg-wa-green transition-all duration-700"
+                            <div class="h-full bg-wa-teal transition-all duration-700"
                                 style="width: {{ $step > $i ? '100%' : '0%' }}"></div>
                         </div>
                     @endif
@@ -47,7 +47,7 @@
             <div class="p-10 md:p-16 space-y-12 flex-1 animate-in slide-in-from-right-4 duration-500">
                 <div class="max-w-2xl">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
-                        Campaign <span class="text-wa-green">Setup</span></h3>
+                        Campaign <span class="text-wa-teal">Setup</span></h3>
                     <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Give your campaign a name
                         and decide when it hits the network.</p>
                 </div>
@@ -58,7 +58,7 @@
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Campaign
                                 Name</label>
                             <input type="text" wire:model="name"
-                                class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-green transition-all"
+                                class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal transition-all"
                                 placeholder="Summer Promo 2024">
                             <x-input-error for="name" class="mt-2" />
                         </div>
@@ -68,10 +68,10 @@
                             <div class="grid grid-cols-1 gap-4">
                                 {{-- Now --}}
                                 <div wire:click="$set('scheduleMode', 'now')"
-                                    class="group cursor-pointer relative rounded-3xl p-6 border-2 transition-all duration-300 {{ $scheduleMode === 'now' ? 'border-wa-green bg-wa-green/5' : 'border-slate-100 dark:border-slate-800 hover:border-wa-green/30' }}">
+                                    class="group cursor-pointer relative rounded-3xl p-6 border-2 transition-all duration-300 {{ $scheduleMode === 'now' ? 'border-wa-teal bg-wa-teal/5' : 'border-slate-100 dark:border-slate-800 hover:border-wa-teal/30' }}">
                                     <div class="flex items-center gap-4">
                                         <div
-                                            class="w-12 h-12 rounded-2xl bg-wa-green flex items-center justify-center text-white shadow-lg shadow-wa-green/20">
+                                            class="w-12 h-12 rounded-2xl bg-wa-teal flex items-center justify-center text-white shadow-lg shadow-wa-teal/20">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -84,7 +84,7 @@
                                         </div>
                                     </div>
                                     @if ($scheduleMode === 'now')
-                                        <div class="absolute top-6 right-6 text-wa-green">
+                                        <div class="absolute top-6 right-6 text-wa-teal">
                                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                     d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -96,10 +96,10 @@
 
                                 {{-- Later --}}
                                 <div wire:click="$set('scheduleMode', 'later')"
-                                    class="group cursor-pointer relative rounded-3xl p-6 border-2 transition-all duration-300 {{ $scheduleMode === 'later' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-100 dark:border-slate-800 hover:border-blue-500/30' }}">
+                                    class="group cursor-pointer relative rounded-3xl p-6 border-2 transition-all duration-300 {{ $scheduleMode === 'later' ? 'border-wa-teal bg-wa-teal/5' : 'border-slate-100 dark:border-slate-800 hover:border-wa-teal/30' }}">
                                     <div class="flex items-center gap-4">
                                         <div
-                                            class="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                            class="w-12 h-12 rounded-2xl bg-wa-teal flex items-center justify-center text-white shadow-lg shadow-wa-teal/20">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -112,7 +112,7 @@
                                         </div>
                                     </div>
                                     @if ($scheduleMode === 'later')
-                                        <div class="absolute top-6 right-6 text-blue-500">
+                                        <div class="absolute top-6 right-6 text-wa-teal">
                                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
                                                     d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -128,7 +128,7 @@
                             <div class="animate-in fade-in slide-in-from-top-2 duration-300">
                                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Dispatch Time</label>
                                 <input type="datetime-local" wire:model="scheduled_at"
-                                    class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all">
+                                    class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal transition-all">
                                 <x-input-error for="scheduled_at" class="mt-2" />
                             </div>
                         @endif
@@ -136,8 +136,8 @@
 
                     <div class="hidden lg:flex items-center justify-center">
                         <div class="relative">
-                            <div class="absolute -inset-4 bg-wa-green/10 rounded-full blur-3xl animate-pulse"></div>
-                            <svg class="w-64 h-64 text-wa-green/20" fill="currentColor" viewBox="0 0 24 24">
+                            <div class="absolute -inset-4 bg-wa-teal/10 rounded-full blur-3xl animate-pulse"></div>
+                            <svg class="w-64 h-64 text-wa-teal/20" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 1L9 9L1 12L9 15L12 23L15 15L23 12L15 9L12 1Z" />
                             </svg>
                         </div>
@@ -158,7 +158,7 @@
             <div class="p-10 md:p-16 space-y-12 flex-1 animate-in slide-in-from-right-4 duration-500">
                 <div class="max-w-2xl">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
-                        Select <span class="text-blue-500">Audience</span></h3>
+                        Select <span class="text-wa-teal">Audience</span></h3>
                     <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Who are we reaching out to today? Filter by tags or select specific contacts.</p>
                 </div>
 
@@ -168,15 +168,15 @@
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Selection Mode</label>
                             <div class="flex flex-wrap gap-4">
                                 <button wire:click="$set('audienceType', 'tags')" 
-                                    class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'tags' ? 'bg-blue-500 text-white border-blue-500' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
+                                    class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'tags' ? 'bg-wa-teal text-white border-wa-teal' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
                                     Filter by Tags
                                 </button>
                                 <button wire:click="$set('audienceType', 'contacts')" 
-                                    class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'contacts' ? 'bg-blue-500 text-white border-blue-500' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
+                                    class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'contacts' ? 'bg-wa-teal text-white border-wa-teal' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
                                     Manual Selection
                                 </button>
                                 <button wire:click="$set('audienceType', 'all')" 
-                                    class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'all' ? 'bg-blue-500 text-white border-blue-500' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
+                                    class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'all' ? 'bg-wa-teal text-white border-wa-teal' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
                                     Entire Database
                                 </button>
                             </div>
@@ -189,7 +189,7 @@
                                     @foreach($this->tags as $tag)
                                         <label class="cursor-pointer group">
                                             <input type="checkbox" wire:model.live="selectedTags" value="{{ $tag->id }}" class="hidden">
-                                            <div class="px-4 py-3 rounded-2xl border-2 text-xs font-bold transition-all {{ in_array($tag->id, $selectedTags) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10 text-blue-600' : 'border-slate-50 dark:border-slate-800 text-slate-500 hover:border-slate-200' }}">
+                                            <div class="px-4 py-3 rounded-2xl border-2 text-xs font-bold transition-all {{ in_array($tag->id, $selectedTags) ? 'border-wa-teal bg-blue-50 dark:bg-blue-900/10 text-blue-600' : 'border-slate-50 dark:border-slate-800 text-slate-500 hover:border-slate-200' }}">
                                                 {{ $tag->name }}
                                             </div>
                                         </label>
@@ -206,7 +206,7 @@
                                     <div class="space-y-2">
                                         @foreach($this->contacts as $contact)
                                             <label class="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-active-dark transition-all cursor-pointer group">
-                                                <input type="checkbox" wire:model.live="selectedContacts" value="{{ $contact->id }}" class="w-5 h-5 rounded-lg border-slate-200 text-blue-500 focus:ring-blue-500/20">
+                                                <input type="checkbox" wire:model.live="selectedContacts" value="{{ $contact->id }}" class="w-5 h-5 rounded-lg border-slate-200 text-wa-teal focus:ring-wa-teal/20">
                                                 <div>
                                                     <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $contact->first_name }} {{ $contact->last_name }}</p>
                                                     <p class="text-[10px] font-medium text-slate-500">{{ $contact->phone }}</p>
@@ -221,7 +221,7 @@
                         @if($audienceType === 'all')
                             <div class="p-8 bg-blue-50 dark:bg-blue-900/10 rounded-[2rem] border border-blue-100 dark:border-blue-800/50">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white">
+                                    <div class="w-12 h-12 rounded-2xl bg-wa-teal flex items-center justify-center text-white">
                                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                                     </div>
                                     <div>
@@ -247,7 +247,7 @@
                                 </div>
 
                                 <div class="w-full bg-slate-200 dark:bg-slate-700 h-1 rounded-full overflow-hidden">
-                                    <div class="h-full bg-blue-500 transition-all duration-1000" style="width: {{ min(100, $audienceCount > 0 ? ($audienceCount / 1000) * 100 : 0) }}%"></div>
+                                    <div class="h-full bg-wa-teal transition-all duration-1000" style="width: {{ min(100, $audienceCount > 0 ? ($audienceCount / 1000) * 100 : 0) }}%"></div>
                                 </div>
 
                                 <p class="text-[10px] font-bold text-slate-400 leading-relaxed uppercase">
@@ -312,7 +312,7 @@
                                                 <p class="text-[10px] font-medium text-slate-500">Drag and drop or click to browse</p>
                                                 
                                                 @if($headerMediaFile)
-                                                    <div class="mt-4 px-4 py-2 bg-wa-green/10 text-wa-green text-[10px] font-black rounded-lg">File Ready: {{ $headerMediaFile->getClientOriginalName() }}</div>
+                                                    <div class="mt-4 px-4 py-2 bg-wa-teal/10 text-wa-teal text-[10px] font-black rounded-lg">File Ready: {{ $headerMediaFile->getClientOriginalName() }}</div>
                                                 @endif
                                             </div>
                                         </div>
@@ -382,7 +382,7 @@
                                              @php
                                                  $previewText = $info['bodyText'];
                                                  foreach($templateVars as $key => $val) {
-                                                     $previewText = str_replace('{{'.($key+1).'}}', '<span class="text-wa-green font-black">'.($val ?: '...').'</span>', $previewText);
+                                                     $previewText = str_replace('{{'.($key+1).'}}', '<span class="text-wa-teal font-black">'.($val ?: '...').'</span>', $previewText);
                                                  }
                                              @endphp
                                              {!! nl2br($previewText) !!}
@@ -443,7 +443,7 @@
                     <div class="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Selected Template</p>
                         <div class="flex items-center gap-2">
-                             <div class="w-1.5 h-1.5 rounded-full bg-wa-green animate-pulse"></div>
+                             <div class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></div>
                              <span class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{{ $this->templates->find($selectedTemplateId)->name ?? 'None' }}</span>
                         </div>
                     </div>

@@ -19,12 +19,24 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\View::composer('*', \App\Http\View\Composers\GlobalSettingsComposer::class);
+
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             // Limit by Team ID if authenticated, otherwise IP
             $key = $request->user()?->current_team_id ?: $request->ip();
             // 600 requests per minute per Team (10 req/sec)
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(600)->by($key);
         });
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Login::class,
+            \App\Listeners\LogSuccessfulLogin::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Logout::class,
+            \App\Listeners\LogSuccessfulLogout::class
+        );
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\MessageReceived::class,

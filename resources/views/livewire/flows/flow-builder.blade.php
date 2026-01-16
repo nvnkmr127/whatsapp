@@ -46,7 +46,7 @@
                     <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Endpoint</label>
                     <div class="flex items-center gap-2 mt-2">
                         <input type="checkbox" wire:model="usesDataEndpoint"
-                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            class="rounded border-gray-300 text-wa-teal shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                         <span class="text-xs font-bold text-slate-600 dark:text-slate-400">Use Data Endpoint</span>
                     </div>
                 </div>
@@ -60,12 +60,12 @@
                         Save Draft
                     </button>
                     <button wire:click="deploy"
-                        class="px-6 py-2.5 bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
-                        Deploy to Meta
+                        class="px-6 py-2.5 bg-wa-teal text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        Save to Meta
                     </button>
                 </div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Status: <span class="text-indigo-600">{{ $flowId ? 'Saved' : 'Local Draft' }}</span>
+                    Status: <span class="text-wa-teal">{{ $flowId ? 'Saved' : 'Local Draft' }}</span>
                 </p>
             </div>
         </div>
@@ -107,7 +107,7 @@
                         class="w-full p-4 rounded-2xl border transition-all text-left flex items-center justify-between group {{ $selectedScreenIndex === $index ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800/50' : 'bg-transparent border-transparent hover:bg-slate-50' }}">
                         <div>
                             <p
-                                class="text-[9px] font-black uppercase tracking-widest {{ $selectedScreenIndex === $index ? 'text-indigo-600' : 'text-slate-400' }}">
+                                class="text-[9px] font-black uppercase tracking-widest {{ $selectedScreenIndex === $index ? 'text-wa-teal' : 'text-slate-400' }}">
                                 {{ $screen['id'] }}
                             </p>
                             <p
@@ -125,7 +125,7 @@
                     </button>
                 @endforeach
                 <button wire:click="addScreen"
-                    class="w-full p-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
+                    class="w-full p-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-slate-400 hover:text-wa-teal hover:border-indigo-100 transition-all font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -154,7 +154,7 @@
 
                     <div class="flex-1 overflow-y-auto p-8 space-y-6">
                         <div class="border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-                            <label class="text-[9px] font-black uppercase tracking-widest text-indigo-600">Header
+                            <label class="text-[9px] font-black uppercase tracking-widest text-wa-teal">Header
                                 Text</label>
                             <input type="text" wire:model="screens.{{ $selectedScreenIndex }}.title"
                                 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 w-full">
@@ -162,7 +162,7 @@
 
                         @foreach($screens[$selectedScreenIndex]['components'] as $cIndex => $component)
                             <div wire:click="$set('selectedComponentIndex', {{ $cIndex }})"
-                                class="relative group p-4 border-2 rounded-2xl transition-all cursor-pointer {{ $selectedComponentIndex === $cIndex ? 'border-indigo-600 bg-indigo-50/10' : 'border-transparent hover:border-slate-100' }}">
+                                class="relative group p-4 border-2 rounded-2xl transition-all cursor-pointer {{ $selectedComponentIndex === $cIndex ? 'border-wa-teal bg-indigo-50/10' : 'border-transparent hover:border-slate-100' }}">
                                 @if(isset($component['type']) && $component['type'] === 'TextBody')
                                     <p class="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
                                         {{ $component['text'] }}
@@ -267,7 +267,7 @@
                                 @elseif($component['type'] === 'Footer')
                                     <div class="pt-8 mt-auto">
                                         <button
-                                            class="w-full py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl">
+                                            class="w-full py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl">
                                             {{ $component['label'] }}
                                         </button>
                                     </div>
@@ -297,7 +297,7 @@
                 @if($selectedComponentIndex !== null)
                     @php $comp = $screens[$selectedScreenIndex]['components'][$selectedComponentIndex]; @endphp
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-4">Editing
+                        <p class="text-[10px] font-black uppercase tracking-widest text-wa-teal mb-4">Editing
                             {{ $comp['type'] }}
                         </p>
 
@@ -331,7 +331,7 @@
                                         Field</span>
                                     <input type="checkbox"
                                         wire:model.live="screens.{{ $selectedScreenIndex }}.components.{{ $selectedComponentIndex }}.required"
-                                        class="w-5 h-5 rounded border-slate-200 text-indigo-600 focus:ring-indigo-500/20">
+                                        class="w-5 h-5 rounded border-slate-200 text-wa-teal focus:ring-indigo-500/20">
                                 </div>
                             </div>
                         @elseif(in_array($comp['type'], ['CheckboxGroup', 'RadioGroup', 'Select', 'Dropdown']))
@@ -350,7 +350,7 @@
                                             class="text-[10px] font-black uppercase tracking-widest text-slate-400">Options</label>
                                         <button
                                             wire:click="addOption({{ $selectedScreenIndex }}, {{ $selectedComponentIndex }})"
-                                            class="text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:underline">+
+                                            class="text-[9px] font-black uppercase tracking-widest text-wa-teal hover:underline">+
                                             Add Option</button>
                                     </div>
                                     <div class="space-y-2">
@@ -405,7 +405,7 @@
                                     <span class="text-[9px] font-black uppercase tracking-widest text-slate-500">Required</span>
                                     <input type="checkbox"
                                         wire:model.live="screens.{{ $selectedScreenIndex }}.components.{{ $selectedComponentIndex }}.required"
-                                        class="w-5 h-5 rounded border-slate-200 text-indigo-600 focus:ring-indigo-500/20">
+                                        class="w-5 h-5 rounded border-slate-200 text-wa-teal focus:ring-indigo-500/20">
                                 </div>
                             </div>
                         @elseif($comp['type'] === 'Image')
@@ -463,8 +463,8 @@
                     <div class="grid grid-cols-2 gap-3">
                         <button wire:click="addComponent('TextBody')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 6h16M4 12h16M4 18h7" />
                             </svg>
@@ -472,8 +472,8 @@
                         </button>
                         <button wire:click="addComponent('TextInput')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
@@ -482,8 +482,8 @@
                         </button>
                         <button wire:click="addComponent('TextArea')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
@@ -492,8 +492,8 @@
                         </button>
                         <button wire:click="addComponent('CheckboxGroup')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -501,8 +501,8 @@
                         </button>
                         <button wire:click="addComponent('RadioGroup')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
@@ -511,8 +511,8 @@
                         </button>
                         <button wire:click="addComponent('Select')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                             </svg>
@@ -520,8 +520,8 @@
                         </button>
                         <button wire:click="addComponent('DateField')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -529,8 +529,8 @@
                         </button>
                         <button wire:click="addComponent('PhotoPicker')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -538,8 +538,8 @@
                         </button>
                         <button wire:click="addComponent('DocumentPicker')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
@@ -547,8 +547,8 @@
                         </button>
                         <button wire:click="addComponent('Image')"
                             class="p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl flex flex-col items-center gap-2 transition-all group">
-                            <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>

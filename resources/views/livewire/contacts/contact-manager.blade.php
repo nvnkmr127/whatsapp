@@ -3,14 +3,14 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-wa-green/10 text-wa-green rounded-lg">
+                <div class="p-2 bg-wa-teal/10 text-wa-teal rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Audience <span
-                        class="text-wa-green">Center</span></h1>
+                        class="text-wa-teal">Center</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Manage your contacts, tags, and communication preferences.</p>
         </div>
@@ -39,7 +39,7 @@
             Import
         </button>
         <button wire:click="create"
-            class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-green text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-green/20 hover:scale-[1.02] active:scale-95 transition-all">
+            class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
             </svg>
@@ -55,9 +55,9 @@
         <div class="p-8 border-b border-slate-50 dark:border-slate-800/50 flex flex-col lg:flex-row gap-6">
             <div class="flex-1 relative group">
                 <input wire:model.live.debounce.300ms="search" type="text"
-                    class="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-green/20 transition-all font-medium"
+                    class="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
                     placeholder="Search by name, phone, or email...">
-                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-green transition-colors"
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-teal transition-colors"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -67,7 +67,7 @@
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="w-full sm:w-48">
                     <select wire:model.live="filterTag"
-                        class="w-full py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-700 dark:text-slate-300 text-sm font-bold focus:ring-2 focus:ring-wa-green/20 transition-all appearance-none cursor-pointer">
+                        class="w-full py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-700 dark:text-slate-300 text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none cursor-pointer">
                         <option value="">All Tags</option>
                         @foreach($tags as $tag)
                             <option value="{{ $tag->id }}">{{ $tag->name }}</option>
@@ -76,7 +76,7 @@
                 </div>
                 <div class="w-full sm:w-48">
                     <select wire:model.live="filterStatus"
-                        class="w-full py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-700 dark:text-slate-300 text-sm font-bold focus:ring-2 focus:ring-wa-green/20 transition-all appearance-none cursor-pointer">
+                        class="w-full py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-700 dark:text-slate-300 text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none cursor-pointer">
                         <option value="">All Statuses</option>
                         <option value="opted_in">Opt-in</option>
                         <option value="opted_out">Opt-out</option>
@@ -132,6 +132,13 @@
                             </td>
                             <td class="px-8 py-6">
                                 <div class="flex flex-wrap gap-2">
+                                    @if($contact->category)
+                                        <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
+                                              style="background-color: {{ $contact->category->color }}20; color: {{ $contact->category->color }}; border-color: {{ $contact->category->color }}40">
+                                            <i class="{{ $contact->category->icon }} mr-1"></i>
+                                            {{ $contact->category->name }}
+                                        </span>
+                                    @endif
                                     @foreach($contact->tags as $tag)
                                         <span
                                             class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
@@ -139,17 +146,17 @@
                                             {{ $tag->name }}
                                         </span>
                                     @endforeach
-                                    @if($contact->tags->isEmpty())
-                                        <span class="text-xs text-slate-400 italic">No tags</span>
+                                    @if($contact->tags->isEmpty() && !$contact->category)
+                                        <span class="text-xs text-slate-400 italic">No classification</span>
                                     @endif
                                 </div>
                             </td>
                             <td class="px-8 py-6">
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="w-2 h-2 rounded-full {{ $contact->opt_in_status === 'opted_in' ? 'bg-wa-green shadow-lg shadow-wa-green/40' : 'bg-rose-500 shadow-lg shadow-rose-500/40' }}"></span>
+                                        class="w-2 h-2 rounded-full {{ $contact->opt_in_status === 'opted_in' ? 'bg-wa-teal shadow-lg shadow-wa-teal/40' : 'bg-rose-500 shadow-lg shadow-rose-500/40' }}"></span>
                                     <span
-                                        class="text-xs font-black uppercase tracking-widest {{ $contact->opt_in_status === 'opted_in' ? 'text-wa-green' : 'text-rose-500' }}">
+                                        class="text-xs font-black uppercase tracking-widest {{ $contact->opt_in_status === 'opted_in' ? 'text-wa-teal' : 'text-rose-500' }}">
                                         {{ str_replace('_', ' ', $contact->opt_in_status) }}
                                     </span>
                                 </div>
@@ -298,7 +305,19 @@
                         </div>
                     @endif
 
-                    <div class="space-y-2">
+                    <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <div class="space-y-2">
+                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Contact Category</label>
+                            <select wire:model="category_id"
+                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                                <option value="">No Category</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('category_id') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+                        </div>
+
                         <label class="text-xs font-black uppercase tracking-widest text-slate-400">Select Tags</label>
                         <div
                             class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl grid grid-cols-2 gap-3 max-h-40 overflow-y-auto">
@@ -321,7 +340,7 @@
                     </button>
                     <button wire:click="store"
                         class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                        Save Identity
+                        Save Contact
                     </button>
                 </div>
             </div>
@@ -404,7 +423,7 @@
                             </button>
                         </div>
                         @if (session()->has('tag_message'))
-                            <div class="text-xs font-bold text-wa-green">{{ session('tag_message') }}</div>
+                            <div class="text-xs font-bold text-wa-teal">{{ session('tag_message') }}</div>
                         @endif
                     </div>
 
@@ -494,7 +513,7 @@
                             </button>
                         </div>
                         @if (session()->has('field_message'))
-                            <div class="text-xs font-bold text-wa-green">{{ session('field_message') }}</div>
+                            <div class="text-xs font-bold text-wa-teal">{{ session('field_message') }}</div>
                         @endif
                     </div>
 
@@ -627,7 +646,7 @@
                         <!-- Result -->
                         <div class="text-center space-y-6">
                             <div
-                                class="w-20 h-20 bg-wa-green/10 rounded-full flex items-center justify-center mx-auto text-wa-green">
+                                class="w-20 h-20 bg-wa-teal/10 rounded-full flex items-center justify-center mx-auto text-wa-teal">
                                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
@@ -635,7 +654,7 @@
                             <div>
                                 <h3 class="text-xl font-black text-slate-900 dark:text-white">Import Complete!</h3>
                                 <div class="mt-2 text-sm font-medium text-slate-500">
-                                    Success: <span class="text-wa-green font-bold">{{ $importResult['success_count'] }}</span>
+                                    Success: <span class="text-wa-teal font-bold">{{ $importResult['success_count'] }}</span>
                                     @if(count($importResult['errors']) > 0)
                                         | Errors: <span class="text-rose-500 font-bold">{{ count($importResult['errors']) }}</span>
                                     @endif
@@ -705,18 +724,27 @@
                         <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl space-y-1">
                             <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</div>
                             <div
-                                class="font-bold flex items-center gap-2 {{ $viewingContact->opt_in_status === 'opted_in' ? 'text-wa-green' : 'text-slate-500' }}">
+                                class="font-bold flex items-center gap-2 {{ $viewingContact->opt_in_status === 'opted_in' ? 'text-wa-teal' : 'text-slate-500' }}">
                                 <span
-                                    class="w-2 h-2 rounded-full {{ $viewingContact->opt_in_status === 'opted_in' ? 'bg-wa-green' : 'bg-slate-500' }}"></span>
+                                    class="w-2 h-2 rounded-full {{ $viewingContact->opt_in_status === 'opted_in' ? 'bg-wa-teal' : 'bg-slate-500' }}"></span>
                                 {{ $viewingContact->opt_in_status === 'opted_in' ? 'Opted In' : 'Opted Out' }}
                             </div>
                         </div>
                     </div>
 
-                    @if($viewingContact->tags->isNotEmpty())
+                    @if($viewingContact->category || $viewingContact->tags->isNotEmpty())
                         <div class="space-y-2">
-                            <div class="text-xs font-black text-slate-400 uppercase tracking-widest">Assigned Tags</div>
+                            <div class="text-xs font-black text-slate-400 uppercase tracking-widest">Classification</div>
                             <div class="flex flex-wrap gap-2">
+                                @if($viewingContact->category)
+                                    <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm flex items-center gap-2"
+                                          style="background-color: {{ $viewingContact->category->color }}">
+                                        @if($viewingContact->category->icon)
+                                            <i class="{{ $viewingContact->category->icon }}"></i>
+                                        @endif
+                                        {{ $viewingContact->category->name }}
+                                    </span>
+                                @endif
                                 @foreach($viewingContact->tags as $tag)
                                     <span
                                         class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-white shadow-sm"

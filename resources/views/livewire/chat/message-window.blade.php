@@ -431,7 +431,7 @@
                                                 {{ $template->name }}
                                             </h3>
                                             <span
-                                                class="px-2 py-0.5 bg-wa-green/10 text-wa-green border border-wa-green/20 rounded text-[9px] font-black uppercase tracking-widest shrink-0">
+                                                class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal border border-wa-teal/20 rounded text-[9px] font-black uppercase tracking-widest shrink-0">
                                                 {{ $template->status }}
                                             </span>
                                         </div>

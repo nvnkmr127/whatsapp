@@ -33,5 +33,16 @@ Follow this checklist to get your WhatsApp Business Platform up and running in u
 - [ ] Click **Save**.
 - [ ] **Test**: Reply "test" from your phone to your business number.
 
+### Step 5: Setup Billing
+- [ ] Go to **Billing**.
+- [ ] Check your default **Plan**.
+- [ ] **Top up** your wallet (if in production) or verify the demo balance.
+
+### Step 6: Configure Commerce
+- [ ] Go to **Commerce > Settings**.
+- [ ] Enable the commerce engine.
+- [ ] Add your first product in **Product Manager**.
+- [ ] **Verify**: Send a product catalog message to your test contact from the CRM/Inbox.
+
 ### Done!
-You are now ready to explore advanced features like Campaigns and CRM integration. Refer to the [User Guide](user_guide.md) for more details.
+You are now ready to explore advanced features like Campaigns, AI Brain, and CRM integration. Refer to the [User Guide](user_guide.md) for more details.

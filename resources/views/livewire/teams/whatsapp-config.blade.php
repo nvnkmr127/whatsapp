@@ -13,7 +13,7 @@
             </div>
             <div>
                 <h1 class="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                    WHATSAPP <span class="text-green-500">CONFIGURATION</span>
+                    WHATSAPP <span class="text-wa-teal">CONFIGURATION</span>
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 font-medium">Manage your WhatsApp Business API connection
                     and settings.</p>
@@ -26,7 +26,7 @@
                     <span class="relative flex h-3 w-3">
                         <span
                             class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-wa-teal"></span>
                     </span>
                     <span class="text-sm font-bold text-green-700 dark:text-green-400">CONNECTED</span>
                 </div>
@@ -72,7 +72,7 @@
                                 @php
                                     $percent = $credits_total > 0 ? ($credits / $credits_total) * 100 : 0;
                                 @endphp
-             <div
+                                <div
                                     class="flex items-center {{ $percent > 90 ? 'text-rose-500' : 'text-green-600' }} text-sm font-bold">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -95,7 +95,7 @@
                                 </div>
                                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Quality</span>
                             </div>
-                            <div class="text-4xl font-bold text-green-500 uppercase">{{ $wm_quality_rating ?? 'GREEN' }}</div>
+                            <div class="text-4xl font-bold text-wa-teal uppercase">{{ $wm_quality_rating ?? 'GREEN' }}</div>
                             <p class="mt-4 text-sm text-slate-500 font-medium">Based on Meta health check</p>
                         </div>
 
@@ -149,7 +149,7 @@
                                 </div>
                             @endif
                             <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">BUSINESS <span
-                                    class="text-green-500">PROFILE</span></h3>
+                                    class="text-wa-teal">PROFILE</span></h3>
                         </div>
 
                         @if(!$is_editing_profile)
@@ -167,7 +167,7 @@
                                     <x-label for="profile_description" value="Business Description"
                                         class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                     <textarea id="profile_description" wire:model="profile_description" rows="4"
-                                        class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500 transition-all"
+                                        class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all"
                                         placeholder="Briefly describe your business..."></textarea>
                                 </div>
                                 <div>
@@ -190,7 +190,7 @@
                                         <x-label for="profile_vertical" value="Industry (Vertical)"
                                             class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                         <select id="profile_vertical" wire:model="profile_vertical"
-                                            class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-green-500 focus:border-green-500 transition-all">
+                                            class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all">
                                             <option value="">Select industry...</option>
                                             <option value="AUTO">Automotive</option>
                                             <option value="BEAUTY">Beauty & Personal Care</option>
@@ -351,7 +351,7 @@
                                 </svg>
                             </div>
                             <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">API <span
-                                    class="text-green-500">CREDENTIALS</span></h3>
+                                    class="text-wa-teal">CREDENTIALS</span></h3>
                         </div>
 
                         <div class="space-y-6">
@@ -419,7 +419,7 @@
                                 </svg>
                             </div>
                             <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">WEBHOOK <span
-                                    class="text-green-500">SETTINGS</span></h3>
+                                    class="text-wa-teal">SETTINGS</span></h3>
                         </div>
 
                         <div class="space-y-6">
@@ -486,7 +486,7 @@
                     class="flex flex-col md:flex-row items-center justify-between gap-6 p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800">
                     <div class="space-y-1 text-center md:text-left">
                         <h4 class="font-bold text-slate-900 dark:text-white uppercase tracking-tight">META MANAGER <span
-                                class="text-green-500">PORTAL</span></h4>
+                                class="text-wa-teal">PORTAL</span></h4>
                         <p class="text-sm text-slate-500 font-medium italic">Configure templates, messages, and business hours
                             directly on Meta.</p>
                     </div>
@@ -502,7 +502,7 @@
                         </a>
                         <button wire:click="registerNumber" wire:loading.attr="disabled"
                             wire:confirm="Default PIN is 123456. Are you sure you want to re-register?"
-                            class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50">
+                            class="px-6 py-3 bg-wa-teal hover:bg-green-600 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50">
                             REGISTER PHONE
                         </button>
                     </div>
@@ -513,7 +513,7 @@
         <div class="max-w-4xl mx-auto py-12">
             <div class="text-center mb-12">
                 <h3 class="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-2">CONNECT YOUR
-                    <span class="text-green-500">ACCOUNT</span>
+                    <span class="text-wa-teal">ACCOUNT</span>
                 </h3>
                 <p class="text-slate-500 dark:text-slate-400 font-medium font-serif">Link your Meta Business Account to
                     start sending messages.</p>

@@ -7,6 +7,11 @@
 4. [Using the Shared Inbox](#4-using-the-shared-inbox)
 5. [Creating Automations](#5-creating-automations)
 6. [Sending Campaigns](#6-sending-campaigns)
+7. [Billing & Plans](#7-billing--plans)
+8. [Commerce & Orders](#8-commerce--orders)
+9. [Analytics & Insights](#9-analytics--insights)
+10. [Audit & Compliance](#10-audit--compliance)
+11. [Developer Portal](#11-developer-portal)
 
 ---
 
@@ -60,3 +65,46 @@ Welcome to the WhatsApp Business API Platform. This guide will help you navigate
 3. **Select Audience**: Choose a Tag or Segment to send to.
 4. **Schedule**: Choose "Send Now" or pick a future date/time.
 5. **Launch**: Click "Send". You can track delivery stats in the **Broadcasting** list view.
+
+## 7. Billing & Plans
+*Role Required: Admin*
+
+Manage your subscription and wallet to ensure uninterrupted service.
+
+- **Plans**: View your current subscription level and available features.
+- **Wallet**: Top up your balance to cover messaging costs.
+- **Usage**: Track your daily and monthly messaging expenditures.
+
+## 8. Commerce & Orders
+*Role Required: Manager, Admin*
+
+Turn your WhatsApp into a sales channel.
+
+- **Product Manager**: Catalog your items with images, descriptions, and pricing.
+- **Order Management**: Track incoming orders from WhatsApp customers.
+- **Settings**: Configure automated notifications for "Order Received", "Shipped", and "Pending" states.
+
+## 9. Analytics & Insights
+*Role Required: Manager, Admin*
+
+Monitor your performance with real-time data.
+
+- **Message Stats**: Track Sent, Delivered, Read, and Failed counts.
+- **Customer Events**: Monitor specific user actions like button clicks or automated flow completions.
+
+## 10. Audit & Compliance
+*Role Required: Admin*
+
+Ensure your operations are secure and compliant.
+
+- **Activity Logs**: A searchable history of all administrative actions within your team.
+- **Consent Registry**: A verifiable log of user opt-ins and opt-outs.
+
+## 11. Developer Portal
+*Role Required: Admin / Developer*
+
+Technical tools for advanced integrations.
+
+- **Webhooks**: Configure custom callback URLs to receive real-time data in your own systems.
+- **API Tokens**: Generate secure tokens for programmatic access to the platform.
+- **Documentation**: Access the technical API reference directly within the portal.

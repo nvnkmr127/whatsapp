@@ -112,7 +112,7 @@
                         loading="lazy">
                     @if($conversation->status === 'open')
                         <div
-                            class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-wa-green border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
+                            class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-wa-teal border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
                         </div>
                     @endif
                 </div>

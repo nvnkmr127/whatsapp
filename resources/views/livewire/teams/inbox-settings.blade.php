@@ -3,23 +3,23 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-wa-green/10 text-wa-green rounded-lg">
+                <div class="p-2 bg-wa-teal/10 text-wa-teal rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Inbox <span
-                        class="text-wa-green">Settings</span></h1>
+                        class="text-wa-teal">Settings</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Configure automated replies, working hours, and message behavior.</p>
         </div>
         <div class="flex gap-3">
             <x-action-message class="mr-3 flex items-center" on="saved">
-                <span class="text-wa-green font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
+                <span class="text-wa-teal font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
             </x-action-message>
             <button wire:click="save"
-                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-green text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-green/20 hover:scale-[1.02] active:scale-95 transition-all">
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
@@ -42,31 +42,13 @@
                             Receipts</h2>
                         <p class="text-sm text-slate-500 font-medium mt-1">Status visibility for senders</p>
                     </div>
-                    <div
-                        class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                        <input type="checkbox" name="readReceiptsEnabled" id="readReceiptsEnabled"
-                            wire:model="readReceiptsEnabled"
-                            class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 checked:border-wa-green" />
-                        <label for="readReceiptsEnabled"
-                            class="toggle-label block overflow-hidden h-6 rounded-full bg-slate-200 dark:bg-slate-700 cursor-pointer peer-checked:bg-wa-green/20"></label>
-                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" wire:model="readReceiptsEnabled" class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-wa-teal/20 dark:peer-focus:ring-wa-teal/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
+                        </div>
+                    </label>
                 </div>
-                <style>
-                    .toggle-checkbox:checked {
-                        right: 0;
-                        border-color: #25D366;
-                    }
-
-                    .toggle-checkbox:checked+.toggle-label {
-                        background-color: rgba(37, 211, 102, 0.2);
-                    }
-
-                    .toggle-checkbox {
-                        right: calc(100% - 1.5rem);
-                        /* Start at left */
-                        transition: all 0.2s ease-in-out;
-                    }
-                </style>
                 <div
                     class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-sm text-slate-600 dark:text-slate-400 font-medium">
                     {{ __('Disabling this will prevent others from seeing whether you have read their messages.') }}
@@ -86,7 +68,7 @@
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" wire:model="aiAutoReplyEnabled" class="sr-only peer">
                         <div
-                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-wa-green/20 dark:peer-focus:ring-wa-green/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-green">
+                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-wa-teal/20 dark:peer-focus:ring-wa-teal/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
                         </div>
                     </label>
                 </div>
@@ -123,14 +105,14 @@
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
                     <!-- Welcome Message -->
                     <div class="py-6 first:pt-0">
-                        <div class="flex items-center justify-between mb-4">
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" wire:model.live="welcomeMessageEnabled"
-                                    class="w-5 h-5 rounded-lg border-none bg-slate-200 dark:bg-slate-700 text-wa-green focus:ring-wa-green/20">
-                                <span
-                                    class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">{{ __('Welcome Message') }}</span>
-                            </label>
-                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" wire:model.live="welcomeMessageEnabled" class="sr-only peer">
+                            <div
+                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-wa-teal/20 dark:peer-focus:ring-wa-teal/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
+                            </div>
+                            <span
+                                class="ml-3 text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">{{ __('Welcome Message') }}</span>
+                        </label>
 
                         @if($welcomeMessageEnabled)
                             <div class="flex items-start gap-4">
@@ -156,11 +138,13 @@
                     <!-- Off Hours Message -->
                     <div class="py-6">
                         <div class="flex items-center justify-between mb-4">
-                            <label class="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" wire:model.live="offHoursMessageEnabled"
-                                    class="w-5 h-5 rounded-lg border-none bg-slate-200 dark:bg-slate-700 text-wa-green focus:ring-wa-green/20">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" wire:model.live="offHoursMessageEnabled" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-wa-teal/20 dark:peer-focus:ring-wa-teal/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
+                                </div>
                                 <span
-                                    class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">{{ __('Away Message') }}</span>
+                                    class="ml-3 text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">{{ __('Away Message') }}</span>
                             </label>
                         </div>
 
@@ -183,7 +167,8 @@
                                 </button>
                             </div>
                             <p class="mt-2 text-[10px] uppercase font-bold text-slate-400 ml-1">
-                                {{ __('Sent when contacted outside business hours below.') }}</p>
+                                {{ __('Sent when contacted outside business hours below.') }}
+                            </p>
                         @endif
                     </div>
                 </div>
@@ -207,9 +192,12 @@
                             </div>
 
                             <div class="flex items-center gap-4 flex-1 justify-end">
-                                <label class="flex items-center cursor-pointer">
+                                <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" wire:model.live="workingHours.{{ $day }}.enabled"
-                                        class="w-4 h-4 rounded border-none bg-slate-200 dark:bg-slate-700 text-wa-teal focus:ring-wa-teal/20">
+                                        class="sr-only peer">
+                                    <div
+                                        class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
+                                    </div>
                                 </label>
 
                                 @if($workingHours[$day]['enabled'])

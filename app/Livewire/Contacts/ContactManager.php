@@ -29,7 +29,8 @@ class ContactManager extends Component
     public $phone_number;
     public $email;
     public $language = 'en';
-    public $opt_in_status = 'OPT_IN';
+    public $opt_in_status = 'opted_in';
+    public $category_id;
     public $selectedTags = [];
     public $customAttributes = []; // For holding dynamic field values
 
@@ -58,6 +59,7 @@ class ContactManager extends Component
         'email' => 'nullable|email|max:255',
         'language' => 'required|string|max:10',
         'opt_in_status' => 'required|in:opted_in,opted_out',
+        'category_id' => 'nullable|exists:categories,id',
         'selectedTags' => 'array',
         'customAttributes' => 'array',
     ];
@@ -86,11 +88,14 @@ class ContactManager extends Component
             $query->where('opt_in_status', $this->filterStatus);
         }
 
-        $contacts = $query->with('tags')->latest()->paginate(15);
+        $contacts = $query->with(['tags', 'category'])->latest()->paginate(15);
         $tags = ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
         $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
+        $categories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('target_module', ['all', 'contacts'])
+            ->get();
 
-        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields'));
+        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'));
     }
 
     public function create()
@@ -142,6 +147,7 @@ class ContactManager extends Component
         $this->email = $contact->email;
         $this->language = $contact->language;
         $this->opt_in_status = $contact->opt_in_status;
+        $this->category_id = $contact->category_id;
         $this->selectedTags = $contact->tags->pluck('id')->toArray();
         $this->customAttributes = $contact->custom_attributes ?? [];
         $this->openModal();
@@ -159,6 +165,7 @@ class ContactManager extends Component
             'email' => $this->email,
             'language' => $this->language,
             'opt_in_status' => $this->opt_in_status,
+            'category_id' => $this->category_id ?: null,
             'custom_attributes' => $this->customAttributes,
         ];
 
@@ -170,6 +177,12 @@ class ContactManager extends Component
         $contact = $contactService->createOrUpdate($data);
 
         $contact->tags()->sync($this->selectedTags);
+
+        audit(
+            $this->contactId ? 'contact.updated' : 'contact.created',
+            ($this->contactId ? "Updated" : "Created") . " contact '{$contact->name}' ({$contact->phone_number})",
+            $contact
+        );
 
         session()->flash('message', $this->contactId ? 'Contact updated successfully.' : 'Contact created successfully.');
         $this->closeModal();
@@ -188,6 +201,7 @@ class ContactManager extends Component
             $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->find($this->contactId);
             if ($contact) {
                 $contact->delete();
+                audit('contact.deleted', "Deleted contact '{$contact->name}' ({$contact->phone_number})", $contact);
                 session()->flash('message', 'Contact deleted successfully.');
             }
         }
@@ -362,6 +376,7 @@ class ContactManager extends Component
         $this->importResult = $result;
 
         if ($result['success_count'] > 0) {
+            audit('contact.imported', "Imported {$result['success_count']} contacts from CSV.", null, ['result' => $result]);
             session()->flash('import_message', "Imported {$result['success_count']} contacts successfully.");
         }
     }
@@ -398,6 +413,7 @@ class ContactManager extends Component
         $this->email = '';
         $this->language = 'en';
         $this->opt_in_status = 'opted_in';
+        $this->category_id = null;
         $this->selectedTags = [];
         $this->customAttributes = [];
         $this->contactId = null;

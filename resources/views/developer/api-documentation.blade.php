@@ -4,14 +4,14 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div class="flex items-center gap-4">
                 <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
-                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-8 h-8 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                             d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
                 <div>
                     <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        API <span class="text-purple-600">Documentation</span>
+                        API <span class="text-wa-teal">Documentation</span>
                     </h1>
                     <p class="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Programmatic access to the
                         WhatsApp Business ecosystem</p>
@@ -44,23 +44,23 @@
                     </div>
                     <nav class="space-y-1">
                         <a href="#intro"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Introduction</a>
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Introduction</a>
                         <a href="#auth"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Authentication</a>
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Authentication</a>
                         <a href="#contacts"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Contacts
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Contacts
                             API</a>
                         <a href="#messages"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Messaging
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Messaging
                             API</a>
                         <a href="#templates"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Templates
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Templates
                             API</a>
                         <a href="#outbound-webhooks"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Outbound
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Outbound
                             Webhooks</a>
                         <a href="#inbound-sources"
-                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600 rounded-xl transition-all">Inbound
+                            class="block px-4 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-wa-teal rounded-xl transition-all">Inbound
                             Webhook Sources</a>
                     </nav>
                 </div>
@@ -73,14 +73,14 @@
                 <div id="intro"
                     class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-xl border border-slate-50 dark:border-slate-800 scroll-mt-8">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">
-                        WhatsApp <span class="text-purple-600">Business API</span></h3>
+                        WhatsApp <span class="text-wa-teal">Business API</span></h3>
                     <p class="text-slate-600 dark:text-slate-400 leading-relaxed mb-8 font-medium">
                         Our RESTful API allows you to programmatically manage contacts, send messages, and integrate
                         WhatsApp messaging into your existing applications, CRMs, and e-commerce platforms.
                     </p>
                     <div
                         class="bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50 rounded-3xl p-6 text-center">
-                        <div class="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2">Base Endpoint
+                        <div class="text-[10px] font-black text-wa-teal uppercase tracking-widest mb-2">Base Endpoint
                         </div>
                         <code class="text-sm font-black text-slate-900 dark:text-white">{{ $baseUrl }}</code>
                     </div>
@@ -123,7 +123,7 @@
                         </div>
                         <p class="text-xs text-slate-500 font-bold uppercase tracking-widest text-center italic">
                             Missing a token? Generate one in the <a href="{{ route('developer.api-tokens') }}"
-                                class="text-purple-600 hover:scale-105 inline-block transition-transform underline">Token
+                                class="text-wa-teal hover:scale-105 inline-block transition-transform underline">Token
                                 Manager</a>
                         </p>
                     </div>
@@ -135,7 +135,7 @@
                     <div
                         class="p-10 border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/10">
                         <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Identity
-                            & <span class="text-blue-500">AudienceCenter</span></h3>
+                            & <span class="text-wa-teal">AudienceCenter</span></h3>
                         <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-2">v1/contacts</p>
                     </div>
 
@@ -207,7 +207,7 @@
                     <div
                         class="p-10 border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/10">
                         <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                            Conversational <span class="text-wa-green">Messaging</span></h3>
+                            Conversational <span class="text-wa-teal">Messaging</span></h3>
                         <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-2">v1/messages</p>
                     </div>
 
@@ -363,7 +363,7 @@
                         <div class="bg-slate-900 rounded-[2.5rem] p-10 border border-white/5 relative group">
                             <div class="flex items-center gap-3 mb-4">
                                 <span
-                                    class="px-2 py-0.5 bg-blue-500 text-white rounded text-[8px] font-black uppercase">POST</span>
+                                    class="px-2 py-0.5 bg-wa-teal text-white rounded text-[8px] font-black uppercase">POST</span>
                                 <code class="text-xs font-mono text-blue-300">/api/v1/webhooks/inbound/{slug}</code>
                             </div>
                             <p class="text-xs text-slate-400 font-medium mb-6 italic">Send payloads from external
@@ -392,7 +392,7 @@
                     <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-[100px] -z-0"></div>
                     <h3
                         class="text-xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight relative z-10">
-                        WhatsApp <span class="text-purple-600">Meta Webhook</span></h3>
+                        WhatsApp <span class="text-wa-teal">Meta Webhook</span></h3>
                     <p
                         class="text-slate-600 dark:text-slate-400 text-sm mb-6 font-medium relative z-10 leading-relaxed">
                         Configure this URL in your <strong>Meta Business Manager</strong> (App Settings -> WhatsApp ->
@@ -405,7 +405,7 @@
                             <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Callback
                                 URL</span>
                             <button onclick="copyToClipboard('whatsapp-webhook-raw', this)"
-                                class="text-[10px] font-black text-purple-600 hover:underline uppercase tracking-widest">Copy
+                                class="text-[10px] font-black text-wa-teal hover:underline uppercase tracking-widest">Copy
                                 URL</button>
                         </div>
                         <code class="text-sm font-black text-slate-900 dark:text-white"

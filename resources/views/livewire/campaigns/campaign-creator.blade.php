@@ -1,11 +1,41 @@
-<div class="px-4 md:px-0 max-w-7xl mx-auto py-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
-            {{ isset($campaign->id) ? 'Edit Campaign' : 'Create Campaign' }}
-        </h1>
+<div class="space-y-8">
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="p-2 bg-wa-teal/10 text-wa-teal rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                    {{ isset($campaign->id) ? 'Edit' : 'Create' }} <span class="text-wa-teal">Campaign</span>
+                </h1>
+            </div>
+            <p class="text-slate-500 font-medium">Design and launch your WhatsApp broadcast campaign.</p>
+        </div>
+        <div class="flex gap-3">
+            <x-button.ghost href="{{ route('campaigns.index') }}" class="px-8 py-3 rounded-2xl">Cancel</x-button.ghost>
+            <button wire:click="save" wire:loading.attr="disabled"
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                <span wire:loading.remove>
+                    {{ isset($campaign->id) ? 'Update Campaign' : 'Launch Campaign' }}
+                </span>
+                <span wire:loading class="flex items-center">
+                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                </span>
+            </button>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start" x-data="{
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" x-data="{
             scheduledDate: @entangle('send_now'),
             relationTypeDynamicData: @entangle('relation_type_dynamic'),
             campaignsSelected: false,
@@ -22,7 +52,7 @@
             headerInputs: @entangle('headerInputs'),
             bodyInputs: @entangle('bodyInputs'),
             footerInputs: @entangle('footerInputs'),
-            mergeFields: @entangle('mergeFields'), // JSON string from backend
+            mergeFields: @entangle('mergeFields'),
             editTemplateId: @entangle('template_id'),
             headerInputErrors: [],
             bodyInputErrors: [],
@@ -74,7 +104,6 @@
                     this.bodyParamsCount = parseInt(selectedOption.dataset.bodyParamsCount || 0);
                     this.footerParamsCount = parseInt(selectedOption.dataset.footerParamsCount || 0);
                     
-                    // Set allowed file types
                     if (this.inputType === 'IMAGE') this.inputAccept = 'image/*';
                     else if (this.inputType === 'VIDEO') this.inputAccept = 'video/*';
                     else if (this.inputType === 'DOCUMENT') this.inputAccept = '.pdf,.doc,.docx,.txt';
@@ -86,16 +115,15 @@
                      this.buttons = [];
                 }
                 
-                this.previewUrl = ''; // Reset preview on template change
+                this.previewUrl = '';
                 this.$nextTick(() => this.initTribute());
             },
 
             replaceVariables(template, inputs) {
                 if (!template || !inputs) return '';
-                // Simple replacement of {{1}}, {{2}} with inputs array
                 return template.replace(/\{\{(\d+)\}\}/g, (match, p1) => {
                     const index = parseInt(p1, 10) - 1;
-                    return `<span class='font-bold text-indigo-600'>${inputs[index] || match}</span>`;
+                    return `<span class='font-bold text-wa-teal'>${inputs[index] || match}</span>`;
                 });
             },
 
@@ -107,37 +135,37 @@
             },
             
             toggleSchedule() {
-                this.scheduledDate = !this.scheduledDate; // Toggle send_now
+                this.scheduledDate = !this.scheduledDate;
                 if (!this.scheduledDate) {
                      this.$nextTick(() => window.flatePickrWithTime());
                 }
             }
         }" x-init="
             $watch('mergeFields', () => initTribute());
-            // Init TomSelect for template if needed, though standard select is fine
-            // window.initTomSelect('#template-select'); 
         ">
         <!-- Form Section -->
-        <div class="lg:col-span-2 space-y-6">
-            <x-card>
-                <x-slot:header>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Campaign Details</h3>
-                </x-slot:header>
-                <div class="space-y-4">
-                    <!-- Campaign Name -->
-                    <div>
-                        <x-label for="campaign_name" value="Campaign Name *" />
-                        <x-input id="campaign_name" type="text" class="mt-1 block w-full" wire:model="campaign_name"
-                            placeholder="e.g. Summer Sale" />
-                        <x-input-error for="campaign_name" class="mt-2" />
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Campaign Details -->
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
+                <div class="mb-6">
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Campaign
+                        Details</h2>
+                    <p class="text-sm text-slate-500 font-medium mt-1">Basic information and template</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Campaign Name *</label>
+                        <input type="text" wire:model="campaign_name" placeholder="Summer Flash Sale 2024"
+                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
+                        <x-input-error for="campaign_name" />
                     </div>
 
-                    <!-- Template Selection -->
-                    <div>
-                        <x-label for="template_id" value="Select Template *" />
-                        <select id="template_id" wire:model.live="template_id"
-                            x-on:change="handleCampaignChange($event)"
-                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Select Template *</label>
+                        <select wire:model.live="template_id" x-on:change="handleCampaignChange($event)"
+                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white cursor-pointer">
                             <option value="">-- Choose a Template --</option>
                             @foreach($this->templates as $template)
                                 <option value="{{ $template->id }}" data-header="{{ $template->header_data_text }}"
@@ -151,274 +179,298 @@
                                 </option>
                             @endforeach
                         </select>
-                        <x-input-error for="template_id" class="mt-2" />
+                        <x-input-error for="template_id" />
                     </div>
                 </div>
-            </x-card>
+            </div>
 
-            <!-- Variables Section -->
-            <x-card x-show="campaignsSelected" x-cloak>
-                <x-slot:header>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Variables & Media</h3>
-                </x-slot:header>
-
-                <div class="space-y-6">
-                    <!-- Header Params -->
-                    <template x-if="inputType !== 'TEXT' && inputType !== ''">
-                        <!-- Media Upload -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Header Media (<span x-text="inputType"></span>)
-                            </label>
-                            <div class="border-dashed border-2 border-gray-300 rounded-md p-4 text-center hover:border-indigo-500 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                @click="$refs.fileInput.click()" @keydown.enter="$refs.fileInput.click()"
-                                @keydown.space.prevent="$refs.fileInput.click()" tabindex="0" role="button"
-                                aria-label="Upload file">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto text-gray-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 16.5V9.75m0 0l3 3.75m-3-3.75l-3 3.75M12 9.75V4.5m0 0a3.012 3.012 0 013 0v5.25m-3 0h3m-3 0h-3" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 16.5V9.75m0 0l3 3.75m-3-3.75l-3 3.75M12 9.75V4.5m0 0a3.012 3.012 0 013 0v5.25m-3 0h3m-3 0h-3" />
-                                    <!-- Fallback generic upload cloud icon -->
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 16.5V9.75m0 0l3 3.75m-3-3.75l-3 3.75M12 9.75V4.5m0 0a3.012 3.012 0 013 0v5.25" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                                </svg>
-                                <span class="text-sm text-gray-500"
-                                    x-text="previewFileName || 'Click to upload specific media'"></span>
-                                <input type="file" x-ref="fileInput" wire:model="file" class="hidden"
-                                    @change="handleFilePreview($event)" :accept="inputAccept" />
-                            </div>
-                            <x-input-error for="file" class="mt-2" />
-                        </div>
-                    </template>
-
-                    <template x-if="inputType === 'TEXT' && headerParamsCount > 0">
-                        <div class="space-y-2">
-                            <h4 class="text-sm font-semibold text-gray-500">Header Variables</h4>
-                            <template x-for="i in headerParamsCount" :key="'h'+i">
-                                <div>
-                                    <label class="text-xs text-gray-500">Variable {{ '{{' + i + '}}' }}</label>
-                                    <input type="text" x-model="headerInputs[i-1]" @focus="initTribute"
-                                        class="mentionable mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm" />
-                                </div>
-                            </template>
-                        </div>
-                    </template>
-
-                    <!-- Body Params -->
-                    <template x-if="bodyParamsCount > 0">
-                        <div class="space-y-2">
-                            <h4 class="text-sm font-semibold text-gray-500">Body Variables</h4>
-                            <template x-for="i in bodyParamsCount" :key="'b'+i">
-                                <div>
-                                    <label class="text-xs text-gray-500">Variable {{ '{{' + i + '}}' }}</label>
-                                    <input type="text" x-model="bodyInputs[i-1]" @focus="initTribute"
-                                        class="mentionable mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm" />
-                                </div>
-                            </template>
-                        </div>
-                    </template>
-
-                    <!-- Footer Params -->
-                    <template x-if="footerParamsCount > 0">
-                        <div class="space-y-2">
-                            <h4 class="text-sm font-semibold text-gray-500">Footer Variables</h4>
-                            <template x-for="i in footerParamsCount" :key="'f'+i">
-                                <div>
-                                    <label class="text-xs text-gray-500">Variable {{ '{{' + i + '}}' }}</label>
-                                    <input type="text" x-model="footerInputs[i-1]" @focus="initTribute"
-                                        class="mentionable mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm" />
-                                </div>
-                            </template>
-                        </div>
-                    </template>
+            <!-- Variables & Media Section -->
+            <div x-show="campaignsSelected" x-cloak
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
+                <div class="mb-6">
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Variables &
+                        Media</h2>
+                    <p class="text-sm text-slate-500 font-medium mt-1">Dynamic content and attachments</p>
                 </div>
-            </x-card>
+
+                <div class="space-y-8">
+                    <!-- Media Upload -->
+                    <template x-if="inputType !== 'TEXT' && inputType !== ''">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase text-slate-400">Header Media (<span
+                                    x-text="inputType"></span>)</label>
+                            <div class="relative group">
+                                <div class="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center hover:border-wa-teal hover:bg-wa-teal/5 transition-all cursor-pointer group"
+                                    @click="$refs.fileInput.click()">
+                                    <div
+                                        class="bg-wa-teal/10 text-wa-teal w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 8l-4-4m0 0L8 8m4-4v12" />
+                                        </svg>
+                                    </div>
+                                    <div class="text-sm font-bold text-slate-900 dark:text-white"
+                                        x-text="previewFileName || 'Drag and drop or click to upload'"></div>
+                                    <p class="text-xs text-slate-500 mt-1">Supported: <span x-text="inputType"></span>
+                                    </p>
+                                    <input type="file" x-ref="fileInput" wire:model="file" class="hidden"
+                                        @change="handleFilePreview($event)" :accept="inputAccept" />
+                                </div>
+                                <x-input-error for="file" class="mt-2" />
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Variables Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Header Params -->
+                        <template x-if="inputType === 'TEXT' && headerParamsCount > 0">
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Header Variables
+                                </h4>
+                                <div class="space-y-4">
+                                    <template x-for="i in headerParamsCount" :key="'h'+i">
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] font-bold text-slate-500 uppercase">Variable
+                                                {{'{{' + i + '}}'}}</label>
+                                            <input type="text" x-model="headerInputs[i-1]" @focus="initTribute"
+                                                class="mentionable w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-wa-teal/20">
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Body Params -->
+                        <template x-if="bodyParamsCount > 0">
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Body Variables
+                                </h4>
+                                <div class="space-y-4">
+                                    <template x-for="i in bodyParamsCount" :key="'b'+i">
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] font-bold text-slate-500 uppercase">Variable
+                                                {{'{{' + i + '}}'}}</label>
+                                            <input type="text" x-model="bodyInputs[i-1]" @focus="initTribute"
+                                                class="mentionable w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-wa-teal/20">
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Footer Params -->
+                        <template x-if="footerParamsCount > 0">
+                            <div class="space-y-4">
+                                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Footer Variables
+                                </h4>
+                                <div class="space-y-4">
+                                    <template x-for="i in footerParamsCount" :key="'f'+i">
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] font-bold text-slate-500 uppercase">Variable
+                                                {{'{{' + i + '}}'}}</label>
+                                            <input type="text" x-model="footerInputs[i-1]" @focus="initTribute"
+                                                class="mentionable w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-wa-teal/20">
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
 
             <!-- Audience Section -->
-            <x-card>
-                <x-slot:header>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Target Audience</h3>
-                </x-slot:header>
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
+                <div class="mb-6">
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Target
+                        Audience</h2>
+                    <p class="text-sm text-slate-500 font-medium mt-1">Select your campaign recipients</p>
+                </div>
 
-                <div class="space-y-4">
-                    <!-- "All Contacts" Toggle -->
-                    <div class="flex items-center">
-                        <input id="is_checked" type="checkbox" wire:model.live="isChecked"
-                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <label for="is_checked" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                            Select All Contacts in Team
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-[2rem]">
+                        <div>
+                            <span class="block text-sm font-bold text-slate-900 dark:text-white">Broadcast to All
+                                Contacts</span>
+                            <span class="text-xs text-slate-500">Send this campaign to everyone in your team</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" wire:model.live="isChecked" class="sr-only peer">
+                            <div
+                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
+                            </div>
                         </label>
                     </div>
 
-                    <div class="relative flex items-center py-2">
-                        <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
-                        <span class="flex-shrink-0 mx-4 text-gray-400">OR</span>
-                        <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+                    <div x-show="!isChecked" x-collapse>
+                        <div class="relative py-4 text-center">
+                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                <div class="w-full border-t border-slate-100 dark:border-slate-800"></div>
+                            </div>
+                            <span
+                                class="relative px-4 bg-white dark:bg-slate-900 text-[10px] font-black uppercase text-slate-300 tracking-widest">OR
+                                SELECT SPECIFIC</span>
+                        </div>
+
+                        <div class="space-y-2" wire:ignore>
+                            <label class="text-[10px] font-black uppercase text-slate-400">Search & Select
+                                Contacts</label>
+                            <select id="contact-select" multiple placeholder="Type names or numbers..." x-init="
+                                window.initTomSelect('#contact-select', {
+                                    onChange: function(value) { @this.set('relation_type_dynamic', value); }
+                                });
+                            ">
+                                @foreach($contacts as $contact)
+                                    <option value="{{ $contact['id'] }}">{{ $contact['firstname'] }}
+                                        {{ $contact['lastname'] }} ({{ $contact['phone'] }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- Specific Contact Selection -->
-                    <div wire:ignore>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Specific
-                            Contacts</label>
-                        <select id="contact-select" multiple placeholder="Search contacts..." x-init="
-                                    window.initTomSelect('#contact-select', {
-                                        onChange: function(value) {
-                                            @this.set('relation_type_dynamic', value);
-                                        }
-                                    });
-                                    $watch('isDisabled', (disabled) => {
-                                         if(disabled) { 
-                                             document.querySelector('#contact-select').tomselect.disable();
-                                         } else {
-                                             document.querySelector('#contact-select').tomselect.enable();
-                                         }
-                                    });
-                                " x-bind:disabled="isChecked">
-                            @foreach($contacts as $contact)
-                                <option value="{{ $contact['id'] }}">{{ $contact['firstname'] }} {{ $contact['lastname'] }}
-                                    ({{ $contact['phone'] }})</option>
-                            @endforeach
-                        </select>
-                        <p x-show="isChecked" class="text-xs text-gray-500 mt-1">Specific selection disabled when
-                            "Select All" is active.</p>
+                    <div class="flex items-center gap-4 p-4 bg-wa-teal/5 rounded-2xl border border-wa-teal/10">
+                        <div class="p-3 bg-wa-teal text-white rounded-xl shadow-lg shadow-wa-teal/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="block text-2xl font-black text-wa-teal">{{ $contactCount }}</span>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total
+                                Recipients</span>
+                        </div>
                     </div>
-
-                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-md text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-300">
-                            Total Recipients: <span class="font-bold text-indigo-600 text-lg">{{ $contactCount }}</span>
-                        </p>
-                    </div>
-                    <x-input-error for="relation_type_dynamic" />
                 </div>
-            </x-card>
+            </div>
 
             <!-- Schedule Section -->
-            <x-card>
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Scheduling</h3>
-
-                    <div class="flex items-center">
-                        <label class="mr-2 text-sm text-gray-700 dark:text-gray-300">Send Now</label>
-                        <button type="button" @click="toggleSchedule()"
-                            :class="scheduledDate ? 'bg-indigo-600' : 'bg-gray-200'"
-                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2">
-                            <span :class="scheduledDate ? 'translate-x-5' : 'translate-x-0'"
-                                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                        </button>
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                            Scheduling</h2>
+                        <p class="text-sm text-slate-500 font-medium mt-1">Set the delivery time</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-slate-500 uppercase">Send Now</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" @click="toggleSchedule()" :checked="scheduledDate"
+                                class="sr-only peer">
+                            <div
+                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
+                            </div>
+                        </label>
                     </div>
                 </div>
 
                 <div x-show="!scheduledDate" x-collapse>
-                    <x-label for="scheduled_send_time" value="Schedule Date & Time" />
-                    <div class="relative mt-1">
-                        <input type="text" id="scheduled_send_time" wire:model="scheduled_send_time"
-                            class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            placeholder="Select date and time" x-init="window.flatePickrWithTime()" />
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor"
-                            class="w-5 h-5 absolute right-3 top-2.5 text-gray-400 pointer-events-none">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                        </svg>
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block">Schedule Date &
+                                Time</label>
+                            <div class="relative">
+                                <input type="text" id="scheduled_send_time" wire:model="scheduled_send_time"
+                                    class="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20"
+                                    placeholder="Select date and time" x-init="window.flatePickrWithTime()" />
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <x-input-error for="scheduled_send_time" class="mt-2" />
+                        </div>
                     </div>
-                    <x-input-error for="scheduled_send_time" class="mt-2" />
                 </div>
-            </x-card>
-
-            <!-- Submit Actions -->
-            <div class="flex justify-end space-x-3">
-                <x-button.ghost href="{{ route('campaigns.index') }}">Cancel</x-button.ghost>
-                <x-button class="bg-indigo-600 hover:bg-indigo-700 text-white" wire:click="save"
-                    wire:loading.attr="disabled">
-                    <span wire:loading.remove>
-                        {{ isset($campaign->id) ? 'Update Campaign' : 'Launch Campaign' }}
-                    </span>
-                    <span wire:loading class="flex items-center">
-                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
-                            fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                        Processing...
-                    </span>
-                </x-button>
             </div>
         </div>
 
         <!-- Preview Sidebar -->
         <div class="hidden lg:block space-y-6">
-            <div class="sticky top-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Preview</h3>
+            <div class="sticky top-8">
+                <div class="mb-6 flex items-center justify-between">
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Live <span
+                            class="text-wa-teal">Preview</span></h3>
+                    <div
+                        class="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                        WhatsApp Desktop</div>
+                </div>
 
-                <!-- WhatsApp Preview Container -->
-                <div class="bg-[#E5DDD5] dark:bg-[#0b141a] rounded-lg shadow-lg overflow-hidden border border-gray-200 dark:border-gray-800"
-                    style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); opacity: 0.9;">
+                <!-- Phone Frame Appearance -->
+                <div class="relative mx-auto w-[320px] bg-[#0b141a] rounded-[3rem] p-3 shadow-2xl border-[8px] border-slate-900 overflow-hidden min-h-[580px]"
+                    style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; background-position: center;">
 
-                    <div class="p-4">
-                        <div class="bg-white dark:bg-[#202c33] rounded-lg p-2 shadow-sm max-w-[90%] relative">
+                    <div class="mt-8 space-y-3">
+                        <div
+                            class="bg-white dark:bg-[#202c33] rounded-tr-2xl rounded-bl-2xl rounded-br-2xl p-2.5 shadow-md relative animate-in fade-in slide-in-from-left-4 duration-500">
                             <!-- Media Preview -->
                             <template x-if="previewUrl">
-                                <div class="mb-2 rounded-lg overflow-hidden">
-                                    <template x-if="inputType === 'IMAGE'">
-                                        <img :src="previewUrl" class="w-full h-auto object-cover" />
-                                    </template>
-                                    <template x-if="inputType === 'VIDEO'">
-                                        <video :src="previewUrl" controls class="w-full h-auto"></video>
-                                    </template>
+                                <div
+                                    class="mb-2 rounded-xl overflow-hidden shadow-inner bg-slate-100 dark:bg-slate-800">
+                                    <template x-if="inputType === 'IMAGE'"><img :src="previewUrl"
+                                            class="w-full h-auto" /></template>
+                                    <template x-if="inputType === 'VIDEO'"><video :src="previewUrl"
+                                            class="w-full h-auto"></video></template>
                                     <template x-if="inputType === 'DOCUMENT'">
-                                        <div
-                                            class="bg-gray-100 dark:bg-gray-700 p-3 flex items-center space-x-3 rounded">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                                                fill="currentColor" class="w-8 h-8 text-gray-500">
-                                                <path fill-rule="evenodd"
-                                                    d="M5.625 1.5H9a3.75 3.75 0 013.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 013.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 01-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875zM12.75 12a.75.75 0 00-1.5 0V15a.75.75 0 003 0v-3a.75.75 0 00-1.5 0z"
-                                                    clip-rule="evenodd" />
-                                                <path
-                                                    d="M14.25 5.25a5.23 5.23 0 00-1.279-3.434 9.768 9.768 0 016.963 6.963A5.23 5.23 0 0016.5 7.5h-1.875a.375.375 0 01-.375-.375V5.25z" />
-                                            </svg>
-                                            <span class="text-sm truncate" x-text="previewFileName"></span>
+                                        <div class="p-3 flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 bg-wa-teal rounded-lg flex items-center justify-center text-white">
+                                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                                                </svg>
+                                            </div>
+                                            <span class="text-xs font-bold truncate max-w-[140px]"
+                                                x-text="previewFileName"></span>
                                         </div>
                                     </template>
                                 </div>
                             </template>
 
-                            <!-- Header Text -->
-                            <template x-if="inputType === 'TEXT' && campaignHeader">
-                                <div class="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1"
-                                    x-html="replaceVariables(campaignHeader, headerInputs)"></div>
-                            </template>
+                            <!-- Content -->
+                            <div class="space-y-1 px-1">
+                                <template x-if="inputType === 'TEXT' && campaignHeader">
+                                    <div class="font-black text-slate-900 dark:text-white text-xs"
+                                        x-html="replaceVariables(campaignHeader, headerInputs)"></div>
+                                </template>
+                                <div class="text-[13px] text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap"
+                                    x-html="replaceVariables(campaignBody, bodyInputs)"></div>
+                                <template x-if="campaignFooter">
+                                    <div class="text-[10px] text-slate-400 pt-1" x-text="campaignFooter"></div>
+                                </template>
+                            </div>
 
-                            <!-- Body Text -->
-                            <div class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap"
-                                x-html="replaceVariables(campaignBody, bodyInputs)"></div>
-
-                            <!-- Footer -->
-                            <template x-if="campaignFooter">
-                                <div class="text-[10px] text-gray-500 mt-1" x-text="campaignFooter"></div>
-                            </template>
-
-                            <div class="absolute bottom-1 right-2 text-[10px] text-gray-500">
-                                {{ now()->format('H:i') }}
+                            <div class="flex justify-end pr-1 mt-1">
+                                <span class="text-[10px] text-slate-400">{{ now()->format('H:i') }}</span>
                             </div>
                         </div>
 
-                        <!-- Buttons -->
+                        <!-- Buttons Preview -->
                         <template x-if="buttons.length > 0">
-                            <div class="mt-2 space-y-1">
+                            <div class="space-y-1 w-[90%]">
                                 <template x-for="btn in buttons">
-                                    <div class="bg-white dark:bg-[#202c33] text-center text-blue-500 py-2 rounded shadow-sm text-sm font-medium cursor-pointer"
+                                    <div class="bg-white/95 dark:bg-[#202c33]/95 backdrop-blur shadow-sm text-center text-wa-teal py-2.5 rounded-xl text-[13px] font-bold border-t border-slate-100 dark:border-slate-700/50"
                                         x-text="btn.text"></div>
                                 </template>
                             </div>
                         </template>
                     </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-start gap-3">
+                    <svg class="w-5 h-5 text-slate-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">Preview renders
+                        approximations. Variables highlighted in <span class="text-wa-teal">Green</span> will be
+                        replaced dynamically.</p>
                 </div>
             </div>
         </div>

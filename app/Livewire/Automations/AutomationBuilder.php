@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 
+use Livewire\WithFileUploads;
+
 class AutomationBuilder extends Component
 {
+    use WithFileUploads;
     public $automationId;
     public $name;
     // Trigger Properties
@@ -24,6 +27,7 @@ class AutomationBuilder extends Component
 
     // Node editing properties
     public $nodeText = '';
+    public $nodeButtonText = ''; // For interactive_list
     public $nodeUrl = '';
     public $nodeMethod = 'GET';
     public $nodeSaveTo = '';
@@ -33,10 +37,19 @@ class AutomationBuilder extends Component
     public $nodeOptions = [];
     public $newOption = '';
 
+    // Carousel properties
+    public $nodeCards = []; // [['title' => '', 'description' => '', 'image' => '', 'buttons' => []]]
+
     // Advanced Node properties
     public $nodeHeaders = []; // [['key' => '', 'value' => '']]
     public $nodeJson = '';
+    public $nodeContacts = []; // [['name' => '', 'phone' => '']]
+
+    public $showErrorModal = false;
+
     public $nodeModel = 'gpt-4o';
+    public $nodeLanguage = 'en'; // For templates
+    public $nodeOperator = 'eq'; // For conditions
 
     // Text Node specific
     public $nodeTyping = false;
@@ -45,14 +58,33 @@ class AutomationBuilder extends Component
     public $nodeDelayHours = 0;
 
     public $availableTags = [];
+    public $approvedTemplates = [];
+    public $availableFlows = [];
+    public $uploadFile; // For media uploads
 
-    public function mount($id = null)
+    // CRM / Contact Properties
+    public $nodeProvider = '';
+    public $nodeAction = '';
+    public $debugMode = false;
+    public $debugLogs = []; // History of actions
+
+
+
+    public function mount($automationId = null)
     {
+        $this->debugMode = session('automation_debug_mode', false);
+        $this->debugLogs = session('automation_debug_logs', []);
+
+        $this->logDebug('Component Mounting', ['automationId' => $automationId]);
         \Illuminate\Support\Facades\Gate::authorize('chat-access'); // Using chat-access as proxy for automation access
         $this->availableTags = \App\Models\ContactTag::where('team_id', Auth::user()->currentTeam->id)->get()->toArray();
+        $this->approvedTemplates = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+            ->where('status', 'APPROVED')
+            ->get()->toArray();
+        $this->availableFlows = \App\Models\Flow::where('team_id', Auth::user()->currentTeam->id)->get()->toArray();
 
-        if ($id) {
-            $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        if ($automationId) {
+            $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($automationId);
             $this->automationId = $automation->id;
             $this->name = $automation->name;
 
@@ -65,8 +97,20 @@ class AutomationBuilder extends Component
             }
 
             $flowData = $automation->flow_data ?? ['nodes' => [], 'edges' => []];
-            $this->nodes = $flowData['nodes'] ?? [];
-            $this->edges = $flowData['edges'] ?? [];
+
+            $this->logDebug('Raw Database flow_data', [
+                'raw_type' => gettype($automation->flow_data),
+                'raw_content' => $automation->flow_data
+            ]);
+
+            $this->nodes = isset($flowData['nodes']) ? array_values($flowData['nodes']) : [];
+            $this->edges = isset($flowData['edges']) ? array_values($flowData['edges']) : [];
+
+            $this->logDebug('Loaded Automation from DB', [
+                'automation_id' => $automation->id,
+                'nodes_count' => count($this->nodes),
+                'edges_count' => count($this->edges)
+            ]);
         } else {
             // Default Start Node
             $this->nodes = [
@@ -74,18 +118,52 @@ class AutomationBuilder extends Component
             ];
             // Default Trigger Config
             $this->triggerConfig = ['keywords' => [], 'is_regex' => false];
+            $this->name = 'Untitled Automation ' . date('Y-m-d H:i');
         }
     }
 
     public function save()
     {
-        $this->validate([
-            'name' => 'required|string|max:255',
-            'nodes' => 'required|array|min:1',
-        ], [
-            'nodes.required' => 'The automation flow cannot be empty.',
-            'nodes.min' => 'Please add at least one node to the automation.',
+        $this->logDebug('Save Clicked', [
+            'raw_nodes_count' => count($this->nodes),
+            'raw_edges_count' => count($this->edges),
+            'selected_node' => $this->selectedNodeId
         ]);
+
+        // Flush pending changes from properties to the nodes array
+        $this->updateNodeData();
+
+        try {
+            $this->validate([
+                'name' => 'required|string|max:255',
+                'nodes' => 'required|array|min:1',
+            ], [
+                'nodes.required' => 'The automation flow cannot be empty.',
+                'nodes.min' => 'Please add at least one node to the automation.',
+            ]);
+
+            // Connectivity Validation (Except for draft/debug if we wanted, but user asked for it)
+            if (count($this->nodes) > 1) {
+                $connectedNodeIds = collect($this->edges)->pluck('target')->unique()->toArray();
+                $disconnectedNodes = [];
+
+                foreach ($this->nodes as $node) {
+                    if ($node['type'] !== 'trigger' && !in_array($node['id'], $connectedNodeIds)) {
+                        $disconnectedNodes[] = $node['data']['label'] ?? $node['type'];
+                    }
+                }
+
+                if (!empty($disconnectedNodes)) {
+                    $this->logDebug('Validation Failed: Disconnected Nodes', ['nodes' => $disconnectedNodes]);
+                    $this->addError('nodes', 'The following nodes are not connected to the flow: ' . implode(', ', $disconnectedNodes));
+                    $this->showErrorModal = true;
+                    return;
+                }
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->showErrorModal = true;
+            throw $e;
+        }
 
         try {
             $data = [
@@ -95,24 +173,75 @@ class AutomationBuilder extends Component
                 'trigger_type' => $this->triggerType,
                 'trigger_config' => $this->triggerConfig,
                 'flow_data' => [
-                    'nodes' => $this->nodes,
-                    'edges' => $this->edges
+                    'nodes' => array_values($this->nodes),
+                    'edges' => array_values($this->edges)
                 ]
             ];
 
+            if ($this->debugMode) {
+                $this->logDebug('Final Save Payload', [
+                    'id' => $this->automationId,
+                    'node_count' => count($this->nodes),
+                    'edge_count' => count($this->edges),
+                    'payload' => $data['flow_data']
+                ]);
+
+                \Illuminate\Support\Facades\Log::info('Saving Automation:', [
+                    'id' => $this->automationId,
+                    'node_count' => count($this->nodes),
+                    'edge_count' => count($this->edges),
+                    'payload_preview' => json_encode($data['flow_data'])
+                ]);
+            }
+
             if ($this->automationId) {
                 $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
-                $automation->update($data);
+                $success = $automation->update($data);
+
+                $this->logDebug('Database Update Result', [
+                    'success' => $success,
+                    'db_id' => $automation->id,
+                    'saved_nodes' => count($automation->flow_data['nodes'] ?? [])
+                ]);
+
+                session()->flash('success', 'Automation saved successfully!');
             } else {
                 $automation = Automation::create($data);
                 $this->automationId = $automation->id;
+                session()->flash('success', 'Automation created successfully!');
+                session(['automation_debug_logs' => $this->debugLogs]);
+                return redirect()->route('automations.builder', $automation->id);
             }
-
-            session()->flash('success', 'Automation saved successfully!');
         } catch (\Exception $e) {
+            $this->logDebug('Save Exception', ['error' => $e->getMessage()]);
             \Illuminate\Support\Facades\Log::error('Automation Save Error: ' . $e->getMessage());
             $this->addError('base', 'An error occurred while saving the automation. Please try again.');
+            $this->showErrorModal = true;
         }
+    }
+
+    public function updatedDebugMode($value)
+    {
+        session(['automation_debug_mode' => $value]);
+    }
+
+    protected function logDebug($message, $data = [])
+    {
+        $entry = [
+            'time' => date('H:i:s'),
+            'message' => $message,
+            'data' => $data
+        ];
+        array_unshift($this->debugLogs, $entry); // Newest first
+        if (count($this->debugLogs) > 50) {
+            array_pop($this->debugLogs);
+        }
+
+        // Persist to session immediately so it survives any reload/redirect
+        session(['automation_debug_logs' => $this->debugLogs]);
+
+        // Also log to file for permanent record
+        \Illuminate\Support\Facades\Log::info("DEBUG: " . $message, $data);
     }
 
     public function addNode($type)
@@ -195,6 +324,16 @@ class AutomationBuilder extends Component
                 $data['flow_id'] = '';
                 $data['text'] = 'Open Form';
                 break;
+            case 'carousel':
+                $data['cards'] = [
+                    [
+                        'title' => 'Card Title',
+                        'description' => 'Card Description',
+                        'image' => '',
+                        'buttons' => [['id' => uniqid('btn-'), 'type' => 'reply', 'title' => 'Button 1']]
+                    ]
+                ];
+                break;
         }
 
         $this->nodes[] = [
@@ -237,10 +376,14 @@ class AutomationBuilder extends Component
 
         // Reset Common Fields
         $this->nodeText = '';
+        $this->nodeButtonText = '';
         $this->nodeUrl = '';
         $this->nodeMethod = 'GET';
         $this->nodeSaveTo = '';
+        $this->nodeSaveTo = '';
         $this->nodeOptions = [];
+        $this->nodeLanguage = 'en';
+        $this->nodeOperator = 'eq';
 
         foreach ($this->nodes as $node) {
             if ($node['id'] === $id) {
@@ -263,9 +406,17 @@ class AutomationBuilder extends Component
                 } elseif ($type === 'interactive_button') {
                     $this->nodeText = $data['text'] ?? '';
                     // Flatten buttons for simple UI editor
-                    $this->nodeOptions = collect($data['buttons'] ?? [])->pluck('title')->toArray();
+                    $this->nodeOptions = collect($data['buttons'] ?? [])->map(function ($btn) {
+                        return ['id' => $btn['id'], 'label' => $btn['title']];
+                    })->toArray();
                 } elseif ($type === 'interactive_list') {
                     $this->nodeText = $data['text'] ?? '';
+                    $this->nodeButtonText = $data['button_text'] ?? 'View Options';
+                    // Flatten 1st section rows for simple editing
+                    $rows = $data['sections'][0]['rows'] ?? [];
+                    $this->nodeOptions = collect($rows)->map(function ($row) {
+                        return ['id' => $row['id'], 'label' => $row['title']];
+                    })->toArray();
                 } elseif ($type === 'user_input') {
                     $this->nodeText = $data['question'] ?? '';
                     $this->nodeSaveTo = $data['variable'] ?? '';
@@ -275,6 +426,11 @@ class AutomationBuilder extends Component
                     $this->nodeModel = $data['model'] ?? 'gpt-4o';
                 } elseif ($type === 'template') {
                     $this->nodeText = $data['template_name'] ?? '';
+                    $this->nodeLanguage = $data['language'] ?? 'en';
+                } elseif ($type === 'condition') {
+                    $this->nodeSaveTo = $data['variable'] ?? '';
+                    $this->nodeOperator = $data['operator'] ?? 'eq';
+                    $this->nodeText = $data['value'] ?? '';
                 } elseif ($type === 'webhook') {
                     $this->nodeUrl = $data['url'] ?? '';
                     $this->nodeMethod = $data['method'] ?? 'POST';
@@ -285,10 +441,83 @@ class AutomationBuilder extends Component
                 } elseif ($type === 'send_flow') {
                     $this->nodeSaveTo = $data['flow_id'] ?? '';
                     $this->nodeText = $data['text'] ?? 'Open Form';
+                } elseif ($type === 'crm_sync') {
+                    $this->nodeProvider = $data['provider'] ?? 'salesforce';
+                    $this->nodeAction = $data['action'] ?? 'update_lead';
+                } elseif ($type === 'location_request') {
+                    $this->nodeText = $data['text'] ?? '';
+                } elseif ($type === 'contact') {
+                    $contacts = $data['contacts'] ?? [];
+                    // Flatten for simple UI
+                    $this->nodeContacts = [];
+                    foreach ($contacts as $c) {
+                        $this->nodeContacts[] = [
+                            'name' => $c['name']['formatted_name'] ?? '',
+                            'phone' => $c['phones'][0]['phone'] ?? ''
+                        ];
+                    }
+                } elseif ($type === 'carousel') {
+                    $this->nodeCards = $data['cards'] ?? [];
                 }
                 break;
             }
         }
+    }
+
+
+
+    // Generic hook to save any node property change immediately to the array
+    public function updated($propertyName)
+    {
+        // If we are editing a node property (starts with node, or trigger config)
+        if (str_starts_with($propertyName, 'node') || str_starts_with($propertyName, 'triggerConfig')) {
+            $this->updateNodeData();
+        }
+    }
+
+    public function updatedNodeText($value)
+    {
+        // Check if currently selected node is template
+        $node = collect($this->nodes)->firstWhere('id', $this->selectedNodeId);
+        if ($node && $node['type'] === 'template') {
+            // Find the template by name
+            $template = collect($this->approvedTemplates)->firstWhere('name', $value);
+            if ($template) {
+                $this->nodeLanguage = $template['language'] ?? 'en';
+                $this->updateNodeData(); // Save immediately
+            }
+        }
+    }
+
+    public function updatedUploadFile()
+    {
+        $this->validate([
+            'uploadFile' => 'file|max:10240', // 10MB max
+        ]);
+
+        $node = collect($this->nodes)->firstWhere('id', $this->selectedNodeId);
+        if (!$node)
+            return;
+
+        $type = $node['type'];
+        // Validation logic based on type
+        if ($type === 'image') {
+            $this->validate(['uploadFile' => 'image|mimes:jpeg,png,jpg']);
+        } elseif ($type === 'video') {
+            $this->validate(['uploadFile' => 'mimetypes:video/mp4,video/3gpp']);
+        } elseif ($type === 'audio') {
+            $this->validate(['uploadFile' => 'mimetypes:audio/mpeg,audio/ogg,audio/wav']);
+        }
+
+        // Store file
+        $path = $this->uploadFile->store('automation-uploads', 'public');
+        $this->nodeUrl = \Illuminate\Support\Facades\Storage::url($path);
+
+        // Reset upload input
+        $this->reset('uploadFile');
+
+        // Update node data immediately
+        $this->updateNodeData();
     }
 
     public function updateNodeData()
@@ -299,6 +528,12 @@ class AutomationBuilder extends Component
 
                 if ($type === 'trigger') {
                     $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)) . ' Trigger';
+                    $node['data']['trigger_type'] = $this->triggerType;
+                    $node['data']['keywords'] = $this->triggerConfig['keywords'] ?? [];
+                    $node['data']['add_tags'] = $this->triggerConfig['add_tags'] ?? [];
+                    $node['data']['remove_tags'] = $this->triggerConfig['remove_tags'] ?? [];
+                    $node['data']['template_name'] = $this->triggerConfig['template_name'] ?? null;
+                    $node['data']['button_text'] = $this->triggerConfig['button_text'] ?? null;
                 } elseif ($type === 'text') {
                     $node['data']['text'] = $this->nodeText;
                     $node['data']['typing'] = $this->nodeTyping;
@@ -312,10 +547,24 @@ class AutomationBuilder extends Component
                     $node['data']['text'] = $this->nodeText;
                     // Rebuild buttons from options
                     $buttons = [];
-                    foreach ($this->nodeOptions as $k => $opt) {
-                        $buttons[] = ['id' => 'btn-' . $k, 'title' => $opt];
+                    foreach ($this->nodeOptions as $opt) {
+                        // Use existing ID or generate new if missing (legacy data)
+                        $id = $opt['id'] ?? uniqid('btn-');
+                        $buttons[] = ['id' => $id, 'title' => $opt['label']];
                     }
                     $node['data']['buttons'] = $buttons;
+                } elseif ($type === 'interactive_list') {
+                    $node['data']['text'] = $this->nodeText;
+                    $node['data']['button_text'] = $this->nodeButtonText;
+                    // Rebuild sections from options (Single Section Mode)
+                    $rows = [];
+                    foreach ($this->nodeOptions as $opt) {
+                        $id = $opt['id'] ?? uniqid('row-');
+                        $rows[] = ['id' => $id, 'title' => $opt['label'], 'description' => ''];
+                    }
+                    $node['data']['sections'] = [
+                        ['title' => 'Options', 'rows' => $rows]
+                    ];
                 } elseif ($type === 'user_input') {
                     $node['data']['question'] = $this->nodeText;
                     $node['data']['variable'] = $this->nodeSaveTo;
@@ -330,11 +579,36 @@ class AutomationBuilder extends Component
                     $node['data']['json_body'] = $this->nodeJson;
                 } elseif ($type === 'template') {
                     $node['data']['template_name'] = $this->nodeText;
+                    $node['data']['language'] = $this->nodeLanguage;
+                } elseif ($type === 'condition') {
+                    $node['data']['variable'] = $this->nodeSaveTo;
+                    $node['data']['operator'] = $this->nodeOperator;
+                    $node['data']['value'] = $this->nodeText;
                 } elseif ($type === 'delay') {
                     $node['data']['value'] = $this->nodeText;
+                } elseif ($type === 'carousel') {
+                    $node['data']['cards'] = $this->nodeCards;
                 } elseif ($type === 'send_flow') {
                     $node['data']['flow_id'] = $this->nodeSaveTo;
                     $node['data']['text'] = $this->nodeText;
+                } elseif ($type === 'crm_sync') {
+                    $node['data']['provider'] = $this->nodeProvider;
+                    $node['data']['action'] = $this->nodeAction;
+                } elseif ($type === 'location_request') {
+                    $node['data']['text'] = $this->nodeText;
+                } elseif ($type === 'contact') {
+                    $contacts = [];
+                    foreach ($this->nodeContacts as $c) {
+                        if (!empty($c['name'])) {
+                            $contacts[] = [
+                                'name' => ['formatted_name' => $c['name']],
+                                'phones' => [['phone' => $c['phone']]]
+                            ];
+                        }
+                    }
+                    $node['data']['contacts'] = $contacts;
+                } elseif ($type === 'carousel') {
+                    $node['data']['cards'] = $this->nodeCards;
                 }
             }
         }
@@ -343,7 +617,10 @@ class AutomationBuilder extends Component
     public function addOption()
     {
         if (!empty($this->newOption)) {
-            $this->nodeOptions[] = $this->newOption;
+            $this->nodeOptions[] = [
+                'id' => uniqid($this->selectedNodeId . '_opt_'),
+                'label' => $this->newOption
+            ];
             $this->newOption = '';
             $this->updateNodeData();
         }
@@ -434,11 +711,71 @@ class AutomationBuilder extends Component
         $this->triggerConfig['remove_tags'][] = '';
     }
 
+    // Carousel Methods
+    public function addCard()
+    {
+        $this->nodeCards[] = [
+            'title' => 'New Card',
+            'description' => '',
+            'image' => '',
+            'buttons' => []
+        ];
+        $this->updateNodeData();
+    }
+
+    public function removeCard($index)
+    {
+        if (isset($this->nodeCards[$index])) {
+            unset($this->nodeCards[$index]);
+            $this->nodeCards = array_values($this->nodeCards);
+            $this->updateNodeData();
+        }
+    }
+
+    public function addCardButton($cardIndex)
+    {
+        if (isset($this->nodeCards[$cardIndex])) {
+            if (count($this->nodeCards[$cardIndex]['buttons'] ?? []) < 3) {
+                $this->nodeCards[$cardIndex]['buttons'][] = [
+                    'id' => uniqid('btn-'),
+                    'type' => 'reply',
+                    'title' => 'Button'
+                ];
+                $this->updateNodeData();
+            }
+        }
+    }
+
+    public function removeCardButton($cardIndex, $btnIndex)
+    {
+        if (isset($this->nodeCards[$cardIndex]['buttons'][$btnIndex])) {
+            unset($this->nodeCards[$cardIndex]['buttons'][$btnIndex]);
+            $this->nodeCards[$cardIndex]['buttons'] = array_values($this->nodeCards[$cardIndex]['buttons']);
+            $this->updateNodeData();
+        }
+    }
+
+
     public function removeRemoveTag($index)
     {
         if (isset($this->triggerConfig['remove_tags'][$index])) {
             unset($this->triggerConfig['remove_tags'][$index]);
             $this->triggerConfig['remove_tags'] = array_values($this->triggerConfig['remove_tags']);
+        }
+    }
+
+    public function addContact()
+    {
+        $this->nodeContacts[] = ['name' => '', 'phone' => ''];
+        $this->updateNodeData();
+    }
+
+    public function removeContact($index)
+    {
+        if (isset($this->nodeContacts[$index])) {
+            unset($this->nodeContacts[$index]);
+            $this->nodeContacts = array_values($this->nodeContacts);
+            $this->updateNodeData();
         }
     }
 
@@ -451,6 +788,25 @@ class AutomationBuilder extends Component
         if ($this->selectedNodeId === $id) {
             $this->selectedNodeId = null;
         }
+    }
+
+    public function getEdgesWithPathsProperty()
+    {
+        return collect($this->edges)->map(function ($edge) {
+            $source = collect($this->nodes)->firstWhere('id', $edge['source']);
+            $target = collect($this->nodes)->firstWhere('id', $edge['target']);
+
+            if (!$source || !$target)
+                return null;
+
+            // These terminal coordinates are used by the connection logic
+            $edge['source_x'] = $source['x'] + 288 + 16; // Right handle
+            $edge['source_y'] = $source['y'] + 48;
+            $edge['target_x'] = $target['x'] - 16; // Left handle
+            $edge['target_y'] = $target['y'] + 48;
+
+            return $edge;
+        })->filter()->values()->toArray();
     }
 
     #[Layout('layouts.builder')]

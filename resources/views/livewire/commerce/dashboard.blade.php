@@ -43,7 +43,7 @@
             <div class="relative z-10 space-y-2">
                 <span class="text-[10px] font-black uppercase tracking-[0.2em] text-wa-teal/70">Total Revenue</span>
                 <div class="text-4xl font-black tracking-tight">${{ number_format($stats['total_revenue'], 2) }}</div>
-                <div class="flex items-center gap-2 text-wa-green text-xs font-bold pt-2">
+                <div class="flex items-center gap-2 text-wa-teal text-xs font-bold pt-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
                             d="M5 10l7-7m0 0l7 7m-7-7v18" />

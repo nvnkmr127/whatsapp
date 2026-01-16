@@ -1,91 +1,132 @@
 <x-app-layout>
-    <div class="p-6">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
-            <h2
-                class="text-xl font-bold bg-white dark:bg-gray-800 p-4 rounded shadow w-full md:w-auto text-gray-800 dark:text-gray-200">
-                {{ __('Consent Registry') }}
-            </h2>
-            <div class="flex space-x-2">
-                <a href="{{ route('compliance.registry', ['status' => 'OPT_IN']) }}"
-                    class="px-4 py-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 rounded shadow hover:bg-green-200 dark:hover:bg-green-800 transition text-sm font-medium">
+    <div class="space-y-8 p-6">
+        <!-- Page Header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Consent
+                        <span class="text-emerald-500">Registry</span>
+                    </h1>
+                </div>
+                <p class="text-slate-500 font-medium">Track and manage customer consent status for compliance.</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{{ route('compliance.registry', ['status' => 'opted_in']) }}"
+                    class="flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800">
+                    <span class="w-2 h-2 rounded-full bg-wa-teal"></span>
                     Opted In
                 </a>
-                <a href="{{ route('compliance.registry', ['status' => 'OPT_OUT']) }}"
-                    class="px-4 py-2 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 rounded shadow hover:bg-red-200 dark:hover:bg-red-800 transition text-sm font-medium">
+                <a href="{{ route('compliance.registry', ['status' => 'opted_out']) }}"
+                    class="flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
                     Opted Out
                 </a>
                 <a href="{{ route('compliance.registry') }}"
-                    class="px-4 py-2 bg-white text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded shadow hover:bg-gray-50 dark:hover:bg-gray-600 transition text-sm font-medium border border-gray-200 dark:border-gray-600">
-                    All
+                    class="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                    All Contacts
                 </a>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <!-- Table Card -->
+        <div
+            class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+            <!-- Table Content -->
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            <th
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Name
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-slate-50 dark:border-slate-800/50">
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                Contact
+                                Identity</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                Communication</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                Consent
+                                Status</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Source
                             </th>
-                            <th
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Phone
-                            </th>
-                            <th
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Source
-                            </th>
-                            <th
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Last Changed
-                            </th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Last
+                                Changed</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        @foreach($contacts as $contact)
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out">
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                                    {{ $contact->name }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                    {{ $contact->phone_number }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <span
-                                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                            {{ $contact->opt_in_status === 'OPT_IN' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-                            ($contact->opt_in_status === 'OPT_OUT' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300') }}">
-                                                        {{ ucfirst(str_replace('_', ' ', $contact->opt_in_status)) }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                    {{ $contact->opt_in_source ?? 'N/A' }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                    {{ $contact->opt_in_at ? $contact->opt_in_at->format('Y-m-d H:i') : '-' }}
-                                                </td>
-                                            </tr>
-                        @endforeach
-                        @if($contacts->isEmpty())
-                            <tr>
-                                <td colspan="5" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                                    No records found.
+                    <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
+                        @forelse($contacts as $contact)
+                            <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                                <td class="px-8 py-6">
+                                    <div class="flex items-center gap-4">
+                                        <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $contact->name }}"
+                                            alt="{{ $contact->name }}"
+                                            class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 object-cover"
+                                            loading="lazy">
+                                        <div>
+                                            <div class="text-sm font-black text-slate-900 dark:text-white">
+                                                {{ $contact->name }}
+                                            </div>
+                                            <div class="text-xs text-slate-500 font-medium">
+                                                {{ $contact->email ?: 'No email linked' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <span
+                                        class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black tabular-nums rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                                        {{ $contact->phone_number }}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="w-2 h-2 rounded-full {{ $contact->opt_in_status === 'opted_in' ? 'bg-wa-teal shadow-lg shadow-wa-teal/40' : 'bg-rose-500 shadow-lg shadow-rose-500/40' }}"></span>
+                                        <span
+                                            class="text-xs font-black uppercase tracking-widest {{ $contact->opt_in_status === 'opted_in' ? 'text-wa-teal' : 'text-rose-500' }}">
+                                            {{ str_replace('_', ' ', $contact->opt_in_status) }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <span class="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                        {{ $contact->opt_in_source ?? 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <span class="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                        {{ $contact->opt_in_at ? $contact->opt_in_at->format('M d, Y H:i') : '-' }}
+                                    </span>
                                 </td>
                             </tr>
-                        @endif
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-8 py-20 text-center">
+                                    <div class="flex flex-col items-center gap-4">
+                                        <div
+                                            class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300">
+                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                            </svg>
+                                        </div>
+                                        <div class="text-slate-400 font-bold">No consent records found.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                {{ $contacts->links() }}
-            </div>
+
+            @if($contacts->hasPages())
+                <div class="p-8 border-t border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/10">
+                    {{ $contacts->links() }}
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>

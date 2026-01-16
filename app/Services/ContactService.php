@@ -40,6 +40,18 @@ class ContactService
         $contact->fill(Arr::except($data, ['team_id', 'phone_number']));
         $contact->save();
 
+        // Trigger automation if this is a new contact
+        if ($contact->wasRecentlyCreated) {
+            try {
+                $whatsappService = new WhatsAppService();
+                $automationService = new AutomationService($whatsappService);
+                $automationService->checkSpecialTriggers($contact, 'contact_added');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Contact Added Automation Trigger Failed: ' . $e->getMessage());
+                // Don't throw - contact creation should succeed even if automation fails
+            }
+        }
+
         return $contact;
     }
 
@@ -64,6 +76,18 @@ class ContactService
         }
 
         $contact->tags()->sync($ids);
+
+        // Trigger automation for tag assigned
+        if (!empty($ids)) {
+            try {
+                $whatsappService = new WhatsAppService();
+                $automationService = new AutomationService($whatsappService);
+                $automationService->checkSpecialTriggers($contact, 'tag_assigned');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());
+                // Don't throw - tag assignment should succeed even if automation fails
+            }
+        }
     }
 
     /**
@@ -83,6 +107,18 @@ class ContactService
             }
         }
         $contact->tags()->syncWithoutDetaching($ids);
+
+        // Trigger automation for tag assigned
+        if (!empty($ids)) {
+            try {
+                $whatsappService = new WhatsAppService();
+                $automationService = new AutomationService($whatsappService);
+                $automationService->checkSpecialTriggers($contact, 'tag_assigned');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());
+                // Don't throw - tag assignment should succeed even if automation fails
+            }
+        }
     }
 
     /**

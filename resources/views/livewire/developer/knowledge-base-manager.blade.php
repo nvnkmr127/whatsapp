@@ -3,14 +3,14 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                <div class="p-2 bg-indigo-100 dark:bg-indigo-900/20 text-wa-teal dark:text-indigo-400 rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Business <span
-                        class="text-indigo-600">Brain</span></h1>
+                        class="text-wa-teal">Brain</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Teach your AI about your business by adding documents, websites, or
                 text.</p>
@@ -18,7 +18,7 @@
         <div class="flex gap-3">
             <x-action-message class="mr-3 flex items-center" on="saved">
                 <span
-                    class="text-indigo-600 font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
+                    class="text-wa-teal font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
             </x-action-message>
         </div>
     </div>
@@ -32,18 +32,18 @@
                 <div>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Add
                         Information</h2>
-                    <p class="text-sm text-indigo-600 font-bold uppercase tracking-wider mt-1">Source Selection</p>
+                    <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">Source Selection</p>
                 </div>
                 <!-- Tabs -->
                 <div class="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl">
                     <button @click="activeTab = 'file'"
-                        :class="activeTab === 'file' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600' : 'text-slate-500'"
+                        :class="activeTab === 'file' ? 'bg-white dark:bg-slate-700 shadow-sm text-wa-teal' : 'text-slate-500'"
                         class="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">File</button>
                     <button @click="activeTab = 'url'"
-                        :class="activeTab === 'url' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600' : 'text-slate-500'"
+                        :class="activeTab === 'url' ? 'bg-white dark:bg-slate-700 shadow-sm text-wa-teal' : 'text-slate-500'"
                         class="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">Website</button>
                     <button @click="activeTab = 'text'"
-                        :class="activeTab === 'text' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600' : 'text-slate-500'"
+                        :class="activeTab === 'text' ? 'bg-white dark:bg-slate-700 shadow-sm text-wa-teal' : 'text-slate-500'"
                         class="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">Raw
                         Text</button>
                 </div>
@@ -83,7 +83,7 @@
                     <x-input-error for="file" />
 
                     <button wire:click="uploadFile" wire:loading.attr="disabled"
-                        class="w-full mt-6 py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all">
+                        class="w-full mt-6 py-4 bg-slate-900 dark:bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all">
                         <span wire:loading.remove wire:target="uploadFile">Process Document</span>
                         <span wire:loading wire:target="uploadFile">Analyzing Content...</span>
                     </button>
@@ -99,7 +99,7 @@
                     <x-input-error for="url" />
 
                     <button wire:click="addUrl" wire:loading.attr="disabled"
-                        class="w-full mt-6 py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all">
+                        class="w-full mt-6 py-4 bg-slate-900 dark:bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all">
                         <span wire:loading.remove wire:target="addUrl">Crawl Website</span>
                         <span wire:loading wire:target="addUrl">Reading Website...</span>
                     </button>
@@ -116,7 +116,7 @@
                     <x-input-error for="rawText" />
 
                     <button wire:click="addText" wire:loading.attr="disabled"
-                        class="w-full mt-6 py-4 bg-slate-900 dark:bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all">
+                        class="w-full mt-6 py-4 bg-slate-900 dark:bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.01] active:scale-95 transition-all">
                         <span wire:loading.remove wire:target="addText">Save Text</span>
                         <span wire:loading wire:target="addText">Saving...</span>
                     </button>
@@ -125,7 +125,7 @@
         </div>
 
         <!-- Stats/Info Card -->
-        <div class="bg-indigo-600 rounded-[2.5rem] shadow-xl p-8 text-white">
+        <div class="bg-wa-teal rounded-[2.5rem] shadow-xl p-8 text-white">
             <h3 class="text-xl font-black uppercase tracking-tight mb-4">How it works</h3>
             <div class="space-y-6">
                 <div class="flex gap-4">
@@ -191,7 +191,7 @@
                         </svg>
                     </button>
                     @endif
-                    <button wire:click="showPreview({{ $source->id }})" class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Preview">
+                    <button wire:click="showPreview({{ $source->id }})" class="p-2 text-slate-400 hover:text-wa-teal transition-colors" title="Preview">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -212,7 +212,7 @@
                 </div>
 
                     <div class="flex items-center gap-4 mb-4">
-                        <div class="p-3 bg-white dark:bg-slate-700 rounded-2xl shadow-sm text-indigo-600">
+                        <div class="p-3 bg-white dark:bg-slate-700 rounded-2xl shadow-sm text-wa-teal">
                             @if($source->type === 'file')
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -275,7 +275,7 @@
     @if (session()->has('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)"
             class="fixed bottom-8 right-8 z-50 animate-in slide-in-from-right-10 duration-500">
-            <div class="bg-indigo-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/20 backdrop-blur-xl">
+            <div class="bg-wa-teal text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/20 backdrop-blur-xl">
                  <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
@@ -301,7 +301,7 @@
                             <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight" id="modal-title">
                                 {{ $modalMode === 'edit' ? 'Edit Information' : 'Preview Information' }}
                             </h3>
-                            <p class="text-sm text-indigo-600 font-bold uppercase tracking-wider mt-1">{{ $editingName }}</p>
+                            <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">{{ $editingName }}</p>
                         </div>
                         <button wire:click="closeModal" class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,13 +338,13 @@
                                                 <tbody class="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
                                                     <tr>
                                                         <td class="px-6 py-4 whitespace-nowrap">
-                                                            <span class="px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50">Website</span>
+                                                            <span class="px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-wa-teal dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50">Website</span>
                                                         </td>
                                                         <td class="px-6 py-4">
                                                             <div class="text-sm font-bold text-slate-900 dark:text-white break-all">{{ App\Models\KnowledgeBaseSource::find($editingId)?->path }}</div>
                                                         </td>
                                                         <td class="px-6 py-4 text-right whitespace-nowrap">
-                                                            <a href="{{ App\Models\KnowledgeBaseSource::find($editingId)?->path }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 transition-colors">
+                                                            <a href="{{ App\Models\KnowledgeBaseSource::find($editingId)?->path }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-wa-teal hover:text-indigo-700 transition-colors">
                                                                 Visit
                                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 012 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -375,7 +375,7 @@
                             Close
                         </button>
                         @if($modalMode === 'edit')
-                        <button wire:click="saveEdit" class="px-8 py-3 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        <button wire:click="saveEdit" class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                             Save Changes
                         </button>
                         @endif

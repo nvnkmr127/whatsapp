@@ -14,7 +14,7 @@ class ProductManager extends Component
     use WithPagination;
 
     public $search = '';
-    public $name, $description, $price, $currency = 'USD', $retailer_id, $image_url, $url;
+    public $name, $description, $price, $currency = 'USD', $retailer_id, $image_url, $url, $category_id;
     public $editingProductId = null;
     public $showCreateModal = false;
 
@@ -31,6 +31,7 @@ class ProductManager extends Component
             'price' => 'required|numeric|min:0',
             'retailer_id' => 'required|string|max:100|unique:products,retailer_id,' . $this->editingProductId . ',id',
             'image_url' => 'nullable|url',
+            'category_id' => 'nullable|exists:categories,id',
         ];
     }
 
@@ -53,6 +54,7 @@ class ProductManager extends Component
             'retailer_id' => $this->retailer_id,
             'image_url' => $this->image_url,
             'url' => $this->url,
+            'category_id' => $this->category_id ?: null,
             'availability' => 'in stock',
         ]);
 
@@ -72,6 +74,7 @@ class ProductManager extends Component
         $this->retailer_id = $product->retailer_id;
         $this->image_url = $product->image_url;
         $this->url = $product->url;
+        $this->category_id = $product->category_id;
 
         $this->showCreateModal = true;
     }
@@ -89,6 +92,7 @@ class ProductManager extends Component
             'retailer_id' => $this->retailer_id,
             'image_url' => $this->image_url,
             'url' => $this->url,
+            'category_id' => $this->category_id ?: null,
         ]);
 
         $this->resetInput();
@@ -121,7 +125,7 @@ class ProductManager extends Component
 
     public function resetInput()
     {
-        $this->reset(['name', 'description', 'price', 'retailer_id', 'image_url', 'url', 'editingProductId']);
+        $this->reset(['name', 'description', 'price', 'retailer_id', 'image_url', 'url', 'editingProductId', 'category_id']);
     }
 
     #[Layout('components.layouts.app')]
@@ -135,8 +139,13 @@ class ProductManager extends Component
             ->orderBy('created_at', 'desc')
             ->paginate(12);
 
+        $categories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('target_module', ['all', 'products'])
+            ->get();
+
         return view('livewire.commerce.product-manager', [
-            'products' => $products
+            'products' => $products,
+            'categories' => $categories
         ]);
     }
 }

@@ -18,7 +18,7 @@
 </head>
 
 <body
-    class="font-sans antialiased bg-slate-50 dark:bg-slate-950 overflow-hidden h-screen w-screen selection:bg-wa-green/30">
+    class="font-sans antialiased bg-slate-50 dark:bg-slate-950 overflow-hidden h-screen w-screen selection:bg-wa-teal/30">
 
     <!-- Builder Layout -->
     <div class="h-full w-full flex flex-col relative">

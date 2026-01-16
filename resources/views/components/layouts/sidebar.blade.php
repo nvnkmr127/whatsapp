@@ -81,7 +81,7 @@
                                             class="w-full group flex items-center justify-between px-4 py-3 text-sm font-bold rounded-xl transition-all duration-200 {{ $isActive ? 'bg-slate-800/60 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-900' }}">
                                             
                                             <div class="flex items-center">
-                                                <svg class="mr-4 h-5 w-5 transition-transform duration-200 {{ $isActive ? 'text-wa-green' : 'text-slate-500 group-hover:text-slate-300' }}"
+                                                <svg class="mr-4 h-5 w-5 transition-transform duration-200 {{ $isActive ? 'text-wa-teal' : 'text-slate-500 group-hover:text-slate-300' }}"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $link['icon'] }}" />
                                                 </svg>
@@ -102,7 +102,7 @@
                                             class="mt-1 ml-4 pl-4 border-l border-slate-800 space-y-1">
                                             @foreach($link['children'] as $child)
                                                 <a href="{{ route($child['route']) }}"
-                                                    class="block px-4 py-2 text-[12px] font-bold tracking-wide transition-colors duration-200 {{ request()->routeIs($child['route']) ? 'text-wa-green font-black' : 'text-slate-500 hover:text-white' }}">
+                                                    class="block px-4 py-2 text-[12px] font-bold tracking-wide transition-colors duration-200 {{ request()->routeIs($child['route']) ? 'text-wa-teal font-black' : 'text-slate-500 hover:text-white' }}">
                                                     {{ $child['label'] }}
                                                 </a>
                                             @endforeach
@@ -118,7 +118,7 @@
                                             <span class="tracking-wide text-left">{{ $link['label'] }}</span>
                                             
                                             @if($isActive)
-                                                <div class="absolute right-3 w-1.5 h-1.5 bg-wa-green rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
+                                                <div class="absolute right-3 w-1.5 h-1.5 bg-wa-teal rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
                                             @endif
                                         </a>
                                     @endif
@@ -167,14 +167,14 @@
                 class="w-full flex items-center gap-4 p-3 bg-slate-900/50 backdrop-blur-md border border-white/5 rounded-[2rem] shadow-xl hover:bg-slate-800/80 hover:border-white/10 transition-all group">
                 
                 <div class="relative flex-shrink-0">
-                    <img class="h-10 w-10 rounded-full object-cover ring-2 ring-slate-800 group-hover:ring-wa-green/50 transition-all"
+                    <img class="h-10 w-10 rounded-full object-cover ring-2 ring-slate-800 group-hover:ring-wa-teal/50 transition-all"
                         src="{{ Auth::user()->profile_photo_url }}" alt="">
-                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-wa-green border-2 border-slate-900 rounded-full"></div>
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-wa-teal border-2 border-slate-900 rounded-full"></div>
                 </div>
 
                 <div class="flex-1 text-left min-w-0">
                     <div class="text-xs font-black text-white truncate tracking-tight uppercase">{{ Auth::user()->name }}</div>
-                    <div class="text-[9px] font-bold text-slate-500 truncate uppercase tracking-wider group-hover:text-wa-green transition-colors">
+                    <div class="text-[9px] font-bold text-slate-500 truncate uppercase tracking-wider group-hover:text-wa-teal transition-colors">
                         {{ Auth::user()->currentTeam->name }}
                     </div>
                 </div>

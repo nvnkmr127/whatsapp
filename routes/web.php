@@ -39,6 +39,7 @@ Route::middleware([
     Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware('can:manage-settings');
     Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware('can:manage-settings');
     Route::get('/settings/system', \App\Livewire\Settings\SystemSettings::class)->name('settings.system')->middleware('can:manage-settings');
+    Route::get('/settings/categories', \App\Livewire\Settings\CategoryManager::class)->name('settings.categories')->middleware('can:manage-settings');
 
     Route::post('/whatsapp/onboard/exchange', [\App\Http\Controllers\WhatsAppOnboardingController::class, 'exchangeToken'])
         ->name('whatsapp.onboard.exchange')
@@ -77,6 +78,7 @@ Route::middleware([
     })->name('templates.index')->middleware('can:manage-templates');
 
     // Compliance Modules
+    Route::get('/compliance', \App\Livewire\Compliance\ComplianceManager::class)->name('compliance.index')->middleware('can:manage-settings');
     Route::get('/compliance/logs', [\App\Http\Controllers\ComplianceController::class, 'logs'])->name('compliance.logs')->middleware('can:manage-settings');
     Route::get('/compliance/registry', [\App\Http\Controllers\ComplianceController::class, 'registry'])->name('compliance.registry')->middleware('can:manage-settings');
 
@@ -89,6 +91,7 @@ Route::middleware([
     Route::get('/flows/builder/{flowId?}', \App\Livewire\Flows\FlowBuilder::class)->name('flows.builder')->middleware('can:manage-campaigns');
 
     Route::get('/analytics', \App\Livewire\Analytics\AnalyticsDashboard::class)->name('analytics')->middleware(['can:manage-settings', 'plan_feature:analytics']);
+    Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware('can:manage-settings');
 
     // Billing Dashboard
     Route::get('/billing', \App\Livewire\Billing\BillingDashboard::class)->name('billing');

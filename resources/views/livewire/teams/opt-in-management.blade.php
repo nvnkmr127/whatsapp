@@ -3,7 +3,7 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg">
+                <div class="p-2 bg-purple-100 dark:bg-purple-900/20 text-wa-teal dark:text-purple-400 rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
@@ -11,17 +11,16 @@
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Opt-In <span
-                        class="text-purple-500">Management</span></h1>
+                        class="text-wa-teal">Management</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Manage how users subscribe and unsubscribe from your messages.</p>
         </div>
         <div class="flex gap-3">
             <x-action-message class="mr-3 flex items-center" on="saved">
-                <span
-                    class="text-purple-500 font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
+                <span class="text-wa-teal font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
             </x-action-message>
             <button wire:click="save"
-                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-purple-600 text-white dark:text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-purple-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
@@ -38,10 +37,10 @@
                 <div>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Subscription
                     </h2>
-                    <p class="text-sm text-green-500 font-bold uppercase tracking-wider mt-1">Opt-In Configuration</p>
+                    <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">Opt-In Configuration</p>
                 </div>
                 <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl">
-                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -54,9 +53,9 @@
                     <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block">Opt-In Keywords</label>
                     <div class="flex gap-2 mb-4">
                         <input type="text" wire:model="newOptInKeyword" placeholder="e.g. START, JOIN"
-                            class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-green-500/20 text-slate-900 dark:text-white">
+                            class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
                         <button wire:click="addOptInKeyword"
-                            class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-green-500/20">
+                            class="px-6 py-3 bg-wa-teal hover:bg-green-600 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-wa-teal/20">
                             Add
                         </button>
                     </div>
@@ -87,7 +86,7 @@
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model="optInMessageEnabled" class="sr-only peer">
                             <div
-                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500">
+                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
                             </div>
                         </label>
                     </div>
@@ -95,7 +94,7 @@
                     @if($optInMessageEnabled)
                         <div class="animate-in fade-in slide-in-from-top-2 duration-200">
                             <textarea wire:model="optInMessage" rows="3"
-                                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-green-500/20 text-slate-900 dark:text-white resize-none"
+                                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white resize-none"
                                 placeholder="Message to send when user opts in..."></textarea>
                             <p class="mt-2 text-[10px] uppercase font-bold text-slate-400 text-right">Sent immediately after
                                 keyword match</p>

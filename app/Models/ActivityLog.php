@@ -10,6 +10,7 @@ class ActivityLog extends Model
 
     protected $casts = [
         'created_at' => 'datetime',
+        'properties' => 'array',
     ];
 
     public function user()

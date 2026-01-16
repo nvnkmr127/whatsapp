@@ -3,14 +3,14 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-blue-100 text-blue-600 rounded-lg dark:bg-blue-500/10 dark:text-blue-400">
+                <div class="p-2 bg-blue-100 text-wa-teal rounded-lg dark:bg-blue-500/10 dark:wa-teal">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Analytics &
-                    <span class="text-blue-600 dark:text-blue-400">Billing</span>
+                    <span class="text-wa-teal dark:wa-teal">Billing</span>
                 </h1>
             </div>
             <p class="text-slate-500 font-medium">Monitor your metrics, usage, and financial transactions.</p>
@@ -26,7 +26,7 @@
                 Export CSV
             </button>
             <button wire:click="toggleSchedule"
-                class="flex items-center gap-2 px-6 py-3 {{ $isScheduled ? 'bg-wa-green text-white' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' }} font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95">
+                class="flex items-center gap-2 px-6 py-3 {{ $isScheduled ? 'bg-wa-teal text-white' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' }} font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -54,7 +54,7 @@
                         class="text-3xl font-black text-slate-900 dark:text-white">${{ number_format($wallet->balance, 2) }}</span>
                 </div>
                 <button
-                    class="mt-4 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                    class="mt-4 text-xs font-bold text-wa-teal dark:wa-teal hover:underline flex items-center gap-1">
                     Add Funds
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -66,7 +66,7 @@
         <!-- Messages Sent -->
         <div
             class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-wa-green">
+            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-wa-teal">
                 <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -75,7 +75,7 @@
             <div class="relative z-10">
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Sent (30d)</h3>
                 <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($msgSent) }}</div>
-                <p class="mt-4 text-[10px] font-bold text-wa-green uppercase tracking-widest">Outbound Traffic</p>
+                <p class="mt-4 text-[10px] font-bold text-wa-teal uppercase tracking-widest">Outbound Traffic</p>
             </div>
         </div>
 
@@ -120,7 +120,7 @@
         <!-- Message Velocity Chart -->
         <div
             class="lg:col-span-3 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 sm:p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-wa-green/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
 
             <div class="relative">
                 <div class="flex items-center justify-between mb-10">
@@ -134,7 +134,7 @@
                     <div
                         class="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-wa-green shadow-lg shadow-wa-green/20"></span> Sent
+                            <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Sent
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Received
@@ -153,7 +153,7 @@
             class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
             <div class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
                 <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Billing <span
-                        class="text-blue-600">History</span></h3>
+                        class="text-wa-teal">History</span></h3>
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</div>
             </div>
             <div class="overflow-x-auto">
@@ -188,7 +188,7 @@
                                 </td>
                                 <td class="px-8 py-6">
                                     <span
-                                        class="text-sm font-black {{ $txn->amount < 0 ? 'text-rose-500' : 'text-wa-green' }}">
+                                        class="text-sm font-black {{ $txn->amount < 0 ? 'text-rose-500' : 'text-wa-teal' }}">
                                         {{ $txn->amount < 0 ? '-' : '+' }}${{ number_format(abs($txn->amount), 2) }}
                                     </span>
                                 </td>
@@ -220,7 +220,7 @@
                 <div class="space-y-6">
                     <div
                         class="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/30">
-                        <div class="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">
+                        <div class="text-xs font-black text-wa-teal dark:wa-teal uppercase tracking-widest mb-1">
                             Coming Soon</div>
                         <p class="text-sm text-blue-800 dark:text-blue-300 leading-relaxed font-medium">Agent
                             performance metrics, average resolution time, and satisfaction scores will appear here.</p>

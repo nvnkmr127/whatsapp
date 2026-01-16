@@ -58,12 +58,11 @@ class ExecuteWebhookWorkflow implements ShouldQueue
                         'team_id' => $this->workflow->team_id,
                         'webhook_workflow_id' => $this->workflow->id,
                         'contact_id' => \App\Models\Contact::where('phone_number', $this->recipient)->value('id'), // Best effort match
-                        'chat_id' => $this->recipient, // Using phone as chat_id for now
-                        'wamid' => $wamid,
+                        'whatsapp_message_id' => $wamid,
                         'type' => 'template',
                         'direction' => 'outbound',
                         'status' => 'sent', // Initially sent
-                        'body' => "Template: {$template->name}",
+                        'content' => "Template: {$template->name}",
                         'metadata' => [
                             'template_name' => $template->name,
                             'parameters' => $this->parameters

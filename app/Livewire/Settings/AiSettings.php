@@ -138,6 +138,15 @@ class AiSettings extends Component
         }
     }
 
+    public function getCreativityLevelProperty()
+    {
+        if ($this->temperature > 0.7)
+            return 'High';
+        if ($this->temperature < 0.3)
+            return 'Low';
+        return 'Normal';
+    }
+
     public function render()
     {
         return view('livewire.settings.ai-settings');

@@ -3,14 +3,14 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-green-100 text-green-600 rounded-lg dark:bg-green-500/10 dark:text-green-400">
+                <div class="p-2 bg-green-100 text-wa-teal rounded-lg dark:bg-green-500/10 dark:text-wa-teal">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Webhook <span
-                        class="text-green-600 dark:text-green-400">Manager</span></h1>
+                        class="text-wa-teal dark:text-wa-teal">Manager</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Outbound event notifications & API-triggered workflows.</p>
         </div>
@@ -167,7 +167,7 @@
                     <x-label value="Signing Secret (Optional)"
                         class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
                     <button wire:click="generateSecret" type="button"
-                        class="text-xs font-bold text-green-600 hover:text-green-700 uppercase tracking-widest">Generate
+                        class="text-xs font-bold text-wa-teal hover:text-green-700 uppercase tracking-widest">Generate
                         Secret</button>
                 </div>
                 <x-input wire:model="secret" type="text"
@@ -186,7 +186,7 @@
                         <label
                             class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                             <input type="checkbox" wire:model="events" value="{{ $key }}"
-                                class="rounded border-slate-300 text-green-600 focus:ring-green-500">
+                                class="rounded border-slate-300 text-wa-teal focus:ring-green-500">
                             <span class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $label }}</span>
                         </label>
                     @endforeach
@@ -197,7 +197,7 @@
                 <label
                     class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                     <input type="checkbox" wire:model="is_active"
-                        class="rounded border-slate-300 text-green-600 focus:ring-green-500">
+                        class="rounded border-slate-300 text-wa-teal focus:ring-green-500">
                     <span class="text-sm font-bold text-slate-700 dark:text-slate-300">Active</span>
                 </label>
             </div>

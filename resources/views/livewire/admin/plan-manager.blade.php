@@ -21,8 +21,7 @@
 
         <!-- Flash Message -->
         @if (session()->has('message'))
-            <div
-                class="mb-8 p-4 bg-wa-green/10 text-wa-green rounded-2xl border border-wa-green/20 flex items-center gap-3">
+            <div class="mb-8 p-4 bg-wa-teal/10 text-wa-teal rounded-2xl border border-wa-teal/20 flex items-center gap-3">
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
@@ -46,7 +45,8 @@
                         <div class="flex justify-between items-start mb-6">
                             <div>
                                 <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                    {{ $plan->name }}</h3>
+                                    {{ $plan->name }}
+                                </h3>
                                 <div class="flex items-baseline gap-1 mt-2">
                                     <span
                                         class="text-4xl font-black text-indigo-500">${{ number_format($plan->monthly_price, 2) }}</span>
@@ -64,7 +64,7 @@
                         <!-- Limits -->
                         <div class="space-y-4 mb-8">
                             <div class="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl text-wa-green shadow-sm">
+                                <div class="p-2 bg-white dark:bg-slate-800 rounded-xl text-wa-teal shadow-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -75,7 +75,8 @@
                                     </div>
                                     <div class="font-bold text-slate-900 dark:text-white">
                                         {{ number_format($plan->message_limit) }} <span
-                                            class="text-xs font-medium text-slate-500">/mo</span></div>
+                                            class="text-xs font-medium text-slate-500">/mo</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -103,7 +104,7 @@
                                     @foreach($plan->features as $feature => $enabled)
                                         @if($enabled)
                                             <div class="flex items-center gap-2">
-                                                <svg class="w-4 h-4 text-wa-green flex-shrink-0" fill="none" stroke="currentColor"
+                                                <svg class="w-4 h-4 text-wa-teal flex-shrink-0" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M5 13l4 4L19 7" />

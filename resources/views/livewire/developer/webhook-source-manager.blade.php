@@ -3,20 +3,20 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-purple-100 text-purple-600 rounded-lg dark:bg-purple-500/10 dark:text-purple-400">
+                <div class="p-2 bg-purple-100 text-wa-teal rounded-lg dark:bg-purple-500/10 dark:text-wa-teal">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Webhook <span
-                        class="text-purple-600 dark:text-purple-400">Sources</span></h1>
+                        class="text-wa-teal dark:text-wa-teal">Sources</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Configure webhooks from external platforms - Get unique URL, send
                 data, map fields visually</p>
         </div>
         <div>
-            <button wire:click="cancelEdit" class="px-6 py-3 bg-purple-600 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-purple-600/30 hover:scale-105 transition-all">
+            <button wire:click="cancelEdit" class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
                 + New Source
             </button>
         </div>
@@ -59,7 +59,7 @@
                             </td>
                             <td class="px-8 py-4">
                                 <code
-                                    class="text-[10px] font-mono text-purple-600 dark:text-purple-400">{{ Str::limit($source->getWebhookUrl(), 30) }}</code>
+                                    class="text-[10px] font-mono text-wa-teal dark:text-wa-teal">{{ Str::limit($source->getWebhookUrl(), 30) }}</code>
                             </td>
                             <td class="px-8 py-4">
                                 <button wire:click="toggleStatus({{ $source->id }})" class="group/toggle flex items-center gap-2 focus:outline-none">
@@ -79,7 +79,7 @@
                                         </svg>
                                     </button>
                                     <button wire:click="edit({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-xl transition-all" title="Edit Configuration">
+                                        class="p-2 text-slate-400 hover:text-wa-teal hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-xl transition-all" title="Edit Configuration">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -120,7 +120,7 @@
                     @foreach($steps as $stepNum => $step)
                         <div class="flex flex-col items-center gap-2 relative z-10">
                             <div
-                                class="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 {{ $currentStep >= $stepNum ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-110' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
+                                class="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 {{ $currentStep >= $stepNum ? 'bg-wa-teal text-white shadow-lg shadow-wa-teal/30 scale-110' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
                                 @if($currentStep > $stepNum)
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
@@ -140,7 +140,7 @@
                         </div>
                         @if($stepNum < 4)
                             <div
-                                class="flex-1 h-[2px] mb-6 mx-2 {{ $currentStep > $stepNum ? 'bg-purple-600' : 'bg-slate-100 dark:bg-slate-800' }}">
+                                class="flex-1 h-[2px] mb-6 mx-2 {{ $currentStep > $stepNum ? 'bg-wa-teal' : 'bg-slate-100 dark:bg-slate-800' }}">
                             </div>
                         @endif
                     @endforeach
@@ -179,7 +179,7 @@
                     <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div class="flex items-center gap-4 mb-8">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
+                                class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-wa-teal flex items-center justify-center">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -196,7 +196,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-2 group">
                                 <x-label value="Connection Name"
-                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-purple-600 transition-colors" />
+                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
                                 <x-input wire:model="name" type="text"
                                     class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner"
                                     placeholder="e.g. Shopify Store" />
@@ -205,7 +205,7 @@
 
                             <div class="space-y-2 group">
                                 <x-label value="Platform"
-                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-purple-600 transition-colors" />
+                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
                                 <select wire:model.live="platform" wire:change="selectPlatform($event.target.value)"
                                     class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner appearance-none cursor-pointer">
                                     @foreach($platforms as $key => $preset)
@@ -241,7 +241,7 @@
                                     </div>
                                     @if($auth_method !== 'none')
                                         <div
-                                            class="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl border border-purple-100/50 dark:border-purple-500/10 text-[10px] font-bold text-purple-600/70 uppercase tracking-widest">
+                                            class="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl border border-purple-100/50 dark:border-purple-500/10 text-[10px] font-bold text-wa-teal/70 uppercase tracking-widest">
                                             @if($auth_method === 'api_key') Recommend including in X-API-Key header @else
                                             Security verification enabled @endif
                                         </div>
@@ -255,7 +255,7 @@
                                                 <x-label value="API Key"
                                                     class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
                                                 <button wire:click="generateApiKey" type="button"
-                                                    class="text-[10px] font-black text-purple-600 hover:text-purple-700 uppercase tracking-widest">Regenerate</button>
+                                                    class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest">Regenerate</button>
                                             </div>
                                             <div class="relative group">
                                                 <x-input wire:model="auth_config.key" type="text"
@@ -263,7 +263,7 @@
                                                     readonly />
                                                 <button
                                                     onclick="navigator.clipboard.writeText('{{ $auth_config['key'] ?? '' }}')"
-                                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-purple-600 transition-colors bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
+                                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-wa-teal transition-colors bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
                                                         viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -278,7 +278,7 @@
                                                 <x-label value="Shared Secret"
                                                     class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
                                                 <button wire:click="generateSecret" type="button"
-                                                    class="text-[10px] font-black text-purple-600 hover:text-purple-700 uppercase tracking-widest">Regenerate</button>
+                                                    class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest">Regenerate</button>
                                             </div>
                                             <x-input wire:model="auth_config.secret" type="text"
                                                 class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-mono text-xs text-slate-900 dark:text-white" />
@@ -297,7 +297,7 @@
 
                         @if($editingId)
                             <div
-                                class="bg-purple-600 text-white rounded-[2rem] p-8 shadow-2xl shadow-purple-600/30 animate-in slide-in-from-left duration-700">
+                                class="bg-wa-teal text-white rounded-[2rem] p-8 shadow-2xl shadow-wa-teal/30 animate-in slide-in-from-left duration-700">
                                 <div class="flex flex-col md:flex-row items-center gap-6">
                                     <div
                                         class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-md">
@@ -314,7 +314,7 @@
                                                 class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
                                             <button
                                                 onclick="navigator.clipboard.writeText('{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}')"
-                                                class="bg-white text-purple-600 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg shadow-black/10">Copy
+                                                class="bg-white text-wa-teal px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg shadow-black/10">Copy
                                                 URL</button>
                                         </div>
                                         <p class="text-[10px] font-bold opacity-70 mt-3 uppercase tracking-widest">Paste this
@@ -332,7 +332,7 @@
                         wire:poll.2000ms="checkForNewPayload">
                         <div class="text-center space-y-4">
                             <h4 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                Listening for <span class="text-purple-600">Events</span></h4>
+                                Listening for <span class="text-wa-teal">Events</span></h4>
                             <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">Send a request from your
                                 platform to capture the structure</p>
                         </div>
@@ -349,7 +349,7 @@
                             <div
                                 class="relative z-10 w-64 h-64 rounded-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col items-center justify-center border-8 border-slate-50 dark:border-slate-800 transition-all duration-700 {{ $isCapturing ? 'border-purple-500/50 scale-110' : '' }}">
                                 @if($isCapturing)
-                                    <div class="w-16 h-16 text-purple-600 animate-bounce mb-4">
+                                    <div class="w-16 h-16 text-wa-teal animate-bounce mb-4">
                                         <svg fill="currentColor" viewBox="0 0 24 24">
                                             <path
                                                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
@@ -360,7 +360,7 @@
                                         Listening</button>
                                 @else
                                     <button wire:click="startCapture"
-                                        class="w-40 h-40 rounded-full bg-gradient-to-tr from-purple-600 to-purple-400 text-white flex flex-col items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-purple-600/30 group">
+                                        class="w-40 h-40 rounded-full bg-gradient-to-tr from-wa-teal to-wa-teal text-wa-teal flex flex-col items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-wa-teal/30 group">
                                         <svg class="w-12 h-12 group-hover:rotate-12 transition-transform" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -385,7 +385,7 @@
                             </h6>
                             <div class="flex items-center justify-between gap-4">
                                 <code
-                                    class="text-xs font-mono text-purple-400 break-all select-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
+                                    class="text-xs font-mono text-white break-all select-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
                                 <span
                                     class="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-lg border border-emerald-500/20 shrink-0">Ready</span>
                             </div>
@@ -398,7 +398,7 @@
                     <div class="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
+                                <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-wa-teal flex items-center justify-center">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                                 </div>
                                 <div>
@@ -411,7 +411,7 @@
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
                                     View Raw Data
                                 </button>
-                                <button wire:click="refreshMappingContext" type="button" class="p-2.5 bg-white dark:bg-slate-900 text-slate-400 hover:text-purple-600 rounded-xl border border-slate-100 dark:border-slate-800 transition-all">
+                                <button wire:click="refreshMappingContext" type="button" class="p-2.5 bg-white dark:bg-slate-900 text-slate-400 hover:text-wa-teal rounded-xl border border-slate-100 dark:border-slate-800 transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                 </button>
                             </div>
@@ -432,7 +432,7 @@
                         @if($selectedTemplateId && !empty($templateParams))
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {{-- Phone Number Mapping (Required) --}}
-                                <div class="col-span-full bg-gradient-to-br from-purple-600 to-purple-700 rounded-3xl p-8 shadow-xl relative overflow-hidden">
+                                <div class="col-span-full bg-gradient-to-br from-wa-teal to-wa-teal rounded-3xl p-8 shadow-xl relative overflow-hidden">
                                     <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
                                     <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                                         <div>
@@ -460,13 +460,13 @@
                                         @foreach($templateParams as $paramNum)
                                             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group">
                                                 <div class="flex items-center justify-between mb-4">
-                                                    <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center font-black text-xs border border-purple-100 dark:border-purple-500/20">
+                                                    <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-wa-teal flex items-center justify-center font-black text-xs border border-purple-100 dark:border-purple-500/20">
                                                         {{ $paramNum }}
                                                     </span>
                                                     @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
-                                                        <button wire:click="$set('templateParameters.{{ $paramNum }}', '')" class="text-[10px] font-black text-purple-600 hover:underline uppercase tracking-widest">Switch to Dynamic</button>
+                                                        <button wire:click="$set('templateParameters.{{ $paramNum }}', '')" class="text-[10px] font-black text-wa-teal hover:underline uppercase tracking-widest">Switch to Dynamic</button>
                                                     @else
-                                                        <button wire:click="$set('templateParameters.{{ $paramNum }}', 'STATIC:')" class="text-[10px] font-black text-slate-400 hover:text-purple-600 hover:underline uppercase tracking-widest">Set Static Value</button>
+                                                        <button wire:click="$set('templateParameters.{{ $paramNum }}', 'STATIC:')" class="text-[10px] font-black text-slate-400 hover:text-wa-teal hover:underline uppercase tracking-widest">Set Static Value</button>
                                                     @endif
                                                 </div>
 
@@ -517,7 +517,7 @@
                                          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                      </button>
                                  </div>
-                                 <div class="flex-1 overflow-auto p-8 font-mono text-xs text-purple-400 custom-scrollbar">
+                                 <div class="flex-1 overflow-auto p-8 font-mono text-xs text-wa-teal custom-scrollbar">
                                      <pre class="bg-black/40 p-6 rounded-[2rem]">{{ json_encode($capturedPayload ?: [], JSON_PRETTY_PRINT) }}</pre>
                                  </div>
                                  <div class="p-8 bg-black/40 border-t border-white/5 mt-auto">
@@ -532,7 +532,7 @@
                 @if($currentStep === 4)
                     <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div class="flex items-center gap-4 mb-8">
-                            <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center">
+                            <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-wa-teal flex items-center justify-center">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h10a2 2 0 012 2v2M7 7h10"/></svg>
                             </div>
                             <div>
@@ -546,7 +546,7 @@
                             <div class="bg-slate-50 dark:bg-slate-800/20 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800">
                                 <div class="flex items-center justify-between mb-6">
                                     <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Conditional Sending</h5>
-                                    <button wire:click="addFilterRule" type="button" class="text-[10px] font-black text-purple-600 hover:text-purple-700 uppercase tracking-widest flex items-center gap-1">
+                                    <button wire:click="addFilterRule" type="button" class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                         Add Rule
                                     </button>
@@ -608,14 +608,14 @@
 
                                 <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm">
                                     <div class="flex items-center gap-3 mb-4">
-                                        <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center">
+                                        <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 text-wa-teal flex items-center justify-center">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                         </div>
                                         <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Source Status</h5>
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Active & Ready</span>
-                                        <button wire:click="$toggle('is_active')" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {{ $is_active ? 'bg-purple-600' : 'bg-slate-200 dark:bg-slate-800' }}">
+                                        <button wire:click="$toggle('is_active')" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {{ $is_active ? 'bg-wa-teal' : 'bg-slate-200 dark:bg-slate-800' }}">
                                             <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $is_active ? 'translate-x-5' : 'translate-x-0' }}"></span>
                                         </button>
                                     </div>
@@ -631,7 +631,7 @@
         <div class="px-8 py-8 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/10 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 @if($currentStep > 1)
-                    <button wire:click="previousStep" type="button" class="group px-8 py-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xs font-black text-slate-600 dark:text-slate-400 hover:text-purple-600 hover:border-purple-600/30 transition-all uppercase tracking-widest flex items-center gap-2">
+                    <button wire:click="previousStep" type="button" class="group px-8 py-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xs font-black text-slate-600 dark:text-slate-400 hover:text-wa-teal hover:border-wa-teal/30 transition-all uppercase tracking-widest flex items-center gap-2">
                         <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Back
                     </button>
@@ -641,12 +641,12 @@
 
             <div class="flex items-center gap-4">
                 @if($currentStep < 4)
-                    <button wire:click="nextStep" type="button" class="group px-10 py-4 bg-purple-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-xl shadow-purple-600/30 flex items-center gap-2">
+                    <button wire:click="nextStep" type="button" class="group px-10 py-4 bg-wa-teal text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-wa-teal transition-all shadow-xl shadow-wa-teal/30 flex items-center gap-2">
                         Next
                         <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>
                 @else
-                    <button wire:click="update" type="button" class="group px-12 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-purple-600/40 flex items-center gap-2">
+                    <button wire:click="update" type="button" class="group px-12 py-4 bg-gradient-to-r from-wa-teal to-wa-teal text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-wa-teal/40 flex items-center gap-2">
                         Complete Setup
                         <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </button>
@@ -687,7 +687,7 @@
                                         <p class="text-[10px] font-bold opacity-80 uppercase tracking-widest">Payload matched successfully</p>
                                     </div>
                                     @if(isset($testResult['mapped_data']))
-                                        <div class="bg-slate-900 text-purple-400 rounded-[2rem] p-6 shadow-xl border border-slate-800">
+                                        <div class="bg-slate-900 text-wa-teal rounded-[2rem] p-6 shadow-xl border border-slate-800">
                                             <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Resolved Data</h5>
                                             <pre class="text-[10px] font-mono">{{ json_encode($testResult['mapped_data'], JSON_PRETTY_PRINT) }}</pre>
                                         </div>
@@ -700,7 +700,7 @@
 
                 <div class="px-10 py-8 bg-slate-50 dark:bg-slate-800/10 border-t border-slate-50 dark:border-slate-800 flex justify-end gap-4">
                     <button wire:click="$set('showTestModal', false)" class="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest px-6">Close</button>
-                    <button wire:click="testWebhook" class="px-8 py-4 bg-purple-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 shadow-lg shadow-purple-600/30 transition-all">Run Diagnostic</button>
+                    <button wire:click="testWebhook" class="px-8 py-4 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal shadow-lg shadow-wa-teal/30 transition-all">Run Diagnostic</button>
                 </div>
             </div>
         </div>
@@ -722,7 +722,7 @@
                 @forelse($recentLogs as $log)
                     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm group">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-600 text-[10px] font-black uppercase rounded-lg border border-purple-100 dark:border-purple-500/20">
+                            <span class="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 text-wa-teal text-[10px] font-black uppercase rounded-lg border border-purple-100 dark:border-purple-500/20">
                                 {{ $log['event_type'] ?: 'GENERIC_EVENT' }}
                             </span>
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $log['created_at'] }}</span>

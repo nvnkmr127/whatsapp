@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.1.0] - 2026-01-16
+
+### Added
+- **Billing & Subscription**: Complete plan management system for Super Admins and billing dashboard for tenants.
+- **Commerce Engine**: Integrated product catalog, order management, and automated WhatsApp notifications for order updates.
+- **Analytics Dashboard**: Comprehensive messaging statistics and real-time customer event tracking.
+- **Developer Portal**: Dedicated space for managing webhooks, API tokens, and technical documentation.
+- **AI Knowledge Base**: "Business Brain" module for training bots on custom documentation and categories.
+- **Activity Logs**: System-wide audit logging to track administrative and agent actions.
+
+### Changed
+- **UI/UX Refinement**: Redesigned Sidebar, Header, and core modules (Contacts, Settings) for a premium, unified aesthetic.
+- **Navigation**: Restructured sidebar to include new Billing, Commerce, and Developer sections.
+
+### Fixed
+- **Blade Syntax**: Resolved various `@endif` and type mismatch errors in Livewire components.
+- **Database Schema**: Fixed missing `team_id` columns and table name inconsistencies in analytics and compliance modules.
+
+---
+
 ## [1.0.0] - 2026-01-13 (Production Ready)
 
 ### Added

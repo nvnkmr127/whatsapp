@@ -30,6 +30,16 @@ class Sidebar extends Component
                 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
             ],
             [
+                'route' => 'teams.whatsapp_config',
+                'label' => 'WhatsApp API',
+                'icon' => 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+                'children' => [
+                    ['route' => 'teams.whatsapp_config', 'label' => 'Configurations'],
+                    ['route' => 'teams.whatsapp_opt_in', 'label' => 'Opt-In Manager'],
+                    ['route' => 'teams.inbox_settings', 'label' => 'Inbox Settings'],
+                ]
+            ],
+            [
                 'route' => 'chat',
                 'label' => 'Shared Inbox',
                 'icon' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
@@ -80,6 +90,7 @@ class Sidebar extends Component
                     ['route' => 'commerce.products', 'label' => 'Products'],
                     ['route' => 'commerce.orders', 'label' => 'Orders'],
                     ['route' => 'integrations.ecommerce', 'label' => 'Integrations'],
+                    ['route' => 'commerce.settings', 'label' => 'Settings'],
                 ]
             ],
         ];
@@ -91,7 +102,11 @@ class Sidebar extends Component
             [
                 'route' => 'analytics',
                 'label' => 'Analytics',
-                'icon' => 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z'
+                'icon' => 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+                'children' => [
+                    ['route' => 'analytics', 'label' => 'Dashboard'],
+                    ['route' => 'analytics.events', 'label' => 'Customer Events'],
+                ]
             ],
             [
                 'route' => 'flows.index',
@@ -118,11 +133,12 @@ class Sidebar extends Component
     {
         return [
             [
-                'route' => 'compliance.registry',
-                'label' => 'Consent Registry',
+                'route' => 'compliance.index',
+                'label' => 'Compliance',
                 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
                 'children' => [
-                    ['route' => 'compliance.registry', 'label' => 'Registry Overview'],
+                    ['route' => 'compliance.index', 'label' => 'Overview'],
+                    ['route' => 'compliance.registry', 'label' => 'Registry'],
                     ['route' => 'compliance.logs', 'label' => 'Audit Logs'],
                 ]
             ],
@@ -143,16 +159,6 @@ class Sidebar extends Component
                 'icon' => 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z'
             ],
             [
-                'route' => 'teams.whatsapp_config',
-                'label' => 'WhatsApp API',
-                'icon' => 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
-                'children' => [
-                    ['route' => 'teams.whatsapp_config', 'label' => 'Configurations'],
-                    ['route' => 'teams.whatsapp_opt_in', 'label' => 'Opt-In Manager'],
-                    ['route' => 'teams.inbox_settings', 'label' => 'Inbox Settings'],
-                ]
-            ],
-            [
                 'route' => 'billing',
                 'label' => 'Billing & Usage',
                 'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'
@@ -169,10 +175,16 @@ class Sidebar extends Component
                 'children' => [
                     ['route' => 'developer.overview', 'label' => 'Overview'],
                     ['route' => 'developer.webhooks', 'label' => 'Webhooks'],
+                    ['route' => 'webhooks.logs', 'label' => 'Webhook Logs'],
                     ['route' => 'developer.api-tokens', 'label' => 'API Keys'],
                     ['route' => 'developer.docs', 'label' => 'API Docs'],
                     ['route' => 'webhook-sources.index', 'label' => 'Inbound Sources'],
                 ]
+            ],
+            [
+                'route' => 'settings.categories',
+                'label' => 'Categories',
+                'icon' => 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'
             ],
         ];
     }

@@ -3,14 +3,14 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-wa-green/10 text-wa-green rounded-lg">
+                <div class="p-2 bg-wa-teal/10 text-wa-teal rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">WhatsApp <span
-                        class="text-wa-green">Templates</span></h1>
+                        class="text-wa-teal">Templates</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Manage and sync your WhatsApp message templates.</p>
         </div>
@@ -32,7 +32,7 @@
                 Sync Templates
             </button>
 
-            <button wire:click="openCreateModal" class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-green text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-green/20 hover:scale-[1.02] active:scale-95 transition-all">
+            <button wire:click="openCreateModal" class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
                 </svg>
@@ -48,9 +48,9 @@
             class="p-8 border-b border-slate-50 dark:border-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="relative group w-full sm:w-96">
                 <input wire:model.live.debounce.300ms="search" type="text"
-                    class="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-green/20 transition-all font-medium"
+                    class="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
                     placeholder="Search templates...">
-                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-green transition-colors"
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-teal transition-colors"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -85,7 +85,7 @@
                     @forelse ($templates as $template)
                         <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                             <td class="px-8 py-6">
-                                <button wire:click="viewTemplate({{ $template->id }})" class="text-left group-hover:text-wa-green transition-colors focus:outline-none">
+                                <button wire:click="viewTemplate({{ $template->id }})" class="text-left group-hover:text-wa-teal transition-colors focus:outline-none">
                                     <div class="text-sm font-black text-slate-900 dark:text-white">
                                         {{ $template->name }}
                                     </div>
@@ -112,7 +112,7 @@
                                 <div class="flex items-center justify-center">
                                     <div
                                         class="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2
-                                                @if($template->status === 'APPROVED') bg-wa-green/10 text-wa-green
+                                                @if($template->status === 'APPROVED') bg-wa-teal/10 text-wa-teal
                                                 @elseif($template->status === 'REJECTED') bg-rose-500/10 text-rose-500
                                                 @else bg-amber-500/10 text-amber-500 @endif border border-current/10 shadow-sm">
                                         <span class="w-1.5 h-1.5 rounded-full bg-current"></span>

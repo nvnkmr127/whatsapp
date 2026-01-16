@@ -159,6 +159,7 @@ class SystemSettings extends Component
         $this->currentLogoPath = $team->logo_path;
 
         session()->flash('message', 'System settings updated successfully.');
+        audit('settings.updated', "System settings updated by " . Auth::user()->name);
         $this->dispatch('saved');
 
         // Full page redirect to reflect branding changes (logo, primary color, team name) in the layout

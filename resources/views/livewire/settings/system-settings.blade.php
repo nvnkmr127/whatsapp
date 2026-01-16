@@ -4,7 +4,7 @@
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                System <span class="text-indigo-500">Settings</span>
+                System <span class="text-wa-teal">Settings</span>
             </h1>
             <p class="text-slate-500 font-medium">Manage global workspace configurations, branding, and system defaults.</p>
         </div>
@@ -18,7 +18,7 @@
                     <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden p-8 text-center group">
                         <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Workspace Logo</h3>
                         
-                        <div class="relative w-40 h-40 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden group-hover:border-indigo-500/50 transition-colors">
+                        <div class="relative w-40 h-40 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden group-hover:border-wa-teal/50 transition-colors">
                             @if ($logo)
                                 <img src="{{ $logo->temporaryUrl() }}" class="w-full h-full object-cover">
                             @elseif ($currentLogoPath)
@@ -37,7 +37,7 @@
 
                         <div class="flex flex-col gap-3">
                             <label class="cursor-pointer">
-                                <span class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-all">
+                                <span class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/10 text-wa-teal dark:text-indigo-400 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                                     Upload New
                                 </span>
@@ -81,14 +81,14 @@
                     <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
                         <div class="p-8 md:p-10 space-y-8">
                             <div>
-                                <h3 class="text-xs font-black uppercase tracking-widest text-indigo-500 border-b border-slate-50 dark:border-slate-800 pb-2 mb-6">Regional & Localization</h3>
+                                <h3 class="text-xs font-black uppercase tracking-widest text-wa-teal border-b border-slate-50 dark:border-slate-800 pb-2 mb-6">Regional & Localization</h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <!-- Target Market -->
                                     <div class="space-y-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">Target Market / Country</label>
                                         <div class="relative">
                                             <select wire:model.live="selectedCountry" 
-                                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none">
+                                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none">
                                                 <option value="">Choose Country...</option>
                                                 @foreach($countries as $code => $data)
                                                     <option value="{{ $code }}">{{ $data['label'] }}</option>
@@ -106,7 +106,7 @@
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Language</label>
                                         <div class="relative">
                                             <select wire:model="language" 
-                                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none">
+                                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none">
                                                 <option value="en">English (US)</option>
                                                 <option value="hi">Hindi (India)</option>
                                                 <option value="ar">Arabic (Gulf)</option>
@@ -123,7 +123,7 @@
                                     <div class="space-y-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">Transaction Currency</label>
                                         <input type="text" wire:model="currencySymbol" placeholder="$"
-                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                     </div>
 
                                     <!-- Timezone Override -->
@@ -131,7 +131,7 @@
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Timezone</label>
                                         <div class="relative">
                                             <select wire:model="timezone" 
-                                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none">
+                                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none">
                                                 @foreach($timezones as $tz => $label)
                                                     <option value="{{ $tz }}">{{ $label }}</option>
                                                 @endforeach
@@ -148,7 +148,7 @@
                                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                             @foreach(['Y-m-d' => 'YYYY-MM-DD', 'd/m/Y' => 'DD/MM/YYYY', 'm/d/Y' => 'MM/DD/YYYY', 'd-m-Y' => 'DD-MM-YYYY'] as $value => $label)
                                                 <button type="button" wire:click="$set('dateFormat', '{{ $value }}')"
-                                                    class="px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all {{ $dateFormat === $value ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700' }}">
+                                                    class="px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all {{ $dateFormat === $value ? 'bg-wa-teal text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700' }}">
                                                     {{ $label }}
                                                 </button>
                                             @endforeach
@@ -183,19 +183,19 @@
                                     <div class="space-y-2 md:col-span-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">Official Workspace Name</label>
                                         <input type="text" wire:model="teamName"
-                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                     </div>
 
                                     <div class="space-y-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">Support Desk Email</label>
                                         <input type="email" wire:model="supportEmail" placeholder="support@company.com"
-                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                     </div>
 
                                     <div class="space-y-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">UI Pagination Limit</label>
                                         <input type="number" wire:model="paginationLimit" min="5" max="100"
-                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                     </div>
                                 </div>
                             </div>
@@ -224,14 +224,14 @@
                         <!-- Footer Actions -->
                         <div class="p-8 md:p-10 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between border-t border-slate-50 dark:border-slate-800">
                             <div x-data="{ show: false }" x-show="show" x-transition x-init="@this.on('saved', () => { show = true; setTimeout(() => { show = false }, 3000) })" style="display: none;"
-                                class="text-xs font-black text-wa-green uppercase tracking-widest flex items-center gap-2">
+                                class="text-xs font-black text-wa-teal uppercase tracking-widest flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 configuration Updated
                             </div>
 
                             <button type="submit" 
-                                class="ml-auto px-12 py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-1 active:translate-y-0 transition-all">
-                                Deploy Changes
+                                class="ml-auto px-12 py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-2xl shadow-wa-teal/30 hover:bg-indigo-700 hover:-translate-y-1 active:translate-y-0 transition-all">
+                                Save Changes
                             </button>
                         </div>
                     </div>

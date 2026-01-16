@@ -3,21 +3,20 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                <div class="p-2 bg-indigo-100 dark:bg-indigo-900/20 text-wa-teal dark:text-indigo-400 rounded-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">AI <span
-                        class="text-indigo-600">Settings</span></h1>
+                        class="text-wa-teal">Settings</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Customize how your AI responds and connects.</p>
         </div>
         <div class="flex gap-3">
             <x-action-message class="mr-3 flex items-center" on="saved">
-                <span
-                    class="text-indigo-600 font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
+                <span class="text-wa-teal font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
             </x-action-message>
             <button wire:click="testConnection" wire:loading.attr="disabled"
                 class="flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl border border-slate-100 dark:border-white/5 hover:scale-[1.02] active:scale-95 transition-all">
@@ -25,7 +24,7 @@
                 <span wire:loading wire:target="testConnection">Testing...</span>
             </button>
             <button wire:click="save"
-                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
@@ -40,11 +39,12 @@
             class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">AI Behavior</h2>
-                    <p class="text-sm text-indigo-600 font-bold uppercase tracking-wider mt-1">What to say</p>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">AI Behavior
+                    </h2>
+                    <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">What to say</p>
                 </div>
                 <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
-                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
@@ -53,8 +53,8 @@
 
             <div class="space-y-6">
                 <div>
-                    <label
-                        class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">AI Type</label>
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">AI
+                        Type</label>
                     <select wire:model.live="instruction_type"
                         class="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white appearance-none">
                         <option value="custom">My Own Instructions</option>
@@ -65,7 +65,9 @@
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Instructions (AI Personality)</label>
+                    <label
+                        class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Instructions
+                        (AI Personality)</label>
                     <textarea wire:model="ai_persona" rows="8"
                         class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-[1.5rem] text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white resize-none leading-relaxed"
                         placeholder="Define how the AI should behave..."></textarea>
@@ -81,7 +83,8 @@
             class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">AI Service</h2>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">AI Service
+                    </h2>
                     <p class="text-sm text-amber-500 font-bold uppercase tracking-wider mt-1">Connection</p>
                 </div>
                 <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl">
@@ -118,19 +121,21 @@
                             class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Creativity</label>
                         <div class="flex items-center gap-4 px-4 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                             <input type="range" wire:model.live="temperature" min="0" max="1" step="0.1"
-                                class="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                            <span class="text-xs font-black text-indigo-600">@if($temperature > 0.7) High @elseif($temperature < 0.3) Low @else Normal @endif ({{ $temperature }})</span>
+                                class="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-wa-teal">
+                            <span class="text-xs font-black text-wa-teal">{{ $this->creativityLevel }}
+                                ({{ $temperature }})</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="pt-6 border-t border-slate-50 dark:border-slate-800">
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Try Again on Error</label>
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Try Again on
+                            Error</label>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model.live="show_retry" class="sr-only peer">
                             <div
-                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600">
+                                class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal">
                             </div>
                         </label>
                     </div>
@@ -151,7 +156,8 @@
             class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Extra Text</h2>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Extra Text
+                    </h2>
                     <p class="text-sm text-purple-500 font-bold uppercase tracking-wider mt-1">Add messages</p>
                 </div>
                 <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl">
@@ -167,7 +173,8 @@
                 <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Add to Start of Message</span>
+                            <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Add to Start of
+                                Message</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model.live="show_header" class="sr-only peer">
@@ -186,7 +193,8 @@
                 <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Add to End of Message</span>
+                            <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Add to End of
+                                Message</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model.live="show_footer" class="sr-only peer">
@@ -243,7 +251,8 @@
                 <!-- Fallback Message -->
                 <div>
                     <div class="flex items-center justify-between">
-                        <label class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Message if AI Fails</label>
+                        <label class="text-[10px] font-black uppercase text-slate-500 tracking-wider">Message if AI
+                            Fails</label>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model.live="show_fallback" class="sr-only peer">
                             <div
@@ -263,7 +272,7 @@
             <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)"
                 class="fixed bottom-8 right-8 z-50 animate-in slide-in-from-right-10 duration-500">
                 <div
-                    class="bg-indigo-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/20 backdrop-blur-xl">
+                    class="bg-wa-teal text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/20 backdrop-blur-xl">
                     <svg class="w-5 h-5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                     </svg>

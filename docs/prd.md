@@ -38,7 +38,25 @@
 - **Tagging**: Organize contacts with custom tags.
 - **Consent Management**: Track opt-in/opt-out status for compliance.
 
-### 3.6 Compliance & Security
+### 3.6 Commerce Engine
+- **Product Catalog**: Manage products, variants, and pricing.
+- **Order Lifecycle**: Track orders from placement to fulfillment.
+- **Automated Notifications**: WhatsApp triggers for order status updates.
+
+### 3.7 Billing & Monetization (Super Admin)
+- **Plan Management**: Create and manage subscription tiers.
+- **Wallet System**: Credit-based messaging with top-up capabilities.
+- **Usage Tracking**: Real-time monitoring of message costs and volume.
+
+### 3.8 AI & Knowledge Base
+- **Business Brain**: Train bots using custom documentation and PDFs.
+- **Dynamic Response**: AI-driven fallback for complex queries.
+
+### 3.9 Developer Tools
+- **Webhook Management**: Custom event delivery setup.
+- **API Access**: Programmatic interaction via secure tokens.
+
+### 3.10 Compliance & Security
 - **Consent Registry**: Immutable log of user consent actions.
 - **Audit Logs**: System-wide activity tracking for security.
 - **Role-Based Access Control (RBAC)**: Strict permission enforcement.
@@ -49,6 +67,7 @@
 - **Database**: MySQL / PostgreSQL
 - **Queue System**: Redis (for high-throughput broadcasting)
 - **Real-time**: Laravel Reverb / Pusher
+- **AI Integration**: OpenAI API (for Business Brain)
 
 ## 5. Non-Functional Requirements
 - **Scalability**: Capable of handling thousands of concurrent webhook events.

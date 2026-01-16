@@ -87,6 +87,7 @@ class KnowledgeBaseManager extends Component
         ]);
 
         $this->loadSources();
+        audit('knowledge_base.updated', "Updated knowledge base source '{$source->name}'", $source);
         $this->closeModal();
         $this->dispatch('saved');
         session()->flash('success', 'Information updated.');
@@ -104,7 +105,7 @@ class KnowledgeBaseManager extends Component
         $service = new KnowledgeBaseService();
         $content = $service->extractFromFile($path, $this->file->getClientOriginalName());
 
-        KnowledgeBaseSource::create([
+        $source = KnowledgeBaseSource::create([
             'team_id' => Auth::user()->currentTeam->id,
             'type' => 'file',
             'name' => $this->name,
@@ -115,6 +116,8 @@ class KnowledgeBaseManager extends Component
                 'extension' => $this->file->extension(),
             ]
         ]);
+
+        audit('knowledge_base.added', "Added knowledge base source '{$this->name}' (File)", $source);
 
         $this->reset(['file', 'name']);
         $this->loadSources();
@@ -132,7 +135,7 @@ class KnowledgeBaseManager extends Component
         $service = new KnowledgeBaseService();
         $content = $service->extractFromUrl($this->url);
 
-        KnowledgeBaseSource::create([
+        $source = KnowledgeBaseSource::create([
             'team_id' => Auth::user()->currentTeam->id,
             'type' => 'url',
             'name' => $this->name,
@@ -142,6 +145,8 @@ class KnowledgeBaseManager extends Component
                 'url' => $this->url,
             ]
         ]);
+
+        audit('knowledge_base.added', "Added knowledge base source '{$this->name}' (URL)", $source);
 
         $this->reset(['url', 'name']);
         $this->loadSources();
@@ -156,7 +161,7 @@ class KnowledgeBaseManager extends Component
             'rawText' => 'required|string',
         ]);
 
-        KnowledgeBaseSource::create([
+        $source = KnowledgeBaseSource::create([
             'team_id' => Auth::user()->currentTeam->id,
             'type' => 'text',
             'name' => $this->name,
@@ -164,6 +169,8 @@ class KnowledgeBaseManager extends Component
             'content' => $this->rawText,
             'metadata' => []
         ]);
+
+        audit('knowledge_base.added', "Added knowledge base source '{$this->name}' (Text)", $source);
 
         $this->reset(['rawText', 'name']);
         $this->loadSources();
@@ -180,6 +187,7 @@ class KnowledgeBaseManager extends Component
         }
 
         $source->delete();
+        audit('knowledge_base.deleted', "Deleted knowledge base source '{$source->name}'");
         $this->loadSources();
         $this->dispatch('saved');
         session()->flash('success', 'Information removed.');

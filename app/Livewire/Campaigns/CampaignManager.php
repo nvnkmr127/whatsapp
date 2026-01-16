@@ -56,9 +56,11 @@ class CampaignManager extends Component
 
         if ($this->sendNow) {
             (new BroadcastService())->launch($campaign);
+            audit('campaign.launched', "Campaign '{$campaign->name}' launched immediately.", $campaign);
             session()->flash('message', 'Campaign launched successfully!');
         } else {
             $campaign->update(['status' => 'scheduled']);
+            audit('campaign.scheduled', "Campaign '{$campaign->name}' scheduled for {$campaign->scheduled_at}.", $campaign);
             session()->flash('message', 'Campaign scheduled!');
         }
 
