@@ -59,7 +59,11 @@ class Sidebar extends Component
             [
                 'route' => 'automations.index',
                 'label' => 'Bot Manager',
-                'icon' => 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z'
+                'icon' => 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z',
+                'children' => [
+                    ['route' => 'automations.index', 'label' => 'Automations'],
+                    ['route' => 'automations.builder', 'label' => 'Bot Builder'],
+                ]
             ],
         ];
     }
@@ -70,25 +74,13 @@ class Sidebar extends Component
             [
                 'route' => 'commerce.dashboard',
                 'label' => 'Overview',
-                'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'
-            ],
-            [
-                'route' => 'commerce.products',
-                'label' => 'Products',
-                'icon' => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14v10l-8 4m16-4l-8 4',
-                'is_sub' => true
-            ],
-            [
-                'route' => 'commerce.orders',
-                'label' => 'Orders',
-                'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-                'is_sub' => true
-            ],
-            [
-                'route' => 'integrations.ecommerce',
-                'label' => 'Integrations',
-                'icon' => 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z',
-                'is_sub' => true
+                'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+                'children' => [
+                    ['route' => 'commerce.dashboard', 'label' => 'Commerce Dashboard'],
+                    ['route' => 'commerce.products', 'label' => 'Products'],
+                    ['route' => 'commerce.orders', 'label' => 'Orders'],
+                    ['route' => 'integrations.ecommerce', 'label' => 'Integrations'],
+                ]
             ],
         ];
     }
@@ -104,18 +96,20 @@ class Sidebar extends Component
             [
                 'route' => 'flows.index',
                 'label' => 'Smart Flows',
-                'icon' => 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
+                'icon' => 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z',
+                'children' => [
+                    ['route' => 'flows.index', 'label' => 'Flow Builder'],
+                    ['route' => 'flows.builder', 'label' => 'Visual Canvas'],
+                ]
             ],
             [
                 'route' => 'knowledge-base.index',
                 'label' => 'Knowledge Base',
-                'icon' => 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25'
-            ],
-            [
-                'route' => 'settings.ai',
-                'label' => 'AI Config',
-                'icon' => 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
-                'is_sub' => true
+                'icon' => 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
+                'children' => [
+                    ['route' => 'knowledge-base.index', 'label' => 'Documentation'],
+                    ['route' => 'settings.ai', 'label' => 'AI Config'],
+                ]
             ],
         ];
     }
@@ -126,13 +120,11 @@ class Sidebar extends Component
             [
                 'route' => 'compliance.registry',
                 'label' => 'Consent Registry',
-                'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
-            ],
-            [
-                'route' => 'compliance.logs',
-                'label' => 'Audit Logs',
-                'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-                'is_sub' => true
+                'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'children' => [
+                    ['route' => 'compliance.registry', 'label' => 'Registry Overview'],
+                    ['route' => 'compliance.logs', 'label' => 'Audit Logs'],
+                ]
             ],
         ];
     }
@@ -143,7 +135,7 @@ class Sidebar extends Component
             [
                 'route' => 'settings.system',
                 'label' => 'System Settings',
-                'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+                'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 001.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
             ],
             [
                 'route' => 'teams.members',
@@ -153,19 +145,12 @@ class Sidebar extends Component
             [
                 'route' => 'teams.whatsapp_config',
                 'label' => 'WhatsApp API',
-                'icon' => 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1'
-            ],
-            [
-                'route' => 'teams.whatsapp_opt_in',
-                'label' => 'Opt-In Manager',
-                'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-                'is_sub' => true
-            ],
-            [
-                'route' => 'teams.inbox_settings',
-                'label' => 'Inbox Settings',
-                'icon' => 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
-                'is_sub' => true
+                'icon' => 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+                'children' => [
+                    ['route' => 'teams.whatsapp_config', 'label' => 'Configurations'],
+                    ['route' => 'teams.whatsapp_opt_in', 'label' => 'Opt-In Manager'],
+                    ['route' => 'teams.inbox_settings', 'label' => 'Inbox Settings'],
+                ]
             ],
             [
                 'route' => 'billing',
@@ -175,14 +160,19 @@ class Sidebar extends Component
             [
                 'route' => 'activity.index',
                 'label' => 'Activity Log',
-                'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-                'is_sub' => false
+                'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
             ],
             [
                 'route' => 'developer.overview',
                 'label' => 'Developer',
                 'icon' => 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
-                'is_sub' => true
+                'children' => [
+                    ['route' => 'developer.overview', 'label' => 'Overview'],
+                    ['route' => 'developer.webhooks', 'label' => 'Webhooks'],
+                    ['route' => 'developer.api-tokens', 'label' => 'API Keys'],
+                    ['route' => 'developer.docs', 'label' => 'API Docs'],
+                    ['route' => 'webhook-sources.index', 'label' => 'Inbound Sources'],
+                ]
             ],
         ];
     }

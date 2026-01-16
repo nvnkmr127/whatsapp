@@ -17,6 +17,19 @@ class SystemSettings extends Component
     public $logo;
     public $currentLogoPath;
 
+    // Smart Country Settings
+    public $selectedCountry;
+    public $language = 'en';
+    public $metaPolicyInfo = '';
+
+    public $countries = [
+        'IN' => ['label' => 'India', 'timezone' => 'Asia/Kolkata', 'currency' => 'INR', 'lang' => 'hi', 'policy' => 'India requires DLT/TRAI registration for templates. Category mixing is strictly prohibited.'],
+        'AE' => ['label' => 'United Arab Emirates', 'timezone' => 'Asia/Dubai', 'currency' => 'AED', 'lang' => 'ar', 'policy' => 'UAE requires official business registration and verified Meta Business Manager.'],
+        'AU' => ['label' => 'Australia', 'timezone' => 'Australia/Sydney', 'currency' => 'AUD', 'lang' => 'en', 'policy' => 'Australia Spam Act (2003) requires explicit opt-in and clear opt-out mechanisms.'],
+        'IQ' => ['label' => 'Iraq', 'timezone' => 'Asia/Baghdad', 'currency' => 'IQD', 'lang' => 'ar', 'policy' => 'Standard Meta commercial policies apply. Multilingual templates (Arabic/Kurdish) recommended.'],
+        'US' => ['label' => 'United States', 'timezone' => 'America/New_York', 'currency' => 'USD', 'lang' => 'en', 'policy' => 'USA requires strict adherence to TCPA/CTIA. STOP/UNSUBSCRIBE keywords are mandatory.'],
+    ];
+
     // Enhanced Settings
     public $primaryColor = '#4F46E5'; // Default Indigo
     public $currencySymbol = '$';
@@ -41,6 +54,7 @@ class SystemSettings extends Component
         'Europe/Madrid' => 'Madrid',
         'Asia/Dubai' => 'Dubai',
         'Asia/Kolkata' => 'India Standard Time',
+        'Asia/Baghdad' => 'Baghdad',
         'Asia/Singapore' => 'Singapore',
         'Asia/Tokyo' => 'Tokyo',
         'Asia/Shanghai' => 'Beijing, Shanghai',
@@ -60,7 +74,20 @@ class SystemSettings extends Component
         'paginationLimit' => 'required|integer|min:5|max:100',
         'supportEmail' => 'nullable|email',
         'maintenanceMode' => 'boolean',
+        'selectedCountry' => 'nullable|string|in:IN,AE,AU,IQ,US',
+        'language' => 'required|string|max:5',
     ];
+
+    public function updatedSelectedCountry($value)
+    {
+        if (isset($this->countries[$value])) {
+            $country = $this->countries[$value];
+            $this->timezone = $country['timezone'];
+            $this->currencySymbol = $country['currency'];
+            $this->language = $country['lang'];
+            $this->metaPolicyInfo = $country['policy'];
+        }
+    }
 
     public function mount()
     {
@@ -80,6 +107,12 @@ class SystemSettings extends Component
         $this->paginationLimit = $settings['pagination_limit'] ?? 20;
         $this->supportEmail = $settings['support_email'] ?? '';
         $this->maintenanceMode = filter_var($settings['maintenance_mode'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $this->selectedCountry = $settings['selected_country'] ?? null;
+        $this->language = $settings['primary_language'] ?? 'en';
+
+        if ($this->selectedCountry && isset($this->countries[$this->selectedCountry])) {
+            $this->metaPolicyInfo = $this->countries[$this->selectedCountry]['policy'];
+        }
     }
 
     public function save()
@@ -112,6 +145,8 @@ class SystemSettings extends Component
             'pagination_limit' => $this->paginationLimit,
             'support_email' => $this->supportEmail,
             'maintenance_mode' => $this->maintenanceMode,
+            'selected_country' => $this->selectedCountry,
+            'primary_language' => $this->language,
         ];
 
         foreach ($settings as $key => $value) {
@@ -125,6 +160,9 @@ class SystemSettings extends Component
 
         session()->flash('message', 'System settings updated successfully.');
         $this->dispatch('saved');
+
+        // Full page redirect to reflect branding changes (logo, primary color, team name) in the layout
+        return redirect()->route('settings.system');
     }
 
     public function removeLogo()

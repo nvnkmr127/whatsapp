@@ -24,6 +24,34 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
+    <!-- Custom Style Injection -->
+    @php
+        $globalSettings = \App\Models\Setting::all()->pluck('value', 'key');
+        $primaryColor = $globalSettings['brand_primary_color'] ?? '#4F46E5';
+    @endphp
+    <style>
+        :root {
+            --wa-primary:
+                {{ $primaryColor }}
+            ;
+        }
+
+        .bg-wa-primary {
+            background-color: var(--wa-primary);
+        }
+
+        .text-wa-primary {
+            color: var(--wa-primary);
+        }
+
+        .border-wa-primary {
+            border-color: var(--wa-primary);
+        }
+
+        .ring-wa-primary {
+            --tw-ring-color: var(--wa-primary);
+        }
+    </style>
 </head>
 
 <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
