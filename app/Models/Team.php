@@ -49,6 +49,8 @@ class Team extends JetstreamTeam
         'chat_assignment_config',
         'chat_status_rules',
         'commerce_config',
+        'subscription_plan',
+        'subscription_status',
     ];
 
     /**
@@ -138,5 +140,10 @@ class Team extends JetstreamTeam
     public function automations()
     {
         return $this->hasMany(Automation::class);
+    }
+
+    public function cannedMessages()
+    {
+        return $this->hasMany(CannedMessage::class);
     }
 }

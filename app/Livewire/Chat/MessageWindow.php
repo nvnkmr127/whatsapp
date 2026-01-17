@@ -152,13 +152,15 @@ class MessageWindow extends Component
 
     public function getQuickRepliesProperty()
     {
-        return [
-            ['code' => 'hello', 'text' => 'Hello! How can I help you today?'],
-            ['code' => 'thanks', 'text' => 'Thank you for contacting us.'],
-            ['code' => 'price', 'text' => 'Our pricing plans are available on our website.'],
-            ['code' => 'hours', 'text' => 'We are open Mon-Fri, 9am to 6pm.'],
-            ['code' => 'agent', 'text' => 'Let me connect you with a human agent.'],
-        ];
+        return \App\Models\CannedMessage::where('team_id', Auth::user()->currentTeam->id)
+            ->latest()
+            ->get()
+            ->map(function ($msg) {
+                return [
+                    'code' => $msg->shortcut,
+                    'text' => $msg->content
+                ];
+            });
     }
 
     public function getIsSessionOpenProperty()

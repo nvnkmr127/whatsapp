@@ -37,6 +37,7 @@ class Sidebar extends Component
                     ['route' => 'teams.whatsapp_config', 'label' => 'Configurations'],
                     ['route' => 'teams.whatsapp_opt_in', 'label' => 'Opt-In Manager'],
                     ['route' => 'teams.inbox_settings', 'label' => 'Inbox Settings'],
+                    ['route' => 'settings.canned-messages', 'label' => 'Canned Responses'],
                 ]
             ],
             [
@@ -122,7 +123,7 @@ class Sidebar extends Component
                 'label' => 'Knowledge Base',
                 'icon' => 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
                 'children' => [
-                    ['route' => 'knowledge-base.index', 'label' => 'Documentation'],
+                    ['route' => 'knowledge-base.index', 'label' => 'AI Brain'],
                     ['route' => 'settings.ai', 'label' => 'AI Config'],
                 ]
             ],
