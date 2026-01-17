@@ -8,7 +8,9 @@ use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\TeamWallet;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Title;
 
+#[Title('Analytics')]
 class AnalyticsDashboard extends Component
 {
     public $dateRange = 30; // days

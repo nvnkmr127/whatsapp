@@ -5,7 +5,9 @@ namespace App\Livewire\Teams;
 use App\Traits\WhatsApp;
 use Livewire\Component;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Title;
 
+#[Title('WhatsApp Configuration')]
 class WhatsappConfig extends Component
 {
     use WhatsApp;

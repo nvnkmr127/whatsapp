@@ -5,7 +5,9 @@ namespace App\Livewire\Flows;
 use App\Models\WhatsAppFlow;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\Attributes\Title;
 
+#[Title('Flows')]
 class FlowManager extends Component
 {
     public $flows = [];

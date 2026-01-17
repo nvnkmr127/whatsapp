@@ -7,7 +7,9 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 
+#[Title('Commerce')]
 class Dashboard extends Component
 {
     public $stats = [];

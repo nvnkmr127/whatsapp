@@ -4,7 +4,9 @@ namespace App\Livewire\Chat;
 
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\Attributes\Title;
 
+#[Title('Team Inbox')]
 class ChatDashboard extends Component
 {
     public $activeConversationId = null;

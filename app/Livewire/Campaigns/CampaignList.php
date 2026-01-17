@@ -6,7 +6,9 @@ use App\Models\Campaign;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
+use Livewire\Attributes\Title;
 
+#[Title('Campaigns')]
 class CampaignList extends Component
 {
     use WithPagination;

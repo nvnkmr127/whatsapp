@@ -7,7 +7,9 @@ use App\Models\TemplateBot;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
+use Livewire\Attributes\Title;
 
+#[Title('Automations')]
 class AutomationList extends Component
 {
     use WithPagination;
