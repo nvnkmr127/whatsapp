@@ -374,6 +374,10 @@ class ProcessWebhookJob implements ShouldQueue
             return $interactive['list_reply']['title'] ?? '[List Reply]';
         }
 
+        if ($type === 'button_reply') {
+            return $interactive['button_reply']['title'] ?? '[Button Reply]';
+        }
+
         return "[Interactive: $type]";
     }
 

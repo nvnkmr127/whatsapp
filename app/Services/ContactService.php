@@ -61,33 +61,11 @@ class ContactService
      */
     public function syncTags(Contact $contact, array $tags)
     {
-        $ids = [];
-
-        foreach ($tags as $tagInput) {
-            if (is_numeric($tagInput)) {
-                $ids[] = $tagInput;
-            } else {
-                // Find or Create by Name
-                $tag = ContactTag::firstOrCreate(
-                    ['team_id' => $contact->team_id, 'name' => $tagInput]
-                );
-                $ids[] = $tag->id;
-            }
-        }
-
+        $ids = $this->resolveTagIds($contact->team_id, $tags);
         $contact->tags()->sync($ids);
 
         // Trigger automation for tag assigned
-        if (!empty($ids)) {
-            try {
-                $whatsappService = new WhatsAppService();
-                $automationService = new AutomationService($whatsappService);
-                $automationService->checkSpecialTriggers($contact, 'tag_assigned');
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());
-                // Don't throw - tag assignment should succeed even if automation fails
-            }
-        }
+        $this->triggerTagAutomation($contact, $ids);
     }
 
     /**
@@ -95,20 +73,76 @@ class ContactService
      */
     public function addTags(Contact $contact, array $tags)
     {
-        $ids = [];
-        foreach ($tags as $tagInput) {
-            if (is_numeric($tagInput)) {
-                $ids[] = $tagInput;
-            } else {
-                $tag = ContactTag::firstOrCreate(
-                    ['team_id' => $contact->team_id, 'name' => $tagInput]
-                );
-                $ids[] = $tag->id;
-            }
-        }
+        $ids = $this->resolveTagIds($contact->team_id, $tags);
         $contact->tags()->syncWithoutDetaching($ids);
 
         // Trigger automation for tag assigned
+        $this->triggerTagAutomation($contact, $ids);
+    }
+
+    /**
+     * Resolve tag input (IDs or Names) to a list of Tag IDs.
+     */
+    protected function resolveTagIds(int $teamId, array $tags): array
+    {
+        $ids = [];
+        $names = [];
+
+        foreach ($tags as $tag) {
+            if (is_numeric($tag)) {
+                $ids[] = (int) $tag;
+            } else {
+                $names[] = $tag;
+            }
+        }
+
+        if (empty($names)) {
+            return array_unique($ids);
+        }
+
+        $names = array_unique($names);
+
+        // Find existing tags
+        $existingTags = ContactTag::where('team_id', $teamId)
+            ->whereIn('name', $names)
+            ->get();
+
+        $existingNames = $existingTags->pluck('name')->toArray();
+        $existingIds = $existingTags->pluck('id')->toArray();
+
+        // Determine missing tags
+        $missingNames = array_diff($names, $existingNames);
+
+        if (!empty($missingNames)) {
+            $now = now();
+            $newTagsData = [];
+            foreach ($missingNames as $name) {
+                $newTagsData[] = [
+                    'team_id' => $teamId,
+                    'name' => $name,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+            ContactTag::insert($newTagsData);
+
+            // Fetch the newly created IDs
+            $newTags = ContactTag::where('team_id', $teamId)
+                ->whereIn('name', $missingNames)
+                ->pluck('id')
+                ->toArray();
+
+            $existingIds = array_merge($existingIds, $newTags);
+        }
+
+        return array_unique(array_merge($ids, $existingIds));
+    }
+
+    /**
+     * Helper to trigger automation logic for assigned tags.
+     */
+    protected function triggerTagAutomation(Contact $contact, array $ids)
+    {
         if (!empty($ids)) {
             try {
                 $whatsappService = new WhatsAppService();

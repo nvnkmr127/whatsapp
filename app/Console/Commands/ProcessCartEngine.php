@@ -72,14 +72,58 @@ class ProcessCartEngine extends Command
 
     protected function sendReminder(Cart $cart)
     {
-        // TODO: Integrate with WhatsApp Message Sender
-        // For now, valid logic is to just log it and mark sentinel
+        $team = $cart->team;
+        if (!$team) {
+            Log::error("Cart {$cart->id} has no team.");
+            return;
+        }
 
-        Log::info("Sending Abandoned Cart Reminder for Cart {$cart->uuid}");
+        $contact = $cart->contact;
+        if (!$contact) {
+            Log::error("Cart {$cart->id} has no contact.");
+            return;
+        }
 
-        $cart->update([
-            'reminder_sent_at' => now(),
-            // In future, maybe trigger an Automation/Flow here
-        ]);
+        // Initialize WhatsApp Service
+        $whatsapp = new \App\Services\WhatsAppService($team);
+
+        $config = $team->commerce_config ?? [];
+        $templateName = $config['abandoned_cart_template'] ?? null;
+
+        try {
+            if ($templateName) {
+                // Send Template Message
+                // Assuming template has 1 variable for the cart link or checkout URL
+                // We'll generate a checkout link (mock for now if not defined)
+                $checkoutUrl = config('app.url') . "/checkout/" . $cart->uuid;
+
+                $result = $whatsapp->sendTemplate(
+                    $contact->phone_number,
+                    $templateName,
+                    'en_US', // Default language, could be dynamic
+                    [$contact->first_name ?? 'there', $checkoutUrl] // Body params: Name, Link
+                );
+            } else {
+                // Fallback: Send Text Message
+                $checkoutUrl = config('app.url') . "/checkout/" . $cart->uuid;
+                $message = "Hi " . ($contact->first_name ?? 'there') . ", you left items in your cart. Complete your purchase here: " . $checkoutUrl;
+
+                $result = $whatsapp->sendText($contact->phone_number, $message);
+            }
+
+            if (isset($result['success']) && $result['success']) {
+                Log::info("Sent Abandoned Cart Reminder to {$contact->phone_number} for Cart {$cart->uuid}");
+
+                $cart->update([
+                    'reminder_sent_at' => now(),
+                    'status' => 'reminder_sent' // Optional: update status to reflect reminder sent
+                ]);
+            } else {
+                Log::error("Failed to send reminder for Cart {$cart->uuid}: " . json_encode($result));
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Exception sending reminder for Cart {$cart->uuid}: " . $e->getMessage());
+        }
     }
 }
