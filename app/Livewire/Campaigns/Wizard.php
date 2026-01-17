@@ -52,8 +52,14 @@ class Wizard extends Component
 
     public function mount()
     {
-        $this->name = 'Campaign ' . date('Y-m-d H:i');
+        $this->name = request('default_name', 'Campaign ' . date('Y-m-d H:i'));
         $this->scheduled_at = now()->addMinutes(5)->format('Y-m-d\TH:i');
+
+        if (request()->has('retarget_ids')) {
+            $this->audienceType = 'contacts';
+            $this->selectedContacts = request('retarget_ids');
+            $this->calculateAudience();
+        }
     }
 
     #[Computed]

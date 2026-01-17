@@ -84,14 +84,22 @@
                                 </div>
                             </td>
                             <td class="px-8 py-6 text-right">
-                                @if($campaign->sent_count > 0)
-                                    <div class="text-sm font-black text-wa-teal">
-                                        {{ number_format($campaign->read_percentage, 1) }}% <span
-                                            class="text-[9px] uppercase tracking-widest text-slate-400 ml-1">Read</span>
-                                    </div>
-                                @else
-                                    <span class="text-slate-300">--</span>
-                                @endif
+                                <div class="flex items-center justify-end gap-3">
+                                    @if($campaign->sent_count > 0)
+                                        <div class="text-sm font-black text-wa-teal mr-4">
+                                            {{ number_format($campaign->read_percentage, 1) }}% <span
+                                                class="text-[9px] uppercase tracking-widest text-slate-400 ml-1">Read</span>
+                                        </div>
+
+                                        <!-- Retarget Action -->
+                                        <button wire:click="openRetargetModal({{ $campaign->id }})"
+                                            class="text-xs font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:underline">
+                                            Retarget
+                                        </button>
+                                    @else
+                                        <span class="text-slate-300">--</span>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -218,6 +226,79 @@
                 <button wire:click="create"
                     class="px-8 py-3 bg-wa-teal hover:bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-wa-teal/20 transition-all active:scale-95">
                     Launch Campaign
+                </button>
+            </div>
+        </x-slot>
+    </x-dialog-modal>
+
+    <!-- Retargeting Modal -->
+    <x-dialog-modal wire:model="retargetingCampaignId">
+        <x-slot name="title">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-indigo-500/10 text-indigo-500 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Retarget
+                        Audience</h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Re-engage based on
+                        interaction</p>
+                </div>
+            </div>
+        </x-slot>
+
+        <x-slot name="content">
+            <div class="space-y-4">
+                <div
+                    class="p-4 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20">
+                    <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Retarget
+                        Users Who:</label>
+                    <div class="space-y-2">
+                        <label
+                            class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
+                            <input type="radio" wire:model="retargetingCriteria" value="not_read"
+                                class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't Read
+                                (Delivered but ignored)</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
+                            <input type="radio" wire:model="retargetingCriteria" value="not_delivered"
+                                class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't Receive
+                                (Failed/Sent but not delivered)</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
+                            <input type="radio" wire:model="retargetingCriteria" value="read"
+                                class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Read (Engaged
+                                users)</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
+                            <input type="radio" wire:model="retargetingCriteria" value="failed"
+                                class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Failed
+                                (Errors)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </x-slot>
+
+        <x-slot name="footer">
+            <div class="flex items-center justify-end gap-3 w-full">
+                <button wire:click="$set('retargetingCampaignId', null)"
+                    class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button wire:click="retarget"
+                    class="px-8 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+                    Create Retargeting Campaign
                 </button>
             </div>
         </x-slot>
