@@ -114,9 +114,20 @@ class ProcessWebhookJob implements ShouldQueue
             Log::error("Webhook Processing Failed: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             $payloadRecord->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
 
-            // Re-throw to trigger queue retry if configured
             throw $e;
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error("ProcessWebhookJob FAILED completely: " . $exception->getMessage(), [
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'trace' => $exception->getTraceAsString()
+        ]);
     }
 
     protected function processIncomingMessage(Team $team, array $msgData, array $contactData)
