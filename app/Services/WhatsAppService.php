@@ -173,14 +173,14 @@ class WhatsAppService
     public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [])
     {
         // Fetch Template first to understand structure
-        $tpl = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
+        $tpl = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
             ->where('name', $templateName)
             ->where('language', $language)
             ->first();
 
         // Language Fallback
         if (!$tpl) {
-            $fallback = \App\Models\WhatsAppTemplate::where('team_id', $this->team->id)
+            $fallback = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
                 ->where('name', $templateName)
                 ->where('language', 'en_US')
                 ->first();

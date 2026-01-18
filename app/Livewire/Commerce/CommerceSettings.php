@@ -4,7 +4,7 @@ namespace App\Livewire\Commerce;
 
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use App\Models\WhatsAppTemplate;
+use App\Models\WhatsappTemplate;
 use Illuminate\Support\Facades\Log;
 
 #[Layout('layouts.app')]
@@ -97,7 +97,7 @@ class CommerceSettings extends Component
         $start = microtime(true);
         // Fetch valid Transactional/Utility templates
         // Optimizing: only fetch name and category
-        $templates = WhatsAppTemplate::where('team_id', $this->team->id)
+        $templates = WhatsappTemplate::where('team_id', $this->team->id)
             ->whereIn('category', ['UTILITY', 'TRANSACTIONAL'])
             ->get(['name', 'category', 'language']);
 

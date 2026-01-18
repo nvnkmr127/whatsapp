@@ -29,7 +29,7 @@ class CampaignManager extends Component
     {
         $this->availableTags = ContactTag::where('team_id', auth()->user()->currentTeam->id)->get();
         // Templates should come from DB or API
-        $this->availableTemplates = \App\Models\WhatsAppTemplate::where('team_id', auth()->user()->currentTeam->id)
+        $this->availableTemplates = \App\Models\WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
             ->where('status', 'APPROVED')
             ->get();
     }

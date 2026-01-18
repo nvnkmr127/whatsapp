@@ -3,7 +3,7 @@
 namespace App\Livewire\Templates;
 
 use App\Services\WhatsAppService;
-use App\Models\WhatsAppTemplate;
+use App\Models\WhatsappTemplate;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -56,7 +56,7 @@ class TemplateManager extends Component
 
     public function loadTemplates()
     {
-        $this->templates = WhatsAppTemplate::where('team_id', Auth::user()->currentTeam->id)->latest()->get();
+        $this->templates = WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->latest()->get();
     }
 
     public function syncTemplates(WhatsAppService $whatsapp)
@@ -68,7 +68,7 @@ class TemplateManager extends Component
 
             if ($response['success']) {
                 foreach ($response['data'] as $remote) {
-                    WhatsAppTemplate::updateOrCreate(
+                    WhatsappTemplate::updateOrCreate(
                         [
                             'team_id' => Auth::user()->currentTeam->id,
                             'name' => $remote['name'],

@@ -208,8 +208,8 @@
                                             <label class="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-active-dark transition-all cursor-pointer group">
                                                 <input type="checkbox" wire:model.live="selectedContacts" value="{{ $contact->id }}" class="w-5 h-5 rounded-lg border-slate-200 text-wa-teal focus:ring-wa-teal/20">
                                                 <div>
-                                                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $contact->first_name }} {{ $contact->last_name }}</p>
-                                                    <p class="text-[10px] font-medium text-slate-500">{{ $contact->phone }}</p>
+                                                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $contact->name ?: 'Unnamed Contact' }}</p>
+                                                    <p class="text-[10px] font-medium text-slate-500">{{ $contact->phone_number }}</p>
                                                 </div>
                                             </label>
                                         @endforeach
