@@ -133,23 +133,23 @@
             <span x-text="node.data.model || 'GPT-4o'"></span>
         </div>
     </div>
-</div>
 
-<!-- Handles (Hit Areas Enhanced) -->
-<!-- Input -->
-<div class="absolute -left-4 top-8 w-8 h-8 flex items-center justify-center z-20 cursor-crosshair group/handle"
-    @mouseup="endConnect(node.id)">
-    <div
-        class="w-4 h-4 bg-slate-100 dark:bg-slate-800 rounded-full border-2 border-slate-300 dark:border-slate-600 group-hover/handle:border-wa-teal group-hover/handle:scale-125 transition-all">
-    </div>
-</div>
 
-<!-- Output -->
-<div class="absolute -right-4 top-8 w-8 h-8 flex items-center justify-center z-20 cursor-crosshair group/handle"
-    @mousedown.stop="startConnect($event, node.id)">
-    <div
-        class="w-4 h-4 bg-wa-teal rounded-full border-2 border-white dark:border-slate-900 group-hover/handle:scale-125 transition-all shadow-sm">
+    <!-- Handles (Hit Areas Enhanced) -->
+    <!-- Input -->
+    <div class="absolute -left-4 top-8 w-8 h-8 flex items-center justify-center z-20 cursor-crosshair group/handle"
+        @mouseup="endConnect(node.id)">
+        <div
+            class="w-4 h-4 bg-slate-100 dark:bg-slate-800 rounded-full border-2 border-slate-300 dark:border-slate-600 group-hover/handle:border-wa-teal group-hover/handle:scale-125 transition-all">
+        </div>
     </div>
-</div>
+
+    <!-- Output -->
+    <div class="absolute -right-4 top-8 w-8 h-8 flex items-center justify-center z-20 cursor-crosshair group/handle"
+        @mousedown.stop="startConnect($event, node.id)">
+        <div
+            class="w-4 h-4 bg-wa-teal rounded-full border-2 border-white dark:border-slate-900 group-hover/handle:scale-125 transition-all shadow-sm">
+        </div>
+    </div>
 
 </div>

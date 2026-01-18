@@ -3,6 +3,8 @@
     x-data="{ 
         isTyping: false,
         typingUser: '',
+        uploadError: null,
+        showUploadErrorModal: false,
         init() {
             console.log('Front: Init Echo for teams.{{ auth()->user()->currentTeam->id }}');
             
@@ -123,7 +125,7 @@
             </span>
         </div>
 
-        @foreach($messages as $message)
+        @foreach($chatMessages as $message)
             <div wire:key="msg-{{ $message->id }}"
                 class="flex {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }} animate-in slide-in-from-bottom-2 duration-300">
                 <div class="max-w-[85%] sm:max-w-[70%] group">
@@ -291,6 +293,7 @@
 
                 <!-- Hidden File Input -->
                 <input type="file" wire:model="newAttachment" class="hidden" x-ref="fileInput"
+                    x-on:livewire-upload-error="uploadError = 'File upload failed. The file may be too large (Server Limit) or the format is invalid.'; showUploadErrorModal = true;"
                     accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
                 <!-- Attach Button (Popover) -->

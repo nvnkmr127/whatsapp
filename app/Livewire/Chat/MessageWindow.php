@@ -46,7 +46,7 @@ class MessageWindow extends Component
         return [];
     }
 
-    public $messages = []; // Dedicated property
+    public $chatMessages = []; // Dedicated property
     public $lastMessageId = null;
 
     public function mount($conversationId)
@@ -54,8 +54,8 @@ class MessageWindow extends Component
         $this->conversationId = $conversationId;
         $this->loadConversation();
         // Initialize lastMessageId to avoid alert on load
-        if (count($this->messages) > 0) {
-            $this->lastMessageId = $this->messages->last()->id;
+        if (count($this->chatMessages) > 0) {
+            $this->lastMessageId = $this->chatMessages->last()->id;
         }
     }
 
@@ -65,13 +65,13 @@ class MessageWindow extends Component
 
         if ($this->conversation) {
             // Load messages specifically and assign to public property
-            $this->messages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
+            $this->chatMessages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
         } else {
-            $this->messages = [];
+            $this->chatMessages = [];
         }
 
-        if (count($this->messages) > 0) {
-            $latestId = $this->messages->last()->id;
+        if (count($this->chatMessages) > 0) {
+            $latestId = $this->chatMessages->last()->id;
 
             // If we have a lastMessageId tracking and the new one is different -> New Message!
             if ($this->lastMessageId && $latestId > $this->lastMessageId) {
