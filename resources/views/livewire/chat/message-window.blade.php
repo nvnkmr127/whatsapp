@@ -1,4 +1,5 @@
 <div class="flex flex-col h-full relative bg-dots-pattern" 
+    wire:poll.2s.keep-alive="loadConversation"
     x-data="{ 
         isTyping: false,
         typingUser: '',
