@@ -16,7 +16,8 @@ class ContactService
     public function createOrUpdate(array $data)
     {
         $teamId = $data['team_id'];
-        $phone = $data['phone_number']; // formatting logic could go here
+        $phone = $this->normalizePhoneNumber($data['phone_number']);
+        $data['phone_number'] = $phone;
 
         if (isset($data['id'])) {
             $contact = Contact::where('team_id', $teamId)->find($data['id']);
@@ -53,6 +54,25 @@ class ContactService
         }
 
         return $contact;
+    }
+
+    /**
+     * Normalize phone number format
+     */
+    protected function normalizePhoneNumber(string $phone): string
+    {
+        // Remove all spaces, dashes, parentheses
+        $phone = preg_replace('/[\s\-\(\)]/', '', $phone);
+
+        // If doesn't start with +, add default country code
+        if (!str_starts_with($phone, '+')) {
+            $defaultCode = get_setting('default_country_code', '+91');
+            // Remove leading zero if present
+            $phone = $defaultCode . ltrim($phone, '0');
+        }
+
+        // Store without + for consistency
+        return ltrim($phone, '+');
     }
 
     /**

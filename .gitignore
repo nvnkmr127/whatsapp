@@ -22,3 +22,69 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Laravel specific
+/bootstrap/cache/*
+!/bootstrap/cache/.gitkeep
+/storage/framework/cache/*
+!/storage/framework/cache/.gitkeep
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+/storage/framework/views/*
+!/storage/framework/views/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+.phpstorm.meta.php
+_ide_helper.php
+_ide_helper_models.php
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# NPM and Node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Composer
+/vendor/
+composer.lock
+
+# Testing
+.phpunit.result.cache
+/coverage/
+/.phpunit.cache
+
+# Deployment and Build
+/public/build/
+/public/hot
+/public/storage
+/storage/framework/down
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# Large test directory (if not needed in repo)
+/test-exts-fil/

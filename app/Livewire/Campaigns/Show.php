@@ -16,6 +16,12 @@ class Show extends Component
     public function mount($campaignId)
     {
         $this->campaignId = $campaignId;
+
+        // Verify team ownership early
+        $campaign = Campaign::findOrFail($campaignId);
+        if ($campaign->team_id !== auth()->user()->currentTeam->id) {
+            abort(403, 'You do not have permission to access this campaign.');
+        }
     }
 
     #[Computed]
@@ -47,10 +53,6 @@ class Show extends Component
     #[Layout('layouts.app')]
     public function render()
     {
-        if ($this->campaign->team_id !== auth()->user()->currentTeam->id) {
-            abort(403);
-        }
-
         $messages = $this->campaign->messages()->latest()->paginate(20);
 
         return view('livewire.campaigns.show', [

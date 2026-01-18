@@ -93,8 +93,31 @@
         </div>
     </div>
 
-    <!-- Channel List -->
-    <div class="flex-1 overflow-y-auto custom-scrollbar space-y-2 px-4 pb-4">
+
+    <!-- Channel List with Enhanced Scrolling -->
+    <div class="flex-1 overflow-y-auto space-y-2 px-4 pb-4 scroll-smooth"
+        style="max-height: calc(100vh - 280px); scrollbar-width: thin; scrollbar-color: rgb(20 184 166 / 0.3) transparent;">
+        <style>
+            /* Custom Scrollbar for Webkit Browsers */
+            .flex-1.overflow-y-auto::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .flex-1.overflow-y-auto::-webkit-scrollbar-track {
+                background: transparent;
+                border-radius: 10px;
+            }
+
+            .flex-1.overflow-y-auto::-webkit-scrollbar-thumb {
+                background: rgb(20 184 166 / 0.3);
+                border-radius: 10px;
+                transition: background 0.2s;
+            }
+
+            .flex-1.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+                background: rgb(20 184 166 / 0.5);
+            }
+        </style>
         @forelse($conversations as $conversation)
             @php
                 $initials = substr($conversation->contact->name ?? '?', 0, 1);

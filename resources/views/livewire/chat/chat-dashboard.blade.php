@@ -19,7 +19,24 @@
                     </svg>
                 </button>
             </div>
-            <livewire:chat.message-window :conversation-id="$activeConversationId" :key="'window-' . $activeConversationId" />
+            <!-- Instant Loading Placeholder -->
+            <div wire:loading wire:target="activeConversationId"
+                class="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-950 z-10">
+                <div class="text-center">
+                    <div class="w-16 h-16 mb-4 rounded-2xl bg-wa-teal/10 flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8 text-wa-teal animate-pulse" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading conversation...</p>
+                </div>
+            </div>
+
+            <livewire:chat.message-window :conversation-id="$activeConversationId" :key="'window-' . $activeConversationId"
+                lazy />
         @else
             <div
                 class="flex-1 flex items-center justify-center flex-col text-slate-400 dark:text-slate-600 p-8 text-center bg-dots-pattern">

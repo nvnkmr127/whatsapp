@@ -85,7 +85,15 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <!-- Target Market -->
                                     <div class="space-y-2">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">Target Market / Country</label>
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                            Target Market / Country
+                                            <span wire:loading wire:target="selectedCountry" class="text-wa-teal">
+                                                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </span>
+                                        </label>
                                         <div class="relative">
                                             <select wire:model.live="selectedCountry" 
                                                 class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none">
@@ -99,11 +107,22 @@
                                             </div>
                                         </div>
                                         @error('selectedCountry') <span class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
+                                        @if($selectedCountry)
+                                            <p class="text-[10px] text-wa-teal font-bold uppercase tracking-wider flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                Auto-saved
+                                            </p>
+                                        @endif
                                     </div>
 
                                     <!-- Primary Language -->
                                     <div class="space-y-2">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Language</label>
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                            System Language
+                                            @if($selectedCountry)
+                                                <span class="text-[9px] text-slate-400 font-medium normal-case tracking-normal">(auto-set from country)</span>
+                                            @endif
+                                        </label>
                                         <div class="relative">
                                             <select wire:model="language" 
                                                 class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none">
@@ -121,16 +140,26 @@
 
                                     <!-- Currency Symbol -->
                                     <div class="space-y-2">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">Transaction Currency</label>
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                            Transaction Currency
+                                            @if($selectedCountry)
+                                                <span class="text-[9px] text-slate-400 font-medium normal-case tracking-normal">(auto-set from country)</span>
+                                            @endif
+                                        </label>
                                         <input type="text" wire:model="currencySymbol" placeholder="$"
                                             class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                     </div>
 
                                     <!-- Timezone Override -->
                                     <div class="space-y-2">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Timezone</label>
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                            System Timezone
+                                            @if($selectedCountry)
+                                                <span class="text-[9px] text-slate-400 font-medium normal-case tracking-normal">(auto-set from country)</span>
+                                            @endif
+                                        </label>
                                         <div class="relative">
-                                            <select wire:model="timezone" 
+                                            <select wire:model.live="timezone" 
                                                 class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-wa-teal/20 transition-all appearance-none">
                                                 @foreach($timezones as $tz => $label)
                                                     <option value="{{ $tz }}">{{ $label }}</option>

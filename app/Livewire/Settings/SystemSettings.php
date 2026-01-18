@@ -25,11 +25,11 @@ class SystemSettings extends Component
     public $metaPolicyInfo = '';
 
     public $countries = [
-        'IN' => ['label' => 'India', 'timezone' => 'Asia/Kolkata', 'currency' => 'INR', 'lang' => 'hi', 'policy' => 'India requires DLT/TRAI registration for templates. Category mixing is strictly prohibited.'],
-        'AE' => ['label' => 'United Arab Emirates', 'timezone' => 'Asia/Dubai', 'currency' => 'AED', 'lang' => 'ar', 'policy' => 'UAE requires official business registration and verified Meta Business Manager.'],
-        'AU' => ['label' => 'Australia', 'timezone' => 'Australia/Sydney', 'currency' => 'AUD', 'lang' => 'en', 'policy' => 'Australia Spam Act (2003) requires explicit opt-in and clear opt-out mechanisms.'],
-        'IQ' => ['label' => 'Iraq', 'timezone' => 'Asia/Baghdad', 'currency' => 'IQD', 'lang' => 'ar', 'policy' => 'Standard Meta commercial policies apply. Multilingual templates (Arabic/Kurdish) recommended.'],
-        'US' => ['label' => 'United States', 'timezone' => 'America/New_York', 'currency' => 'USD', 'lang' => 'en', 'policy' => 'USA requires strict adherence to TCPA/CTIA. STOP/UNSUBSCRIBE keywords are mandatory.'],
+        'IN' => ['label' => 'India', 'country_code' => '+91', 'timezone' => 'Asia/Kolkata', 'currency' => 'INR', 'lang' => 'hi', 'policy' => 'India requires DLT/TRAI registration for templates. Category mixing is strictly prohibited.'],
+        'AE' => ['label' => 'United Arab Emirates', 'country_code' => '+971', 'timezone' => 'Asia/Dubai', 'currency' => 'AED', 'lang' => 'ar', 'policy' => 'UAE requires official business registration and verified Meta Business Manager.'],
+        'AU' => ['label' => 'Australia', 'country_code' => '+61', 'timezone' => 'Australia/Sydney', 'currency' => 'AUD', 'lang' => 'en', 'policy' => 'Australia Spam Act (2003) requires explicit opt-in and clear opt-out mechanisms.'],
+        'IQ' => ['label' => 'Iraq', 'country_code' => '+964', 'timezone' => 'Asia/Baghdad', 'currency' => 'IQD', 'lang' => 'ar', 'policy' => 'Standard Meta commercial policies apply. Multilingual templates (Arabic/Kurdish) recommended.'],
+        'US' => ['label' => 'United States', 'country_code' => '+1', 'timezone' => 'America/New_York', 'currency' => 'USD', 'lang' => 'en', 'policy' => 'USA requires strict adherence to TCPA/CTIA. STOP/UNSUBSCRIBE keywords are mandatory.'],
     ];
 
     // Enhanced Settings
@@ -88,6 +88,33 @@ class SystemSettings extends Component
             $this->currencySymbol = $country['currency'];
             $this->language = $country['lang'];
             $this->metaPolicyInfo = $country['policy'];
+
+            // Auto-save timezone and related settings immediately
+            $team = Auth::user()->currentTeam;
+            $team->timezone = $this->timezone;
+            $team->save();
+
+            // Update global settings
+            \App\Models\Setting::updateOrCreate(
+                ['key' => 'selected_country'],
+                ['value' => $value, 'group' => 'system']
+            );
+            \App\Models\Setting::updateOrCreate(
+                ['key' => 'currency_symbol'],
+                ['value' => $this->currencySymbol, 'group' => 'system']
+            );
+            \App\Models\Setting::updateOrCreate(
+                ['key' => 'primary_language'],
+                ['value' => $this->language, 'group' => 'system']
+            );
+            \App\Models\Setting::updateOrCreate(
+                ['key' => 'default_country_code'],
+                ['value' => $country['country_code'], 'group' => 'system']
+            );
+
+            session()->flash('message', 'Country settings updated! Timezone changed to ' . $country['timezone'] . ', Country code set to ' . $country['country_code']);
+            audit('settings.country_changed', "Country changed to {$country['label']} by " . Auth::user()->name);
+            $this->dispatch('saved');
         }
     }
 

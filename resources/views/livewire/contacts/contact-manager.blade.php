@@ -233,11 +233,23 @@
                         <div class="space-y-2">
                             <label class="text-xs font-black uppercase tracking-widest text-slate-400">WhatsApp
                                 Number</label>
-                            <input type="text" wire:model="phone_number"
-                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                placeholder="e.g. 1234567890">
-                            @error('phone_number') <span
-                            class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="col-span-1">
+                                    <select wire:model="countryCode" 
+                                        class="w-full px-3 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer text-sm">
+                                        @foreach($availableCountryCodes as $code => $label)
+                                            <option value="{{ $code }}">{{ $code }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('countryCode') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-span-2">
+                                    <input type="text" wire:model="phoneNumberWithoutCode"
+                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
+                                        placeholder="8686877397">
+                                    @error('phoneNumberWithoutCode') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
 

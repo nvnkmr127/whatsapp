@@ -26,13 +26,25 @@ class ContactManager extends Component
 
     // Form fields
     public $name;
-    public $phone_number;
+    public $countryCode;
+    public $phoneNumberWithoutCode;
     public $email;
     public $language = 'en';
     public $opt_in_status = 'opted_in';
     public $category_id;
     public $selectedTags = [];
     public $customAttributes = []; // For holding dynamic field values
+
+    public $availableCountryCodes = [
+        '+1' => 'United States/Canada (+1)',
+        '+20' => 'Egypt (+20)',
+        '+44' => 'United Kingdom (+44)',
+        '+61' => 'Australia (+61)',
+        '+91' => 'India (+91)',
+        '+964' => 'Iraq (+964)',
+        '+966' => 'Saudi Arabia (+966)',
+        '+971' => 'UAE (+971)',
+    ];
 
     // Import State
     public $isImportModalOpen = false;
@@ -55,7 +67,8 @@ class ContactManager extends Component
 
     protected $rules = [
         'name' => 'required|string|max:255',
-        'phone_number' => 'required|string|max:20', // Add more specific validation if needed
+        'countryCode' => 'required|string',
+        'phoneNumberWithoutCode' => 'required|string|max:20',
         'email' => 'nullable|email|max:255',
         'language' => 'required|string|max:10',
         'opt_in_status' => 'required|in:opted_in,opted_out',
@@ -102,6 +115,8 @@ class ContactManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->resetInputFields();
+        // Load default country code from settings
+        $this->countryCode = get_setting('default_country_code', '+91');
         $this->openModal();
     }
 
@@ -143,7 +158,31 @@ class ContactManager extends Component
         $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $this->contactId = $id;
         $this->name = $contact->name;
-        $this->phone_number = $contact->phone_number;
+
+        // Split phone number into country code and number
+        $phone = $contact->phone_number;
+        // Try to extract country code (assuming format like 918686877397 or +918686877397)
+        $phone = ltrim($phone, '+');
+
+        // Check if phone starts with known country code
+        $foundCode = null;
+        foreach (array_keys($this->availableCountryCodes) as $code) {
+            $codeWithoutPlus = ltrim($code, '+');
+            if (str_starts_with($phone, $codeWithoutPlus)) {
+                $foundCode = $code;
+                $this->phoneNumberWithoutCode = substr($phone, strlen($codeWithoutPlus));
+                break;
+            }
+        }
+
+        if ($foundCode) {
+            $this->countryCode = $foundCode;
+        } else {
+            // Fallback to default country code
+            $this->countryCode = get_setting('default_country_code', '+91');
+            $this->phoneNumberWithoutCode = $phone;
+        }
+
         $this->email = $contact->email;
         $this->language = $contact->language;
         $this->opt_in_status = $contact->opt_in_status;
@@ -158,10 +197,13 @@ class ContactManager extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->validate();
 
+        // Combine country code + phone number
+        $fullPhoneNumber = ltrim($this->countryCode, '+') . ltrim($this->phoneNumberWithoutCode, '0');
+
         $data = [
             'team_id' => Auth::user()->currentTeam->id,
             'name' => $this->name,
-            'phone_number' => $this->phone_number,
+            'phone_number' => $fullPhoneNumber,
             'email' => $this->email,
             'language' => $this->language,
             'opt_in_status' => $this->opt_in_status,
@@ -383,6 +425,8 @@ class ContactManager extends Component
 
     public function downloadSampleCsv()
     {
+        $defaultCountryCode = get_setting('default_country_code', '+91');
+
         $headers = ['Name', 'Phone', 'Email', 'Tags'];
         $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
 
@@ -390,16 +434,17 @@ class ContactManager extends Component
             $headers[] = $field->key;
         }
 
-        $callback = function () use ($headers) {
+        $callback = function () use ($headers, $defaultCountryCode) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $headers);
 
-            // Add a sample row
-            $row = ['John Doe', '1234567890', 'john@example.com', 'VIP,Lead'];
-            // Fill custom fields with blanks or sample data if needed
-            // For now, leave custom fields blank in sample to avoid confusion
-
+            // Add sample rows with country code
+            $row = ['John Doe', $defaultCountryCode . '1234567890', 'john@example.com', 'VIP,Lead'];
             fputcsv($file, $row);
+
+            $row2 = ['Jane Smith', $defaultCountryCode . '9876543210', 'jane@example.com', 'Customer'];
+            fputcsv($file, $row2);
+
             fclose($file);
         };
 
@@ -409,7 +454,8 @@ class ContactManager extends Component
     private function resetInputFields()
     {
         $this->name = '';
-        $this->phone_number = '';
+        $this->countryCode = get_setting('default_country_code', '+91');
+        $this->phoneNumberWithoutCode = '';
         $this->email = '';
         $this->language = 'en';
         $this->opt_in_status = 'opted_in';
