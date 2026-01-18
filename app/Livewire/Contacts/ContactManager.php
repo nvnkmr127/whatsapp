@@ -197,38 +197,44 @@ class ContactManager extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->validate();
 
-        // Combine country code + phone number
-        $fullPhoneNumber = $this->countryCode . ltrim($this->phoneNumberWithoutCode, '0');
+        try {
+            // Combine country code + phone number
+            $fullPhoneNumber = $this->countryCode . ltrim($this->phoneNumberWithoutCode, '0');
 
-        $data = [
-            'team_id' => Auth::user()->currentTeam->id,
-            'name' => $this->name,
-            'phone_number' => $fullPhoneNumber,
-            'email' => $this->email,
-            'language' => $this->language,
-            'opt_in_status' => $this->opt_in_status,
-            'category_id' => $this->category_id ?: null,
-            'custom_attributes' => $this->customAttributes,
-        ];
+            $data = [
+                'team_id' => Auth::user()->currentTeam->id,
+                'name' => $this->name,
+                'phone_number' => $fullPhoneNumber,
+                'email' => $this->email,
+                'language' => $this->language,
+                'opt_in_status' => $this->opt_in_status,
+                'category_id' => $this->category_id ?: null,
+                'custom_attributes' => $this->customAttributes,
+            ];
 
-        if ($this->contactId) {
-            $data['id'] = $this->contactId;
+            if ($this->contactId) {
+                $data['id'] = $this->contactId;
+            }
+
+            $contactService = new \App\Services\ContactService();
+            $contact = $contactService->createOrUpdate($data);
+
+            $contact->tags()->sync($this->selectedTags);
+
+            audit(
+                $this->contactId ? 'contact.updated' : 'contact.created',
+                ($this->contactId ? "Updated" : "Created") . " contact '{$contact->name}' ({$contact->phone_number})",
+                $contact
+            );
+
+            session()->flash('message', $this->contactId ? 'Contact updated successfully.' : 'Contact created successfully.');
+            $this->closeModal();
+            $this->resetInputFields();
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Contact Store Failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            session()->flash('error', 'Error saving contact: ' . $e->getMessage());
         }
-
-        $contactService = new \App\Services\ContactService();
-        $contact = $contactService->createOrUpdate($data);
-
-        $contact->tags()->sync($this->selectedTags);
-
-        audit(
-            $this->contactId ? 'contact.updated' : 'contact.created',
-            ($this->contactId ? "Updated" : "Created") . " contact '{$contact->name}' ({$contact->phone_number})",
-            $contact
-        );
-
-        session()->flash('message', $this->contactId ? 'Contact updated successfully.' : 'Contact created successfully.');
-        $this->closeModal();
-        $this->resetInputFields();
     }
 
     public function confirmDelete($id)
