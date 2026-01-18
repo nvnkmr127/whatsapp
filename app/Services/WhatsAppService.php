@@ -74,9 +74,9 @@ class WhatsAppService
     public function sendText($to, $message)
     {
         // Find contact to check policy
-        $contact = \App\Models\Contact::where('phone_number', $to)
-            ->where('team_id', $this->team->id ?? null)
-            ->first();
+        $contact = \App\Models\Contact::firstOrCreate(
+            ['team_id' => $this->team->id, 'phone_number' => $to]
+        );
 
         // Enforce 24h Policy for Free Text
         $policy = new PolicyService();
@@ -92,7 +92,26 @@ class WhatsAppService
             'text' => ['body' => $message],
         ];
 
-        return $this->sendRequest('messages', $payload);
+        $response = $this->sendRequest('messages', $payload);
+
+        if ($response['success'] ?? false) {
+            $wamId = $response['data']['messages'][0]['id'] ?? null;
+
+            // Persist to Database
+            \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'conversation_id' => null, // Will be linked by webhook or we can try to find open convo
+                'type' => 'text',
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'whatsapp_message_id' => $wamId,
+                'content' => $message,
+                'sent_at' => now(),
+            ]);
+        }
+
+        return $response;
     }
 
     /**
@@ -101,9 +120,9 @@ class WhatsAppService
     public function sendMedia($to, $type, $link, $caption = null)
     {
         // Find contact to check policy
-        $contact = \App\Models\Contact::where('phone_number', $to)
-            ->where('team_id', $this->team->id ?? null)
-            ->first();
+        $contact = \App\Models\Contact::firstOrCreate(
+            ['team_id' => $this->team->id, 'phone_number' => $to]
+        );
 
         // Enforce 24h Policy for Free Messages (Media is a free message)
         $policy = new PolicyService();
@@ -122,7 +141,27 @@ class WhatsAppService
             ]
         ];
 
-        return $this->sendRequest('messages', $payload);
+        $response = $this->sendRequest('messages', $payload);
+
+        if ($response['success'] ?? false) {
+            $wamId = $response['data']['messages'][0]['id'] ?? null;
+
+            // Persist to Database
+            \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'type' => $type,
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'whatsapp_message_id' => $wamId,
+                'media_type' => $type,
+                'media_url' => $link, // Store original link or handle accordingly
+                'caption' => $caption,
+                'sent_at' => now(),
+            ]);
+        }
+
+        return $response;
     }
 
     /**
@@ -131,9 +170,9 @@ class WhatsAppService
     public function sendInteractiveButtons($to, $text, array $buttons)
     {
         // Find contact to check policy
-        $contact = \App\Models\Contact::where('phone_number', $to)
-            ->where('team_id', $this->team->id ?? null)
-            ->first();
+        $contact = \App\Models\Contact::firstOrCreate(
+            ['team_id' => $this->team->id, 'phone_number' => $to]
+        );
 
         // Enforce 24h Policy for Free Messages (Interactive is a free message)
         $policy = new PolicyService();
@@ -161,7 +200,26 @@ class WhatsAppService
             ]
         ];
 
-        return $this->sendRequest('messages', $payload);
+        $response = $this->sendRequest('messages', $payload);
+
+        if ($response['success'] ?? false) {
+            $wamId = $response['data']['messages'][0]['id'] ?? null;
+
+            // Persist to Database
+            \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'type' => 'interactive',
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'whatsapp_message_id' => $wamId,
+                'content' => $text, // Main body text
+                'metadata' => ['buttons' => $buttons],
+                'sent_at' => now(),
+            ]);
+        }
+
+        return $response;
     }
 
     /**
@@ -307,7 +365,30 @@ class WhatsAppService
         }
         // ---------------------
 
-        return $this->sendRequest('messages', $payload);
+        $response = $this->sendRequest('messages', $payload);
+
+        if ($response['success'] ?? false) {
+            $wamId = $response['data']['messages'][0]['id'] ?? null;
+
+            // Persist to Database
+            \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'type' => 'template',
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'whatsapp_message_id' => $wamId,
+                'content' => "Template: {$templateName}", // Fallback text representation
+                'metadata' => [
+                    'template_name' => $templateName,
+                    'language' => $language,
+                    'variables' => array_merge($headerParams, $bodyParams, $footerParams)
+                ],
+                'sent_at' => now(),
+            ]);
+        }
+
+        return $response;
     }
 
     /**
