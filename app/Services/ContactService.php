@@ -23,11 +23,29 @@ class ContactService
             $contact = Contact::where('team_id', $teamId)->find($data['id']);
         }
 
-        if (!isset($contact) || !$contact) {
-            $contact = Contact::firstOrNew([
-                'team_id' => $teamId,
-                'phone_number' => $phone,
-            ]);
+        if (isset($contact) && $contact) {
+            // Update existing contact
+            if ($contact->phone_number !== $phone) {
+                // Check if another contact has this number
+                $exists = Contact::where('team_id', $teamId)
+                    ->where('phone_number', $phone)
+                    ->where('id', '!=', $contact->id)
+                    ->exists();
+
+                if ($exists) {
+                    throw new \Exception("Another contact with this phone number already exists.");
+                }
+                $contact->phone_number = $phone;
+            }
+        } else {
+            // Create new or find existing by phone
+            $contact = Contact::where('team_id', $teamId)->where('phone_number', $phone)->first();
+
+            if (!$contact) {
+                $contact = new Contact();
+                $contact->team_id = $teamId;
+                $contact->phone_number = $phone;
+            }
         }
 
         // Merge Attributes
@@ -38,7 +56,7 @@ class ContactService
         }
 
         // Fill other fields
-        $contact->fill(Arr::except($data, ['team_id', 'phone_number']));
+        $contact->fill(Arr::except($data, ['team_id', 'phone_number', 'id']));
         $contact->save();
 
         // Trigger automation if this is a new contact

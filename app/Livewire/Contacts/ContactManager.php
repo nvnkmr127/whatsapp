@@ -198,7 +198,7 @@ class ContactManager extends Component
         $this->validate();
 
         // Combine country code + phone number
-        $fullPhoneNumber = ltrim($this->countryCode, '+') . ltrim($this->phoneNumberWithoutCode, '0');
+        $fullPhoneNumber = $this->countryCode . ltrim($this->phoneNumberWithoutCode, '0');
 
         $data = [
             'team_id' => Auth::user()->currentTeam->id,
