@@ -22,7 +22,14 @@
             channel.listen('.App\\Events\\MessageReceived', (e) => { console.log('Front: .App\\Events\\MessageReceived', e); });
         }
     }"
-    @play-sound.window="document.getElementById('notification-sound').play()">
+    @play-sound.window="
+        document.getElementById('notification-sound').play();
+        if (Notification.permission === 'granted') {
+            new Notification('New Message', { body: 'You have received a new message.', icon: '/favicon.ico' });
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+    ">
     <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
     <!-- Header -->
     <div

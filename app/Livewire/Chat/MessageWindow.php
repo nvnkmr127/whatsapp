@@ -46,10 +46,16 @@ class MessageWindow extends Component
         return [];
     }
 
+    public $lastMessageId = null;
+
     public function mount($conversationId)
     {
         $this->conversationId = $conversationId;
         $this->loadConversation();
+        // Initialize lastMessageId to avoid alert on load
+        if ($this->conversation && $this->conversation->messages->isNotEmpty()) {
+            $this->lastMessageId = $this->conversation->messages->last()->id;
+        }
     }
 
     public function loadConversation()
@@ -60,6 +66,18 @@ class MessageWindow extends Component
             },
             'contact'
         ])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
+
+        if ($this->conversation && $this->conversation->messages->isNotEmpty()) {
+            $latestId = $this->conversation->messages->last()->id;
+
+            // If we have a lastMessageId tracking and the new one is different -> New Message!
+            if ($this->lastMessageId && $latestId > $this->lastMessageId) {
+                $this->dispatch('play-sound');
+                $this->dispatch('scroll-bottom');
+            }
+
+            $this->lastMessageId = $latestId;
+        }
 
         // Mark as read logic could go here
     }
