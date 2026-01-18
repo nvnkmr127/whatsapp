@@ -1,4 +1,20 @@
-<div class="flex flex-col h-full relative bg-dots-pattern">
+<div class="flex flex-col h-full relative bg-dots-pattern" 
+    x-data="{ 
+        isTyping: false,
+        typingUser: '',
+        init() {
+            window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}')
+                .listenForWhisper('typing', (e) => {
+                    if(e.conversation_id == {{ $conversationId }}) {
+                        this.isTyping = true;
+                        this.typingUser = e.name;
+                        setTimeout(() => this.isTyping = false, 3000);
+                    }
+                });
+        }
+    }"
+    @play-sound.window="document.getElementById('notification-sound').play()">
+    <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
     <!-- Header -->
     <div
         class="px-6 py-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10 sticky top-0">
@@ -13,6 +29,9 @@
                 </h2>
                 <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
                     <span class="text-wa-teal">{{ $conversation->contact->phone_number }}</span>
+                    <span x-show="isTyping" x-transition class="text-wa-teal animate-pulse font-black" style="display: none;">
+                        • TYPING...
+                    </span>
                     @if($conversation->last_message_at)
                         <span class="text-slate-300 dark:text-slate-700">|</span>
                         <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}">
@@ -313,8 +332,8 @@
 
                 <!-- Input Field -->
                 <div class="flex-1 relative group">
-                    <textarea wire:model="messageBody" wire:keydown.enter.prevent="sendMessage" x-ref="messageInput"
-                        @keyup="checkQR()" placeholder="Type a message (or / for templates)..." rows="1"
+                     <textarea wire:model="messageBody" wire:keydown.enter.prevent="sendMessage" x-ref="messageInput"
+                        @keyup="checkQR(); window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}').whisper('typing', { conversation_id: {{ $conversationId }}, name: 'Agent' })" placeholder="Type a message (or / for templates)..." rows="1"
                         class="w-full py-4 px-6 bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-wa-teal/20 rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50"
                         style="min-height: 56px;"></textarea>
 

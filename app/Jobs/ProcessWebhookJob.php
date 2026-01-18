@@ -139,7 +139,10 @@ class ProcessWebhookJob implements ShouldQueue
         ]);
 
         // Update Interaction Time
-        $contact->update(['last_interaction_at' => now()]);
+        $contact->update([
+            'last_interaction_at' => now(),
+            'last_customer_message_at' => now(), // Fix: Update this to open 24h window
+        ]);
 
         // 1.5 COMPLIANCE: Detect Keywords (Priority)
         $content = $this->extractContent($msgData);

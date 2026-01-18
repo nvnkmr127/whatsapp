@@ -34,9 +34,16 @@ class MessageWindow extends Component
     public $buttonBody = '';
     public $interactiveButtons = []; // Array of titles
 
-    protected $listeners = [
-        'echo:conversations,MessageReceived' => 'handleIncomingMessage',
-    ];
+    public function getListeners()
+    {
+        if (Auth::check() && Auth::user()->currentTeam) {
+            return [
+                "echo-private:teams." . Auth::user()->currentTeam->id . ",MessageReceived" => 'handleIncomingMessage',
+                "echo-private:teams." . Auth::user()->currentTeam->id . ",client-typing" => 'handleClientTyping',
+            ];
+        }
+        return [];
+    }
 
     public function mount($conversationId)
     {
@@ -142,7 +149,14 @@ class MessageWindow extends Component
         if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
             $this->loadConversation();
             $this->dispatch('scroll-bottom');
+            $this->dispatch('play-sound');
         }
+    }
+
+    public function handleClientTyping($event)
+    {
+        // This will be handled by JS listener mainly, but we can have a fallback here if needed
+        // For now, we rely on the JS listener in the blade file for visual feedback
     }
 
     public function deleteAttachment()
