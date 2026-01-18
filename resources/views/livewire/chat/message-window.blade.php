@@ -3,14 +3,22 @@
         isTyping: false,
         typingUser: '',
         init() {
-            window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}')
-                .listenForWhisper('typing', (e) => {
+            console.log("Front: Init Echo for teams.{{ auth()->user()->currentTeam->id }}");
+            
+            const channel = window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}');
+            
+            channel.listenForWhisper('typing', (e) => {
                     if(e.conversation_id == {{ $conversationId }}) {
                         this.isTyping = true;
                         this.typingUser = e.name;
                         setTimeout(() => this.isTyping = false, 3000);
                     }
                 });
+            
+            channel.listen('MessageReceived', (e) => { console.log('Front: MessageReceived (simple)', e); });
+            channel.listen('.MessageReceived', (e) => { console.log('Front: .MessageReceived', e); });
+            channel.listen('App\\Events\\MessageReceived', (e) => { console.log('Front: App\\Events\\MessageReceived', e); });
+            channel.listen('.App\\Events\\MessageReceived', (e) => { console.log('Front: .App\\Events\\MessageReceived', e); });
         }
     }"
     @play-sound.window="document.getElementById('notification-sound').play()">

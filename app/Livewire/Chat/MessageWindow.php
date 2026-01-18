@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Log;
 
 class MessageWindow extends Component
 {
@@ -70,6 +71,11 @@ class MessageWindow extends Component
 
     public function sendMessage()
     {
+        Log::info("MessageWindow: sendMessage called", [
+            'body' => $this->messageBody,
+            'has_attachment' => $this->newAttachment ? true : false,
+            'conversation_id' => $this->conversationId
+        ]);
         $this->validate([
             'messageBody' => 'nullable|required_without:newAttachment|string',
             'newAttachment' => 'nullable|file|max:16384',
@@ -147,6 +153,7 @@ class MessageWindow extends Component
 
     public function handleIncomingMessage($event)
     {
+        Log::info("MessageWindow: handleIncomingMessage received", ['event' => $event]);
         if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
             $this->loadConversation();
             $this->dispatch('scroll-bottom');

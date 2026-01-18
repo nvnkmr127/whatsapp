@@ -516,6 +516,8 @@ class WhatsAppService
 
         $response = null;
 
+        Log::debug("WhatsApp API Sending [$method] to $url", ['data' => $data]);
+
         if ($method === 'post') {
             $response = $client->post($url, $data);
         } elseif ($method === 'get') {

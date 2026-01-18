@@ -46,6 +46,7 @@ class ProcessWebhookJob implements ShouldQueue
      */
     public function handle(): void
     {
+        Log::info("ProcessWebhookJob started for Payload ID: {$this->payloadId}");
         $payloadRecord = WebhookPayload::find($this->payloadId);
 
         if (!$payloadRecord) {
@@ -120,6 +121,11 @@ class ProcessWebhookJob implements ShouldQueue
 
     protected function processIncomingMessage(Team $team, array $msgData, array $contactData)
     {
+        Log::info("ProcessWebhookJob: Processing incoming message", [
+            'team_id' => $team->id,
+            'from' => $msgData['from'],
+            'message_id' => $msgData['id']
+        ]);
         // Idempotency Check
         if (Message::where('whatsapp_message_id', $msgData['id'])->exists()) {
             Log::info("Message duplicate ignored: {$msgData['id']}");
@@ -300,6 +306,7 @@ class ProcessWebhookJob implements ShouldQueue
         }
 
         // Broadcast
+        Log::info("ProcessWebhookJob: Dispatching MessageReceived event", ['message_id' => $message->id]);
         \App\Events\MessageReceived::dispatch($message);
 
         // 7. Mark as Read (If Enabled)
