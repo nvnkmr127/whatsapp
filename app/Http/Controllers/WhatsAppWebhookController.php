@@ -16,7 +16,13 @@ class WhatsAppWebhookController extends Controller
      */
     public function verify(Request $request)
     {
-        $verifyToken = config('services.whatsapp.verify_token', 'my-secret-token');
+        // Read from Settings table (global for all teams)
+        $verifyToken = get_setting('whatsapp_webhook_verify_token');
+
+        // Fallback to config if not set in database
+        if (empty($verifyToken)) {
+            $verifyToken = config('services.whatsapp.verify_token', 'my-secret-token');
+        }
 
         $mode = $request->query('hub_mode');
         $token = $request->query('hub_verify_token');
