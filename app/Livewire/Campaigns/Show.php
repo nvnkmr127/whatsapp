@@ -19,7 +19,13 @@ class Show extends Component
 
         // Verify team ownership early
         $campaign = Campaign::findOrFail($campaignId);
-        if ($campaign->team_id !== auth()->user()->currentTeam->id) {
+
+        $user = auth()->user();
+        if ($user->is_super_admin) {
+            return; // Super admin bypass
+        }
+
+        if ($campaign->team_id != $user->current_team_id) {
             abort(403, 'You do not have permission to access this campaign.');
         }
     }
