@@ -115,7 +115,7 @@
         </div>
 
         @foreach($conversation->messages as $message)
-            <div
+            <div wire:key="msg-{{ $message->id }}"
                 class="flex {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }} animate-in slide-in-from-bottom-2 duration-300">
                 <div class="max-w-[85%] sm:max-w-[70%] group">
                     <div
