@@ -16,7 +16,15 @@ class ConversationList extends Component
     public $filterOptIn = 'all'; // all, yes, no
     public $filterBlocked = 'all'; // all, yes, no
 
-    protected $listeners = ['echo:conversations,ConversationUpdated' => '$refresh'];
+    public function getListeners()
+    {
+        if (Auth::check() && Auth::user()->currentTeam) {
+            return [
+                "echo-private:teams." . Auth::user()->currentTeam->id . ",MessageReceived" => '$refresh',
+            ];
+        }
+        return [];
+    }
 
     public function mount()
     {

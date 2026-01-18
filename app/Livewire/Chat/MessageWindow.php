@@ -109,6 +109,7 @@ class MessageWindow extends Component
             if ($response && ($response['success'] ?? false)) {
                 // Validated
                 $this->reset(['messageBody', 'newAttachment']);
+                $this->loadConversation();
                 $this->dispatch('messageSent'); // Trigger UI update if needed
             } else {
                 $errorMsg = $response ? ($response['error']['message'] ?? 'Unknown error') : 'No content to send.';

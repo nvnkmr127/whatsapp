@@ -370,6 +370,32 @@ class WhatsAppService
         if ($response['success'] ?? false) {
             $wamId = $response['data']['messages'][0]['id'] ?? null;
 
+            // Render Body for Display
+            $richContent = "Template: {$templateName}";
+            $mediaUrl = null;
+            $mediaType = null;
+
+            if ($tpl) {
+                $bodyComp = collect($tpl->components)->firstWhere('type', 'BODY');
+                if ($bodyComp) {
+                    $text = $bodyComp['text'] ?? '';
+                    foreach ($bodyParams as $index => $param) {
+                        $search = '{{' . ($index + 1) . '}}';
+                        $text = str_replace($search, $param, $text);
+                    }
+                    $richContent = $text;
+                }
+            }
+
+            // Capture Header Media
+            if (!empty($headerParams)) {
+                $headerComp = collect($tpl->components ?? [])->firstWhere('type', 'HEADER');
+                if ($headerComp && in_array($headerComp['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+                    $mediaType = strtolower($headerComp['format']);
+                    $mediaUrl = $headerParams[0] ?? null; // Assume 1st param is URL
+                }
+            }
+
             // Persist to Database
             \App\Models\Message::create([
                 'team_id' => $this->team->id,
@@ -378,7 +404,9 @@ class WhatsAppService
                 'direction' => 'outbound',
                 'status' => 'sent',
                 'whatsapp_message_id' => $wamId,
-                'content' => "Template: {$templateName}", // Fallback text representation
+                'content' => $richContent,
+                'media_url' => $mediaUrl,
+                'media_type' => $mediaType,
                 'metadata' => [
                     'template_name' => $templateName,
                     'language' => $language,
