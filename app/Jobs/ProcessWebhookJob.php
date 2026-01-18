@@ -150,7 +150,7 @@ class ProcessWebhookJob implements ShouldQueue
         $contactService = new \App\Services\ContactService();
         $contact = $contactService->createOrUpdate([
             'team_id' => $team->id,
-            'phone_number' => $phone,
+            'phone_number' => '+' . $phone,
             'name' => $name,
             // 'custom_attributes' => ['source' => 'whatsapp_webhook'] // Optional: track source
         ]);
