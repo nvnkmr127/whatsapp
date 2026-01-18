@@ -539,6 +539,7 @@ class WhatsAppService
             return ['success' => false, 'error' => $response->json()];
         }
 
+        Log::info("WhatsApp API Success: [$method] $url", ['response' => $response->json()]);
 
         return ['success' => true, 'data' => $response->json()];
     }

@@ -40,6 +40,7 @@ class WhatsAppWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        Log::info("WhatsAppWebhookController: Webhook Received", ['headers' => $request->header(), 'content' => $request->all()]);
         $data = $request->all();
         $signature = $request->header('X-Hub-Signature-256');
 
