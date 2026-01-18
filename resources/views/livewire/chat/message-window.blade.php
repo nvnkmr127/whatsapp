@@ -23,7 +23,9 @@
         }
     }"
     @play-sound.window="
-        document.getElementById('notification-sound').play();
+        document.getElementById('notification-sound').play().catch(error => {
+            console.log('Audio autoplay blocked until user interaction:', error);
+        });
         if (Notification.permission === 'granted') {
             new Notification('New Message', { body: 'You have received a new message.', icon: '/favicon.ico' });
         } else if (Notification.permission !== 'denied') {
@@ -121,7 +123,7 @@
             </span>
         </div>
 
-        @foreach($conversation->messages as $message)
+        @foreach($messages as $message)
             <div wire:key="msg-{{ $message->id }}"
                 class="flex {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }} animate-in slide-in-from-bottom-2 duration-300">
                 <div class="max-w-[85%] sm:max-w-[70%] group">

@@ -46,6 +46,7 @@ class MessageWindow extends Component
         return [];
     }
 
+    public $messages = []; // Dedicated property
     public $lastMessageId = null;
 
     public function mount($conversationId)
@@ -53,22 +54,24 @@ class MessageWindow extends Component
         $this->conversationId = $conversationId;
         $this->loadConversation();
         // Initialize lastMessageId to avoid alert on load
-        if ($this->conversation && $this->conversation->messages->isNotEmpty()) {
-            $this->lastMessageId = $this->conversation->messages->last()->id;
+        if (count($this->messages) > 0) {
+            $this->lastMessageId = $this->messages->last()->id;
         }
     }
 
     public function loadConversation()
     {
-        $this->conversation = Conversation::with([
-            'messages' => function ($q) {
-                $q->orderBy('created_at', 'asc');
-            },
-            'contact'
-        ])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
+        $this->conversation = Conversation::with(['contact'])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
 
-        if ($this->conversation && $this->conversation->messages->isNotEmpty()) {
-            $latestId = $this->conversation->messages->last()->id;
+        if ($this->conversation) {
+            // Load messages specifically and assign to public property
+            $this->messages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
+        } else {
+            $this->messages = [];
+        }
+
+        if (count($this->messages) > 0) {
+            $latestId = $this->messages->last()->id;
 
             // If we have a lastMessageId tracking and the new one is different -> New Message!
             if ($this->lastMessageId && $latestId > $this->lastMessageId) {
