@@ -26,6 +26,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('settings');
+        // No down needed as this is a restoration migration
     }
 };
