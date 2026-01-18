@@ -3,7 +3,7 @@
         isTyping: false,
         typingUser: '',
         init() {
-            console.log("Front: Init Echo for teams.{{ auth()->user()->currentTeam->id }}");
+            console.log('Front: Init Echo for teams.{{ auth()->user()->currentTeam->id }}');
             
             const channel = window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}');
             
