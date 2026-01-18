@@ -12,5 +12,6 @@ Artisan::command('inspire', function () {
 
 Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
+Schedule::command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();
 
 

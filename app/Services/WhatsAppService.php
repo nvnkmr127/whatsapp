@@ -97,11 +97,16 @@ class WhatsAppService
         if ($response['success'] ?? false) {
             $wamId = $response['data']['messages'][0]['id'] ?? null;
 
+            // Resolve Conversation
+            $conversationService = new \App\Services\ConversationService();
+            $conversation = $conversationService->ensureActiveConversation($contact);
+            $conversationService->handleOutboundMessage($conversation);
+
             // Persist to Database
             \App\Models\Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
-                'conversation_id' => null, // Will be linked by webhook or we can try to find open convo
+                'conversation_id' => $conversation->id,
                 'type' => 'text',
                 'direction' => 'outbound',
                 'status' => 'sent',
@@ -146,10 +151,16 @@ class WhatsAppService
         if ($response['success'] ?? false) {
             $wamId = $response['data']['messages'][0]['id'] ?? null;
 
+            // Resolve Conversation
+            $conversationService = new \App\Services\ConversationService();
+            $conversation = $conversationService->ensureActiveConversation($contact);
+            $conversationService->handleOutboundMessage($conversation);
+
             // Persist to Database
             \App\Models\Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
                 'type' => $type,
                 'direction' => 'outbound',
                 'status' => 'sent',
@@ -205,10 +216,16 @@ class WhatsAppService
         if ($response['success'] ?? false) {
             $wamId = $response['data']['messages'][0]['id'] ?? null;
 
+            // Resolve Conversation
+            $conversationService = new \App\Services\ConversationService();
+            $conversation = $conversationService->ensureActiveConversation($contact);
+            $conversationService->handleOutboundMessage($conversation);
+
             // Persist to Database
             \App\Models\Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
                 'type' => 'interactive',
                 'direction' => 'outbound',
                 'status' => 'sent',
@@ -396,10 +413,16 @@ class WhatsAppService
                 }
             }
 
+            // Resolve Conversation
+            $conversationService = new \App\Services\ConversationService();
+            $conversation = $conversationService->ensureActiveConversation($contact);
+            $conversationService->handleOutboundMessage($conversation);
+
             // Persist to Database
             \App\Models\Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
                 'type' => 'template',
                 'direction' => 'outbound',
                 'status' => 'sent',
