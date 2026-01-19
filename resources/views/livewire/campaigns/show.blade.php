@@ -307,7 +307,7 @@
                                                                 <td class="px-8 py-4">
                                                                     <span
                                                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                                                                                                                                {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
+                                                                                                                                                                                            {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
                                     ($msg->status == 'delivered' ? 'bg-blue-100 text-blue-800' :
                                         ($msg->status == 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
                                                                         {{ $msg->status }}
@@ -340,7 +340,6 @@
             </div>
         </div>
     </div>
-</div>
     <!-- Retargeting Modal -->
     <x-dialog-modal wire:model="showRetargetModal">
         <x-slot name="title">
