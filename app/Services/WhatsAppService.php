@@ -245,7 +245,7 @@ class WhatsAppService
     /**
      * Send a template message.
      */
-    public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [])
+    public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null)
     {
         // Fetch Template first to understand structure
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
@@ -423,6 +423,7 @@ class WhatsAppService
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
+                'campaign_id' => $campaignId, // Passed from broadcast if applicable
                 'type' => 'template',
                 'direction' => 'outbound',
                 'status' => 'sent',

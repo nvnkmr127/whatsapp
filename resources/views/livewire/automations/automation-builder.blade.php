@@ -584,7 +584,7 @@
                                          <div class="space-y-2">
                                             @foreach($triggerConfig['keywords'] ?? [] as $index => $kw)
                                                 <div class="flex items-center gap-2">
-                                                    <input type="text" wire:model.blur="triggerConfig.keywords.{{ $index }}" 
+                                                    <input type="text" wire:model.live="triggerConfig.keywords.{{ $index }}" 
                                                         class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
                                                         placeholder="Keyword">
                                                     <button wire:click="removeTriggerKeyword({{ $index }})" class="text-slate-400 hover:text-rose-500">

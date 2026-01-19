@@ -195,9 +195,54 @@ class AutomationService
         // Process Node Type
         switch ($node['type']) {
             case 'message':
+            case 'text':
                 $this->whatsapp->setTeam($run->automation->team);
                 $this->whatsapp->sendText($run->contact->phone_number, $node['data']['text'] ?? '');
                 $this->moveToNextNode($run);
+                break;
+
+            case 'image':
+            case 'video':
+            case 'audio':
+            case 'file':
+                $this->whatsapp->setTeam($run->automation->team);
+                $url = $node['data']['url'] ?? null;
+                $caption = $node['data']['caption'] ?? '';
+                if ($url) {
+                    $this->whatsapp->sendMedia($run->contact->phone_number, $node['type'], $url, $caption);
+                }
+                $this->moveToNextNode($run);
+                break;
+
+            case 'interactive_button':
+                $this->whatsapp->setTeam($run->automation->team);
+                $text = $node['data']['text'] ?? '';
+                $buttons = [];
+                foreach ($node['data']['buttons'] ?? [] as $btn) {
+                    $buttons[$btn['id']] = $btn['title'];
+                }
+                if (!empty($buttons)) {
+                    $this->whatsapp->sendInteractiveButtons($run->contact->phone_number, $text, $buttons);
+                } else {
+                    $this->whatsapp->sendText($run->contact->phone_number, $text);
+                }
+                $run->update(['status' => 'waiting_input']);
+                break;
+
+            case 'interactive_list':
+                $this->whatsapp->setTeam($run->automation->team);
+                $text = $node['data']['text'] ?? '';
+                $buttonText = $node['data']['button_text'] ?? 'Options';
+                $sections = $node['data']['sections'] ?? [];
+
+                // WhatsAppService might need a specific format for lists, but for now we follow button logic if sendInteractiveList exists
+                if (method_exists($this->whatsapp, 'sendInteractiveList')) {
+                    $this->whatsapp->sendInteractiveList($run->contact->phone_number, $text, $buttonText, $sections);
+                } else {
+                    // Fallback to buttons or text if method doesn't exist
+                    $this->whatsapp->sendText($run->contact->phone_number, $text);
+                }
+                $run->update(['status' => 'waiting_input']);
                 break;
 
             case 'template':
@@ -238,8 +283,9 @@ class AutomationService
                 break;
 
             case 'question':
+            case 'user_input':
                 $this->whatsapp->setTeam($run->automation->team);
-                $nodeContent = $node['data']['text'] ?? '';
+                $nodeContent = $node['data']['text'] ?? $node['data']['question'] ?? '';
                 $options = $node['data']['options'] ?? [];
                 if (!empty($options)) {
                     $buttons = [];
@@ -258,6 +304,7 @@ class AutomationService
                 $this->moveToNextNode($run);
                 break;
 
+            case 'webhook':
             case 'api_request':
                 // External API Connector Module
                 $url = $node['data']['url'] ?? '';

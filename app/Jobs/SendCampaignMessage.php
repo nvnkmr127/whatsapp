@@ -60,36 +60,19 @@ class SendCampaignMessage implements ShouldQueue
             // Set Team Context
             $whatsapp->setTeam($this->campaign->team);
 
-            // Send Template
+            // Send Template (Pass campaign ID to handle persistence correctly)
             $response = $whatsapp->sendTemplate(
                 $this->contact->phone_number,
                 $this->campaign->template_name,
                 $this->campaign->language ?? 'en_US',
-                $this->campaign->template_variables ?? []
+                $this->campaign->template_variables ?? [],
+                [], // Header Params
+                [], // Footer Params
+                $this->campaign->id
             );
 
             if (($response['success'] ?? false)) {
                 $this->campaign->increment('sent_count');
-
-                // --- ANALYTICS: Create Message Record ---
-                // We need the WAMID from response
-                $wamid = $response['data']['messages'][0]['id'] ?? null;
-
-                if ($wamid) {
-                    \App\Models\Message::create([
-                        'team_id' => $this->campaign->team_id,
-                        'contact_id' => $this->contact->id,
-                        'whatsapp_message_id' => $wamid,
-                        'campaign_id' => $this->campaign->id,
-                        'type' => 'template',
-                        'direction' => 'outbound',
-                        'content' => "Template: " . $this->campaign->template_name,
-                        'status' => 'sent', // Initially sent
-                        'sent_at' => now(),
-                    ]);
-                }
-                // ----------------------------------------
-
             } else {
                 Log::warning("Campaign {$this->campaign->id} failed for {$this->contact->id}", ['response' => $response]);
             }

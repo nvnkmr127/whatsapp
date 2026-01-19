@@ -12,6 +12,50 @@ class Show extends Component
     use \Livewire\WithPagination;
 
     public $campaignId;
+    public $showRetargetModal = false;
+    public $retargetingCriteria = 'not_read'; // not_delivered, not_read, read, failed
+
+    public function openRetargetModal()
+    {
+        $this->showRetargetModal = true;
+    }
+
+    public function retarget()
+    {
+        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($this->campaignId);
+        $query = $campaign->messages();
+
+        switch ($this->retargetingCriteria) {
+            case 'not_delivered':
+                $query->where('status', '!=', 'delivered');
+                break;
+            case 'not_read':
+                // Delivered but not read
+                $query->where('status', 'delivered')->whereNull('read_at');
+                break;
+            case 'read':
+                $query->whereNotNull('read_at');
+                break;
+            case 'failed':
+                $query->where('status', 'failed');
+                break;
+        }
+
+        $contactIds = $query->pluck('contact_id')->unique()->toArray();
+
+        if (empty($contactIds)) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'No contacts found matching criteria.'
+            ]);
+            return;
+        }
+
+        return redirect()->route('campaigns.create', [
+            'retarget_ids' => $contactIds,
+            'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
+        ]);
+    }
 
     public function mount($campaignId)
     {
