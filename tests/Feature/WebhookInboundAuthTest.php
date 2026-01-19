@@ -45,4 +45,17 @@ class WebhookInboundAuthTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonFragment(['success' => true]);
     }
+
+    public function test_webhook_auth_handles_string_config_gracefully()
+    {
+        $service = new \App\Services\WebhookAuthService();
+        $request = new \Illuminate\Http\Request();
+
+        // This used to throw TypeError, now it should handle string/JSON or fallback to empty array
+        $result = $service->verify($request, 'api_key', '{"key":"secret"}');
+        $this->assertFalse($result); // Missing header = false, but shouldn't crash
+
+        $result = $service->verify($request, 'none', 'some-string');
+        $this->assertTrue($result);
+    }
 }

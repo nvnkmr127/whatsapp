@@ -10,12 +10,15 @@ class WebhookAuthService
     /**
      * Verify webhook authentication based on method
      */
-    public function verify(Request $request, string $authMethod, array $authConfig): bool
+    public function verify(Request $request, string $authMethod, $authConfig): bool
     {
+        $config = is_array($authConfig) ? $authConfig : (is_string($authConfig) ? json_decode($authConfig, true) : []);
+        $config = $config ?? [];
+
         return match ($authMethod) {
-            'hmac' => $this->verifyHmac($request, $authConfig),
-            'api_key' => $this->verifyApiKey($request, $authConfig),
-            'basic' => $this->verifyBasicAuth($request, $authConfig),
+            'hmac' => $this->verifyHmac($request, $config),
+            'api_key' => $this->verifyApiKey($request, $config),
+            'basic' => $this->verifyBasicAuth($request, $config),
             'none' => true,
             default => false,
         };

@@ -46,8 +46,12 @@ class WebhookSource extends Model
     {
         $config = $this->auth_config;
 
+        if (is_string($config)) {
+            $config = json_decode($config, true) ?? [];
+        }
+
         if ($key === null) {
-            return $config ?? [];
+            return is_array($config) ? $config : [];
         }
 
         return data_get($config, $key, $default);
