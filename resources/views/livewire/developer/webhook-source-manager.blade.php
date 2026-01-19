@@ -398,36 +398,43 @@
                                         Required Authentication
                                     </h7>
 
-                                    @php
-                                        $authHeader = $auth_config['header'] ?? null;
-                                        if (!$authHeader) {
-                                            $authHeader = match($auth_method) {
-                                                'api_key' => 'X-API-Key',
-                                                'hmac' => 'X-Webhook-Signature',
-                                                'basic' => 'Authorization',
-                                                default => null
+                                    @if($auth_method === 'none')
+                                        <div class="flex items-center gap-3 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Public Webhook: No Key Required</p>
+                                        </div>
+                                    @else
+                                        @php
+                                            $authHeader = $auth_config['header'] ?? null;
+                                            if (!$authHeader) {
+                                                $authHeader = match($auth_method) {
+                                                    'api_key' => 'X-API-Key',
+                                                    'hmac' => 'X-Webhook-Signature',
+                                                    'basic' => 'Authorization',
+                                                    default => null
+                                                };
+                                            }
+                                            $authValue = match($auth_method) {
+                                                'api_key' => $auth_config['key'] ?? 'MISSING_KEY',
+                                                'hmac' => 'HMAC-SHA256(payload, secret)',
+                                                'basic' => 'Basic base64(user:pass)',
+                                                default => 'N/A'
                                             };
-                                        }
-                                        $authValue = match($auth_method) {
-                                            'api_key' => $auth_config['key'] ?? 'MISSING_KEY',
-                                            'hmac' => 'HMAC-SHA256(payload, secret)',
-                                            'basic' => 'Basic base64(user:pass)',
-                                            default => 'No authentication required'
-                                        };
-                                    @endphp
+                                        @endphp
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Header Name</p>
-                                            <code class="text-xs font-mono text-white truncate block">{{ $authHeader ?: 'N/A' }}</code>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Header Name</p>
+                                                <code class="text-xs font-mono text-white truncate block">{{ $authHeader ?: 'N/A' }}</code>
+                                            </div>
+                                            <div>
+                                                <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Expected Value</p>
+                                                <code class="text-xs font-mono text-white truncate block">{{ $authValue }}</code>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Expected Value</p>
-                                            <code class="text-xs font-mono text-white truncate block">{{ $authValue }}</code>
-                                        </div>
-                                    </div>
+                                    @endif
 
-                                    @if($source?->auth_method === 'api_key')
+                                    @if($auth_method === 'api_key')
                                         <div class="mt-4 pt-4 border-t border-white/5">
                                             <p class="text-[9px] font-bold text-amber-500/80 uppercase tracking-widest flex items-center gap-1">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -789,7 +796,7 @@
                             </span>
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $log['created_at'] }}</span>
                         </div>
-                        <pre class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto border border-slate-100 dark:border-slate-800">{{ json_encode(json_decode($log['payload']), JSON_PRETTY_PRINT) }}</pre>
+                        <pre class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto border border-slate-100 dark:border-slate-800">{{ json_encode($log['payload'], JSON_PRETTY_PRINT) }}</pre>
                     </div>
                 @empty
                     <div class="text-center py-20 bg-slate-50 dark:bg-slate-800/20 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
