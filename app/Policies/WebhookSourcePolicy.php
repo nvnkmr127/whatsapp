@@ -13,6 +13,10 @@ class WebhookSourcePolicy
      */
     public function viewAny(User $user): bool
     {
+        if ($user->is_super_admin) {
+            return true;
+        }
+
         return $user->currentTeam !== null;
     }
 
@@ -21,7 +25,11 @@ class WebhookSourcePolicy
      */
     public function view(User $user, WebhookSource $webhookSource): bool
     {
-        return $user->currentTeam->id === $webhookSource->team_id;
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        return $user->currentTeam && $user->currentTeam->id === $webhookSource->team_id;
     }
 
     /**
@@ -29,6 +37,10 @@ class WebhookSourcePolicy
      */
     public function create(User $user): bool
     {
+        if ($user->is_super_admin) {
+            return true;
+        }
+
         return $user->currentTeam !== null;
     }
 
@@ -37,7 +49,11 @@ class WebhookSourcePolicy
      */
     public function update(User $user, WebhookSource $webhookSource): bool
     {
-        return $user->currentTeam->id === $webhookSource->team_id;
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        return $user->currentTeam && $user->currentTeam->id === $webhookSource->team_id;
     }
 
     /**
@@ -45,7 +61,11 @@ class WebhookSourcePolicy
      */
     public function delete(User $user, WebhookSource $webhookSource): bool
     {
-        return $user->currentTeam->id === $webhookSource->team_id;
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        return $user->currentTeam && $user->currentTeam->id === $webhookSource->team_id;
     }
 
     /**
@@ -53,7 +73,11 @@ class WebhookSourcePolicy
      */
     public function restore(User $user, WebhookSource $webhookSource): bool
     {
-        return $user->currentTeam->id === $webhookSource->team_id;
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        return $user->currentTeam && $user->currentTeam->id === $webhookSource->team_id;
     }
 
     /**
@@ -61,7 +85,11 @@ class WebhookSourcePolicy
      */
     public function forceDelete(User $user, WebhookSource $webhookSource): bool
     {
-        return $user->currentTeam->id === $webhookSource->team_id;
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        return $user->currentTeam && $user->currentTeam->id === $webhookSource->team_id;
     }
 }
 

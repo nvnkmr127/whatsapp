@@ -96,16 +96,18 @@ class ProcessWebhookJob implements ShouldQueue
             }
 
             // Handle Messages
-            if (isset($change['messages'][0])) {
-                $msgRequest = $change['messages'][0];
-                $contactProfile = $change['contacts'][0] ?? ['wa_id' => $msgRequest['from']];
-
-                $this->processIncomingMessage($team, $msgRequest, $contactProfile);
+            if (isset($change['messages']) && is_array($change['messages'])) {
+                foreach ($change['messages'] as $index => $msgRequest) {
+                    $contactProfile = $change['contacts'][$index] ?? ['wa_id' => $msgRequest['from']];
+                    $this->processIncomingMessage($team, $msgRequest, $contactProfile);
+                }
             }
 
             // Handle Status Updates
-            if (isset($change['statuses'][0])) {
-                $this->processStatusUpdate($change['statuses'][0]);
+            if (isset($change['statuses']) && is_array($change['statuses'])) {
+                foreach ($change['statuses'] as $statusData) {
+                    $this->processStatusUpdate($statusData);
+                }
             }
 
             $payloadRecord->update(['status' => 'processed']);
@@ -318,7 +320,11 @@ class ProcessWebhookJob implements ShouldQueue
 
         // Broadcast
         Log::info("ProcessWebhookJob: Dispatching MessageReceived event", ['message_id' => $message->id]);
-        \App\Events\MessageReceived::dispatch($message);
+        try {
+            \App\Events\MessageReceived::dispatch($message);
+        } catch (\Exception $e) {
+            Log::warning("Real-time broadcast failed for message {$message->id}, but data was saved: " . $e->getMessage());
+        }
 
         // 7. Mark as Read (If Enabled)
         if ($team->read_receipts_enabled) {
@@ -358,7 +364,11 @@ class ProcessWebhookJob implements ShouldQueue
                     $updateData['error_message'] = $statusData['errors'][0]['message'] ?? 'Unknown error';
 
                 $message->update($updateData);
-                \App\Events\MessageStatusUpdated::dispatch($message);
+                try {
+                    \App\Events\MessageStatusUpdated::dispatch($message);
+                } catch (\Exception $e) {
+                    Log::warning("Real-time status update broadcast failed for message {$message->id}, but data was saved: " . $e->getMessage());
+                }
             }
         }
     }

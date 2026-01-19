@@ -148,6 +148,12 @@ class WebhookSourceManager extends Component
     protected function saveInitialSource()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            $this->dispatch('notify', 'Please select a team before creating a source.');
+            return;
+        }
+
         $source = WebhookSource::create([
             'team_id' => $team->id,
             'name' => $this->name,
@@ -249,7 +255,16 @@ class WebhookSourceManager extends Component
      */
     public function getRecentPayloads($sourceId)
     {
-        $source = WebhookSource::where('team_id', auth()->user()->currentTeam->id)->find($sourceId);
+        $team = auth()->user()->currentTeam;
+
+        $query = WebhookSource::query();
+
+        if ($team) {
+            $query->where('team_id', $team->id);
+        }
+
+        $source = $query->find($sourceId);
+
         if (!$source) {
             return [];
         }
@@ -402,7 +417,12 @@ class WebhookSourceManager extends Component
         $this->testResult = null;
 
         // Load sample payload based on platform
-        $source = WebhookSource::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
+        $team = auth()->user()->currentTeam;
+        $query = WebhookSource::query();
+        if ($team) {
+            $query->where('team_id', $team->id);
+        }
+        $source = $query->findOrFail($id);
         $this->testPayload = $this->getSamplePayload($source->platform);
     }
 
@@ -556,20 +576,40 @@ class WebhookSourceManager extends Component
 
     public function render()
     {
-        $team = auth()->user()->currentTeam;
+        $user = auth()->user();
+        $team = $user->currentTeam;
 
-        $sources = WebhookSource::where('team_id', $team->id)
-            ->with('payloads')
+        if (!$team && !$user->is_super_admin) {
+            return <<<'HTML'
+                <div class="p-8 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800">
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">No Team Selected</h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Please select or create a team to manage webhook sources.</p>
+                </div>
+            HTML;
+        }
+
+        $query = WebhookSource::query();
+        if ($team && !$user->is_super_admin) {
+            $query->where('team_id', $team->id);
+        }
+
+        $sources = $query->with('payloads')
             ->latest()
             ->paginate(10);
 
         $platforms = config('webhook-platforms');
-        $templates = WhatsappTemplate::where('team_id', $team->id)->get();
+
+        $templates = [];
+        if ($team) {
+            $templates = WhatsappTemplate::where('team_id', $team->id)->get();
+        } elseif ($user->is_super_admin) {
+            $templates = WhatsappTemplate::all();
+        }
 
         // Get template parameters for selected template
         $templateParams = [];
         if ($this->selectedTemplateId) {
-            $template = WhatsappTemplate::where('team_id', $team->id)->find($this->selectedTemplateId);
+            $template = WhatsappTemplate::find($this->selectedTemplateId);
             if ($template && $template->components) {
                 foreach ($template->components as $component) {
                     if (isset($component['type']) && $component['type'] === 'BODY') {

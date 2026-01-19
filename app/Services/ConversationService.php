@@ -30,7 +30,11 @@ class ConversationService
             // 'assigned_to' could be auto-assigned implicitly via routing logic later
         ]);
 
-        \App\Events\ConversationOpened::dispatch($conversation);
+        try {
+            \App\Events\ConversationOpened::dispatch($conversation);
+        } catch (\Exception $e) {
+            Log::warning("ConversationOpened broadcast failed for conversation {$conversation->id}, but it was created successfully: " . $e->getMessage());
+        }
 
         return $conversation;
     }
@@ -71,6 +75,10 @@ class ConversationService
             'closed_at' => now(),
         ]);
 
-        \App\Events\ConversationClosed::dispatch($conversation);
+        try {
+            \App\Events\ConversationClosed::dispatch($conversation);
+        } catch (\Exception $e) {
+            Log::warning("ConversationClosed broadcast failed for conversation {$conversation->id}, but it was closed successfully: " . $e->getMessage());
+        }
     }
 }
