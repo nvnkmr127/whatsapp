@@ -29,6 +29,7 @@ class WebhookSourceManager extends Component
     public $capturedPayload = null;
     public $lastPayloadId = null;
     public $showRawData = false;
+    public $showWizardModal = false;
 
     // For filtering rules
     public $filtering_rules_ui = [];
@@ -320,6 +321,12 @@ class WebhookSourceManager extends Component
         return $paths;
     }
 
+    public function openNewSource()
+    {
+        $this->cancelEdit();
+        $this->showWizardModal = true;
+    }
+
     public function create()
     {
         $this->nextStep();
@@ -338,9 +345,14 @@ class WebhookSourceManager extends Component
         $this->field_mappings = $source->field_mappings ?? [];
         $this->transformation_rules = $source->transformation_rules ?? [];
         $this->action_config = $source->action_config ?? [];
-        $this->is_active = $source->is_active;
-        $this->process_delay = $source->process_delay;
         $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
+        $this->is_active = $source->is_active;
+
+        // Load latest payload if available for context
+        $latest = \App\Models\WebhookPayload::where('webhook_source_id', $id)->latest()->first();
+        if ($latest) {
+            $this->capturedPayload = $latest->payload;
+        }
 
         // Set selected event type
         if (!empty($this->field_mappings)) {
@@ -354,6 +366,7 @@ class WebhookSourceManager extends Component
 
         $this->currentStep = 1; // Start at step 1 when editing
         $this->loadMappingContext();
+        $this->showWizardModal = true;
     }
 
     public function update()
@@ -401,14 +414,14 @@ class WebhookSourceManager extends Component
             'process_delay' => $this->process_delay,
         ]);
 
-        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload']);
+        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
         $this->initializeDefaults();
         $this->dispatch('notify', 'Webhook source saved successfully.');
     }
 
     public function cancelEdit()
     {
-        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters']);
+        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'showWizardModal']);
         $this->initializeDefaults();
     }
 
@@ -598,6 +611,11 @@ class WebhookSourceManager extends Component
 
         // 4. Flatten payload for dropdown (key => value)
         $this->mappingContext = !empty($payload) ? Arr::dot($payload) : [];
+
+        // 5. Ensure capturedPayload is set if we found one
+        if (!empty($payload) && !$this->capturedPayload) {
+            $this->capturedPayload = $payload;
+        }
     }
 
     public function render()

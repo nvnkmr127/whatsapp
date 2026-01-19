@@ -16,7 +16,7 @@
                 data, map fields visually</p>
         </div>
         <div>
-            <button wire:click="cancelEdit" class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
+            <button wire:click="openNewSource" class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
                 + New Source
             </button>
         </div>
@@ -102,81 +102,65 @@
         </div>
     </div>
 
-    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-50 dark:border-slate-800 overflow-hidden relative">
-
-        {{-- Wizard Progress Header --}}
-        <div class="px-8 py-10 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/5">
-            <div class="max-w-3xl mx-auto">
-                <div class="flex items-center justify-between mb-4">
-                    @php
-                        $steps = [
-                            1 => ['Identify', 'Source Info'],
-                            2 => ['Capture', 'Live Data'],
-                            3 => ['Mapping', 'Visual Link'],
-                            4 => ['Logic', 'Rules & Launch']
-                        ];
-                    @endphp
-
-                    @foreach($steps as $stepNum => $step)
-                        <div class="flex flex-col items-center gap-2 relative z-10">
-                            <div
-                                class="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 {{ $currentStep >= $stepNum ? 'bg-wa-teal text-white shadow-lg shadow-wa-teal/30 scale-110' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
-                                @if($currentStep > $stepNum)
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                            d="M5 13l4 4L19 7" />
-                                    </svg>
-                                @else
-                                    {{ $stepNum }}
-                                @endif
-                            </div>
-                            <div class="text-center">
-                                <div
-                                    class="text-[10px] font-black uppercase tracking-tight {{ $currentStep >= $stepNum ? 'text-slate-900 dark:text-white' : 'text-slate-400' }}">
-                                    {{ $step[0] }}</div>
-                                <div class="text-[8px] font-bold text-slate-400 uppercase hidden md:block">{{ $step[1] }}
-                                </div>
-                            </div>
-                        </div>
-                        @if($stepNum < 4)
-                            <div
-                                class="flex-1 h-[2px] mb-6 mx-2 {{ $currentStep > $stepNum ? 'bg-wa-teal' : 'bg-slate-100 dark:bg-slate-800' }}">
-                            </div>
-                        @endif
-                    @endforeach
+    <x-dialog-modal wire:model.live="showWizardModal" maxWidth="5xl">
+        <x-slot name="title">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                        {{ $editingId ? 'Update Webhook Source' : 'New Webhook Source' }}
+                    </h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configure your inbound integration</p>
                 </div>
             </div>
-        </div>
-        @if($sources->hasPages())
-            <div class="p-8 border-t border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/10">
-                {{ $sources->links() }}
-            </div>
-        @endif
-    </div>
+        </x-slot>
 
-    {{-- Create/Edit Form --}}
-    <div
-        class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
-        <div class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-            <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    {{ $editingId ? 'Update Source' : 'New Webhook Source' }}
-                </h3>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Configure your inbound webhook
-                </p>
-            </div>
-            @if($editingId)
-                <button wire:click="cancelEdit"
-                    class="text-xs font-bold text-rose-500 uppercase tracking-widest hover:underline">Cancel
-                    Editing</button>
-            @endif
-        </div>
+        <x-slot name="content">
+            <div class="min-h-[500px] overflow-x-hidden">
+                {{-- Wizard Progress Header --}}
+                <div class="mb-10">
+                    <div class="flex items-center justify-between max-w-4xl mx-auto">
+                        @php
+                            $steps = [
+                                1 => ['Identify', 'Source Info'],
+                                2 => ['Capture', 'Live Data'],
+                                3 => ['Mapping', 'Visual Link'],
+                                4 => ['Logic', 'Rules & Launch']
+                            ];
+                        @endphp
 
-        <div class="p-8 md:p-12 min-h-[400px]">
-            <div class="max-w-4xl mx-auto">
-                {{-- Step 1: Identify & Secure --}}
-                @if($currentStep === 1)
-                    <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        @foreach($steps as $stepNum => $step)
+                            <div class="flex flex-col items-center gap-2 relative z-10">
+                                <div
+                                    class="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-all duration-500 {{ $currentStep >= $stepNum ? 'bg-wa-teal text-white shadow-lg shadow-wa-teal/30 scale-110' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
+                                    @if($currentStep > $stepNum)
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    @else
+                                        {{ $stepNum }}
+                                    @endif
+                                </div>
+                                <div class="text-center">
+                                    <div
+                                        class="text-[9px] font-black uppercase tracking-tight {{ $currentStep >= $stepNum ? 'text-slate-900 dark:text-white' : 'text-slate-400' }}">
+                                        {{ $step[0] }}</div>
+                                </div>
+                            </div>
+                            @if($stepNum < 4)
+                                <div
+                                    class="flex-1 h-[2px] mb-4 mx-2 {{ $currentStep > $stepNum ? 'bg-wa-teal' : 'bg-slate-100 dark:bg-slate-800' }}">
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Step Content --}}
+                <div class="max-w-4xl mx-auto">
+                    {{-- Step 1: Identify & Secure --}}
+                    @if($currentStep === 1)
+                        <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div class="flex items-center gap-4 mb-8">
                             <div
                                 class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-wa-teal flex items-center justify-center">
@@ -494,7 +478,21 @@
                                             <svg class="w-12 h-12 text-wa-teal" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.437 5.634 1.437h.005c6.551 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                                         </div>
                                         <div class="relative z-10">
-                                            <p class="text-xs font-bold text-slate-900 dark:text-white leading-relaxed whitespace-pre-wrap">{{ $selectedTemplate->content }}</p>
+                                            @php
+                                                $previewContent = $selectedTemplate->content;
+                                                foreach($templateParameters as $num => $path) {
+                                                    if ($path) {
+                                                        $val = $mappingContext[$path] ?? null;
+                                                        if (str_starts_with($path, 'STATIC:')) {
+                                                            $val = substr($path, 7);
+                                                        }
+                                                        if ($val) {
+                                                            $previewContent = str_replace("{{{$num}}}", "<span class='text-wa-teal font-black'>$val</span>", $previewContent);
+                                                        }
+                                                    }
+                                                }
+                                            @endphp
+                                            <p class="text-xs font-bold text-slate-900 dark:text-white leading-relaxed whitespace-pre-wrap">{!! $previewContent !!}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -512,7 +510,7 @@
                                                 </h5>
                                                 <p class="text-purple-100/70 text-[10px] font-bold uppercase tracking-widest mt-1">Select field from payload</p>
                                             </div>
-                                            <select wire:model="field_mappings.phone_number" class="w-full bg-white/10 border-2 border-white/20 rounded-2xl py-3 px-5 font-mono text-xs text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/40 focus:ring-0 transition-all cursor-pointer">
+                                            <select wire:model.live="field_mappings.phone_number" class="w-full bg-white/10 border-2 border-white/20 rounded-2xl py-3 px-5 font-mono text-xs text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/40 focus:ring-0 transition-all cursor-pointer">
                                                 <option value="" class="text-slate-900">-- Select Phone Field --</option>
                                                 @foreach($mappingContext as $key => $value)
                                                     <option value="{{ $key }}" class="text-slate-900">{{ $key }} ({{ Str::limit(is_string($value) ? $value : json_encode($value), 30) }})</option>
@@ -523,55 +521,59 @@
                                 </div>
 
                                 {{-- Variables Mapping --}}
-                                <div class="col-span-full space-y-4">
-                                    <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Variable Assignments</h5>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        @foreach($templateParams as $paramNum)
-                                            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group">
-                                                <div class="flex items-center justify-between mb-4">
-                                                    <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-wa-teal flex items-center justify-center font-black text-xs border border-purple-100 dark:border-purple-500/20">
-                                                        {{ $paramNum }}
-                                                    </span>
-                                                    @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
-                                                        <button wire:click="$set('templateParameters.{{ $paramNum }}', '')" class="text-[10px] font-black text-wa-teal hover:underline uppercase tracking-widest">Switch to Dynamic</button>
-                                                    @else
-                                                        <button wire:click="$set('templateParameters.{{ $paramNum }}', 'STATIC:')" class="text-[10px] font-black text-slate-400 hover:text-wa-teal hover:underline uppercase tracking-widest">Set Static Value</button>
-                                                    @endif
-                                                </div>
+                                @if(!empty($templateParams))
+                                    <div class="col-span-full space-y-4">
+                                        <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Variable Assignments</h5>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            @foreach($templateParams as $paramNum)
+                                                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group">
+                                                    <div class="flex items-center justify-between mb-4">
+                                                        <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-wa-teal flex items-center justify-center font-black text-xs border border-purple-100 dark:border-purple-500/20">
+                                                            {{ $paramNum }}
+                                                        </span>
+                                                        @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
+                                                            <button wire:click="$set('templateParameters.{{ $paramNum }}', '')" class="text-[10px] font-black text-wa-teal hover:underline uppercase tracking-widest">Switch to Dynamic</button>
+                                                        @else
+                                                            <button wire:click="$set('templateParameters.{{ $paramNum }}', 'STATIC:')" class="text-[10px] font-black text-slate-400 hover:text-wa-teal hover:underline uppercase tracking-widest">Set Static Value</button>
+                                                        @endif
+                                                    </div>
 
-                                                <div class="space-y-4">
-                                                    @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
-                                                        <input type="text" 
-                                                               value="{{ substr($templateParameters[$paramNum] ?? '', 7) }}"
-                                                               @change="$wire.set('templateParameters.{{ $paramNum }}', 'STATIC:' + $event.target.value)"
-                                                               class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner"
-                                                               placeholder="Fixed Text Value..." />
-                                                    @else
-                                                        <select wire:model="templateParameters.{{ $paramNum }}" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-mono text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner cursor-pointer">
-                                                            <option value="">-- Map to Field --</option>
-                                                            @foreach($mappingContext as $key => $value)
-                                                                <option value="{{ $key }}">{{ $key }}</option>
-                                                            @endforeach
+                                                    <div class="space-y-4">
+                                                        @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
+                                                            <input type="text" 
+                                                                   value="{{ substr($templateParameters[$paramNum] ?? '', 7) }}"
+                                                                   @change="$wire.set('templateParameters.{{ $paramNum }}', 'STATIC:' + $event.target.value)"
+                                                                   class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner"
+                                                                   placeholder="Fixed Text Value..." />
+                                                        @else
+                                                            <select wire:model.live="templateParameters.{{ $paramNum }}" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-mono text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner cursor-pointer">
+                                                                <option value="">-- Map to Field --</option>
+                                                                @foreach($mappingContext as $key => $value)
+                                                                    <option value="{{ $key }}">{{ $key }} ({{ Str::limit(is_string($value) ? $value : json_encode($value), 20) }})</option>
+                                                                @endforeach
+                                                            </select>
+                                                        @endif
+
+                                                        <select wire:model="transformation_rules.param_{{ $paramNum }}" class="w-full bg-transparent border-t-0 border-x-0 border-b-2 border-slate-100 dark:border-slate-800 focus:border-purple-500 focus:ring-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">
+                                                            <option value="">No Transformation</option>
+                                                            <option value="uppercase">UPPERCASE</option>
+                                                            <option value="lowercase">lowercase</option>
+                                                            <option value="ucwords">Title Case</option>
+                                                            <option value="format_phone">Phone E.164</option>
+                                                            <option value="stripe_amount_to_decimal">Stripe (/100)</option>
                                                         </select>
-                                                    @endif
-
-                                                    <select wire:model="transformation_rules.param_{{ $paramNum }}" class="w-full bg-transparent border-t-0 border-x-0 border-b-2 border-slate-100 dark:border-slate-800 focus:border-purple-500 focus:ring-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">
-                                                        <option value="">No Transformation</option>
-                                                        <option value="uppercase">UPPERCASE</option>
-                                                        <option value="lowercase">lowercase</option>
-                                                        <option value="ucwords">Title Case</option>
-                                                        <option value="format_phone">Phone E.164</option>
-                                                        <option value="stripe_amount_to_decimal">Stripe (/100)</option>
-                                                    </select>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        @endforeach
+                                            @endforeach
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        @elseif($selectedTemplateId)
-                            <div class="bg-amber-50 dark:bg-amber-900/10 rounded-3xl p-12 text-center border-2 border-dashed border-amber-200 dark:border-amber-800 animate-pulse">
-                                <p class="text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest text-sm">No variables detect in this template</p>
+                                @else
+                                    <div class="col-span-full">
+                                        <div class="bg-amber-50 dark:bg-amber-900/10 rounded-3xl p-12 text-center border-2 border-dashed border-amber-200 dark:border-amber-800">
+                                            <p class="text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest text-sm">No variables detected in this template. Only phone number mapping is required.</p>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @endif
 
@@ -694,35 +696,42 @@
                     </div>
                 @endif
             </div>
-        </div>
+        </x-slot>
 
-        {{-- Wizard Action Footer --}}
-        <div class="px-8 py-8 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/10 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                @if($currentStep > 1)
-                    <button wire:click="previousStep" type="button" class="group px-8 py-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xs font-black text-slate-600 dark:text-slate-400 hover:text-wa-teal hover:border-wa-teal/30 transition-all uppercase tracking-widest flex items-center gap-2">
-                        <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        Back
-                    </button>
-                @endif
-                <button wire:click="cancelEdit" type="button" class="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors px-4">Cancel</button>
-            </div>
+        <x-slot name="footer">
+            <div class="flex items-center justify-between w-full">
+                <div class="flex items-center gap-4">
+                    @if($currentStep > 1)
+                        <button wire:click="previousStep" type="button" class="group px-6 py-3 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[10px] font-black text-slate-600 dark:text-slate-400 hover:text-wa-teal hover:border-wa-teal/30 transition-all uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3 h-3 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            Back
+                        </button>
+                    @endif
+                    <button wire:click="cancelEdit" type="button" class="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors px-4">Cancel</button>
+                </div>
 
-            <div class="flex items-center gap-4">
-                @if($currentStep < 4)
-                    <button wire:click="nextStep" type="button" class="group px-10 py-4 bg-wa-teal text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-wa-teal transition-all shadow-xl shadow-wa-teal/30 flex items-center gap-2">
-                        Next
-                        <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </button>
-                @else
-                    <button wire:click="update" type="button" class="group px-12 py-4 bg-gradient-to-r from-wa-teal to-wa-teal text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-wa-teal/40 flex items-center gap-2">
-                        Complete Setup
-                        <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    </button>
-                @endif
+                <div class="flex items-center gap-4">
+                    @if($currentStep < 4)
+                        <button wire:click="nextStep" type="button" class="group px-8 py-3 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal transition-all shadow-xl shadow-wa-teal/30 flex items-center gap-2">
+                            Next
+                            <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    @else
+                        <button wire:click="update" type="button" class="group px-10 py-3 bg-gradient-to-r from-wa-teal to-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-wa-teal/40 flex items-center gap-2">
+                            Complete Setup
+                            <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </button>
+                    @endif
+                </div>
             </div>
+        </x-slot>
+    </x-dialog-modal>
+
+    @if($sources->hasPages())
+        <div class="mt-8 p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+            {{ $sources->links() }}
         </div>
-    </div>
+    @endif
 
     {{-- Test Modal --}}
     @if($showTestModal)
