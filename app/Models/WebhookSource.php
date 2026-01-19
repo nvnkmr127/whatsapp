@@ -10,6 +10,7 @@ class WebhookSource extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'auth_config' => 'array',
         'field_mappings' => 'array',
         'transformation_rules' => 'array',
         'filtering_rules' => 'array',
@@ -43,7 +44,7 @@ class WebhookSource extends Model
     // Helper Methods
     public function getAuthConfig($key = null, $default = null)
     {
-        $config = is_string($this->auth_config) ? json_decode($this->auth_config, true) : $this->auth_config;
+        $config = $this->auth_config;
 
         if ($key === null) {
             return $config ?? [];

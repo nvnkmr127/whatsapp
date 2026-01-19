@@ -44,10 +44,17 @@ class InboundWebhookController extends Controller
         // Authenticate webhook
         if (!$this->authService->verify($request, $source->auth_method, $source->getAuthConfig())) {
             Log::warning('Webhook authentication failed', [
-                'source' => $source->name,
+                'source_id' => $source->id,
+                'source_name' => $source->name,
                 'auth_method' => $source->auth_method,
+                'url' => $request->fullUrl(),
+                'headers' => array_keys($request->headers->all()),
             ]);
-            return response()->json(['error' => 'Authentication failed'], 401);
+            return response()->json([
+                'error' => 'Authentication failed',
+                'required_auth' => $source->auth_method,
+                'tip' => 'Check your webhook source configuration for the correct credentials and headers.'
+            ], 401);
         }
 
         // Get payload

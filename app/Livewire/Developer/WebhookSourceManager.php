@@ -357,15 +357,19 @@ class WebhookSourceManager extends Component
 
         // Build field mappings
         $fieldMappings = [];
-        if ($this->selectedEventType && !empty($this->templateParameters)) {
-            $fieldMappings[$this->selectedEventType] = [];
+        $eventType = $this->selectedEventType ?: 'custom';
+
+        if (!empty($this->templateParameters)) {
+            $fieldMappings[$eventType] = [];
 
             foreach ($this->templateParameters as $position => $fieldPath) {
-                $fieldMappings[$this->selectedEventType]["param_{$position}"] = $fieldPath;
+                if ($fieldPath) {
+                    $fieldMappings[$eventType]["param_{$position}"] = $fieldPath;
+                }
             }
 
             if (isset($this->field_mappings['phone_number'])) {
-                $fieldMappings[$this->selectedEventType]['phone_number'] = $this->field_mappings['phone_number'];
+                $fieldMappings[$eventType]['phone_number'] = $this->field_mappings['phone_number'];
             }
         }
 
@@ -478,7 +482,14 @@ class WebhookSourceManager extends Component
 
         if ($this->actionType === 'send_template') {
             $config['template_id'] = $this->selectedTemplateId;
-            $config['parameter_mapping'] = $this->templateParameters ?? [];
+
+            $paramMapping = [];
+            foreach ($this->templateParameters as $position => $field) {
+                if ($field) {
+                    $paramMapping[$position] = "param_{$position}";
+                }
+            }
+            $config['parameter_mapping'] = $paramMapping;
             $config['phone_field'] = 'phone_number';
         }
 
@@ -608,21 +619,27 @@ class WebhookSourceManager extends Component
 
         // Get template parameters for selected template
         $templateParams = [];
+        $selectedTemplate = null;
         if ($this->selectedTemplateId) {
-            $template = WhatsappTemplate::find($this->selectedTemplateId);
-            if ($template && $template->components) {
-                foreach ($template->components as $component) {
-                    if (isset($component['type']) && $component['type'] === 'BODY') {
-                        // Extract {{1}}, {{2}}, etc. from template body
-                        preg_match_all('/\{\{(\d+)\}\}/', $component['text'] ?? '', $matches);
+            $selectedTemplate = WhatsappTemplate::find($this->selectedTemplateId);
+            if ($selectedTemplate && $selectedTemplate->components) {
+                foreach ($selectedTemplate->components as $component) {
+                    // Extract {{1}}, {{2}}, etc. from all components with text
+                    if (isset($component['text'])) {
+                        preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches);
                         if (!empty($matches[1])) {
-                            $templateParams = $matches[1];
+                            foreach ($matches[1] as $match) {
+                                if (!in_array($match, $templateParams)) {
+                                    $templateParams[] = $match;
+                                }
+                            }
                         }
                     }
                 }
+                sort($templateParams);
             }
         }
 
-        return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams'));
+        return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate'));
     }
 }

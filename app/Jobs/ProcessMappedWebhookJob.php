@@ -79,17 +79,17 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         // Build template parameters
         $parameters = [];
-        foreach ($parameterMapping as $position => $field) {
-            $parameters[$position] = $this->payload->mapped_data[$field] ?? '';
+        foreach ($parameterMapping as $position => $mappedKey) {
+            $parameters[$position] = $this->payload->mapped_data[$mappedKey] ?? '';
         }
 
         // Send WhatsApp template
-        $whatsappService = new WhatsAppService();
+        $whatsappService = new WhatsAppService($template->team);
         $whatsappService->sendTemplate(
             $phoneNumber,
             $template->name,
-            $parameters,
-            $template->language ?? 'en'
+            $template->language ?? 'en_US',
+            $parameters
         );
 
         Log::info('Webhook triggered template send', [

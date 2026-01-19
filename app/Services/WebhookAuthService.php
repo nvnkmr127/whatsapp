@@ -111,6 +111,7 @@ class WebhookAuthService
         if (!$providedKey) {
             Log::warning('API Key verification failed: No key header found', [
                 'expected_header' => $header,
+                'available_headers' => array_keys($request->headers->all()),
             ]);
             return false;
         }
@@ -118,7 +119,10 @@ class WebhookAuthService
         $isValid = hash_equals($expectedKey, $providedKey);
 
         if (!$isValid) {
-            Log::warning('API Key verification failed: Key mismatch');
+            Log::warning('API Key verification failed: Key mismatch', [
+                'header' => $header,
+                'received_key_preview' => substr($providedKey, 0, 4) . '...',
+            ]);
         }
 
         return $isValid;
@@ -135,17 +139,28 @@ class WebhookAuthService
         $authHeader = $request->header('Authorization');
 
         if (!$authHeader || !str_starts_with($authHeader, 'Basic ')) {
-            Log::warning('Basic Auth verification failed: No auth header found');
+            Log::warning('Basic Auth verification failed: No valid Authorization header found', [
+                'has_header' => (bool) $authHeader,
+            ]);
             return false;
         }
 
         $credentials = base64_decode(substr($authHeader, 6));
-        [$providedUsername, $providedPassword] = explode(':', $credentials, 2);
+        $parts = explode(':', $credentials, 2);
+
+        if (count($parts) < 2) {
+            Log::warning('Basic Auth verification failed: Malformed credentials');
+            return false;
+        }
+
+        [$providedUsername, $providedPassword] = $parts;
 
         $isValid = hash_equals($username, $providedUsername) && hash_equals($password, $providedPassword);
 
         if (!$isValid) {
-            Log::warning('Basic Auth verification failed: Credentials mismatch');
+            Log::warning('Basic Auth verification failed: Credentials mismatch', [
+                'username_match' => hash_equals($username, $providedUsername),
+            ]);
         }
 
         return $isValid;
