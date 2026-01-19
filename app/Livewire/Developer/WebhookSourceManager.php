@@ -159,7 +159,7 @@ class WebhookSourceManager extends Component
             'name' => $this->name,
             'platform' => $this->platform,
             'auth_method' => $this->auth_method,
-            'auth_config' => json_encode($this->auth_config),
+            'auth_config' => $this->auth_config,
             'is_active' => true,
         ]);
         $this->editingId = $source->id;
@@ -183,6 +183,13 @@ class WebhookSourceManager extends Component
             // Set sample transformations
             if (!empty($preset['sample_transformations'])) {
                 $this->transformation_rules = $preset['sample_transformations'];
+            }
+
+            // Auto-generate keys/secrets if missing
+            if ($this->auth_method === 'api_key' && empty($this->auth_config['key'])) {
+                $this->generateApiKey();
+            } elseif ($this->auth_method === 'hmac' && empty($this->auth_config['secret'])) {
+                $this->generateSecret();
             }
         }
 
@@ -377,7 +384,7 @@ class WebhookSourceManager extends Component
             'name' => $this->name,
             'platform' => $this->platform,
             'auth_method' => $this->auth_method,
-            'auth_config' => json_encode($this->auth_config),
+            'auth_config' => $this->auth_config,
             'field_mappings' => $fieldMappings ?: $this->field_mappings,
             'transformation_rules' => $this->transformation_rules,
             'action_config' => $actionConfig,

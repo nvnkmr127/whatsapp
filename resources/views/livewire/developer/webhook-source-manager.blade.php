@@ -399,18 +399,17 @@
                                     </h7>
 
                                     @php
-                                        $source = \App\Models\WebhookSource::find($editingId);
-                                        $authHeader = $source?->getAuthConfig('header');
+                                        $authHeader = $auth_config['header'] ?? null;
                                         if (!$authHeader) {
-                                            $authHeader = match($source?->auth_method) {
+                                            $authHeader = match($auth_method) {
                                                 'api_key' => 'X-API-Key',
                                                 'hmac' => 'X-Webhook-Signature',
                                                 'basic' => 'Authorization',
                                                 default => null
                                             };
                                         }
-                                        $authValue = match($source?->auth_method) {
-                                            'api_key' => $source?->getAuthConfig('key'),
+                                        $authValue = match($auth_method) {
+                                            'api_key' => $auth_config['key'] ?? 'MISSING_KEY',
                                             'hmac' => 'HMAC-SHA256(payload, secret)',
                                             'basic' => 'Basic base64(user:pass)',
                                             default => 'No authentication required'
