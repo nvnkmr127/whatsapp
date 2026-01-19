@@ -141,7 +141,7 @@
                                         {{ $stepNum }}
                                     @endif
                                 </div>
-                                <div class="text-center">
+                                <div class="text-center hidden md:block">
                                     <div
                                         class="text-[9px] font-black uppercase tracking-tight {{ $currentStep >= $stepNum ? 'text-slate-900 dark:text-white' : 'text-slate-400' }}">
                                         {{ $step[0] }}</div>
@@ -331,26 +331,26 @@
                             @endif
 
                             <div
-                                class="relative z-10 w-64 h-64 rounded-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col items-center justify-center border-8 border-slate-50 dark:border-slate-800 transition-all duration-700 {{ $isCapturing ? 'border-purple-500/50 scale-110' : '' }}">
+                                class="relative z-10 w-48 h-48 md:w-64 md:h-64 rounded-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col items-center justify-center border-8 border-slate-50 dark:border-slate-800 transition-all duration-700 {{ $isCapturing ? 'border-purple-500/50 scale-105 md:scale-110' : '' }}">
                                 @if($isCapturing)
-                                    <div class="w-16 h-16 text-wa-teal animate-bounce mb-4">
+                                    <div class="w-12 h-12 md:w-16 md:h-16 text-wa-teal animate-bounce mb-4">
                                         <svg fill="currentColor" viewBox="0 0 24 24">
                                             <path
                                                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
                                         </svg>
                                     </div>
                                     <button wire:click="stopCapture"
-                                        class="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline">Stop
+                                        class="text-xs font-black text-rose-500 uppercase tracking-widest hover:underline bg-rose-500/5 px-4 py-2 rounded-full border border-rose-500/10">Stop
                                         Listening</button>
                                 @else
                                     <button wire:click="startCapture"
-                                        class="w-40 h-40 rounded-full bg-gradient-to-tr from-wa-teal to-wa-teal text-wa-teal flex flex-col items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-wa-teal/30 group">
-                                        <svg class="w-12 h-12 group-hover:rotate-12 transition-transform" fill="none"
+                                        class="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr from-wa-teal to-wa-teal text-white flex flex-col items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-wa-teal/30 group">
+                                        <svg class="w-8 h-8 md:w-12 md:h-12 group-hover:rotate-12 transition-transform" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M13 10V3L4 14h7v7l9-11h-7z" />
                                         </svg>
-                                        <span class="text-xs font-black uppercase tracking-widest">Start Capture</span>
+                                        <span class="text-[10px] md:text-xs font-black uppercase tracking-widest">Start Capture</span>
                                     </button>
                                 @endif
                             </div>
