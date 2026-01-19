@@ -64,7 +64,10 @@ class WebhookSourceManager extends Component
 
     protected function initializeDefaults()
     {
-        $this->auth_config = ['key' => Str::random(32)];
+        $this->auth_config = [
+            'key' => Str::random(32),
+            'header' => 'X-API-Key'
+        ];
         $this->field_mappings = [];
         $this->transformation_rules = [];
         $this->action_config = [];
@@ -190,6 +193,11 @@ class WebhookSourceManager extends Component
                 $this->generateApiKey();
             } elseif ($this->auth_method === 'hmac' && empty($this->auth_config['secret'])) {
                 $this->generateSecret();
+            }
+
+            // Set default header if not present in config but present in preset
+            if (empty($this->auth_config['header']) && !empty($preset['auth_config']['header'])) {
+                $this->auth_config['header'] = $preset['auth_config']['header'];
             }
         }
 
