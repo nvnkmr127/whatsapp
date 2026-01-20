@@ -10,9 +10,30 @@ return new class extends Migration {
      */
     public function up(): void
     {
+        // First, clean up any duplicate whatsapp_message_id values
+        // Keep the oldest message for each duplicate whatsapp_message_id
+        DB::statement("
+            DELETE m1 FROM messages m1
+            INNER JOIN messages m2 
+            WHERE m1.whatsapp_message_id = m2.whatsapp_message_id
+            AND m1.whatsapp_message_id IS NOT NULL
+            AND m1.id > m2.id
+        ");
+
         Schema::table('messages', function (Blueprint $table) {
-            // Drop existing index if it exists
-            $table->dropIndex(['whatsapp_message_id']);
+            // Drop existing index if it exists (wrapped in try-catch to handle if it doesn't exist)
+            try {
+                $sm = Schema::getConnection()->getDoctrineSchemaManager();
+                $indexes = $sm->listTableIndexes('messages');
+
+                // Check if a non-unique index exists
+                if (isset($indexes['messages_whatsapp_message_id_index'])) {
+                    $table->dropIndex(['whatsapp_message_id']);
+                }
+            } catch (\Exception $e) {
+                // Index doesn't exist, that's fine
+            }
+
             // Add unique constraint
             $table->unique('whatsapp_message_id');
         });
