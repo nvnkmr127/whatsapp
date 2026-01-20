@@ -48,6 +48,10 @@
                         <x-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
                             {{ __('Analytics') }}
                         </x-nav-link>
+
+                        <x-nav-link href="{{ route('backups.index') }}" :active="request()->routeIs('backups.*')">
+                            {{ __('Backups') }}
+                        </x-nav-link>
                     @endcan
                 </div>
             </div>
@@ -87,6 +91,10 @@
                                     @can('manage-settings')
                                         <x-dropdown-link href="{{ route('teams.whatsapp_config') }}">
                                             {{ __('WhatsApp API') }}
+                                        </x-dropdown-link>
+
+                                        <x-dropdown-link href="{{ route('backups.index') }}">
+                                            {{ __('Backup & Restore') }}
                                         </x-dropdown-link>
                                     @endcan
 
@@ -181,6 +189,9 @@
                                 <x-dropdown-link href="{{ route('admin.dashboard') }}">
                                     {{ __('Admin Dashboard') }}
                                 </x-dropdown-link>
+                                <x-dropdown-link href="{{ route('backups.index') }}">
+                                    {{ __('System Backups') }}
+                                </x-dropdown-link>
                             @endif
 
                             <div class="border-t border-gray-200 dark:border-gray-600"></div>
@@ -253,6 +264,10 @@
                 <x-responsive-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
                     {{ __('Analytics') }}
                 </x-responsive-nav-link>
+
+                <x-responsive-nav-link href="{{ route('backups.index') }}" :active="request()->routeIs('backups.*')">
+                    {{ __('Backups') }}
+                </x-responsive-nav-link>
             @endcan
         </div>
 
@@ -312,6 +327,10 @@
                     <x-responsive-nav-link href="{{ route('admin.dashboard') }}"
                         :active="request()->routeIs('admin.dashboard')">
                         {{ __('Admin Dashboard') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link href="{{ route('backups.index') }}"
+                        :active="request()->routeIs('backups.*')">
+                        {{ __('System Backups') }}
                     </x-responsive-nav-link>
                 @endif
 

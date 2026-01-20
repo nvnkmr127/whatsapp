@@ -45,10 +45,10 @@
                 <div class="absolute top-6 right-6">
                     <span
                         class="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full 
-                                            @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
-                                            @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
-                                            @elseif($campaign->status === 'processing') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
-                                            @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
+                                                @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
+                                                @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
+                                                @elseif($campaign->status === 'processing') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
+                                                @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
                         {{ $campaign->status }}
                     </span>
                 </div>
@@ -78,6 +78,13 @@
                     <div
                         class="mt-auto flex items-center justify-between pt-6 border-t border-slate-50 dark:border-slate-800/50">
                         <div class="flex items-center gap-2">
+                            @if(in_array($campaign->status, ['processing', 'sending', 'queued']))
+                                <a href="{{ route('campaigns.live', $campaign->id) }}"
+                                    class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-teal/20">
+                                    Live Monitor
+                                </a>
+                            @endif
+
                             <a href="{{ route('campaigns.show', $campaign->id) }}"
                                 class="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                 View Report

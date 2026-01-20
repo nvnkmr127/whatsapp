@@ -71,7 +71,7 @@ class WhatsAppService
     /**
      * Send a plain text message.
      */
-    public function sendText($to, $message)
+    public function sendText($to, $message, $existingMessage = null)
     {
         // Find contact to check policy
         $contact = \App\Models\Contact::firstOrCreate(
@@ -85,6 +85,24 @@ class WhatsAppService
             throw new \Exception("Cannot send free text message. 24-hour window is closed or User opted out. (Policy UC-03). Please use a Template.");
         }
 
+        // 1. Resolve Conversation
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        // 2. Pre-Persist or Use Existing
+        $msg = $existingMessage;
+        if (!$msg) {
+            $msg = \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
+                'type' => 'text',
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'content' => $message,
+            ]);
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
@@ -92,37 +110,39 @@ class WhatsAppService
             'text' => ['body' => $message],
         ];
 
-        $response = $this->sendRequest('messages', $payload);
+        try {
+            $response = $this->sendRequest('messages', $payload);
 
-        if ($response['success'] ?? false) {
-            $wamId = $response['data']['messages'][0]['id'] ?? null;
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation);
 
-            // Resolve Conversation
-            $conversationService = new \App\Services\ConversationService();
-            $conversation = $conversationService->ensureActiveConversation($contact);
-            $conversationService->handleOutboundMessage($conversation);
+                $msg->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamId,
+                    'sent_at' => now(),
+                ]);
+            } else {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
+                ]);
+            }
 
-            // Persist to Database
-            \App\Models\Message::create([
-                'team_id' => $this->team->id,
-                'contact_id' => $contact->id,
-                'conversation_id' => $conversation->id,
-                'type' => 'text',
-                'direction' => 'outbound',
-                'status' => 'sent',
-                'whatsapp_message_id' => $wamId,
-                'content' => $message,
-                'sent_at' => now(),
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
             ]);
+            throw $e;
         }
-
-        return $response;
     }
 
     /**
      * Send a media message (Image, Video, Audio, Document).
      */
-    public function sendMedia($to, $type, $link, $caption = null)
+    public function sendMedia($to, $type, $link, $caption = null, $existingMessage = null)
     {
         // Find contact to check policy
         $contact = \App\Models\Contact::firstOrCreate(
@@ -136,6 +156,26 @@ class WhatsAppService
             throw new \Exception("Cannot send media. 24-hour window is closed or User opted out. Please use a Template.");
         }
 
+        // 1. Resolve Conversation
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        // 2. Pre-Persist or Use Existing
+        $msg = $existingMessage;
+        if (!$msg) {
+            $msg = \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
+                'type' => $type,
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'media_type' => $type,
+                'media_url' => $link,
+                'caption' => $caption,
+            ]);
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
@@ -146,39 +186,39 @@ class WhatsAppService
             ]
         ];
 
-        $response = $this->sendRequest('messages', $payload);
+        try {
+            $response = $this->sendRequest('messages', $payload);
 
-        if ($response['success'] ?? false) {
-            $wamId = $response['data']['messages'][0]['id'] ?? null;
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation);
 
-            // Resolve Conversation
-            $conversationService = new \App\Services\ConversationService();
-            $conversation = $conversationService->ensureActiveConversation($contact);
-            $conversationService->handleOutboundMessage($conversation);
+                $msg->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamId,
+                    'sent_at' => now(),
+                ]);
+            } else {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
+                ]);
+            }
 
-            // Persist to Database
-            \App\Models\Message::create([
-                'team_id' => $this->team->id,
-                'contact_id' => $contact->id,
-                'conversation_id' => $conversation->id,
-                'type' => $type,
-                'direction' => 'outbound',
-                'status' => 'sent',
-                'whatsapp_message_id' => $wamId,
-                'media_type' => $type,
-                'media_url' => $link, // Store original link or handle accordingly
-                'caption' => $caption,
-                'sent_at' => now(),
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
             ]);
+            throw $e;
         }
-
-        return $response;
     }
 
     /**
      * Send interactive buttons.
      */
-    public function sendInteractiveButtons($to, $text, array $buttons)
+    public function sendInteractiveButtons($to, $text, array $buttons, $existingMessage = null)
     {
         // Find contact to check policy
         $contact = \App\Models\Contact::firstOrCreate(
@@ -190,6 +230,25 @@ class WhatsAppService
         if ($contact && !$policy->canSendFreeMessage($contact)) {
             Log::warning("Blocked interactive message to {$to}. 24h Window Closed or Opt-out.");
             throw new \Exception("Cannot send interactive buttons. 24-hour window is closed or User opted out. Please use a Template.");
+        }
+
+        // 1. Resolve Conversation
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        // 2. Pre-Persist or Use Existing
+        $msg = $existingMessage;
+        if (!$msg) {
+            $msg = \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
+                'type' => 'interactive',
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'content' => $text,
+                'metadata' => ['buttons' => $buttons],
+            ]);
         }
 
         $buttonObjects = [];
@@ -211,32 +270,33 @@ class WhatsAppService
             ]
         ];
 
-        $response = $this->sendRequest('messages', $payload);
+        try {
+            $response = $this->sendRequest('messages', $payload);
 
-        if ($response['success'] ?? false) {
-            $wamId = $response['data']['messages'][0]['id'] ?? null;
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation);
 
-            // Resolve Conversation
-            $conversationService = new \App\Services\ConversationService();
-            $conversation = $conversationService->ensureActiveConversation($contact);
-            $conversationService->handleOutboundMessage($conversation);
+                $msg->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamId,
+                    'sent_at' => now(),
+                ]);
+            } else {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
+                ]);
+            }
 
-            // Persist to Database
-            \App\Models\Message::create([
-                'team_id' => $this->team->id,
-                'contact_id' => $contact->id,
-                'conversation_id' => $conversation->id,
-                'type' => 'interactive',
-                'direction' => 'outbound',
-                'status' => 'sent',
-                'whatsapp_message_id' => $wamId,
-                'content' => $text, // Main body text
-                'metadata' => ['buttons' => $buttons],
-                'sent_at' => now(),
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
             ]);
+            throw $e;
         }
-
-        return $response;
     }
 
     /**
@@ -245,7 +305,7 @@ class WhatsAppService
     /**
      * Send a template message.
      */
-    public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null)
+    public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null, $existingMessage = null)
     {
         // Fetch Template first to understand structure
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
@@ -382,11 +442,12 @@ class WhatsAppService
         }
         // ---------------------
 
-        $response = $this->sendRequest('messages', $payload);
+        // --- PRE-PERSISTENCE or USE EXISTING ---
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
 
-        if ($response['success'] ?? false) {
-            $wamId = $response['data']['messages'][0]['id'] ?? null;
-
+        $msg = $existingMessage;
+        if (!$msg) {
             // Render Body for Display
             $richContent = "Template: {$templateName}";
             $mediaUrl = null;
@@ -413,21 +474,14 @@ class WhatsAppService
                 }
             }
 
-            // Resolve Conversation
-            $conversationService = new \App\Services\ConversationService();
-            $conversation = $conversationService->ensureActiveConversation($contact);
-            $conversationService->handleOutboundMessage($conversation);
-
-            // Persist to Database
-            \App\Models\Message::create([
+            $msg = \App\Models\Message::create([
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
-                'campaign_id' => $campaignId, // Passed from broadcast if applicable
+                'campaign_id' => $campaignId,
                 'type' => 'template',
                 'direction' => 'outbound',
-                'status' => 'sent',
-                'whatsapp_message_id' => $wamId,
+                'status' => 'queued',
                 'content' => $richContent,
                 'media_url' => $mediaUrl,
                 'media_type' => $mediaType,
@@ -436,11 +490,36 @@ class WhatsAppService
                     'language' => $language,
                     'variables' => array_merge($headerParams, $bodyParams, $footerParams)
                 ],
-                'sent_at' => now(),
             ]);
         }
 
-        return $response;
+        try {
+            $response = $this->sendRequest('messages', $payload);
+
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation);
+
+                $msg->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamId,
+                    'sent_at' => now(),
+                ]);
+            } else {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
     }
 
     /**

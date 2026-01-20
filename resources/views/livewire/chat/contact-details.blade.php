@@ -41,10 +41,10 @@
 
                 <div class="mt-3 flex items-center gap-2">
                     <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                                {{ $contact->opt_in_status === 'opted_in'
+                                    {{ $contact->opt_in_status === 'opted_in'
             ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
-                                }}">
+                                    }}">
                         <!-- Default Text -->
                         <span class="block {{ $contact->opt_in_status === 'opted_in' ? 'group-hover:hidden' : '' }}">
                             {{ $contact->opt_in_status === 'opted_in' ? 'OPTED IN' : 'OPTED OUT' }}
@@ -161,6 +161,47 @@
                         </svg>
                         <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Metadata
                             Encrypted</span>
+                    </div>
+                </section>
+
+                <section>
+                    <h5
+                        class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167a2.405 2.405 0 011.002-2.736l3.144-1.921A1.76 1.76 0 0111 5.882zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Campaign History
+                    </h5>
+                    <div class="space-y-2">
+                        @php
+                            $uniqueCampaigns = $contact->attributedMessages
+                                ->map(fn($m) => $m->attributedCampaign)
+                                ->filter()
+                                ->unique('id')
+                                ->sortByDesc('created_at');
+                        @endphp
+
+                        @forelse($uniqueCampaigns as $camp)
+                            <div
+                                class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
+                                <div class="flex flex-col">
+                                    <span
+                                        class="text-[10px] font-black text-slate-900 dark:text-white truncate max-w-[140px]">{{ $camp->name }}</span>
+                                    <span
+                                        class="text-[8px] font-bold text-slate-400 uppercase">{{ $camp->created_at->format('M d, Y') }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal border border-wa-teal/20 rounded text-[7px] font-black uppercase">Interacted</span>
+                                </div>
+                            </div>
+                        @empty
+                            <div
+                                class="py-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                                <span class="text-[10px] font-black text-slate-400 uppercase italic">No Campaign Reach</span>
+                            </div>
+                        @endforelse
                     </div>
                 </section>
 

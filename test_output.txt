@@ -1,0 +1,47 @@
+
+   FAIL  Tests\Feature\Integrations\GoogleDriveBackupTest
+  ⨯ google drive upload flow                                             1.51s  
+  ⨯ token refresh handled                                                0.01s  
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Integrations\GoogleDriveBackupTest > goo…  Exception   
+  Google token refresh failed: {
+  "error": "invalid_request",
+  "error_description": "Could not determine client ID from request."
+}
+
+  at app/Services/Integrations/GoogleDriveService.php:120
+    116▕                 $this->integration->update([
+    117▕                     'status' => 'error',
+    118▕                     'error_message' => 'Failed to refresh Google Drive token.'
+    119▕                 ]);
+  ➜ 120▕                 throw new Exception("Google token refresh failed: " . $response->body());
+    121▕             }
+    122▕ 
+    123▕             $data = $response->json();
+    124▕             $credentials['access_token'] = $data['access_token'];
+
+  1   app/Services/Integrations/GoogleDriveService.php:120
+  2   app/Services/Integrations/GoogleDriveService.php:27
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Integrations\GoogleDriveBackupTest…   QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: integrations.name (Connection: sqlite, Database: :memory:, SQL: insert into "integrations" ("team_id", "type", "credentials", "status", "updated_at", "created_at") values (1, google_drive, eyJpdiI6IkxzM3NLYjI4TVNobGRNTk1KKzFaSEE9PSIsInZhbHVlIjoib1o3MlVQNy9FSTYrWGMvRStyVXRWcjdaVDZ6N0hMd0pIVlpiTU5jRTdHL1RMNXlDRHVGT0tPeHJtNWRnMGEybytaRk5DRE9FUjFaWnVjNEtkNHY5Q2Exc1hxV3NDVGJkcEZSNWwyNTh1dmVlUDdQVSs2UUUzNldVUmdRZ3UyNE4iLCJtYWMiOiIxZGFhMmU1OTdkZGNlYWM0OTQ3YzFjODEzYTU3OWE1ODhkNjc5NzlkMjZlN2Q2YzU1MTk2NzNjNmMwYWZlMDQ1IiwidGFnIjoiIn0=, active, 2026-01-20 04:09:29, 2026-01-20 04:09:29))
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:838
+    834▕             $exceptionType = $this->isUniqueConstraintError($e)
+    835▕                 ? UniqueConstraintViolationException::class
+    836▕                 : QueryException::class;
+    837▕ 
+  ➜ 838▕             throw new $exceptionType(
+    839▕                 $this->getNameWithReadWriteType(),
+    840▕                 $query,
+    841▕                 $this->prepareBindings($bindings),
+    842▕                 $e,
+
+      [2m+19 vendor frames [22m
+  20  tests/Feature/Integrations/GoogleDriveBackupTest.php:64
+
+
+  Tests:    2 failed (0 assertions)
+  Duration: 1.54s
+

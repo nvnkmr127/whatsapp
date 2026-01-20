@@ -3,49 +3,52 @@
 namespace App\Services;
 
 use App\Models\Campaign;
-use App\Models\Contact;
-use App\Jobs\SendCampaignMessage;
-use Illuminate\Support\Facades\DB;
+use App\Jobs\ProduceBroadcastEventsJob;
+use Illuminate\Support\Facades\Log;
 
 class BroadcastService
 {
+    protected $snapshotService;
+
+    public function __construct(CampaignSnapshotService $snapshotService)
+    {
+        $this->snapshotService = $snapshotService;
+    }
+
     /**
-     * Launch a campaign immediately or schedule it.
+     * Launch a campaign by creating a snapshot and producing events.
      */
     public function launch(Campaign $campaign)
     {
-        // 1. Resolve Contacts based on Segment
-        $query = Contact::where('team_id', $campaign->team_id)
-            ->where('opt_in_status', 'opted_in'); // SAFETY: Only opted-in users
+        Log::info("Launching Event-Driven Campaign {$campaign->id}");
 
-        $config = $campaign->segment_config ?? [];
+        // 1. Create Snapshot (Immutable state for this run)
+        $snapshot = $this->snapshotService->createSnapshot($campaign);
 
-        if (isset($config['tags']) && is_array($config['tags']) && count($config['tags']) > 0) {
-            $query->whereHas('tags', function ($q) use ($config) {
-                $q->whereIn('contact_tags.id', $config['tags']);
-            });
-        }
-
-        // Count total
-        $total = $query->count();
+        // 2. Update Campaign Status
         $campaign->update([
-            'total_contacts' => $total,
-            'status' => 'processing'
+            'status' => 'processing',
+            'started_at' => now(),
         ]);
 
-        if ($total === 0) {
-            $campaign->update(['status' => 'completed']);
-            return;
-        }
+        // 3. Dispatch Event Production (Async)
+        ProduceBroadcastEventsJob::dispatch($snapshot->id);
 
-        // 2. Dispatch Jobs (Rate Limiting handled by Queue Worker or Job Middleware)
-        // Chunking to avoid memory issues
-        $query->chunk(100, function ($contacts) use ($campaign) {
-            foreach ($contacts as $contact) {
-                // Dispatch Job
-                SendCampaignMessage::dispatch($campaign, $contact)
-                    ->onQueue('whatsapp_broadcasts'); // Use a dedicated queue if possible
-            }
-        });
+        Log::info("Campaign {$campaign->id} transitioned to event production phase.");
+
+        return $snapshot;
+    }
+
+    /**
+     * Cancel a running campaign (Placeholder for event-based cancellation)
+     */
+    public function cancel(Campaign $campaign)
+    {
+        // In an event-driven system, we might place a "cancellation" flag in Redis 
+        // that consumers check before processing an event from this campaign.
+        $campaign->update(['status' => 'cancelled']);
+        Log::info("Campaign {$campaign->id} marked as cancelled.");
+
+        return true;
     }
 }

@@ -45,13 +45,23 @@
                             <div class="space-y-2">
                                 <label class="text-xs font-black uppercase tracking-widest text-slate-500">Subscription
                                     Status <span class="text-rose-500">*</span></label>
-                                <select name="subscription_status"
-                                    class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none">
-                                    <option value="active" {{ old('subscription_status', $team->subscription_status) === 'active' ? 'selected' : '' }}>Active</option>
-                                    <option value="inactive" {{ old('subscription_status', $team->subscription_status) === 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                    <option value="cancelled" {{ old('subscription_status', $team->subscription_status) === 'cancelled' ? 'selected' : '' }}>Cancelled
-                                    </option>
-                                </select>
+                                <div class="relative">
+                                    <select name="subscription_status"
+                                        class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                                        <option value="active" {{ old('subscription_status', $team->subscription_status) === 'active' ? 'selected' : '' }}>Active</option>
+                                        <option value="inactive" {{ old('subscription_status', $team->subscription_status) === 'inactive' ? 'selected' : '' }}>Inactive
+                                        </option>
+                                        <option value="cancelled" {{ old('subscription_status', $team->subscription_status) === 'cancelled' ? 'selected' : '' }}>Cancelled
+                                        </option>
+                                    </select>
+                                    <div
+                                        class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
                                 @error('subscription_status') <span
                                 class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
                             </div>
@@ -87,6 +97,80 @@
                                 </div>
                                 @error('plan') <span
                                 class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
+                            </div>
+
+                            <!-- Feature Add-ons -->
+                            <div class="space-y-4 pt-4">
+                                <h3
+                                    class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                                    Feature Add-ons</h3>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <label class="relative flex items-center cursor-pointer group">
+                                        <input type="checkbox" name="features[]" value="backups" class="peer hidden" {{ $team->addOns->contains('type', 'backups') ? 'checked' : '' }}>
+                                        <div
+                                            class="flex items-center gap-4 w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all">
+                                            <div
+                                                class="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-wa-green transition-colors shadow-sm">
+                                                <svg class="w-6 h-6" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                                    Manual Backups</div>
+                                                <div
+                                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                    Enable Snapshot Recovery</div>
+                                            </div>
+                                            <div
+                                                class="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center peer-checked:bg-wa-green peer-checked:border-wa-green transition-all">
+                                                <svg class="w-4 h-4 text-white hidden peer-checked:block" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="3" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="relative flex items-center cursor-pointer group">
+                                        <input type="checkbox" name="features[]" value="cloud_backups"
+                                            class="peer hidden" {{ $team->addOns->contains('type', 'cloud_backups') ? 'checked' : '' }}>
+                                        <div
+                                            class="flex items-center gap-4 w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-500/5 transition-all">
+                                            <div
+                                                class="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors shadow-sm">
+                                                <svg class="w-6 h-6" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                                    Cloud Sync</div>
+                                                <div
+                                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                    Google Drive Integration</div>
+                                            </div>
+                                            <div
+                                                class="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 transition-all">
+                                                <svg class="w-4 h-4 text-white hidden peer-checked:block" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="3" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

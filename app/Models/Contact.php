@@ -59,4 +59,9 @@ class Contact extends Model
     {
         return $this->belongsTo(Category::class);
     }
+
+    public function attributedMessages()
+    {
+        return $this->hasMany(Message::class)->whereNotNull('attributed_campaign_id');
+    }
 }

@@ -35,4 +35,17 @@ class MessageStatusUpdated implements ShouldBroadcastNow
             new PrivateChannel('teams.' . $this->message->team_id),
         ];
     }
+
+    /**
+     * Data to broadcast.
+     */
+    public function broadcastWith(): array
+    {
+        return [
+            'message_id' => $this->message->id,
+            'whatsapp_message_id' => $this->message->whatsapp_message_id,
+            'status' => $this->message->status,
+            'timestamp' => now()->timestamp,
+        ];
+    }
 }

@@ -33,6 +33,12 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
 
     // Embed Token (if needed)
     Route::post('/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
+
+    // Conversation Locks (Multi-Agent)
+    Route::post('/conversations/{conversation}/lock', [\App\Http\Controllers\ConversationController::class, 'lock']);
+    Route::post('/conversations/{conversation}/unlock', [\App\Http\Controllers\ConversationController::class, 'unlock']);
+    Route::post('/conversations/{conversation}/heartbeat', [\App\Http\Controllers\ConversationController::class, 'heartbeat']);
+    Route::post('/conversations/{conversation}/takeover', [\App\Http\Controllers\ConversationController::class, 'forceTakeOver']);
 });
 
 use App\Http\Controllers\WhatsAppWebhookController;

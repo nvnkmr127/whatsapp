@@ -1,27 +1,79 @@
 <div class="flex flex-col h-full relative bg-dots-pattern" 
-    wire:poll.2s.keep-alive="loadConversation"
     x-data="{ 
         isTyping: false,
         typingUser: '',
-        uploadError: null,
-        showUploadErrorModal: false,
+        activeUsers: [],
         init() {
-            console.log('Front: Init Echo for teams.{{ auth()->user()->currentTeam->id }}');
+            // Init Store User ID
+            $store.chat.setMyUser({{ auth()->id() }});
             
+            // --- Presence Channel (Multi-Agent) ---
+            console.log('Front: Joining presence-conversation.{{ $conversationId }}');
+            const pChannel = window.Echo.join('conversation.{{ $conversationId }}');
+            
+            pChannel.here((users) => {
+                this.activeUsers = users;
+                // If I am here, maybe acquire lock if I was the last owner? 
+                // For now, let's just see who is here.
+            })
+            .joining((user) => {
+                this.activeUsers.push(user);
+                console.log(user.name + ' joined.');
+            })
+            .leaving((user) => {
+                this.activeUsers = this.activeUsers.filter(u => u.id !== user.id);
+                // If owner left, maybe I can take over? 
+                // Creating a 'LockReleased' event from server is cleaner, 
+                // but if they close tab, we need to know.
+                // The lock has TTL, so it will expire anyway.
+            })
+            .listenForWhisper('typing', (e) => {
+                if (e.id !== {{ auth()->id() }}) {
+                    this.isTyping = true;
+                    this.typingUser = e.name;
+                    // Debounce hide
+                    if (this.typingTimber) clearTimeout(this.typingTimer);
+                    this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
+                    
+                    // Also assume they have lock if they are typing
+                    $store.chat.setLockState(e.id);
+                }
+            });
+
+            // --- Team Events ---
             const channel = window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}');
             
-            channel.listenForWhisper('typing', (e) => {
-                    if(e.conversation_id == {{ $conversationId }}) {
-                        this.isTyping = true;
-                        this.typingUser = e.name;
-                        setTimeout(() => this.isTyping = false, 3000);
-                    }
-                });
-            
-            channel.listen('MessageReceived', (e) => { console.log('Front: MessageReceived (simple)', e); });
-            channel.listen('.MessageReceived', (e) => { console.log('Front: .MessageReceived', e); });
-            channel.listen('App\\Events\\MessageReceived', (e) => { console.log('Front: App\\Events\\MessageReceived', e); });
-            channel.listen('.App\\Events\\MessageReceived', (e) => { console.log('Front: .App\\Events\\MessageReceived', e); });
+            channel.listen('MessageReceived', (e) => { 
+                console.log('Front: MessageReceived', e);
+                $store.chat.loadMessages(); 
+            });
+
+            channel.listen('MessageStatusUpdated', (e) => {
+                 if(e.message) {
+                     let msg = $store.chat.messages.find(m => m.id === e.message.id);
+                     if(msg) msg.status = e.message.status;
+                 }
+            });
+
+            // Sync on Reconnect
+            window.addEventListener('online', () => {
+                $store.chat.setConnectionState('connected');
+            });
+            window.addEventListener('offline', () => {
+                $store.chat.setConnectionState('offline');
+            });
+
+            window.Echo.connector.pusher.connection.bind('state_change', (states) => {
+                // states = { previous: 'old', current: 'new' }
+                // map pulsar states: connected, connecting, unavailable, failed, disconnected
+                if (states.current === 'connected') {
+                     $store.chat.setConnectionState('connected');
+                } else if (states.current === 'connecting') {
+                     $store.chat.setConnectionState('connecting');
+                } else {
+                     $store.chat.setConnectionState('offline');
+                }
+            });
         }
     }"
     @play-sound.window="
@@ -35,9 +87,24 @@
         }
     ">
     <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+    
+    <!-- Connection Status Banner -->
+    <div x-show="$store.chat.connectionState !== 'connected'" x-cloak x-transition
+         class="w-full z-40 bg-rose-500/10 dark:bg-rose-900/20 py-2 border-b border-rose-200 dark:border-rose-900/50 flex items-center justify-center">
+        <div class="text-rose-600 dark:text-rose-400 text-xs font-bold inline-flex items-center gap-2">
+             <template x-if="$store.chat.connectionState === 'connecting'">
+                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+             </template>
+             <template x-if="$store.chat.connectionState === 'offline'">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             </template>
+             <span x-text="$store.chat.connectionState === 'connecting' ? 'Reconnecting to chat...' : 'You are currently offline'"></span>
+        </div>
+    </div>
+
     <!-- Header -->
     <div
-        class="px-6 py-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10 sticky top-0">
+        class="px-6 py-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10 sticky top-0 shadow-sm">
         <div class="flex items-center">
             <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
                 alt="{{ $conversation->contact->name ?? 'Unknown' }}"
@@ -49,191 +116,255 @@
                 </h2>
                 <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
                     <span class="text-wa-teal">{{ $conversation->contact->phone_number }}</span>
-                    <span x-show="isTyping" x-transition class="text-wa-teal animate-pulse font-black" style="display: none;">
-                        • TYPING...
+                    
+                    <span x-show="isTyping" x-transition class="text-wa-teal animate-pulse font-black flex items-center gap-1">
+                        <span x-text="typingUser"></span> IS TYPING...
                     </span>
+
                     @if($conversation->last_message_at)
-                        <span class="text-slate-300 dark:text-slate-700">|</span>
-                        <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}">
+                        <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping">|</span>
+                        <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}" x-show="!isTyping">
                             {{ $conversation->last_message_at->diffForHumans() }}
                         </span>
                     @endif
                 </div>
             </div>
         </div>
-        <div class="flex items-center gap-3" x-data="{ showCloseModal: false }">
-            <button @click="$dispatch('toggle-details')"
-                class="hidden xl:flex p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
-                title="Toggle Contact Info">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </button>
-
-            <span
-                class="px-2 py-1 text-[9px] font-black rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 uppercase tracking-widest">{{ $conversation->status }}</span>
-
-            @if($conversation->status !== 'closed')
-                <button @click="showCloseModal = !showCloseModal"
-                    class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
+        
+        <!-- Multi-Agent Presence & Actions -->
+        <div class="flex items-center gap-4">
+            <!-- Presence Pile -->
+            <div class="flex -space-x-2 overflow-hidden">
+                <template x-for="user in activeUsers" :key="user.id">
+                     <div class="relative group/avatar cursor-help">
+                        <img :src="user.profile_photo_url || `https://ui-avatars.com/api/?name=${user.name}&background=random`" 
+                             :alt="user.name"
+                             class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-900"
+                             :title="user.name">
+                        <div class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white dark:border-slate-900"></div>
+                     </div>
+                 </template>
+            </div>
+            
+            <div class="flex items-center gap-3" x-data="{ showCloseModal: false }">
+                <button @click="$dispatch('toggle-details')"
+                    class="hidden xl:flex p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
+                    title="Toggle Contact Info">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </button>
-            @endif
 
-            <!-- Modal -->
-            <div x-show="showCloseModal" x-cloak
-                class="absolute top-16 right-6 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
-                @click.away="showCloseModal = false">
-                <p
-                    class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
-                    Close Conversation</p>
-                <div class="grid grid-cols-1 gap-2">
-                    <button wire:click="closeConversation('resolved')" @click="showCloseModal = false"
-                        class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl text-emerald-600 transition-colors">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> Resolved
+                <span
+                    class="px-2 py-1 text-[9px] font-black rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 uppercase tracking-widest">{{ $conversation->status }}</span>
+
+                @if($conversation->status !== 'closed')
+                    <button @click="showCloseModal = !showCloseModal"
+                        class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
-                    <button wire:click="closeConversation('spam')" @click="showCloseModal = false"
-                        class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl text-rose-600 transition-colors">
-                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span> Spam
-                    </button>
-                    <button wire:click="closeConversation('timeout')" @click="showCloseModal = false"
-                        class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-slate-500 transition-colors">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span> No Response
-                    </button>
+                @endif
+
+                <!-- Modal -->
+                <div x-show="showCloseModal" x-cloak
+                    class="absolute top-16 right-6 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
+                    @click.away="showCloseModal = false">
+                    <p
+                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                        Close Conversation</p>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button wire:click="closeConversation('resolved')" @click="showCloseModal = false"
+                            class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl text-emerald-600 transition-colors">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> Resolved
+                        </button>
+                        <button wire:click="closeConversation('spam')" @click="showCloseModal = false"
+                            class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl text-rose-600 transition-colors">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span> Spam
+                        </button>
+                        <button wire:click="closeConversation('timeout')" @click="showCloseModal = false"
+                            class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-slate-500 transition-colors">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span> No Response
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Messages -->
-    <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 dark:bg-slate-950" id="messages-container" x-data
-        x-init="$el.scrollTop = $el.scrollHeight; setTimeout(() => $el.scrollTop = $el.scrollHeight, 100)"
-        @scroll-bottom.window="$el.scrollTop = $el.scrollHeight">
+    <!-- Messages (Virtual Scroller) -->
+    <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950 relative" 
+         id="messages-container"
+         x-data="{
+            itemHeight: 80, // Average height estimate
+            buffer: 5,
+            viewportHeight: 0,
+            scrollTop: 0,
+            init() {
+                $store.chat.init($wire, {{ $conversationId }});
+                this.viewportHeight = this.$el.clientHeight;
+                
+                // Initialize Scroll
+                this.$watch('$store.chat.messages', (val, old) => {
+                   if (old.length === 0 && val.length > 0) {
+                       this.$nextTick(() => this.scrollToBottom());
+                   }
+                });
+                
+                // Event Listeners
+                window.addEventListener('chat-scroll-bottom', () => this.scrollToBottom());
+                window.addEventListener('chat-initial-loaded', () => this.scrollToBottom());
+            },
+            scrollToBottom() {
+                this.$el.scrollTop = this.$el.scrollHeight;
+            },
+            handleScroll(e) {
+                this.scrollTop = e.target.scrollTop;
+                // Load More Trigger
+                if (this.scrollTop < 100 && $store.chat.messages.length > 0) {
+                    const oldHeight = this.$el.scrollHeight;
+                    const oldTop = this.$el.scrollTop;
+                    $store.chat.loadMessages().then(() => {
+                        this.$nextTick(() => {
+                            const newHeight = this.$el.scrollHeight;
+                            if (newHeight > oldHeight) {
+                                this.$el.scrollTop = newHeight - oldHeight + oldTop;
+                            }
+                        });
+                    });
+                }
+            },
+            get startIndex() {
+                return Math.floor(this.scrollTop / this.itemHeight);
+            },
+            get renderConfig() {
+                // Return start index and end index
+                // Note: Simple virtualization. For complex bubbles, use a library or just raw render if < 200 items.
+                const count = $store.chat.messages.length;
+                if (count < 100) return { start: 0, end: count, top: 0, bottom: 0 };
+                
+                let start = Math.max(0, this.startIndex - this.buffer);
+                let visibleCount = Math.ceil(this.viewportHeight / this.itemHeight) + (2 * this.buffer);
+                let end = Math.min(count, start + visibleCount);
+                
+                let topH = start * this.itemHeight;
+                let bottomH = (count - end) * this.itemHeight;
+                
+                return { start, end, top: topH, bottom: bottomH };
+            },
+            get visibleMessages() {
+                const conf = this.renderConfig;
+                return $store.chat.messages.slice(conf.start, conf.end);
+            }
+         }"
+         @scroll.passive="handleScroll"
+         x-init="init()"
+    >
 
-        <div class="flex justify-center mb-8">
-            <span
-                class="px-4 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-[9px] font-bold text-amber-700 dark:text-amber-400 tracking-wide border border-amber-200 dark:border-amber-800 flex items-center gap-2 shadow-sm">
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                        clip-rule="evenodd" />
-                </svg>
+        <div class="flex justify-center mb-8" :style="{ marginTop: renderConfig.top + 'px' }">
+             <span class="px-4 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-[9px] font-bold text-amber-700 dark:text-amber-400 tracking-wide border border-amber-200 dark:border-amber-800 flex items-center gap-2 shadow-sm">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
                 Messages are end-to-end encrypted
             </span>
         </div>
 
-        @foreach($chatMessages as $message)
-            <div wire:key="msg-{{ $message->id }}"
-                class="flex {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }} animate-in slide-in-from-bottom-2 duration-300">
+        <template x-for="message in visibleMessages" :key="message.id">
+            <div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 animate-in slide-in-from-bottom-2 duration-300']">
                 <div class="max-w-[85%] sm:max-w-[70%] group">
-                    <div
-                        class="relative {{ $message->direction === 'outbound'
-            ? 'bg-wa-teal text-white rounded-2xl rounded-tr-sm shadow-xl shadow-wa-teal/10'
-            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100 dark:border-slate-700' }} 
-                                                                                p-3 px-4 transition-all hover:scale-[1.01]">
+                    <div :class="[
+                        'relative p-3 px-4 transition-all hover:scale-[1.01] shadow-sm',
+                        message.is_outbound 
+                            ? 'bg-wa-teal text-white rounded-2xl rounded-tr-sm shadow-xl shadow-wa-teal/10' 
+                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-700'
+                    ]">
+                        <!-- Attribution Badge -->
+                        <template x-if="message.attributed_campaign_name">
+                            <div class="mb-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-wa-teal/10 dark:bg-wa-teal/20 border border-wa-teal/20">
+                                <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167a2.405 2.405 0 011.002-2.736l3.144-1.921A1.76 1.76 0 0111 5.882zM15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">
+                                    Reply to: <span x-text="message.attributed_campaign_name"></span>
+                                </span>
+                            </div>
+                        </template>
 
                         <!-- Media -->
-                        @if($message->media_url)
+                        <template x-if="message.media_url">
                             <div class="mb-3 rounded-lg overflow-hidden border border-white/10">
-                                @if(Str::startsWith($message->media_type, 'image'))
-                                    <img src="{{ Storage::url($message->media_url) }}"
-                                        class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                        onclick="window.open(this.src)">
-                                @elseif(Str::startsWith($message->media_type, 'video'))
-                                    <video src="{{ Storage::url($message->media_url) }}" controls class="w-full max-h-80"></video>
-                                @elseif(Str::startsWith($message->media_type, 'audio'))
-                                    <audio src="{{ Storage::url($message->media_url) }}" controls class="w-full"></audio>
-                                @else
-                                    <a href="{{ Storage::url($message->media_url) }}" target="_blank"
-                                        class="flex items-center gap-3 p-3 bg-white/10 rounded-lg border border-white/10 hover:bg-white/20 transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
+                                <template x-if="message.media_type && message.media_type.startsWith('image')">
+                                    <img :src="message.media_url" class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90" onclick="window.open(this.src)">
+                                </template>
+                                <template x-if="message.media_type && message.media_type.startsWith('video')">
+                                    <video :src="message.media_url" controls class="w-full max-h-80"></video>
+                                </template>
+                                <template x-if="message.media_type && message.media_type.startsWith('audio')">
+                                    <audio :src="message.media_url" controls class="w-full"></audio>
+                                </template>
+                                <template x-if="message.media_type && !['image','video','audio'].some(t => message.media_type.startsWith(t))">
+                                    <a :href="message.media_url" target="_blank" class="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                         <span class="font-bold text-xs truncate">Document</span>
                                     </a>
-                                @endif
+                                </template>
                             </div>
-                        @endif
+                        </template>
 
                         <!-- Text -->
-                        @if($message->content)
-                            <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed">
-                                {{ $message->content }}
-                            </p>
-                        @endif
-
+                        <template x-if="message.content">
+                            <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content"></p>
+                        </template>
+                        
                         <!-- Caption -->
-                        @if($message->caption && !$message->content)
-                            <p class="text-xs font-bold italic opacity-80 mt-1">{{ $message->caption }}</p>
-                        @endif
+                        <template x-if="message.caption && !message.content">
+                             <p class="text-xs font-bold italic opacity-80 mt-1" x-text="message.caption"></p>
+                        </template>
 
                         <!-- Metadata -->
-                        <div
-                            class="text-[9px] font-black uppercase tracking-widest mt-2 flex items-center justify-end gap-1.5 opacity-60">
-                            <span>{{ $message->created_at->format('H:i') }}</span>
-                            @if($message->direction === 'outbound')
-                                @if($message->status === 'read')
-                                    <!-- Read: Blue Double Tick -->
-                                    <svg class="w-3 h-3 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                            d="M5 13l4 4L19 7M5 7l4 4 10-10" />
-                                    </svg>
-                                @elseif($message->status === 'delivered')
-                                    <!-- Delivered: Gray Double Tick -->
-                                    <svg class="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                            d="M5 13l4 4L19 7M5 7l4 4 10-10" />
-                                    </svg>
-                                @elseif($message->status === 'sent')
-                                    <!-- Sent: Single Gray Tick -->
-                                    <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                @elseif($message->status === 'failed')
-                                    <!-- Failed: Red Exclamation with Tooltip -->
-                                    <div class="group/error relative">
-                                        <svg class="w-3 h-3 text-rose-300 cursor-help" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        @if($message->error_message)
-                                            <div
-                                                class="absolute bottom-full right-0 mb-2 w-48 p-2 bg-rose-900/90 text-white text-[9px] rounded-lg shadow-xl invisible group-hover/error:visible z-50 whitespace-normal normal-case">
-                                                {{ $message->error_message }}
-                                            </div>
-                                        @endif
-                                    </div>
-                                @else
-                                    <!-- Queued/Pending: Clock -->
-                                    <svg class="w-3 h-3 text-white/40 animate-pulse" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                @endif
-                            @endif
+                        <div class="text-[9px] font-black uppercase tracking-widest mt-2 flex items-center justify-end gap-1.5 opacity-60">
+                            <span x-text="message.pretty_time"></span>
+                            
+                            <template x-if="message.is_outbound">
+                                <span>
+                                    <template x-if="message.status === 'read'">
+                                        <svg class="w-3 h-3 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7M5 7l4 4 10-10" /></svg>
+                                    </template>
+                                    <template x-if="message.status === 'delivered'">
+                                        <svg class="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7M5 7l4 4 10-10" /></svg>
+                                    </template>
+                                    <template x-if="message.status === 'sent'">
+                                        <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                    </template>
+                                    <template x-if="message.status === 'failed'">
+                                        <div class="group/error relative">
+                                            <svg class="w-3 h-3 text-rose-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        </div>
+                                    </template>
+                                    <template x-if="['queued', 'sending'].includes(message.status)">
+                                        <svg class="w-3 h-3 text-white/40 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    </template>
+                                </span>
+                            </template>
                         </div>
                     </div>
                 </div>
             </div>
-        @endforeach
+        </template>
+        
+        <div :style="{ height: renderConfig.bottom + 'px' }"></div>
     </div>
 
     <!-- Input Area -->
     <div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10"
         x-data="{ 
+            msgBody: '',
             showAttach: false, 
             showEmoji: false, 
             showQR: false,
             qrFilter: '',
             quickReplies: {{ \Illuminate\Support\Js::from($quickReplies) }},
             checkQR() {
-                const val = $wire.get('messageBody') || '';
+                const val = this.msgBody || '';
                 const match = val.match(/\/(.*)$/);
                 if (match) {
                     this.showQR = true;
@@ -243,15 +374,30 @@
                 }
             },
             selectQR(text) {
-                const val = $wire.get('messageBody') || '';
-                const newVal = val.replace(/\/(.*)$/, text);
-                $wire.set('messageBody', newVal);
+                const val = this.msgBody || '';
+                this.msgBody = val.replace(/\/(.*)$/, text);
                 this.showQR = false;
                 $refs.messageInput.focus();
             },
             insertEmoji(emoji) {
-                $wire.set('messageBody', ($wire.get('messageBody') || '') + emoji);
+                this.msgBody = (this.msgBody || '') + emoji;
                 this.showEmoji = false;
+            },
+            async handleSubmit() {
+                if (this.msgBody.trim() === '' && !$wire.newAttachment) return;
+
+                // Check for attachment (Legacy Path)
+                if ($wire.newAttachment) {
+                    $wire.set('messageBody', this.msgBody);
+                    await $wire.sendMessage(); // Legacy
+                    this.msgBody = '';
+                    return;
+                }
+
+                // Text Only (Optimistic Path)
+                const body = this.msgBody;
+                this.msgBody = ''; // Clear immediately
+                $store.chat.sendMessage(body);
             }
          }">
 
@@ -289,7 +435,21 @@
                 </div>
             @endif
 
-            <form wire:submit.prevent="sendMessage" class="flex items-center gap-2 relative">
+            <form @submit.prevent="handleSubmit" class="flex items-center gap-2 relative">
+
+                <!-- Lock Banner -->
+                <div x-show="$store.chat.isLockedForMe()" x-transition x-cloak
+                     class="absolute bottom-full left-0 w-full mb-4 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs z-20">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        <span class="font-bold text-slate-500">
+                            Reply Locked: <span class="text-slate-800 dark:text-slate-200" x-text="$store.chat.lockedBy ? $store.chat.lockedBy.name : 'Another Agent'"></span> is writing...
+                        </span>
+                    </div>
+                    <button type="button" @click="$store.chat.takeOver()" class="text-wa-teal font-bold hover:underline">
+                        Take Over
+                    </button>
+                </div>
 
                 <!-- Hidden File Input -->
                 <input type="file" wire:model="newAttachment" class="hidden" x-ref="fileInput"
@@ -298,14 +458,16 @@
 
                 <!-- Attach Button (Popover) -->
                 <div class="relative">
-                    <button type="button" @click="showAttach = !showAttach"
-                        class="p-3 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all">
+                    <button type="button" @click="if(!$store.chat.isLockedForMe()) showAttach = !showAttach"
+                        :disabled="$store.chat.isLockedForMe()"
+                        :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed' : 'hover:text-wa-teal hover:bg-wa-teal/5'"
+                        class="p-3 text-slate-400 rounded-xl transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                         </svg>
                     </button>
-
+                    <!-- ... attach menu ... -->
                     <div x-show="showAttach" @click.away="showAttach = false" x-cloak
                         class="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-2 overflow-hidden animate-in slide-in-from-bottom-2 z-50">
                         <button type="button" @click="$refs.fileInput.click(); showAttach = false"
@@ -335,8 +497,10 @@
 
                 <!-- Emoji Button -->
                 <div class="relative">
-                    <button type="button" @click="showEmoji = !showEmoji"
-                        class="p-3 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all">
+                    <button type="button" @click="if(!$store.chat.isLockedForMe()) showEmoji = !showEmoji"
+                        :disabled="$store.chat.isLockedForMe()"
+                        :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed' : 'hover:text-wa-teal hover:bg-wa-teal/5'"
+                        class="p-3 text-slate-400 rounded-xl transition-all">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -353,9 +517,14 @@
 
                 <!-- Input Field -->
                 <div class="flex-1 relative group">
-                     <textarea wire:model="messageBody" wire:keydown.enter.prevent="sendMessage" x-ref="messageInput"
-                        @keyup="checkQR(); window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}').whisper('typing', { conversation_id: {{ $conversationId }}, name: 'Agent' })" placeholder="Type a message (or / for templates)..." rows="1"
-                        class="w-full py-4 px-6 bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-wa-teal/20 rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50"
+                     <textarea x-model="msgBody" @keydown.enter.prevent="handleSubmit" x-ref="messageInput"
+                        @focus="$store.chat.requestLock()"
+                        @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
+                        @keyup="checkQR(); window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}').whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()" 
+                        placeholder="Type a message (or / for templates)..." rows="1"
+                        :disabled="$store.chat.isLockedForMe()"
+                        :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50'"
+                        class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 
                     <!-- Quick Replies Popover -->
@@ -385,7 +554,9 @@
                 </div>
 
                 <button type="submit"
-                    class="h-14 w-14 flex items-center justify-center bg-slate-900 dark:bg-wa-teal text-white rounded-[1.5rem] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 disabled:opacity-50 group"
+                    :disabled="$store.chat.isLockedForMe()"
+                    :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-slate-900 dark:bg-wa-teal hover:scale-105 active:scale-95 shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20'"
+                    class="h-14 w-14 flex items-center justify-center text-white rounded-[1.5rem] transition-all group"
                     wire:loading.attr="disabled">
                     <svg class="w-5 h-5 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
                         fill="none" stroke="currentColor" viewBox="0 0 24 24">

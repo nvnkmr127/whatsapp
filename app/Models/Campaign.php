@@ -15,6 +15,8 @@ class Campaign extends Model
         'body_params' => 'array',
         'footer_params' => 'array',
         'scheduled_at' => 'datetime',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     protected static function booted()
@@ -42,6 +44,11 @@ class Campaign extends Model
     public function messages()
     {
         return $this->hasMany(Message::class);
+    }
+
+    public function lastSnapshot()
+    {
+        return $this->belongsTo(CampaignSnapshot::class, 'last_snapshot_id');
     }
 
     /*

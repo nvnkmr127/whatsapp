@@ -36,6 +36,11 @@ class Message extends Model
         return $this->belongsTo(Campaign::class);
     }
 
+    public function attributedCampaign()
+    {
+        return $this->belongsTo(Campaign::class, 'attributed_campaign_id');
+    }
+
     public function webhookWorkflow()
     {
         return $this->belongsTo(WebhookWorkflow::class);

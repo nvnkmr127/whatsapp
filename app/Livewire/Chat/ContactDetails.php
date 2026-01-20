@@ -21,7 +21,12 @@ class ContactDetails extends Component
 
     public function loadData()
     {
-        $this->conversation = Conversation::with(['contact.tags', 'notes.user', 'assignee'])->find($this->conversationId);
+        $this->conversation = Conversation::with([
+            'contact.tags',
+            'contact.attributedMessages.attributedCampaign',
+            'notes.user',
+            'assignee'
+        ])->find($this->conversationId);
         $this->contact = $this->conversation->contact;
     }
 

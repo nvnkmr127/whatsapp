@@ -37,4 +37,16 @@ class MessageReceived implements ShouldBroadcastNow
             new PrivateChannel('teams.' . $this->message->team_id),
         ];
     }
+
+    /**
+     * Data to broadcast.
+     */
+    public function broadcastWith(): array
+    {
+        return [
+            'message' => $this->message,
+            'timestamp' => now()->timestamp,
+            'sequence_id' => $this->message->id,
+        ];
+    }
 }

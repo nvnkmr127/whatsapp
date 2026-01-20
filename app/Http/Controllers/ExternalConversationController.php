@@ -73,6 +73,28 @@ class ExternalConversationController extends Controller
             \Illuminate\Support\Facades\Cache::put($cacheKey, true, 60 * 60 * 24);
         }
 
+        // 1. Resolve Contact & Conversation
+        $contact = \App\Models\Contact::firstOrCreate(
+            ['team_id' => $team->id, 'phone_number' => $request->phone_number]
+        );
+        $conversation = (new \App\Services\ConversationService())->ensureActiveConversation($contact);
+
+        // 2. Pre-persist
+        $message = \App\Models\Message::create([
+            'team_id' => $team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'type' => $request->type,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'content' => $request->type === 'text' ? $request->message : "Template: {$request->template_name}",
+            'metadata' => $request->type === 'template' ? [
+                'template_name' => $request->template_name,
+                'language' => $request->language ?? 'en_US',
+                'variables' => $request->variables ?? []
+            ] : [],
+        ]);
+
         // Dispatch Job
         \App\Jobs\SendMessageJob::dispatch(
             $team->id,
@@ -80,7 +102,8 @@ class ExternalConversationController extends Controller
             $request->type,
             $request->type === 'text' ? $request->message : ($request->variables ?? []),
             $request->template_name ?? null,
-            $request->language ?? 'en_US'
+            $request->language ?? 'en_US',
+            $message->id
         );
 
         return response()->json([

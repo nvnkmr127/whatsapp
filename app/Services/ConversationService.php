@@ -5,9 +5,98 @@ namespace App\Services;
 use App\Models\Contact;
 use App\Models\Conversation;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 class ConversationService
 {
+    /**
+     * TTL for the lock in seconds.
+     */
+    const LOCK_TTL = 30;
+
+    /**
+     * Try to acquire a lock for a conversation.
+     *
+     * @param int $conversationId
+     * @param int $userId
+     * @return array ['success' => bool, 'owner' => int|null, 'expires_in' => int]
+     */
+    public function acquireLock(int $conversationId, int $userId): array
+    {
+        $key = "conversation_lock:{$conversationId}";
+        $currentOwner = Redis::get($key);
+
+        // If locked by someone else
+        if ($currentOwner && (int) $currentOwner !== $userId) {
+            return [
+                'success' => false,
+                'owner' => (int) $currentOwner,
+                'expires_in' => Redis::ttl($key)
+            ];
+        }
+
+        // Acquire or Refresh lock
+        Redis::setex($key, self::LOCK_TTL, $userId);
+
+        return [
+            'success' => true,
+            'owner' => $userId,
+            'expires_in' => self::LOCK_TTL
+        ];
+    }
+
+    /**
+     * Force release a lock.
+     *
+     * @param int $conversationId
+     * @param int $userId
+     * @return void
+     */
+    public function releaseLock(int $conversationId, int $userId): void
+    {
+        $key = "conversation_lock:{$conversationId}";
+        $currentOwner = Redis::get($key);
+
+        // Only owner can release, unless it's a force unlock (which we handle via acquire with overwrite if needed, 
+        // but for polite release, check owner)
+        if ($currentOwner && (int) $currentOwner === $userId) {
+            Redis::del($key);
+        }
+    }
+
+    /**
+     * Force take over a lock (break existing).
+     *
+     * @param int $conversationId
+     * @param int $userId
+     * @return void
+     */
+    public function forceTakeOver(int $conversationId, int $userId): void
+    {
+        $key = "conversation_lock:{$conversationId}";
+        Redis::setex($key, self::LOCK_TTL, $userId);
+    }
+
+    /**
+     * Get current lock status.
+     *
+     * @param int $conversationId
+     * @return array|null
+     */
+    public function getLockStatus(int $conversationId): ?array
+    {
+        $key = "conversation_lock:{$conversationId}";
+        $owner = Redis::get($key);
+
+        if (!$owner) {
+            return null;
+        }
+
+        return [
+            'owner' => (int) $owner,
+            'expires_in' => Redis::ttl($key)
+        ];
+    }
     /**
      * Get the active conversation for a contact, or create a new one.
      */

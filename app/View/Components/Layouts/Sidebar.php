@@ -170,6 +170,12 @@ class Sidebar extends Component
                 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
             ],
             [
+                'route' => 'backups.index',
+                'label' => 'Backup & Restore',
+                'icon' => 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
+                'can' => 'manage-settings'
+            ],
+            [
                 'route' => 'developer.overview',
                 'label' => 'Developer',
                 'icon' => 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',

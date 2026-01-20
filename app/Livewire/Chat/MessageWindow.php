@@ -105,46 +105,47 @@ class MessageWindow extends Component
         if (!$this->conversation)
             return;
 
-        $waService = new WhatsAppService();
-        $waService->setTeam(Auth::user()->currentTeam);
+        // 1. Pre-persist for immediate UI feedback (Optimistic Update)
+        $msgData = [
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'queued',
+        ];
 
-        // Send via API
-        try {
-            $response = null;
+        if ($this->newAttachment) {
+            $path = $this->newAttachment->store('media', 'public');
+            $url = asset(Storage::url($path));
+            $type = $this->getMediaType($this->newAttachment->getMimeType());
 
-            if ($this->newAttachment) {
-                // Handle Media
-                $path = $this->newAttachment->store('media', 'public');
-                $url = asset(Storage::url($path));
-                $type = $this->getMediaType($this->newAttachment->getMimeType());
-
-                $response = $waService->sendMedia(
-                    $this->conversation->contact->phone_number,
-                    $type,
-                    $url,
-                    $this->messageBody // Caption
-                );
-
-            } elseif ($this->messageBody) {
-                // Text Only
-                $response = $waService->sendText(
-                    $this->conversation->contact->phone_number,
-                    $this->messageBody
-                );
-            }
-
-            if ($response && ($response['success'] ?? false)) {
-                // Validated
-                $this->reset(['messageBody', 'newAttachment']);
-                $this->loadConversation();
-                $this->dispatch('messageSent'); // Trigger UI update if needed
-            } else {
-                $errorMsg = $response ? ($response['error']['message'] ?? 'Unknown error') : 'No content to send.';
-                session()->flash('error', 'Failed to send: ' . $errorMsg);
-            }
-        } catch (\Exception $e) {
-            session()->flash('error', $e->getMessage());
+            $msgData['type'] = $type;
+            $msgData['content'] = $this->messageBody; // Caption
+            $msgData['media_url'] = $url;
+            $msgData['media_type'] = $type;
+            $msgData['caption'] = $this->messageBody;
+        } else {
+            $msgData['type'] = 'text';
+            $msgData['content'] = $this->messageBody;
         }
+
+        $message = \App\Models\Message::create($msgData);
+
+        // 2. Dispatch Async Job
+        \App\Jobs\SendMessageJob::dispatch(
+            Auth::user()->currentTeam->id,
+            $this->conversation->contact->phone_number,
+            $msgData['type'],
+            $msgData['type'] === 'text' ? $this->messageBody : $msgData['media_url'],
+            null, // templateName
+            'en_US',
+            $message->id
+        );
+
+        // 3. Update UI
+        $this->reset(['messageBody', 'newAttachment']);
+        $this->loadConversation();
+        $this->dispatch('messageSent');
     }
 
     private function getMediaType($mime)
@@ -326,39 +327,57 @@ class MessageWindow extends Component
         if (!$this->selectedTemplate || !$this->conversation)
             return;
 
-        $waService = new WhatsAppService();
-        $waService->setTeam(Auth::user()->currentTeam);
-
         try {
-            // Map variables to parameters structure required by WhatsApp/Service
-            // Assuming service accepts an array of strings in order
-            $parameters = [];
-
-            // Sort variables by their index (1, 2, 3...)
             ksort($this->templateVariables);
             $parameters = array_values($this->templateVariables);
 
-            // If template has a media header, the service expects the URL as the first parameter
             if ($this->templateMediaUrl) {
                 array_unshift($parameters, $this->templateMediaUrl);
             }
 
-            $response = $waService->sendTemplate(
+            // 1. Pre-persist
+            $richContent = "Template: {$this->selectedTemplate->name}";
+            $bodyComp = collect($this->selectedTemplate->components)->firstWhere('type', 'BODY');
+            if ($bodyComp) {
+                $text = $bodyComp['text'] ?? '';
+                foreach ($parameters as $index => $param) {
+                    $search = '{{' . ($index + 1) . '}}';
+                    $text = str_replace($search, $param, $text);
+                }
+                $richContent = $text;
+            }
+
+            $message = \App\Models\Message::create([
+                'team_id' => Auth::user()->currentTeam->id,
+                'contact_id' => $this->conversation->contact_id,
+                'conversation_id' => $this->conversation->id,
+                'type' => 'template',
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'content' => $richContent,
+                'metadata' => [
+                    'template_name' => $this->selectedTemplate->name,
+                    'language' => $this->selectedTemplate->language ?? 'en_US',
+                    'variables' => $parameters
+                ],
+            ]);
+
+            // 2. Dispatch Job
+            \App\Jobs\SendMessageJob::dispatch(
+                Auth::user()->currentTeam->id,
                 $this->conversation->contact->phone_number,
+                'template',
+                $parameters,
                 $this->selectedTemplate->name,
                 $this->selectedTemplate->language ?? 'en_US',
-                $parameters // Pass variables here
+                $message->id
             );
 
-            if ($response['success'] ?? false) {
-                $this->dispatch('messageSent');
-                $this->loadConversation();
-                $this->closeTemplateModals();
-                session()->flash('success', 'Template sent successfully!');
-            } else {
-                $errorMsg = $response['error']['message'] ?? 'Unknown error';
-                session()->flash('error', 'Template failed: ' . $errorMsg);
-            }
+            $this->dispatch('messageSent');
+            $this->loadConversation();
+            $this->closeTemplateModals();
+            session()->flash('success', 'Template queued for sending.');
+
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
         }
@@ -462,36 +481,154 @@ class MessageWindow extends Component
         if (!$this->conversation)
             return;
 
-        $waService = new WhatsAppService();
-        $waService->setTeam(Auth::user()->currentTeam);
-
         try {
-            // Prepare buttons: ID is just the title slugified or similar, here we use text as ID
+            // Prepare buttons
             $buttons = [];
             foreach ($this->interactiveButtons as $title) {
                 $id = 'btn_' . \Illuminate\Support\Str::slug($title);
                 $buttons[$id] = $title;
             }
 
-            $response = $waService->sendInteractiveButtons(
+            // 1. Pre-persist
+            $message = \App\Models\Message::create([
+                'team_id' => Auth::user()->currentTeam->id,
+                'contact_id' => $this->conversation->contact_id,
+                'conversation_id' => $this->conversation->id,
+                'type' => 'interactive',
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'content' => $this->buttonBody,
+                'metadata' => ['buttons' => $buttons],
+            ]);
+
+            // 2. Dispatch (Currently SendMessageJob doesn't support 'interactive' natively, let's fix that or use service)
+            // Fix: Add 'interactive' support to SendMessageJob or call sync for now (buttons are rare)
+            // For audit compliance, EVERYTHING outbound should be async.
+            // I'll update SendMessageJob to support 'interactive' as well.
+
+            \App\Jobs\SendMessageJob::dispatch(
+                Auth::user()->currentTeam->id,
                 $this->conversation->contact->phone_number,
+                'interactive',
                 $this->buttonBody,
-                $buttons
+                null,
+                'en_US',
+                $message->id
             );
 
-            if ($response['success'] ?? false) {
-                $this->dispatch('messageSent');
-                $this->loadConversation();
-                $this->showInteractiveButtonsModal = false;
-                $this->reset(['buttonBody', 'interactiveButtons']);
-                session()->flash('success', 'Buttons sent successfully!');
-            } else {
-                $errorMsg = $response['error']['message'] ?? 'Unknown error';
-                session()->flash('error', 'Failed to send buttons: ' . $errorMsg);
-            }
+            $this->dispatch('messageSent');
+            $this->loadConversation();
+            $this->showInteractiveButtonsModal = false;
+            $this->reset(['buttonBody', 'interactiveButtons']);
+            session()->flash('success', 'Buttons queued successfully!');
+
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
         }
+    }
+
+    /**
+     * API for Alpine Store to fetch messages as JSON
+     */
+    #[\Livewire\Attributes\Renderless]
+    public function loadMessagesJson($offset = 0, $limit = 50)
+    {
+        if (!$this->conversation)
+            return [];
+
+        return $this->conversation->messages()
+            ->with(['attributedCampaign'])
+            ->orderBy('created_at', 'desc')
+            ->skip($offset)
+            ->take($limit)
+            ->get()
+            ->map(function ($msg) {
+                return [
+                    'id' => $msg->id,
+                    'direction' => $msg->direction,
+                    'content' => $msg->content,
+                    'type' => $msg->type,
+                    'status' => $msg->status,
+                    'created_at' => $msg->created_at->timestamp, // Unix for easier JS sort
+                    'pretty_time' => $msg->created_at->format('H:i'),
+                    'media_url' => $msg->media_url ? (\Illuminate\Support\Facades\Storage::url($msg->media_url)) : null,
+                    'media_type' => $msg->media_type,
+                    'caption' => $msg->caption,
+                    'error_message' => $msg->error_message, // For failed status
+                    'is_outbound' => $msg->direction === 'outbound',
+                    'attributed_campaign_name' => $msg->attributedCampaign?->name,
+                ];
+            })
+            ->reverse() // Return chronological for the list
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * API for Alpine Store to send text messages and get ID
+     */
+    #[\Livewire\Attributes\Renderless]
+    public function sendMessageJson($body, $tempId)
+    {
+        if (empty($body) || !$this->conversation) {
+            return ['status' => 'error', 'message' => 'Invalid session'];
+        }
+
+        // Multi-Agent Safety: Double Commit Guard
+        // 1. Check if another agent replied in the very last second (Race Condition)
+        if ($this->conversation->last_message_at && $this->conversation->last_message_at->diffInSeconds(now()) < 2) {
+            // Assuming last message was outbound agent 
+            // We can query the actual last message to be sure it wasn't the customer
+            $lastMsg = $this->conversation->messages()->latest()->first();
+            if ($lastMsg && $lastMsg->direction === 'outbound' && $lastMsg->created_at->diffInSeconds(now()) < 2) {
+                return ['status' => 'error', 'message' => 'Collision Detected: Another agent just sent a message.'];
+            }
+        }
+
+        // 2. Check Lock Ownership (Optional strictness)
+        $lockKey = "conversation_lock:{$this->conversation->id}";
+        $lockOwner = \Illuminate\Support\Facades\Redis::get($lockKey);
+        if ($lockOwner && (int) $lockOwner !== Auth::id()) {
+            // We allow replying if lock is expired (empty) but if someone else holds it, we reject.
+            // However, UI handles input fix usually. This is a safety check.
+            return ['status' => 'error', 'message' => 'This chat is locked by another agent.'];
+        }
+
+        $msgData = [
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'type' => 'text',
+            'content' => $body
+        ];
+
+        $message = \App\Models\Message::create($msgData);
+
+        // Update conversation last_message_at immediately for the guard to work for others
+        $this->conversation->update(['last_message_at' => now()]);
+
+        // Release lock immediately after sending (optional, or let blur handle it)
+        // \App\Services\ConversationService::releaseLock($this->conversation->id, Auth::id());
+
+        \App\Jobs\SendMessageJob::dispatch(
+            Auth::user()->currentTeam->id,
+            $this->conversation->contact->phone_number,
+            'text',
+            $body,
+            null,
+            'en_US',
+            $message->id
+        );
+
+        return [
+            'id' => $message->id,
+            'temp_id' => $tempId,
+            'status' => 'queued',
+            'created_at' => $message->created_at->timestamp,
+            'pretty_time' => $message->created_at->format('H:i'),
+        ];
     }
 
     public function render()

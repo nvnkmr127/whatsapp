@@ -15,6 +15,8 @@ class SuperAdminController extends Controller
             'active_subs' => Team::where('subscription_status', 'active')->count(),
             'total_users' => User::count(),
             'total_messages' => \App\Models\Message::count(),
+            'total_backups' => \App\Models\TenantBackup::count(),
+            'global_backups' => \App\Models\TenantBackup::whereNull('team_id')->count(),
         ];
 
         $query = Team::with('owner')->latest();
@@ -34,9 +36,13 @@ class SuperAdminController extends Controller
             $query->where('subscription_status', $request->status);
         }
 
-        $teams = $query->paginate(20)->withQueryString();
+        $teams = $query->paginate(20, ['*'], 'teams')->withQueryString();
 
-        return view('admin.dashboard', compact('stats', 'teams'));
+        $globalBackups = \App\Models\TenantBackup::whereNull('team_id')
+            ->latest()
+            ->paginate(10, ['*'], 'backups');
+
+        return view('admin.dashboard', compact('stats', 'teams', 'globalBackups'));
     }
 
     public function create()
@@ -126,7 +132,7 @@ class SuperAdminController extends Controller
 
     public function edit($id)
     {
-        $team = Team::with('owner')->findOrFail($id);
+        $team = Team::with(['owner', 'addOns'])->findOrFail($id);
         return view('admin.tenants.edit', compact('team'));
     }
 
@@ -138,6 +144,8 @@ class SuperAdminController extends Controller
             'company_name' => 'required|string|max:255',
             'plan' => 'required|in:basic,pro,enterprise',
             'subscription_status' => 'required|in:active,inactive,cancelled',
+            'features' => 'nullable|array',
+            'features.*' => 'string|in:backups,cloud_backups',
         ]);
 
         $team->update([
@@ -145,6 +153,17 @@ class SuperAdminController extends Controller
             'subscription_plan' => $validated['plan'],
             'subscription_status' => $validated['subscription_status'],
         ]);
+
+        // Sync Add-ons
+        $requestedFeatures = $validated['features'] ?? [];
+
+        // Remove features not in request
+        $team->addOns()->whereNotIn('type', $requestedFeatures)->delete();
+
+        // Add features not in DB
+        foreach ($requestedFeatures as $feature) {
+            $team->addOns()->updateOrCreate(['type' => $feature]);
+        }
 
         return redirect()
             ->route('admin.dashboard')

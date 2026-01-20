@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Developer\KnowledgeBaseManager;
 use App\Livewire\Settings\AiSettings;
+use App\Http\Controllers\Integrations\GoogleDriveController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -74,6 +75,8 @@ Route::middleware([
 
     Route::get('/campaigns/{campaignId}', \App\Livewire\Campaigns\Show::class)->name('campaigns.show')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
+    Route::get('/campaigns/{campaign}/live', \App\Livewire\Campaigns\Dashboard::class)->name('campaigns.live')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
+
     Route::get('/templates', function () {
         return view('templates.index');
     })->name('templates.index')->middleware('can:manage-templates');
@@ -114,6 +117,20 @@ Route::middleware([
     Route::get('/commerce/products', \App\Livewire\Commerce\ProductManager::class)->name('commerce.products')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);
     Route::get('/commerce/settings', \App\Livewire\Commerce\CommerceSettings::class)->name('commerce.settings')->middleware(['can:manage-settings', 'plan_feature:commerce']);
     Route::get('/integrations/ecommerce', \App\Livewire\Integrations\EcommerceIntegrations::class)->name('integrations.ecommerce')->middleware(['can:manage-settings', 'plan_feature:commerce']);
+
+    // Google Drive Integration
+    Route::prefix('integrations/google-drive')->name('integrations.google-drive.')->group(function () {
+        Route::get('/redirect', [GoogleDriveController::class, 'redirect'])->name('redirect');
+        Route::get('/callback', [GoogleDriveController::class, 'callback'])->name('callback');
+        Route::post('/disconnect', [GoogleDriveController::class, 'disconnect'])->name('disconnect');
+    });
+
+    // Backup & Restore
+    Route::get('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'index'])->name('backups.index');
+    Route::post('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'store'])->name('backups.store');
+    Route::get('/backups/{id}/download', [\App\Http\Controllers\Backup\BackupController::class, 'download'])->name('backups.download');
+    Route::post('/backups/{id}/restore', [\App\Http\Controllers\Backup\RestoreController::class, 'restore'])->name('backups.restore');
+    Route::post('/backups/upload-restore', [\App\Http\Controllers\Backup\RestoreController::class, 'uploadAndRestore'])->name('backups.upload-restore');
 });
 
 // Embed Routes (Publicly accessible but Token protected internally)

@@ -146,4 +146,33 @@ class Team extends JetstreamTeam
     {
         return $this->hasMany(CannedMessage::class);
     }
+
+    public function addOns()
+    {
+        return $this->hasMany(TeamAddOn::class);
+    }
+
+    /**
+     * Centralized feature check logic.
+     * Checks subscription plan and active add-ons.
+     */
+    public function hasFeature(string $feature): bool
+    {
+        // 1. Check Subscription Status
+        if ($this->subscription_status === 'expired' || ($this->subscription_ends_at && $this->subscription_ends_at->isPast())) {
+            return false;
+        }
+
+        // 2. Check Plan Features
+        $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
+        if ($plan && $plan->hasFeature($feature)) {
+            return true;
+        }
+
+        // 3. Check Add-ons
+        return $this->addOns()
+            ->where('type', $feature)
+            ->get()
+            ->contains(fn($addon) => $addon->isActive());
+    }
 }

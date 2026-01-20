@@ -2,16 +2,16 @@
 
 namespace App\Jobs;
 
+use App\Models\Campaign;
+use App\Services\BroadcastService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class ProcessCampaignJob implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new job instance.
-     */
     protected $campaignId;
 
     public function __construct($campaignId)
@@ -19,49 +19,22 @@ class ProcessCampaignJob implements ShouldQueue
         $this->campaignId = $campaignId;
     }
 
-    public function handle(): void
+    public function handle(BroadcastService $broadcastService): void
     {
-        $campaign = \App\Models\Campaign::find($this->campaignId);
+        $campaign = Campaign::find($this->campaignId);
 
-        if (!$campaign || $campaign->status !== 'scheduled') {
+        if (!$campaign) {
             return;
         }
 
-        $campaign->update(['status' => 'processing']);
-
-        // Filter Logic
-        $query = \App\Models\Contact::where('team_id', $campaign->team_id);
-        $filters = $campaign->audience_filters ?? [];
-
-        if (!empty($filters['tags'])) {
-            $query->whereHas('tags', function ($q) use ($filters) {
-                $q->whereIn('contact_tags.id', $filters['tags']);
-            });
-        } elseif (!empty($filters['contacts'])) {
-            $query->whereIn('id', $filters['contacts']);
-        } elseif (!empty($filters['all']) && $filters['all'] === true) {
-            // target all
-        } else {
-            $query->whereRaw('1=0');
-        }
-
-        $total = $query->count();
-        $campaign->update(['total_contacts' => $total]);
-
-        if ($total === 0) {
-            $campaign->update(['status' => 'completed']);
+        // Only process if scheduled or processing (resume)
+        if (!in_array($campaign->status, ['scheduled', 'processing', 'draft'])) {
+            Log::info("Campaign {$this->campaignId} is in status {$campaign->status}, skipping launch.");
             return;
         }
 
-        // Chunking
-        $query->chunk(100, function ($contacts) use ($campaign) {
-            foreach ($contacts as $contact) {
-                dispatch(new \App\Jobs\SendCampaignMessageJob($campaign->id, $contact->id));
-            }
-        });
+        Log::info("Launching Campaign {$this->campaignId} via ProcessCampaignJob wrapper.");
 
-        // We mark as completed "dispatching", but actual sending is async. 
-        // Monitor job? For now, just mark processed.
-        $campaign->update(['status' => 'completed']);
+        $broadcastService->launch($campaign);
     }
 }
