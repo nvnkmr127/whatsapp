@@ -34,6 +34,13 @@ class PhoneNumberHelper
         // Remove leading zeros (common in local formats)
         $phone = ltrim($phone, '0');
 
+        // Check if it already starts with the numeric country code (e.g. 91...)
+        $numericCode = ltrim($defaultCode, '+');
+        if (str_starts_with($phone, $numericCode) && strlen($phone) > strlen($numericCode) + 8) {
+            // Assume it already has the code, just add +
+            return self::validate('+' . $phone);
+        }
+
         // Construct E.164 format
         $normalized = $defaultCode . $phone;
 
