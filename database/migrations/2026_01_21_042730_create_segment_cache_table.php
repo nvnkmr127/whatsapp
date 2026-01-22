@@ -15,8 +15,8 @@ return new class extends Migration {
             $table->foreignId('segment_id')->unique()->constrained()->cascadeOnDelete();
             $table->mediumText('contact_ids'); // Comma-separated contact IDs
             $table->unsignedInteger('member_count');
-            $table->timestamp('cached_at');
-            $table->timestamp('expires_at');
+            $table->timestamp('cached_at')->useCurrent();
+            $table->timestamp('expires_at')->nullable();
 
             $table->index('expires_at', 'idx_segment_cache_expires');
         });
