@@ -716,8 +716,19 @@ class WhatsAppService
         $state = $this->team->whatsapp_setup_state;
         $allowed = [
             \App\Enums\IntegrationState::READY,
-            \App\Enums\IntegrationState::READY_WARNING
+            \App\Enums\IntegrationState::READY_WARNING,
+            \App\Enums\IntegrationState::ACTIVE // Legacy/Alias support
         ];
+
+        // Auto-heal: If PROVISIONED but has credentials, upgrade to READY
+        if ($state === \App\Enums\IntegrationState::PROVISIONED) {
+            if (!empty($this->team->whatsapp_access_token) && !empty($this->team->whatsapp_phone_number_id)) {
+                Log::info("Messaging Lock: Auto-upgrading Team {$this->team->id} from PROVISIONED to READY as credentials exist.");
+                $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+                $this->team->save();
+                return; // Proceed
+            }
+        }
 
         if (!in_array($state, $allowed)) {
             $label = $state ? $state->label() : 'Unknown';
