@@ -205,14 +205,15 @@
                                         @error('category') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
                                     </div>
                                     <div class="space-y-2">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Language</label>
-                                        <select wire:model="language"
-                                            class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
-                                            <option value="en_US">English (US)</option>
-                                            <option value="es_ES">Spanish</option>
-                                        </select>
-                                        @error('language') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                                    </div>
+                                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Language</label>
+                                            <select wire:model="language"
+                                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                                                @foreach($languages as $code => $label)
+                                                    <option value="{{ $code }}">{{ $label }} ({{ $code }})</option>
+                                                @endforeach
+                                            </select>
+                                            @error('language') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+                                        </div>
                                 </div>
 
                                 <!-- Header -->
@@ -225,6 +226,7 @@
                                         <option value="IMAGE">Image</option>
                                         <option value="VIDEO">Video</option>
                                         <option value="DOCUMENT">Document</option>
+                                        <option value="LOCATION">Location</option>
                                     </select>
                                     @if ($headerType === 'TEXT')
                                         <input wire:model.live="headerText" type="text"
@@ -287,6 +289,9 @@
                                                             <option value="QUICK_REPLY">Quick Reply</option>
                                                             <option value="URL">URL</option>
                                                             <option value="PHONE_NUMBER">Phone</option>
+                                                            <option value="COPY_CODE">Promotion (Copy Code)</option>
+                                                            <option value="CATALOG">Catalog</option>
+                                                            <option value="MPM">Multi-Product</option>
                                                         </select>
                                                     </div>
                                                     <div class="space-y-1">
@@ -309,6 +314,13 @@
                                                             <input type="text" wire:model.live="buttons.{{ $index }}.phoneNumber"
                                                                 class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold"
                                                                 placeholder="+1...">
+                                                        </div>
+                                                    @elseif($buttons[$index]['type'] === 'COPY_CODE')
+                                                        <div class="col-span-full space-y-1">
+                                                            <label class="text-[9px] font-black text-slate-400 uppercase">Offer Code</label>
+                                                            <input type="text" wire:model.live="buttons.{{ $index }}.copyCode" maxlength="15"
+                                                                class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold"
+                                                                placeholder="SAVE20">
                                                         </div>
                                                     @endif
                                                 </div>
@@ -345,10 +357,11 @@
                                         <div class="absolute top-0 left-[-8px] w-0 h-0 border-t-[0px] border-r-[12px] border-b-[12px] border-transparent border-r-white dark:border-r-slate-700"></div>
 
                                         <!-- Media Header Preview -->
-                                        @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
+                                        @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION']))
                                             <div class="w-full aspect-video bg-slate-100 dark:bg-slate-600 rounded-lg mb-2 flex items-center justify-center border border-slate-200 dark:border-slate-500">
                                                 @if($headerType === 'IMAGE') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                 @elseif($headerType === 'VIDEO') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                @elseif($headerType === 'LOCATION') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                                 @else <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                                 @endif
                                             </div>
@@ -375,7 +388,9 @@
                                             @foreach($buttons as $btn)
                                                 <div class="bg-white/90 dark:bg-slate-700/90 rounded-lg py-1.5 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-600 shadow-sm backdrop-blur-sm">
                                                     @if(($btn['type'] ?? '') === 'URL') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                                                    @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                    @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                                    @elseif(($btn['type'] ?? '') === 'COPY_CODE') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                                    @elseif(in_array(($btn['type'] ?? ''), ['CATALOG', 'MPM'])) <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                                                     @endif
                                                     <span class="text-[11px] font-bold text-wa-teal truncate">{{ $btn['text'] ?: 'Button Label' }}</span>
                                                 </div>
@@ -504,10 +519,11 @@
                                         <div class="absolute top-0 left-[-8px] w-0 h-0 border-t-[0px] border-r-[12px] border-b-[12px] border-transparent border-r-white dark:border-r-slate-700"></div>
 
                                         <!-- Media Header Preview -->
-                                        @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
+                                        @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION']))
                                             <div class="w-full aspect-video bg-slate-100 dark:bg-slate-600 rounded-lg mb-2 flex items-center justify-center border border-slate-200 dark:border-slate-500">
                                                 @if($headerType === 'IMAGE') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                 @elseif($headerType === 'VIDEO') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                @elseif($headerType === 'LOCATION') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                                 @else <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                                 @endif
                                             </div>
@@ -535,6 +551,8 @@
                                                 <div class="bg-white/90 dark:bg-slate-700/90 rounded-lg py-1.5 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-600 shadow-sm backdrop-blur-sm">
                                                     @if(($btn['type'] ?? '') === 'URL') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                                                     @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                    @elseif(($btn['type'] ?? '') === 'COPY_CODE') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                                    @elseif(in_array(($btn['type'] ?? ''), ['CATALOG', 'MPM'])) <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                                                     @endif
                                                     <span class="text-[11px] font-bold text-wa-teal truncate">{{ $btn['text'] ?: 'Button Label' }}</span>
                                                 </div>
