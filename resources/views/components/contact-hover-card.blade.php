@@ -22,7 +22,7 @@
 
             {{-- Header with Avatar & Health Widget --}}
             <div
-                class="sticky top-0 z-10 p-8 pb-6 bg-gradient-to-br from-wa-teal/10 to-emerald-500/5 border-b border-slate-100 dark:border-slate-800">
+                class="sticky top-0 z-10 p-8 pb-6 bg-white dark:bg-slate-900 bg-gradient-to-br from-wa-teal/10 to-emerald-500/5 border-b border-slate-100 dark:border-slate-800">
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex items-center gap-4 flex-1">
                         <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $contact->name }}"
@@ -79,7 +79,7 @@
                                     class="flex gap-2 {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }}">
                                     <div
                                         class="max-w-[85%] {{ $message->direction === 'outbound' ? 'bg-wa-teal/10 text-wa-teal' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300' }} rounded-xl px-4 py-3 shadow-sm">
-                                        <p class="text-sm font-medium">{{ $message->body ?? 'Media message' }}</p>
+                                        <p class="text-sm font-medium">{{ $message->content ?: 'Media message' }}</p>
                                         <span
                                             class="text-[10px] opacity-60 font-medium mt-1 block">{{ $message->created_at->diffForHumans() }}</span>
                                     </div>
@@ -94,19 +94,22 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
                             <div class="text-2xl font-black text-slate-900 dark:text-white">
-                                {{ $contact->message_count ?? 0 }}</div>
+                                {{ $contact->message_count ?? 0 }}
+                            </div>
                             <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Messages
                             </div>
                         </div>
                         <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
                             <div class="text-2xl font-black text-slate-900 dark:text-white">
-                                {{ $contact->conversation_count ?? 0 }}</div>
+                                {{ $contact->conversation_count ?? 0 }}
+                            </div>
                             <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
                                 Conversations</div>
                         </div>
                         <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
                             <div class="text-2xl font-black text-slate-900 dark:text-white">
-                                {{ $contact->engagement_score ?? 0 }}</div>
+                                {{ $contact->engagement_score ?? 0 }}
+                            </div>
                             <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Engagement
                             </div>
                         </div>
