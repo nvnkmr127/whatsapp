@@ -22,6 +22,7 @@ Schedule::command('whatsapp:check-setup-health')->everySixHours();
 // Existing schedules
 Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
+Schedule::command('automation:resume')->everyMinute();
 
 // Queue Worker for Background Jobs (runs every minute, keeps running for 55s)
 // Changed from --stop-when-empty to --max-time=55 to prevent exit when queue is empty, reducing latency.

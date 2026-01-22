@@ -28,8 +28,20 @@ class AutomationTriggerListener implements ShouldQueue
 
         try {
             $automationService = new AutomationService(new WhatsAppService());
+            $handoffService = new \App\Services\BotHandoffService();
 
-            // 1. Check active flow
+            // 1. Global Handoff Keywords
+            $handoffKeywords = ['human', 'agent', 'person', 'representative', 'help', 'support', 'talk to someone'];
+            $cleanContent = strtolower(trim($content));
+            foreach ($handoffKeywords as $kw) {
+                if ($cleanContent === $kw) {
+                    $handoffService->pause($contact, 'keyword_trigger');
+                    (new \App\Services\AssignmentService())->assignToBestAgent($contact->team, $contact);
+                    return;
+                }
+            }
+
+            // 2. Check active flow
             if ($automationService->handleReply($contact, $content)) {
                 return;
             }

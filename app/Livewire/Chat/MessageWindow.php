@@ -200,6 +200,25 @@ class MessageWindow extends Component
         // For now, we rely on the JS listener in the blade file for visual feedback
     }
 
+    public function toggleBot()
+    {
+        if (!$this->conversation || !$this->conversation->contact)
+            return;
+
+        $contact = $this->conversation->contact;
+        $handoff = new \App\Services\BotHandoffService();
+
+        if ($contact->is_bot_paused) {
+            $handoff->resume($contact);
+            $this->dispatch('bot-resumed');
+        } else {
+            $handoff->pause($contact, 'manual');
+            $this->dispatch('bot-paused');
+        }
+
+        $this->loadConversation();
+    }
+
     public function deleteAttachment()
     {
         $this->newAttachment = null;

@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class HandleIncomingWorkflowJob implements ShouldQueue
 {
@@ -21,7 +22,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
     public $messageId;
     public $teamId;
 
-    public $tries = 2; // AI might fail, don't over-retry if it's a model error
+    public $tries = 2;
     public $backoff = [30, 60];
 
     public function __construct($messageId, $teamId)
@@ -32,64 +33,84 @@ class HandleIncomingWorkflowJob implements ShouldQueue
 
     public function handle(): void
     {
-        $message = Message::with(['contact', 'team'])->find($this->messageId);
-        if (!$message)
+        // Idempotency check: Ensure we don't process the same message twice
+        $lockKey = "processing_msg_{$this->messageId}";
+        if (!Cache::add($lockKey, true, 60)) {
+            Log::info("Message {$this->messageId} is already being processed. Skipping.");
             return;
-
-        $team = $message->team;
-        $contact = $message->contact;
-
-        $waService = new WhatsAppService();
-        $waService->setTeam($team);
-
-        // 1. AI Assistant Check
-        $commerceConfig = $team->commerce_config ?? [];
-        if (($commerceConfig['ai_assistant_enabled'] ?? false) && $message->type === 'text') {
-            try {
-                $aiService = new AiCommerceService($waService);
-                $handled = $aiService->handle($contact, $message->content);
-
-                if ($handled) {
-                    Log::info("AI Assistant handled message {$this->messageId}");
-                    return; // Stop further processing
-                }
-            } catch (\Exception $e) {
-                Log::error("AI Assistant Logic Failed in Job: " . $e->getMessage());
-            }
         }
 
-        // 2. Automation Service Check
-        if ($team->ai_auto_reply_enabled) {
-            $botService = new AutomationService($waService);
-            $input = $message->content;
+        try {
+            $message = Message::with(['contact', 'team'])->find($this->messageId);
+            if (!$message)
+                return;
 
-            // a. Check for "User Starts Conversation"
-            if ($contact->messages()->where('direction', 'inbound')->count() === 1) {
-                if ($botService->checkSpecialTriggers($contact, 'user_starts_conversation')) {
-                    return;
+            $team = $message->team;
+            $contact = $message->contact;
+
+            $waService = new WhatsAppService();
+            $waService->setTeam($team);
+
+            // Agent Assignment Check: Bots should stay silent if a human is assigned
+            $isAssigned = $contact->assigned_to !== null;
+
+            // 1. AI Assistant Check
+            if (!$isAssigned) {
+                $commerceConfig = $team->commerce_config ?? [];
+                if (($commerceConfig['ai_assistant_enabled'] ?? false) && $message->type === 'text') {
+                    try {
+                        $aiService = new AiCommerceService($waService);
+                        $handled = $aiService->handle($contact, $message->content);
+
+                        if ($handled) {
+                            Log::info("AI Assistant handled message {$this->messageId}");
+                            return;
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("AI Assistant Logic Failed in Job: " . $e->getMessage());
+                    }
                 }
             }
 
-            // b. Try processing active session
-            if ($botService->handleReply($contact, $input)) {
-                return;
-            }
+            // 2. Automation Service Check
+            if ($team->ai_auto_reply_enabled) {
+                $botService = new AutomationService($waService);
+                $input = $message->content;
 
-            // c. Strictly check Trigger Keywords
-            if ($botService->checkTriggers($contact, trim($input))) {
-                return;
-            }
+                // a. Check for "User Starts Conversation"
+                if (!$isAssigned && $contact->messages()->where('direction', 'inbound')->count() === 1) {
+                    if ($botService->checkSpecialTriggers($contact, 'user_starts_conversation')) {
+                        return;
+                    }
+                }
 
-            // d. Template Response
-            if (in_array($message->type, ['button', 'interactive'])) {
-                if ($botService->checkTemplateTriggers($contact, $input)) {
+                // b. Try processing active session (handleReply has internal assigned check)
+                if ($botService->handleReply($contact, $input)) {
                     return;
                 }
+
+                // c. Strictly check Trigger Keywords (has internal assigned check)
+                if (!$isAssigned && $botService->checkTriggers($contact, trim($input))) {
+                    return;
+                }
+
+                // d. Template Response (has internal assigned check)
+                if (!$isAssigned && in_array($message->type, ['button', 'interactive'])) {
+                    if ($botService->checkTemplateTriggers($contact, $input)) {
+                        return;
+                    }
+                }
             }
+
+            // 3. Welcome / Away Messages (Business Hours)
+            if (!$isAssigned) {
+                $this->handleAutoReplies($waService, $team, $contact, $message);
+            }
+
+        } finally {
+            // Keep the lock for a bit to prevent race conditions from rapid retries
+            // but eventually it will expire.
         }
-
-        // 3. Welcome / Away Messages (Business Hours)
-        $this->handleAutoReplies($waService, $team, $contact, $message);
     }
 
     protected function handleAutoReplies($waService, $team, $contact, $message)
@@ -97,7 +118,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
         // 1. Welcome Message
         if ($team->welcome_message_enabled && $contact->messages()->where('direction', 'inbound')->count() === 1) {
             $lockKey = "welcome_message_lock:{$contact->id}";
-            if (\Illuminate\Support\Facades\Cache::add($lockKey, true, 30)) {
+            if (Cache::add($lockKey, true, 30)) {
                 $this->sendAutoReply($waService, $contact->phone_number, $team->welcome_message, $team->welcome_message_config);
                 return;
             }
@@ -106,7 +127,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
         // 2. Business Hours / Away Message
         if ($team->away_message_enabled && !$team->isWithinBusinessHours()) {
             $lockKey = "away_message_lock:{$contact->id}";
-            if (\Illuminate\Support\Facades\Cache::add($lockKey, true, 3600)) { // 1h lock for away message
+            if (Cache::add($lockKey, true, 3600)) {
                 $recentOutbound = $message->conversation->messages()
                     ->where('direction', 'outbound')
                     ->where('created_at', '>', now()->subHours(24))

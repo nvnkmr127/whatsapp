@@ -129,6 +129,23 @@
                         <span x-text="typingUser"></span> IS TYPING...
                     </span>
 
+                    @if($conversation->contact->is_bot_paused)
+                        <span class="text-slate-300 dark:text-slate-700">|</span>
+                        <span class="flex items-center gap-1 text-rose-500 font-black">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                            BOT PAUSED
+                            @if($conversation->contact->bot_paused_reason)
+                                <span class="text-[8px] opacity-60">({{ $conversation->contact->bot_paused_reason }})</span>
+                            @endif
+                        </span>
+                    @else
+                        <span class="text-slate-300 dark:text-slate-700">|</span>
+                        <span class="flex items-center gap-1 text-emerald-500 font-black">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                            BOT ACTIVE
+                        </span>
+                    @endif
+
                     @if($conversation->last_message_at)
                         <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping">|</span>
                         <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}" x-show="!isTyping">
@@ -162,6 +179,16 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
+                </button>
+
+                <button wire:click="toggleBot"
+                    class="p-2 rounded-xl transition-all {{ $conversation->contact->is_bot_paused ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500' }} hover:scale-105"
+                    title="{{ $conversation->contact->is_bot_paused ? 'Resume Bot' : 'Pause Bot' }}">
+                    @if($conversation->contact->is_bot_paused)
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    @else
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    @endif
                 </button>
 
                 <span

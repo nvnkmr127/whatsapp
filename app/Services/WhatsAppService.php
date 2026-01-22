@@ -12,6 +12,7 @@ class WhatsAppService
     protected $token;
     protected $phoneId;
     protected $team;
+    public $isBot = false;
 
     public function __construct(?Team $team = null)
     {
@@ -94,7 +95,6 @@ class WhatsAppService
         });
     }
 
-
     /**
      * Send a plain text message.
      */
@@ -128,6 +128,7 @@ class WhatsAppService
                 'direction' => 'outbound',
                 'status' => 'queued',
                 'content' => $message,
+                'metadata' => ['is_bot' => $this->isBot],
             ]);
         }
 
@@ -143,7 +144,7 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
-                $conversationService->handleOutboundMessage($conversation);
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
 
                 $msg->update([
                     'status' => 'sent',
@@ -202,6 +203,7 @@ class WhatsAppService
                 'media_type' => $type,
                 'media_url' => $link,
                 'caption' => $caption,
+                'metadata' => ['is_bot' => $this->isBot],
             ]);
         }
 
@@ -220,7 +222,7 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
-                $conversationService->handleOutboundMessage($conversation);
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
 
                 $msg->update([
                     'status' => 'sent',
@@ -277,7 +279,7 @@ class WhatsAppService
                 'direction' => 'outbound',
                 'status' => 'queued',
                 'content' => $text,
-                'metadata' => ['buttons' => $buttons],
+                'metadata' => ['buttons' => $buttons, 'is_bot' => $this->isBot],
             ]);
         }
 
@@ -305,7 +307,7 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
-                $conversationService->handleOutboundMessage($conversation);
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
 
                 $msg->update([
                     'status' => 'sent',
@@ -329,9 +331,6 @@ class WhatsAppService
         }
     }
 
-    /**
-     * Send a template message.
-     */
     /**
      * Send a template message.
      */
@@ -432,8 +431,6 @@ class WhatsAppService
             ]
         ];
 
-        $category = $tpl ? strtolower($tpl->category) : 'marketing';
-
         // 3. Resolve Contact ID
         $contact = $this->getOrCreateContact($to);
 
@@ -441,44 +438,22 @@ class WhatsAppService
         $policy = app(PolicyService::class);
         $category = strtoupper($tpl->category ?? 'MARKETING');
 
-        // 1. Marketing Opt-In Enforced via Contact Consent
-
-        // 1. Marketing Opt-In Enforced via Contact Consent
         if ($category === 'MARKETING' && !$contact->hasValidConsent()) {
-            Log::warning("Blocked MARKETING template to {$to}. No valid consent found.", [
-                'opt_in_status' => $contact->opt_in_status,
-                'opt_in_expires_at' => $contact->opt_in_expires_at
-            ]);
             return [
                 'success' => false,
-                'error' => "CAT_MARKETING_NO_OPT_IN: Marketing message blocked. This contact has not opted in or consent has expired."
+                'error' => "CAT_MARKETING_NO_OPT_IN: Marketing message blocked."
             ];
         }
 
-        // 2. Utility Guardrail (Block if opted-out)
         if ($category === 'UTILITY' && $contact->opt_in_status === 'opted_out') {
-            Log::warning("Blocked UTILITY template to {$to}. Contact has OPTED OUT of all communications.");
             return [
                 'success' => false,
-                'error' => "CAT_UTILITY_BLOCKED: Transactional message blocked. This contact has opted out of all communications."
+                'error' => "CAT_UTILITY_BLOCKED: Transactional message blocked."
             ];
         }
 
-        // 3. Existing general policy check (e.g. rate limits, custom logic)
         if (!$policy->canSendTemplate($contact, strtolower($category))) {
-            Log::warning("Blocked template to {$to}. General policy rejection (Category: {$category}).");
             return ['success' => false, 'error' => 'Blocked by General Messaging Policy.'];
-        }
-        // --------------------
-
-        // 4. Validate Variables
-        if ($tpl) {
-            $tplService = new TemplateService();
-            $allVars = array_merge($headerParams, $bodyParams, $footerParams);
-            if (!$tplService->validateVariables($tpl, $allVars)) {
-                Log::error("Template Validation Failed for {$to}", ['template' => $templateName, 'vars' => $allVars]);
-                return ['success' => false, 'error' => 'Template Variable Mismatch'];
-            }
         }
 
         // 5. Check Wallet & Plan Limits
@@ -486,10 +461,8 @@ class WhatsAppService
         $allowed = $billing->recordConversationUsage($this->team, $contact->id, $category, null);
 
         if (!$allowed) {
-            Log::warning("Blocked message to {$to} due to Limits or Funds.");
             return ['success' => false, 'error' => 'Plan Limit Reached or Insufficient Funds'];
         }
-        // ---------------------
 
         // --- PRE-PERSISTENCE or USE EXISTING ---
         $conversationService = new \App\Services\ConversationService();
@@ -497,7 +470,6 @@ class WhatsAppService
 
         $msg = $existingMessage;
         if (!$msg) {
-            // Render Body for Display
             $richContent = "Template: {$templateName}";
             $mediaUrl = null;
             $mediaType = null;
@@ -514,12 +486,11 @@ class WhatsAppService
                 }
             }
 
-            // Capture Header Media
             if (!empty($headerParams)) {
                 $headerComp = collect($tpl->components ?? [])->firstWhere('type', 'HEADER');
                 if ($headerComp && in_array($headerComp['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
                     $mediaType = strtolower($headerComp['format']);
-                    $mediaUrl = $headerParams[0] ?? null; // Assume 1st param is URL
+                    $mediaUrl = $headerParams[0] ?? null;
                 }
             }
 
@@ -537,7 +508,8 @@ class WhatsAppService
                 'metadata' => [
                     'template_name' => $templateName,
                     'language' => $language,
-                    'variables' => array_merge($headerParams, $bodyParams, $footerParams)
+                    'variables' => array_merge($headerParams, $bodyParams, $footerParams),
+                    'is_bot' => $this->isBot
                 ],
             ]);
         }
@@ -547,7 +519,7 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
-                $conversationService->handleOutboundMessage($conversation);
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
 
                 $msg->update([
                     'status' => 'sent',
@@ -586,7 +558,7 @@ class WhatsAppService
     }
 
     /**
-     * Get Business Profile (Address, Email, Website, etc.)
+     * Get Business Profile.
      */
     public function getBusinessProfile()
     {
@@ -600,7 +572,6 @@ class WhatsAppService
      */
     public function updateBusinessProfile(array $data)
     {
-        // $data can include about, address, description, email, etc.
         $payload = [
             'messaging_product' => 'whatsapp',
         ] + $data;
@@ -609,48 +580,40 @@ class WhatsAppService
     }
 
     /**
-     * Get Templates for the WABA.
-     * Note: Templates are stored at WABA level, not Phone ID level.
+     * Get Templates.
      */
     public function getTemplates()
     {
-        // We use the WABA ID stored in the team settings
         $wabaId = $this->team->whatsapp_business_account_id;
-
         if (!$wabaId) {
-            throw new \Exception("WhatsApp Business Account ID (WABA) is not configured.");
+            throw new \Exception("WABA ID is not configured.");
         }
-
         $url = "{$this->baseUrl}/{$wabaId}/message_templates";
         return $this->sendRequestFullUrl($url, 'get');
     }
 
     /**
-     * Create a new Template.
+     * Create Template.
      */
     public function createTemplate(array $data)
     {
         $wabaId = $this->team->whatsapp_business_account_id;
-
         if (!$wabaId) {
-            throw new \Exception("WhatsApp Business Account ID (WABA) is not configured.");
+            throw new \Exception("WABA ID is not configured.");
         }
-
         $url = "{$this->baseUrl}/{$wabaId}/message_templates";
         return $this->sendRequestFullUrl($url, 'post', $data);
     }
 
     /**
-     * Delete a Template by Name.
+     * Delete Template.
      */
     public function deleteTemplate($name)
     {
         $wabaId = $this->team->whatsapp_business_account_id;
-
         if (!$wabaId) {
-            throw new \Exception("WhatsApp Business Account ID (WABA) is not configured.");
+            throw new \Exception("WABA ID is not configured.");
         }
-
         $url = "{$this->baseUrl}/{$wabaId}/message_templates";
         return $this->sendRequestFullUrl($url, 'delete', ['name' => $name]);
     }
@@ -677,18 +640,11 @@ class WhatsAppService
         } elseif ($method === 'delete') {
             $response = $client->delete($url, $data);
         } else {
-            Log::error('Unsupported HTTP method', ['method' => $method]);
-            return ['success' => false, 'error' => 'Unsupported HTTP method'];
+            return ['success' => false, 'error' => 'Unsupported method'];
         }
 
         if ($response->failed()) {
-            // Rule 3: Atomic Demotion on 401
             if ($response->status() === 401 && $this->team) {
-                Log::warning("WhatsApp API 401 Unauthorized for team {$this->team->id}. Demoting to SUSPENDED.");
-                $this->team->update([
-                    'whatsapp_setup_state' => \App\Enums\IntegrationState::class . '::SUSPENDED',
-                    // Wait, better way to update Enum
-                ]);
                 $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::SUSPENDED;
                 $this->team->save();
             }
@@ -699,11 +655,8 @@ class WhatsAppService
                 'payload' => $data,
                 'url' => $url,
             ]);
-            // Return validation errors if present
             return ['success' => false, 'error' => $response->json(), 'status_code' => $response->status()];
         }
-
-        Log::info("WhatsApp API Success: [$method] $url", ['response' => $response->json()]);
 
         return ['success' => true, 'data' => $response->json()];
     }
@@ -717,23 +670,19 @@ class WhatsAppService
         $allowed = [
             \App\Enums\IntegrationState::READY,
             \App\Enums\IntegrationState::READY_WARNING,
-            \App\Enums\IntegrationState::ACTIVE // Legacy/Alias support
+            \App\Enums\IntegrationState::ACTIVE
         ];
 
-        // Auto-heal: If PROVISIONED but has credentials, upgrade to READY
         if ($state === \App\Enums\IntegrationState::PROVISIONED) {
             if (!empty($this->team->whatsapp_access_token) && !empty($this->team->whatsapp_phone_number_id)) {
-                Log::info("Messaging Lock: Auto-upgrading Team {$this->team->id} from PROVISIONED to READY as credentials exist.");
                 $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
                 $this->team->save();
-                return; // Proceed
+                return;
             }
         }
 
         if (!in_array($state, $allowed)) {
-            $label = $state ? $state->label() : 'Unknown';
-            Log::error("Messaging Lock: Team {$this->team->id} is in state {$label}. Blocking outbound message.");
-            throw new \Exception("Messaging is blocked. Connection state: {$label}. Please fix your connection in Settings.");
+            throw new \Exception("Messaging blocked. Connection state: " . ($state ? $state->label() : 'Unknown'));
         }
     }
 }

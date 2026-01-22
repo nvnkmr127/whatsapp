@@ -23,4 +23,9 @@ class Automation extends Model
     {
         return $this->belongsTo(Team::class);
     }
+
+    public function validate()
+    {
+        return (new \App\Services\AutomationValidationService())->validate($this);
+    }
 }

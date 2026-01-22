@@ -8,6 +8,7 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 
 use Livewire\WithFileUploads;
+use Livewire\Attributes\Computed;
 
 class AutomationBuilder extends Component
 {
@@ -20,12 +21,14 @@ class AutomationBuilder extends Component
 
     public $nodes = []; // [ {id, type, x, y, data} ]
     public $edges = []; // [ {source, target} ]
+    public $stepMetadata = []; // [ nodeId => {stepNumber, isBranch, isLoop} ]
 
     public $selectedNodeId = null;
     public $selectedEdgeIndex = null;
     public $edgeCondition = '';
 
     // Node editing properties
+    public $nodeLabel = '';
     public $nodeText = '';
     public $nodeButtonText = ''; // For interactive_list
     public $nodeUrl = '';
@@ -44,6 +47,8 @@ class AutomationBuilder extends Component
     public $nodeHeaders = []; // [['key' => '', 'value' => '']]
     public $nodeJson = '';
     public $nodeContacts = []; // [['name' => '', 'phone' => '']]
+    public $nodeDelayValue = 5;
+    public $nodeDelayUnit = 'seconds';
 
     public $showErrorModal = false;
 
@@ -62,13 +67,127 @@ class AutomationBuilder extends Component
     public $availableFlows = [];
     public $uploadFile; // For media uploads
 
+    public $validationIssues = [];
+    public $isActivatable = true;
+
+    // Versioning & Publishing
+    public $showPublishModal = false;
+    public $publishNote = '';
+    public $version = 1;
+    public $lastPublishedAt = null;
+    public $publishLog = [];
+    public $isDirty = false;
+
     // CRM / Contact Properties
     public $nodeProvider = '';
     public $nodeAction = '';
     public $debugMode = false;
     public $debugLogs = []; // History of actions
 
+    public function runValidation()
+    {
+        $automation = new Automation([
+            'team_id' => Auth::user()->currentTeam->id,
+            'trigger_type' => $this->triggerType,
+            'trigger_config' => $this->triggerConfig,
+            'flow_data' => [
+                'nodes' => array_values($this->nodes),
+                'edges' => array_values($this->edges)
+            ]
+        ]);
 
+        $results = (new \App\Services\AutomationValidationService())->validate($automation);
+        $this->validationIssues = $results['issues'];
+        $this->isActivatable = $results['is_activatable'];
+
+        $this->calculateStepMetadata();
+    }
+
+    public function calculateStepMetadata()
+    {
+        $nodeMetadata = [];
+        $edgeMetadata = [];
+        $queue = [];
+
+        // Find trigger node
+        $triggerNode = collect($this->nodes)->firstWhere('type', 'trigger') ?? collect($this->nodes)->first();
+        if (!$triggerNode)
+            return;
+
+        $queue[] = ['id' => $triggerNode['id']];
+        $order = 1;
+
+        while (!empty($queue)) {
+            $current = array_shift($queue);
+            $nodeId = $current['id'];
+
+            if (isset($nodeMetadata[$nodeId]))
+                continue;
+
+            $nodeMetadata[$nodeId] = [
+                'step' => $order++,
+                'isBranch' => false,
+                'isLoop' => false,
+            ];
+
+            $outgoing = collect($this->edges);
+            $count = 0;
+            foreach ($outgoing as $index => $edge) {
+                if ($edge['source'] === $nodeId) {
+                    $count++;
+                    $targetId = $edge['target'];
+
+                    if (isset($nodeMetadata[$targetId])) {
+                        $edgeMetadata[$index] = ['isLoop' => true];
+                        $nodeMetadata[$nodeId]['isLoop'] = true;
+                    } else {
+                        $queue[] = ['id' => $targetId];
+                    }
+                }
+            }
+            $nodeMetadata[$nodeId]['isBranch'] = $count > 1;
+        }
+
+        $this->stepMetadata = [
+            'nodes' => $nodeMetadata,
+            'edges' => $edgeMetadata
+        ];
+    }
+
+
+
+    #[Computed]
+    public function risks()
+    {
+        $risks = [];
+
+        if ($this->triggerType === 'user_starts_conversation') {
+            $risks[] = [
+                'level' => 'high',
+                'description' => 'Broad Trigger: This will fire for EVERY new conversation.',
+                'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
+            ];
+        }
+
+        $hasExternal = collect($this->nodes)->contains(fn($n) => in_array($n['type'] ?? '', ['openai', 'webhook']));
+        if ($hasExternal) {
+            $risks[] = [
+                'level' => 'medium',
+                'description' => 'External Dependencies: Flow relies on OpenAI or Webhooks which can fail or incur costs.',
+                'icon' => 'M13 10V3L4 14h7v7l9-11h-7z'
+            ];
+        }
+
+        if (count($this->nodes) > 15) {
+            $risks[] = [
+                'level' => 'low',
+                'description' => 'Large Flow: Complex logic might be harder to debug if something goes wrong.',
+                'icon' => 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2'
+            ];
+        }
+
+        return $risks;
+    }
 
     public function mount($automationId = null)
     {
@@ -106,6 +225,10 @@ class AutomationBuilder extends Component
             $this->nodes = isset($flowData['nodes']) ? array_values($flowData['nodes']) : [];
             $this->edges = isset($flowData['edges']) ? array_values($flowData['edges']) : [];
 
+            $this->version = $automation->version ?? 1;
+            $this->lastPublishedAt = $automation->last_published_at;
+            $this->publishLog = $automation->publish_log ?? [];
+
             $this->logDebug('Loaded Automation from DB', [
                 'automation_id' => $automation->id,
                 'nodes_count' => count($this->nodes),
@@ -120,18 +243,22 @@ class AutomationBuilder extends Component
             $this->triggerConfig = ['keywords' => [], 'is_regex' => false];
             $this->name = 'Untitled Automation ' . date('Y-m-d H:i');
         }
+
+        $this->runValidation();
     }
 
-    public function save()
+    public function save($shouldActivate = false)
     {
         $this->logDebug('Save Clicked', [
             'raw_nodes_count' => count($this->nodes),
             'raw_edges_count' => count($this->edges),
-            'selected_node' => $this->selectedNodeId
+            'selected_node' => $this->selectedNodeId,
+            'should_activate' => $shouldActivate
         ]);
 
         // Flush pending changes from properties to the nodes array
         $this->updateNodeData();
+        $this->runValidation();
 
         try {
             $this->validate([
@@ -142,23 +269,10 @@ class AutomationBuilder extends Component
                 'nodes.min' => 'Please add at least one node to the automation.',
             ]);
 
-            // Connectivity Validation (Except for draft/debug if we wanted, but user asked for it)
-            if (count($this->nodes) > 1) {
-                $connectedNodeIds = collect($this->edges)->pluck('target')->unique()->toArray();
-                $disconnectedNodes = [];
-
-                foreach ($this->nodes as $node) {
-                    if ($node['type'] !== 'trigger' && !in_array($node['id'], $connectedNodeIds)) {
-                        $disconnectedNodes[] = $node['data']['label'] ?? $node['type'];
-                    }
-                }
-
-                if (!empty($disconnectedNodes)) {
-                    $this->logDebug('Validation Failed: Disconnected Nodes', ['nodes' => $disconnectedNodes]);
-                    $this->addError('nodes', 'The following nodes are not connected to the flow: ' . implode(', ', $disconnectedNodes));
-                    $this->showErrorModal = true;
-                    return;
-                }
+            if ($shouldActivate && !$this->isActivatable) {
+                $this->addError('base', 'There are critical errors in your flow. Please fix them before publishing.');
+                $this->showErrorModal = true;
+                return;
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->showErrorModal = true;
@@ -169,9 +283,12 @@ class AutomationBuilder extends Component
             $data = [
                 'team_id' => Auth::user()->currentTeam->id,
                 'name' => $this->name,
-                'is_active' => true,
+                'is_active' => $shouldActivate ? true : (isset($this->automationId) ? \App\Models\Automation::find($this->automationId)->is_active : false),
                 'trigger_type' => $this->triggerType,
                 'trigger_config' => $this->triggerConfig,
+                'version' => $this->version,
+                'last_published_at' => $this->lastPublishedAt,
+                'publish_log' => $this->publishLog,
                 'flow_data' => [
                     'nodes' => array_values($this->nodes),
                     'edges' => array_values($this->edges)
@@ -185,39 +302,61 @@ class AutomationBuilder extends Component
                     'edge_count' => count($this->edges),
                     'payload' => $data['flow_data']
                 ]);
-
-                \Illuminate\Support\Facades\Log::info('Saving Automation:', [
-                    'id' => $this->automationId,
-                    'node_count' => count($this->nodes),
-                    'edge_count' => count($this->edges),
-                    'payload_preview' => json_encode($data['flow_data'])
-                ]);
             }
 
             if ($this->automationId) {
                 $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
-                $success = $automation->update($data);
-
-                $this->logDebug('Database Update Result', [
-                    'success' => $success,
-                    'db_id' => $automation->id,
-                    'saved_nodes' => count($automation->flow_data['nodes'] ?? [])
-                ]);
-
-                session()->flash('success', 'Automation saved successfully!');
+                $automation->update($data);
+                session()->flash('success', $shouldActivate ? 'Automation published successfully!' : 'Draft saved successfully!');
             } else {
                 $automation = Automation::create($data);
                 $this->automationId = $automation->id;
-                session()->flash('success', 'Automation created successfully!');
-                session(['automation_debug_logs' => $this->debugLogs]);
+                session()->flash('success', $shouldActivate ? 'Automation created and published!' : 'Draft created successfully!');
                 return redirect()->route('automations.builder', $automation->id);
             }
         } catch (\Exception $e) {
             $this->logDebug('Save Exception', ['error' => $e->getMessage()]);
-            \Illuminate\Support\Facades\Log::error('Automation Save Error: ' . $e->getMessage());
-            $this->addError('base', 'An error occurred while saving the automation. Please try again.');
+            $this->addError('base', 'An error occurred while saving the automation.');
             $this->showErrorModal = true;
         }
+    }
+
+    public function publish()
+    {
+        $this->updateNodeData();
+        $this->runValidation();
+
+        if (!$this->isActivatable) {
+            $this->addError('base', 'There are critical errors in your flow. Please fix them before publishing.');
+            $this->showErrorModal = true;
+            return;
+        }
+
+        $this->showPublishModal = true;
+    }
+
+    public function confirmPublish()
+    {
+        $this->logDebug('Confirming Publish', ['note' => $this->publishNote]);
+
+        $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
+
+        // Handle versioning
+        $newVersion = ($automation->version ?? 0) + 1;
+        $this->version = $newVersion;
+        $this->lastPublishedAt = now();
+
+        $entry = [
+            'version' => $newVersion,
+            'note' => $this->publishNote,
+            'published_at' => now()->toDateTimeString(),
+            'published_by' => Auth::user()->name
+        ];
+        array_unshift($this->publishLog, $entry);
+
+        $this->save(true);
+        $this->showPublishModal = false;
+        $this->publishNote = '';
     }
 
     public function updatedDebugMode($value)
@@ -344,6 +483,7 @@ class AutomationBuilder extends Component
             'data' => $data
         ];
         $this->nodes = array_values($this->nodes); // Ensure array keys are reset
+        $this->runValidation();
     }
 
     // Called by Alpine when node moves
@@ -367,6 +507,7 @@ class AutomationBuilder extends Component
         }
         $this->edges[] = ['source' => $source, 'target' => $target, 'condition' => ''];
         $this->edges = array_values($this->edges);
+        $this->runValidation();
     }
 
     public function selectNode($id)
@@ -375,6 +516,7 @@ class AutomationBuilder extends Component
         $this->selectedEdgeIndex = null;
 
         // Reset Common Fields
+        $this->nodeLabel = '';
         $this->nodeText = '';
         $this->nodeButtonText = '';
         $this->nodeUrl = '';
@@ -389,6 +531,10 @@ class AutomationBuilder extends Component
             if ($node['id'] === $id) {
                 $data = $node['data'] ?? [];
                 $type = $node['type'];
+
+                if ($id) {
+                    $this->nodeLabel = $data['label'] ?? ucfirst($type);
+                }
 
                 if ($type === 'text') {
                     $this->nodeText = $data['text'] ?? '';
@@ -437,7 +583,8 @@ class AutomationBuilder extends Component
                     $this->nodeHeaders = $data['headers'] ?? [];
                     $this->nodeJson = $data['json_body'] ?? '';
                 } elseif ($type === 'delay') {
-                    $this->nodeText = $data['value'] ?? '5';
+                    $this->nodeDelayValue = $data['value'] ?? 5;
+                    $this->nodeDelayUnit = $data['time_unit'] ?? 'seconds';
                 } elseif ($type === 'send_flow') {
                     $this->nodeSaveTo = $data['flow_id'] ?? '';
                     $this->nodeText = $data['text'] ?? 'Open Form';
@@ -473,6 +620,7 @@ class AutomationBuilder extends Component
         if (str_starts_with($propertyName, 'node') || str_starts_with($propertyName, 'triggerConfig')) {
             $this->updateNodeData();
         }
+        $this->runValidation();
     }
 
     public function updatedNodeText($value)
@@ -525,6 +673,7 @@ class AutomationBuilder extends Component
         foreach ($this->nodes as &$node) {
             if ($node['id'] === $this->selectedNodeId) {
                 $type = $node['type'];
+                $node['data']['label'] = $this->nodeLabel ?: $node['data']['label'];
 
                 if ($type === 'trigger') {
                     $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)) . ' Trigger';
@@ -585,7 +734,8 @@ class AutomationBuilder extends Component
                     $node['data']['operator'] = $this->nodeOperator;
                     $node['data']['value'] = $this->nodeText;
                 } elseif ($type === 'delay') {
-                    $node['data']['value'] = $this->nodeText;
+                    $node['data']['value'] = $this->nodeDelayValue;
+                    $node['data']['time_unit'] = $this->nodeDelayUnit;
                 } elseif ($type === 'carousel') {
                     $node['data']['cards'] = $this->nodeCards;
                 } elseif ($type === 'send_flow') {
@@ -788,6 +938,7 @@ class AutomationBuilder extends Component
         if ($this->selectedNodeId === $id) {
             $this->selectedNodeId = null;
         }
+        $this->runValidation();
     }
 
     public function getEdgesWithPathsProperty()

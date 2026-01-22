@@ -146,12 +146,16 @@ class ConversationService
      * Handle Outbound Agent Message logic:
      * - Set status to 'waiting_reply'
      */
-    public function handleOutboundMessage(Conversation $conversation)
+    public function handleOutboundMessage(Conversation $conversation, bool $isBot = false)
     {
         $conversation->update([
             'last_message_at' => now(),
             'status' => 'waiting_reply',
         ]);
+
+        if (!$isBot) {
+            (new BotHandoffService())->handleAgentActivity($conversation->contact);
+        }
     }
 
     /**
@@ -163,6 +167,8 @@ class ConversationService
             'status' => 'closed',
             'closed_at' => now(),
         ]);
+
+        (new BotHandoffService())->resume($conversation->contact);
 
         try {
             \App\Events\ConversationClosed::dispatch($conversation);
