@@ -35,7 +35,7 @@
     $lifecycleStyle = $lifecycleColors[$lifecycle] ?? $lifecycleColors['new'];
 
     $daysSinceLastMessage = $contact->last_interaction_at
-        ? now()->diffInDays($contact->last_interaction_at)
+        ? (int) abs(now()->diffInDays($contact->last_interaction_at))
         : null;
 @endphp
 
