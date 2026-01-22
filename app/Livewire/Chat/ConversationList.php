@@ -20,7 +20,7 @@ class ConversationList extends Component
     {
         if (Auth::check() && Auth::user()->currentTeam) {
             return [
-                "echo-private:teams." . Auth::user()->currentTeam->id . ",MessageReceived" => '$refresh',
+                "echo-private:teams." . Auth::user()->currentTeam->id . ",.MessageReceived" => '$refresh',
             ];
         }
         return [];

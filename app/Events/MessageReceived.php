@@ -27,6 +27,14 @@ class MessageReceived implements ShouldBroadcastNow
     }
 
     /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MessageReceived';
+    }
+
+    /**
      * Get the channels the event should broadcast on.
      *
      * @return array<int, \Illuminate\Broadcasting\Channel>
@@ -35,6 +43,7 @@ class MessageReceived implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('teams.' . $this->message->team_id),
+            new PresenceChannel('conversation.' . $this->message->conversation_id),
         ];
     }
 

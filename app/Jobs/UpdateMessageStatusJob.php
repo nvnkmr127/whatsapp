@@ -86,6 +86,9 @@ class UpdateMessageStatusJob implements ShouldQueue
 
         $message->update($updateData);
 
+        // Broadcast the update for UI
+        \App\Events\MessageStatusUpdated::dispatch($message);
+
         // Update Campaign Stats if applicable
         if ($message->campaign_id) {
             $this->updateCampaignStats($message, $oldStatus, $newStatus);

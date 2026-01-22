@@ -13,8 +13,6 @@
             
             pChannel.here((users) => {
                 this.activeUsers = users;
-                // If I am here, maybe acquire lock if I was the last owner? 
-                // For now, let's just see who is here.
             })
             .joining((user) => {
                 this.activeUsers.push(user);
@@ -22,38 +20,43 @@
             })
             .leaving((user) => {
                 this.activeUsers = this.activeUsers.filter(u => u.id !== user.id);
-                // If owner left, maybe I can take over? 
-                // Creating a 'LockReleased' event from server is cleaner, 
-                // but if they close tab, we need to know.
-                // The lock has TTL, so it will expire anyway.
+            })
+            .listen('.MessageReceived', (e) => {
+                console.log('Front (pChannel): MessageReceived', e);
+                $store.chat.syncLatest();
+            })
+            .listen('.MessageStatusUpdated', (e) => {
+                 console.log('Front (pChannel): MessageStatusUpdated', e);
+                 if(e.message) {
+                     let msg = $store.chat.messages.find(m => m.id === e.message.id);
+                     if(msg) msg.status = e.message.status;
+                 }
             })
             .listenForWhisper('typing', (e) => {
                 if (e.id !== {{ auth()->id() }}) {
                     this.isTyping = true;
                     this.typingUser = e.name;
-                    // Debounce hide
-                    if (this.typingTimber) clearTimeout(this.typingTimer);
+                    if (this.typingTimer) clearTimeout(this.typingTimer);
                     this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
-                    
-                    // Also assume they have lock if they are typing
                     $store.chat.setLockState(e.id);
                 }
             });
 
-            // --- Team Events ---
+            // --- Team Events (Backup) ---
             const channel = window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}');
             
-            channel.listen('MessageReceived', (e) => { 
-                console.log('Front: MessageReceived', e);
+            channel.listen('.MessageReceived', (e) => { 
+                console.log('Front (Team): MessageReceived', e);
                 if (e.message && e.message.conversation_id == {{ $conversationId }}) {
                     $store.chat.syncLatest(); 
                 }
             });
 
-            channel.listen('MessageStatusUpdated', (e) => {
-                 if(e.message) {
+            channel.listen('.MessageStatusUpdated', (e) => {
+                 console.log('Front (Team): MessageStatusUpdated', e);
+                 if (e.message) {
                      let msg = $store.chat.messages.find(m => m.id === e.message.id);
-                     if(msg) msg.status = e.message.status;
+                     if (msg) msg.status = e.message.status;
                  }
             });
 

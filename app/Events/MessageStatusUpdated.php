@@ -27,12 +27,21 @@ class MessageStatusUpdated implements ShouldBroadcastNow
     }
 
     /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MessageStatusUpdated';
+    }
+
+    /**
      * Get the channels the event should broadcast on.
      */
     public function broadcastOn(): array
     {
         return [
             new PrivateChannel('teams.' . $this->message->team_id),
+            new PresenceChannel('conversation.' . $this->message->conversation_id),
         ];
     }
 
@@ -42,7 +51,10 @@ class MessageStatusUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'message_id' => $this->message->id,
+            'message' => [
+                'id' => $this->message->id,
+                'status' => $this->message->status,
+            ],
             'whatsapp_message_id' => $this->message->whatsapp_message_id,
             'status' => $this->message->status,
             'timestamp' => now()->timestamp,

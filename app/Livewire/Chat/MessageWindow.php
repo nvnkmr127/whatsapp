@@ -38,12 +38,22 @@ class MessageWindow extends Component
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {
+            $teamId = Auth::user()->currentTeam->id;
             return [
-                "echo-private:teams." . Auth::user()->currentTeam->id . ",MessageReceived" => 'handleIncomingMessage',
-                "echo-private:teams." . Auth::user()->currentTeam->id . ",client-typing" => 'handleClientTyping',
+                "echo-private:teams.{$teamId},.MessageReceived" => 'handleIncomingMessage',
+                "echo-private:teams.{$teamId},.MessageStatusUpdated" => 'handleStatusUpdate',
+                "echo-presence:conversation.{$this->conversationId},.MessageReceived" => 'handleIncomingMessage',
+                "echo-presence:conversation.{$this->conversationId},.MessageStatusUpdated" => 'handleStatusUpdate',
+                "echo-presence:conversation.{$this->conversationId},client-typing" => 'handleClientTyping',
             ];
         }
         return [];
+    }
+
+    public function handleStatusUpdate($event)
+    {
+        // This will trigger a re-render or we can search and update the property
+        $this->loadConversation();
     }
 
     public $chatMessages = []; // Dedicated property

@@ -101,7 +101,7 @@ document.addEventListener('alpine:init', () => {
             // This is for incoming from OTHER people or if sendMessageJson didn't return yet.
 
             this.messages.push(msg);
-            window.dispatchEvent(new CustomEvent('chat-scroll-bottom-if-near'));
+            window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
         },
 
         // --- Multi-Agent Locking ---
@@ -231,7 +231,7 @@ document.addEventListener('alpine:init', () => {
                 if (addedCount > 0) {
                     // Sort again just in case (though push usually fine if latest)
                     this.messages.sort((a, b) => a.created_at - b.created_at);
-                    window.dispatchEvent(new CustomEvent('chat-scroll-bottom-if-near'));
+                    window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
                 }
 
                 console.log(`Synced ${addedCount} missing messages.`);

@@ -6,9 +6,14 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// Conversations Channel (for list updates)
+// Team-level channel for broad updates (new messages across all contacts)
+Broadcast::channel('teams.{teamId}', function ($user, $teamId) {
+    return (int) $user->currentTeam->id === (int) $teamId;
+});
+
+// Conversations Channel (for list updates - generic name but scoped in listener)
 Broadcast::channel('conversations', function ($user) {
-    return true; // For MVP. TODO: Scope to Team.
+    return $user->currentTeam !== null;
 });
 
 // Single Conversation Channel (for messages)
