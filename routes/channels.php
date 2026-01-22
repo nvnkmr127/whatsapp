@@ -25,7 +25,8 @@ Broadcast::channel('presence-conversation.{conversationId}', function ($user, $c
     }
 });
 
-// Team Channel (for global team events like MessageReceived)
-Broadcast::channel('teams.{teamId}', function ($user, $teamId) {
-    return (int) $user->current_team_id === (int) $teamId;
+// Campaign Progress Channel
+Broadcast::channel('campaign.{campaignId}.progress', function ($user, $campaignId) {
+    $campaign = \App\Models\Campaign::find($campaignId);
+    return $campaign && $campaign->team_id === $user->current_team_id;
 });
