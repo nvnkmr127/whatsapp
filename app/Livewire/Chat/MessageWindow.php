@@ -587,7 +587,8 @@ class MessageWindow extends Component
 
         // 2. Check Lock Ownership (Optional strictness)
         $lockKey = "conversation_lock:{$this->conversation->id}";
-        $lockOwner = \Illuminate\Support\Facades\Redis::get($lockKey);
+        // Replace Redis with Cache for shared hosting compatibility
+        $lockOwner = \Illuminate\Support\Facades\Cache::get($lockKey);
         if ($lockOwner && (int) $lockOwner !== Auth::id()) {
             // We allow replying if lock is expired (empty) but if someone else holds it, we reject.
             // However, UI handles input fix usually. This is a safety check.
