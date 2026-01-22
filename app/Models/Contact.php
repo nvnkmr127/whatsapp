@@ -13,10 +13,27 @@ class Contact extends Model
         'custom_attributes' => 'array',
         'last_interaction_at' => 'datetime',
         'opt_in_at' => 'datetime',
+        'opt_in_expires_at' => 'datetime',
         'last_customer_message_at' => 'datetime',
         'sla_breached_at' => 'datetime',
         'has_pending_reply' => 'boolean',
     ];
+
+    /**
+     * Check if contact has valid consent for marketing.
+     */
+    public function hasValidConsent(): bool
+    {
+        if ($this->opt_in_status !== 'opted_in') {
+            return false;
+        }
+
+        if ($this->opt_in_expires_at && $this->opt_in_expires_at < now()) {
+            return false;
+        }
+
+        return true;
+    }
 
     public function team()
     {

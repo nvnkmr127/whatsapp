@@ -18,7 +18,6 @@
         "laravel/tinker": "^2.10.1",
         "league/csv": "^9.28",
         "livewire/livewire": "^3.6.4",
-        "predis/predis": "^3.3",
         "smalot/pdfparser": "^2.12"
     },
     "require-dev": {

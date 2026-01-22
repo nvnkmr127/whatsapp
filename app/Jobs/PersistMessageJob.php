@@ -10,7 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
+
 
 class PersistMessageJob implements ShouldQueue
 {
@@ -51,21 +51,29 @@ class PersistMessageJob implements ShouldQueue
             return;
         }
 
-        // 1. Contact Management
-        $phone = $data['from_phone'];
-        $name = $data['contact_name'] ?? $phone;
+        // 1. Contact Management (thread-safe)
+        $phone = \App\Helpers\PhoneNumberHelper::normalize($data['from_phone']);
+        $name = $data['contact_name'] ?? null;
 
         $contactService = new \App\Services\ContactService();
         $contact = $contactService->createOrUpdate([
             'team_id' => $team->id,
-            'phone_number' => '+' . $phone,
+            'phone_number' => $phone,
             'name' => $name,
         ]);
 
-        $contact->update([
-            'last_interaction_at' => now(),
-            'last_customer_message_at' => now(),
-        ]);
+        // 2. Update interaction timestamps atomically
+        $messageTimestamp = isset($data['timestamp']) ? \Carbon\Carbon::createFromTimestamp($data['timestamp']) : now();
+
+        \App\Models\Contact::where('id', $contact->id)
+            ->where(function ($query) use ($messageTimestamp) {
+                $query->whereNull('last_interaction_at')
+                    ->orWhere('last_interaction_at', '<', $messageTimestamp);
+            })
+            ->update([
+                'last_interaction_at' => $messageTimestamp,
+                'last_customer_message_at' => $messageTimestamp,
+            ]);
 
         // 2. Keyword Management
         $content = $this->extractContent($data['content']);
@@ -114,15 +122,7 @@ class PersistMessageJob implements ShouldQueue
         // B. Temporal Attribution Fallback (Redis/Cache Pointer)
         if (!$attributedCampaignId) {
             $phone = $data['from_phone']; // Standardize phone for lookup
-            if (config('database.redis.client') !== 'null') {
-                try {
-                    $attributedCampaignId = Redis::get("last_campaign:contact:{$phone}");
-                } catch (\Exception $e) {
-                    $attributedCampaignId = \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$phone}");
-                }
-            } else {
-                $attributedCampaignId = \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$phone}");
-            }
+            $attributedCampaignId = \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$phone}");
 
             if ($attributedCampaignId) {
                 Log::info("PersistMessageJob: Temporal attribution via Cache/Redis for Campaign: {$attributedCampaignId}");

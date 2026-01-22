@@ -12,85 +12,106 @@ class ContactService
     /**
      * Create or Update a Contact.
      * Merges custom_attributes instead of overwriting.
+     * Thread-safe implementation with database locking.
      */
     public function createOrUpdate(array $data)
     {
         $teamId = $data['team_id'];
-        $phone = $this->normalizePhoneNumber($data['phone_number']);
+        $phone = \App\Helpers\PhoneNumberHelper::normalize($data['phone_number']);
         $data['phone_number'] = $phone;
 
-        if (isset($data['id'])) {
-            $contact = Contact::where('team_id', $teamId)->find($data['id']);
-        }
+        return DB::transaction(function () use ($teamId, $phone, $data) {
+            // Use lockForUpdate to prevent race conditions
+            $contact = Contact::lockForUpdate()
+                ->where('team_id', $teamId)
+                ->where('phone_number', $phone)
+                ->first();
 
-        if (isset($contact) && $contact) {
-            // Update existing contact
-            if ($contact->phone_number !== $phone) {
-                // Check if another contact has this number
-                $exists = Contact::where('team_id', $teamId)
-                    ->where('phone_number', $phone)
-                    ->where('id', '!=', $contact->id)
-                    ->exists();
+            if (!$contact) {
+                // Handle ID-based lookup for updates
+                if (isset($data['id'])) {
+                    $contact = Contact::lockForUpdate()
+                        ->where('team_id', $teamId)
+                        ->find($data['id']);
 
-                if ($exists) {
-                    throw new \Exception("Another contact with this phone number already exists.");
+                    // If found by ID but phone changed, check for conflicts
+                    if ($contact && $contact->phone_number !== $phone) {
+                        $exists = Contact::where('team_id', $teamId)
+                            ->where('phone_number', $phone)
+                            ->where('id', '!=', $contact->id)
+                            ->exists();
+
+                        if ($exists) {
+                            throw new \Exception("Another contact with this phone number already exists.");
+                        }
+                        $contact->phone_number = $phone;
+                    }
                 }
-                $contact->phone_number = $phone;
             }
-        } else {
-            // Create new or find existing by phone
-            $contact = Contact::where('team_id', $teamId)->where('phone_number', $phone)->first();
 
+            // Create new contact if not found
             if (!$contact) {
                 $contact = new Contact();
                 $contact->team_id = $teamId;
                 $contact->phone_number = $phone;
             }
-        }
 
-        // Merge Attributes
-        if (isset($data['custom_attributes']) && is_array($data['custom_attributes'])) {
-            $current = $contact->custom_attributes ?? [];
-            $contact->custom_attributes = array_merge($current, $data['custom_attributes']);
-            unset($data['custom_attributes']);
-        }
+            // Merge custom attributes (deep merge for nested arrays)
+            if (isset($data['custom_attributes']) && is_array($data['custom_attributes'])) {
+                $current = $contact->custom_attributes ?? [];
+                $merged = $this->deepMerge($current, $data['custom_attributes']);
 
-        // Fill other fields
-        $contact->fill(Arr::except($data, ['team_id', 'phone_number', 'id']));
-        $contact->save();
+                // Limit to prevent bloat
+                if (count($merged) > 50) {
+                    throw new \Exception("Custom attributes limit exceeded (max 50 keys)");
+                }
 
-        // Trigger automation if this is a new contact
-        if ($contact->wasRecentlyCreated) {
-            try {
-                $whatsappService = new WhatsAppService();
-                $automationService = new AutomationService($whatsappService);
-                $automationService->checkSpecialTriggers($contact, 'contact_added');
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Contact Added Automation Trigger Failed: ' . $e->getMessage());
-                // Don't throw - contact creation should succeed even if automation fails
+                $contact->custom_attributes = $merged;
+                unset($data['custom_attributes']);
             }
-        }
 
-        return $contact;
+            // Fill other fields
+            $contact->fill(Arr::except($data, ['team_id', 'phone_number', 'id']));
+            $contact->save();
+
+            // Trigger automation if this is a new contact
+            if ($contact->wasRecentlyCreated) {
+                try {
+                    $whatsappService = new WhatsAppService();
+                    $automationService = new AutomationService($whatsappService);
+                    $automationService->checkSpecialTriggers($contact, 'contact_added');
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Contact Added Automation Trigger Failed: ' . $e->getMessage());
+                    // Don't throw - contact creation should succeed even if automation fails
+                }
+            }
+
+            return $contact;
+        });
     }
 
     /**
-     * Normalize phone number format
+     * Deep merge arrays recursively.
+     */
+    protected function deepMerge(array $array1, array $array2): array
+    {
+        foreach ($array2 as $key => $value) {
+            if (is_array($value) && isset($array1[$key]) && is_array($array1[$key])) {
+                $array1[$key] = $this->deepMerge($array1[$key], $value);
+            } else {
+                $array1[$key] = $value;
+            }
+        }
+        return $array1;
+    }
+
+    /**
+     * Normalize phone number format (deprecated - use PhoneNumberHelper instead)
+     * @deprecated Use \App\Helpers\PhoneNumberHelper::normalize() instead
      */
     protected function normalizePhoneNumber(string $phone): string
     {
-        // Remove all spaces, dashes, parentheses
-        $phone = preg_replace('/[\s\-\(\)]/', '', $phone);
-
-        // If doesn't start with +, add default country code
-        if (!str_starts_with($phone, '+')) {
-            $defaultCode = get_setting('default_country_code', '+91');
-            // Remove leading zero if present
-            $phone = $defaultCode . ltrim($phone, '0');
-        }
-
-        // Store without + for consistency
-        return ltrim($phone, '+');
+        return \App\Helpers\PhoneNumberHelper::normalize($phone);
     }
 
     /**

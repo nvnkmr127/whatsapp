@@ -33,6 +33,39 @@ class WhatsAppConfigService
      */
     public function hasValidCredentials(Team $team): bool
     {
-        return !empty($team->whatsapp_access_token) && !empty($team->whatsapp_phone_number_id);
+        if (empty($team->whatsapp_access_token) || empty($team->whatsapp_phone_number_id)) {
+            return false;
+        }
+
+        // Check token expiration
+        if ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->isPast()) {
+            \Log::warning("WhatsApp token expired for team {$team->id}");
+            return false;
+        }
+
+        // Warn if expiring soon (7 days)
+        if ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->diffInDays() < 7) {
+            \Log::info("WhatsApp token expiring soon for team {$team->id}", [
+                'expires_at' => $team->whatsapp_token_expires_at,
+                'days_remaining' => $team->whatsapp_token_expires_at->diffInDays()
+            ]);
+
+            // Trigger event for notification
+            event(new \App\Events\WhatsAppTokenExpiringSoon($team));
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if token needs refresh (expires in less than 7 days)
+     */
+    public function needsRefresh(Team $team): bool
+    {
+        if (!$team->whatsapp_token_expires_at) {
+            return false;
+        }
+
+        return $team->whatsapp_token_expires_at->diffInDays() < 7;
     }
 }

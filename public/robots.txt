@@ -1,2 +1,7 @@
+# Allow Facebook's external hit bot for link previews and metadata scraping
+User-agent: facebookexternalhit
+Allow: /
+
+# Allow all other bots
 User-agent: *
 Disallow:

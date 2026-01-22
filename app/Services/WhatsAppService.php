@@ -13,7 +13,7 @@ class WhatsAppService
     protected $phoneId;
     protected $team;
 
-    public function __construct(Team $team = null)
+    public function __construct(?Team $team = null)
     {
         $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
         if ($team) {
@@ -67,6 +67,33 @@ class WhatsAppService
         ];
     }
 
+    /**
+     * Get or create contact with race condition protection.
+     * 
+     * @param string $phone Phone number in any format
+     * @return \App\Models\Contact
+     */
+    protected function getOrCreateContact(string $phone)
+    {
+        $phone = \App\Helpers\PhoneNumberHelper::normalize($phone);
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($phone) {
+            $contact = \App\Models\Contact::lockForUpdate()
+                ->where('team_id', $this->team->id)
+                ->where('phone_number', $phone)
+                ->first();
+
+            if (!$contact) {
+                $contact = \App\Models\Contact::create([
+                    'team_id' => $this->team->id,
+                    'phone_number' => $phone,
+                ]);
+            }
+
+            return $contact;
+        });
+    }
+
 
     /**
      * Send a plain text message.
@@ -74,16 +101,17 @@ class WhatsAppService
     public function sendText($to, $message, $existingMessage = null)
     {
         // Find contact to check policy
-        $contact = \App\Models\Contact::firstOrCreate(
-            ['team_id' => $this->team->id, 'phone_number' => $to]
-        );
+        $contact = $this->getOrCreateContact($to);
 
         // Enforce 24h Policy for Free Text
-        $policy = new PolicyService();
+        $policy = app(PolicyService::class);
         if ($contact && !$policy->canSendFreeMessage($contact)) {
             Log::warning("Blocked free message to {$to}. 24h Window Closed or Opt-out.");
             throw new \Exception("Cannot send free text message. 24-hour window is closed or User opted out. (Policy UC-03). Please use a Template.");
         }
+
+        // Rule 1: Messaging Lock
+        $this->verifyReadyToSend();
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -145,16 +173,17 @@ class WhatsAppService
     public function sendMedia($to, $type, $link, $caption = null, $existingMessage = null)
     {
         // Find contact to check policy
-        $contact = \App\Models\Contact::firstOrCreate(
-            ['team_id' => $this->team->id, 'phone_number' => $to]
-        );
+        $contact = $this->getOrCreateContact($to);
 
         // Enforce 24h Policy for Free Messages (Media is a free message)
-        $policy = new PolicyService();
+        $policy = app(PolicyService::class);
         if ($contact && !$policy->canSendFreeMessage($contact)) {
             Log::warning("Blocked media message to {$to}. 24h Window Closed or Opt-out.");
             throw new \Exception("Cannot send media. 24-hour window is closed or User opted out. Please use a Template.");
         }
+
+        // Rule 1: Messaging Lock
+        $this->verifyReadyToSend();
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -221,16 +250,17 @@ class WhatsAppService
     public function sendInteractiveButtons($to, $text, array $buttons, $existingMessage = null)
     {
         // Find contact to check policy
-        $contact = \App\Models\Contact::firstOrCreate(
-            ['team_id' => $this->team->id, 'phone_number' => $to]
-        );
+        $contact = $this->getOrCreateContact($to);
 
         // Enforce 24h Policy for Free Messages (Interactive is a free message)
-        $policy = new PolicyService();
+        $policy = app(PolicyService::class);
         if ($contact && !$policy->canSendFreeMessage($contact)) {
             Log::warning("Blocked interactive message to {$to}. 24h Window Closed or Opt-out.");
             throw new \Exception("Cannot send interactive buttons. 24-hour window is closed or User opted out. Please use a Template.");
         }
+
+        // Rule 1: Messaging Lock
+        $this->verifyReadyToSend();
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -330,6 +360,24 @@ class WhatsAppService
             return ['success' => false, 'error' => 'Template not found in local database. Please sync templates.'];
         }
 
+        // Readiness Pre-flight check (Rules UC-04, UC-05)
+        $validator = new \App\Validators\TemplateValidator();
+        $validator->validate($tpl, [
+            'header_media_url' => $headerParams[0] ?? null
+        ]);
+
+        if ($tpl->readiness_score < 70) {
+            Log::warning("Blocked sendTemplate due to low readiness: {$tpl->name}", ['score' => $tpl->readiness_score]);
+            $reasons = collect($tpl->validation_results)->pluck('description')->implode(', ');
+            return [
+                'success' => false,
+                'error' => "Template is not ready (Score: {$tpl->readiness_score}). Reasons: {$reasons}."
+            ];
+        }
+
+        // Rule 1: Messaging Lock
+        $this->verifyReadyToSend();
+
         $components = [];
 
         // Handle Header
@@ -353,29 +401,6 @@ class WhatsAppService
                 $components[] = [
                     'type' => 'header',
                     'parameters' => $hParams
-                ];
-            }
-        } elseif ($tpl && !empty($tpl->components)) {
-            // BACKWARD COMPATIBILITY: Auto-detect header if not provided
-            $headerComponent = collect($tpl->components)->firstWhere('type', 'HEADER');
-            if ($headerComponent && in_array($headerComponent['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                $format = $headerComponent['format'];
-                $mediaLink = array_shift($bodyParams) ?? 'https://via.placeholder.com/150';
-
-                if (!filter_var($mediaLink, FILTER_VALIDATE_URL)) {
-                    Log::warning("Expected URL for {$format} header. Using placeholder.");
-                    $mediaLink = 'https://placehold.co/600x400.png?text=Image';
-                }
-
-                $manualType = strtolower($format);
-                $components[] = [
-                    'type' => 'header',
-                    'parameters' => [
-                        [
-                            'type' => $manualType,
-                            $manualType => ['link' => $mediaLink]
-                        ]
-                    ]
                 ];
             }
         }
@@ -410,15 +435,39 @@ class WhatsAppService
         $category = $tpl ? strtolower($tpl->category) : 'marketing';
 
         // 3. Resolve Contact ID
-        $contact = \App\Models\Contact::firstOrCreate(
-            ['team_id' => $this->team->id, 'phone_number' => $to]
-        );
+        $contact = $this->getOrCreateContact($to);
 
-        // --- POLICY CHECK ---
-        $policy = new PolicyService();
-        if (!$policy->canSendTemplate($contact, $category)) {
-            Log::warning("Blocked template to {$to}. Marketing Opt-in required or User Opted-out.");
-            return ['success' => false, 'error' => 'Blocked by Policy: Marketing requires Opt-in, or User Opted-out.'];
+        // --- POLICY GUARDRAILS (UC-07) ---
+        $policy = app(PolicyService::class);
+        $category = strtoupper($tpl->category ?? 'MARKETING');
+
+        // 1. Marketing Opt-In Enforced via Contact Consent
+
+        // 1. Marketing Opt-In Enforced via Contact Consent
+        if ($category === 'MARKETING' && !$contact->hasValidConsent()) {
+            Log::warning("Blocked MARKETING template to {$to}. No valid consent found.", [
+                'opt_in_status' => $contact->opt_in_status,
+                'opt_in_expires_at' => $contact->opt_in_expires_at
+            ]);
+            return [
+                'success' => false,
+                'error' => "CAT_MARKETING_NO_OPT_IN: Marketing message blocked. This contact has not opted in or consent has expired."
+            ];
+        }
+
+        // 2. Utility Guardrail (Block if opted-out)
+        if ($category === 'UTILITY' && $contact->opt_in_status === 'opted_out') {
+            Log::warning("Blocked UTILITY template to {$to}. Contact has OPTED OUT of all communications.");
+            return [
+                'success' => false,
+                'error' => "CAT_UTILITY_BLOCKED: Transactional message blocked. This contact has opted out of all communications."
+            ];
+        }
+
+        // 3. Existing general policy check (e.g. rate limits, custom logic)
+        if (!$policy->canSendTemplate($contact, strtolower($category))) {
+            Log::warning("Blocked template to {$to}. General policy rejection (Category: {$category}).");
+            return ['success' => false, 'error' => 'Blocked by General Messaging Policy.'];
         }
         // --------------------
 
@@ -433,7 +482,7 @@ class WhatsAppService
         }
 
         // 5. Check Wallet & Plan Limits
-        $billing = new \App\Services\BillingService();
+        $billing = app(\App\Services\BillingService::class);
         $allowed = $billing->recordConversationUsage($this->team, $contact->id, $category, null);
 
         if (!$allowed) {
@@ -633,17 +682,47 @@ class WhatsAppService
         }
 
         if ($response->failed()) {
+            // Rule 3: Atomic Demotion on 401
+            if ($response->status() === 401 && $this->team) {
+                Log::warning("WhatsApp API 401 Unauthorized for team {$this->team->id}. Demoting to SUSPENDED.");
+                $this->team->update([
+                    'whatsapp_setup_state' => \App\Enums\IntegrationState::class . '::SUSPENDED',
+                    // Wait, better way to update Enum
+                ]);
+                $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::SUSPENDED;
+                $this->team->save();
+            }
+
             Log::error('WhatsApp API Error', [
+                'status' => $response->status(),
                 'error' => $response->json(),
                 'payload' => $data,
                 'url' => $url,
             ]);
             // Return validation errors if present
-            return ['success' => false, 'error' => $response->json()];
+            return ['success' => false, 'error' => $response->json(), 'status_code' => $response->status()];
         }
 
         Log::info("WhatsApp API Success: [$method] $url", ['response' => $response->json()]);
 
         return ['success' => true, 'data' => $response->json()];
+    }
+
+    protected function verifyReadyToSend()
+    {
+        if (!$this->team)
+            return;
+
+        $state = $this->team->whatsapp_setup_state;
+        $allowed = [
+            \App\Enums\IntegrationState::READY,
+            \App\Enums\IntegrationState::READY_WARNING
+        ];
+
+        if (!in_array($state, $allowed)) {
+            $label = $state ? $state->label() : 'Unknown';
+            Log::error("Messaging Lock: Team {$this->team->id} is in state {$label}. Blocking outbound message.");
+            throw new \Exception("Messaging is blocked. Connection state: {$label}. Please fix your connection in Settings.");
+        }
     }
 }

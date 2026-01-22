@@ -39,6 +39,10 @@ class ExternalContactController extends Controller
             'name' => 'nullable|string',
             'email' => 'nullable|email',
             'custom_attributes' => 'nullable|array',
+            'opt_in' => 'nullable|boolean',
+            'opt_in_source' => 'nullable|string',
+            'opt_in_notes' => 'nullable|string',
+            'opt_in_proof_url' => 'nullable|url',
         ]);
 
         $team = $request->user()->currentTeam;
@@ -64,7 +68,8 @@ class ExternalContactController extends Controller
             (new \App\Services\ConsentService)->optIn(
                 $contact,
                 $request->input('opt_in_source', 'API'),
-                'Opt-in via API'
+                $request->input('opt_in_notes', 'Opt-in via API'),
+                $request->input('opt_in_proof_url')
             );
         }
 

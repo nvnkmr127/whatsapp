@@ -19,16 +19,24 @@
                     and settings.</p>
             </div>
         </div>
-        <div>
+        <div class="flex items-center gap-3">
             @if($is_whatsmark_connected)
-                <div
-                    class="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-2xl border border-green-100 dark:border-green-800">
-                    <span class="relative flex h-3 w-3">
-                        <span
-                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-wa-teal"></span>
-                    </span>
-                    <span class="text-sm font-bold text-green-700 dark:text-green-400">CONNECTED</span>
+                <div class="flex flex-col items-end gap-2">
+                    <div
+                        class="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-2xl border border-green-100 dark:border-green-800">
+                        <span class="relative flex h-3 w-3">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-wa-teal"></span>
+                        </span>
+                        <span class="text-sm font-bold text-green-700 dark:text-green-400">CONNECTED</span>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1 bg-{{ $integrationStateColor }}-100 dark:bg-{{ $integrationStateColor }}-900/30 rounded-full border border-{{ $integrationStateColor }}-200 dark:border-{{ $integrationStateColor }}-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-{{ $integrationStateColor }}-500 animate-pulse"></span>
+                        <span class="text-[10px] font-black text-{{ $integrationStateColor }}-700 dark:text-{{ $integrationStateColor }}-400 uppercase tracking-widest">
+                            {{ $integrationStateLabel }}
+                        </span>
+                    </div>
                 </div>
             @else
                 <div
@@ -45,6 +53,35 @@
     <div
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-50 dark:border-slate-800">
         @if($is_whatsmark_connected)
+                <!-- Critical Alert Banner -->
+                @if(in_array($integrationState, ['suspended', 'restricted']))
+                    <div class="mb-10 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800/50 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-rose-100 dark:shadow-none animate-bounce-subtle">
+                        <div class="flex items-center gap-5 text-center md:text-left">
+                            <div class="p-4 bg-rose-500 text-white rounded-2xl shadow-xl shadow-rose-200 dark:shadow-none">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter">ACTION REQUIRED: {{ $integrationStateLabel }}</h4>
+                                <p class="text-sm font-bold text-rose-700 dark:text-rose-400 opacity-80 uppercase tracking-widest">
+                                    {{ $integrationState === 'suspended' ? 'Your Meta session has expired or been revoked. Messaging is blocked.' : 'Your account is restricted by Meta due to policy violations.' }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            @if($integrationState === 'suspended')
+                                <button onclick="launchWhatsAppSignup()" class="px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
+                                    RE-AUTHENTICATE NOW
+                                </button>
+                            @endif
+                            <button wire:click="validateConnection" class="px-8 py-4 bg-white dark:bg-slate-800 text-rose-600 border-2 border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-50 transition-all">
+                                RE-CHECK STATUS
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Dashboard View -->
                 <div class="space-y-12">
                     <!-- Stats Grid -->
@@ -115,21 +152,172 @@
                             </div>
                             <div class="mt-4 flex items-center justify-between">
                                 <span class="text-sm text-slate-500 font-medium">Messages per 24h</span>
-                                <button wire:click="syncInfo" wire:loading.attr="disabled"
-                                    class="group flex items-center gap-2 text-xs font-bold text-green-600 hover:text-green-700">
-                                    <svg wire:loading.class="animate-spin" class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                            stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor"
-                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                        </path>
-                                    </svg>
-                                    <span>SYNC INFO</span>
-                                </button>
+                                <div class="flex flex-col items-end gap-2">
+                                    <button wire:click="syncInfo" wire:loading.attr="disabled"
+                                        class="group flex items-center gap-2 text-xs font-bold text-green-600 hover:text-green-700">
+                                        <svg wire:loading.class="animate-spin" class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        <span>SYNC INFO</span>
+                                    </button>
+                                    <button wire:click="validateConnection" wire:loading.attr="disabled"
+                                        class="group flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700">
+                                        <svg wire:loading.class="animate-spin" class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        <span>RE-VERIFY CONNECTION</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                </div>
+
+                <!-- Readiness & Health Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8">
+                    <!-- Setup Progress Widget -->
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="flex items-center gap-3">
+                                <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SETUP <span class="text-wa-teal">PROGRESS</span></h3>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ $setupProgress['completed'] }}/{{ $setupProgress['total'] }} STEPS COMPLETED</p>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-slate-900 dark:text-white">{{ $setupProgress['progress'] }}%</div>
+                        </div>
+
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full mb-10 overflow-hidden shadow-inner">
+                            <div class="bg-gradient-to-r from-wa-teal to-green-400 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style="width: {{ $setupProgress['progress'] }}%"></div>
+                        </div>
+
+                        <div class="space-y-6">
+                            @foreach($setupProgress['steps'] as $step)
+                                <div class="flex items-start gap-4 group">
+                                    <div class="mt-1 flex-shrink-0">
+                                        @if($step['status'] === 'completed')
+                                            <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-200 dark:shadow-none">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                            </div>
+                                        @elseif($step['status'] === 'warning')
+                                            <div class="w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-rose-200 dark:shadow-none animate-pulse">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                                </svg>
+                                            </div>
+                                        @elseif($step['status'] === 'pending')
+                                            <div class="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-200 dark:shadow-none">
+                                                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </div>
+                                        @else
+                                            <div class="w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center">
+                                                <div class="w-2 h-2 bg-current rounded-full"></div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex-grow">
+                                        <h4 class="text-sm font-bold {{ $step['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }} uppercase tracking-wider">{{ $step['title'] }}</h4>
+                                        <p class="text-[11px] font-medium text-slate-500 mt-0.5">{{ $step['description'] }}</p>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Account Health Widget -->
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="flex items-center gap-3">
+                                <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl text-indigo-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SYSTEM <span class="text-wa-teal">HEALTH</span></h3>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">REAL-TIME MONITORING</p>
+                                </div>
+                            </div>
+                            <button wire:click="refreshHealth" wire:loading.attr="disabled" class="p-2 text-slate-400 hover:text-wa-teal transition-colors">
+                                <svg wire:loading.class="animate-spin" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="relative flex items-center justify-center mb-10">
+                            <svg class="w-32 h-32 transform -rotate-90">
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="12" fill="transparent" class="text-slate-100 dark:text-slate-800" />
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="12" fill="transparent" 
+                                        stroke-dasharray="{{ 2 * pi() * 58 }}" 
+                                        stroke-dashoffset="{{ (1 - $healthScore/100) * 2 * pi() * 58 }}" 
+                                        class="{{ $healthStatus === 'healthy' ? 'text-wa-teal' : ($healthStatus === 'warning' ? 'text-orange-500' : 'text-rose-500') }} transition-all duration-1000 ease-out" />
+                            </svg>
+                            <div class="absolute flex flex-col items-center">
+                                <span class="text-3xl font-black text-slate-900 dark:text-white">{{ $healthScore }}</span>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">{{ $healthStatus }}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <!-- Token Health Score -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Access Token</span>
+                                    <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $tokenHealthScore }}%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-1000" style="width: {{ $tokenHealthScore }}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Quality Rating Score -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Quality rating</span>
+                                    <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $qualityHealthScore }}%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-amber-500 h-full rounded-full transition-all duration-1000" style="width: {{ $qualityHealthScore }}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Messaging Usage Score -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Messaging usage</span>
+                                    <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $messagingUsagePercent }}%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width: {{ $messagingUsagePercent }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert Center Section -->
+                <div class="py-8">
+                    <livewire:teams.whatsapp-alerts />
                 </div>
 
                 <!-- Business Profile Section -->

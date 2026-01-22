@@ -22,11 +22,28 @@ class ContactImportService
         $this->contactService = new ContactService();
     }
 
-    public function import(string $filePath, array $columnMapping)
+    /**
+     * Import contacts from CSV file.
+     * 
+     * @param string $filePath Path to CSV file
+     * @param array $columnMapping Mapping of CSV columns to contact fields
+     * @param array $options Import options including consent information
+     * @return array Results with success count and errors
+     */
+    public function import(string $filePath, array $columnMapping, array $options = [])
     {
         // $columnMapping = ['csv_header' => 'contact_field_key']
         // internal fields: name, phone_number, email, tags
         // custom fields: keys from contact_fields table
+
+        // GDPR Compliance: Require consent source for all imports
+        $requireConsent = $options['require_consent'] ?? true;
+        $consentSource = $options['consent_source'] ?? null;
+        $consentProof = $options['consent_proof_url'] ?? null;
+
+        if ($requireConsent && !$consentSource) {
+            throw new \Exception("Consent source is required for contact import. Please provide 'consent_source' in options.");
+        }
 
         $csv = Reader::createFromPath($filePath, 'r');
         $csv->setHeaderOffset(0);
@@ -44,7 +61,27 @@ class ContactImportService
                     continue;
                 }
 
-                $this->processContact($contactData);
+                // Add consent information if not already in CSV
+                if ($requireConsent && empty($contactData['opt_in_status'])) {
+                    $contactData['opt_in_status'] = 'opted_in';
+                    $contactData['opt_in_source'] = $consentSource;
+                    $contactData['opt_in_at'] = now();
+                }
+
+                $contact = $this->processContact($contactData);
+
+                // Log consent for audit trail
+                if ($contact->opt_in_status === 'opted_in') {
+                    \App\Models\ConsentLog::create([
+                        'team_id' => $this->team->id,
+                        'contact_id' => $contact->id,
+                        'action' => 'OPT_IN',
+                        'source' => $consentSource,
+                        'notes' => "Imported from CSV: " . basename($filePath),
+                        'proof_url' => $consentProof,
+                    ]);
+                }
+
                 $successCount++;
             } catch (\Exception $e) {
                 $errors[] = "Row " . ($index + 1) . ": " . $e->getMessage();
@@ -97,5 +134,7 @@ class ContactImportService
         if (!empty($tags)) {
             $this->contactService->addTags($contact, $tags);
         }
+
+        return $contact;
     }
 }

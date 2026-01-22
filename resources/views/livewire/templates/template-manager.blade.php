@@ -87,9 +87,32 @@
                     </div>
                 </div>
 
+                <!-- Readiness Section -->
+                <div class="px-8 pb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Readiness Check</span>
+                        <span class="text-[10px] font-black {{ $tpl->readiness_score >= 90 ? 'text-emerald-500' : ($tpl->readiness_score >= 70 ? 'text-amber-500' : 'text-rose-500') }}">
+                            {{ $tpl->readiness_score }}%
+                        </span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full {{ $tpl->readiness_score >= 90 ? 'bg-emerald-500' : ($tpl->readiness_score >= 70 ? 'bg-amber-500' : 'bg-rose-500') }} transition-all" style="width: {{ $tpl->readiness_score }}%"></div>
+                    </div>
+                    
+                    @if(!empty($tpl->validation_results))
+                        <div class="mt-3 space-y-1.5">
+                            @foreach($tpl->validation_results as $error)
+                                <div class="flex items-start gap-2 text-[9px] {{ ($error['severity'] ?? '') === 'fatal' ? 'text-rose-500' : 'text-amber-500' }} font-bold leading-tight uppercase tracking-wider">
+                                    <svg class="w-2.5 h-2.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                    <span>{{ $error['description'] ?? ($error['message'] ?? 'Unknown mismatch') }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
                 <div class="px-8 py-6 bg-slate-50/50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">ID: {{ substr($tpl->whatsapp_template_id, 0, 8) }}...</span>
-                    <!-- Actions could go here -->
                 </div>
             </div>
         @empty
@@ -149,6 +172,36 @@
                                         <option value="MARKETING">Marketing (Promotion)</option>
                                         <option value="AUTHENTICATION">Authentication (Security)</option>
                                     </select>
+
+                                    <!-- Category Hints (UC-08) -->
+                                    <div class="mt-3 p-3 bg-slate-100/50 dark:bg-slate-900/50 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+                                        @if($category === 'AUTHENTICATION')
+                                            <p class="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest leading-relaxed">
+                                                <svg class="w-3 h-3 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                Strict: OTP only. Media & Custom Buttons disallowed. Requires Disclaimer footer.
+                                            </p>
+                                        @elseif($category === 'MARKETING')
+                                            <p class="text-[9px] font-bold text-wa-teal uppercase tracking-widest leading-relaxed">
+                                                <svg class="w-3 h-3 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                Flexible: For promos & news. Enforces marketing opt-in flag before sending.
+                                            </p>
+                                        @else
+                                            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                                                <svg class="w-3 h-3 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                Safe: For orders & alerts. Restricted to non-promotional content.
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Language</label>
+                                    <select wire:model="language"
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                        @foreach($languages as $code => $label)
+                                            <option value="{{ $code }}">{{ $label }} ({{ $code }})</option>
+                                        @endforeach
+                                    </select>
+                                    @error('language') <span class="text-[10px] font-bold text-rose-500 mt-2 block uppercase tracking-wide">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         </section>
@@ -217,6 +270,7 @@
 
                             <div class="space-y-4">
                                 @foreach($buttons as $index => $btn)
+                                    <!-- (Existing Button HTML...) -->
                                     <div class="p-6 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-800 relative group animate-in slide-in-from-left-2 transition-all">
                                         <button type="button" wire:click="removeButton({{ $index }})" 
                                             class="absolute -top-2 -right-2 p-2 bg-rose-500 text-white rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
@@ -264,6 +318,52 @@
                                 @endif
                             </div>
                         </section>
+
+                        <!-- Variable Schema Section -->
+                        @if(!empty($variableConfig))
+                            <section class="space-y-6 animate-in slide-in-from-bottom-4">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 dark:border-slate-900 pb-2">4. Variable Schema (Required)</h4>
+                                <div class="space-y-4">
+                                    @foreach($variableConfig as $var => $config)
+                                        <div class="p-6 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-wa-teal/20 shadow-sm relative overflow-hidden">
+                                            <div class="absolute top-0 right-0 px-3 py-1 bg-wa-teal/10 text-wa-teal text-[10px] font-black rounded-bl-xl uppercase tracking-widest">{{ $var }}</div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                                <div>
+                                                    <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Internal Variable Name</label>
+                                                    <input type="text" wire:model="variableConfig.{{ $var }}.name"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-300"
+                                                        placeholder="e.g. customer_name">
+                                                    @error('variableConfig.'.$var.'.name') <span class="text-[9px] font-bold text-rose-500 mt-1 block uppercase">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Data Type</label>
+                                                    <select wire:model="variableConfig.{{ $var }}.type"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20">
+                                                        <option value="TEXT">Text (Default)</option>
+                                                        <option value="CURRENCY">Currency</option>
+                                                        <option value="DATE_TIME">Date/Time</option>
+                                                        <option value="IMAGE_URL">Image URL</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Fallback Value (Optional)</label>
+                                                    <input type="text" wire:model="variableConfig.{{ $var }}.fallback"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-300"
+                                                        placeholder="e.g. Valued Customer">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Sample Content (For Approval)</label>
+                                                    <input type="text" wire:model="variableConfig.{{ $var }}.sample"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-300"
+                                                        placeholder="e.g. John Doe">
+                                                    @error('variableConfig.'.$var.'.sample') <span class="text-[9px] font-bold text-rose-500 mt-1 block uppercase">{{ $message }}</span> @enderror
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
                     </div>
                 </div>
 
@@ -302,7 +402,7 @@
                                 @endif
 
                                 <!-- Body -->
-                                <p class="text-[11px] text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{{ $body ?: 'Hello, this is your message body...' }}</p>
+                                <p class="text-[11px] text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{{ $this->previewBody ?: 'Hello, this is your message body...' }}</p>
 
                                 <!-- Footer -->
                                 @if($footer)

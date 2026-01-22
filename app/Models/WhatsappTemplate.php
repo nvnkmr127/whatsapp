@@ -10,6 +10,10 @@ class WhatsappTemplate extends Model
 
     protected $casts = [
         'components' => 'array',
+        'validation_results' => 'array',
+        'readiness_score' => 'integer',
+        'is_paused' => 'boolean',
+        'variable_config' => 'array',
     ];
 
     public function team()
@@ -32,5 +36,15 @@ class WhatsappTemplate extends Model
         }
 
         return implode("\n", $content);
+    }
+
+    /**
+     * Scope a query to only include templates that are safe for sending.
+     * Use with readiness check in application logic for stricter control.
+     */
+    public function scopeSafeForSending($query)
+    {
+        return $query->where('status', 'APPROVED')
+            ->where('is_paused', false);
     }
 }

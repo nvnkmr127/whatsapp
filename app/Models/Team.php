@@ -51,6 +51,13 @@ class Team extends JetstreamTeam
         'commerce_config',
         'subscription_plan',
         'subscription_status',
+        'whatsapp_messaging_limit',
+        'whatsapp_quality_rating',
+        'whatsapp_phone_display',
+        'whatsapp_verified_name',
+        'whatsapp_setup_state',
+        'whatsapp_token_expires_at',
+        'whatsapp_token_last_validated',
     ];
 
     /**
@@ -90,6 +97,13 @@ class Team extends JetstreamTeam
             'chat_status_rules' => 'array',
             'commerce_config' => 'array',
             'subscription_ends_at' => 'datetime',
+            'whatsapp_setup_progress' => 'array',
+            'whatsapp_setup_started_at' => 'datetime',
+            'whatsapp_setup_completed_at' => 'datetime',
+            'whatsapp_setup_in_progress' => 'boolean',
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::class,
+            'whatsapp_token_expires_at' => 'datetime',
+            'whatsapp_token_last_validated' => 'datetime',
         ];
     }
 
@@ -152,6 +166,21 @@ class Team extends JetstreamTeam
         return $this->hasMany(TeamAddOn::class);
     }
 
+    public function healthSnapshots()
+    {
+        return $this->hasMany(WhatsAppHealthSnapshot::class);
+    }
+
+    public function healthAlerts()
+    {
+        return $this->hasMany(WhatsAppHealthAlert::class);
+    }
+
+    public function whatsappTemplates()
+    {
+        return $this->hasMany(WhatsappTemplate::class);
+    }
+
     /**
      * Centralized feature check logic.
      * Checks subscription plan and active add-ons.
@@ -174,5 +203,83 @@ class Team extends JetstreamTeam
             ->where('type', $feature)
             ->get()
             ->contains(fn($addon) => $addon->isActive());
+    }
+
+    /**
+     * Get current setup state as enum
+     */
+    public function getSetupState(): \App\Enums\WhatsAppSetupState
+    {
+        $state = $this->whatsapp_setup_state; // Could be IntegrationState enum
+
+        $value = $state instanceof \App\Enums\IntegrationState ? strtoupper($state->value) : ($state ?? 'NOT_CONFIGURED');
+
+        // Normalize common mappings
+        $value = match ($value) {
+            'READY', 'READY_WARNING' => 'ACTIVE',
+            'DISCONNECTED' => 'NOT_CONFIGURED',
+            default => $value
+        };
+
+        try {
+            return \App\Enums\WhatsAppSetupState::from($value);
+        } catch (\ValueError $e) {
+            return \App\Enums\WhatsAppSetupState::NOT_CONFIGURED;
+        }
+    }
+
+    /**
+     * Check if setup is in a specific state
+     */
+    public function isInSetupState(string|\App\Enums\WhatsAppSetupState|\App\Enums\IntegrationState $state): bool
+    {
+        if ($state instanceof \App\Enums\IntegrationState) {
+            return $this->whatsapp_setup_state === $state;
+        }
+
+        if (is_string($state)) {
+            try {
+                $state = \App\Enums\WhatsAppSetupState::from(strtoupper($state));
+            } catch (\ValueError $e) {
+                return false;
+            }
+        }
+
+        return $this->getSetupState() === $state;
+    }
+
+    /**
+     * Check if setup is active
+     */
+    public function isWhatsAppActive(): bool
+    {
+        return $this->isInSetupState(\App\Enums\WhatsAppSetupState::ACTIVE);
+    }
+
+    /**
+     * Check if setup is degraded
+     */
+    public function isWhatsAppDegraded(): bool
+    {
+        return $this->isInSetupState(\App\Enums\WhatsAppSetupState::DEGRADED);
+    }
+
+    /**
+     * Check if setup is suspended
+     */
+    public function isWhatsAppSuspended(): bool
+    {
+        return $this->isInSetupState(\App\Enums\WhatsAppSetupState::SUSPENDED);
+    }
+
+    /**
+     * Check if WhatsApp can send messages
+     */
+    public function canSendWhatsAppMessages(): bool
+    {
+        return in_array($this->getSetupState(), [
+            \App\Enums\WhatsAppSetupState::ACTIVE,
+            \App\Enums\WhatsAppSetupState::DEGRADED,
+        ]);
     }
 }

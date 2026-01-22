@@ -39,6 +39,14 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
     Route::post('/conversations/{conversation}/unlock', [\App\Http\Controllers\ConversationController::class, 'unlock']);
     Route::post('/conversations/{conversation}/heartbeat', [\App\Http\Controllers\ConversationController::class, 'heartbeat']);
     Route::post('/conversations/{conversation}/takeover', [\App\Http\Controllers\ConversationController::class, 'forceTakeOver']);
+
+    // Inbox Contact Integration
+    Route::prefix('inbox/contacts')->group(function () {
+        Route::get('resolve', [\App\Http\Controllers\Api\InboxContactController::class, 'resolve']);
+        Route::post('resolve-batch', [\App\Http\Controllers\Api\InboxContactController::class, 'resolveBatch']);
+        Route::put('{contact}', [\App\Http\Controllers\Api\InboxContactController::class, 'update']);
+        Route::post('{contact}/assign', [\App\Http\Controllers\Api\InboxContactController::class, 'assign']);
+    });
 });
 
 use App\Http\Controllers\WhatsAppWebhookController;

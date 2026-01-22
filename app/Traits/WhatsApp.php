@@ -22,12 +22,12 @@ trait WhatsApp
 
     private function getToken(): string
     {
-        return get_setting('whatsapp_wm_access_token') ?? config('services.whatsapp.access_token') ?? '';
+        return $this->team->whatsapp_access_token ?? auth()->user()->currentTeam->whatsapp_access_token ?? '';
     }
 
     private function getAccountID(): string
     {
-        return get_setting('whatsapp_wm_business_account_id') ?? config('services.whatsapp.account_id') ?? '';
+        return $this->team->whatsapp_business_account_id ?? auth()->user()->currentTeam->whatsapp_business_account_id ?? '';
     }
 
     public function loadTemplatesFromWhatsApp(): array
@@ -96,7 +96,7 @@ trait WhatsApp
                         // MAJOR MISMATCH detected between Trait and Migration.
                         // I must also fix the update array to match migration columns.
                         'components' => $templateData['components'], // Save raw components as JSON
-                        'team_id' => auth()->user()->currentTeam->id ?? \App\Models\Team::first()->id, // Needs team_id as per migration
+                        'team_id' => $this->team->id ?? auth()->user()->currentTeam->id, // Use contextual team
                     ]
                 );
             }
@@ -179,6 +179,115 @@ trait WhatsApp
 
         } catch (\Throwable $e) {
             Log::error("WhatsApp Register Phone Error: " . $e->getMessage());
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Exchange a short-lived user token for a long-lived (60 days) access token.
+     */
+    public function exchangeForLongLivedToken(string $shortLivedToken): array
+    {
+        try {
+            $appId = config('services.facebook.client_id');
+            $appSecret = config('services.facebook.client_secret');
+
+            if (empty($appId) || empty($appSecret)) {
+                return ['status' => false, 'message' => 'Facebook App ID or Secret not configured in services.php'];
+            }
+
+            $response = Http::get(self::$facebookAPI . 'oauth/access_token', [
+                'grant_type' => 'fb_exchange_token',
+                'client_id' => $appId,
+                'client_secret' => $appSecret,
+                'fb_exchange_token' => $shortLivedToken,
+            ]);
+
+            if ($response->failed()) {
+                return ['status' => false, 'message' => $response->json('error.message') ?? 'Token exchange failed'];
+            }
+
+            return [
+                'status' => true,
+                'access_token' => $response->json('access_token'),
+                'expires_in' => $response->json('expires_in'), // Usually present for user tokens
+            ];
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Token Exchange Error: " . $e->getMessage());
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Subscribe the application to the WhatsApp Business Account's webhooks.
+     */
+    public function subscribeToWebhooks(string $wabaId, string $token): array
+    {
+        try {
+            $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
+
+            $response = Http::withToken($token)->post($url);
+
+            if ($response->failed()) {
+                return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook subscription failed'];
+            }
+
+            return ['status' => true, 'message' => 'Successfully subscribed to webhooks'];
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Webhook Subscription Error: " . $e->getMessage());
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Debug an access token to see its scopes and validity.
+     */
+    public function debugToken(string $token): array
+    {
+        try {
+            $appToken = config('services.facebook.client_id') . '|' . config('services.facebook.client_secret');
+
+            $response = Http::get(self::$facebookAPI . 'debug_token', [
+                'input_token' => $token,
+                'access_token' => $appToken,
+            ]);
+
+            if ($response->failed()) {
+                return ['status' => false, 'message' => $response->json('error.message') ?? 'Token debug failed'];
+            }
+
+            return [
+                'status' => true,
+                'data' => $response->json('data')
+            ];
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Token Debug Error: " . $e->getMessage());
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Check if the app is subscribed to webhooks for this WABA.
+     */
+    public function checkWebhookSubscription(string $wabaId, string $token): array
+    {
+        try {
+            $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
+            $response = Http::withToken($token)->get($url);
+
+            if ($response->failed()) {
+                return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook check failed'];
+            }
+
+            $subscriptions = $response->json('data');
+            $isSubscribed = collect($subscriptions)->contains('id', config('services.facebook.client_id'));
+
+            return [
+                'status' => true,
+                'is_subscribed' => $isSubscribed
+            ];
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Webhook Check Error: " . $e->getMessage());
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }

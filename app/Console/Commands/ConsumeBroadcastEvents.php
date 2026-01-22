@@ -10,7 +10,6 @@ use App\Services\EventBusService;
 use App\Services\RateLimitService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
 
 class ConsumeBroadcastEvents extends Command
@@ -51,9 +50,7 @@ class ConsumeBroadcastEvents extends Command
 
         $this->info("Starting Broadcast Consumer: Group [{$group}], Consumer [{$consumer}]");
 
-        // 1. Ensure Group Exists (Redis Only)
-        $this->eventBus->createGroup($this->stream, $group, '0');
-
+        // Database Polling
         while (true) {
             try {
                 // Check if system is paused globally first
@@ -63,23 +60,6 @@ class ConsumeBroadcastEvents extends Command
                     continue;
                 }
 
-                // A. Try Redis Stream
-                $redisClient = config('database.redis.client');
-                if (!empty($redisClient) && $redisClient !== 'null') {
-                    try {
-                        $results = Redis::xreadgroup('GROUP', $group, $consumer, 'COUNT', $count, 'BLOCK', 2000, 'STREAMS', $this->stream, '>');
-                        if (!empty($results)) {
-                            foreach ($results[$this->stream] as $id => $data) {
-                                $this->processEvent((string) $id, $data, $group);
-                            }
-                            continue;
-                        }
-                    } catch (\Exception $e) {
-                        $this->warn("Redis polling failed: " . $e->getMessage());
-                    }
-                }
-
-                // B. Database Fallback polling
                 $dbEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
                     ->where('status', 'pending')
                     ->orderBy('id', 'asc')

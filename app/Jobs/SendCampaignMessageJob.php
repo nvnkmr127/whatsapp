@@ -15,7 +15,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Cache;
 use App\Events\CampaignProgressUpdated;
 
@@ -118,16 +117,9 @@ class SendCampaignMessageJob implements ShouldQueue
 
                 // --- STORE ATTRIBUTION POINTER ---
                 // Store for 48 hours to track temporal replies
-                if (config('database.redis.client') !== 'null') {
-                    try {
-                        Redis::setex("last_campaign:contact:{$contact->phone_number}", 172800, $this->campaignId);
-                    } catch (\Exception $e) {
-                        Log::warning("Redis failed for attribution pointer: " . $e->getMessage());
-                        Cache::put("last_campaign:contact:{$contact->phone_number}", $this->campaignId, 172800);
-                    }
-                } else {
-                    Cache::put("last_campaign:contact:{$contact->phone_number}", $this->campaignId, 172800);
-                }
+                // --- STORE ATTRIBUTION POINTER ---
+                // Store for 48 hours to track temporal replies
+                Cache::put("last_campaign:contact:{$contact->phone_number}", $this->campaignId, 172800);
             } else {
                 $error = $response['error'] ?? 'Unknown API Error';
                 throw new \Exception(is_array($error) ? json_encode($error) : $error);
