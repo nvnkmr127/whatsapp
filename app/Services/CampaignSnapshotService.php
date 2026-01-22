@@ -70,7 +70,10 @@ class CampaignSnapshotService
             });
 
             // 4. Update Campaign
-            $campaign->update(['last_snapshot_id' => $snapshot->id]);
+            $campaign->update([
+                'last_snapshot_id' => $snapshot->id,
+                'total_contacts' => $count
+            ]);
 
             Log::info("Created snapshot {$snapshot->id} for Campaign {$campaign->id} with {$count} contacts.");
 

@@ -132,8 +132,9 @@ class ConsumeBroadcastEvents extends Command
                     break;
 
                 case 'message.status':
-                    // Handle Status Updates (Delivery, Read receipts) if needed
-                    // For now, we can just ack them or add a specific job if required
+                    // Dispatch Job to update message status and campaign stats
+                    \App\Jobs\UpdateMessageStatusJob::dispatch($payload)->onQueue('messages');
+                    $this->info("Dispatched UpdateMessageStatusJob for Event {$id}");
                     $this->eventBus->ack($this->stream, $group, [$id]);
                     break;
 

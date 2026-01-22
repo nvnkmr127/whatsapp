@@ -85,16 +85,17 @@ class Show extends Component
     {
         $campaign = $this->campaign;
 
-        $sentCount = $campaign->messages()->count();
-        $deliveredCount = $campaign->messages()->whereIn('status', ['delivered', 'read'])->count();
-        $readCount = $campaign->messages()->where('status', 'read')->count();
+        $sentCount = $campaign->sent_count;
+        $deliveredCount = $campaign->del_count;
+        $readCount = $campaign->read_count;
+        $failedCount = $campaign->messages()->where('status', 'failed')->count();
 
         return [
-            'total' => $campaign->audience_count ?: $campaign->total_contacts,
+            'total' => $campaign->total_contacts,
             'sent' => $sentCount,
             'delivered' => $deliveredCount,
             'read' => $readCount,
-            'failed' => $campaign->messages()->where('status', 'failed')->count(),
+            'failed' => $failedCount,
             'delivery_rate' => $sentCount > 0 ? round(($deliveredCount / $sentCount) * 100) : 0,
             'read_rate' => $deliveredCount > 0 ? round(($readCount / $deliveredCount) * 100) : 0,
         ];
