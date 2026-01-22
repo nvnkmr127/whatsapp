@@ -172,16 +172,16 @@ class PersistMessageJob implements ShouldQueue
         $type = $msgData['type'];
         return match ($type) {
             'text' => $msgData['text']['body'] ?? '',
-            'image' => $msgData['image']['caption'] ?? '[Image]',
-            'video' => $msgData['video']['caption'] ?? '[Video]',
-            'audio' => '[Audio]',
-            'document' => $msgData['document']['caption'] ?? $msgData['document']['filename'] ?? '[Document]',
-            'sticker' => '[Sticker]',
+            'image' => $msgData['image']['caption'] ?? null,
+            'video' => $msgData['video']['caption'] ?? null,
+            'audio' => null,
+            'document' => $msgData['document']['caption'] ?? $msgData['document']['filename'] ?? null,
+            'sticker' => null,
             'location' => 'Location',
             'contacts' => '[Contact Card]',
-            'interactive' => $this->extractInteractiveContent($msgData['interactive']), // Fix: method needed
-            'button' => $msgData['button']['text'] ?? '[Button]',
-            default => "[$type message]",
+            'interactive' => $this->extractInteractiveContent($msgData['interactive']),
+            'button' => $msgData['button']['text'] ?? null,
+            default => null,
         };
     }
 

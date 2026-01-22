@@ -319,7 +319,7 @@
                         </template>
 
                         <!-- Text -->
-                        <template x-if="message.content">
+                        <template x-if="message.content && message.content !== '[Image]'">
                             <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content"></p>
                         </template>
                         
@@ -987,36 +987,55 @@
     <!-- Lightbox Modal -->
     <template x-teleport="body">
         <div x-show="lightboxOpen" 
-             class="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/95 backdrop-blur-md p-4 md:p-10"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-95"
+             class="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
              @keydown.escape.window="lightboxOpen = false"
              x-cloak>
             
-            <button @click="lightboxOpen = false" 
-                    class="absolute top-6 right-6 p-3 text-white/50 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-[210]">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-
-            <div class="relative w-full h-full flex items-center justify-center" @click.away="lightboxOpen = false">
-                <img :src="lightboxImage" 
-                     class="max-w-full max-h-full object-contain rounded-xl shadow-2xl animate-in zoom-in duration-300">
-            </div>
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl" @click="lightboxOpen = false"
+                 x-show="lightboxOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"></div>
             
-            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
-                <a :href="lightboxImage" download 
-                   class="px-6 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download
-                </a>
+            <!-- Modal Content -->
+            <div class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
+                 x-show="lightboxOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+                
+                <!-- Modal Header -->
+                <div class="px-6 py-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 z-10">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Image Preview</h3>
+                    <div class="flex items-center gap-2">
+                        <a :href="lightboxImage" download 
+                           class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
+                           title="Download">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        </a>
+                        <button @click="lightboxOpen = false" 
+                                class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Image Container -->
+                <div class="p-6 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-center min-h-[300px] max-h-[70vh] overflow-hidden">
+                    <img :src="lightboxImage" 
+                         class="max-w-full max-h-full object-contain rounded-xl shadow-lg animate-in zoom-in duration-300">
+                </div>
             </div>
         </div>
     </template>
