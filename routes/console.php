@@ -22,5 +22,16 @@ Schedule::command('whatsapp:check-setup-health')->everySixHours();
 // Existing schedules
 Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
-Schedule::command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();
+
+// Queue Worker for Background Jobs (runs every minute, stops when empty to release resources)
+// Added 'broadcasts' queue to ensure campaign messages are sent
+Schedule::command('queue:work --queue=broadcasts,messages,webhooks,default --stop-when-empty --tries=3 --timeout=90')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+// Broadcast Event Consumer (Polling loop that runs for 55s then exits, restarted by Cron)
+// This replaces the need for a separate Supervisor process
+Schedule::command('broadcast:consume --seconds=55')
+    ->everyMinute()
+    ->withoutOverlapping();
 

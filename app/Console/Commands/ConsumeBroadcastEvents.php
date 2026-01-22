@@ -19,7 +19,7 @@ class ConsumeBroadcastEvents extends Command
      *
      * @var string
      */
-    protected $signature = 'broadcast:consume {--group=dispatchers} {--consumer=worker1} {--count=50}';
+    protected $signature = 'broadcast:consume {--group=dispatchers} {--consumer=worker1} {--count=50} {--seconds=0}';
 
     /**
      * The console command description.
@@ -47,11 +47,19 @@ class ConsumeBroadcastEvents extends Command
         $group = $this->option('group');
         $consumer = $this->option('consumer');
         $count = (int) $this->option('count');
+        $maxSeconds = (int) $this->option('seconds');
+        $startTime = microtime(true);
 
         $this->info("Starting Broadcast Consumer: Group [{$group}], Consumer [{$consumer}]");
 
         // Database Polling
         while (true) {
+            // Self-termination check for Scheduler
+            if ($maxSeconds > 0 && (microtime(true) - $startTime) >= $maxSeconds) {
+                $this->info("Time limit of {$maxSeconds} seconds reached. Exiting for scheduler.");
+                break;
+            }
+
             try {
                 // Check if system is paused globally first
                 if ($this->rateLimitService->isPaused()) {
@@ -68,6 +76,11 @@ class ConsumeBroadcastEvents extends Command
 
                 if ($dbEvents->isNotEmpty()) {
                     foreach ($dbEvents as $event) {
+                        // Check time limit inside the loop as well for responsiveness
+                        if ($maxSeconds > 0 && (microtime(true) - $startTime) >= $maxSeconds) {
+                            break 2; // Break both loops
+                        }
+
                         // Optimistic Locking for DB events
                         $affected = \Illuminate\Support\Facades\DB::table('broadcast_events')
                             ->where('id', $event->id)
@@ -105,18 +118,50 @@ class ConsumeBroadcastEvents extends Command
         $eventType = $data['event_type'] ?? null;
         $payload = json_decode($data['payload'] ?? '{}', true);
 
-        if ($eventType !== 'message.queued') {
-            $this->eventBus->ack($this->stream, $group, [$id]);
-            return;
-        }
+        try {
+            switch ($eventType) {
+                case 'message.queued':
+                    $this->processCampaignMessage($id, $payload, $group);
+                    break;
 
+                case 'message.inbound':
+                    // Dispatch Job to persist inbound message
+                    \App\Jobs\PersistMessageJob::dispatch($payload)->onQueue('messages');
+                    $this->info("Dispatched PersistMessageJob for Event {$id}");
+                    $this->eventBus->ack($this->stream, $group, [$id]);
+                    break;
+
+                case 'message.status':
+                    // Handle Status Updates (Delivery, Read receipts) if needed
+                    // For now, we can just ack them or add a specific job if required
+                    $this->eventBus->ack($this->stream, $group, [$id]);
+                    break;
+
+                default:
+                    $this->warn("Unknown event type {$eventType} for event {$id}. Acking to clear.");
+                    $this->eventBus->ack($this->stream, $group, [$id]);
+                    break;
+            }
+        } catch (\Exception $e) {
+            $this->error("Failed to process event {$id}: " . $e->getMessage());
+            // Optionally release lock instead of acking if we want retry, 
+            // but for now we rely on the loop's error handling to retry naturally if it crashes, 
+            // or better, if it's a logic error, we shouldn't infinite loop. 
+            // We'll leave it in 'processing' state (locked) to be retried or fixed manually?
+            // Actually, safe bet for now is to LOG and maybe move to failed_events table later.
+            // For this implementation, we will NOT ack, so it stays 'processing'.
+        }
+    }
+
+    protected function processCampaignMessage(string $id, array $payload, string $group)
+    {
         $campaignId = $payload['campaign_id'] ?? null;
         $contactId = $payload['contact_id'] ?? null;
         $phoneNumber = $payload['phone_number'] ?? null;
-        $teamId = $payload['meta']['team_id'] ?? 0; // Assuming team_id is in meta
+        $teamId = $payload['meta']['team_id'] ?? 0;
 
         if (!$campaignId || !$contactId || !$phoneNumber) {
-            $this->warn("Malformed event {$id}, skipping.");
+            $this->warn("Malformed campaign event {$id}, skipping.");
             $this->eventBus->ack($this->stream, $group, [$id]);
             return;
         }
@@ -128,14 +173,10 @@ class ConsumeBroadcastEvents extends Command
 
         // --- RATE LIMIT CHECK ---
         if (!$this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
-            // If limit reached, we don't ACK. We can either BLOCK the loop (not ideal)
-            // or let the message remain in the PEL for another consumer or a retry.
-            // For now, we'll wait 200ms and retry internally once before giving up
-            // this specific event to keep the consumer group moving.
             usleep(200000);
             if (!$this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
                 $this->warn("Rate limit reached for {$phoneNumber}, backing off event {$id}");
-                return; // Return without Ack means it stays in the PEL (Pending Entry List)
+                return;
             }
         }
 
@@ -154,6 +195,7 @@ class ConsumeBroadcastEvents extends Command
         } catch (\Exception $e) {
             $this->error("Failed to process event {$id}: " . $e->getMessage());
             Cache::forget($lockKey);
+            throw $e; // Rethrow to be caught by main loop
         }
     }
 }
