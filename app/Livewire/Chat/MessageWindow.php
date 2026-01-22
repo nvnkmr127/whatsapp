@@ -131,12 +131,13 @@ class MessageWindow extends Component
 
             $msgData['type'] = $type;
             $msgData['content'] = $this->messageBody; // Caption
-            $msgData['media_url'] = $url;
+            $msgData['media_url'] = $path; // Store relative in DB
             $msgData['media_type'] = $type;
             $msgData['caption'] = $this->messageBody;
         } else {
             $msgData['type'] = 'text';
             $msgData['content'] = $this->messageBody;
+            $url = $this->messageBody;
         }
 
         $message = \App\Models\Message::create($msgData);
@@ -146,7 +147,7 @@ class MessageWindow extends Component
             Auth::user()->currentTeam->id,
             $this->conversation->contact->phone_number,
             $msgData['type'],
-            $msgData['type'] === 'text' ? $this->messageBody : $msgData['media_url'],
+            $url, // Use full URL or text body
             null, // templateName
             'en_US',
             $message->id

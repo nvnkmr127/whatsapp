@@ -3,15 +3,18 @@
         isTyping: false,
         typingUser: '',
         activeUsers: [],
+        pChannel: null,
+        lightboxOpen: false,
+        lightboxImage: '',
         init() {
             // Init Store User ID
             $store.chat.setMyUser({{ auth()->id() }});
             
             // --- Presence Channel (Multi-Agent) ---
             console.log('Front: Joining presence-conversation.{{ $conversationId }}');
-            const pChannel = window.Echo.join('conversation.{{ $conversationId }}');
+            this.pChannel = window.Echo.join('conversation.{{ $conversationId }}');
             
-            pChannel.here((users) => {
+            this.pChannel.here((users) => {
                 this.activeUsers = users;
             })
             .joining((user) => {
@@ -298,7 +301,7 @@
                         <template x-if="message.media_url">
                             <div class="mb-3 rounded-lg overflow-hidden border border-white/10">
                                 <template x-if="message.media_type && message.media_type.startsWith('image')">
-                                    <img :src="message.media_url" class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90" onclick="window.open(this.src)">
+                                    <img :src="message.media_url" class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm" @click="lightboxImage = message.media_url; lightboxOpen = true">
                                 </template>
                                 <template x-if="message.media_type && message.media_type.startsWith('video')">
                                     <video :src="message.media_url" controls class="w-full max-h-80"></video>
@@ -525,7 +528,7 @@
                      <textarea x-model="msgBody" @keydown.enter.prevent="handleSubmit" x-ref="messageInput"
                         @focus="$store.chat.requestLock()"
                         @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
-                        @keyup="checkQR(); window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}').whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()" 
+                        @keyup="checkQR(); pChannel.whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()" 
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()"
                         :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50'"
@@ -980,4 +983,41 @@
         </div>
         @endteleport
     @endif
+
+    <!-- Lightbox Modal -->
+    <template x-teleport="body">
+        <div x-show="lightboxOpen" 
+             class="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/95 backdrop-blur-md p-4 md:p-10"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             @keydown.escape.window="lightboxOpen = false"
+             x-cloak>
+            
+            <button @click="lightboxOpen = false" 
+                    class="absolute top-6 right-6 p-3 text-white/50 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-[210]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <div class="relative w-full h-full flex items-center justify-center" @click.away="lightboxOpen = false">
+                <img :src="lightboxImage" 
+                     class="max-w-full max-h-full object-contain rounded-xl shadow-2xl animate-in zoom-in duration-300">
+            </div>
+            
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4">
+                <a :href="lightboxImage" download 
+                   class="px-6 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                </a>
+            </div>
+        </div>
+    </template>
 </div>

@@ -221,9 +221,13 @@ document.addEventListener('alpine:init', () => {
                         this.messages.push(newMsg);
                         addedCount++;
                     } else {
-                        // Update status if changed (e.g. from sent to delivered)
+                        // Update status and media_url if changed
                         if (this.messages[idx].status !== newMsg.status) {
                             this.messages[idx].status = newMsg.status;
+                        }
+                        if (newMsg.media_url && this.messages[idx].media_url !== newMsg.media_url) {
+                            this.messages[idx].media_url = newMsg.media_url;
+                            this.messages[idx].media_type = newMsg.media_type;
                         }
                     }
                 });
