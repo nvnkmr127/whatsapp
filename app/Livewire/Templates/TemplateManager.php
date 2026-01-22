@@ -26,7 +26,10 @@ class TemplateManager extends Component
         'af' => 'Afrikaans',
         'sq' => 'Albanian',
         'ar' => 'Arabic',
+        'hy' => 'Armenian',
         'az' => 'Azerbaijani',
+        'eu' => 'Basque',
+        'be' => 'Belarusian',
         'bn' => 'Bengali',
         'bg' => 'Bulgarian',
         'ca' => 'Catalan',
@@ -44,6 +47,7 @@ class TemplateManager extends Component
         'fil' => 'Filipino',
         'fi' => 'Finnish',
         'fr' => 'French',
+        'gl' => 'Galician',
         'ka' => 'Georgian',
         'de' => 'German',
         'el' => 'Greek',
@@ -52,15 +56,16 @@ class TemplateManager extends Component
         'he' => 'Hebrew',
         'hi' => 'Hindi',
         'hu' => 'Hungarian',
+        'is' => 'Icelandic',
         'id' => 'Indonesian',
         'ga' => 'Irish',
         'it' => 'Italian',
         'ja' => 'Japanese',
         'kn' => 'Kannada',
         'kk' => 'Kazakh',
-        'rw_RW' => 'Kinyarwanda',
+        'km' => 'Khmer',
         'ko' => 'Korean',
-        'ky_KG' => 'Kyrgyz (Kyrgyzstan)',
+        'ky_KG' => 'Kyrgyz',
         'lo' => 'Lao',
         'lv' => 'Latvian',
         'lt' => 'Lithuanian',
@@ -68,11 +73,12 @@ class TemplateManager extends Component
         'ms' => 'Malay',
         'ml' => 'Malayalam',
         'mr' => 'Marathi',
+        'my' => 'Burmese',
         'nb' => 'Norwegian',
         'fa' => 'Persian',
         'pl' => 'Polish',
-        'pt_BR' => 'Portuguese (Brazil)',
-        'pt_PT' => 'Portuguese (Portugal)',
+        'pt_BR' => 'Portuguese (BR)',
+        'pt_PT' => 'Portuguese (POR)',
         'pa' => 'Punjabi',
         'ro' => 'Romanian',
         'ru' => 'Russian',
@@ -104,11 +110,14 @@ class TemplateManager extends Component
             'category' => 'required|in:UTILITY,MARKETING,AUTHENTICATION',
             'language' => ['required', 'string', 'in:' . implode(',', array_keys($this->languages))],
             'body' => 'required|max:1024',
+            'headerType' => 'in:NONE,TEXT,IMAGE,VIDEO,DOCUMENT,LOCATION',
             'headerText' => 'required_if:headerType,TEXT|max:60',
             'footer' => 'nullable|max:60',
             'buttons.*.text' => 'required|string|max:25',
+            'buttons.*.type' => 'required|in:QUICK_REPLY,URL,PHONE_NUMBER,COPY_CODE,CATALOG,MPM',
             'buttons.*.url' => 'required_if:buttons.*.type,URL',
             'buttons.*.phoneNumber' => 'required_if:buttons.*.type,PHONE_NUMBER',
+            'buttons.*.copyCode' => 'required_if:buttons.*.type,COPY_CODE|max:15',
         ];
     }
 
@@ -120,9 +129,9 @@ class TemplateManager extends Component
 
     public function addButton()
     {
-        if (count($this->buttons) >= 3)
+        if (count($this->buttons) >= 10) // Increased limit for flexibility, though Marketing is usually 3, Quick Reply up to 3-10 depending on type
             return;
-        $this->buttons[] = ['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phoneNumber' => ''];
+        $this->buttons[] = ['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''];
     }
 
     public function removeButton($index)
@@ -260,14 +269,13 @@ class TemplateManager extends Component
                 $header['text'] = $this->headerText;
             } else if (in_array($this->headerType, ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
                 // Meta API requires 'example' for media headers during creation
-                // We'll use a placeholder handle if the user hasn't provided one (MVP simplification)
-                // In a production app, the user would upload a file first to get a handle.
                 $header['example'] = [
                     'header_handle' => [
-                        '4' // Meta documentation often uses a dummy handle ID for validation if not live
+                        '4' // Dummy handle
                     ]
                 ];
             }
+            // LOCATION requires no extra fields for creation, just format: LOCATION
             $components[] = $header;
         }
 
@@ -305,6 +313,23 @@ class TemplateManager extends Component
                         'type' => 'PHONE_NUMBER',
                         'text' => $btn['text'],
                         'phone_number' => $btn['phoneNumber']
+                    ];
+                } elseif ($btn['type'] === 'COPY_CODE') {
+                    $buttonComponents[] = [
+                        'type' => 'COPY_CODE',
+                        'example' => $btn['copyCode'] // The code itself is the example/value
+                    ];
+                } elseif ($btn['type'] === 'CATALOG') {
+                    $buttonComponents[] = [
+                        'type' => 'CATALOG',
+                        'text' => $btn['text']
+                    ];
+                } elseif ($btn['type'] === 'MPM') {
+                    // Multi-Product Message usually configured via specific flow, but as a button it's MPM
+                    // Often handled via flow or catalog, keeping generic here if supported by library
+                    $buttonComponents[] = [
+                        'type' => 'MPM',
+                        'text' => $btn['text']
                     ];
                 }
             }

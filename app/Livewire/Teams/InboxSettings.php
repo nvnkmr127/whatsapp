@@ -7,6 +7,7 @@ use Livewire\Component;
 
 class InboxSettings extends Component
 {
+
     public $readReceiptsEnabled = true;
     public $welcomeMessageEnabled = false;
     public $welcomeMessage = '';
