@@ -45,7 +45,9 @@
             
             channel.listen('MessageReceived', (e) => { 
                 console.log('Front: MessageReceived', e);
-                $store.chat.loadMessages(); 
+                if (e.message && e.message.conversation_id == {{ $conversationId }}) {
+                    $store.chat.syncLatest(); 
+                }
             });
 
             channel.listen('MessageStatusUpdated', (e) => {

@@ -76,7 +76,7 @@ class MessageWindow extends Component
             // If we have a lastMessageId tracking and the new one is different -> New Message!
             if ($this->lastMessageId && $latestId > $this->lastMessageId) {
                 $this->dispatch('play-sound');
-                $this->dispatch('scroll-bottom');
+                $this->dispatch('chat-scroll-bottom');
             }
 
             $this->lastMessageId = $latestId;
@@ -178,7 +178,7 @@ class MessageWindow extends Component
         Log::info("MessageWindow: handleIncomingMessage received", ['event' => $event]);
         if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
             $this->loadConversation();
-            $this->dispatch('scroll-bottom');
+            $this->dispatch('chat-scroll-bottom');
             $this->dispatch('play-sound');
         }
     }
