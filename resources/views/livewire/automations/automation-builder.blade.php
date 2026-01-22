@@ -1020,7 +1020,7 @@
                                         (['image', 'video', 'audio', 'file'].includes(selectedNode.type) ? 'Caption' : 'Message Text')))
                                     "></label>
                                     
-                                    <button type="button" @click="const el = $el.closest('.space-y-6').querySelector('textarea'); el.value += '{{'; el.dispatchEvent(new Event(&quot;input&quot;)); el.focus();"
+                                    <button type="button" @click="const el = $el.closest('.space-y-6').querySelector('textarea'); el.value += '@{{'; el.dispatchEvent(new Event(&quot;input&quot;)); el.focus();"
                                         class="flex items-center gap-1 text-[10px] font-bold text-wa-teal bg-wa-teal/5 px-2 py-1 rounded-lg border border-wa-teal/20 hover:bg-wa-teal/10 transition-colors">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                                         Insert Variable
