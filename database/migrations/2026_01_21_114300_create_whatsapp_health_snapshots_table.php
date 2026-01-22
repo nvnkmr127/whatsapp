@@ -44,7 +44,7 @@ return new class extends Migration {
             $table->decimal('usage_percent', 5, 2)->nullable();
 
             // Metadata
-            $table->timestamp('snapshot_at');
+            $table->timestamp('snapshot_at')->useCurrent();
             $table->timestamps();
 
             $table->index(['team_id', 'snapshot_at']);
