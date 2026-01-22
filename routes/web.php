@@ -63,6 +63,12 @@ Route::middleware([
     // Agent Console (Agents, Managers, Admins)
     Route::get('/chat', \App\Livewire\Chat\ChatDashboard::class)->name('chat')->middleware('can:chat-access');
 
+    // Conversation Locks (Session Auth for Web)
+    Route::post('/api/v1/conversations/{conversation}/lock', [\App\Http\Controllers\ConversationController::class, 'lock']);
+    Route::post('/api/v1/conversations/{conversation}/unlock', [\App\Http\Controllers\ConversationController::class, 'unlock']);
+    Route::post('/api/v1/conversations/{conversation}/heartbeat', [\App\Http\Controllers\ConversationController::class, 'heartbeat']);
+    Route::post('/api/v1/conversations/{conversation}/takeover', [\App\Http\Controllers\ConversationController::class, 'forceTakeOver']);
+
     // CRM (Managers, Admins)
     Route::get('/contacts', function () {
         return view('contacts.index');
