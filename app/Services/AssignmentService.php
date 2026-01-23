@@ -11,11 +11,6 @@ class AssignmentService
 {
     /**
      * Assign a contact to an agent based on deterministic rules.
-     * 
-     * Priority:
-     * 1. Sticky Assignment (if configured)
-     * 2. Custom Rules (Priority Based)
-     * 3. Round Robin (Load Balanced)
      */
     public function assign(Contact $contact): ?User
     {
@@ -24,33 +19,81 @@ class AssignmentService
             return $contact->assigned_to_user;
         }
 
+        $result = $this->determineAgent($contact);
+
+        if ($result['agent']) {
+            $this->performAssignment($contact, $result['agent'], $result['reason']);
+            return $result['agent'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Simulate assignment for a contact without persisting changes.
+     * 
+     * @return array [
+     *    'status' => 'success'|'no_agent'|'error',
+     *    'agent_name' => string|null,
+     *    'reason' => string,
+     *    'rule_matched' => string|null
+     * ]
+     */
+    public function simulate(Contact $contact): array
+    {
+        $result = $this->determineAgent($contact);
+
+        if ($result['agent']) {
+            return [
+                'status' => 'success',
+                'agent_name' => $result['agent']->name,
+                'reason' => $result['reason'],
+                'rule_matched' => $result['rule_id'] ?? null,
+            ];
+        }
+
+        return [
+            'status' => 'no_agent',
+            'agent_name' => null,
+            'reason' => 'No matching agents found or no rules matched.',
+            'rule_matched' => null,
+        ];
+    }
+
+    /**
+     * Core logic to determine the agent.
+     * Returns ['agent' => User|null, 'reason' => string, 'rule_id' => int|null]
+     */
+    protected function determineAgent(Contact $contact): array
+    {
         $team = $contact->team;
         $config = $team->chat_assignment_config ?? [];
 
-        // 1. Sticky Assignment (Re-assign to previous owner if within window)
+        // 1. Sticky Assignment
         if ($this->shouldStickyAssign($contact, $config)) {
             $previousAgent = $this->getPreviousAgent($contact);
             if ($previousAgent && $this->isAgentAvailable($previousAgent)) {
-                $this->performAssignment($contact, $previousAgent, 'Sticky Assignment');
-                return $previousAgent;
+                return ['agent' => $previousAgent, 'reason' => 'Sticky Assignment (Previous Owner)', 'rule_id' => 'sticky'];
             }
         }
 
         // 2. Custom Rule Matching
         $ruleAgent = $this->matchRules($contact, $config['rules'] ?? []);
         if ($ruleAgent) {
-            $this->performAssignment($contact, $ruleAgent, 'Custom Rule');
-            return $ruleAgent;
+            return [
+                'agent' => $ruleAgent,
+                'reason' => "Custom Rule Match",
+                'rule_id' => 'custom'
+            ];
         }
 
         // 3. Fallback: Deterministic Round Robin
         $fallbackAgent = $this->getRoundRobinAgent($team);
         if ($fallbackAgent) {
-            $this->performAssignment($contact, $fallbackAgent, 'Round Robin');
-            return $fallbackAgent;
+            return ['agent' => $fallbackAgent, 'reason' => 'Round Robin (Load Balanced)', 'rule_id' => 'fallback'];
         }
 
-        return null;
+        return ['agent' => null, 'reason' => 'No eligible agent found', 'rule_id' => null];
     }
 
     /**
