@@ -38,26 +38,28 @@ class AiSettings extends Component
 
     public function mount()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+
         $teamId = Auth::user()->currentTeam->id;
 
-        $this->openai_api_key = $this->getSetting("ai_openai_api_key_$teamId");
-        $this->openai_model = $this->getSetting("ai_openai_model_$teamId", 'gpt-4o');
-        $this->ai_persona = $this->getSetting("ai_persona_$teamId", $this->presets['support']);
+        $this->openai_api_key = get_setting("ai_openai_api_key_$teamId");
+        $this->openai_model = get_setting("ai_openai_model_$teamId", 'gpt-4o');
+        $this->ai_persona = get_setting("ai_persona_$teamId", $this->presets['support']);
 
-        $this->temperature = (float) $this->getSetting("ai_temperature_$teamId", 0.7);
-        $this->instruction_type = $this->getSetting("ai_instruction_type_$teamId", 'support');
+        $this->temperature = (float) get_setting("ai_temperature_$teamId", 0.7);
+        $this->instruction_type = get_setting("ai_instruction_type_$teamId", 'support');
 
-        $this->header_message = $this->getSetting("ai_header_$teamId");
-        $this->footer_message = $this->getSetting("ai_footer_$teamId");
-        $this->stop_keywords = $this->getSetting("ai_stop_keywords_$teamId");
-        $this->retry_attempts = (int) $this->getSetting("ai_retry_$teamId", 1);
-        $this->fallback_message = $this->getSetting("ai_fallback_$teamId");
+        $this->header_message = get_setting("ai_header_$teamId");
+        $this->footer_message = get_setting("ai_footer_$teamId");
+        $this->stop_keywords = get_setting("ai_stop_keywords_$teamId");
+        $this->retry_attempts = (int) get_setting("ai_retry_$teamId", 1);
+        $this->fallback_message = get_setting("ai_fallback_$teamId");
 
-        $this->show_header = (bool) $this->getSetting("ai_show_header_$teamId", false);
-        $this->show_footer = (bool) $this->getSetting("ai_show_footer_$teamId", false);
-        $this->show_stop = (bool) $this->getSetting("ai_show_stop_$teamId", false);
-        $this->show_retry = (bool) $this->getSetting("ai_show_retry_$teamId", false);
-        $this->show_fallback = (bool) $this->getSetting("ai_show_fallback_$teamId", false);
+        $this->show_header = (bool) get_setting("ai_show_header_$teamId", false);
+        $this->show_footer = (bool) get_setting("ai_show_footer_$teamId", false);
+        $this->show_stop = (bool) get_setting("ai_show_stop_$teamId", false);
+        $this->show_retry = (bool) get_setting("ai_show_retry_$teamId", false);
+        $this->show_fallback = (bool) get_setting("ai_show_fallback_$teamId", false);
     }
 
     public function updatedInstructionType($value)
@@ -67,22 +69,12 @@ class AiSettings extends Component
         }
     }
 
-    protected function getSetting($key, $default = '')
-    {
-        $setting = Setting::where('key', $key)->first();
-        return $setting ? $setting->value : $default;
-    }
 
-    protected function setSetting($key, $value)
-    {
-        Setting::updateOrCreate(
-            ['key' => $key],
-            ['value' => $value, 'group' => 'ai_settings']
-        );
-    }
 
     public function save()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+
         $this->validate([
             'openai_api_key' => 'required|string',
             'openai_model' => 'required|string',
@@ -93,24 +85,24 @@ class AiSettings extends Component
 
         $teamId = Auth::user()->currentTeam->id;
 
-        $this->setSetting("ai_openai_api_key_$teamId", $this->openai_api_key);
-        $this->setSetting("ai_openai_model_$teamId", $this->openai_model);
-        $this->setSetting("ai_persona_$teamId", $this->ai_persona);
+        set_setting("ai_openai_api_key_$teamId", $this->openai_api_key, 'ai_settings');
+        set_setting("ai_openai_model_$teamId", $this->openai_model, 'ai_settings');
+        set_setting("ai_persona_$teamId", $this->ai_persona, 'ai_settings');
 
-        $this->setSetting("ai_temperature_$teamId", $this->temperature);
-        $this->setSetting("ai_instruction_type_$teamId", $this->instruction_type);
+        set_setting("ai_temperature_$teamId", $this->temperature, 'ai_settings');
+        set_setting("ai_instruction_type_$teamId", $this->instruction_type, 'ai_settings');
 
-        $this->setSetting("ai_header_$teamId", $this->header_message);
-        $this->setSetting("ai_footer_$teamId", $this->footer_message);
-        $this->setSetting("ai_stop_keywords_$teamId", $this->stop_keywords);
-        $this->setSetting("ai_retry_$teamId", $this->retry_attempts);
-        $this->setSetting("ai_fallback_$teamId", $this->fallback_message);
+        set_setting("ai_header_$teamId", $this->header_message, 'ai_settings');
+        set_setting("ai_footer_$teamId", $this->footer_message, 'ai_settings');
+        set_setting("ai_stop_keywords_$teamId", $this->stop_keywords, 'ai_settings');
+        set_setting("ai_retry_$teamId", $this->retry_attempts, 'ai_settings');
+        set_setting("ai_fallback_$teamId", $this->fallback_message, 'ai_settings');
 
-        $this->setSetting("ai_show_header_$teamId", $this->show_header);
-        $this->setSetting("ai_show_footer_$teamId", $this->show_footer);
-        $this->setSetting("ai_show_stop_$teamId", $this->show_stop);
-        $this->setSetting("ai_show_retry_$teamId", $this->show_retry);
-        $this->setSetting("ai_show_fallback_$teamId", $this->show_fallback);
+        set_setting("ai_show_header_$teamId", $this->show_header, 'ai_settings');
+        set_setting("ai_show_footer_$teamId", $this->show_footer, 'ai_settings');
+        set_setting("ai_show_stop_$teamId", $this->show_stop, 'ai_settings');
+        set_setting("ai_show_retry_$teamId", $this->show_retry, 'ai_settings');
+        set_setting("ai_show_fallback_$teamId", $this->show_fallback, 'ai_settings');
 
         $this->dispatch('saved');
         session()->flash('success', 'AI Settings updated successfully.');
@@ -118,6 +110,7 @@ class AiSettings extends Component
 
     public function testConnection()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate(['openai_api_key' => 'required|string']);
 
         try {

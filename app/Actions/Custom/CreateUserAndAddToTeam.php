@@ -41,7 +41,10 @@ class CreateUserAndAddToTeam
 
             $team->users()->attach(
                 $user,
-                ['role' => $input['role']]
+                [
+                    'role' => $input['role'],
+                    'receives_tickets' => $input['role'] === 'agent'
+                ]
             );
 
             // Optional: Create personal team for the user if required by app logic

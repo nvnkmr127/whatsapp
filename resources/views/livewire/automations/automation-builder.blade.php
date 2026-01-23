@@ -1298,9 +1298,7 @@
                 </div>
 
             </div>
-        </div>
 
-    </div>
 
     <!-- Publish Review Modal -->
     <x-dialog-modal wire:model.live="showPublishModal" maxWidth="2xl">

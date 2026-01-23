@@ -50,9 +50,17 @@ class Contact extends Model
         return $this->belongsToMany(ContactTag::class, 'contact_tag_pivot', 'contact_id', 'tag_id');
     }
 
-    public function assignedTo()
+    public function assignedToUser()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * @deprecated Use assignedToUser instead.
+     */
+    public function assignedTo()
+    {
+        return $this->assignedToUser();
     }
 
     public function notes()

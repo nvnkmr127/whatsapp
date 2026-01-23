@@ -55,14 +55,16 @@ class CategoryManager extends Component
 
     public function openCreateModal()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->resetForm();
         $this->showCreateModal = true;
     }
 
     public function openEditModal($id)
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->resetForm();
-        $category = Category::findOrFail($id);
+        $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
 
         $this->editingCategoryId = $id;
         $this->name = $category->name;
@@ -77,6 +79,7 @@ class CategoryManager extends Component
 
     public function saveCategory()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate();
 
         $data = [
@@ -90,7 +93,9 @@ class CategoryManager extends Component
         ];
 
         if ($this->editingCategoryId) {
-            Category::findOrFail($this->editingCategoryId)->update($data);
+            Category::where('team_id', Auth::user()->currentTeam->id)
+                ->findOrFail($this->editingCategoryId)
+                ->update($data);
             session()->flash('message', 'Category updated successfully.');
         } else {
             Category::create($data);
@@ -102,7 +107,8 @@ class CategoryManager extends Component
 
     public function deleteCategory($id)
     {
-        $category = Category::findOrFail($id);
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+        $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
 
         // Check if category is in use
         if ($category->products()->count() > 0 || $category->contacts()->count() > 0) {
@@ -116,7 +122,8 @@ class CategoryManager extends Component
 
     public function toggleStatus($id)
     {
-        $category = Category::findOrFail($id);
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+        $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $category->update(['is_active' => !$category->is_active]);
     }
 

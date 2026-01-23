@@ -43,12 +43,14 @@ class CannedMessageManager extends Component
 
     public function openModal()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->reset(['cannedMessageId', 'shortcut', 'content']);
         $this->showModal = true;
     }
 
     public function edit($id)
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $message = CannedMessage::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
         $this->cannedMessageId = $message->id;
         $this->shortcut = $message->shortcut;
@@ -58,6 +60,7 @@ class CannedMessageManager extends Component
 
     public function save()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate();
 
         // Check for duplicate shortcut if provided
@@ -88,12 +91,14 @@ class CannedMessageManager extends Component
 
     public function confirmDelete($id)
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->messageIdBeingDeleted = $id;
         $this->confirmingDeletion = true;
     }
 
     public function delete()
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $message = CannedMessage::where('team_id', auth()->user()->currentTeam->id)->findOrFail($this->messageIdBeingDeleted);
         $message->delete();
 

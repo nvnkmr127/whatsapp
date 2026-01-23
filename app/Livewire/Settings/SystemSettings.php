@@ -66,22 +66,27 @@ class SystemSettings extends Component
         'Pacific/Auckland' => 'Auckland',
     ];
 
-    protected $rules = [
-        'teamName' => 'required|string|max:255',
-        'timezone' => 'required|string',
-        'logo' => 'nullable|image|max:2048', // 2MB max
-        'primaryColor' => 'required|string|regex:/^#[a-fA-F0-9]{6}$/',
-        'currencySymbol' => 'required|string|max:10',
-        'dateFormat' => 'required|string|in:Y-m-d,d/m/Y,m/d/Y,d-m-Y',
-        'paginationLimit' => 'required|integer|min:5|max:100',
-        'supportEmail' => 'nullable|email',
-        'maintenanceMode' => 'boolean',
-        'selectedCountry' => 'nullable|string|in:IN,AE,AU,IQ,US',
-        'language' => 'required|string|max:5',
-    ];
+    protected function rules()
+    {
+        return [
+            'teamName' => 'required|string|max:255',
+            'timezone' => 'required|string|in:' . implode(',', array_keys($this->timezones)),
+            'logo' => 'nullable|image|max:2048', // 2MB max
+            'primaryColor' => 'required|string|regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/',
+            'currencySymbol' => 'required|string|max:10',
+            'dateFormat' => 'required|string|in:Y-m-d,d/m/Y,m/d/Y,d-m-Y',
+            'paginationLimit' => 'required|integer|min:5|max:100',
+            'supportEmail' => 'nullable|email',
+            'maintenanceMode' => 'boolean',
+            'selectedCountry' => 'nullable|string|in:IN,AE,AU,IQ,US',
+            'language' => 'required|string|max:5',
+        ];
+    }
 
     public function updatedSelectedCountry($value)
     {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+
         if (isset($this->countries[$value])) {
             $country = $this->countries[$value];
             $this->timezone = $country['timezone'];
@@ -95,22 +100,10 @@ class SystemSettings extends Component
             $team->save();
 
             // Update global settings
-            \App\Models\Setting::updateOrCreate(
-                ['key' => 'selected_country'],
-                ['value' => $value, 'group' => 'system']
-            );
-            \App\Models\Setting::updateOrCreate(
-                ['key' => 'currency_symbol'],
-                ['value' => $this->currencySymbol, 'group' => 'system']
-            );
-            \App\Models\Setting::updateOrCreate(
-                ['key' => 'primary_language'],
-                ['value' => $this->language, 'group' => 'system']
-            );
-            \App\Models\Setting::updateOrCreate(
-                ['key' => 'default_country_code'],
-                ['value' => $country['country_code'], 'group' => 'system']
-            );
+            set_setting('selected_country', $value, 'system');
+            set_setting('currency_symbol', $this->currencySymbol, 'system');
+            set_setting('primary_language', $this->language, 'system');
+            set_setting('default_country_code', $country['country_code'], 'system');
 
             session()->flash('message', 'Country settings updated! Timezone changed to ' . $country['timezone'] . ', Country code set to ' . $country['country_code']);
             audit('settings.country_changed', "Country changed to {$country['label']} by " . Auth::user()->name);
@@ -179,10 +172,7 @@ class SystemSettings extends Component
         ];
 
         foreach ($settings as $key => $value) {
-            \App\Models\Setting::updateOrCreate(
-                ['key' => $key],
-                ['value' => $value, 'group' => 'system']
-            );
+            set_setting($key, $value, 'system');
         }
 
         $this->currentLogoPath = $team->logo_path;

@@ -4,7 +4,9 @@ namespace App\Livewire\Teams;
 
 use App\Actions\Custom\CreateUserAndAddToTeam;
 use Laravel\Jetstream\Http\Livewire\TeamMemberManager;
+use Livewire\Attributes\Layout;
 
+#[Layout('layouts.app')]
 class MembersManager extends TeamMemberManager
 {
     /**
@@ -27,25 +29,11 @@ class MembersManager extends TeamMemberManager
     public $isAddMemberModalOpen = false;
 
     /**
-     * Chat Status Rules
-     *
-     * @var array
-     */
-    public $statusRules = [];
-
-    /**
-     * Search query for members assignment rule
+     * Search query for members
      *
      * @var string
      */
-    public $memberSearch = '';
-
-    /**
-     * Available statuses for rules
-     *
-     * @var array
-     */
-    public $availableStatuses = ['open', 'pending', 'resolved', 'closed'];
+    public $search = '';
 
     /**
      * Mount the component.
@@ -61,72 +49,8 @@ class MembersManager extends TeamMemberManager
             abort(403);
         }
 
-        $this->statusRules = $this->team->chat_status_rules ?? [];
-
         parent::mount($this->team);
     }
-
-    /**
-     * Toggle ticket assignment for a member.
-     *
-     * @param  int  $userId
-     * @return void
-     */
-    public function toggleTicketAssignment($userId)
-    {
-        $member = $this->team->users()->where('users.id', $userId)->first();
-
-        if ($member) {
-            $current = (bool) $member->pivot->receives_tickets;
-            $this->team->users()->updateExistingPivot($userId, [
-                'receives_tickets' => !$current,
-            ]);
-
-            $this->team = $this->team->fresh();
-            $this->dispatch('saved');
-        }
-    }
-
-    /**
-     * Add a empty status rule.
-     *
-     * @return void
-     */
-    public function addStatusRule()
-    {
-        $this->statusRules[] = [
-            'status_in' => 'open',
-            'after_days' => 1,
-            'status_to' => 'closed',
-        ];
-    }
-
-    /**
-     * Remove a status rule.
-     *
-     * @param  int  $index
-     * @return void
-     */
-    public function removeStatusRule($index)
-    {
-        unset($this->statusRules[$index]);
-        $this->statusRules = array_values($this->statusRules);
-    }
-
-    /**
-     * Save only the status rules.
-     *
-     * @return void
-     */
-    public function saveStatusRules()
-    {
-        $this->team->forceFill([
-            'chat_status_rules' => $this->statusRules,
-        ])->save();
-
-        $this->dispatch('saved');
-    }
-
 
     public function openAddMemberModal()
     {
@@ -182,6 +106,16 @@ class MembersManager extends TeamMemberManager
      */
     public function render()
     {
-        return view('teams.members')->layout('layouts.app');
+        $users = $this->team->users()
+            ->when($this->search, function ($query) {
+                $query->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhere('email', 'like', '%' . $this->search . '%');
+            })
+            ->orderBy('name')
+            ->paginate(10);
+
+        return view('teams.members', [
+            'users' => $users
+        ]);
     }
 }
