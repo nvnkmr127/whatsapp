@@ -12,6 +12,7 @@ class Automation extends Model
         'is_active' => 'boolean',
         'trigger_config' => 'array',
         'flow_data' => 'array',
+        'publish_log' => 'array',
     ];
 
     public function steps()

@@ -365,15 +365,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <button wire:click="$toggle('debugMode')"
-                    class="px-3 py-2 rounded-xl text-xs font-bold transition-all border"
-                    :class="$wire.debugMode ? 'bg-amber-100 border-amber-200 text-amber-700 shadow-inner' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full"
-                            :class="$wire.debugMode ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'"></span>
-                        Debug Mode
-                    </div>
-                </button>
+
 
                 <button type="button" wire:click.prevent="save"
                     class="text-xs font-bold px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-sm">
@@ -573,51 +565,7 @@
         </div>
 
         <!-- Debug JSON Overlay -->
-        <div x-show="$wire.debugMode" 
-            x-transition:enter="transition ease-out duration-300 transform"
-            x-transition:enter-start="translate-y-full"
-            x-transition:enter-end="translate-y-0"
-            class="absolute bottom-0 left-72 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-700 z-[70] h-64 overflow-hidden flex flex-col font-mono shadow-2xl">
-            
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <div class="flex items-center gap-4">
-                    <span>Active Storage Debugger</span>
-                    <span class="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">REAL-TIME SYNC</span>
-                </div>
-                <div class="flex gap-4">
-                    <span>Nodes: <span class="text-white" x-text="nodesArray.length"></span></span>
-                    <span>Edges: <span class="text-white" x-text="edgesArray.length"></span></span>
-                </div>
-            </div>
 
-            <div class="flex-1 flex divide-x divide-slate-700 overflow-hidden">
-                <div class="flex-1 flex flex-col">
-                    <div class="px-4 py-1 text-[9px] font-bold text-slate-500 bg-slate-900/50 flex justify-between">
-                        <span>ACTION_HISTORY_LOG</span>
-                        <span class="text-wa-teal">LATEST_ON_TOP</span>
-                    </div>
-                    <div class="flex-1 overflow-auto p-4 space-y-3 scrollbar-hide">
-                        <template x-for="log in debugLogs" :key="log.time + log.message">
-                            <div class="border-l-2 border-slate-700 pl-3 py-1 bg-slate-800/30 rounded-r-md">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-[10px] text-slate-500 font-bold" x-text="log.time"></span>
-                                    <span class="text-[11px] text-white font-black" x-text="log.message"></span>
-                                </div>
-                                <pre class="text-[10px] text-slate-400 overflow-x-auto" x-text="JSON.stringify(log.data, null, 2)"></pre>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                <div class="flex-1 flex flex-col">
-                    <div class="px-4 py-1 text-[9px] font-bold text-slate-500 bg-slate-900/50">NODES_LIVE</div>
-                    <pre class="flex-1 overflow-auto p-4 text-[11px] text-emerald-400 scrollbar-hide" x-text="JSON.stringify(nodes, null, 2)"></pre>
-                </div>
-                <div class="flex-1 flex flex-col">
-                    <div class="px-4 py-1 text-[9px] font-bold text-slate-500 bg-slate-900/50">EDGES_LIVE</div>
-                    <pre class="flex-1 overflow-auto p-4 text-[11px] text-cyan-400 scrollbar-hide" x-text="JSON.stringify(edges, null, 2)"></pre>
-                </div>
-            </div>
-        </div>
 
         <!-- Right Sidebar: Properties & History -->
         <div class="w-80 flex-none bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col z-40 shadow-xl transition-all duration-300"

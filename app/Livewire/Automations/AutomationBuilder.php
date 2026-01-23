@@ -191,6 +191,12 @@ class AutomationBuilder extends Component
 
     public function mount($automationId = null)
     {
+        \Illuminate\Support\Facades\Log::info("AutomationBuilder MOUNT", [
+            'automationId' => $automationId,
+            'user_id' => Auth::id(),
+            'team_id' => Auth::user()->currentTeam->id ?? 'null'
+        ]);
+
         $this->debugMode = session('automation_debug_mode', false);
         $this->debugLogs = session('automation_debug_logs', []);
 
@@ -203,7 +209,16 @@ class AutomationBuilder extends Component
         $this->availableFlows = \App\Models\Flow::where('team_id', Auth::user()->currentTeam->id)->get()->toArray();
 
         if ($automationId) {
-            $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($automationId);
+            try {
+                $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($automationId);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                \Illuminate\Support\Facades\Log::error("AutomationBuilder: Automation not found or access denied.", [
+                    'id' => $automationId,
+                    'team_id' => Auth::user()->currentTeam->id
+                ]);
+                abort(404, "Automation not found.");
+            }
+
             $this->automationId = $automation->id;
             $this->name = $automation->name;
 
@@ -339,22 +354,36 @@ class AutomationBuilder extends Component
     {
         $this->logDebug('Confirming Publish', ['note' => $this->publishNote]);
 
-        $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
+        // If we are editing an existing one, update version
+        if ($this->automationId) {
+            $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
+            $newVersion = ($automation->version ?? 0) + 1;
+            $this->version = $newVersion;
+        } else {
+            // New automation starts at 1
+            $this->version = 1;
+        }
 
-        // Handle versioning
-        $newVersion = ($automation->version ?? 0) + 1;
-        $this->version = $newVersion;
         $this->lastPublishedAt = now();
 
         $entry = [
-            'version' => $newVersion,
+            'version' => $this->version,
             'note' => $this->publishNote,
             'published_at' => now()->toDateTimeString(),
             'published_by' => Auth::user()->name
         ];
+
+        // Ensure publishLog is array
+        if (!is_array($this->publishLog)) {
+            $this->publishLog = [];
+        }
         array_unshift($this->publishLog, $entry);
 
-        $this->save(true);
+        $result = $this->save(true);
+        if ($result instanceof \Illuminate\Http\RedirectResponse || $result instanceof \Livewire\Features\SupportRedirects\Redirector) {
+            return $result;
+        }
+
         $this->showPublishModal = false;
         $this->publishNote = '';
     }
