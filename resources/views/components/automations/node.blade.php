@@ -55,7 +55,7 @@
 
                 <!-- Branch/Loop Indicators -->
                 <div class="flex items-center gap-2 mt-0.5" x-show="stepMetadata?.nodes && stepMetadata.nodes[node.id]">
-                    <template x-if="stepMetadata.nodes[node.id].isBranch">
+                    <template x-if="stepMetadata.nodes[node.id]?.isBranch">
                         <span
                             class="flex items-center gap-0.5 text-[8px] font-black text-blue-500 uppercase tracking-tighter">
                             <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +65,7 @@
                             Parallel Branch
                         </span>
                     </template>
-                    <template x-if="stepMetadata.nodes[node.id].isLoop">
+                    <template x-if="stepMetadata.nodes[node.id]?.isLoop">
                         <span
                             class="flex items-center gap-0.5 text-[8px] font-black text-amber-500 uppercase tracking-tighter">
                             <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
