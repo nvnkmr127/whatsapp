@@ -398,46 +398,7 @@
         <div class="flex-1 flex overflow-hidden relative">
 
             <!-- Preflight Checklist Sidebar -->
-            <div x-show="validationIssues && validationIssues.length > 0"
-                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-8 opacity-0"
-                x-transition:enter-end="translate-y-0 opacity-100"
-                class="absolute bottom-6 left-6 z-[60] w-80 max-h-[400px] flex flex-col bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
-                <div
-                    class="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <div class="relative flex h-2 w-2"
-                            x-show="$wire.validationIssues.some(i => i.level === 'error')">
-                            <span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-                        </div>
-                        <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest">Preflight Checklist</h4>
-                    </div>
-                    <span
-                        class="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300"
-                        x-text="validationIssues.length"></span>
-                </div>
-
-                <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                    <template x-for="issue in validationIssues" :key="JSON.stringify(issue)">
-                        <div @click="if(issue.node_id) { selectedId = issue.node_id; $wire.selectNode(issue.node_id); panX = -nodesArray.find(n => n.id === issue.node_id).x * scale + (window.innerWidth / 2) - 150; panY = -nodesArray.find(n => n.id === issue.node_id).y * scale + (window.innerHeight / 2); if(issue.field) focusField(issue.field);
-                           }"
-                          class="group p-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all cursor-pointer overflow-hidden">
-                         <div class="flex gap-3">
-                             <div class="mt-0.5">
-                                 <svg x-show="issue.level === 'error'" class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                 <svg x-show="issue.level === 'warning'" class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                             </div>
-                             <div class="flex-1">
-                                 <p class="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight group-hover:text-wa-teal transition-colors" x-text="issue.message"></p>
-                                 <p x-show="issue.node_id" class="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-tighter" x-text="'Issue in: ' + (nodesArray.find(n => n.id === issue.node_id)?.data?.label || 'Node ' + issue.node_id.substring(0,6))"></p>
-                             </div>
-                         </div>
-                     </div>
-                 </template>
-             </div>
-        </div>
 
         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-lg space-y-2 pointer-events-none">
             @if (session()->has('success'))
@@ -450,7 +411,7 @@
         </div>
 
         <!-- Left Sidebar: Component Palette -->
-        <div class="w-72 flex-none bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-40 transition-all duration-300"
+        <div class="h-full section-left-sidebar w-72 flex-none bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-40 transition-all duration-300"
              :class="{'w-72': true, 'w-0 opacity-0 overflow-hidden': false}">
             
             <div class="p-4 border-b border-slate-100 dark:border-slate-800">
@@ -461,7 +422,7 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+            <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-6 custom-scrollbar pb-20">
                  <!-- Component Groups -->
                  @foreach([
                         'Messages' => [
@@ -520,6 +481,47 @@
         <div class="flex-1 bg-slate-50 dark:bg-slate-950 relative overflow-hidden cursor-grab active:cursor-grabbing" id="canvas-container"
              @mousedown="startPan($event)" @mousemove="pan($event)" @mouseup="endPan()" @mouseleave="endPan()" @wheel="zoom($event)">
              
+             <!-- Preflight Checklist Sidebar (Moved to Canvas) -->
+            <div x-show="validationIssues && validationIssues.length > 0"
+                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-8 opacity-0"
+                x-transition:enter-end="translate-y-0 opacity-100"
+                class="absolute bottom-24 right-6 z-[60] w-80 max-h-[400px] flex flex-col bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden pointer-events-auto">
+
+                <div
+                    class="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex h-2 w-2"
+                            x-show="$wire.validationIssues.some(i => i.level === 'error')">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                        </div>
+                        <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest">Preflight Checklist</h4>
+                    </div>
+                    <span
+                        class="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300"
+                        x-text="validationIssues.length"></span>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                    <template x-for="issue in validationIssues" :key="JSON.stringify(issue)">
+                        <div @click="if(issue.node_id) { selectedId = issue.node_id; $wire.selectNode(issue.node_id); panX = -nodesArray.find(n => n.id === issue.node_id).x * scale + (window.innerWidth / 2) - 150; panY = -nodesArray.find(n => n.id === issue.node_id).y * scale + (window.innerHeight / 2); if(issue.field) focusField(issue.field);
+                           }"
+                          class="group p-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all cursor-pointer overflow-hidden">
+                         <div class="flex gap-3">
+                             <div class="mt-0.5">
+                                 <svg x-show="issue.level === 'error'" class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                 <svg x-show="issue.level === 'warning'" class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                             </div>
+                             <div class="flex-1">
+                                 <p class="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight group-hover:text-wa-teal transition-colors" x-text="issue.message"></p>
+                                 <p x-show="issue.node_id" class="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-tighter" x-text="'Issue in: ' + (nodesArray.find(n => n.id === issue.node_id)?.data?.label || 'Node ' + issue.node_id.substring(0,6))"></p>
+                             </div>
+                         </div>
+                     </div>
+                 </template>
+             </div>
+        </div>             
              <!-- Canvas Controls -->
             <div class="absolute bottom-6 right-6 flex items-center gap-2 z-50">
                 <div class="flex items-center bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-slate-200 dark:border-slate-800 p-1">
