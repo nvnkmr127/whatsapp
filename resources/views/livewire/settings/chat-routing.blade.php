@@ -19,10 +19,20 @@
     <!-- Chat Routing Content -->
     <div>
         <!-- Chat Rules Header -->
-        <div class="mb-6">
-            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Chat <span
-                    class="text-wa-teal">Rules</span></h2>
-            <p class="text-slate-500 font-medium mt-1">Set the chat rules for incoming chats.</p>
+        <div class="flex items-end justify-between mb-6">
+            <div>
+                <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Chat <span
+                        class="text-wa-teal">Rules</span></h2>
+                <p class="text-slate-500 font-medium mt-1">Set the chat rules for incoming chats.</p>
+            </div>
+            <button wire:click="openSimulateModal"
+                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                <span>Test Routing</span>
+            </button>
         </div>
 
         <!-- Chat Assignment Rules -->
@@ -198,4 +208,183 @@
             </div>
         </div>
     </div>
+
+    <!-- Assignment Simulator -->
+    <div
+        class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8 mb-8">
+        <div class="mb-8">
+            <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Assignment Simulator
+            </h3>
+            <p class="text-sm text-slate-500 font-medium mt-1">Test your routing rules with a simulated contact.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <!-- Simulated Phone -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone Number</label>
+                <input type="text" wire:model="simulationPhone"
+                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                    placeholder="+1234567890">
+            </div>
+
+            <!-- Simulated Source -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Source</label>
+                <select wire:model="simulationSource"
+                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20">
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="web">Web Chat</option>
+                    <option value="api">API</option>
+                    <option value="import">Import</option>
+                </select>
+            </div>
+
+            <!-- Action -->
+            <div>
+                <button wire:click="runSimulation"
+                    class="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition-all">
+                    Simulate Routing
+                </button>
+            </div>
+        </div>
+
+        <!-- Simulation Results -->
+        @if ($simulationResult)
+            <div class="mt-8 p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
+                <div class="flex items-start gap-4">
+                    <div
+                        class="p-3 rounded-xl {{ $simulationResult['status'] === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600' }}">
+                        @if ($simulationResult['status'] === 'success')
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        @else
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        @endif
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-bold text-slate-900 dark:text-white">
+                            {{ $simulationResult['status'] === 'success' ? 'Agent Assigned' : 'No Agent Assigned' }}
+                        </h4>
+                        <p class="text-sm text-slate-500 font-medium mt-1">
+                            {{ $simulationResult['reason'] }}
+                        </p>
+                        @if ($simulationResult['agent_name'])
+                            <div class="mt-3 flex items-center gap-2">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Assigned
+                                    To:</span>
+                                <span class="text-sm font-bold text-indigo-600">{{ $simulationResult['agent_name'] }}</span>
+                            </div>
+                        @endif
+                        @if ($simulationResult['rule_matched'])
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Rule Match:</span>
+                                <span
+                                    class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ $simulationResult['rule_matched'] }}</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+    </div>
+
+    <!-- Simulation Modal -->
+    <x-dialog-modal wire:model.live="isSimulateModalOpen" maxWidth="xl">
+        <x-slot name="title">
+            <div class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Test Chat Assignment
+            </div>
+        </x-slot>
+
+        <x-slot name="content">
+            <div class="space-y-6">
+                <p class="text-sm text-slate-500">
+                    Simulate how the assignment engine routes a contact based on current logic and rules.
+                    This does not actually assign any tickets.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Phone -->
+                    <div class="space-y-2">
+                        <x-label for="sim-phone" value="Phone Number" />
+                        <x-input id="sim-phone" type="text" class="w-full" wire:model="simulationPhone"
+                            placeholder="+1234567890" />
+                    </div>
+
+                    <!-- Source -->
+                    <div class="space-y-2">
+                        <x-label for="sim-source" value="Source" />
+                        <select id="sim-source" wire:model="simulationSource"
+                            class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-wa-teal focus:ring-wa-teal rounded-md shadow-sm">
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="web">Web</option>
+                            <option value="api">API</option>
+                        </select>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="md:col-span-2 space-y-2">
+                        <x-label for="sim-tags" value="Tags (comma separated)" />
+                        <x-input id="sim-tags" type="text" class="w-full" wire:model="simulationTags"
+                            placeholder="vip, urgent, sales" />
+                    </div>
+                </div>
+
+                @if ($simulationResult)
+                    <div
+                        class="mt-6 p-4 rounded-xl border {{ $simulationResult['status'] === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800' }}">
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="{{ $simulationResult['status'] === 'success' ? 'text-green-500' : 'text-amber-500' }}">
+                                @if ($simulationResult['status'] === 'success')
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                @else
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                @endif
+                            </div>
+                            <div>
+                                <h4
+                                    class="text-sm font-bold {{ $simulationResult['status'] === 'success' ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200' }}">
+                                    {{ $simulationResult['status'] === 'success' ? 'Assigned Successfully' : 'No Agent Assigned' }}
+                                </h4>
+                                <div
+                                    class="mt-1 text-sm {{ $simulationResult['status'] === 'success' ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300' }}">
+                                    @if ($simulationResult['agent_name'])
+                                        Assigned to: <strong>{{ $simulationResult['agent_name'] }}</strong><br>
+                                    @endif
+                                    Reason: {{ $simulationResult['reason'] }}<br>
+                                    @if ($simulationResult['rule_matched'])
+                                        Rule Matched: <span
+                                            class="font-mono text-xs">{{ $simulationResult['rule_matched'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </x-slot>
+
+        <x-slot name="footer">
+            <x-secondary-button wire:click="$toggle('isSimulateModalOpen')" wire:loading.attr="disabled">
+                Close
+            </x-secondary-button>
+
+            <x-button class="ml-3 bg-wa-teal hover:bg-wa-teal-dark" wire:click="runSimulation"
+                wire:loading.attr="disabled">
+                {{ __('Run Simulation') }}
+            </x-button>
+        </x-slot>
+    </x-dialog-modal>
 </div>

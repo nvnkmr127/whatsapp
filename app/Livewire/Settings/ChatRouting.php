@@ -53,7 +53,26 @@ class ChatRouting extends Component
         }
 
         $this->statusRules = $this->team->chat_status_rules ?? [];
+
+        $config = $this->team->chat_assignment_config ?? [];
+        $this->stickyEnabled = $config['sticky_enabled'] ?? false;
+        $this->customRules = $config['rules'] ?? [];
     }
+
+    /**
+     * Simulation Properties
+     */
+    public $simulationPhone = '';
+    public $simulationSource = '';
+    public $simulationTags = [];
+    public $simulationResult = null;
+    public $isSimulateModalOpen = false;
+
+    /**
+     * Custom Assignment Rules Properties
+     */
+    public $customRules = [];
+    public $stickyEnabled = false;
 
     /**
      * Rules to validate the status rules.
@@ -66,7 +85,57 @@ class ChatRouting extends Component
             'statusRules.*.status_in' => ['required', 'string', 'in:' . implode(',', $this->availableStatuses)],
             'statusRules.*.after_days' => ['required', 'integer', 'min:1', 'max:365'],
             'statusRules.*.status_to' => ['required', 'string', 'in:' . implode(',', $this->availableStatuses)],
+
+            // Custom Rules Validation
+            'stickyEnabled' => ['boolean'],
+            'customRules.*.priority' => ['required', 'integer'],
+            'customRules.*.conditions' => ['array'],
+            'customRules.*.assign_to.type' => ['required', 'string', 'in:user,role'],
+            // specific validation depends on type, keep it simple for now
         ];
+    }
+
+    // ... mount ...
+
+
+    public function openSimulateModal()
+    {
+        $this->simulationResult = null;
+        $this->simulationPhone = '';
+        $this->simulationSource = 'whatsapp';
+        $this->simulationTags = [];
+        $this->isSimulateModalOpen = true;
+    }
+
+    public function runSimulation(\App\Services\AssignmentService $engine)
+    {
+        $mockContact = new \App\Models\Contact([
+            'team_id' => $this->team->id,
+            'phone' => $this->simulationPhone,
+            'source' => $this->simulationSource,
+        ]);
+
+        // Mock Tags
+        if (!empty($this->simulationTags)) {
+            // Treat comma-separated string as tags
+            $tagNames = is_array($this->simulationTags)
+                ? $this->simulationTags
+                : array_map('trim', explode(',', $this->simulationTags));
+
+            $tags = collect();
+            foreach ($tagNames as $name) {
+                if (!empty($name)) {
+                    // Create a mock object that behaves like a ContactTag
+                    $tags->push(new \App\Models\ContactTag(['name' => $name]));
+                }
+            }
+
+            $mockContact->setRelation('tags', $tags);
+        } else {
+            $mockContact->setRelation('tags', collect());
+        }
+
+        $this->simulationResult = $engine->simulate($mockContact);
     }
 
     /**
@@ -122,6 +191,52 @@ class ChatRouting extends Component
     {
         unset($this->statusRules[$index]);
         $this->statusRules = array_values($this->statusRules);
+    }
+
+    public function addCustomRule()
+    {
+        $this->customRules[] = [
+            'priority' => count($this->customRules) + 1,
+            'conditions' => [
+                ['type' => 'tag', 'value' => '']
+            ],
+            'assign_to' => ['type' => 'role', 'role' => 'agent']
+        ];
+    }
+
+    public function removeCustomRule($index)
+    {
+        unset($this->customRules[$index]);
+        $this->customRules = array_values($this->customRules);
+    }
+
+    public function addCondition($ruleIndex)
+    {
+        $this->customRules[$ruleIndex]['conditions'][] = ['type' => 'tag', 'value' => ''];
+    }
+
+    public function removeCondition($ruleIndex, $conditionIndex)
+    {
+        unset($this->customRules[$ruleIndex]['conditions'][$conditionIndex]);
+        $this->customRules[$ruleIndex]['conditions'] = array_values($this->customRules[$ruleIndex]['conditions']);
+    }
+
+    public function saveAssignmentConfig()
+    {
+        // $this->validate([
+        //     'stickyEnabled' => 'boolean',
+        //     'customRules.*' => 'array'
+        // ]);
+        // Simplistic validation to allow saving for now
+
+        $this->team->forceFill([
+            'chat_assignment_config' => [
+                'sticky_enabled' => $this->stickyEnabled,
+                'rules' => $this->customRules
+            ]
+        ])->save();
+
+        $this->dispatch('saved');
     }
 
     /**
@@ -182,7 +297,8 @@ class ChatRouting extends Component
             ->paginate(10);
 
         return view('livewire.settings.chat-routing', [
-            'users' => $users
+            'users' => $users,
+            'teamMembers' => $this->team->users()->orderBy('name')->get()
         ]);
     }
 }

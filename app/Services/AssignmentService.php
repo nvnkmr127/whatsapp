@@ -109,8 +109,17 @@ class AssignmentService
      */
     protected function getPreviousAgent(Contact $contact): ?User
     {
-        // Logic to find last conversation's owner or log
-        // For now, returning null as we need audit logs for this
+        // 1. Try to find from Conversation History
+        // We look for the most recent conversation that was assigned to someone
+        $lastConversation = $contact->conversations()
+            ->whereNotNull('assigned_to')
+            ->latest('created_at')
+            ->first();
+
+        if ($lastConversation && $lastConversation->assignee) {
+            return $lastConversation->assignee;
+        }
+
         return null;
     }
 
