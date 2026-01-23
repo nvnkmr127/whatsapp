@@ -64,7 +64,7 @@ class ChatRouting extends Component
      */
     public $simulationPhone = '';
     public $simulationSource = '';
-    public $simulationTags = [];
+    public $simulationTags = '';
     public $simulationResult = null;
     public $isSimulateModalOpen = false;
 
@@ -103,7 +103,7 @@ class ChatRouting extends Component
         $this->simulationResult = null;
         $this->simulationPhone = '';
         $this->simulationSource = 'whatsapp';
-        $this->simulationTags = [];
+        $this->simulationTags = '';
         $this->isSimulateModalOpen = true;
     }
 
@@ -120,7 +120,7 @@ class ChatRouting extends Component
             // Treat comma-separated string as tags
             $tagNames = is_array($this->simulationTags)
                 ? $this->simulationTags
-                : array_map('trim', explode(',', $this->simulationTags));
+                : array_map('trim', explode(',', (string) $this->simulationTags));
 
             $tags = collect();
             foreach ($tagNames as $name) {
@@ -139,6 +139,13 @@ class ChatRouting extends Component
     }
 
     /**
+     * Confirmation state for disabling tickets.
+     */
+    public $confirmingTicketDisabling = false;
+    public $ticketDisablingFor = null;
+    public $activeTicketsForDisabling = 0;
+
+    /**
      * Toggle ticket assignment for a member.
      *
      * @param int $userId
@@ -149,22 +156,50 @@ class ChatRouting extends Component
         $member = $this->team->users()->where('users.id', $userId)->first();
 
         if ($member) {
-            $current = (bool) $member->membership->receives_tickets;
+            $isReceiving = (bool) $member->membership->receives_tickets;
 
-            // Update the pivot table using the membership relation
-// Note: The original code used $this->team->users()->updateExistingPivot but accessing via membership is safer if
-// relation is set up correctly.
-// However, strictly safely, updateExistingPivot is good.
-            $this->team->users()->updateExistingPivot($userId, [
-                'receives_tickets' => !$current,
-            ]);
+            // If we are currently receiving, and want to toggle (disable)
+            if ($isReceiving) {
+                // Check for active tickets
+                $count = \App\Models\Contact::where('team_id', $this->team->id)
+                    ->where('assigned_to', $userId)
+                    ->whereNotIn('status', ['resolved', 'closed'])
+                    ->count();
 
-            // Refresh team relation to update UI
-            $this->team = $this->team->fresh();
+                if ($count > 0) {
+                    $this->ticketDisablingFor = $userId;
+                    $this->activeTicketsForDisabling = $count;
+                    $this->confirmingTicketDisabling = true;
+                    return;
+                }
+            }
 
-            // Dispatch success to show notification
-            $this->dispatch('saved');
+            // Otherwise, toggle immediately
+            $this->performToggle($userId, !$isReceiving);
         }
+    }
+
+    public function disableTicketAssignment()
+    {
+        if ($this->ticketDisablingFor) {
+            $this->performToggle($this->ticketDisablingFor, false);
+            $this->confirmingTicketDisabling = false;
+            $this->ticketDisablingFor = null;
+            $this->activeTicketsForDisabling = 0;
+        }
+    }
+
+    protected function performToggle($userId, $newState)
+    {
+        $this->team->users()->updateExistingPivot($userId, [
+            'receives_tickets' => $newState,
+        ]);
+
+        // Refresh team relation to update UI
+        $this->team = $this->team->fresh();
+
+        // Dispatch success to show notification
+        $this->dispatch('saved');
     }
 
     /**
@@ -223,11 +258,13 @@ class ChatRouting extends Component
 
     public function saveAssignmentConfig()
     {
-        // $this->validate([
-        //     'stickyEnabled' => 'boolean',
-        //     'customRules.*' => 'array'
-        // ]);
-        // Simplistic validation to allow saving for now
+        $this->validate([
+            'stickyEnabled' => ['boolean'],
+            'customRules' => ['array'],
+            'customRules.*.priority' => ['required', 'integer'],
+            'customRules.*.conditions' => ['array'],
+            'customRules.*.assign_to.type' => ['required', 'in:user,role'],
+        ]);
 
         $this->team->forceFill([
             'chat_assignment_config' => [

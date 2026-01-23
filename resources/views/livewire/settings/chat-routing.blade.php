@@ -35,6 +35,121 @@
             </button>
         </div>
 
+        <!-- Routing Logic Configuration -->
+        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8 mb-8">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Assignment Logic</h3>
+                    <p class="text-sm text-slate-500 font-medium mt-1">Configure customized routing logic and preferences.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                     <button wire:click="saveAssignmentConfig" 
+                        class="px-6 py-2 bg-wa-teal text-white font-bold uppercase text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        Save CONFIG
+                    </button>
+                    <x-action-message on="saved" class="text-sm text-gray-600 dark:text-gray-400">
+                        {{ __('Saved.') }}
+                    </x-action-message>
+                </div>
+            </div>
+
+            <!-- Sticky Assignment Toggle -->
+            <div class="mb-8 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl flex items-center gap-4 border border-slate-100 dark:border-slate-700/50">
+                <div class="flex items-center h-5">
+                    <input id="sticky-mode" type="checkbox" wire:model="stickyEnabled" 
+                        class="w-5 h-5 text-wa-teal bg-white border-gray-300 rounded focus:ring-wa-teal focus:ring-offset-0 transition duration-150 ease-in-out">
+                </div>
+                <div class="ml-2">
+                    <label for="sticky-mode" class="text-sm font-bold text-slate-900 dark:text-white cursor-pointer select-none">Sticky Assignment</label>
+                    <p class="text-xs text-slate-500 mt-0.5">When enabled, the system attempts to re-assign returning contacts to their previous agent if available.</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Custom Routing Rules</h4>
+                
+                <div class="space-y-4">
+                    @foreach($customRules as $rIndex => $rule)
+                        <div class="p-6 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800/20 relative group transition-all hover:border-wa-teal/30">
+                            <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button wire:click="removeCustomRule({{ $rIndex }})" class="text-slate-400 hover:text-rose-500 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+
+                            <div class="flex items-center gap-2 mb-4">
+                                <span class="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded">Rule {{ $rIndex + 1 }}</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div class="space-y-3">
+                                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">If...</label>
+                                    <div class="space-y-2">
+                                        @foreach($rule['conditions'] as $cIndex => $condition)
+                                            <div class="flex gap-2">
+                                                <select wire:model="customRules.{{ $rIndex }}.conditions.{{ $cIndex }}.type" 
+                                                    class="w-1/3 text-sm font-semibold rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:border-wa-teal focus:ring-wa-teal">
+                                                    <option value="tag">Tag</option>
+                                                    <option value="source">Source</option>
+                                                    <option value="phone_country">Phone Prefix</option>
+                                                </select>
+                                                <div class="relative flex-1">
+                                                    <input type="text" wire:model="customRules.{{ $rIndex }}.conditions.{{ $cIndex }}.value" 
+                                                        class="w-full text-sm font-semibold rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:border-wa-teal focus:ring-wa-teal" 
+                                                        placeholder="Value (e.g. 'vip' or 'whatsapp')">
+                                                        
+                                                    @if(count($rule['conditions']) > 1)
+                                                        <button wire:click="removeCondition({{ $rIndex }}, {{ $cIndex }})" 
+                                                            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 p-1">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                        <button wire:click="addCondition({{ $rIndex }})" class="text-xs font-bold text-wa-teal hover:underline">+ And condition</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-3">
+                                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Assign To...</label>
+                                    <div class="flex gap-2">
+                                        <select wire:model.live="customRules.{{ $rIndex }}.assign_to.type" 
+                                            class="w-1/3 text-sm font-semibold rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:border-wa-teal focus:ring-wa-teal">
+                                            <option value="role">Role</option>
+                                            <option value="user">Specific User</option>
+                                        </select>
+                                        
+                                        @if(($rule['assign_to']['type'] ?? '') === 'role')
+                                            <select wire:model="customRules.{{ $rIndex }}.assign_to.role" 
+                                                class="flex-1 text-sm font-semibold rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:border-wa-teal focus:ring-wa-teal">
+                                                <option value="agent">Agent</option>
+                                                <option value="manager">Manager</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
+                                        @else
+                                            <select wire:model="customRules.{{ $rIndex }}.assign_to.id" 
+                                                class="flex-1 text-sm font-semibold rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:border-wa-teal focus:ring-wa-teal">
+                                                <option value="">Select User</option>
+                                                @foreach($teamMembers as $member)
+                                                    <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                
+                <button wire:click="addCustomRule" 
+                    class="mt-4 w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400 font-bold text-xs uppercase tracking-widest hover:border-wa-teal hover:text-wa-teal transition-all">
+                    + Add Routing Rule
+                </button>
+            </div>
+        </div>
+
         <!-- Chat Assignment Rules -->
         <div
             class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden mb-8">
@@ -387,4 +502,45 @@
             </x-button>
         </x-slot>
     </x-dialog-modal>
+
+    <!-- Guarded Toggle Confirmation Modal -->
+    <x-confirmation-modal wire:model.live="confirmingTicketDisabling">
+        <x-slot name="title">
+            {{ __('Disable Chat Assignment') }}
+        </x-slot>
+
+        <x-slot name="content">
+            <div class="mb-4 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">
+                            Impact Warning
+                        </h3>
+                        <div class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                            <p>This user currently has <strong>{{ $activeTicketsForDisabling }}</strong> active conversations assigned to them.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <p>
+                {{ __('Disabling chat assignment will prevent this user from receiving new chats. However, their existing active chats will remain assigned to them. Are you sure you want to proceed?') }}
+            </p>
+        </x-slot>
+
+        <x-slot name="footer">
+            <x-secondary-button wire:click="$toggle('confirmingTicketDisabling')" wire:loading.attr="disabled">
+                {{ __('Cancel') }}
+            </x-secondary-button>
+
+            <x-danger-button class="ml-3" wire:click="disableTicketAssignment" wire:loading.attr="disabled">
+                {{ __('Disable Assignment') }}
+            </x-danger-button>
+        </x-slot>
+    </x-confirmation-modal>
 </div>

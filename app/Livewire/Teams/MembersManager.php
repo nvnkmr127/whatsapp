@@ -3,6 +3,7 @@
 namespace App\Livewire\Teams;
 
 use App\Actions\Custom\CreateUserAndAddToTeam;
+use App\Models\Contact;
 use Laravel\Jetstream\Http\Livewire\TeamMemberManager;
 use Livewire\Attributes\Layout;
 
@@ -20,6 +21,34 @@ class MembersManager extends TeamMemberManager
         'password' => '',
         'role' => null,
     ];
+
+    /**
+     * The active ticket count for the user being managed/removed.
+     *
+     * @var int
+     */
+    public $activeTicketCount = 0;
+
+    public function manageRole($userId)
+    {
+        parent::manageRole($userId);
+        $this->calculateActiveTickets($userId);
+    }
+
+    public function confirmTeamMemberRemoval($userId)
+    {
+        parent::confirmTeamMemberRemoval($userId);
+        $this->calculateActiveTickets($userId);
+    }
+
+    protected function calculateActiveTickets($userId)
+    {
+        // Active tickets are those not resolved or closed
+        $this->activeTicketCount = Contact::where('team_id', $this->team->id)
+            ->where('assigned_to', $userId)
+            ->whereNotIn('status', ['resolved', 'closed'])
+            ->count();
+    }
 
     /**
      * Indicates if the add member modal is open.

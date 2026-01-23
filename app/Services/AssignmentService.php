@@ -129,8 +129,8 @@ class AssignmentService
      */
     protected function matchRules(Contact $contact, array $rules): ?User
     {
-        // Sort rules by priority (High to Low)
-        $sortedRules = collect($rules)->sortByDesc('priority');
+        // Sort rules by priority (Low to High, e.g. 1 is first)
+        $sortedRules = collect($rules)->sortBy('priority');
 
         foreach ($sortedRules as $rule) {
             if ($this->evaluateConditions($contact, $rule['conditions'] ?? [])) {
