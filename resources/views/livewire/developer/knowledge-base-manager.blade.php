@@ -3,19 +3,35 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-indigo-100 dark:bg-indigo-900/20 text-wa-teal dark:text-indigo-400 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                <div class="p-3 bg-wa-teal dark:bg-wa-teal/30 rounded-2xl">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                             d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Business <span
+                <h1 class="text-3xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Business <span
                         class="text-wa-teal">Brain</span></h1>
             </div>
             <p class="text-slate-500 font-medium">Teach your AI about your business by adding documents, websites, or
                 text.</p>
         </div>
         <div class="flex gap-3">
+            <a href="{{ route('knowledge-base.feedback') }}"
+                class="text-sm font-bold text-wa-teal hover:text-blue-700 uppercase tracking-widest transition-colors flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                View Feedback
+            </a>
+            <a href="{{ route('developer.overview') }}"
+                class="text-sm font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7 7-7" />
+                </svg>
+                Back to Portal
+            </a>
             <x-action-message class="mr-3 flex items-center" on="saved">
                 <span
                     class="text-wa-teal font-bold text-xs uppercase tracking-widest">{{ __('Changes Saved') }}</span>
@@ -186,7 +202,7 @@
                 <div class="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     @if($source->type !== 'text')
                     <button wire:click="reprocessSource({{ $source->id }})" wire:loading.attr="disabled" class="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Refresh Information">
-                        <svg class="w-4 h-4" :class="{'animate-spin': $wire.loading && $wire.target.includes('reprocessSource({{ $source->id }})')}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4" wire:loading.class="animate-spin" wire:target="reprocessSource({{ $source->id }})" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                     </button>

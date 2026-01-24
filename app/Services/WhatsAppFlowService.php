@@ -121,16 +121,41 @@ class WhatsAppFlowService
     }
 
     /**
-     * Publish the Flow.
+     * Publish the Flow and Create Version Snapshot.
      */
     public function publishFlow(WhatsAppFlow $flow)
     {
+        // 1. Trigger Publish On Meta
         $response = Http::withToken((string) $this->token)
             ->post("{$this->baseUrl}/{$flow->flow_id}/publish");
 
         if ($response->failed()) {
             throw new \Exception("Meta Flow Publish Failed: " . $response->body());
         }
+
+        // 2. Create Internal Version Snapshot
+        $newVersionNumber = $flow->latest_version_number + 1;
+
+        // Hash content for integrity checks
+        $contentHash = md5(json_encode($flow->design_data) . json_encode($flow->flow_json));
+
+        $version = \App\Models\WhatsAppFlowVersion::create([
+            'whatsapp_flow_id' => $flow->id,
+            'version_number' => $newVersionNumber,
+            'status' => 'PUBLISHED',
+            'version_hash' => $contentHash,
+            'meta_publish_id' => $response->json()['id'] ?? null,
+            'design_data' => $flow->design_data,
+            'flow_json' => $flow->flow_json,
+            'entry_point_config' => $flow->entry_point_config
+        ]);
+
+        // 3. Update Flow Head
+        $flow->update([
+            'status' => 'PUBLISHED', // Sync status
+            'active_version_id' => $version->id,
+            'latest_version_number' => $newVersionNumber
+        ]);
 
         return $response->json();
     }
@@ -415,31 +440,126 @@ class WhatsAppFlowService
     /**
      * Handle incoming Flow Data Request (Decrypted).
      */
+    /**
+     * Handle incoming Flow Data Request (Decrypted).
+     */
     public function handleRequest(array $request)
     {
         $action = $request['action'] ?? null;
 
+        // Log raw request for debugging (in prod, mask sensitive data)
+        Log::info("Flow Handle Request: " . $action, $request);
+
         switch ($action) {
+            case 'INIT':
+                // INIT request is used to load initial data for the Flow.
+                return [
+                    'screen' => 'screen_welcome', // Optional: force start screen? usually not needed for v3
+                    'data' => []
+                ];
+
+            case 'data_exchange':
+                $flowToken = $request['flow_token'] ?? null;
+                $submissionData = $request['data'] ?? [];
+
+                // 1. Context Resolution
+                $tokenData = json_decode($flowToken, true);
+                if (!$tokenData || !isset($tokenData['id'])) {
+                    // Fallback check if token is just ID string (Legacy)
+                    if (is_numeric($flowToken)) {
+                        $flowId = $flowToken;
+                        $versionNum = null;
+                    } else {
+                        Log::error("Invalid Flow Token format", ['token' => $flowToken]);
+                        throw new \Exception("Invalid Flow Token");
+                    }
+                } else {
+                    $flowId = $tokenData['id'];
+                    $versionNum = $tokenData['v'] ?? null;
+                }
+
+                // 2. Load Version Snapshot
+                $version = null;
+                if ($versionNum) {
+                    $version = \App\Models\WhatsAppFlowVersion::where('whatsapp_flow_id', $flowId)
+                        ->where('version_number', $versionNum)
+                        ->first();
+                }
+
+                // Fallback to active version if specific version not found (or not provided)
+                if (!$version) {
+                    $flow = WhatsAppFlow::find($flowId);
+                    if ($flow && $flow->active_version_id) {
+                        $version = $flow->activeVersion;
+                    }
+                }
+
+                if (!$version) {
+                    // Critical Error: No definition found.
+                    // Return a generic error to the user interface in WhatsApp
+                    return [
+                        'screen' => 'SUCCESS', // Fallback? Or TERMINAL error screen?
+                        'data' => [
+                            'extension_error' => 'Flow definition not found. Please contact support.'
+                        ]
+                    ];
+                }
+
+                // 3. Downstream Enforcement: Schema Validation
+                $validator = new \App\Validators\FlowSubmissionValidator();
+                $validation = $validator->validate($submissionData, $version);
+
+                if (!$validation['isValid']) {
+                    // Return Validation Errors to Flow (Interactive Feedback)
+                    // The error structure matches Meta's expectation for field errors
+                    // However, for simple flows, we might just want to show a toast or error screen.
+                    // Using standard error response for data_exchange
+                    return [
+                        'error_message' => 'Please fix the errors below.',
+                        'field_errors' => $validation['errors']
+                    ];
+                }
+
+                // 4. Policy Enforcement (Commerce/Sensitive Data)
+                // Re-check for policy violations in the submitted data (e.g. if I missed it in design)
+                // This is a second line of defense.
+                // For instance, simple regex check on values for Credit Card patterns
+                foreach ($validation['cleanedData'] as $key => $val) {
+                    if (is_string($val) && strlen($val) > 12) {
+                        if (preg_match('/\b(?:\d[ -]*?){13,16}\b/', $val)) {
+                            // Possible CC number?
+                            // Block it.
+                            Log::warning("Potential Sensitive Data (PCI) blocked in flow submission", ['flow_id' => $flowId]);
+                            return [
+                                'error_message' => 'Security Alert: Payment information cannot be processed in this form.'
+                            ];
+                        }
+                    }
+                }
+
+                // 5. Success - Data is valid and safe.
+                // Store response? (Ideally asynchronously via Job, but here valid)
+                // Or perform the "After Submit Action" (Webhook/API)
+
+                // Determine next step
+                // Ideally, we look at the routing logic. For now, we assume this is the final submit.
+
+                return [
+                    'screen' => 'SUCCESS', // Assume a terminal success screen exists or logic handles it
+                    'data' => [
+                        'extension_message_response' => [
+                            'params' => [
+                                'flow_token' => $flowToken,
+                            ]
+                        ]
+                    ]
+                ];
+
             case 'ping':
                 return [
                     'data' => [
                         'status' => 'active'
                     ]
-                ];
-
-            case 'INIT':
-                // Initial screen data load?
-                return [
-                    'screen' => 'SUCCESS', // Fallback or logic
-                    'data' => []
-                ];
-
-            case 'data_exchange':
-                // Handle form submission / navigation logic
-                // For now, simpler echo
-                return [
-                    'screen' => 'SUCCESS',
-                    'data' => $request['data'] ?? []
                 ];
 
             default:

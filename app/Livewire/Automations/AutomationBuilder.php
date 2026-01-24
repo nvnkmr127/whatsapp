@@ -17,7 +17,16 @@ class AutomationBuilder extends Component
     public $name;
     // Trigger Properties
     public $triggerType = 'keyword';
-    public $triggerConfig = [];
+    public $triggerConfig = [
+        'keywords' => [],
+        'is_regex' => false,
+        'add_tags' => [],
+        'remove_tags' => [],
+        'webhook_url' => null,
+        'template_name' => null,
+        'button_text' => null,
+    ];
+    public $triggerKeywordsString = ''; // Helper for comma-separated keywords
 
     public $nodes = []; // [ {id, type, x, y, data} ]
     public $edges = []; // [ {source, target} ]
@@ -66,6 +75,11 @@ class AutomationBuilder extends Component
     public $approvedTemplates = [];
     public $availableFlows = [];
     public $uploadFile; // For media uploads
+    public $availableKnowledgeBaseSources = [];
+    public $nodeUseKb = false;
+    public $nodeKbScope = 'all';
+    public $nodeKbSourceIds = [];
+    public $nodeKbStrict = true;
 
     public $validationIssues = [];
     public $isActivatable = true;
@@ -207,6 +221,9 @@ class AutomationBuilder extends Component
             ->where('status', 'APPROVED')
             ->get()->toArray();
         $this->availableFlows = \App\Models\Flow::where('team_id', Auth::user()->currentTeam->id)->get()->toArray();
+        $this->availableKnowledgeBaseSources = \App\Models\KnowledgeBaseSource::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('status', [\App\Models\KnowledgeBaseSource::STATUS_READY, 'indexed'])
+            ->get()->toArray();
 
         if ($automationId) {
             try {
@@ -223,7 +240,15 @@ class AutomationBuilder extends Component
             $this->name = $automation->name;
 
             $this->triggerType = $automation->trigger_type ?? 'keyword';
-            $this->triggerConfig = $automation->trigger_config ?? [];
+            $this->triggerConfig = array_merge([
+                'keywords' => [],
+                'is_regex' => false,
+                'add_tags' => [],
+                'remove_tags' => [],
+                'webhook_url' => null,
+                'template_name' => null,
+                'button_text' => null,
+            ], $automation->trigger_config ?? []);
 
             // Backward compatibility
             if ($this->triggerType === 'keyword' && empty($this->triggerConfig['keywords']) && !empty($automation->trigger_config['keywords'])) {
@@ -249,16 +274,26 @@ class AutomationBuilder extends Component
                 'nodes_count' => count($this->nodes),
                 'edges_count' => count($this->edges)
             ]);
+
+            // Sync helper string
+            $this->triggerKeywordsString = implode(', ', $this->triggerConfig['keywords'] ?? []);
         } else {
             // Default Start Node
             $this->nodes = [
                 ['id' => 'Start', 'type' => 'trigger', 'x' => 50, 'y' => 50, 'data' => ['label' => 'Start']]
             ];
             // Default Trigger Config
-            $this->triggerConfig = ['keywords' => [], 'is_regex' => false];
+            $this->triggerConfig = [
+                'keywords' => [],
+                'is_regex' => false,
+                'add_tags' => [],
+                'remove_tags' => [],
+                'webhook_url' => null
+            ];
             $this->name = 'Untitled Automation ' . date('Y-m-d H:i');
         }
 
+        $this->updateNodeData();
         $this->runValidation();
     }
 
@@ -573,8 +608,7 @@ class AutomationBuilder extends Component
                     $this->nodeDelayHours = $data['delay_hours'] ?? 0;
                 } elseif ($type === 'trigger') {
                     // Start Node - Trigger Config
-                    // The properties are on the Component itself ($this->triggerType, $this->triggerConfig)
-                    // But we might want to populate local state if we use it for editing
+                    $this->triggerKeywordsString = implode(', ', $this->triggerConfig['keywords'] ?? []);
                 } elseif (in_array($type, ['image', 'video', 'audio', 'file'])) {
                     $this->nodeUrl = $data['url'] ?? '';
                     $this->nodeText = $data['caption'] ?? '';
@@ -599,6 +633,10 @@ class AutomationBuilder extends Component
                     $this->nodeText = $data['prompt'] ?? '';
                     $this->nodeSaveTo = $data['save_to'] ?? '';
                     $this->nodeModel = $data['model'] ?? 'gpt-4o';
+                    $this->nodeUseKb = $data['use_knowledge_base'] ?? false;
+                    $this->nodeKbScope = $data['kb_scope'] ?? 'all';
+                    $this->nodeKbSourceIds = $data['kb_source_ids'] ?? [];
+                    $this->nodeKbStrict = $data['kb_strict'] ?? true;
                 } elseif ($type === 'template') {
                     $this->nodeText = $data['template_name'] ?? '';
                     $this->nodeLanguage = $data['language'] ?? 'en';
@@ -643,6 +681,12 @@ class AutomationBuilder extends Component
 
 
     // Generic hook to save any node property change immediately to the array
+    public function updatedTriggerKeywordsString($value)
+    {
+        $this->triggerConfig['keywords'] = array_filter(array_map('trim', explode(',', $value)));
+        $this->updateNodeData();
+    }
+
     public function updated($propertyName)
     {
         // If we are editing a node property (starts with node, or trigger config)
@@ -699,20 +743,35 @@ class AutomationBuilder extends Component
 
     public function updateNodeData()
     {
+        // 1. Always sync trigger nodes with component state
+        foreach ($this->nodes as &$node) {
+            if ($node['type'] === 'trigger') {
+                $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)) . ' Trigger';
+                $node['data']['trigger_type'] = $this->triggerType;
+                $node['data']['keywords'] = $this->triggerConfig['keywords'] ?? [];
+                $node['data']['add_tags'] = $this->triggerConfig['add_tags'] ?? [];
+                $node['data']['remove_tags'] = $this->triggerConfig['remove_tags'] ?? [];
+                $node['data']['template_name'] = $this->triggerConfig['template_name'] ?? null;
+                $node['data']['button_text'] = $this->triggerConfig['button_text'] ?? null;
+                $node['data']['webhook_url'] = $this->triggerConfig['webhook_url'] ?? null;
+            }
+        }
+
+        // 2. Update the specifically selected node properties
+        if (!$this->selectedNodeId)
+            return;
+
         foreach ($this->nodes as &$node) {
             if ($node['id'] === $this->selectedNodeId) {
                 $type = $node['type'];
-                $node['data']['label'] = $this->nodeLabel ?: $node['data']['label'];
 
-                if ($type === 'trigger') {
-                    $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)) . ' Trigger';
-                    $node['data']['trigger_type'] = $this->triggerType;
-                    $node['data']['keywords'] = $this->triggerConfig['keywords'] ?? [];
-                    $node['data']['add_tags'] = $this->triggerConfig['add_tags'] ?? [];
-                    $node['data']['remove_tags'] = $this->triggerConfig['remove_tags'] ?? [];
-                    $node['data']['template_name'] = $this->triggerConfig['template_name'] ?? null;
-                    $node['data']['button_text'] = $this->triggerConfig['button_text'] ?? null;
-                } elseif ($type === 'text') {
+                // Don't overwrite trigger label if we already set it above, 
+                // but other nodes use nodeLabel
+                if ($type !== 'trigger') {
+                    $node['data']['label'] = $this->nodeLabel ?: ($node['data']['label'] ?? ucfirst($type));
+                }
+
+                if ($type === 'text') {
                     $node['data']['text'] = $this->nodeText;
                     $node['data']['typing'] = $this->nodeTyping;
                     $node['data']['delay_seconds'] = $this->nodeDelaySeconds;
@@ -750,6 +809,10 @@ class AutomationBuilder extends Component
                     $node['data']['prompt'] = $this->nodeText;
                     $node['data']['save_to'] = $this->nodeSaveTo;
                     $node['data']['model'] = $this->nodeModel;
+                    $node['data']['use_knowledge_base'] = $this->nodeUseKb;
+                    $node['data']['kb_scope'] = $this->nodeKbScope;
+                    $node['data']['kb_source_ids'] = $this->nodeKbSourceIds;
+                    $node['data']['kb_strict'] = $this->nodeKbStrict;
                 } elseif ($type === 'webhook') {
                     $node['data']['url'] = $this->nodeUrl;
                     $node['data']['method'] = $this->nodeMethod;
@@ -856,6 +919,7 @@ class AutomationBuilder extends Component
             $this->triggerConfig['keywords'] = [];
         }
         $this->triggerConfig['keywords'][] = '';
+        $this->updateNodeData();
     }
 
     public function removeTriggerKeyword($index)
@@ -864,6 +928,7 @@ class AutomationBuilder extends Component
             unset($this->triggerConfig['keywords'][$index]);
             $this->triggerConfig['keywords'] = array_values($this->triggerConfig['keywords']);
         }
+        $this->updateNodeData();
     }
 
     public function addStartTag()
@@ -872,6 +937,7 @@ class AutomationBuilder extends Component
             $this->triggerConfig['add_tags'] = [];
         }
         $this->triggerConfig['add_tags'][] = '';
+        $this->updateNodeData();
     }
 
     public function removeStartTag($index)
@@ -880,6 +946,7 @@ class AutomationBuilder extends Component
             unset($this->triggerConfig['add_tags'][$index]);
             $this->triggerConfig['add_tags'] = array_values($this->triggerConfig['add_tags']);
         }
+        $this->updateNodeData();
     }
 
     public function addRemoveTag()
@@ -888,6 +955,7 @@ class AutomationBuilder extends Component
             $this->triggerConfig['remove_tags'] = [];
         }
         $this->triggerConfig['remove_tags'][] = '';
+        $this->updateNodeData();
     }
 
     // Carousel Methods
@@ -941,6 +1009,7 @@ class AutomationBuilder extends Component
             unset($this->triggerConfig['remove_tags'][$index]);
             $this->triggerConfig['remove_tags'] = array_values($this->triggerConfig['remove_tags']);
         }
+        $this->updateNodeData();
     }
 
     public function addContact()

@@ -23,7 +23,7 @@ class TemplateValidator
             $errors[] = [
                 'code' => 'STATUS_INELIGIBLE',
                 'description' => "Template status is {$template->status}, not APPROVED",
-                'severity' => 'fatal'
+                'severity' => 'error'
             ];
         }
 
@@ -48,7 +48,7 @@ class TemplateValidator
                     $errors[] = [
                         'code' => 'CAT_AUTH_MEDIA_DISALLOWED',
                         'description' => "Authentication templates cannot contain media headers",
-                        'severity' => 'fatal'
+                        'severity' => 'error'
                     ];
                 }
 
@@ -59,7 +59,7 @@ class TemplateValidator
                             $errors[] = [
                                 'code' => 'CAT_AUTH_BUTTON_INVALID',
                                 'description' => "Authentication templates only allow OTP or COPY_CODE buttons",
-                                'severity' => 'fatal'
+                                'severity' => 'error'
                             ];
                         }
                     }
@@ -72,7 +72,7 @@ class TemplateValidator
                     $errors[] = [
                         'code' => 'VARIABLE_SKEW',
                         'description' => "Body placeholders must be sequential {{1}}, {{2}}...",
-                        'severity' => 'fatal'
+                        'severity' => 'error'
                     ];
                 }
             }
@@ -98,6 +98,48 @@ class TemplateValidator
                                 'description' => "Dynamic buttons must use {{1}} suffix",
                                 'severity' => 'error'
                             ];
+                        }
+                    }
+
+                    // FLOW INTEGRITY CHECK
+                    if (($btn['type'] ?? '') === 'FLOW') {
+                        $flowId = $btn['flow_id'] ?? null;
+                        if ($flowId) {
+                            $flow = \App\Models\WhatsAppFlow::where('flow_id', $flowId)->first();
+                            if (!$flow) {
+                                $score -= 100;
+                                $errors[] = [
+                                    'code' => 'FLOW_ORPHANED',
+                                    'description' => "Linked Flow ID {$flowId} not found in system.",
+                                    'severity' => 'error'
+                                ];
+                            } else {
+                                // Check Flow Readiness
+                                $fValidator = new \App\Validators\FlowReadinessValidator();
+                                $fResult = $fValidator->validate($flow);
+                                if (!$fResult->isValid()) {
+                                    $score -= 50;
+                                    $reason = $fResult->getBlockingReason();
+                                    $errors[] = [
+                                        'code' => 'FLOW_NOT_READY',
+                                        'description' => "Linked Flow is not ready: {$reason}",
+                                        'severity' => 'error'
+                                    ];
+                                }
+
+                                // Check Entry Point
+                                $epValidator = new \App\Validators\FlowEntryPointValidator();
+                                $epResult = $epValidator->validate($flow, 'template');
+                                if (!$epResult->isValid()) {
+                                    $score -= 50;
+                                    $reason = $epResult->getBlockingReason();
+                                    $errors[] = [
+                                        'code' => 'FLOW_ENTRY_BLOCKED',
+                                        'description' => "Flow cannot be used in Templates: {$reason}",
+                                        'severity' => 'error'
+                                    ];
+                                }
+                            }
                         }
                     }
                 }

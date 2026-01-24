@@ -18,13 +18,15 @@ class ProcessWebhookJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $payloadId;
+    public $traceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($payloadId)
+    public function __construct($payloadId, $traceId = null)
     {
         $this->payloadId = $payloadId;
+        $this->traceId = $traceId;
         $this->onQueue('webhooks');
     }
 
@@ -46,12 +48,16 @@ class ProcessWebhookJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    /**
-     * Execute the job.
-     */
     public function handle(\App\Services\EventBusService $eventBus): void
     {
-        Log::info("ProcessWebhookJob (Stream Producer) started for Payload ID: {$this->payloadId}");
+        // Restore Trace Context
+        if ($this->traceId) {
+            \App\Services\TraceContext::set($this->traceId);
+        } else {
+            \App\Services\TraceContext::ensureTraceId();
+        }
+
+        Log::info("ProcessWebhookJob (Stream Producer) started for Payload ID: {$this->payloadId} [Trace: " . \App\Services\TraceContext::getTraceId() . "]");
         $payloadRecord = WebhookPayload::find($this->payloadId);
 
         if (!$payloadRecord) {
@@ -81,8 +87,9 @@ class ProcessWebhookJob implements ShouldQueue
                 // Construct standardized event
                 $event = \App\Factories\EventFactory::makeInboundMessage($body);
 
-                // Idempotency: Redis SETNX would happen here or inside EventBus, but we rely on DB unique key downstream for now too.
-                // We'll publish to the stream.
+                // Publish to stream - EventBus should propagate trace ID in metadata ideally
+                // But for now, we assume EventBus propagates headers or payload data
+                // We'll trust that the domain events fired LATER (e.g. MessageReceived) will pick up the context from TraceContext singleton.
 
                 $id = $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload']);
 

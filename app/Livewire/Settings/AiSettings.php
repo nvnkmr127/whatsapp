@@ -20,6 +20,11 @@ class AiSettings extends Component
     public $stop_keywords;
     public $retry_attempts = 1;
     public $fallback_message;
+    public $use_kb = false;
+    public $kb_scope = 'all';
+    public $kb_source_ids = [];
+    public $kb_strict = true;
+    public $available_kb_sources = [];
 
     // Toggles
     public $show_header = false;
@@ -60,6 +65,14 @@ class AiSettings extends Component
         $this->show_stop = (bool) get_setting("ai_show_stop_$teamId", false);
         $this->show_retry = (bool) get_setting("ai_show_retry_$teamId", false);
         $this->show_fallback = (bool) get_setting("ai_show_fallback_$teamId", false);
+
+        $this->use_kb = (bool) get_setting("ai_use_kb_$teamId", false);
+        $this->kb_scope = get_setting("ai_kb_scope_$teamId", 'all');
+        $this->kb_source_ids = json_decode(get_setting("ai_kb_source_ids_$teamId", '[]'), true);
+        $this->kb_strict = (bool) get_setting("ai_kb_strict_$teamId", true);
+        $this->available_kb_sources = \App\Models\KnowledgeBaseSource::where('team_id', $teamId)
+            ->whereIn('status', [\App\Models\KnowledgeBaseSource::STATUS_READY, 'indexed'])
+            ->get()->toArray();
     }
 
     public function updatedInstructionType($value)
@@ -103,6 +116,11 @@ class AiSettings extends Component
         set_setting("ai_show_stop_$teamId", $this->show_stop, 'ai_settings');
         set_setting("ai_show_retry_$teamId", $this->show_retry, 'ai_settings');
         set_setting("ai_show_fallback_$teamId", $this->show_fallback, 'ai_settings');
+
+        set_setting("ai_use_kb_$teamId", $this->use_kb, 'ai_settings');
+        set_setting("ai_kb_scope_$teamId", $this->kb_scope, 'ai_settings');
+        set_setting("ai_kb_source_ids_$teamId", json_encode($this->kb_source_ids), 'ai_settings');
+        set_setting("ai_kb_strict_$teamId", $this->kb_strict, 'ai_settings');
 
         $this->dispatch('saved');
         session()->flash('success', 'AI Settings updated successfully.');

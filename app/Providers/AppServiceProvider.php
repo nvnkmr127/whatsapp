@@ -45,12 +45,38 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\MessageReceived::class,
+            \App\Listeners\UpdateContactStateOnMessageReceived::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\MessageReceived::class,
             \App\Listeners\SendOutboundWebhook::class
         );
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderStatusUpdated::class,
             \App\Listeners\SendOrderLifecycleNotification::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\ContactLifecycleChanged::class,
+            \App\Listeners\LogContactEvents::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\ContactOptedOut::class,
+            \App\Listeners\LogContactEvents::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\WhatsAppTokenExpiringSoon::class,
+            \App\Listeners\NotifyAdminsOfTokenExpiry::class
+        );
+
+        // Catch-all for Domain Events (Signal Sourcing)
+        \Illuminate\Support\Facades\Event::listen(
+            'App\Events\*',
+            \App\Listeners\PersistDomainEvents::class
         );
 
         $permissions = [

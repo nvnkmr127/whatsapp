@@ -710,19 +710,12 @@
                                                  
                                                  Let's use a dedicated method: `addTriggerKeyword` similar to headers. -->
                                         </div>
-                                         <div class="space-y-2">
-                                            @foreach($triggerConfig['keywords'] ?? [] as $index => $kw)
-                                                <div class="flex items-center gap-2">
-                                                    <input type="text" wire:model.live="triggerConfig.keywords.{{ $index }}" 
-                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
-                                                        placeholder="Keyword">
-                                                    <button wire:click="removeTriggerKeyword({{ $index }})" class="text-slate-400 hover:text-rose-500">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                    </button>
-                                                </div>
-                                            @endforeach
-                                             <button wire:click="addTriggerKeyword"
-                                                class="text-xs font-bold text-wa-teal hover:underline">+ Add Keyword</button>
+                                        <div class="space-y-1">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Keywords (Comma separated)</label>
+                                            <input type="text" wire:model.blur="triggerKeywordsString" 
+                                                class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold px-3 py-2 focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200"
+                                                placeholder="hi, hello, order, status">
+                                            <p class="text-[9px] text-slate-400 mt-1">Separate multiple keywords with commas.</p>
                                         </div>
                                         
                                         <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -1042,6 +1035,67 @@
                                 </select>
                             </div>
 
+                            <!-- Knowledge Base Scope -->
+                            <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800" x-show="['openai'].includes(selectedNode.type)">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Use Business Brain</label>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" wire:model.live="nodeUseKb" wire:change="updateNodeData" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-wa-teal"></div>
+                                    </label>
+                                </div>
+
+                                <div x-show="$wire.nodeUseKb" class="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Search Scope</label>
+                                        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                                            <button @click="$wire.set('nodeKbScope', 'all'); $wire.updateNodeData()" 
+                                                class="px-3 py-2 text-[10px] font-black uppercase rounded-lg transition-all"
+                                                :class="$wire.nodeKbScope === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-wa-teal' : 'text-slate-500'">
+                                                All Sources
+                                            </button>
+                                            <button @click="$wire.set('nodeKbScope', 'selected'); $wire.updateNodeData()" 
+                                                class="px-3 py-2 text-[10px] font-black uppercase rounded-lg transition-all"
+                                                :class="$wire.nodeKbScope === 'selected' ? 'bg-white dark:bg-slate-700 shadow-sm text-wa-teal' : 'text-slate-500'">
+                                                Selected
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Strict Mode Toggle -->
+                                    <div class="flex items-center justify-between p-3 bg-rose-50 dark:bg-rose-900/10 rounded-xl border border-rose-100 dark:border-rose-900/30">
+                                        <div class="flex-1">
+                                            <p class="text-[10px] font-black text-rose-700 dark:text-rose-400 uppercase tracking-tight">Strict Grounding</p>
+                                            <p class="text-[8px] text-rose-600/70 dark:text-rose-400/50 font-bold uppercase">AI only answers from hits</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" wire:model.live="nodeKbStrict" wire:change="updateNodeData" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-rose-500"></div>
+                                        </label>
+                                    </div>
+
+                                    <div x-show="$wire.nodeKbScope === 'selected'" class="space-y-2">
+                                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest">Select Sources</label>
+                                        <div class="space-y-1 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                            @foreach($availableKnowledgeBaseSources as $source)
+                                                <label class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent"
+                                                    :class="$wire.nodeKbSourceIds.includes('{{ $source['id'] }}') ? 'border-wa-teal/20 bg-wa-teal/5' : ''">
+                                                    <input type="checkbox" value="{{ $source['id'] }}" wire:model.live="nodeKbSourceIds" wire:change="updateNodeData"
+                                                        class="w-4 h-4 text-wa-teal border-slate-300 rounded focus:ring-wa-teal dark:bg-slate-900 dark:border-slate-700">
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">{{ $source['name'] }}</p>
+                                                        <p class="text-[9px] text-slate-400 uppercase font-black">{{ $source['type'] }}</p>
+                                                    </div>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                        @if(empty($availableKnowledgeBaseSources))
+                                            <p class="text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg font-bold">No 'Ready' sources found in Business Brain.</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
 
 
                             <!-- Method (Webhook) -->
@@ -1049,7 +1103,10 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase">Method</label>
                                 <select wire:model.blur="nodeMethod" wire:change="updateNodeData"
                                     class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
                                     <option value="PUT">PUT</option>
+                                    <option value="PATCH">PATCH</option>
                                     <option value="DELETE">DELETE</option>
                                 </select>
                             </div>

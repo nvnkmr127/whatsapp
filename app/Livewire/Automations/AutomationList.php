@@ -93,7 +93,7 @@ class AutomationList extends Component
         $automations = $query->latest()->paginate(10);
 
         // Module-Level Core Metrics
-        $teamId = auth()->user()->current_team_id;
+        $teamId = auth()->user()->currentTeam->id;
         $stats = [
             'total' => \App\Models\Automation::where('team_id', $teamId)->count(),
             'active' => \App\Models\Automation::where('team_id', $teamId)->where('is_active', true)->count(),
@@ -102,7 +102,7 @@ class AutomationList extends Component
         ];
 
         return view('livewire.automations.automation-list', [
-            'automations' => $automations,
+            'bots' => $automations,
             'stats' => $stats
         ]);
     }

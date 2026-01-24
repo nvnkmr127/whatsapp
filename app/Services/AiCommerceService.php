@@ -64,20 +64,42 @@ class AiCommerceService
             ];
         })->toJson();
 
+        // 1.5 Fetch Knowledge Base Context (if enabled)
+        $useKb = (bool) get_setting("ai_use_kb_{$teamId}", false);
+        $kbContext = "";
+        $kbGrounding = "";
+        if ($useKb) {
+            $kbService = app(KnowledgeBaseService::class);
+            $kbScope = get_setting("ai_kb_scope_{$teamId}", 'all');
+            $sourceIds = ($kbScope === 'selected') ? json_decode(get_setting("ai_kb_source_ids_{$teamId}", '[]'), true) : null;
+            $kbStrict = (bool) get_setting("ai_kb_strict_{$teamId}", true);
+
+            if ($kbService->isReady($teamId, $sourceIds)) {
+                $kbContext = $kbService->searchContext($teamId, $message, $sourceIds);
+                if ($kbStrict && $kbContext) {
+                    $kbGrounding = "\nGROUNDING RULES:\n1. If the user asks about the business, services, or policies, use ONLY the KNOWLEDGE_BASE context.\n2. Do not speculate. If the question is about the business and not in the context, respond exactly with: \"I'm sorry, I don't have information about that in my business knowledge base.\"\n3. Cite sources as [Source: Name].";
+                }
+            }
+        }
+
         // 2. Prepare System Prompt
         $systemPrompt = "{$persona}
+        {$kbGrounding}
         
         RULES:
         1. Access the user's need.
         2. Select up to 3 matching products from the CATALOG.
         3. If products match, return ONLY a JSON object with this format:
            {\"matched\": true, \"product_ids\": [1, 2], \"reply_text\": \"Here are some options...\"}
-        4. If NO products match, but the user is chatting socially, answer politely but steer back to shopping. Return JSON:
-           {\"matched\": false, \"reply_text\": \"Your polite response...\"}
+        4. If NO products match, but the user is chatting socially or asking about the business, answer politely (using KNOWLEDGE_BASE if relevant). Return JSON:
+           {\"matched\": false, \"reply_text\": \"Your response text...\"}
         5. Keep `reply_text` short and friendly.
 
         CATALOG:
         {$catalogJson}
+
+        KNOWLEDGE_BASE:
+        {$kbContext}
         ";
 
         // 3. Call OpenAI
@@ -103,6 +125,15 @@ class AiCommerceService
 
             if (!isset($aiJson['reply_text'])) {
                 return false;
+            }
+
+            // Check for grounding failure (unanswered)
+            if (str_contains($aiJson['reply_text'], "I'm sorry, I don't have information about that in my business knowledge base.")) {
+                app(KnowledgeBaseService::class)->logGap(
+                    $teamId,
+                    $message,
+                    'unanswered'
+                );
             }
 
             // 4. Send Response

@@ -52,8 +52,9 @@ class WhatsAppWebhookController extends Controller
                 'status' => 'pending',
             ]);
 
-            // Dispatch Job
-            \App\Jobs\ProcessWebhookJob::dispatch($payloadRecord->id);
+            // Dispatch Job with Trace Context
+            $traceId = \App\Services\TraceContext::getTraceId();
+            \App\Jobs\ProcessWebhookJob::dispatch($payloadRecord->id, $traceId);
 
         } catch (\Exception $e) {
             Log::error("Failed to store webhook: " . $e->getMessage());

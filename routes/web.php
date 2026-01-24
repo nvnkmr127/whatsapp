@@ -38,6 +38,7 @@ Route::middleware([
 
     // AI Business Brain
     Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware('can:manage-settings');
+    Route::get('/knowledge-base/feedback', \App\Livewire\Developer\KnowledgeBaseFeedback::class)->name('knowledge-base.feedback')->middleware('can:manage-settings');
     Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware('can:manage-settings');
     Route::get('/settings/system', \App\Livewire\Settings\SystemSettings::class)->name('settings.system')->middleware('can:manage-settings');
     Route::get('/settings/categories', \App\Livewire\Settings\CategoryManager::class)->name('settings.categories')->middleware('can:manage-settings');
@@ -103,6 +104,7 @@ Route::middleware([
 
     Route::get('/analytics', \App\Livewire\Analytics\AnalyticsDashboard::class)->name('analytics')->middleware(['can:manage-settings', 'plan_feature:analytics']);
     Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware('can:manage-settings');
+    Route::get('/analytics/explorer', \App\Livewire\Analytics\EventExplorer::class)->name('analytics.explorer')->middleware('can:manage-settings');
 
     // Billing Dashboard
     Route::get('/billing', \App\Livewire\Billing\BillingDashboard::class)->name('billing');

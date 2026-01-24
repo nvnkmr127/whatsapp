@@ -11,7 +11,14 @@ use Livewire\WithFileUploads;
 
 class KnowledgeBaseManager extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, \Livewire\WithPagination;
+
+    public $showFeedback = false;
+    public $searchFeedback = '';
+    public $statusFilter = 'pending';
+    public $resolutionNote = '';
+    public $selectedGapId = null;
+    public $showResolutionModal = false;
 
     public $sources = [];
     public $file;
@@ -84,6 +91,7 @@ class KnowledgeBaseManager extends Component
         $source->update([
             'name' => $this->editingName,
             'content' => $this->editingContent,
+            'last_synced_at' => now(), // Manual edit counts as sync
         ]);
 
         $this->loadSources();
@@ -102,27 +110,27 @@ class KnowledgeBaseManager extends Component
 
         $path = $this->file->store('knowledge_base', 'local');
 
-        $service = new KnowledgeBaseService();
-        $content = $service->extractFromFile($path, $this->file->getClientOriginalName());
-
         $source = KnowledgeBaseSource::create([
             'team_id' => Auth::user()->currentTeam->id,
             'type' => 'file',
             'name' => $this->name,
             'path' => $path,
-            'content' => $content,
+            'content' => '', // Content will be populated by job
+            'status' => KnowledgeBaseSource::STATUS_PENDING,
             'metadata' => [
                 'original_name' => $this->file->getClientOriginalName(),
                 'extension' => $this->file->extension(),
             ]
         ]);
 
+        \App\Jobs\ProcessKnowledgeBaseSourceJob::dispatch($source);
+
         audit('knowledge_base.added', "Added knowledge base source '{$this->name}' (File)", $source);
 
         $this->reset(['file', 'name']);
         $this->loadSources();
         $this->dispatch('saved');
-        session()->flash('success', 'Information added successfully.');
+        session()->flash('success', 'File uploaded. Processing started in background.');
     }
 
     public function addUrl()
@@ -132,26 +140,26 @@ class KnowledgeBaseManager extends Component
             'name' => 'required|string|max:255',
         ]);
 
-        $service = new KnowledgeBaseService();
-        $content = $service->extractFromUrl($this->url);
-
         $source = KnowledgeBaseSource::create([
             'team_id' => Auth::user()->currentTeam->id,
             'type' => 'url',
             'name' => $this->name,
             'path' => $this->url,
-            'content' => $content,
+            'content' => '', // Will be filled by job
+            'status' => KnowledgeBaseSource::STATUS_PENDING,
             'metadata' => [
                 'url' => $this->url,
             ]
         ]);
+
+        \App\Jobs\ProcessKnowledgeBaseSourceJob::dispatch($source);
 
         audit('knowledge_base.added', "Added knowledge base source '{$this->name}' (URL)", $source);
 
         $this->reset(['url', 'name']);
         $this->loadSources();
         $this->dispatch('saved');
-        session()->flash('success', 'Website information added.');
+        session()->flash('success', 'URL added. Crawling started in background.');
     }
 
     public function addText()
@@ -167,6 +175,8 @@ class KnowledgeBaseManager extends Component
             'name' => $this->name,
             'path' => null,
             'content' => $this->rawText,
+            'status' => KnowledgeBaseSource::STATUS_READY, // Text is instant
+            'last_synced_at' => now(),
             'metadata' => []
         ]);
 
@@ -196,25 +206,74 @@ class KnowledgeBaseManager extends Component
     public function reprocessSource($id)
     {
         $source = KnowledgeBaseSource::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
-        $service = new KnowledgeBaseService();
-        $content = '';
 
-        if ($source->type === 'file' && $source->path) {
-            $content = $service->extractFromFile($source->path, $source->metadata['original_name'] ?? 'file');
-        } elseif ($source->type === 'url' && $source->path) {
-            $content = $service->extractFromUrl($source->path);
-        } else {
-            return;
-        }
+        $source->update([
+            'status' => KnowledgeBaseSource::STATUS_PENDING,
+            'error_message' => null,
+        ]);
 
-        $source->update(['content' => $content]);
+        \App\Jobs\ProcessKnowledgeBaseSourceJob::dispatch($source);
+
         $this->loadSources();
         $this->dispatch('saved');
-        session()->flash('success', 'Information refreshed and relearned.');
+        session()->flash('success', 'Reprocessing started.');
+    }
+
+    public function toggleFeedback()
+    {
+        $this->showFeedback = !$this->showFeedback;
+        $this->resetPage();
+    }
+
+    public function openResolutionModal($id)
+    {
+        $gap = \App\Models\KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $this->selectedGapId = $id;
+        $this->resolutionNote = $gap->resolution_note ?? '';
+        $this->showResolutionModal = true;
+    }
+
+    public function resolveGap()
+    {
+        $this->validate([
+            'resolutionNote' => 'required|string|min:5',
+        ]);
+
+        $gap = \App\Models\KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->selectedGapId);
+        $gap->update([
+            'status' => 'resolved',
+            'resolution_note' => $this->resolutionNote,
+        ]);
+
+        $this->showResolutionModal = false;
+        $this->reset(['selectedGapId', 'resolutionNote']);
+        session()->flash('success', 'Gap marked as resolved.');
+    }
+
+    public function ignoreGap($id)
+    {
+        $gap = \App\Models\KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $gap->update(['status' => 'ignored']);
+        session()->flash('success', 'Gap ignored.');
     }
 
     public function render()
     {
-        return view('livewire.developer.knowledge-base-manager');
+        $gaps = [];
+        if ($this->showFeedback) {
+            $gaps = \App\Models\KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)
+                ->when($this->searchFeedback, function ($query) {
+                    $query->where('query', 'like', '%' . $this->searchFeedback . '%');
+                })
+                ->when($this->statusFilter, function ($query) {
+                    $query->where('status', $this->statusFilter);
+                })
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+        }
+
+        return view('livewire.developer.knowledge-base-manager', [
+            'gaps' => $gaps
+        ]);
     }
 }

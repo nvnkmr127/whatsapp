@@ -18,6 +18,7 @@ class FlowBuilder extends Component
     public $selectedScreenIndex = 0;
     public $selectedComponentIndex = null;
     public $after_submit_action = 'none';
+    public $allowed_entry_points = ['template'];
 
     public $categories = [
         'SIGN_UP',
@@ -44,7 +45,14 @@ class FlowBuilder extends Component
             $this->category = $flow->category ?? 'OTHER';
             $this->usesDataEndpoint = $flow->uses_data_endpoint ?? true;
             $this->after_submit_action = $flow->design_data['after_submit_action'] ?? 'none';
-            $this->screens = $flow->design_data['screens'] ?? $this->defaultScreens();
+            $this->allowed_entry_points = $flow->entry_point_config['allowed_entry_points'] ?? ['template'];
+
+            // Fix: Ensure screens is never empty array
+            $loadedScreens = $flow->design_data['screens'] ?? [];
+            if (empty($loadedScreens)) {
+                $loadedScreens = $this->defaultScreens();
+            }
+            $this->screens = $loadedScreens;
         } else {
             $this->name = 'New WhatsApp Flow';
             $this->category = 'OTHER';
@@ -94,6 +102,21 @@ class FlowBuilder extends Component
 
     public function addComponent($type)
     {
+        // Guard: Ensure screens exist
+        if (empty($this->screens)) {
+            $this->screens = $this->defaultScreens();
+            $this->selectedScreenIndex = 0;
+        }
+
+        // Guard: Ensure selected index is valid
+        if (!isset($this->screens[$this->selectedScreenIndex])) {
+            $this->selectedScreenIndex = 0;
+            // Re-check 0
+            if (!isset($this->screens[0])) {
+                $this->screens = $this->defaultScreens();
+            }
+        }
+
         $component = ['type' => $type];
 
         switch ($type) {
@@ -171,10 +194,12 @@ class FlowBuilder extends Component
 
         // Insert before Footer if exists
         $footerIndex = null;
-        foreach ($this->screens[$this->selectedScreenIndex]['components'] as $key => $comp) {
-            if ($comp['type'] === 'Footer') {
-                $footerIndex = $key;
-                break;
+        if (isset($this->screens[$this->selectedScreenIndex]['components'])) {
+            foreach ($this->screens[$this->selectedScreenIndex]['components'] as $key => $comp) {
+                if (($comp['type'] ?? '') === 'Footer') {
+                    $footerIndex = $key;
+                    break;
+                }
             }
         }
 
@@ -219,6 +244,9 @@ class FlowBuilder extends Component
                 'screens' => $this->screens,
                 'after_submit_action' => $this->after_submit_action,
             ],
+            'entry_point_config' => [
+                'allowed_entry_points' => $this->allowed_entry_points
+            ]
         ];
 
         if ($this->flowId) {
@@ -229,7 +257,16 @@ class FlowBuilder extends Component
             $this->flowId = $flow->id;
         }
 
-        session()->flash('success', 'Flow design saved!');
+        // Readiness Validation
+        $validator = new \App\Validators\FlowReadinessValidator();
+        $result = $validator->validate($flow);
+
+        if (!$result->isValid()) {
+            $warnings = implode(' ', array_map(fn($e) => $e->message, $result->getBlockingErrors()));
+            session()->flash('warning', "Saved, but flow has issues: {$warnings}");
+        } else {
+            session()->flash('success', 'Flow design saved and Validated!');
+        }
     }
 
     public function deploy()
@@ -243,6 +280,16 @@ class FlowBuilder extends Component
 
             if (!$flow->flow_id) {
                 $service->createFlowOnMeta($flow);
+                $flow->refresh(); // Reload to get flow_id
+            }
+
+            // Readiness Check before Publish
+            $validator = new \App\Validators\FlowReadinessValidator();
+            $result = $validator->validate($flow);
+            if (!$result->isValid()) {
+                $reason = $result->getBlockingReason();
+                session()->flash('error', "Cannot deploy: " . $reason);
+                return;
             }
 
             $service->updateFlowDesign($flow, ['screens' => $this->screens]);
@@ -256,9 +303,38 @@ class FlowBuilder extends Component
         }
     }
 
+    public function restoreVersion($versionId)
+    {
+        // 1. Fetch Version
+        $version = \App\Models\WhatsAppFlowVersion::where('whatsapp_flow_id', $this->flowId)->findOrFail($versionId);
+
+        // 2. Load Design Data from Version
+        if (!empty($version->design_data['screens'])) {
+            $this->screens = $version->design_data['screens'];
+            $this->after_submit_action = $version->design_data['after_submit_action'] ?? 'none';
+        }
+
+        // 3. Load Entry Point Config
+        $this->allowed_entry_points = $version->entry_point_config['allowed_entry_points'] ?? ['template'];
+
+        // 4. Save as new Draft
+        $this->save();
+
+        session()->flash('success', "Restored Version #{$version->version_number} as current Draft.");
+    }
+
     #[Layout('layouts.app')]
     public function render()
     {
-        return view('livewire.flows.flow-builder');
+        $versions = [];
+        if ($this->flowId) {
+            $versions = \App\Models\WhatsAppFlowVersion::where('whatsapp_flow_id', $this->flowId)
+                ->orderBy('version_number', 'desc')
+                ->get();
+        }
+
+        return view('livewire.flows.flow-builder', [
+            'versions' => $versions
+        ]);
     }
 }

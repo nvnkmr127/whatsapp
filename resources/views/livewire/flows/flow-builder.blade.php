@@ -50,6 +50,29 @@
                         <span class="text-xs font-bold text-slate-600 dark:text-slate-400">Use Data Endpoint</span>
                     </div>
                 </div>
+                <!-- Entry Points -->
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Entry Points</label>
+                    <div class="flex flex-col gap-1.5 mt-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" wire:model="allowed_entry_points" value="template"
+                                class="w-4 h-4 rounded border-slate-200 text-wa-teal focus:ring-indigo-500/20">
+                            <span class="text-[10px] font-bold text-slate-600 dark:text-slate-400">Template
+                                (Marketing/Utility)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" wire:model="allowed_entry_points" value="interactive"
+                                class="w-4 h-4 rounded border-slate-200 text-wa-teal focus:ring-indigo-500/20">
+                            <span class="text-[10px] font-bold text-slate-600 dark:text-slate-400">Interactive
+                                (Bot/Automation)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" wire:model="allowed_entry_points" value="direct"
+                                class="w-4 h-4 rounded border-slate-200 text-wa-teal focus:ring-indigo-500/20">
+                            <span class="text-[10px] font-bold text-slate-600 dark:text-slate-400">Direct Link</span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <!-- Right Side: Actions -->
@@ -65,7 +88,10 @@
                     </button>
                 </div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Status: <span class="text-wa-teal">{{ $flowId ? 'Saved' : 'Local Draft' }}</span>
+                    Status: <span class="text-wa-teal transition-all">{{ $flowId ? 'Saved' : 'Local Draft' }}</span>
+                    @if(isset($versions) && count($versions) > 0)
+                        <span class="text-slate-300 mx-1">|</span> v{{ $versions->first()->version_number + 1 }} (Next)
+                    @endif
                 </p>
             </div>
         </div>
@@ -452,12 +478,53 @@
                         @endif
                     </div>
                 @else
-                    <div class="text-center py-20">
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Select an element<br>to edit
-                            properties</p>
+                    <div class="py-6 space-y-6">
+                        <div class="text-center px-6">
+                            <div
+                                class="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </div>
+                            <p class="text-xs font-bold text-slate-500">Select an element to edit</p>
+                        </div>
+
+                        @if(isset($versions) && count($versions) > 0)
+                            <div class="border-t border-slate-100 dark:border-slate-800 pt-6 px-4">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Version History
+                                </h4>
+                                <div class="space-y-3">
+                                    @foreach($versions as $v)
+                                        <div
+                                            class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 flex flex-col gap-2 group">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    <span
+                                                        class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-black">v{{ $v->version_number }}</span>
+                                                    <span
+                                                        class="text-[10px] font-bold text-slate-600 dark:text-slate-400">{{ $v->created_at->format('M j, g:i a') }}</span>
+                                                </div>
+                                                <span
+                                                    class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{{ $v->status }}</span>
+                                            </div>
+                                            <div
+                                                class="flex items-center justify-between mt-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                                                <span class="text-[9px] text-slate-400">Meta ID:
+                                                    {{ substr($v->meta_publish_id ?? 'N/A', 0, 8) }}...</span>
+                                                <button wire:click="restoreVersion({{ $v->id }})"
+                                                    wire:confirm="Are you sure you want to restore this version? Unsaved changes in current draft will be lost."
+                                                    class="text-[9px] font-bold text-wa-teal hover:underline">
+                                                    Restore
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @endif
-
                 <div class="pt-8 border-t border-slate-50 dark:border-slate-800">
                     <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Add Elements</h4>
                     <div class="grid grid-cols-2 gap-3">

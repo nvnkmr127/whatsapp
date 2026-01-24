@@ -268,6 +268,129 @@
                 </div>
             </div>
         </div>
+        <!-- 5. Business Brain (Knowledge Base) Settings -->
+        <div
+            class="col-span-full bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Business
+                        Brain</h2>
+                    <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">Knowledge Retrieval</p>
+                </div>
+                <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl text-wa-teal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl">
+                    <div class="flex-1">
+                        <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-1">
+                            Enable for Global Assistant</h3>
+                        <p class="text-xs text-slate-500 font-medium leading-relaxed">Let your AI answer customer
+                            questions using your uploaded business documents and URLs.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer ml-4">
+                        <input type="checkbox" wire:model.live="use_kb" class="sr-only peer">
+                        <div
+                            class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-wa-teal transition-all">
+                        </div>
+                    </label>
+                </div>
+
+                @if($use_kb)
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div class="space-y-4">
+                            <div>
+                                <label
+                                    class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Global
+                                    Search Scope</label>
+                                <div
+                                    class="grid grid-cols-2 gap-2 p-1 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                    <button type="button" wire:click="$set('kb_scope', 'all')"
+                                        class="px-4 py-3 text-[10px] font-black uppercase rounded-xl transition-all {{ $kb_scope === 'all' ? 'bg-white dark:bg-slate-700 shadow-xl text-wa-teal' : 'text-slate-500' }}">
+                                        All Sources
+                                    </button>
+                                    <button type="button" wire:click="$set('kb_scope', 'selected')"
+                                        class="px-4 py-3 text-[10px] font-black uppercase rounded-xl transition-all {{ $kb_scope === 'selected' ? 'bg-white dark:bg-slate-700 shadow-xl text-wa-teal' : 'text-slate-500' }}">
+                                        Selected Only
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Global Strict Grounding Toggle -->
+                            <div
+                                class="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                                <div class="flex-1">
+                                    <p
+                                        class="text-[10px] font-black text-rose-700 dark:text-rose-400 uppercase tracking-tight">
+                                        Strict Grounding</p>
+                                    <p class="text-[8px] text-rose-600/70 dark:text-rose-400/50 font-bold uppercase">Answers
+                                        strictly from knowledge</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model.live="kb_strict" class="sr-only peer">
+                                    <div
+                                        class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-rose-500">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        @if($kb_scope === 'selected')
+                            <div class="space-y-2">
+                                <label
+                                    class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Selected
+                                    Information Sources</label>
+                                <div class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                    @foreach($available_kb_sources as $source)
+                                        <label
+                                            class="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 border rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all {{ in_array($source['id'], $kb_source_ids) ? 'border-wa-teal/30 bg-wa-teal/5' : 'border-slate-100 dark:border-slate-800' }}">
+                                            <input type="checkbox" value="{{ $source['id'] }}" wire:model.live="kb_source_ids"
+                                                class="w-5 h-5 text-wa-teal border-slate-300 rounded-lg focus:ring-wa-teal dark:bg-slate-900 dark:border-slate-700">
+                                            <div class="flex-1">
+                                                <p
+                                                    class="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">
+                                                    {{ $source['name'] }}
+                                                </p>
+                                                <div class="flex items-center gap-2 mt-0.5">
+                                                    <span
+                                                        class="text-[8px] font-black py-0.5 px-2 bg-slate-200 dark:bg-slate-700 rounded text-slate-500 uppercase tracking-widest">{{ $source['type'] }}</span>
+                                                    <span
+                                                        class="text-[9px] text-slate-400 font-bold italic">{{ \Carbon\Carbon::parse($source['last_synced_at'])->diffForHumans() }}</span>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    @endforeach
+                                    @if(empty($available_kb_sources))
+                                        <div
+                                            class="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">No 'Ready' sources
+                                                found.</p>
+                                            <a href="{{ route('knowledge-base.index') }}"
+                                                class="text-[10px] text-wa-teal font-black uppercase underline mt-2 block tracking-widest">Go
+                                                to Business Brain</a>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @else
+                            <div class="flex items-center justify-center p-8 bg-wa-teal/5 rounded-3xl border border-wa-teal/10">
+                                <div class="text-center">
+                                    <p class="text-xs font-black text-wa-teal uppercase tracking-widest">All verified sources
+                                        active</p>
+                                    <p class="text-[10px] text-slate-500 font-bold mt-1">The AI will use everything currently
+                                        marked as 'Ready'.</p>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </div>
         @if (session()->has('success'))
             <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)"
                 class="fixed bottom-8 right-8 z-50 animate-in slide-in-from-right-10 duration-500">

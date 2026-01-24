@@ -332,8 +332,127 @@ class WhatsAppService
     }
 
     /**
-     * Send a template message.
+     * Send a Flow via Interactive Message.
      */
+    public function sendFlow($to, $flowId, $headline, $body, $cta, $mode = 'draft', $initialScreen = null, $data = [], $existingMessage = null)
+    {
+        // Find contact to check policy
+        $contact = $this->getOrCreateContact($to);
+
+        // Enforce 24h Policy for Free Messages
+        $policy = app(PolicyService::class);
+        if ($contact && !$policy->canSendFreeMessage($contact)) {
+            Log::warning("Blocked flow message to {$to}. 24h Window Closed or Opt-out.");
+            throw new \Exception("Cannot send flow. 24-hour window is closed or User opted out. Please use a Template.");
+        }
+
+        // ENTRY POINT ENFORCEMENT
+        // Resolve Flow Model
+        $flow = \App\Models\WhatsAppFlow::where('team_id', $this->team->id)
+            ->where(function ($q) use ($flowId) {
+                $q->where('flow_id', $flowId)->orWhere('id', $flowId);
+            })->first();
+
+        if ($flow) {
+            $epValidator = new \App\Validators\FlowEntryPointValidator();
+            // Flows sent via API (interactive message) fall under 'interactive' entry point
+            $epResult = $epValidator->validate($flow, 'interactive');
+            if (!$epResult->isValid()) {
+                throw new \Exception("Flow Entry Point Blocked: " . $epResult->getBlockingReason());
+            }
+            // Use resolved flow_id
+            $flowId = $flow->flow_id;
+        } else {
+            throw new \Exception("Flow ID {$flowId} not found in system. Cannot verify entry point configuration.");
+        }
+
+        // Rule 1: Messaging Lock
+        $this->verifyReadyToSend();
+
+        // 1. Resolve Conversation
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        // 2. Pre-Persist or Use Existing
+        $msg = $existingMessage;
+        if (!$msg) {
+            $msg = \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
+                'type' => 'interactive',
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'content' => $headline,
+                'metadata' => [
+                    'flow_id' => $flowId,
+                    'mode' => $mode,
+                    'is_bot' => $this->isBot
+                ],
+            ]);
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'flow',
+                'header' => ['type' => 'text', 'text' => $headline],
+                'body' => ['text' => $body],
+                'footer' => ['text' => ''],
+                'action' => [
+                    'name' => 'flow',
+                    'parameters' => [
+                        'flow_message_version' => '3',
+                        'flow_token' => json_encode(['id' => $flowId, 'v' => $flow->latest_version_number ?? 0]), // Track version
+                        'flow_id' => (string) $flowId,
+                        'flow_cta' => $cta,
+                        'flow_action' => 'navigate',
+                        'flow_action_payload' => [
+                            'screen' => $initialScreen ?? ($flow->design_data['screens'][0]['id'] ?? 'screen_welcome'),
+                            'data' => (object) $data
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        // Dev Mode/Production Mode Toggle
+        if ($mode === 'draft') {
+            $payload['interactive']['action']['parameters']['mode'] = 'draft';
+        } else {
+            $payload['interactive']['action']['parameters']['mode'] = 'published';
+        }
+
+        try {
+            $response = $this->sendRequest('messages', $payload);
+
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
+
+                $msg->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamId,
+                    'sent_at' => now(),
+                ]);
+            } else {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
     public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null, $existingMessage = null)
     {
         // Fetch Template first to understand structure

@@ -137,68 +137,46 @@
                 <table class="w-full text-left">
                     <thead>
                         <tr class="border-b border-slate-50 dark:border-slate-800/50">
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Chronology</th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Interaction</th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Stakeholder</th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Details</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Time</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Type</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Summary</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
                         @forelse($events as $event)
-                            <tr wire:key="entry-{{ $event->id }}" wire:click="viewEventDetails({{ $event->id }})" class="group cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                            <tr wire:key="entry-{{ $event->id }}" class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                                 <td class="px-8 py-6">
                                     <div class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                        {{ $event->created_at->format('M d, H:i') }}
+                                        {{ $event->occurred_at->format('M d, H:i') }}
                                     </div>
                                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                        {{ $event->created_at->diffForHumans() }}
+                                        {{ $event->occurred_at->diffForHumans() }}
                                     </div>
                                 </td>
                                 <td class="px-8 py-6">
-                                    <span class="inline-flex px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest
-                                        @if(str_contains($event->event_type, 'purchase')) bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400
-                                        @elseif(str_contains($event->event_type, 'click')) bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400
-                                        @elseif(str_contains($event->event_type, 'view')) bg-purple-100 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400
-                                        @else bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400
-                                        @endif">
-                                        {{ str_replace('_', ' ', $event->event_type) }}
+                                    <span class="inline-flex px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest {{ \App\Services\EventPresenter::badgeClass($event) }}">
+                                        {{ class_basename($event->event_type) }}
                                     </span>
+                                    <div class="text-[9px] text-slate-400 mt-1 uppercase">{{ $event->source }}</div>
                                 </td>
                                 <td class="px-8 py-6">
-                                    @if($event->contact)
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] border border-slate-100 dark:border-slate-800" style="background-color: {{ $event->contact->category->color ?? '#25D366' }}15; color: {{ $event->contact->category->color ?? '#25D366' }};">
-                                                {{ substr($event->contact->name ?? 'U', 0, 1) }}
-                                            </div>
-                                            <div>
-                                                <div class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                                    {{ $event->contact->name ?? 'Unknown' }}
-                                                </div>
-                                                @if($event->contact->category)
-                                                    <div class="text-[9px] font-black uppercase tracking-widest" style="color: {{ $event->contact->category->color }};">
-                                                        {{ $event->contact->category->name }}
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @else
-                                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Anonymous</span>
-                                    @endif
+                                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                        {{ \App\Services\EventPresenter::summary($event) }}
+                                    </div>
+                                    <div class="font-mono text-[9px] text-slate-400 mt-1">
+                                        Trace: {{ Str::limit($event->trace_id ?? '-', 8) }}
+                                    </div>
                                 </td>
                                 <td class="px-8 py-6 text-right">
-                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button class="p-2 text-slate-400 hover:text-wa-teal transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </button>
-                                    </div>
+                                     <button wire:click="viewEventDetails({{ $event->id }})" class="text-xs font-bold text-wa-teal hover:underline uppercase tracking-wider">
+                                        Analyze
+                                     </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-8 py-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px]">No interactions found</td>
+                                <td colspan="4" class="px-8 py-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px]">No system events found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -212,6 +190,8 @@
             @endif
         </div>
     </div>
+    
+    <!-- Detail Modal Removed - We Redirect to Explorer -->
 
     <!-- Event Detail Explorer -->
     @if($showDetailModal && $selectedEvent)

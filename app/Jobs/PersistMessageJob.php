@@ -188,10 +188,20 @@ class PersistMessageJob implements ShouldQueue
     protected function extractInteractiveContent($interactive)
     {
         $type = $interactive['type'];
-        if ($type === 'list_reply')
+        if ($type === 'list_reply') {
             return $interactive['list_reply']['title'] ?? '[List Reply]';
-        if ($type === 'button_reply')
+        }
+        if ($type === 'button_reply') {
             return $interactive['button_reply']['title'] ?? '[Button Reply]';
+        }
+        if ($type === 'nfm_reply') {
+            // Flow Completion
+            $body = $interactive['nfm_reply']['body'] ?? 'Flow Submitted';
+            // We can optionally decode generic response_json here for logging, 
+            // but for the main content body, the user-facing text is best.
+            // We append a marker for Automation to easily detect it if needed, though they should check metadata.
+            return "[Flow] " . $body;
+        }
         return "[Interactive: $type]";
     }
 }

@@ -51,6 +51,21 @@ class FlowManager extends Component
     public function deleteFlow($id)
     {
         $flow = WhatsAppFlow::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+
+        // Integrity Check: Ensure Flow is not used in any active Template
+        if ($flow->flow_id) {
+            $inUse = \App\Models\WhatsappTemplate::where('team_id', $flow->team_id)
+                ->where('components', 'LIKE', "%{$flow->flow_id}%")
+                ->exists();
+
+            if ($inUse) {
+                // Determine which templates (optional, for better UX)
+                // $names = ...
+                session()->flash('error', 'Cannot delete Flow: It is currently linked to one or more Templates. Please remove the flow reference from your templates first.');
+                return;
+            }
+        }
+
         $flow->delete();
         $this->loadFlows();
         session()->flash('success', 'Flow deleted successfully.');

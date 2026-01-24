@@ -99,6 +99,9 @@ class HandleIncomingWorkflowJob implements ShouldQueue
                     if ($botService->checkTemplateTriggers($contact, $input)) {
                         return;
                     }
+                    if ($message->type === 'interactive' && $botService->checkFlowTriggers($contact, $message)) {
+                        return;
+                    }
                 }
             }
 

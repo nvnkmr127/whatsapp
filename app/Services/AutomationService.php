@@ -98,6 +98,40 @@ class AutomationService
         return false;
     }
 
+    public function checkFlowTriggers(Contact $contact, $message)
+    {
+        if (!$this->handoff->shouldProcess($contact))
+            return false;
+
+        // Metadata is cast to array in the Message model
+        $metadata = $message->metadata ?? [];
+        $interactive = $metadata['interactive'] ?? [];
+        if (($interactive['type'] ?? '') !== 'nfm_reply')
+            return false;
+
+        $responseJson = json_decode($interactive['nfm_reply']['response_json'] ?? '{}', true);
+        $flowToken = $responseJson['flow_token'] ?? null;
+
+        $automations = Automation::where('team_id', $contact->team_id)
+            ->where('is_active', true)
+            ->where('trigger_type', 'flow_completion')
+            ->get();
+
+        foreach ($automations as $automation) {
+            // Match against flow_token (assuming flow_token is set to flow_id or unique string)
+            $targetToken = $automation->trigger_config['flow_token'] ?? $automation->trigger_config['flow_id'] ?? null;
+
+            if ($targetToken && (string) $flowToken === (string) $targetToken) {
+                // Pass flow data to the automation run state?
+                // We'll leave that for a more advanced "Start" implementation, 
+                // but at least we trigger it.
+                $this->start($automation, $contact);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function checkStatusTriggers(Contact $contact, $templateName, $status)
     {
         if ($status !== 'delivered')
@@ -475,9 +509,50 @@ class AutomationService
         if (!$apiKey)
             throw new \Exception("OpenAI API Key missing");
 
+        $useKb = $node['data']['use_knowledge_base'] ?? false;
+        $context = "";
+
+        if ($useKb) {
+            $kbService = app(KnowledgeBaseService::class);
+            $scopedSourceIds = $node['data']['kb_source_ids'] ?? null;
+            $kbScope = $node['data']['kb_scope'] ?? 'all'; // all, selected
+
+            if ($kbScope === 'selected' && empty($scopedSourceIds)) {
+                Log::warning("OpenAI Node configured with 'selected' scope but no sources provided for team $teamId");
+                throw new \Exception("Knowledge Base scope is restricted but no sources are selected.");
+            }
+
+            $sourceIdsToUse = ($kbScope === 'selected') ? $scopedSourceIds : null;
+
+            if (!$kbService->isReady($teamId, $sourceIdsToUse)) {
+                // Blocking AI usage when KB is not ready
+                Log::warning("OpenAI Node blocked: Knowledge Base scope is not ready for team $teamId");
+                throw new \Exception("The selected Knowledge Base sources are not ready for use.");
+            }
+
+            $context = $kbService->searchContext($teamId, $run->state_data['variables']['last_message'] ?? $node['data']['prompt'], $sourceIdsToUse);
+        }
+
         $prompt = $node['data']['prompt'] ?? '';
         foreach ($run->state_data['variables'] as $k => $v) {
             $prompt = str_replace('{{' . $k . '}}', (string) $v, $prompt);
+        }
+
+        if ($context) {
+            $strict = $node['data']['kb_strict'] ?? true;
+
+            if ($strict) {
+                $groundingRules = "
+STRICT GROUNDING RULES:
+1. Use ONLY the 'Business Context' provided below to answer.
+2. If the answer is not in the context, respond exactly with: \"I'm sorry, I don't have information about that in my business knowledge base.\"
+3. DO NOT speculate or use outside knowledge.
+4. CITATIONS: At the end of your response, list the sources used as '[Source: Name]'.
+";
+                $prompt = "--- SYSTEM INSTRUCTIONS ---\n" . $groundingRules . "\n\n--- BUSINESS CONTEXT ---\n" . $context . "\n\n--- USER QUESTION ---\n" . $prompt;
+            } else {
+                $prompt = "--- BUSINESS CONTEXT (USE FOR GUIDANCE) ---\n" . $context . "\n\n--- USER QUESTION ---\n" . $prompt;
+            }
         }
 
         $response = \Illuminate\Support\Facades\Http::withToken($apiKey)->post('https://api.openai.com/v1/chat/completions', [
@@ -486,8 +561,19 @@ class AutomationService
         ]);
 
         if ($response->successful()) {
+            $content = $response->json('choices.0.message.content');
+
+            // Check for grounding failure (unanswered)
+            if (str_contains($content, "I'm sorry, I don't have information about that in my business knowledge base.")) {
+                app(KnowledgeBaseService::class)->logGap(
+                    $run->automation->team_id,
+                    $prompt, // The prompt includes the user question
+                    'unanswered'
+                );
+            }
+
             $vars = $run->state_data['variables'];
-            $vars[$node['data']['save_to'] ?? 'ai_response'] = $response->json('choices.0.message.content');
+            $vars[$node['data']['save_to'] ?? 'ai_response'] = $content;
             $run->update(['state_data' => array_merge($run->state_data, ['variables' => $vars])]);
         }
     }
