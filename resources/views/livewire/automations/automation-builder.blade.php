@@ -1,4 +1,4 @@
-<div id="automation-builder-wrapper">
+<div id="automation-builder-wrapper" class="h-full">
     <div class="h-full flex flex-col bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100"
         x-data="flowBuilder">
 
@@ -567,7 +567,7 @@
 
 
         <!-- Right Sidebar: Properties & History -->
-        <div class="w-80 flex-none bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col z-40 shadow-xl transition-all duration-300"
+        <div class="h-full w-80 flex-none bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col z-40 shadow-xl transition-all duration-300 overflow-hidden"
              :class="{'translate-x-0': true}">
             
             <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
@@ -577,7 +577,7 @@
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-5 space-y-8 custom-scrollbar">
+            <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-8 custom-scrollbar">
 
                 <!-- Flow Settings / Version History (Shown when nothing is selected) -->
                 <div x-show="!selectedId && selectedEdgeIndex === null" class="space-y-8">
