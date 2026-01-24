@@ -81,39 +81,73 @@
     </div>
 
     <!-- Contextual Suggestion -->
-    <div
-        class="mt-10 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800/50 flex items-start gap-4">
-        <div class="p-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
-            <svg class="w-5 h-5 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+    <!-- Contextual Insights Layer -->
+    @if(count($insights) > 0)
+        <div class="mt-8 flex flex-col gap-3">
+            @foreach($insights as $insight)
+                <div class="p-4 rounded-xl border flex items-start gap-4 transition-all
+                    {{ $insight['type'] === 'critical' ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/20 dark:border-rose-800' : 
+                       ($insight['type'] === 'warning' ? 'bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800' : 
+                       ($insight['type'] === 'money' ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800' :
+                       'bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-800')) }}">
+                    
+                    <div class="p-2 rounded-lg shrink-0
+                        {{ $insight['type'] === 'critical' ? 'bg-rose-100 text-rose-600 dark:bg-rose-800 dark:text-rose-200' : 
+                           ($insight['type'] === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-800 dark:text-amber-200' : 
+                           ($insight['type'] === 'money' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-200' :
+                           'bg-white text-wa-teal shadow-sm dark:bg-slate-800 dark:text-wa-teal')) }}">
+                        
+                        @if($insight['type'] === 'critical' || $insight['type'] === 'warning')
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        @elseif($insight['type'] === 'money')
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        @else
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        @endif
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-4">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest mb-1
+                                {{ $insight['type'] === 'critical' ? 'text-rose-700 dark:text-rose-300' : 
+                                   ($insight['type'] === 'warning' ? 'text-amber-700 dark:text-amber-300' : 
+                                   ($insight['type'] === 'money' ? 'text-emerald-700 dark:text-emerald-300' :
+                                   'text-slate-900 dark:text-white')) }}">
+                                {{ $insight['type'] === 'money' ? 'Revenue Opportunity' : ($insight['type'] === 'critical' ? 'Urgent Action Required' : 'Optimization Signal') }}
+                            </h4>
+                            @if(isset($insight['action_label']))
+                                <a href="{{ $insight['action_url'] }}" class="hidden sm:flex text-[10px] font-bold items-center gap-1 hover:underline
+                                    {{ $insight['type'] === 'critical' ? 'text-rose-600' : 'text-wa-teal' }}">
+                                    {{ $insight['action_label'] }}
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                </a>
+                            @endif
+                        </div>
+                        
+                        <p class="text-xs font-medium leading-relaxed
+                            {{ $insight['type'] === 'critical' ? 'text-rose-600 dark:text-rose-200' : 
+                               ($insight['type'] === 'warning' ? 'text-amber-600 dark:text-amber-200' : 
+                               ($insight['type'] === 'money' ? 'text-emerald-600 dark:text-emerald-200' :
+                               'text-slate-500 dark:text-slate-400')) }}">
+                            {!! $insight['message'] !!}
+                        </p>
+                        
+                        @if(isset($insight['action_label']))
+                            <a href="{{ $insight['action_url'] }}" class="mt-3 flex sm:hidden text-[10px] font-bold items-center gap-1 hover:underline
+                                {{ $insight['type'] === 'critical' ? 'text-rose-600' : 'text-wa-teal' }}">
+                                {{ $insight['action_label'] }}
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
         </div>
-        <div>
-            <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white mb-1">Module
-                Intelligence</h4>
-            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                @if($activeModule === 'inbox')
-                    High resolution times detected. Consider enabling <strong>Auto-Close</strong> for inactive conversations
-                    to improve ART baseline.
-                @elseif($activeModule === 'broadcast')
-                    Read rates are performing above industry average. You can increase the frequency of high-performing
-                    templates for better ROI.
-                @elseif($activeModule === 'automation')
-                    Flow completion is trailing. Check <strong>Node #4</strong> in the most active automation; customers are
-                    dropping off at the payment link.
-                @elseif($activeModule === 'template')
-                    Your media-to-text ratio is healthy. Meta prefers interactive templates with buttons; consider adding
-                    'Quick Reply' to your transactional alerts.
-                @elseif($activeModule === 'commerce')
-                    Revenue is scaling. Payment pendency is slighty high; enabling <strong>Auto-Payment Reminders</strong>
-                    could improve liquidation by 14%.
-                @elseif($activeModule === 'compliance')
-                    Monitoring four critical risk vectors. <strong>Opt-out exceeding 2%</strong> triggers cooldown
-                    protocols.
-                    <strong>Quality Score</strong> dropping to 'YELLOW' will throttle broadcast volume by 50% automatically.
-                @endif
-            </p>
+    @else
+        <!-- Empty State / Clean Bill of Health -->
+        <div class="mt-8 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/50 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">All systems optimal. No alerts.</span>
         </div>
-    </div>
+    @endif
 </div>
