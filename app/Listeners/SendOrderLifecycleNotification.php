@@ -26,7 +26,13 @@ class SendOrderLifecycleNotification implements ShouldQueue
         $context = $event->context;
         $team = $order->team;
 
-        // 1. Check if Team has configured commerce templates
+        // 1. Check Lifecycle Notification Rules
+        $lifecycleService = app(\App\Services\CommerceLifecycleService::class);
+        if (!$lifecycleService->shouldNotify($team, $status)) {
+            Log::info("Notification suppressed by lifecycle rules for order status: {$status} in Team {$team->id}");
+            return;
+        }
+
         $config = $team->commerce_config ?? [];
         $templates = $config['templates'] ?? [];
 

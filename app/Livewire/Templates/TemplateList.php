@@ -370,8 +370,18 @@ class TemplateList extends Component
 
         $templates = $query->latest()->paginate(10);
 
+        // Module-Level Core Metrics
+        $teamId = auth()->user()->current_team_id;
+        $stats = [
+            'approved' => WhatsappTemplate::where('team_id', $teamId)->where('status', 'APPROVED')->count(),
+            'rejected' => WhatsappTemplate::where('team_id', $teamId)->where('status', 'REJECTED')->count(),
+            'total' => WhatsappTemplate::where('team_id', $teamId)->count(),
+            'media_ratio' => WhatsappTemplate::where('team_id', $teamId)->where('components', 'like', '%IMAGE%')->orWhere('components', 'like', '%VIDEO%')->count(),
+        ];
+
         return view('livewire.templates.template-list', [
-            'templates' => $templates
+            'templates' => $templates,
+            'stats' => $stats
         ]);
     }
 }

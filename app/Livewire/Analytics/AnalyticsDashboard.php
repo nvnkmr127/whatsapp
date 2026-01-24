@@ -15,6 +15,7 @@ class AnalyticsDashboard extends Component
 {
     public $dateRange = 30; // days
     public $chartData = [];
+    public $lastRefresh;
 
     public function render()
     {
@@ -56,8 +57,20 @@ class AnalyticsDashboard extends Component
             'ticketsResolved' => $ticketsResolved,
             'transactions' => $transactions,
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())
-                ->where('report_type', 'monthly_usage')->exists()
+                ->where('report_type', 'monthly_usage')->exists(),
+            'lastUpdated' => Message::latest()->value('updated_at') ?? now()
         ]);
+    }
+
+    public function mount()
+    {
+        $this->lastRefresh = now()->format('H:i:s');
+    }
+
+    public function refreshData()
+    {
+        $this->lastRefresh = now()->format('H:i:s');
+        // Livewire will re-render
     }
 
     protected function loadChartData($teamId)

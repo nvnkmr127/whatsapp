@@ -16,6 +16,28 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Revenue</div>
+                    <div class="text-lg font-black text-slate-900 dark:text-white leading-none">
+                        ${{ number_format($this->orderStats['revenue']) }}</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">AOV
+                    </div>
+                    <div class="text-lg font-black text-wa-teal leading-none">
+                        ${{ number_format($this->orderStats['aov'], 2) }}</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Pending</div>
+                    <div
+                        class="text-lg font-black {{ $this->orderStats['pending'] > 5 ? 'text-rose-500' : 'text-slate-800 dark:text-white' }} leading-none">
+                        {{ $this->orderStats['pending'] }}</div>
+                </div>
+            </div>
+
             <div class="relative group">
                 <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search orders..."
                     class="pl-12 pr-6 py-3 bg-white dark:bg-slate-900 border-none rounded-2xl shadow-xl shadow-slate-900/5 dark:shadow-none text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 w-64 transition-all group-hover:w-80">
@@ -45,35 +67,6 @@
         </div>
     </div>
 
-    <!-- Stats Snapshot (Minor) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        @php
-            $statConfigs = [
-                ['status' => 'pending', 'color' => 'wa-orange'],
-                ['status' => 'shipped', 'color' => 'wa-teal'],
-                ['status' => 'cancelled', 'color' => 'rose-500'],
-            ];
-        @endphp
-        @foreach($statConfigs as $config)
-            <div
-                class="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-xl border border-slate-50 dark:border-slate-800 flex items-center justify-between group hover:border-{{ $config['color'] }}/30 transition-all">
-                <div class="space-y-1">
-                    <span
-                        class="text-[10px] font-black uppercase tracking-widest text-slate-400">{{ ucfirst($config['status']) }}
-                        Today</span>
-                    <div class="text-2xl font-black text-slate-900 dark:text-white">
-                        {{ $this->orderStats[$config['status']] }}
-                    </div>
-                </div>
-                <div class="p-3 bg-{{ $config['color'] }}/10 text-{{ $config['color'] }} rounded-xl">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                </div>
-            </div>
-        @endforeach
-    </div>
 
     <!-- Orders Table/List -->
     <div

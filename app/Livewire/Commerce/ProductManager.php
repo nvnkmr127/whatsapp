@@ -3,7 +3,9 @@
 namespace App\Livewire\Commerce;
 
 use App\Models\Product;
+use App\Models\Integration;
 use App\Services\WhatsAppCommerceService;
+use App\Services\Integrations\MetaCommerceService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -15,6 +17,7 @@ class ProductManager extends Component
 
     public $search = '';
     public $name, $description, $price, $currency = 'USD', $retailer_id, $image_url, $url, $category_id;
+    public $stock_quantity = 0, $manage_stock = false, $availability = 'in stock', $is_active = true;
     public $editingProductId = null;
     public $showCreateModal = false;
 
@@ -29,9 +32,11 @@ class ProductManager extends Component
         return [
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'retailer_id' => 'required|string|max:100|unique:products,retailer_id,' . $this->editingProductId . ',id',
-            'image_url' => 'nullable|url',
+            'retailer_id' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_]+$/|unique:products,retailer_id,' . $this->editingProductId . ',id',
+            'image_url' => 'required|url', // Meta requires image
             'category_id' => 'nullable|exists:categories,id',
+            'stock_quantity' => 'required_if:manage_stock,true|numeric|min:0',
+            'description' => 'required|string|min:10',
         ];
     }
 
@@ -55,7 +60,11 @@ class ProductManager extends Component
             'image_url' => $this->image_url,
             'url' => $this->url,
             'category_id' => $this->category_id ?: null,
-            'availability' => 'in stock',
+            'availability' => $this->availability,
+            'stock_quantity' => $this->stock_quantity,
+            'manage_stock' => $this->manage_stock,
+            'is_active' => $this->is_active,
+            'sync_state' => 'local',
         ]);
 
         $this->resetInput();
@@ -75,6 +84,10 @@ class ProductManager extends Component
         $this->image_url = $product->image_url;
         $this->url = $product->url;
         $this->category_id = $product->category_id;
+        $this->stock_quantity = $product->stock_quantity;
+        $this->manage_stock = $product->manage_stock;
+        $this->availability = $product->availability;
+        $this->is_active = $product->is_active;
 
         $this->showCreateModal = true;
     }
@@ -93,6 +106,11 @@ class ProductManager extends Component
             'image_url' => $this->image_url,
             'url' => $this->url,
             'category_id' => $this->category_id ?: null,
+            'stock_quantity' => $this->stock_quantity,
+            'manage_stock' => $this->manage_stock,
+            'availability' => $this->availability,
+            'is_active' => $this->is_active,
+            'sync_state' => 'local', // Reset sync state on update
         ]);
 
         $this->resetInput();
@@ -105,11 +123,21 @@ class ProductManager extends Component
         $product = Product::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
 
         try {
-            // In a real app, use Dependency Injection, but keeping it simple for now
-            $service = new WhatsAppCommerceService();
-            $service->setTeam(Auth::user()->currentTeam);
+            // 1. Check if there's a dedicated Meta Commerce Integration
+            $integration = Integration::where('team_id', Auth::user()->currentTeam->id)
+                ->where('type', 'meta_commerce')
+                ->where('status', 'active')
+                ->first();
 
-            $service->syncProductToMeta($product);
+            if ($integration) {
+                $service = new MetaCommerceService($integration);
+                $service->syncSingleProduct($product);
+            } else {
+                // 2. Fallback to basic WhatsApp commerce using Team tokens
+                $service = new WhatsAppCommerceService();
+                $service->setTeam(Auth::user()->currentTeam);
+                $service->syncProductToMeta($product);
+            }
 
             session()->flash('success', 'Product synced to Meta Catalog.');
         } catch (\Exception $e) {
@@ -125,7 +153,7 @@ class ProductManager extends Component
 
     public function resetInput()
     {
-        $this->reset(['name', 'description', 'price', 'retailer_id', 'image_url', 'url', 'editingProductId', 'category_id']);
+        $this->reset(['name', 'description', 'price', 'retailer_id', 'image_url', 'url', 'editingProductId', 'category_id', 'stock_quantity', 'manage_stock', 'availability', 'is_active']);
     }
 
     #[Layout('components.layouts.app')]

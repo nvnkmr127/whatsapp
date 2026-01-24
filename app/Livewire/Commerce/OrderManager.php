@@ -60,19 +60,14 @@ class OrderManager extends Component
 
     public function getOrderStatsProperty()
     {
+        $teamId = Auth::user()->currentTeam->id;
+        $totalOrders = Order::where('team_id', $teamId)->count();
+
         return [
-            'pending' => Order::where('team_id', Auth::user()->currentTeam->id)
-                ->where('status', 'pending')
-                ->whereDate('created_at', today())
-                ->count(),
-            'shipped' => Order::where('team_id', Auth::user()->currentTeam->id)
-                ->where('status', 'shipped')
-                ->whereDate('created_at', today())
-                ->count(),
-            'cancelled' => Order::where('team_id', Auth::user()->currentTeam->id)
-                ->where('status', 'cancelled')
-                ->whereDate('created_at', today())
-                ->count(),
+            'revenue' => Order::where('team_id', $teamId)->sum('total_amount'),
+            'aov' => $totalOrders > 0 ? Order::where('team_id', $teamId)->avg('total_amount') : 0,
+            'pending' => Order::where('team_id', $teamId)->where('status', 'pending')->count(),
+            'total_orders' => $totalOrders,
         ];
     }
 

@@ -15,6 +15,28 @@
             <p class="text-slate-500 font-medium">Launch and monitor your bulk WhatsApp message campaigns.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Active
+                    </div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white leading-none">{{ $stats['active'] }}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Success</div>
+                    <div
+                        class="text-lg font-black {{ $stats['success_rate'] > 90 ? 'text-wa-teal' : 'text-rose-500' }} leading-none">
+                        {{ round($stats['success_rate']) }}%</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Engagement</div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white leading-none">
+                        {{ round($stats['engagement']) }}%</div>
+                </div>
+            </div>
+
             <!-- Search -->
             <div class="relative group w-full sm:w-64">
                 <input wire:model.live.debounce.300ms="search" type="text"
@@ -31,7 +53,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
                 </svg>
-                Create Campaign
+                Create
             </a>
         </div>
     </div>
@@ -45,10 +67,10 @@
                 <div class="absolute top-6 right-6">
                     <span
                         class="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full 
-                                                @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
-                                                @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
-                                                @elseif($campaign->status === 'processing') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
-                                                @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
+                                                    @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
+                                                    @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
+                                                    @elseif($campaign->status === 'processing') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
+                                                    @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
                         {{ $campaign->status }}
                     </span>
                 </div>

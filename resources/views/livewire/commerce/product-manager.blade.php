@@ -61,22 +61,47 @@
                         @endif
 
                         <!-- Status Badge -->
-                        <div class="absolute top-3 right-3">
-                            @if($product->meta_product_id)
+                        <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
+                            @if($product->sync_state === 'synced')
                                 <div
-                                    class="bg-wa-teal/90 backdrop-blur text-slate-900 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                                    class="bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7">
                                         </path>
                                     </svg>
                                     Synced
                                 </div>
+                            @elseif($product->sync_state === 'failed')
+                                <div class="bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm flex items-center gap-1"
+                                    title="{{ $product->sync_errors }}">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                            d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                    Failed
+                                </div>
+                            @elseif($product->sync_state === 'syncing')
+                                <div
+                                    class="bg-blue-500 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                                    <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                        </path>
+                                    </svg>
+                                    Syncing
+                                </div>
                             @else
                                 <div
-                                    class="bg-slate-200/90 dark:bg-slate-700/90 backdrop-blur text-slate-500 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm">
-                                    Local Only
+                                    class="bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm">
+                                    Local
                                 </div>
                             @endif
+
+                            @php $audit = $product->readiness; @endphp
+                            <div
+                                class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter backdrop-blur-md shadow-sm border {{ $audit['is_ready'] ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200' }}">
+                                Readiness: {{ $audit['score'] }}%
+                            </div>
                         </div>
                     </div>
 
@@ -109,6 +134,15 @@
                                     class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Price</span>
                                 <span class="text-xl font-black text-slate-900 dark:text-wa-light">{{ $product->currency }}
                                     {{ number_format($product->price, 2) }}</span>
+                                @if($product->manage_stock)
+                                    <div class="mt-1 flex items-center gap-1.5">
+                                        <div
+                                            class="w-1.5 h-1.5 rounded-full {{ $product->stock_quantity > 0 ? 'bg-emerald-500' : 'bg-rose-500' }}">
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase">{{ $product->stock_quantity }}
+                                            in stock</span>
+                                    </div>
+                                @endif
                             </div>
                             <div class="text-right">
                                 <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">SKU</span>
@@ -353,13 +387,37 @@
                             <div class="space-y-2">
                                 <label
                                     class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Availability</label>
-                                <div
-                                    class="h-[52px] bg-emerald-50 dark:bg-emerald-500/10 rounded-xl px-5 flex items-center gap-3 border border-emerald-100 dark:border-emerald-500/20">
-                                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                    <span
-                                        class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">In
+                                <select wire:model="availability"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-5 py-4 text-sm focus:ring-2 focus:ring-wa-teal/20 transition-all font-bold text-slate-900 dark:text-white shadow-sm cursor-pointer">
+                                    <option value="in stock">In Stock</option>
+                                    <option value="out of stock">Out of Stock</option>
+                                </select>
+                            </div>
+
+                            <div class="md:col-span-1 space-y-2">
+                                <label class="flex items-center gap-2 cursor-pointer pb-2">
+                                    <input type="checkbox" wire:model.live="manage_stock"
+                                        class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Manage
                                         Stock</span>
-                                </div>
+                                </label>
+                                @if($manage_stock)
+                                    <input wire:model="stock_quantity" type="number"
+                                        class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-5 py-4 text-sm focus:ring-2 focus:ring-wa-teal/20 transition-all font-bold text-slate-900 dark:text-white shadow-sm"
+                                        placeholder="Quantity">
+                                @endif
+                                @error('stock_quantity') <span
+                                    class="text-rose-500 text-[9px] font-bold uppercase tracking-wider">{{ $message }}</span>
+                                @enderror
+                            </div>
+
+                            <div class="md:col-span-1 space-y-2">
+                                <label class="flex items-center gap-2 cursor-pointer pb-2">
+                                    <input type="checkbox" wire:model="is_active"
+                                        class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Visible
+                                        in Catalog</span>
+                                </label>
                             </div>
 
                             <div class="md:col-span-3 space-y-2">

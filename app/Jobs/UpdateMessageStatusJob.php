@@ -101,9 +101,17 @@ class UpdateMessageStatusJob implements ShouldQueue
         if (!$campaign)
             return;
 
-        // Logic to prevent double counting
-        // We only increment if it's the first time reaching this state
+        // 1. Sync individual CampaignDetail row status
+        // We use phone number and campaign_id to find the matching detail
+        \App\Models\CampaignDetail::where('campaign_id', $message->campaign_id)
+            ->where('phone', $message->contact->phone ?? $message->to)
+            ->update([
+                'status' => $newStatus,
+                'updated_at' => now()
+            ]);
 
+        // 2. Logic to prevent double counting on Campaign totals
+        // We only increment if it's the first time reaching this state
         if ($newStatus === 'delivered' || $newStatus === 'read') {
             // If it wasn't delivered or read before, increment del_count
             if (!in_array($oldStatus, ['delivered', 'read'])) {
@@ -117,5 +125,8 @@ class UpdateMessageStatusJob implements ShouldQueue
                 $campaign->increment('read_count');
             }
         }
+
+        // Broadcast for live UI updates if listening
+        \App\Events\CampaignProgressUpdated::dispatch($campaign);
     }
 }

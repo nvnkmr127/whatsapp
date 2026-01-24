@@ -24,6 +24,9 @@ Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
 Schedule::command('automation:resume')->everyMinute();
 
+// Ecommerce Integration Health Checks
+Schedule::job(new \App\Jobs\CheckIntegrationHealth)->everySixHours();
+
 // Queue Worker for Background Jobs (runs every minute, keeps running for 55s)
 // Changed from --stop-when-empty to --max-time=55 to prevent exit when queue is empty, reducing latency.
 Schedule::command('queue:work --queue=broadcasts,messages,webhooks,default --max-time=55 --tries=3 --timeout=90 --sleep=2')

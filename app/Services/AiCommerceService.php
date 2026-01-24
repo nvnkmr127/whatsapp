@@ -26,6 +26,13 @@ class AiCommerceService
         $team = $contact->team;
         $teamId = $team->id;
 
+        // 0. Commerce Readiness Check
+        $readinessService = app(\App\Services\CommerceReadinessService::class);
+        if (!$readinessService->canPerformAction($team, 'ai_shop')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} due to readiness failure.");
+            return false;
+        }
+
         // Fetch Centralized Settings
         $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? env('OPENAI_API_KEY');
         $model = \App\Models\Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? 'gpt-4o';
@@ -39,8 +46,8 @@ class AiCommerceService
         Log::debug("AiCommerceService: Found API key, model={$model}.");
 
         // 1. Fetch Product Catalog Summary
-        $products = Product::where('team_id', $teamId)
-            ->where('availability', 'in stock')
+        $products = Product::shoppable()
+            ->where('team_id', $teamId)
             ->take(30)
             ->get(['id', 'name', 'price', 'description', 'image_url']);
 

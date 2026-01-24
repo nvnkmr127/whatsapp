@@ -26,16 +26,13 @@ class WooCommerceWebhookController extends Controller
      */
     public function handle(Request $request)
     {
-        $payload = $request->all();
-        // WooCommerce sends the Shop URL in the X-WC-Webhook-Source header or we verify signature `X-WC-Webhook-Signature`.
-        // For MVP, we'll try to identify by `_links.self` or requires a query param `?integration_id=XYZ` which is safer/easier config.
-        // Let's assume the user configures the webhook URL with `?secret=API_KEY_OR_ID` for simplicity in multi-tenant? 
-        // Or strictly identify by domain.
+        // 1. Verify Signature
+        $signature = $request->header('X-WC-Webhook-Signature');
+        $data = $request->getContent();
 
         $webhookSource = $request->header('X-WC-Webhook-Source'); // http://example.com/
 
         if (!$webhookSource) {
-            // Fallback: Check if user passed an ID in query
             return response()->json(['message' => 'Missing Source Header'], 400);
         }
 
@@ -43,16 +40,31 @@ class WooCommerceWebhookController extends Controller
         $domain = parse_url($webhookSource, PHP_URL_HOST) ?? $webhookSource;
 
         $integration = Integration::where('type', 'woocommerce')
+            ->where('status', '!=', \App\Enums\IntegrationState::SUSPENDED->value)
             ->get()
             ->first(function ($int) use ($domain) {
                 return str_contains($int->credentials['url'] ?? '', $domain);
             });
 
         if (!$integration) {
-            Log::info("Received WC webhook for unknown shop: {$domain}");
+            Log::info("Received WC webhook for unknown or suspended shop: {$domain}");
             return response()->json(['message' => 'Shop not integrated'], 200);
         }
 
+        // Verify Secret if configured
+        $secret = $integration->webhook_secret ?? config('services.woocommerce.webhook_secret');
+        if ($secret && $signature) {
+            $expectedSignature = base64_encode(hash_hmac('sha256', $data, $secret, true));
+            if (!hash_equals($signature, $expectedSignature)) {
+                Log::error("WooCommerce Webhook Signature mismatch for integration: {$integration->id}");
+                return response()->json(['error' => 'Invalid signature'], 401);
+            }
+        }
+
+        // Log pulse
+        $integration->update(['last_webhook_received_at' => now()]);
+
+        $payload = $request->all();
         $orderId = $payload['id'] ?? null;
         if (!$orderId) {
             return response()->json(['message' => 'No Order ID'], 200);

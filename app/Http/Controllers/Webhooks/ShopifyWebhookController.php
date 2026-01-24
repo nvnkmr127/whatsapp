@@ -25,12 +25,22 @@ class ShopifyWebhookController extends Controller
      */
     public function handle(Request $request)
     {
-        // 1. Verify HMAC Header (Simplification for now, strictly should verify X-Shopify-Hmac-Sha256)
-        // Ignoring signature verification for MVP/Demo speed, but crucial for Prod.
+        // 1. Verify HMAC Header
+        $hmac = $request->header('X-Shopify-Hmac-Sha256');
+        $data = $request->getContent();
+        $secret = config('services.shopify.webhook_secret'); // Should be per integration ideally
 
-        $payload = $request->all();
-        // Typically shop domain helps identify the integration, but usually webhooks are scoped by app.
-        // We might need to look up the Integration by the shop domain if provided in header or payload.
+        if ($hmac && $secret) {
+            $calculatedHmac = base64_encode(hash_hmac('sha256', $data, $secret, true));
+            if (!hash_equals($hmac, $calculatedHmac)) {
+                Log::error("Shopify Webhook HMAC mismatch for shop: {$request->header('X-Shopify-Shop-Domain')}");
+                return response()->json(['error' => 'Invalid signature'], 401);
+            }
+        } else {
+            Log::warning("Shopify Webhook received without HMAC or Secret configured.");
+            // In strict mode, return 401. For now, log and proceed if you want to allow it.
+        }
+
         $shopDomain = $request->header('X-Shopify-Shop-Domain');
 
         if (!$shopDomain) {
@@ -38,21 +48,21 @@ class ShopifyWebhookController extends Controller
             return response()->json(['error' => 'Missing Shop Domain'], 400);
         }
 
-        // Find the Team/Integration associated with this Shop
-        // We need to look into Integrations where credentials['shop_url'] matches.
-        // Optimization: In real world, we'd have a `shop_domain` column on integrations table.
-        // MVP: Iterate active Shopify integrations.
+        // Optimization: Find by credentials domain directly if possible
+        // Better: Use a dedicated 'shop_domain' column or cache.
         $integration = Integration::where('type', 'shopify')
+            ->where('status', '!=', 'broken') // Don't process for broken integrations
             ->get()
             ->first(function ($int) use ($shopDomain) {
-                return str_contains($int->credentials['shop_url'] ?? '', $shopDomain);
+                return str_contains($int->credentials['domain'] ?? ($int->credentials['shop_url'] ?? ''), $shopDomain);
             });
 
         if (!$integration) {
-            Log::info("Received Shopify webhook for unknown shop: {$shopDomain}");
-            return response()->json(['message' => 'Shop not integrated'], 200);
+            Log::info("Received Shopify webhook for unknown or broken shop: {$shopDomain}");
+            return response()->json(['message' => 'Shop not integrated or integration broken'], 200);
         }
 
+        $payload = $request->all();
         $teamId = $integration->team_id;
         $orderData = $payload;
         $shopifyId = $orderData['id'] ?? null;

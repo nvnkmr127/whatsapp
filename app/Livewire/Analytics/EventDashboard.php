@@ -18,6 +18,7 @@ class EventDashboard extends Component
     public $filterDateRange = '7'; // days
     public $selectedEvent = null;
     public $showDetailModal = false;
+    public $lastRefresh;
 
     protected $queryString = ['searchTerm', 'filterEventType', 'filterCategory', 'filterDateRange'];
 
@@ -111,7 +112,18 @@ class EventDashboard extends Component
             'chartData' => $chartData,
             'distData' => $distData,
             'categories' => $categories,
+            'lastUpdated' => CustomerEvent::latest()->value('created_at') ?? now()
         ]);
+    }
+
+    public function mount()
+    {
+        $this->lastRefresh = now()->format('H:i:s');
+    }
+
+    public function refreshData()
+    {
+        $this->lastRefresh = now()->format('H:i:s');
     }
 
     public function viewEventDetails($eventId)

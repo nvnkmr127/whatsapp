@@ -15,6 +15,21 @@
             <p class="text-slate-500 font-medium">Manage and sync your WhatsApp message templates.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Assets</div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white leading-none">{{ $stats['total'] }}</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Approved</div>
+                    <div class="text-lg font-black text-wa-teal leading-none">{{ $stats['approved'] }}</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Rejected</div>
+                    <div class="text-lg font-black {{ $stats['rejected'] > 0 ? 'text-rose-500' : 'text-slate-300' }} leading-none">{{ $stats['rejected'] }}</div>
+                </div>
+            </div>
+
              <button wire:click="syncTemplates" wire:loading.attr="disabled"
                 class="flex items-center justify-center gap-2 px-8 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800">
                 <svg wire:loading.remove wire:target="syncTemplates" class="w-4 h-4" fill="none"
@@ -29,14 +44,14 @@
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                     </path>
                 </svg>
-                Sync Templates
+                Sync
             </button>
 
             <button wire:click="openCreateModal" class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
                 </svg>
-                Create Template
+                Create
             </button>
         </div>
     </div>

@@ -90,10 +90,20 @@ class AutomationList extends Component
             });
         }
 
-        $bots = $query->latest()->paginate(10);
+        $automations = $query->latest()->paginate(10);
+
+        // Module-Level Core Metrics
+        $teamId = auth()->user()->current_team_id;
+        $stats = [
+            'total' => \App\Models\Automation::where('team_id', $teamId)->count(),
+            'active' => \App\Models\Automation::where('team_id', $teamId)->where('is_active', true)->count(),
+            'total_runs' => \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $teamId))->count(),
+            'completion_rate' => \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $teamId))->where('status', 'completed')->count() / max(1, \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $teamId))->count()) * 100,
+        ];
 
         return view('livewire.automations.automation-list', [
-            'bots' => $bots
+            'automations' => $automations,
+            'stats' => $stats
         ]);
     }
 }

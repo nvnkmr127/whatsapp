@@ -12,13 +12,21 @@
             <h1 class="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">Inbox <span
                     class="text-wa-teal">Center</span></h1>
         </div>
-        <div class="flex gap-2">
-            <button class="p-2 text-slate-400 hover:text-wa-teal transition-colors hover:bg-wa-teal/10 rounded-lg">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-            </button>
+        <div class="flex items-center gap-3">
+            <div class="hidden sm:flex flex-col items-end border-r border-slate-100 dark:border-slate-800 pr-3 mr-1">
+                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">Open</span>
+                <span class="text-xs font-black text-wa-teal leading-none">{{ $stats['active'] }}</span>
+            </div>
+            <div class="hidden sm:flex flex-col items-end border-r border-slate-100 dark:border-slate-800 pr-3 mr-1">
+                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">Resp</span>
+                <span
+                    class="text-xs font-black text-slate-800 dark:text-white leading-none">{{ $stats['avg_response'] }}</span>
+            </div>
+            <div class="hidden sm:flex flex-col items-end">
+                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">Pending</span>
+                <span
+                    class="text-xs font-black {{ $stats['unassigned'] > 5 ? 'text-rose-500' : 'text-slate-800 dark:text-white' }} leading-none">{{ $stats['unassigned'] }}</span>
+            </div>
         </div>
     </div>
 

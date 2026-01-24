@@ -17,13 +17,29 @@
         </div>
 
         <div class="flex items-center gap-3">
+            <div class="hidden md:flex flex-col items-end mr-4">
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Data Freshness</span>
+                <span class="text-xs font-bold text-wa-teal flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></span>
+                    Synced: {{ $lastUpdated->diffForHumans() }}
+                </span>
+            </div>
+
+            <button wire:click="refreshData" wire:loading.class="animate-spin"
+                class="p-3 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:bg-slate-50 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+
             <button wire:click="exportTransactions"
                 class="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Export CSV
+                Export
             </button>
             <button wire:click="toggleSchedule"
                 class="flex items-center gap-2 px-6 py-3 {{ $isScheduled ? 'bg-wa-teal text-white' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' }} font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95">
@@ -31,7 +47,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                {{ $isScheduled ? 'Reports Scheduled' : 'Email Weekly Report' }}
+                {{ $isScheduled ? 'Scheduled' : 'Schedule' }}
             </button>
         </div>
     </div>
@@ -146,6 +162,14 @@
                     <canvas id="messageChart"></canvas>
                 </div>
             </div>
+        </div>
+
+        <div class="lg:col-span-3">
+            <livewire:analytics.module-insights />
+        </div>
+
+        <div class="lg:col-span-3">
+            <livewire:analytics.campaign-funnel />
         </div>
 
         <!-- Billing History -->

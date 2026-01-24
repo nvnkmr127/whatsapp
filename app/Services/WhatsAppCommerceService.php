@@ -32,40 +32,56 @@ class WhatsAppCommerceService
         return $this;
     }
 
-    /**
-     * Sync a Product to Meta Catalog.
-     */
     public function syncProductToMeta(Product $product)
     {
-        if (!$this->catalogId) {
-            throw new \Exception("Catalog ID is not configured for this team.");
+        // 1. Audit Readiness
+        $audit = $product->readiness;
+        if (!$audit['is_ready']) {
+            $product->update([
+                'sync_state' => 'failed',
+                'sync_errors' => implode(", ", $audit['issues'])
+            ]);
+            throw new \Exception("Product not ready for sync: " . implode(", ", $audit['issues']));
         }
 
-        // https://developers.facebook.com/docs/commerce-platform/catalog/batch-api
-        // Ideally we use batch, but for single item:
+        if (!$this->token) {
+            throw new \Exception("WhatsApp credentials missing for this team.");
+        }
 
-        $payload = [
-            'retailer_id' => $product->retailer_id,
-            'name' => $product->name,
-            'description' => $product->description,
-            'availability' => $product->availability,
-            'condition' => 'new',
-            'price' => (int) ($product->price * 100), // In cents? No, depends on currency. Meta expects string "10.00" or object.
-            'currency' => $product->currency,
-            'image_url' => $product->image_url,
-            'url' => $product->url ?? 'https://example.com',
-        ];
+        $product->update(['sync_state' => 'syncing']);
 
-        // This is a complex API call (Commerce Manager).
-        // For "Single Product" creation, we post to /{catalog_id}/products usually.
-        // Simplifying for MVP: Just Log implementation pattern. User needs real catalog ID.
+        try {
+            // Mock API Payload construction
+            $payload = [
+                'retailer_id' => $product->retailer_id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'availability' => $product->availability,
+                'condition' => 'new',
+                'price' => (int) ($product->price * 100),
+                'currency' => $product->currency,
+                'image_url' => $product->image_url,
+                'url' => $product->url ?? 'https://example.com',
+            ];
 
-        // $response = Http::withToken($this->token)->post(...);
+            // Simulation of API Call
+            // $response = Http::withToken($this->token)->post("{$this->baseUrl}/{$this->catalogId}/products", $payload);
 
-        // Mock success for now as we don't have real Catalog ID
-        $product->update(['meta_product_id' => 'META_' . uniqid()]);
+            // For demo purposes, we simulate success
+            $product->update([
+                'meta_product_id' => 'META_' . strtoupper(bin2hex(random_bytes(4))),
+                'sync_state' => 'synced',
+                'sync_errors' => null
+            ]);
 
-        return true;
+            return true;
+        } catch (\Exception $e) {
+            $product->update([
+                'sync_state' => 'failed',
+                'sync_errors' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 
     public function sendProductMessage($to, Product $product)

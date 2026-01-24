@@ -26,6 +26,7 @@ class CampaignDetails extends Component
     public $failedCount = 0;
     public $isInQueue = false;
     public $isRetryAble = false;
+    public $lastRefresh;
 
     // Percentages
     public $totalDeliveredPercent = 0;
@@ -64,6 +65,8 @@ class CampaignDetails extends Component
             $this->totalReadPercent = round(($this->readCount / $this->totalCount) * 100, 1);
             $this->totalFailedPercent = round(($this->failedCount / $this->totalCount) * 100, 1);
         }
+
+        $this->lastRefresh = now()->format('H:i:s');
     }
 
     public function render()

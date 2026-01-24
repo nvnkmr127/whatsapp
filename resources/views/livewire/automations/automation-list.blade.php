@@ -15,6 +15,27 @@
             <p class="text-slate-500 font-medium">Design and manage your automated conversation flows.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Online
+                    </div>
+                    <div class="text-lg font-black text-wa-teal leading-none">{{ $stats['active'] }}</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total
+                        Runs</div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white leading-none">
+                        {{ number_format($stats['total_runs']) }}</div>
+                </div>
+                <div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                        Completion</div>
+                    <div
+                        class="text-lg font-black {{ $stats['completion_rate'] > 70 ? 'text-wa-teal' : 'text-rose-500' }} leading-none">
+                        {{ round($stats['completion_rate']) }}%</div>
+                </div>
+            </div>
+
             <!-- Search -->
             <div class="relative group w-full sm:w-64">
                 <input wire:model.live.debounce.300ms="search" type="text"
@@ -31,7 +52,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
                 </svg>
-                New Automation
+                New
             </a>
         </div>
     </div>

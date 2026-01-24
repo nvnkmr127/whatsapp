@@ -44,6 +44,17 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
         Route::put('{contact}', [\App\Http\Controllers\Api\InboxContactController::class, 'update']);
         Route::post('{contact}/assign', [\App\Http\Controllers\Api\InboxContactController::class, 'assign']);
     });
+
+    // Ecommerce Integrations Management
+    Route::prefix('ecommerce/integrations')->group(function () {
+        Route::get('{integration}/health', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'health']);
+        Route::post('{integration}/sync', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'sync']);
+        Route::get('{integration}/sessions', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'sessions']);
+        Route::patch('{integration}/settings', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'updateSettings']);
+    });
+
+    // Product Customization
+    Route::post('/products/{product}/lock', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'lockField']);
 });
 
 use App\Http\Controllers\WhatsAppWebhookController;
@@ -57,3 +68,7 @@ Route::post('/whatsapp/flow', [App\Http\Controllers\WhatsAppFlowController::clas
 Route::post('/webhooks/shopify/orders', [\App\Http\Controllers\Webhooks\ShopifyWebhookController::class, 'handle']);
 Route::post('/webhooks/woocommerce/orders', [\App\Http\Controllers\Webhooks\WooCommerceWebhookController::class, 'handle']);
 Route::post('/webhooks/custom/orders', [\App\Http\Controllers\Webhooks\CustomSiteWebhookController::class, 'handle']);
+
+// Meta Commerce Webhooks
+Route::get('/webhooks/meta/commerce', [\App\Http\Controllers\Webhooks\MetaCommerceWebhookController::class, 'verify']);
+Route::post('/webhooks/meta/commerce', [\App\Http\Controllers\Webhooks\MetaCommerceWebhookController::class, 'handle']);

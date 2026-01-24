@@ -61,6 +61,14 @@ class AutomationService
             ->get();
 
         foreach ($automations as $automation) {
+            // Enforcement Hook: Logic for commerce-related automations
+            if ($type === 'order_received') {
+                $readinessService = app(\App\Services\CommerceReadinessService::class);
+                if (!$readinessService->canPerformAction($contact->team, 'automation')) {
+                    Log::warning("Automation trigger [order_received] blocked for team {$contact->team->id} due to commerce readiness failure.");
+                    return false;
+                }
+            }
             $this->start($automation, $contact);
             return true;
         }
@@ -155,6 +163,18 @@ class AutomationService
                 'step_count' => 0,
                 'state_data' => ['current_node_id' => $startNodeId, 'variables' => []],
                 'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']]
+            ]);
+
+            // Track Funnel Event
+            \App\Models\CustomerEvent::create([
+                'team_id' => $automation->team_id,
+                'contact_id' => $contact->id,
+                'event_type' => 'flow_started',
+                'event_data' => [
+                    'automation_id' => $automation->id,
+                    'automation_name' => $automation->name,
+                    'attributed_campaign_id' => \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$contact->phone_number}")
+                ]
             ]);
 
             // Dispatch first node
@@ -307,7 +327,7 @@ class AutomationService
 
             case 'handover':
                 $this->handoff->pause($run->contact, 'handoff_node');
-                (new AssignmentService)->assignToBestAgent($run->automation->team, $run->contact);
+                (new AssignmentService)->assign($run->contact);
                 $run->update(['status' => 'completed']);
                 return 'pause'; // Terminates naturally
 

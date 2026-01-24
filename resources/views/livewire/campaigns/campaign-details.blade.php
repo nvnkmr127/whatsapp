@@ -1,16 +1,35 @@
 <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
-    <div class="mb-8 flex justify-between items-center">
+    <div class="mb-8 flex justify-between items-end">
         <div>
-            <h1 class="text-2xl md:text-3xl text-gray-800 dark:text-gray-100 font-bold">{{ $campaign->campaign_name }}
+            <h1 class="text-2xl md:text-3xl text-gray-800 dark:text-gray-100 font-bold uppercase tracking-tight">
+                {{ $campaign->campaign_name }}
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Template: {{ $template_name }} | Scheduled:
-                {{ $campaign->scheduled_at }}
-            </p>
+            <div class="flex items-center gap-3 mt-1">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Template: <span
+                        class="font-bold text-gray-700 dark:text-gray-200">{{ $template_name }}</span></p>
+                <span class="text-gray-300">|</span>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled: <span
+                        class="font-bold text-gray-700 dark:text-gray-200">{{ $campaign->scheduled_at }}</span></p>
+            </div>
         </div>
-        <a href="{{ route('campaigns.index') }}"
-            class="btn bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-            &larr; Back to Campaigns
-        </a>
+        <div class="flex items-center gap-3">
+            <div class="text-right mr-4 hidden md:block">
+                <div class="text-[10px] font-black underline uppercase text-slate-400 tracking-widest leading-none">
+                    Status Freshness</div>
+                <div class="text-xs font-bold text-wa-teal">Updated: {{ $lastRefresh }}</div>
+            </div>
+            <button wire:click="refreshStats" wire:loading.class="animate-spin"
+                class="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+            <a href="{{ route('campaigns.index') }}"
+                class="px-4 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] transition-all shadow-lg active:scale-95">
+                &larr; Campaigns
+            </a>
+        </div>
     </div>
 
     <!-- Stats Cards -->
@@ -43,6 +62,11 @@
                 <div class="text-sm text-red-600 font-bold mb-1">{{ $totalFailedPercent }}%</div>
             </div>
         </div>
+    </div>
+
+    <!-- Analytics Funnel -->
+    <div class="mb-8">
+        <livewire:analytics.campaign-funnel :campaignId="$campaignId" />
     </div>
 
     <!-- Recipients Table -->
@@ -83,11 +107,11 @@
                             <td class="p-2 whitespace-nowrap">
                                 <div class="text-center">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                @if($detail->status === 'read') bg-teal-100 text-teal-800
-                                                @elseif($detail->status === 'delivered') bg-green-100 text-green-800
-                                                @elseif($detail->status === 'sent') bg-blue-100 text-blue-800
-                                                @elseif($detail->status === 'failed') bg-red-100 text-red-800
-                                                @else bg-gray-100 text-gray-800 @endif">
+                                                        @if($detail->status === 'read') bg-teal-100 text-teal-800
+                                                        @elseif($detail->status === 'delivered') bg-green-100 text-green-800
+                                                        @elseif($detail->status === 'sent') bg-blue-100 text-blue-800
+                                                        @elseif($detail->status === 'failed') bg-red-100 text-red-800
+                                                        @else bg-gray-100 text-gray-800 @endif">
                                         {{ ucfirst($detail->status) }}
                                     </span>
                                 </div>

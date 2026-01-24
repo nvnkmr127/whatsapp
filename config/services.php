@@ -48,4 +48,8 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI'),
     ],
 
+    'meta' => [
+        'webhook_verify_token' => env('META_COMMERCE_VERIFY_TOKEN', 'meta-catalog-secret'),
+    ],
+
 ];

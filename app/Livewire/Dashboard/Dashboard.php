@@ -20,12 +20,14 @@ class Dashboard extends Component
     public $chartData = [];
     public $timeRange = 'today';
     public $dashboardData = [];
+    public $lastRefresh;
 
     // Listener for chart updates
     protected $listeners = ['updateTimeRange' => 'updateTimeRange'];
 
     public function mount()
     {
+        $this->lastRefresh = now()->format('H:i:s');
         $this->loadData();
     }
 
@@ -224,6 +226,14 @@ class Dashboard extends Component
     #[Layout('components.layouts.app')]
     public function render()
     {
-        return view('livewire.dashboard.dashboard');
+        return view('livewire.dashboard.dashboard', [
+            'lastUpdated' => Message::latest()->value('updated_at') ?? now()
+        ]);
+    }
+
+    public function refreshData()
+    {
+        $this->lastRefresh = now()->format('H:i:s');
+        $this->loadData();
     }
 }

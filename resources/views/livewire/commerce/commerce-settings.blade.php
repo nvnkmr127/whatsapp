@@ -42,6 +42,69 @@
         </div>
     @endif
 
+    <!-- Commerce Readiness Engine -->
+    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div class="flex items-center gap-6">
+                <!-- Circular Progress Score -->
+                <div class="relative w-24 h-24">
+                    <svg class="w-full h-full" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100 dark:stroke-slate-800" stroke-width="4"></circle>
+                        <circle cx="18" cy="18" r="16" fill="none" 
+                            class="{{ $readiness['state'] === 'READY' ? 'stroke-wa-teal' : ($readiness['state'] === 'WARNING' ? 'stroke-amber-500' : 'stroke-rose-500') }}" 
+                            stroke-width="4" stroke-dasharray="{{ $readiness['score'] }}, 100" stroke-linecap="round"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-xl font-black text-slate-900 dark:text-white">{{ $readiness['score'] }}%</span>
+                        <span class="text-[8px] font-black uppercase tracking-tighter text-slate-400">Readiness</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Store <span class="text-wa-teal">Integrity</span></h2>
+                        @php
+                            $stateColors = [
+                                'READY' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20',
+                                'WARNING' => 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+                                'BLOCKED' => 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                            ];
+                        @endphp
+                        <span class="px-3 py-1 text-[10px] font-black uppercase rounded-full border {{ $stateColors[$readiness['state']] }}">
+                            {{ $readiness['state'] }}
+                        </span>
+                    </div>
+                    <p class="text-slate-500 text-sm font-medium">
+                        {{ $readiness['state'] === 'READY' ? 'All critical systems operational. Store is live.' : 'Action required to restore full commerce functionality.' }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 flex-1 lg:max-w-3xl">
+                @foreach($readiness['checks'] as $key => $check)
+                    <div class="p-3 rounded-2xl border {{ $check['status'] ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800' : 'bg-rose-500/5 border-rose-500/10' }} group relative cursor-help">
+                        <div class="flex flex-col items-center gap-1">
+                            @if($check['status'])
+                                <svg class="w-4 h-4 text-wa-teal" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            @else
+                                <svg class="w-4 h-4 text-rose-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                            @endif
+                            <span class="text-[9px] font-black uppercase text-slate-400 text-center tracking-tighter">{{ $check['label'] }}</span>
+                        </div>
+                        
+                        <!-- Tooltip -->
+                        @if(!$check['status'])
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 font-bold shadow-2xl">
+                            {{ $check['message'] }}
+                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                        </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Left Column: General & Cart Engine -->
         <div class="space-y-8">
@@ -63,9 +126,17 @@
                     <div class="space-y-2">
                         <label class="text-xs font-black uppercase tracking-widest text-slate-400">Store
                             Currency</label>
-                        <input type="text" wire:model="currency"
-                            class="w-full px-5 py-3 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                            placeholder="USD" maxlength="3">
+                        <div class="relative">
+                            <select wire:model="currency" {{ $has_orders ? 'disabled' : '' }}
+                                class="w-full px-5 py-3 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 {{ $has_orders ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}">
+                                @foreach(['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'SAR'] as $curr)
+                                    <option value="{{ $curr }}">{{ $curr }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @if($has_orders)
+                            <p class="text-[10px] text-rose-500 font-bold uppercase tracking-tight">Locked: Orders Exist</p>
+                        @endif
                         <x-input-error for="currency" class="mt-2" />
                     </div>
 
@@ -117,6 +188,7 @@
                         <input type="number" wire:model="cart_expiry_minutes"
                             class="w-full px-5 py-3 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
                             placeholder="60">
+                        <x-input-error for="cart_expiry_minutes" class="mt-2" />
                     </div>
 
                     <div class="space-y-2">
@@ -125,6 +197,7 @@
                         <input type="number" wire:model="cart_reminder_minutes"
                             class="w-full px-5 py-3 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
                             placeholder="30">
+                        <x-input-error for="cart_reminder_minutes" class="mt-2" />
                     </div>
                 </div>
 
@@ -171,16 +244,18 @@
                             class="space-y-3 p-5 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-slate-100 dark:border-slate-800/50 group hover:border-wa-teal/30 transition-all">
                             <div class="flex justify-between items-center">
                                 <label class="text-xs font-black uppercase tracking-widest text-slate-500">Order
-                                    {{ ucfirst(str_replace('_', ' ', $status)) }}</label>
-                                <span
-                                    class="text-[10px] font-bold text-wa-teal bg-wa-teal/10 px-2 py-0.5 rounded-md uppercase tracking-tighter">Trigger</span>
+                                    {{ $status }}</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[8px] font-black uppercase text-slate-400">Customer Alert</span>
+                                    <x-checkbox wire:model="lifecycle_notifications.{{ $status }}" class="w-4 h-4 rounded border-none bg-slate-200 dark:bg-slate-700 text-wa-teal focus:ring-wa-teal/20" />
+                                </div>
                             </div>
 
                             <select wire:model="notifications.{{ $status }}"
                                 class="w-full px-4 py-3 bg-white dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
                                 <option value="">Select Template...</option>
                                 @foreach($availableTemplates as $t)
-                                    <option value="{{ $t->name }}">{{ $t->name }} ({{ $t->language }})</option>
+                                    <option value="{{ $t->name }}">{{ $t->name }} {{ $t->language }}</option>
                                 @endforeach
                             </select>
 
@@ -191,12 +266,12 @@
                                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <span>
-                                    @if($status == 'shipped')
-                                        Variables: Order ID, Tracking Link
-                                    @elseif($status == 'placed')
-                                        Variables: Order ID, Total Amount
+                                    @if($status == 'shipped' || $status == 'fulfilled')
+                                        Variables: @{{1}} (Order ID), @{{2}} (Tracking Link)
+                                    @elseif($status == 'created' || $status == 'paid')
+                                        Variables: @{{1}} (Order ID), @{{2}} (Value)
                                     @else
-                                        Variables: Order ID
+                                        Variables: @{{1}} (Order ID)
                                     @endif
                                 </span>
                             </div>
@@ -266,7 +341,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    @foreach(['placed', 'payment_failed', 'cancelled', 'returned'] as $status)
+                    @foreach(['created', 'paid', 'cancelled', 'returned'] as $status)
                         <label
                             class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
                             <x-checkbox wire:model="agent_notifications.{{ $status }}"
@@ -281,4 +356,67 @@
             </div>
         </div>
     </div>
+    <!-- Confirmation Modal -->
+    <x-confirmation-modal wire:model="show_confirmation">
+        <x-slot name="title">
+            <span class="text-slate-900 dark:text-white uppercase font-black tracking-tight flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Impact Evaluation
+            </span>
+        </x-slot>
+
+        <x-slot name="content">
+            <div class="space-y-6">
+                <p class="text-sm font-medium text-slate-500 leading-relaxed">We analyzed your configuration changes and identified potential operational risks.</p>
+                
+                <div class="space-y-3">
+                    @foreach($risk_messages as $risk)
+                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ $risk['title'] }}</h4>
+                                @php
+                                    $typeStyles = [
+                                        'High Risk' => 'bg-amber-100 text-amber-600',
+                                        'Critical' => 'bg-rose-100 text-rose-600',
+                                        'Blocked' => 'bg-slate-900 text-white',
+                                        'Operational' => 'bg-indigo-100 text-indigo-600',
+                                        'Notice' => 'bg-blue-100 text-blue-600'
+                                    ];
+                                @endphp
+                                <span class="px-2 py-0.5 text-[8px] font-black uppercase rounded {{ $typeStyles[$risk['type']] ?? 'bg-slate-100 text-slate-600' }}">
+                                    {{ $risk['type'] }}
+                                </span>
+                            </div>
+                            <p class="text-xs font-semibold text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {{ $risk['body'] }}
+                            </p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </x-slot>
+
+        <x-slot name="footer">
+            <x-secondary-button wire:click="cancelSave" wire:loading.attr="disabled" class="rounded-xl">
+                Discard Changes
+            </x-secondary-button>
+
+            @php
+                $isBlocked = collect($risk_messages)->contains('type', 'Blocked');
+            @endphp
+
+            @if($isBlocked)
+                <button disabled class="ml-3 px-6 py-2 bg-slate-200 text-slate-400 font-extrabold uppercase text-xs rounded-xl cursor-not-allowed">
+                    Save Blocked
+                </button>
+            @else
+                <button wire:click="confirmSave" 
+                    class="ml-3 px-6 py-2 bg-wa-teal text-slate-900 font-black uppercase text-xs rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-wa-teal/20">
+                    Apply Changes
+                </button>
+            @endif
+        </x-slot>
+    </x-confirmation-modal>
 </div>

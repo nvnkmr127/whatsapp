@@ -3,6 +3,7 @@
 namespace App\Livewire\Campaigns;
 
 use App\Models\Campaign;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
@@ -62,8 +63,18 @@ class CampaignList extends Component
 
         $campaigns = $query->latest()->paginate(10);
 
+        // Module-Level Core Metrics
+        $teamId = auth()->user()->current_team_id;
+        $stats = [
+            'active' => Campaign::where('team_id', $teamId)->whereIn('status', ['processing', 'sending'])->count(),
+            'success_rate' => Campaign::where('team_id', $teamId)->where('sent_count', '>', 0)->select(DB::raw('AVG((deliver_count / sent_count) * 100)'))->value('AVG((deliver_count / sent_count) * 100)') ?? 100,
+            'engagement' => Campaign::where('team_id', $teamId)->where('sent_count', '>', 0)->select(DB::raw('AVG((read_count / sent_count) * 100)'))->value('AVG((read_count / sent_count) * 100)') ?? 0,
+            'total_sent' => Campaign::where('team_id', $teamId)->sum('sent_count'),
+        ];
+
         return view('livewire.campaigns.campaign-list', [
-            'campaigns' => $campaigns
+            'campaigns' => $campaigns,
+            'stats' => $stats
         ]);
     }
 }
