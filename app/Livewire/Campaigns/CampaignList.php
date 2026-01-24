@@ -67,7 +67,7 @@ class CampaignList extends Component
         $teamId = auth()->user()->current_team_id;
         $stats = [
             'active' => Campaign::where('team_id', $teamId)->whereIn('status', ['processing', 'sending'])->count(),
-            'success_rate' => Campaign::where('team_id', $teamId)->where('sent_count', '>', 0)->select(DB::raw('AVG((deliver_count / sent_count) * 100)'))->value('AVG((deliver_count / sent_count) * 100)') ?? 100,
+            'success_rate' => Campaign::where('team_id', $teamId)->where('sent_count', '>', 0)->select(DB::raw('AVG((del_count / sent_count) * 100)'))->value('AVG((del_count / sent_count) * 100)') ?? 100,
             'engagement' => Campaign::where('team_id', $teamId)->where('sent_count', '>', 0)->select(DB::raw('AVG((read_count / sent_count) * 100)'))->value('AVG((read_count / sent_count) * 100)') ?? 0,
             'total_sent' => Campaign::where('team_id', $teamId)->sum('sent_count'),
         ];

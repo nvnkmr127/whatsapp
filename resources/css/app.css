@@ -15,17 +15,48 @@
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-    background: transparent; 
+    background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e0; 
+    background: #cbd5e0;
     border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0; 
+    background: #a0aec0;
 }
+
 
 [x-cloak] {
     display: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
 }

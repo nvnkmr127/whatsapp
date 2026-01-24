@@ -586,7 +586,6 @@ class AutomationBuilder extends Component
         $this->nodeUrl = '';
         $this->nodeMethod = 'GET';
         $this->nodeSaveTo = '';
-        $this->nodeSaveTo = '';
         $this->nodeOptions = [];
         $this->nodeLanguage = 'en';
         $this->nodeOperator = 'eq';

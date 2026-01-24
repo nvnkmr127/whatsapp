@@ -168,9 +168,6 @@
 
                         this.ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                        // Safety check for edges
-                        if (!this.edges) return;
-
                         if (!this.edges) return;
 
                         const edges = this.edgesArray;
@@ -452,27 +449,27 @@
                             ['type' => 'crm_sync', 'label' => 'CRM Sync', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 'color' => 'text-indigo-500', 'bg' => 'bg-indigo-50 dark:bg-indigo-900/20'],
                         ]
                     ] as $group => $items)
-                                            <div>
-                                                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 ml-1">{{ $group }}</h3>
-                                                <div class="space-y-2">
-                                                    @foreach($items as $item)
-                                                        <button @click="$wire.addNode('{{ $item['type'] }}')"
-                                                            class="w-full flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-wa-teal/30 dark:hover:border-wa-teal/30 rounded-xl transition-all group shadow-sm hover:shadow-md hover:scale-[1.02]">
-                                                            <div class="p-2 rounded-lg {{ $item['bg'] }} {{ $item['color'] }} transition-colors">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $item['icon'] }}" />
-                                                                </svg>
-                                                            </div>
-                                                            <div class="flex flex-col items-start">
-                                                                <span class="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-wa-teal transition-colors">{{ $item['label'] }}</span>
-                                                            </div>
-                                                            <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                                            </div>
-                                                        </button>
-                                                    @endforeach
+                                                <div>
+                                                    <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 ml-1">{{ $group }}</h3>
+                                                    <div class="space-y-2">
+                                                        @foreach($items as $item)
+                                                            <button @click="$wire.addNode('{{ $item['type'] }}')"
+                                                                class="w-full flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-wa-teal/30 dark:hover:border-wa-teal/30 rounded-xl transition-all group shadow-sm hover:shadow-md hover:scale-[1.02]">
+                                                                <div class="p-2 rounded-lg {{ $item['bg'] }} {{ $item['color'] }} transition-colors">
+                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $item['icon'] }}" />
+                                                                    </svg>
+                                                                </div>
+                                                                <div class="flex flex-col items-start">
+                                                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-wa-teal transition-colors">{{ $item['label'] }}</span>
+                                                                </div>
+                                                                <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                                                </div>
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
-                                            </div>
                  @endforeach
             </div>
         </div>
@@ -1346,7 +1343,6 @@
                     </template>
                 </div>
 
-                <!-- Edge Properties -->
                 <div x-show="selectedEdgeIndex !== null">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Condition Label</label>
                     <input type="text" wire:model.blur="edgeCondition" wire:change="updateEdgeData"
@@ -1355,6 +1351,8 @@
                 </div>
 
             </div>
+        </div>
+    </div>
 
 
     <!-- Publish Review Modal -->
@@ -1395,21 +1393,21 @@
 
                 <!-- Risk Warnings -->
                 @if(count($this->risks) > 0)
-                <div class="space-y-3">
-                    <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Risk Assessment</h4>
-                    <div class="space-y-2">
-                        @foreach($this->risks as $risk)
-                            <div class="flex items-start gap-4 p-4 rounded-2xl border transition-all {{ $risk['level'] === 'high' ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30' : 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-800/30' }}">
-                                <div class="mt-0.5 p-2 rounded-xl {{ $risk['level'] === 'high' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white' }}">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $risk['icon'] }}" /></svg>
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Risk Assessment</h4>
+                        <div class="space-y-2">
+                            @foreach($this->risks as $risk)
+                                <div class="flex items-start gap-4 p-4 rounded-2xl border transition-all {{ $risk['level'] === 'high' ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30' : 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-800/30' }}">
+                                    <div class="mt-0.5 p-2 rounded-xl {{ $risk['level'] === 'high' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white' }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $risk['icon'] }}" /></svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold {{ $risk['level'] === 'high' ? 'text-rose-700 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300' }}">{{ $risk['description'] }}</p>
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-bold {{ $risk['level'] === 'high' ? 'text-rose-700 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300' }}">{{ $risk['description'] }}</p>
-                                </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
                     </div>
-                </div>
                 @endif
 
                 <!-- Version Note -->
