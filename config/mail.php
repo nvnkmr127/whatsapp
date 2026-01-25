@@ -49,6 +49,24 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        'transactional' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_TRANSACTIONAL_HOST', env('MAIL_HOST')),
+            'port' => env('MAIL_TRANSACTIONAL_PORT', env('MAIL_PORT')),
+            'username' => env('MAIL_TRANSACTIONAL_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('MAIL_TRANSACTIONAL_PASSWORD', env('MAIL_PASSWORD')),
+            'timeout' => null,
+        ],
+
+        'marketing' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_MARKETING_HOST', env('MAIL_HOST')),
+            'port' => env('MAIL_MARKETING_PORT', env('MAIL_PORT')),
+            'username' => env('MAIL_MARKETING_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('MAIL_MARKETING_PASSWORD', env('MAIL_PASSWORD')),
+            'timeout' => null,
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],

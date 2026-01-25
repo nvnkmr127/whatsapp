@@ -29,6 +29,10 @@
                         class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-widest text-xs rounded-2xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 transition-all shadow-sm">
                         Plan Manager
                     </a>
+                    <a href="{{ route('admin.email-templates.index') }}"
+                        class="px-6 py-3 bg-white dark:bg-slate-800 text-indigo-600 font-black uppercase tracking-widest text-xs rounded-2xl border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-50 transition-all shadow-sm">
+                        Email Engine
+                    </a>
                     <a href="{{ route('admin.tenants.create') }}"
                         class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

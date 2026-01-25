@@ -32,6 +32,9 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'marketing_opt_in',
+        'unsubscribed_at',
+        'unsubscribe_token',
     ];
 
     /**
@@ -67,6 +70,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'security_metadata' => 'json',
+            'marketing_opt_in' => 'boolean',
+            'unsubscribed_at' => 'datetime',
         ];
     }
     /**

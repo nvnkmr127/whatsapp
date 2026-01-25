@@ -9,6 +9,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
+
 Route::get('/dev/login/{email}', [\App\Http\Controllers\DevController::class, 'loginAs'])->name('dev.login');
 
 // Passwordless Auth Routes
@@ -86,6 +88,15 @@ Route::middleware([
 
         // Launch Offer Settings
         Route::get('/admin/offer-settings', \App\Livewire\Admin\OfferSettings::class)->name('admin.offer-settings');
+
+        // Email Templates (System)
+        Route::get('/admin/email-templates', \App\Livewire\Admin\EmailTemplates\Index::class)->name('admin.email-templates.index');
+        Route::get('/admin/email-templates/create', \App\Livewire\Admin\EmailTemplates\Create::class)->name('admin.email-templates.create');
+        Route::get('/admin/email-templates/{template}', \App\Livewire\Admin\EmailTemplates\Edit::class)->name('admin.email-templates.edit');
+
+        // Email Logs (Tracking)
+        Route::get('/admin/email-logs', [\App\Http\Controllers\Admin\EmailLogController::class, 'index'])->name('admin.email-logs.index');
+        Route::get('/admin/email-logs/{log}', [\App\Http\Controllers\Admin\EmailLogController::class, 'show'])->name('admin.email-logs.show');
     });
 
     // Logout and Exit Impersonation (Universal)

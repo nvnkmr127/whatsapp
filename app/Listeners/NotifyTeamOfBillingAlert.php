@@ -15,10 +15,12 @@ class NotifyTeamOfBillingAlert implements ShouldQueue
     use InteractsWithQueue;
 
     protected $webhookService;
+    protected $emailDispatcher;
 
-    public function __construct(WebhookService $webhookService)
+    public function __construct(WebhookService $webhookService, \App\Services\Email\EmailDispatcher $emailDispatcher)
     {
         $this->webhookService = $webhookService;
+        $this->emailDispatcher = $emailDispatcher;
     }
 
     /**
@@ -42,13 +44,17 @@ class NotifyTeamOfBillingAlert implements ShouldQueue
 
         foreach ($recipients as $recipient) {
             try {
-                Mail::to($recipient->email)->send(new BillingThresholdAlert(
-                    $team,
-                    $event->metric,
-                    $event->level,
-                    $event->percent,
-                    $event->message
-                ));
+                $this->emailDispatcher->send(
+                    $recipient,
+                    \App\Enums\EmailUseCase::ALERT,
+                    new BillingThresholdAlert(
+                        $team,
+                        $event->metric,
+                        $event->level,
+                        $event->percent,
+                        $event->message
+                    )
+                );
             } catch (\Exception $e) {
                 Log::error("Failed to send billing alert email to {$recipient->email}: " . $e->getMessage());
             }

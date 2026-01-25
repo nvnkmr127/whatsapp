@@ -41,6 +41,7 @@ class LoginSecurityNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->mailer(\App\Enums\EmailUseCase::ALERT->getMailer())
             ->subject('Security Alert: New Login Detected')
             ->greeting('Hello ' . $notifiable->name . '!')
             ->line('A new login was detected for your account from an unrecognized device or location.')

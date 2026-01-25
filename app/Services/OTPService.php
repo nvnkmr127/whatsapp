@@ -109,7 +109,15 @@ class OTPService
     protected function sendEmail(string $email, string $code): bool
     {
         try {
-            Notification::route('mail', $email)->notify(new OtpNotification($code));
+            $user = \App\Models\User::where('email', $email)->first();
+            $name = $user ? $user->name : explode('@', $email)[0];
+
+            app(\App\Services\Email\CentralEmailService::class)->sendOtp($email, [
+                'name' => $name,
+                'code' => $code,
+                'expiry' => '5 minutes'
+            ]);
+
             return true;
         } catch (\Exception $e) {
             Log::error("Failed to send Email OTP to {$email}: " . $e->getMessage());
