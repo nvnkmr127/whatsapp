@@ -29,6 +29,42 @@
                 </div>
             @endif
 
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+                <div class="p-8 md:p-10">
+                    <div class="md:grid md:grid-cols-3 md:gap-6">
+                        <div class="md:col-span-1">
+                            <h3 class="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                Authentication Identities</h3>
+                            <p class="mt-1 text-sm font-medium text-slate-500">
+                                Manage the external accounts and methods you use to log in.
+                            </p>
+                        </div>
+                        <div class="mt-5 md:mt-0 md:col-span-2">
+                            @livewire('profile.manage-identities')
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+                <div class="p-8 md:p-10">
+                    <div class="md:grid md:grid-cols-3 md:gap-6">
+                        <div class="md:col-span-1">
+                            <h3 class="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                Security & Activity Meta</h3>
+                            <p class="mt-1 text-sm font-medium text-slate-500">
+                                View extended security metrics and authentication metadata recorded for your account.
+                            </p>
+                        </div>
+                        <div class="mt-5 md:mt-0 md:col-span-2">
+                            @livewire('profile.security-metadata-viewer')
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::updatePasswords()))
                 <div
                     class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">

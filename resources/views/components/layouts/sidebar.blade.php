@@ -66,7 +66,11 @@
                     <!-- Links -->
                     <div class="space-y-1">
                         @foreach($links as $link)
-                            @if(!isset($link['can']) || auth()->user()->can($link['can']))
+                            @php
+                                $canAccess = (!isset($link['can']) || auth()->user()->can($link['can'])) &&
+                                             (!isset($link['plan_feature']) || auth()->user()->hasPlanFeature($link['plan_feature']));
+                            @endphp
+                            @if($canAccess)
                                 @php 
                                     $hasChildren = isset($link['children']) && count($link['children']) > 0;
                                     $isRouteActive = request()->routeIs($link['route']);
@@ -130,20 +134,12 @@
             @endforeach
 
             <!-- Super Admin Section -->
-            @if(auth()->user()->is_super_admin)
+            @if(auth()->user()->isSuperAdmin())
                 <div class="pt-4 border-t border-slate-900">
                     <div class="px-4 mb-4 flex items-center gap-3">
                         <span class="text-[10px] font-black text-rose-500 uppercase tracking-[0.4em] flex-shrink-0">Nexus Admin</span>
                     </div>
                     <div class="space-y-1 p-2 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
-                        @php
-                            $adminLinks = [
-                                ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'],
-                                ['route' => 'admin.plans', 'label' => 'Subscription Models', 'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
-                                ['route' => 'backups.index', 'label' => 'Global Backups', 'icon' => 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4'],
-                            ];
-                        @endphp
-                        
                         @foreach($adminLinks as $link)
                             @php $isActive = request()->routeIs($link['route']); @endphp
                             <a href="{{ route($link['route']) }}"
@@ -174,7 +170,16 @@
                 </div>
 
                 <div class="flex-1 text-left min-w-0">
-                    <div class="text-xs font-black text-white truncate tracking-tight uppercase">{{ Auth::user()->name }}</div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-xs font-black text-white truncate tracking-tight uppercase">{{ Auth::user()->name }}</div>
+                        @if(Auth::user()->isSuperAdmin())
+                            <span class="px-1.5 py-0.5 bg-rose-500/10 text-rose-500 text-[7px] font-black uppercase tracking-widest border border-rose-500/20 rounded-md">Nexus Root</span>
+                        @elseif(Auth::user()->ownsTeam(Auth::user()->currentTeam))
+                            <span class="px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-[7px] font-black uppercase tracking-widest border border-wa-teal/20 rounded-md">Workspace Admin</span>
+                        @else
+                            <span class="px-1.5 py-0.5 bg-slate-500/10 text-slate-500 text-[7px] font-black uppercase tracking-widest border border-slate-500/20 rounded-md">Collaborator</span>
+                        @endif
+                    </div>
                     <div class="text-[9px] font-bold text-slate-500 truncate uppercase tracking-wider group-hover:text-wa-teal transition-colors">
                         {{ Auth::user()->currentTeam->name }}
                     </div>
@@ -201,9 +206,9 @@
                     </a>
                     
                     @can('manage-settings')
-                    <a href="{{ route('settings.system') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                    <a href="{{ route('settings.hub') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
-                        Admin Control
+                        Settings Hub
                     </a>
                     @endcan
 

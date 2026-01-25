@@ -44,34 +44,25 @@
                             <div class="space-y-2">
                                 <label class="text-xs font-black uppercase tracking-widest text-slate-500">Subscription
                                     Plan <span class="text-rose-500">*</span></label>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="plan" value="basic" class="peer hidden" {{ old('plan') === 'basic' ? 'checked' : '' }}>
-                                        <div
-                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center">
-                                            <div class="font-black text-slate-900 dark:text-white">Basic</div>
-                                            <div class="text-xs font-bold text-slate-400">Starter features</div>
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="plan" value="pro" class="peer hidden" {{ old('plan', 'pro') === 'pro' ? 'checked' : '' }}>
-                                        <div
-                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    @foreach($plans as $plan)
+                                        <label class="cursor-pointer">
+                                            <input type="radio" name="plan" value="{{ $plan->name }}" class="peer hidden" {{ old('plan') === $plan->name ? 'checked' : '' }}>
                                             <div
-                                                class="absolute -top-2 right-4 px-2 py-0.5 bg-wa-green text-white text-[10px] font-black uppercase rounded-full">
-                                                Recommended</div>
-                                            <div class="font-black text-slate-900 dark:text-white">Pro</div>
-                                            <div class="text-xs font-bold text-slate-400">Most popular</div>
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="plan" value="enterprise" class="peer hidden" {{ old('plan') === 'enterprise' ? 'checked' : '' }}>
-                                        <div
-                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center">
-                                            <div class="font-black text-slate-900 dark:text-white">Enterprise</div>
-                                            <div class="text-xs font-bold text-slate-400">Full power</div>
-                                        </div>
-                                    </label>
+                                                class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all text-center relative">
+                                                @if($plan->name === 'pro')
+                                                    <div
+                                                        class="absolute -top-2 right-4 px-2 py-0.5 bg-wa-green text-white text-[10px] font-black uppercase rounded-full">
+                                                        Recommended</div>
+                                                @endif
+                                                <div class="font-black text-slate-900 dark:text-white">
+                                                    {{ $plan->display_name }}</div>
+                                                <div
+                                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                    ${{ number_format($plan->monthly_price, 0) }}/mo</div>
+                                            </div>
+                                        </label>
+                                    @endforeach
                                 </div>
                                 @error('plan') <span
                                 class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror

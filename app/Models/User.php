@@ -30,6 +30,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
     ];
 
@@ -64,6 +65,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
+            'security_metadata' => 'json',
         ];
     }
     /**
@@ -128,5 +131,60 @@ class User extends Authenticatable
         $role = $team->users->where('id', $this->id)->first()->membership->role;
 
         return \Laravel\Jetstream\Jetstream::findRole($role);
+    }
+
+    /**
+     * Get the identities for the user.
+     */
+    public function identities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserIdentity::class);
+    }
+
+    /**
+     * Determine if the user is a super admin.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
+    }
+
+    /**
+     * Revoke all of the user's sessions except the current one.
+     */
+    public function revokeOtherSessions()
+    {
+        if (config('session.driver') !== 'database') {
+            return;
+        }
+
+        \Illuminate\Support\Facades\DB::table('sessions')
+            ->where('user_id', $this->id)
+            ->where('id', '<>', \Illuminate\Support\Facades\Session::getId())
+            ->delete();
+    }
+
+    /**
+     * Revoke all of the user's API tokens.
+     */
+    public function revokeAllTokens()
+    {
+        $this->tokens()->delete();
+    }
+
+    /**
+     * Determine if the user has a specific plan feature in their current team.
+     */
+    public function hasPlanFeature(string $feature): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (!$this->currentTeam) {
+            return false;
+        }
+
+        return $this->currentTeam->hasFeature($feature);
     }
 }

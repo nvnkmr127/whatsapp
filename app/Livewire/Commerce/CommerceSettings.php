@@ -56,6 +56,7 @@ class CommerceSettings extends Component
 
     // Audit & Safety State
     public $has_orders = false;
+    public $ai_assistant_enabled = false;
     public $show_confirmation = false;
     public $pending_action = null; // 'save_with_risk'
     public $risk_messages = [];
@@ -241,12 +242,25 @@ class CommerceSettings extends Component
 
         $templates = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
             ->whereIn('category', ['UTILITY', 'TRANSACTIONAL'])
-            ->where('status', 'APPROVED') // Audit recommendation: Only approved templates
+            ->where('status', 'APPROVED')
             ->get(['name', 'category', 'language']);
 
         return view('livewire.commerce.commerce-settings', [
             'availableTemplates' => $templates,
-            'readiness' => $readiness
+            'readiness' => $readiness,
+            'stateColors' => [
+                'READY' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20',
+                'WARNING' => 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+                'BLOCKED' => 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+            ],
+            'typeStyles' => [
+                'High Risk' => 'bg-amber-100 text-amber-600',
+                'Critical' => 'bg-rose-100 text-rose-600',
+                'Blocked' => 'bg-slate-900 text-white',
+                'Operational' => 'bg-indigo-100 text-indigo-600',
+                'Notice' => 'bg-blue-100 text-blue-600'
+            ],
+            'isBlocked' => collect($this->risk_messages)->contains('type', 'Blocked')
         ]);
     }
 }

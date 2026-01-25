@@ -62,8 +62,8 @@ if (!function_exists('whatsapp_log')) {
     }
 }
 if (!function_exists('audit')) {
-    function audit(string $action, ?string $description = null, ?\Illuminate\Database\Eloquent\Model $subject = null, ?array $properties = [])
+    function audit(string $event, $userId = null, $identifier = null, ?string $provider = null, array $metadata = [])
     {
-        return (new \App\Services\AuditService())->log($action, $description, $subject, $properties);
+        return \App\Services\AuditService::log($event, $userId, $identifier, $provider, $metadata);
     }
 }

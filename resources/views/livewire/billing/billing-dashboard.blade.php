@@ -126,47 +126,131 @@
             <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-8">Usage This Month
             </h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                {{-- Messages Usage --}}
-                <div class="space-y-4">
-                    <div class="flex justify-between items-end">
-                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Messages Sent</span>
-                        <span class="text-sm font-black text-slate-900 dark:text-white">{{ number_format($usage) }}
-                            <span class="text-slate-400 font-bold">/
-                                {{ number_format($plan->message_limit ?? 0) }}</span></span>
-                    </div>
-                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden">
-                        <div class="h-full bg-gradient-to-r from-wa-teal to-wa-teal transition-all duration-500 rounded-full"
-                            style="width: {{ min($usagePercentage, 100) }}%"></div>
-                    </div>
-                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                        <span>0%</span>
-                        <span>{{ number_format($usagePercentage, 0) }}% Used</span>
-                        <span>100%</span>
-                    </div>
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                @foreach($detailedStats as $key => $stat)
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <span
+                                class="text-xs font-black text-slate-400 uppercase tracking-widest">{{ $stat['label'] }}</span>
+                            <span class="text-sm font-black text-slate-900 dark:text-white">
+                                {{ number_format($stat['usage']) }}
+                                @if($stat['limit'] > 0)
+                                    <span class="text-slate-400 font-bold">/ {{ number_format($stat['limit']) }}</span>
+                                @else
+                                    <span class="text-wa-teal font-bold"> (Unlimited)</span>
+                                @endif
+                            </span>
+                        </div>
 
-                {{-- Team Members --}}
-                <div class="space-y-4">
-                    <div class="flex justify-between items-end">
-                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Team Members</span>
-                        <span class="text-sm font-black text-slate-900 dark:text-white">{{ $team->users->count() }}
-                            <span class="text-slate-400 font-bold">/ {{ $plan->agent_limit ?? 0 }}</span></span>
-                    </div>
-                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden">
-                        <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500 rounded-full"
-                            style="width: {{ min(($team->users->count() / max($plan->agent_limit ?? 1, 1)) * 100, 100) }}%">
+                        @php
+                            $progPercent = $stat['limit'] > 0 ? min(($stat['usage'] / $stat['limit']) * 100, 100) : 0;
+                            $barColor = $progPercent >= 90 ? 'from-rose-500 to-rose-600' : ($progPercent >= 80 ? 'from-yellow-400 to-yellow-500' : 'from-wa-teal to-wa-teal');
+                        @endphp
+
+                        <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                            <div class="h-full bg-gradient-to-r {{ $barColor }} transition-all duration-500 rounded-full"
+                                style="width: {{ $stat['limit'] > 0 ? $progPercent : 100 }}%"></div>
+                        </div>
+
+                        <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            <span>0%</span>
+                            <span>{{ $stat['limit'] > 0 ? number_format($progPercent, 0) : 0 }}% Used</span>
+                            <span>100%</span>
                         </div>
                     </div>
-                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                        <span>0%</span>
-                        <span>{{ number_format(($team->users->count() / max($plan->agent_limit ?? 1, 1)) * 100, 0) }}%
-                            Used</span>
-                        <span>100%</span>
-                    </div>
-                </div>
+                @endforeach
             </div>
         </div>
+
+        {{-- Available Plans --}}
+        <div class="mb-8 overflow-x-auto pb-4">
+            <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6">Choose Your Plan</h3>
+            <div class="flex gap-6 min-w-max">
+                @foreach($plans as $p)
+                    <div class="w-72 p-8 rounded-[2rem] border-2 transition-all {{ $p->name === $team->subscription_plan ? 'border-wa-teal bg-wa-teal/5 shadow-lg' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900' }}">
+                        <h4 class="text-xl font-black uppercase tracking-tight mb-2 {{ $p->name === $team->subscription_plan ? 'text-wa-teal' : 'text-slate-900 dark:text-white' }}">
+                            {{ $p->display_name }}
+                        </h4>
+                        <div class="flex items-baseline gap-1 mb-6">
+                            <span class="text-3xl font-black">${{ number_format($p->monthly_price, 0) }}</span>
+                            <span class="text-xs font-bold text-slate-400 capitalize">/ mo</span>
+                        </div>
+                        
+                        <ul class="space-y-3 mb-8">
+                            <li class="text-xs font-bold flex items-center gap-2">
+                                <svg class="w-4 h-4 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                {{ number_format($p->message_limit) }} Messages
+                            </li>
+                            <li class="text-xs font-bold flex items-center gap-2">
+                                <svg class="w-4 h-4 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                {{ $p->agent_limit }} Agents
+                            </li>
+                        </ul>
+
+                        @if($p->name !== $team->subscription_plan)
+                            <button wire:click="selectPlan('{{ $p->name }}')" class="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all">
+                                Switch Plan
+                            </button>
+                        @else
+                            <div class="w-full py-3 text-center text-wa-teal text-[10px] font-black uppercase tracking-widest bg-wa-teal/10 rounded-xl">
+                                Current Plan
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Overrides Notice --}}
+        @if($team->billingOverrides()->active()->exists())
+            <div class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/10 border-2 border-amber-200 dark:border-amber-800 rounded-[2rem] flex items-start gap-4 shadow-sm">
+                <div class="p-3 bg-amber-100 dark:bg-amber-800 rounded-xl text-amber-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-amber-900 dark:text-amber-100 uppercase tracking-tight mb-1">Active Billing Exceptions</h4>
+                    <p class="text-xs font-bold text-amber-700 dark:text-amber-300">Your team has authorized overrides that modify standard plan limits for testing or VIP support. These will expire automatically.</p>
+                </div>
+            </div>
+        @endif
+
+        {{-- Invoices History --}}
+        @php
+            $invoices = \App\Models\TeamInvoice::where('team_id', $team->id)->orderBy('created_at', 'desc')->take(5)->get();
+        @endphp
+        @if($invoices->count() > 0)
+            <div class="bg-white dark:bg-slate-900 border border-slate-50 dark:border-slate-800 rounded-[2.5rem] shadow-xl overflow-hidden mb-8">
+                <div class="p-8 border-b border-slate-50 dark:border-slate-800">
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Recent Invoices</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-50 dark:border-slate-800">
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Number</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                            @foreach($invoices as $invoice)
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                                    <td class="px-8 py-5 text-sm font-bold">{{ $invoice->invoice_number }}</td>
+                                    <td class="px-8 py-5 text-xs font-medium text-slate-500">
+                                        {{ $invoice->period_start->format('M d') }} - {{ $invoice->period_end->format('M d, Y') }}
+                                    </td>
+                                    <td class="px-8 py-5 text-right font-black">${{ number_format($invoice->total_amount, 2) }}</td>
+                                    <td class="px-8 py-5 text-center">
+                                        <button class="text-[10px] font-black uppercase text-wa-teal hover:underline tracking-widest">Download PDF</button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
 
         {{-- Transaction History --}}
         <div
@@ -297,6 +381,96 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        @endif
+
+        {{-- Plan Change Impact Modal --}}
+        @if($showChangePlanModal && $planImpact)
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showChangePlanModal', false)"></div>
+
+                <div class="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div class="p-8 border-b border-slate-50 dark:border-slate-800">
+                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Confirm <span class="text-wa-teal">Plan Change</span></h3>
+                    </div>
+
+                    <div class="p-8 space-y-8 max-h-[60vh] overflow-y-auto">
+                        {{-- Logic: Upgrade or Downgrade --}}
+                        <div class="p-6 rounded-3xl {{ $planImpact['type'] === 'upgrade' ? 'bg-indigo-50 dark:bg-indigo-900/10 text-indigo-900 dark:text-indigo-100' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-900 dark:text-amber-100' }}">
+                            <div class="flex items-center gap-4">
+                                <span class="text-2xl">
+                                    {{ $planImpact['type'] === 'upgrade' ? '🚀' : '📉' }}
+                                </span>
+                                <div>
+                                    <h4 class="font-black uppercase tracking-tight">Switching to {{ ucfirst($selectedPlan) }} Plan</h4>
+                                    <p class="text-xs font-bold opacity-80">This change will be applied immediately.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {{-- Gained Features --}}
+                            @if(count($planImpact['features_gained']) > 0)
+                                <div class="space-y-4">
+                                    <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Features You'll Gain</h5>
+                                    <ul class="space-y-2">
+                                        @foreach($planImpact['features_gained'] as $f)
+                                            <li class="flex items-center gap-2 text-xs font-bold text-wa-teal">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                {{ ucfirst(str_replace('_', ' ', $f)) }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                             {{-- Lost Features --}}
+                             @if(count($planImpact['features_lost']) > 0)
+                                <div class="space-y-4">
+                                    <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Features You'll Lose</h5>
+                                    <ul class="space-y-2">
+                                        @foreach($planImpact['features_lost'] as $f)
+                                            <li class="flex items-center gap-2 text-xs font-bold text-rose-500">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                {{ ucfirst(str_replace('_', ' ', $f)) }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Resource Impact (Warnings) --}}
+                        @if(count($planImpact['resource_impact']) > 0)
+                            <div class="space-y-4">
+                                <h5 class="text-[10px] font-black uppercase tracking-widest text-rose-500">Resource Warnings</h5>
+                                @foreach($planImpact['resource_impact'] as $r)
+                                    <div class="p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800 rounded-2xl flex gap-3 items-start">
+                                        <svg class="w-5 h-5 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                        <p class="text-xs font-bold text-rose-800 dark:text-rose-200">{{ $r['message'] }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if($planImpact['type'] === 'downgrade')
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight text-center">
+                                Downgrades include a 7-day grace period for over-limit resources before suspension.
+                            </p>
+                        @endif
+                    </div>
+
+                    <div class="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-50 dark:border-slate-800 flex gap-3">
+                        <button type="button" wire:click="$set('showChangePlanModal', false)"
+                            class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl border border-slate-100 dark:border-slate-700 hover:text-slate-600 transition-all">
+                            Keep Current Plan
+                        </button>
+                        <button type="button" wire:click="confirmPlanChange"
+                            class="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
+                            Confirm Switch
+                        </button>
+                    </div>
                 </div>
             </div>
         @endif

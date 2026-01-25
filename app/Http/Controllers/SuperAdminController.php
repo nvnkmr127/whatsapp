@@ -20,9 +20,12 @@ class SuperAdminController extends Controller
         ];
 
         $query = Team::with('owner')->latest();
+        $matchingUsers = collect();
 
         if ($request->filled('search')) {
             $search = $request->search;
+
+            // 1. Search Teams
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhereHas('owner', function ($q) use ($search) {
@@ -30,6 +33,14 @@ class SuperAdminController extends Controller
                             ->orWhere('name', 'like', "%{$search}%");
                     });
             });
+
+            // 2. Search Users (Independent of teams)
+            $matchingUsers = User::where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->with('ownedTeams')
+                ->limit(10)
+                ->get();
         }
 
         if ($request->filled('status')) {
@@ -42,12 +53,13 @@ class SuperAdminController extends Controller
             ->latest()
             ->paginate(10, ['*'], 'backups');
 
-        return view('admin.dashboard', compact('stats', 'teams', 'globalBackups'));
+        return view('admin.dashboard', compact('stats', 'teams', 'globalBackups', 'matchingUsers'));
     }
 
     public function create()
     {
-        return view('admin.tenants.create');
+        $plans = \App\Models\Plan::all();
+        return view('admin.tenants.create', compact('plans'));
     }
 
     public function store(Request $request)
@@ -57,7 +69,7 @@ class SuperAdminController extends Controller
             'owner_name' => 'required|string|max:255',
             'owner_email' => 'required|email|unique:users,email',
             'owner_password' => 'required|string|min:8',
-            'plan' => 'required|in:basic,pro,enterprise',
+            'plan' => 'required|exists:plans,name',
         ]);
 
         try {
@@ -132,8 +144,41 @@ class SuperAdminController extends Controller
 
     public function edit($id)
     {
-        $team = Team::with(['owner', 'addOns'])->findOrFail($id);
-        return view('admin.tenants.edit', compact('team'));
+        $team = Team::with(['owner', 'addOns', 'billingOverrides.creator'])->findOrFail($id);
+        $plans = \App\Models\Plan::all();
+        return view('admin.tenants.edit', compact('team', 'plans'));
+    }
+
+    public function storeOverride(Request $request, $id)
+    {
+        $team = Team::findOrFail($id);
+
+        $validated = $request->validate([
+            'type' => 'required|in:limit_increase,feature_enable',
+            'key' => 'required|string',
+            'value' => 'required|string',
+            'reason' => 'required|string|max:500',
+            'duration' => 'nullable|integer|min:1',
+        ]);
+
+        app(\App\Services\BillingService::class)->createOverride(
+            $team,
+            $validated['type'],
+            $validated['key'],
+            $validated['value'],
+            $validated['reason'],
+            $validated['duration'] ?? 30
+        );
+
+        return redirect()->back()->with('flash.banner', "Billing override created for {$team->name}.")->with('flash.bannerStyle', 'success');
+    }
+
+    public function deleteOverride($id, $overrideId)
+    {
+        $override = \App\Models\BillingOverride::where('team_id', $id)->findOrFail($overrideId);
+        $override->delete();
+
+        return redirect()->back()->with('flash.banner', "Billing override removed.")->with('flash.bannerStyle', 'success');
     }
 
     public function update(Request $request, $id)
@@ -142,7 +187,7 @@ class SuperAdminController extends Controller
 
         $validated = $request->validate([
             'company_name' => 'required|string|max:255',
-            'plan' => 'required|in:basic,pro,enterprise',
+            'plan' => 'required|exists:plans,name',
             'subscription_status' => 'required|in:active,inactive,cancelled',
             'features' => 'nullable|array',
             'features.*' => 'string|in:backups,cloud_backups',
@@ -187,5 +232,30 @@ class SuperAdminController extends Controller
             ->route('admin.dashboard')
             ->with('flash.banner', "Workspace '{$name}' deleted successfully!")
             ->with('flash.bannerStyle', 'success');
+    }
+
+    public function auditLogs(Request $request)
+    {
+        $query = \App\Models\AuditLog::with('user')->latest();
+
+        if ($request->filled('event')) {
+            $query->where('event_type', 'like', "%{$request->event}%");
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('identifier', 'like', "%{$search}%")
+                    ->orWhere('ip_address', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $logs = $query->paginate(50);
+
+        return view('admin.audit-logs', compact('logs'));
     }
 }

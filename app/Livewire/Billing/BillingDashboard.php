@@ -18,7 +18,12 @@ class BillingDashboard extends Component
     public $wallet;
     public $usage;
     public $usagePercentage;
+    public $detailedStats;
+    public $plans;
     public $showTopUpModal = false;
+    public $showChangePlanModal = false;
+    public $selectedPlan = null;
+    public $planImpact = null;
     public $topUpAmount = 50;
 
     public function mount()
@@ -32,6 +37,7 @@ class BillingDashboard extends Component
         // Get current plan
         $planName = $this->team->subscription_plan ?? 'basic';
         $this->plan = Plan::where('name', $planName)->first();
+        $this->plans = Plan::all();
 
         // Get wallet
         $this->wallet = TeamWallet::firstOrCreate(
@@ -39,16 +45,36 @@ class BillingDashboard extends Component
             ['balance' => 0]
         );
 
-        // Get usage stats
-        $billingService = new BillingService();
-        $this->usagePercentage = $billingService->getUsagePercentage($this->team);
+        // Get detailed usage stats
+        $billingService = app(BillingService::class);
+        $this->detailedStats = $billingService->getDetailedUsageStats($this->team);
 
-        // Calculate actual usage
-        $this->usage = \App\Models\Message::where('team_id', $this->team->id)
-            ->where('direction', 'outbound')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
+        // Backward compatibility for existing view variable
+        $this->usage = $this->detailedStats['messages']['usage'];
+        $this->usagePercentage = ($this->detailedStats['messages']['limit'] > 0)
+            ? ($this->usage / $this->detailedStats['messages']['limit']) * 100
+            : 0;
+    }
+
+    public function selectPlan($planName)
+    {
+        $this->selectedPlan = $planName;
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $this->planImpact = $subscriptionService->analyzeImpact($this->team, $planName);
+        $this->showChangePlanModal = true;
+    }
+
+    public function confirmPlanChange()
+    {
+        if (!$this->selectedPlan)
+            return;
+
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $subscriptionService->changePlan($this->team, $this->selectedPlan);
+
+        session()->flash('message', "Plan successfully changed to " . ucfirst($this->selectedPlan));
+        $this->showChangePlanModal = false;
+        $this->loadData();
     }
 
     public function openTopUpModal()

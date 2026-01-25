@@ -42,93 +42,78 @@
                                 class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
                             </div>
 
-                            <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-widest text-slate-500">Subscription
-                                    Status <span class="text-rose-500">*</span></label>
-                                <div class="relative">
-                                    <select name="subscription_status"
-                                        class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                                        <option value="active" {{ old('subscription_status', $team->subscription_status) === 'active' ? 'selected' : '' }}>Active</option>
-                                        <option value="inactive" {{ old('subscription_status', $team->subscription_status) === 'inactive' ? 'selected' : '' }}>Inactive
-                                        </option>
-                                        <option value="cancelled" {{ old('subscription_status', $team->subscription_status) === 'cancelled' ? 'selected' : '' }}>Cancelled
-                                        </option>
-                                    </select>
-                                    <div
-                                        class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 9l-7 7-7-7" />
-                                        </svg>
+                            <!-- Billing & Plan -->
+                            <div class="space-y-6">
+                                <h3
+                                    class="text-xs font-black uppercase tracking-widest text-indigo-500 border-b border-indigo-50 dark:border-slate-800 pb-2 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                    Billing & Plan Configuration
+                                </h3>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label
+                                            class="text-xs font-black uppercase tracking-widest text-slate-500">Subscription
+                                            Status</label>
+                                        <select name="subscription_status"
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold">
+                                            <option value="active" {{ old('subscription_status', $team->subscription_status) === 'active' ? 'selected' : '' }}>Active (Full
+                                                Access)</option>
+                                            <option value="inactive" {{ old('subscription_status', $team->subscription_status) === 'inactive' ? 'selected' : '' }}>Inactive
+                                                (Read-Only)</option>
+                                            <option value="cancelled" {{ old('subscription_status', $team->subscription_status) === 'cancelled' ? 'selected' : '' }}>Cancelled
+                                                (Suspended)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label
+                                            class="text-xs font-black uppercase tracking-widest text-slate-500">Workspace
+                                            Plan</label>
+                                        <select name="plan"
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold">
+                                            @foreach($plans as $plan)
+                                                <option value="{{ $plan->name }}" {{ old('plan', $team->subscription_plan) === $plan->name ? 'selected' : '' }}>
+                                                    {{ $plan->display_name }}
+                                                    (${{ number_format($plan->monthly_price, 0) }}/mo)
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
-                                @error('subscription_status') <span
-                                class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
                             </div>
 
-                            <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-widest text-slate-500">Subscription
-                                    Plan <span class="text-rose-500">*</span></label>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="plan" value="basic" class="peer hidden" {{ old('plan', $team->subscription_plan) === 'basic' ? 'checked' : '' }}>
-                                        <div
-                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:bg-indigo-500/5 transition-all text-center">
-                                            <div class="font-black text-slate-900 dark:text-white">Basic</div>
-                                            <div class="text-xs font-bold text-slate-400">Starter features</div>
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="plan" value="pro" class="peer hidden" {{ old('plan', $team->subscription_plan) === 'pro' ? 'checked' : '' }}>
-                                        <div
-                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:bg-indigo-500/5 transition-all text-center">
-                                            <div class="font-black text-slate-900 dark:text-white">Pro</div>
-                                            <div class="text-xs font-bold text-slate-400">Most popular</div>
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="plan" value="enterprise" class="peer hidden" {{ old('plan', $team->subscription_plan) === 'enterprise' ? 'checked' : '' }}>
-                                        <div
-                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:bg-indigo-500/5 transition-all text-center">
-                                            <div class="font-black text-slate-900 dark:text-white">Enterprise</div>
-                                            <div class="text-xs font-bold text-slate-400">Full power</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                @error('plan') <span
-                                class="text-rose-500 text-xs font-bold uppercase">{{ $message }}</span> @enderror
-                            </div>
-
-                            <!-- Feature Add-ons -->
+                            <!-- Infrastructure Capabilities -->
                             <div class="space-y-4 pt-4">
                                 <h3
-                                    class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
-                                    Feature Add-ons</h3>
+                                    class="text-xs font-black uppercase tracking-widest text-emerald-500 border-b border-emerald-50 dark:border-slate-800 pb-2 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                    Infrastructure & Add-ons
+                                </h3>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enable
+                                    system-level capabilities beyond the standard plan.</p>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                     <label class="relative flex items-center cursor-pointer group">
                                         <input type="checkbox" name="features[]" value="backups" class="peer hidden" {{ $team->addOns->contains('type', 'backups') ? 'checked' : '' }}>
                                         <div
-                                            class="flex items-center gap-4 w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-wa-green peer-checked:bg-wa-green/5 transition-all">
-                                            <div
-                                                class="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-wa-green transition-colors shadow-sm">
-                                                <svg class="w-6 h-6" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-                                                </svg>
-                                            </div>
+                                            class="flex items-center gap-4 w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-emerald-500 peer-checked:bg-emerald-500/5 transition-all">
                                             <div class="flex-1">
                                                 <div
                                                     class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                                    Manual Backups</div>
+                                                    System Snapshots</div>
                                                 <div
                                                     class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                    Enable Snapshot Recovery</div>
+                                                    Point-in-time recovery</div>
                                             </div>
                                             <div
-                                                class="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center peer-checked:bg-wa-green peer-checked:border-wa-green transition-all">
+                                                class="w-6 h-6 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-all">
                                                 <svg class="w-4 h-4 text-white hidden peer-checked:block" fill="none"
                                                     stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -143,19 +128,10 @@
                                             class="peer hidden" {{ $team->addOns->contains('type', 'cloud_backups') ? 'checked' : '' }}>
                                         <div
                                             class="flex items-center gap-4 w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-500/5 transition-all">
-                                            <div
-                                                class="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors shadow-sm">
-                                                <svg class="w-6 h-6" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                                </svg>
-                                            </div>
                                             <div class="flex-1">
                                                 <div
                                                     class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                                    Cloud Sync</div>
+                                                    Cloud Off-site</div>
                                                 <div
                                                     class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                                     Google Drive Integration</div>
@@ -211,6 +187,100 @@
                         </button>
                     </div>
                 </form>
+            </div>
+            <!-- Billing Overrides -->
+            <div
+                class="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+                <div class="p-8 md:p-10 space-y-8">
+                    <h3
+                        class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                        Billing Overrides (Staff Only)
+                    </h3>
+
+                    @if($team->billingOverrides->count() > 0)
+                        <div class="space-y-4">
+                            @foreach($team->billingOverrides as $override)
+                                <div
+                                    class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border {{ $override->trashed() || ($override->expires_at && $override->expires_at->isPast()) ? 'opacity-50 grayscale' : 'border-indigo-100 dark:border-indigo-900' }}">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-indigo-500 text-white">
+                                                {{ str_replace('_', ' ', $override->type) }}
+                                            </span>
+                                            <span class="text-sm font-black">{{ $override->key }}: {{ $override->value }}</span>
+                                        </div>
+                                        <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">
+                                            By {{ $override->creator->name ?? 'System' }} •
+                                            {{ $override->expires_at ? 'Expires ' . $override->expires_at->format('M d, Y') : 'Permanent' }}
+                                        </p>
+                                        <p class="text-xs italic text-slate-500 mt-1">"{{ $override->reason }}"</p>
+                                    </div>
+                                    <form action="{{ route('admin.tenants.overrides.destroy', [$team->id, $override->id]) }}"
+                                        method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-all">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs font-bold text-slate-400 text-center py-4 italic">No active overrides for this
+                            workspace.</p>
+                    @endif
+
+                    <!-- Add New Override -->
+                    <form action="{{ route('admin.tenants.overrides.store', $team->id) }}" method="POST"
+                        class="pt-6 border-t border-slate-50 dark:border-slate-800">
+                        @csrf
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label
+                                    class="text-[10px] font-black uppercase tracking-widest text-slate-500">Type</label>
+                                <select name="type"
+                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold">
+                                    <option value="limit_increase">Limit Increase</option>
+                                    <option value="feature_enable">Feature Enable</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-500">Metric
+                                    Key</label>
+                                <input type="text" name="key" placeholder="e.g., message_limit" required
+                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-500">New
+                                    Value</label>
+                                <input type="text" name="value" placeholder="e.g., 5000 or true" required
+                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-slate-500">Duration
+                                    (Days)</label>
+                                <input type="number" name="duration" value="30"
+                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold">
+                            </div>
+                        </div>
+                        <div class="mt-4 space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-500">Internal
+                                Reason</label>
+                            <textarea name="reason" rows="2" required placeholder="Why is this override being granted?"
+                                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold"></textarea>
+                        </div>
+                        <button type="submit"
+                            class="mt-4 w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:scale-[1.01] transition-all">
+                            Apply Override
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

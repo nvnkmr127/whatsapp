@@ -11,10 +11,26 @@ Route::get('/', function () {
 
 Route::get('/dev/login/{email}', [\App\Http\Controllers\DevController::class, 'loginAs'])->name('dev.login');
 
+// Passwordless Auth Routes
+Route::prefix('auth')->name('auth.')->group(function () {
+    Route::post('/otp/request', [\App\Http\Controllers\Auth\PasswordlessAuthController::class, 'requestOtp'])
+        ->middleware('throttle:3,10') // Max 3 requests per 10 minutes
+        ->name('otp.request');
+
+    Route::match(['get', 'post'], '/otp/verify', [\App\Http\Controllers\Auth\PasswordlessAuthController::class, 'verifyOtp'])
+        ->middleware('throttle:5,1') // Max 5 verification attempts per minute
+        ->name('otp.verify');
+
+    // Google OAuth Routes
+    Route::get('/google/redirect', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->name('google.redirect');
+    Route::get('/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->name('google.callback');
+});
+
 Route::middleware([
     'auth:sanctum',
     'Laravel\Jetstream\Http\Middleware\AuthenticateSession',
     'verified',
+    'subscription',
 ])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
@@ -39,6 +55,7 @@ Route::middleware([
     // AI Business Brain
     Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware(['can:manage-settings', 'plan_feature:ai']);
     Route::get('/knowledge-base/feedback', \App\Livewire\Developer\KnowledgeBaseFeedback::class)->name('knowledge-base.feedback')->middleware(['can:manage-settings', 'plan_feature:ai']);
+    Route::get('/settings', \App\Livewire\Settings\SettingsHub::class)->name('settings.hub')->middleware('can:manage-settings');
     Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware(['can:manage-settings', 'plan_feature:ai']);
     Route::get('/settings/system', \App\Livewire\Settings\SystemSettings::class)->name('settings.system')->middleware('can:manage-settings');
     Route::get('/settings/categories', \App\Livewire\Settings\CategoryManager::class)->name('settings.categories')->middleware('can:manage-settings');
@@ -59,8 +76,17 @@ Route::middleware([
         Route::get('/admin/tenants/{id}/edit', [\App\Http\Controllers\SuperAdminController::class, 'edit'])->name('admin.tenants.edit');
         Route::put('/admin/tenants/{id}', [\App\Http\Controllers\SuperAdminController::class, 'update'])->name('admin.tenants.update');
         Route::delete('/admin/tenants/{id}', [\App\Http\Controllers\SuperAdminController::class, 'destroy'])->name('admin.tenants.destroy');
+        Route::get('/admin/audit-logs', [\App\Http\Controllers\SuperAdminController::class, 'auditLogs'])->name('admin.audit-logs');
         Route::get('/admin/plans', \App\Livewire\Admin\PlanManager::class)->name('admin.plans');
+        Route::post('/admin/tenants/{id}/overrides', [\App\Http\Controllers\SuperAdminController::class, 'storeOverride'])->name('admin.tenants.overrides.store');
+        Route::delete('/admin/tenants/{id}/overrides/{overrideId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteOverride'])->name('admin.tenants.overrides.destroy');
+
+        // Impersonation
+        Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\Admin\ImpersonationController::class, 'enter'])->name('admin.impersonate.enter');
     });
+
+    // Logout and Exit Impersonation (Universal)
+    Route::get('/admin/impersonate/exit', [\App\Http\Controllers\Admin\ImpersonationController::class, 'exit'])->name('admin.impersonate.exit');
 
     // Agent Console (Agents, Managers, Admins)
     Route::get('/chat', \App\Livewire\Chat\ChatDashboard::class)->name('chat')->middleware('can:chat-access');
@@ -139,7 +165,9 @@ Route::middleware([
     Route::post('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'store'])->name('backups.store');
     Route::get('/backups/{id}/download', [\App\Http\Controllers\Backup\BackupController::class, 'download'])->name('backups.download');
     Route::post('/backups/{id}/restore', [\App\Http\Controllers\Backup\RestoreController::class, 'restore'])->name('backups.restore');
-    Route::post('/backups/upload-restore', [\App\Http\Controllers\Backup\RestoreController::class, 'uploadAndRestore'])->name('backups.upload-restore');
+    // Identity Management
+    Route::delete('/identities/{identity}', [\App\Http\Controllers\UserIdentityController::class, 'destroy'])->name('identities.destroy');
+
 });
 
 // Embed Routes (Publicly accessible but Token protected internally)

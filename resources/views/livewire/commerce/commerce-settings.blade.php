@@ -63,13 +63,6 @@
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
                         <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Store <span class="text-wa-teal">Integrity</span></h2>
-                        @php
-                            $stateColors = [
-                                'READY' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20',
-                                'WARNING' => 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-                                'BLOCKED' => 'bg-rose-500/10 text-rose-600 border-rose-500/20'
-                            ];
-                        @endphp
                         <span class="px-3 py-1 text-[10px] font-black uppercase rounded-full border {{ $stateColors[$readiness['state']] }}">
                             {{ $readiness['state'] }}
                         </span>
@@ -376,15 +369,6 @@
                         <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50">
                             <div class="flex items-center justify-between mb-2">
                                 <h4 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ $risk['title'] }}</h4>
-                                @php
-                                    $typeStyles = [
-                                        'High Risk' => 'bg-amber-100 text-amber-600',
-                                        'Critical' => 'bg-rose-100 text-rose-600',
-                                        'Blocked' => 'bg-slate-900 text-white',
-                                        'Operational' => 'bg-indigo-100 text-indigo-600',
-                                        'Notice' => 'bg-blue-100 text-blue-600'
-                                    ];
-                                @endphp
                                 <span class="px-2 py-0.5 text-[8px] font-black uppercase rounded {{ $typeStyles[$risk['type']] ?? 'bg-slate-100 text-slate-600' }}">
                                     {{ $risk['type'] }}
                                 </span>
@@ -402,10 +386,6 @@
             <x-secondary-button wire:click="cancelSave" wire:loading.attr="disabled" class="rounded-xl">
                 Discard Changes
             </x-secondary-button>
-
-            @php
-                $isBlocked = collect($risk_messages)->contains('type', 'Blocked');
-            @endphp
 
             @if($isBlocked)
                 <button disabled class="ml-3 px-6 py-2 bg-slate-200 text-slate-400 font-extrabold uppercase text-xs rounded-xl cursor-not-allowed">

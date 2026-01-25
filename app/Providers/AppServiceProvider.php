@@ -95,6 +95,11 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ($permissions as $permission) {
             \Illuminate\Support\Facades\Gate::define($permission, function ($user) use ($permission) {
+                // Global Override for Super Admin
+                if ($user->isSuperAdmin()) {
+                    return true;
+                }
+
                 return $user->hasTeamPermission($user->currentTeam, $permission) || $user->ownsTeam($user->currentTeam);
             });
         }

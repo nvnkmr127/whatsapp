@@ -42,15 +42,36 @@
                         <x-nav-link href="{{ route('automations.index') }}" :active="request()->routeIs('automations.*')">
                             {{ __('Automations') }}
                         </x-nav-link>
+
+                        @if(auth()->user()->hasPlanFeature('flows'))
+                            <x-nav-link href="{{ route('flows.index') }}" :active="request()->routeIs('flows.*')">
+                                {{ __('Flows') }}
+                            </x-nav-link>
+                        @endif
                     @endcan
 
+                    @if(auth()->user()->hasPlanFeature('commerce'))
+                        @can('manage-campaigns')
+                            <x-nav-link href="{{ route('commerce.dashboard') }}" :active="request()->routeIs('commerce.*')">
+                                {{ __('Commerce') }}
+                            </x-nav-link>
+                        @endcan
+                    @endif
+
                     @can('manage-settings')
+                        @if(auth()->user()->hasPlanFeature('ai'))
+                            <x-nav-link href="{{ route('knowledge-base.index') }}"
+                                :active="request()->routeIs('knowledge-base.*')">
+                                {{ __('AI Brain') }}
+                            </x-nav-link>
+                        @endif
+
                         <x-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
                             {{ __('Analytics') }}
                         </x-nav-link>
 
-                        <x-nav-link href="{{ route('backups.index') }}" :active="request()->routeIs('backups.*')">
-                            {{ __('Backups') }}
+                        <x-nav-link href="{{ route('settings.hub') }}" :active="request()->routeIs('settings.*')">
+                            {{ __('Settings') }}
                         </x-nav-link>
                     @endcan
                 </div>
@@ -92,6 +113,12 @@
                                         <x-dropdown-link href="{{ route('teams.whatsapp_config') }}">
                                             {{ __('WhatsApp API') }}
                                         </x-dropdown-link>
+
+                                        @if(auth()->user()->hasPlanFeature('api_access'))
+                                            <x-dropdown-link href="{{ route('developer.overview') }}">
+                                                {{ __('Developer Portal') }}
+                                            </x-dropdown-link>
+                                        @endif
 
                                         <x-dropdown-link href="{{ route('backups.index') }}">
                                             {{ __('Backup & Restore') }}
@@ -261,13 +288,26 @@
             @endcan
 
             @can('manage-settings')
+                @if(auth()->user()->hasPlanFeature('ai'))
+                    <x-responsive-nav-link href="{{ route('knowledge-base.index') }}"
+                        :active="request()->routeIs('knowledge-base.*')">
+                        {{ __('AI Brain') }}
+                    </x-responsive-nav-link>
+                @endif
+
                 <x-responsive-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
                     {{ __('Analytics') }}
                 </x-responsive-nav-link>
 
-                <x-responsive-nav-link href="{{ route('backups.index') }}" :active="request()->routeIs('backups.*')">
-                    {{ __('Backups') }}
+                <x-responsive-nav-link href="{{ route('settings.hub') }}" :active="request()->routeIs('settings.*')">
+                    {{ __('Settings') }}
                 </x-responsive-nav-link>
+
+                @if(auth()->user()->hasPlanFeature('api_access'))
+                    <x-responsive-nav-link href="{{ route('developer.overview') }}" :active="request()->routeIs('developer.*')">
+                        {{ __('Developer Portal') }}
+                    </x-responsive-nav-link>
+                @endif
             @endcan
         </div>
 
@@ -328,8 +368,7 @@
                         :active="request()->routeIs('admin.dashboard')">
                         {{ __('Admin Dashboard') }}
                     </x-responsive-nav-link>
-                    <x-responsive-nav-link href="{{ route('backups.index') }}"
-                        :active="request()->routeIs('backups.*')">
+                    <x-responsive-nav-link href="{{ route('backups.index') }}" :active="request()->routeIs('backups.*')">
                         {{ __('System Backups') }}
                     </x-responsive-nav-link>
                 @endif

@@ -24,6 +24,9 @@ Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
 Schedule::command('automation:resume')->everyMinute();
 
+// Security & Maintenance
+Schedule::command('audit:prune --days=90')->monthly()->at('01:00');
+
 // Ecommerce Integration Health Checks
 Schedule::job(new \App\Jobs\CheckIntegrationHealth)->everySixHours();
 
