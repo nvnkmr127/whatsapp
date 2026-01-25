@@ -33,6 +33,22 @@ class AiCommerceService
             return false;
         }
 
+        // 0.5 Billing Enforcement
+        if (!$team->canAccess('ai')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} - Feature [ai] not in plan.");
+            return false;
+        }
+
+        if (!$team->canAccess('commerce')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} - Feature [commerce] not in plan.");
+            return false;
+        }
+
+        if (!$team->canAccess('send_message')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} - Message limit reached.");
+            return false;
+        }
+
         // Fetch Centralized Settings
         $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? env('OPENAI_API_KEY');
         $model = \App\Models\Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? 'gpt-4o';
@@ -126,6 +142,15 @@ class AiCommerceService
             if (!isset($aiJson['reply_text'])) {
                 return false;
             }
+
+            // Record Usage for Billing
+            \App\Models\ActivityLog::create([
+                'team_id' => $teamId,
+                'action' => 'ai_interaction',
+                'description' => "AI Response sent to {$contact->phone_number}",
+                'subject_type' => get_class($contact),
+                'subject_id' => $contact->id
+            ]);
 
             // Check for grounding failure (unanswered)
             if (str_contains($aiJson['reply_text'], "I'm sorry, I don't have information about that in my business knowledge base.")) {

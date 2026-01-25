@@ -71,6 +71,7 @@
                 @include('components.subscription-banner')
 
                 <div class="px-8 py-8">
+                    <x-billing-alerts />
                     {{ $slot }}
                 </div>
             </main>

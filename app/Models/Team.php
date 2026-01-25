@@ -7,6 +7,8 @@ use Laravel\Jetstream\Events\TeamCreated;
 use Laravel\Jetstream\Events\TeamDeleted;
 use Laravel\Jetstream\Events\TeamUpdated;
 use Laravel\Jetstream\Team as JetstreamTeam;
+use App\Models\Message;
+use App\Models\Plan;
 
 class Team extends JetstreamTeam
 {
@@ -97,6 +99,7 @@ class Team extends JetstreamTeam
             'chat_status_rules' => 'array',
             'commerce_config' => 'array',
             'subscription_ends_at' => 'datetime',
+            'subscription_grace_ends_at' => 'datetime',
             'whatsapp_setup_progress' => 'array',
             'whatsapp_setup_started_at' => 'datetime',
             'whatsapp_setup_completed_at' => 'datetime',
@@ -182,6 +185,88 @@ class Team extends JetstreamTeam
     }
 
     /**
+     * Get active billing overrides.
+     */
+    public function billingOverrides()
+    {
+        return $this->hasMany(BillingOverride::class);
+    }
+
+    /**
+     * Unified Access Check for all Billing & Feature constraints.
+     */
+    public function canAccess(string $capability, array $context = []): bool
+    {
+        // 1. Global Subscription Check
+        if ($this->subscription_status === 'expired') {
+            return false;
+        }
+
+        if ($this->subscription_ends_at && $this->subscription_ends_at->isPast()) {
+            if (!$this->isInGracePeriod()) {
+                return false;
+            }
+        }
+
+        // 2. Feature-Flag Enforcement
+        if (in_array($capability, ['chat', 'contacts', 'templates', 'campaigns', 'automations', 'analytics', 'commerce', 'ai', 'api_access', 'webhooks', 'flows'])) {
+            return $this->hasFeature($capability);
+        }
+
+        // 3. Resource Limit Enforcement
+        return match ($capability) {
+            'add_agent' => ($this->users()->count() + $this->teamInvitations()->count()) < $this->getPlanLimit('agent_limit'),
+            'send_message' => $this->checkMessageLimits(),
+            default => false
+        };
+    }
+
+    /**
+     * Internal check for message limits to avoid circular service dependencies.
+     */
+    protected function checkMessageLimits(): bool
+    {
+        $limit = $this->getPlanLimit('message_limit', 1000);
+
+        if ($limit === 0)
+            return true; // Unlimited
+
+        $usage = Message::where('team_id', $this->id)
+            ->where('direction', 'outbound')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        return $usage < $limit;
+    }
+
+    /**
+     * Get a specific limit from the current plan.
+     */
+    public function getPlanLimit(string $key, $default = 0)
+    {
+        // 1. Check for active overrides first (UC-30)
+        $override = $this->billingOverrides()
+            ->where('type', 'limit_increase')
+            ->where('key', $key)
+            ->active()
+            ->latest()
+            ->first();
+
+        if ($override) {
+            return (int) $override->value;
+        }
+
+        // 2. Fallback to Plan
+        $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
+        if (!$plan) {
+            return $default;
+        }
+
+        return $plan->{$key} ?? $default;
+    }
+
+    /**
      * Centralized feature check logic.
      * Checks subscription plan and active add-ons.
      */
@@ -192,7 +277,18 @@ class Team extends JetstreamTeam
             return false;
         }
 
-        // 2. Check Plan Features
+        // 2. Check Overrides (Manually enabled features)
+        $override = $this->billingOverrides()
+            ->where('type', 'feature_enable')
+            ->where('key', $feature)
+            ->active()
+            ->exists();
+
+        if ($override) {
+            return true;
+        }
+
+        // 3. Check Plan Features
         $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
         if ($plan && $plan->hasFeature($feature)) {
             return true;
@@ -270,6 +366,14 @@ class Team extends JetstreamTeam
     public function isWhatsAppSuspended(): bool
     {
         return $this->isInSetupState(\App\Enums\WhatsAppSetupState::SUSPENDED);
+    }
+
+    /**
+     * Check if the team is currently in a subscription grace period.
+     */
+    public function isInGracePeriod(): bool
+    {
+        return $this->subscription_grace_ends_at && $this->subscription_grace_ends_at->isFuture();
     }
 
     /**

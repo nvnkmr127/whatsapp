@@ -48,8 +48,25 @@ class InviteTeamMember implements InvitesTeamMembers
         ], $this->rules($team), [
             'email.unique' => __('This user has already been invited to the team.'),
         ])->after(
-            $this->ensureUserIsNotAlreadyOnTeam($team, $email)
-        )->validateWithBag('addTeamMember');
+                $this->ensureTeamIsNotFull($team)
+            )->after(
+                $this->ensureUserIsNotAlreadyOnTeam($team, $email)
+            )->validateWithBag('addTeamMember');
+    }
+
+    /**
+     * Ensure that the team has not reached its agent limit.
+     */
+    protected function ensureTeamIsNotFull(Team $team): Closure
+    {
+        return function ($validator) use ($team) {
+            if (!$team->canAccess('add_agent')) {
+                $validator->errors()->add(
+                    'email',
+                    __('This team has reached its agent limit for the current plan.')
+                );
+            }
+        };
     }
 
     /**
@@ -61,14 +78,15 @@ class InviteTeamMember implements InvitesTeamMembers
     {
         return array_filter([
             'email' => [
-                'required', 'email',
+                'required',
+                'email',
                 Rule::unique(Jetstream::teamInvitationModel())->where(function (Builder $query) use ($team) {
                     $query->where('team_id', $team->id);
                 }),
             ],
             'role' => Jetstream::hasRoles()
-                            ? ['required', 'string', new Role]
-                            : null,
+                ? ['required', 'string', new Role]
+                : null,
         ]);
     }
 

@@ -169,6 +169,17 @@ class AutomationService
                 return;
             }
 
+            // 0. Billing Enforcement
+            if (!$automation->team->canAccess('automations')) {
+                Log::warning("Automation #{$automation->id} skipped: Feature [automations] not accessible for team {$automation->team_id}.");
+                return;
+            }
+
+            if (!$automation->team->canAccess('send_message')) {
+                Log::warning("Automation #{$automation->id} skipped: Message limit reached for team {$automation->team_id}.");
+                return;
+            }
+
             // Interrupt existing runs
             AutomationRun::where('contact_id', $contact->id)
                 ->whereIn('status', ['active', 'waiting_input', 'paused'])
@@ -504,6 +515,10 @@ class AutomationService
 
     protected function handleOpenAiNode(AutomationRun $run, array $node)
     {
+        if (!$run->automation->team->canAccess('ai')) {
+            throw new \Exception("AI feature not available on your current plan.");
+        }
+
         $teamId = $run->automation->team_id;
         $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_$teamId")->value('value');
         if (!$apiKey)
@@ -575,6 +590,15 @@ STRICT GROUNDING RULES:
             $vars = $run->state_data['variables'];
             $vars[$node['data']['save_to'] ?? 'ai_response'] = $content;
             $run->update(['state_data' => array_merge($run->state_data, ['variables' => $vars])]);
+
+            // Record Usage for Billing
+            \App\Models\ActivityLog::create([
+                'team_id' => $teamId,
+                'action' => 'ai_interaction',
+                'description' => "AI Node executed in Automation #{$run->automation_id}",
+                'subject_type' => get_class($run),
+                'subject_id' => $run->id
+            ]);
         }
     }
 

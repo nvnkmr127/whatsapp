@@ -7,17 +7,16 @@ use App\Models\TeamWallet;
 use App\Models\TeamTransaction;
 use App\Models\WhatsAppConversation;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class BillingService
 {
     public function getUsagePercentage(Team $team)
     {
-        $planName = $team->subscription_plan ?? 'basic';
-        $plan = \App\Models\Plan::where('name', $planName)->first();
-        $limit = $plan ? $plan->message_limit : 1000;
+        $limit = $team->getPlanLimit('message_limit', 1000);
 
         if ($limit == 0)
-            return 0; // Unlimited?
+            return 0; // Unlimited
 
         $usage = \App\Models\Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
@@ -33,23 +32,12 @@ class BillingService
      */
     public function checkPlanLimits(Team $team)
     {
-        // 1. Get Plan
-        // Assuming we look up Plan by name/slug stored in team->subscription_plan
-        // Or we have a Plan model ID. 
-        // Migration added 'subscription_plan' string. Let's map it or fetch Plan model.
-        // Simple map for MVP if Plan model lookup is complex, but we have Plan model now.
-        $planName = $team->subscription_plan ?? 'basic';
-        $plan = \App\Models\Plan::where('name', $planName)->first();
+        $limit = $team->getPlanLimit('message_limit', 1000);
 
-        if (!$plan) {
-            // Fallback to basic limits if no plan found (or Trial)
-            $limit = 1000;
-        } else {
-            $limit = $plan->message_limit;
-        }
+        if ($limit === 0)
+            return true; // Unlimited
 
         // 2. Count Usage (Current Month)
-        // We track 'sent' messages.
         $usage = \App\Models\Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
             ->whereMonth('created_at', now()->month)
@@ -141,6 +129,103 @@ class BillingService
         };
     }
 
+    public function getDetailedUsageStats(Team $team): array
+    {
+        return [
+            'messages' => [
+                'usage' => \App\Models\Message::where('team_id', $team->id)
+                    ->where('direction', 'outbound')
+                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('created_at', now()->year)
+                    ->count(),
+                'limit' => $team->getPlanLimit('message_limit', 1000),
+                'label' => 'Outbound Messages',
+                'type' => 'monthly'
+            ],
+            'agents' => [
+                'usage' => $team->users()->count() + $team->teamInvitations()->count(),
+                'limit' => $team->getPlanLimit('agent_limit', 2),
+                'label' => 'Team Agents',
+                'type' => 'provisioned'
+            ],
+            'automations' => [
+                'usage' => \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $team->id))
+                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('created_at', now()->year)
+                    ->count(),
+                'limit' => $team->getPlanLimit('automation_run_limit', 100),
+                'label' => 'Automation Runs',
+                'type' => 'monthly'
+            ],
+            'contacts' => [
+                'usage' => $team->contacts()->count(),
+                'limit' => $team->getPlanLimit('contact_limit', 1000),
+                'label' => 'CRM Contacts',
+                'type' => 'total'
+            ],
+            'ai_conversations' => [
+                'usage' => \App\Models\ActivityLog::where('team_id', $team->id)
+                    ->where('action', 'ai_interaction')
+                    ->whereMonth('created_at', now()->month)
+                    ->whereYear('created_at', now()->year)
+                    ->count(),
+                'limit' => $team->getPlanLimit('ai_conversation_limit', 50),
+                'label' => 'AI Interactions',
+                'type' => 'monthly'
+            ],
+        ];
+    }
+
+    /**
+     * Identify which resources are near or over their limits.
+     */
+    public function getWarningStatus(Team $team): array
+    {
+        $stats = $this->getDetailedUsageStats($team);
+        $warnings = [];
+
+        foreach ($stats as $key => $data) {
+            if ($data['limit'] === 0)
+                continue; // Unlimited
+
+            $percent = ($data['usage'] / $data['limit']) * 100;
+            $level = null;
+            $message = "";
+
+            if ($percent >= 100) {
+                $level = 'danger';
+                $message = "Limit reached! You have used all {$data['limit']} {$data['label']}. Please upgrade for more access.";
+            } elseif ($percent >= 90) {
+                $level = 'warning';
+                $message = "Critical threshold! You are at {$percent}% of your {$data['label']} limit.";
+            } elseif ($percent >= 80) {
+                $level = 'info';
+                $message = "Usage alert: You have reached 80% of your {$data['label']} limit.";
+            }
+
+            if ($level) {
+                $warnings[] = [
+                    'level' => $level,
+                    'metric' => $key,
+                    'message' => $message,
+                    'percent' => $percent
+                ];
+
+                // Cooldown: Only dispatch event if level has increased
+                $cacheKey = "billing_alert_{$team->id}_{$key}";
+                $lastLevel = \Illuminate\Support\Facades\Cache::get($cacheKey);
+
+                $levels = ['info' => 1, 'warning' => 2, 'danger' => 3];
+                if (!$lastLevel || ($levels[$level] > ($levels[$lastLevel] ?? 0))) {
+                    \App\Events\UsageThresholdReached::dispatch($team, $key, $level, $percent, $message);
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, $level, now()->addHours(24));
+                }
+            }
+        }
+
+        return $warnings;
+    }
+
     public function deposit(Team $team, $amount, $note = 'Deposit')
     {
         $wallet = TeamWallet::firstOrCreate(
@@ -157,5 +242,50 @@ class BillingService
             'description' => $note,
             'invoice_number' => 'INV-' . strtoupper(uniqid()),
         ]);
+    }
+
+    /**
+     * Log a billing-related action for audit purposes.
+     */
+    public function logBillingEvent(Team $team, string $action, string $description, array $properties = [])
+    {
+        \App\Models\ActivityLog::create([
+            'team_id' => $team->id,
+            'user_id' => auth()->id(),
+            'action' => "billing.{$action}",
+            'description' => $description,
+            'properties' => $properties,
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
+    /**
+     * Create a manual override for a team's billing constraints.
+     * Restricted to Super Admins.
+     */
+    public function createOverride(Team $team, string $type, string $key, $value, string $reason, $durationDays = 30)
+    {
+        // Permission check should be done in controller/middleware, but double check here.
+        if (!auth()->user()?->is_super_admin) {
+            throw new \Exception("Unauthorized: Only Super Admins can create billing overrides.");
+        }
+
+        $override = \App\Models\BillingOverride::create([
+            'team_id' => $team->id,
+            'created_by' => auth()->id(),
+            'type' => $type,
+            'key' => $key,
+            'value' => $value,
+            'reason' => $reason,
+            'expires_at' => $durationDays ? now()->addDays($durationDays) : null,
+        ]);
+
+        $this->logBillingEvent($team, 'override_created', "Manual override created for {$key}", [
+            'type' => $type,
+            'value' => $value,
+            'expires_at' => $override->expires_at
+        ]);
+
+        return $override;
     }
 }

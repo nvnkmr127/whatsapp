@@ -73,6 +73,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\NotifyAdminsOfTokenExpiry::class
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\UsageThresholdReached::class,
+            \App\Listeners\NotifyTeamOfBillingAlert::class
+        );
+
         // Catch-all for Domain Events (Signal Sourcing)
         \Illuminate\Support\Facades\Event::listen(
             'App\Events\*',

@@ -13,11 +13,13 @@ return new class extends Migration {
     {
         // First, remove any duplicate tag assignments
         DB::statement('
-            DELETE t1 FROM contact_tag_pivot t1
-            INNER JOIN contact_tag_pivot t2 
-            WHERE t1.id > t2.id 
-            AND t1.contact_id = t2.contact_id 
-            AND t1.tag_id = t2.tag_id
+            DELETE FROM contact_tag_pivot 
+            WHERE id IN (
+                SELECT t1.id 
+                FROM contact_tag_pivot t1
+                INNER JOIN contact_tag_pivot t2 ON t1.contact_id = t2.contact_id AND t1.tag_id = t2.tag_id
+                WHERE t1.id > t2.id
+            )
         ');
 
         // Add unique constraint to prevent future duplicates

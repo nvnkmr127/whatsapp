@@ -13,11 +13,14 @@ return new class extends Migration {
         // First, clean up any duplicate whatsapp_message_id values
         // Keep the oldest message for each duplicate whatsapp_message_id
         DB::statement("
-            DELETE m1 FROM messages m1
-            INNER JOIN messages m2 
-            WHERE m1.whatsapp_message_id = m2.whatsapp_message_id
-            AND m1.whatsapp_message_id IS NOT NULL
-            AND m1.id > m2.id
+            DELETE FROM messages 
+            WHERE id IN (
+                SELECT m1.id 
+                FROM messages m1
+                INNER JOIN messages m2 ON m1.whatsapp_message_id = m2.whatsapp_message_id
+                WHERE m1.id > m2.id
+                AND m1.whatsapp_message_id IS NOT NULL
+            )
         ");
 
         Schema::table('messages', function (Blueprint $table) {

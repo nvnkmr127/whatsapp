@@ -13,7 +13,7 @@ Route::get('/dev/login/{email}', [\App\Http\Controllers\DevController::class, 'l
 
 Route::middleware([
     'auth:sanctum',
-    config('jetstream.auth_session'),
+    'Laravel\Jetstream\Http\Middleware\AuthenticateSession',
     'verified',
 ])->group(function () {
     Route::get('/dashboard', function () {
@@ -37,9 +37,9 @@ Route::middleware([
     Route::get('/whatsapp/opt-in', \App\Livewire\Teams\OptInManagement::class)->name('teams.whatsapp_opt_in')->middleware('can:manage-settings');
 
     // AI Business Brain
-    Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware('can:manage-settings');
-    Route::get('/knowledge-base/feedback', \App\Livewire\Developer\KnowledgeBaseFeedback::class)->name('knowledge-base.feedback')->middleware('can:manage-settings');
-    Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware('can:manage-settings');
+    Route::get('/knowledge-base', KnowledgeBaseManager::class)->name('knowledge-base.index')->middleware(['can:manage-settings', 'plan_feature:ai']);
+    Route::get('/knowledge-base/feedback', \App\Livewire\Developer\KnowledgeBaseFeedback::class)->name('knowledge-base.feedback')->middleware(['can:manage-settings', 'plan_feature:ai']);
+    Route::get('/settings/ai', AiSettings::class)->name('settings.ai')->middleware(['can:manage-settings', 'plan_feature:ai']);
     Route::get('/settings/system', \App\Livewire\Settings\SystemSettings::class)->name('settings.system')->middleware('can:manage-settings');
     Route::get('/settings/categories', \App\Livewire\Settings\CategoryManager::class)->name('settings.categories')->middleware('can:manage-settings');
     Route::get('/settings/canned-messages', \App\Livewire\Settings\CannedMessageManager::class)->name('settings.canned-messages')->middleware('can:manage-settings');
@@ -99,8 +99,8 @@ Route::middleware([
     Route::get('/automations/builder/{automationId?}', \App\Livewire\Automations\AutomationBuilder::class)->name('automations.builder')->middleware(['can:manage-campaigns', 'plan_feature:automations']);
 
     // WhatsApp Flows
-    Route::get('/flows', \App\Livewire\Flows\FlowManager::class)->name('flows.index')->middleware('can:manage-campaigns');
-    Route::get('/flows/builder/{flowId?}', \App\Livewire\Flows\FlowBuilder::class)->name('flows.builder')->middleware('can:manage-campaigns');
+    Route::get('/flows', \App\Livewire\Flows\FlowManager::class)->name('flows.index')->middleware(['can:manage-campaigns', 'plan_feature:flows']);
+    Route::get('/flows/builder/{flowId?}', \App\Livewire\Flows\FlowBuilder::class)->name('flows.builder')->middleware(['can:manage-campaigns', 'plan_feature:flows']);
 
     Route::get('/analytics', \App\Livewire\Analytics\AnalyticsDashboard::class)->name('analytics')->middleware(['can:manage-settings', 'plan_feature:analytics']);
     Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware('can:manage-settings');
@@ -114,11 +114,11 @@ Route::middleware([
     })->name('activity.index')->middleware('can:manage-settings');
 
     // Developer Portal
-    Route::get('/developer', \App\Livewire\Developer\DeveloperOverview::class)->name('developer.overview')->middleware('can:manage-settings');
-    Route::get('/developer/webhooks', \App\Livewire\Developer\WebhookManager::class)->name('developer.webhooks')->middleware('can:manage-settings');
-    Route::get('/developer/webhook-sources', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhook-sources.index')->middleware('can:manage-settings');
-    Route::get('/developer/api-tokens', \App\Livewire\Developer\ApiTokenManager::class)->name('developer.api-tokens')->middleware('can:manage-settings');
-    Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs');
+    Route::get('/developer', \App\Livewire\Developer\DeveloperOverview::class)->name('developer.overview')->middleware(['can:manage-settings', 'plan_feature:api_access']);
+    Route::get('/developer/webhooks', \App\Livewire\Developer\WebhookManager::class)->name('developer.webhooks')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
+    Route::get('/developer/webhook-sources', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhook-sources.index')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
+    Route::get('/developer/api-tokens', \App\Livewire\Developer\ApiTokenManager::class)->name('developer.api-tokens')->middleware(['can:manage-settings', 'plan_feature:api_access']);
+    Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs')->middleware('plan_feature:api_access');
     // Commerce
     // Commerce - Requires 'commerce' feature
     Route::get('/commerce', \App\Livewire\Commerce\Dashboard::class)->name('commerce.dashboard')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);

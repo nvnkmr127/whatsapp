@@ -110,8 +110,11 @@ class WhatsAppService
             throw new \Exception("Cannot send free text message. 24-hour window is closed or User opted out. (Policy UC-03). Please use a Template.");
         }
 
-        // Rule 1: Messaging Lock
+        // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
+        if (!$this->team->canAccess('send_message')) {
+            throw new \Exception("Monthly message limit reached or subscription inactive. (Policy UC-20).");
+        }
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -183,8 +186,11 @@ class WhatsAppService
             throw new \Exception("Cannot send media. 24-hour window is closed or User opted out. Please use a Template.");
         }
 
-        // Rule 1: Messaging Lock
+        // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
+        if (!$this->team->canAccess('send_message')) {
+            throw new \Exception("Monthly message limit reached or subscription inactive.");
+        }
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -261,8 +267,11 @@ class WhatsAppService
             throw new \Exception("Cannot send interactive buttons. 24-hour window is closed or User opted out. Please use a Template.");
         }
 
-        // Rule 1: Messaging Lock
+        // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
+        if (!$this->team->canAccess('send_message')) {
+            throw new \Exception("Monthly message limit reached or subscription inactive.");
+        }
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -366,8 +375,11 @@ class WhatsAppService
             throw new \Exception("Flow ID {$flowId} not found in system. Cannot verify entry point configuration.");
         }
 
-        // Rule 1: Messaging Lock
+        // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
+        if (!$this->team->canAccess('send_message')) {
+            throw new \Exception("Monthly message limit reached or subscription inactive.");
+        }
 
         // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
@@ -576,11 +588,15 @@ class WhatsAppService
         }
 
         // 5. Check Wallet & Plan Limits
+        if (!$this->team->canAccess('send_message')) {
+            return ['success' => false, 'error' => 'Plan Limit Reached or Subscription Inactive'];
+        }
+
         $billing = app(\App\Services\BillingService::class);
         $allowed = $billing->recordConversationUsage($this->team, $contact->id, $category, null);
 
         if (!$allowed) {
-            return ['success' => false, 'error' => 'Plan Limit Reached or Insufficient Funds'];
+            return ['success' => false, 'error' => 'Insufficient Wallet Funds'];
         }
 
         // --- PRE-PERSISTENCE or USE EXISTING ---

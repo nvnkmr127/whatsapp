@@ -11,6 +11,9 @@ class Plan extends Model
         'monthly_price',
         'message_limit',
         'agent_limit',
+        'automation_run_limit',
+        'contact_limit',
+        'ai_conversation_limit',
         'features',
     ];
 
@@ -18,6 +21,9 @@ class Plan extends Model
         'monthly_price' => 'decimal:2',
         'message_limit' => 'integer',
         'agent_limit' => 'integer',
+        'automation_run_limit' => 'integer',
+        'contact_limit' => 'integer',
+        'ai_conversation_limit' => 'integer',
         'features' => 'array',
     ];
 

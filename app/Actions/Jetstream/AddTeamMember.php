@@ -29,7 +29,8 @@ class AddTeamMember implements AddsTeamMembers
         AddingTeamMember::dispatch($team, $newTeamMember);
 
         $team->users()->attach(
-            $newTeamMember, ['role' => $role]
+            $newTeamMember,
+            ['role' => $role]
         );
 
         TeamMemberAdded::dispatch($team, $newTeamMember);
@@ -46,8 +47,25 @@ class AddTeamMember implements AddsTeamMembers
         ], $this->rules(), [
             'email.exists' => __('We were unable to find a registered user with this email address.'),
         ])->after(
-            $this->ensureUserIsNotAlreadyOnTeam($team, $email)
-        )->validateWithBag('addTeamMember');
+                $this->ensureTeamIsNotFull($team)
+            )->after(
+                $this->ensureUserIsNotAlreadyOnTeam($team, $email)
+            )->validateWithBag('addTeamMember');
+    }
+
+    /**
+     * Ensure that the team has not reached its agent limit.
+     */
+    protected function ensureTeamIsNotFull(Team $team): Closure
+    {
+        return function ($validator) use ($team) {
+            if (!$team->canAccess('add_agent')) {
+                $validator->errors()->add(
+                    'email',
+                    __('This team has reached its agent limit for the current plan.')
+                );
+            }
+        };
     }
 
     /**
@@ -60,8 +78,8 @@ class AddTeamMember implements AddsTeamMembers
         return array_filter([
             'email' => ['required', 'email', 'exists:users'],
             'role' => Jetstream::hasRoles()
-                            ? ['required', 'string', new Role]
-                            : null,
+                ? ['required', 'string', new Role]
+                : null,
         ]);
     }
 

@@ -22,6 +22,17 @@ class BroadcastService
     {
         Log::info("Launching Event-Driven Campaign {$campaign->id}");
 
+        // 0. Billing & Plan Enforcement
+        if (!$campaign->team->canAccess('campaigns')) {
+            $campaign->update(['status' => 'failed', 'error_message' => 'Campaigns feature not available on your plan.']);
+            throw new \Exception("Campaign launch aborted: Entitlement failure for team {$campaign->team->id}");
+        }
+
+        if (!$campaign->team->canAccess('send_message')) {
+            $campaign->update(['status' => 'failed', 'error_message' => 'Monthly message limit reached.']);
+            throw new \Exception("Campaign launch aborted: Message limit reached for team {$campaign->team->id}");
+        }
+
         // Commerce Readiness Check
         $template = $campaign->template;
         if ($template && in_array($template->category, ['UTILITY', 'TRANSACTIONAL'])) {
