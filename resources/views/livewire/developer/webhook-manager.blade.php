@@ -38,7 +38,13 @@
                     @forelse($subscriptions as $sub)
                         <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                             <td class="px-8 py-6">
-                                <div class="text-sm font-black text-slate-900 dark:text-white">{{ $sub->name }}</div>
+                                <div class="flex items-center gap-2">
+                                    <div class="text-sm font-black text-slate-900 dark:text-white">{{ $sub->name }}</div>
+                                    @if($sub->is_system)
+                                        <span
+                                            class="px-1.5 py-0.5 bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 text-[8px] font-black uppercase tracking-tighter rounded border border-rose-200 dark:border-rose-900/30">SYSTEM</span>
+                                    @endif
+                                </div>
                                 @if($sub->secret)
                                     <div class="text-[10px] text-green-500 font-bold mt-1">🔒 SIGNED</div>
                                 @endif
@@ -182,7 +188,7 @@
                 <x-label value="Subscribe to Events (Leave empty for all)"
                     class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
                 <div class="grid grid-cols-2 gap-3">
-                    @foreach($availableEvents as $key => $label)
+                    @foreach($this->filteredEvents as $key => $label)
                         <label
                             class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                             <input type="checkbox" wire:model="events" value="{{ $key }}"
@@ -193,29 +199,39 @@
                 </div>
             </div>
 
-            <div class="mt-6">
-                <label
-                    class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                    <input type="checkbox" wire:model="is_active"
-                        class="rounded border-slate-300 text-wa-teal focus:ring-green-500">
-                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300">Active</span>
-                </label>
-            </div>
-        </div>
+            <label
+                class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <input type="checkbox" wire:model="is_active"
+                    class="rounded border-slate-300 text-wa-teal focus:ring-green-500">
+                <span class="text-sm font-bold text-slate-700 dark:text-slate-300">Active</span>
+            </label>
 
-        <div class="px-8 py-6 bg-slate-50/50 dark:bg-slate-800/10 flex justify-end gap-4">
-            @if($editingId)
-                <button wire:click="cancelEdit"
-                    class="px-6 py-3 rounded-xl text-slate-500 font-black uppercase tracking-widest text-[10px] hover:bg-slate-100 transition-colors">
-                    Cancel
-                </button>
+            @if(auth()->user()->isSuperAdmin())
+                <label
+                    class="mt-4 flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/10 rounded-xl cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-900/20 transition-colors border border-rose-100 dark:border-rose-900/20">
+                    <input type="checkbox" wire:model="is_system"
+                        class="rounded border-slate-300 text-rose-500 focus:ring-rose-500">
+                    <span class="text-sm font-black text-rose-600 dark:text-rose-500 uppercase tracking-tight">System
+                        Webhook</span>
+                    <span class="text-[9px] font-bold text-rose-400 ml-auto">RECEIVES AUTH EVENTS</span>
+                </label>
             @endif
-            <button wire:click="{{ $editingId ? 'update' : 'create' }}"
-                class="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-95 transition-all">
-                {{ $editingId ? 'Save Changes' : 'Create Webhook' }}
-            </button>
         </div>
     </div>
+
+    <div class="px-8 py-6 bg-slate-50/50 dark:bg-slate-800/10 flex justify-end gap-4">
+        @if($editingId)
+            <button wire:click="cancelEdit"
+                class="px-6 py-3 rounded-xl text-slate-500 font-black uppercase tracking-widest text-[10px] hover:bg-slate-100 transition-colors">
+                Cancel
+            </button>
+        @endif
+        <button wire:click="{{ $editingId ? 'update' : 'create' }}"
+            class="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-95 transition-all">
+            {{ $editingId ? 'Save Changes' : 'Create Webhook' }}
+        </button>
+    </div>
+</div>
 
 
 </div>

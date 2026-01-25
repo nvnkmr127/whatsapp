@@ -44,6 +44,8 @@ class WebhookSourceManager extends Component
     public $actionType = 'send_template';
     public $selectedTemplateId = null;
     public $templateParameters = [];
+    public $otpParamIndex = 1;
+    public $otpLength = 6;
 
     // For testing
     public $testPayload = '';
@@ -363,6 +365,8 @@ class WebhookSourceManager extends Component
         $this->actionType = $this->action_config['type'] ?? 'send_template';
         $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
         $this->templateParameters = $this->action_config['parameter_mapping'] ?? [];
+        $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
+        $this->otpLength = $this->action_config['otp_length'] ?? 6;
 
         $this->currentStep = 1; // Start at step 1 when editing
         $this->loadMappingContext();
@@ -510,6 +514,19 @@ class WebhookSourceManager extends Component
 
         if ($this->actionType === 'send_template') {
             $config['template_id'] = $this->selectedTemplateId;
+
+            $paramMapping = [];
+            foreach ($this->templateParameters as $position => $field) {
+                if ($field) {
+                    $paramMapping[$position] = "param_{$position}";
+                }
+            }
+            $config['parameter_mapping'] = $paramMapping;
+            $config['phone_field'] = 'phone_number';
+        } elseif ($this->actionType === 'send_otp') {
+            $config['template_id'] = $this->selectedTemplateId;
+            $config['otp_param_index'] = $this->otpParamIndex;
+            $config['otp_length'] = $this->otpLength;
 
             $paramMapping = [];
             foreach ($this->templateParameters as $position => $field) {

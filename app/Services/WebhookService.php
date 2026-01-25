@@ -12,11 +12,18 @@ class WebhookService
     /**
      * Dispatch a webhook event to all subscribed endpoints.
      */
-    public function dispatch(int $teamId, string $eventType, array $data): void
+    public function dispatch(?int $teamId, string $eventType, array $data): void
     {
-        $subscriptions = WebhookSubscription::where('team_id', $teamId)
-            ->where('is_active', true)
-            ->get();
+        $query = WebhookSubscription::where('is_active', true);
+
+        if ($teamId) {
+            $query->where('team_id', $teamId);
+        } else {
+            // System-wide webhooks
+            $query->where('is_system', true);
+        }
+
+        $subscriptions = $query->get();
 
         foreach ($subscriptions as $subscription) {
             if ($subscription->isSubscribedTo($eventType)) {

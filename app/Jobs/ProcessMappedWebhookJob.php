@@ -31,6 +31,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         try {
             match ($actionType) {
                 'send_template' => $this->sendTemplate(),
+                'send_otp' => $this->sendOtp(),
                 'upsert_contact' => $this->upsertContact(),
                 'start_automation' => $this->startAutomation(),
                 'forward_webhook' => $this->forwardWebhook(),
@@ -96,6 +97,60 @@ class ProcessMappedWebhookJob implements ShouldQueue
             'phone' => $phoneNumber,
             'template' => $template->name,
             'parameters' => $parameters,
+        ]);
+    }
+
+    protected function sendOtp(): void
+    {
+        $templateId = $this->actionConfig['template_id'] ?? null;
+        $parameterMapping = $this->actionConfig['parameter_mapping'] ?? [];
+        $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
+        $otpParamIndex = $this->actionConfig['otp_param_index'] ?? 1;
+        $otpLength = $this->actionConfig['otp_length'] ?? 6;
+
+        if (!$templateId) {
+            throw new \Exception('Template ID not configured for OTP');
+        }
+
+        $template = WhatsappTemplate::find($templateId);
+        if (!$template) {
+            throw new \Exception("Template not found for OTP: {$templateId}");
+        }
+
+        $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
+        if (!$phoneNumber) {
+            throw new \Exception("Phone number not found in mapped data for OTP");
+        }
+
+        // Generate OTP
+        $otp = (string) rand(pow(10, $otpLength - 1), pow(10, $otpLength) - 1);
+
+        // Build template parameters
+        $parameters = [];
+        foreach ($parameterMapping as $position => $mappedKey) {
+            $parameters[$position] = $this->payload->mapped_data[$mappedKey] ?? '';
+        }
+
+        // Use OTPService for secure storage and sending
+        $otpService = new \App\Services\OTPService();
+        $success = $otpService->sendCustomWhatsAppOtp(
+            $phoneNumber,
+            $otp,
+            $template->name,
+            $template->language ?? 'en_US',
+            $parameters,
+            $template->team,
+            (int) $otpParamIndex
+        );
+
+        if (!$success) {
+            throw new \Exception("Failed to send OTP via WhatsApp");
+        }
+
+        Log::info('Webhook triggered OTP send', [
+            'phone' => $phoneNumber,
+            'template' => $template->name,
+            'otp' => '******', // Log masked
         ]);
     }
 

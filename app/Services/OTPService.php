@@ -39,12 +39,26 @@ class OTPService
         $this->incrementRequestCount($identifier);
 
         if ($type === 'email') {
-            return $this->sendEmail($identifier, $code);
+            $sent = $this->sendEmail($identifier, $code);
         } elseif ($type === 'phone') {
-            return $this->sendWhatsApp($identifier, $code);
+            $sent = $this->sendWhatsApp($identifier, $code);
         }
 
-        return false;
+        if ($sent) {
+            // Dispatch system-wide webhook for Login OTP
+            try {
+                app(\App\Services\WebhookService::class)->dispatch(null, 'auth.otp.login', [
+                    'identifier' => $identifier,
+                    'type' => $type,
+                    'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists(),
+                    'timestamp' => now()->toIso8601String(),
+                ]);
+            } catch (\Exception $e) {
+                Log::error("Failed to dispatch auth.otp.login webhook: " . $e->getMessage());
+            }
+        }
+
+        return $sent;
     }
 
     /**
@@ -125,7 +139,7 @@ class OTPService
         }
     }
 
-    protected function sendWhatsApp(string $phone, string $code): bool
+    public function sendWhatsApp(string $phone, string $code): bool
     {
         try {
             $team = Team::whereNotNull('whatsapp_access_token')
@@ -137,25 +151,56 @@ class OTPService
                 return false;
             }
 
+            return $this->sendCustomWhatsAppOtp($phone, $code, 'verification_code', 'en_US', [$code], $team);
+        } catch (\Exception $e) {
+            Log::error("Failed to send WhatsApp OTP to {$phone}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send OTP using a custom WhatsApp template.
+     */
+    public function sendCustomWhatsAppOtp(
+        string $phone,
+        string $code,
+        string $templateName,
+        string $language,
+        array $parameters,
+        Team $team,
+        int $otpPosition = 0
+    ): bool {
+        try {
+            // Securely store hashed code if not already stored
+            if (!Cache::has($this->getCacheKey($phone))) {
+                Cache::put($this->getCacheKey($phone), [
+                    'hash' => Hash::make($code),
+                    'attempts' => 0,
+                ], $this->ttl);
+            }
+
             $whatsappService = new WhatsAppService($team);
+
+            // Replace the specific position with the OTP code
+            if (isset($parameters[$otpPosition])) {
+                $parameters[$otpPosition] = $code;
+            }
 
             $response = $whatsappService->sendTemplate(
                 $phone,
-                'verification_code',
-                'en_US',
-                [$code]
+                $templateName,
+                $language,
+                $parameters
             );
 
             if ($response['success'] ?? false) {
                 return true;
             }
 
-            Log::warning("WhatsApp template send failed, falling back to text for OTP.");
-            $whatsappService->sendText($phone, "Your verification code is: {$code}");
-
-            return true;
+            Log::warning("WhatsApp template send failed for custom OTP: " . json_encode($response));
+            return false;
         } catch (\Exception $e) {
-            Log::error("Failed to send WhatsApp OTP to {$phone}: " . $e->getMessage());
+            Log::error("Failed to send Custom WhatsApp OTP to {$phone}: " . $e->getMessage());
             return false;
         }
     }

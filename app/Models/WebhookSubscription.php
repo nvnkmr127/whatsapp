@@ -13,11 +13,13 @@ class WebhookSubscription extends Model
         'secret',
         'events',
         'is_active',
+        'is_system',
     ];
 
     protected $casts = [
         'events' => 'array',
         'is_active' => 'boolean',
+        'is_system' => 'boolean',
     ];
 
     public function team()

@@ -10,7 +10,7 @@ class WebhookManager extends Component
 {
     use WithPagination;
 
-    public $name, $url, $secret, $events = [], $is_active = true;
+    public $name, $url, $secret, $events = [], $is_active = true, $is_system = false;
     public $editingId = null;
 
     public $availableEvents = [
@@ -23,7 +23,19 @@ class WebhookManager extends Component
         'conversation.assigned' => 'Conversation Assigned',
         'campaign.completed' => 'Campaign Completed',
         'automation.triggered' => 'Automation Triggered',
+        'auth.otp.login' => 'Auth: Login OTP Sent',
     ];
+
+    public function getFilteredEventsProperty()
+    {
+        $events = $this->availableEvents;
+
+        if (!auth()->user()->isSuperAdmin()) {
+            unset($events['auth.otp.login']);
+        }
+
+        return $events;
+    }
 
     protected $rules = [
         'name' => 'required|string|max:255',
@@ -31,11 +43,17 @@ class WebhookManager extends Component
         'secret' => 'nullable|string|min:16',
         'events' => 'nullable|array',
         'is_active' => 'boolean',
+        'is_system' => 'boolean',
     ];
 
     public function create()
     {
         $this->validate();
+
+        // Security check for system-only events
+        if (!empty($this->events) && in_array('auth.otp.login', $this->events) && !auth()->user()->isSuperAdmin()) {
+            $this->events = array_diff($this->events, ['auth.otp.login']);
+        }
 
         $team = auth()->user()->currentTeam;
 
@@ -46,6 +64,7 @@ class WebhookManager extends Component
             'secret' => $this->secret,
             'events' => empty($this->events) ? null : $this->events,
             'is_active' => $this->is_active,
+            'is_system' => $this->is_system || (!empty($this->events) && in_array('auth.otp.login', $this->events)),
         ]);
 
         $this->reset(['name', 'url', 'secret', 'events', 'is_active']);
@@ -63,11 +82,17 @@ class WebhookManager extends Component
         $this->secret = $subscription->secret;
         $this->events = $subscription->events ?? [];
         $this->is_active = $subscription->is_active;
+        $this->is_system = $subscription->is_system;
     }
 
     public function update()
     {
         $this->validate();
+
+        // Security check for system-only events
+        if (!empty($this->events) && in_array('auth.otp.login', $this->events) && !auth()->user()->isSuperAdmin()) {
+            $this->events = array_diff($this->events, ['auth.otp.login']);
+        }
 
         $subscription = WebhookSubscription::findOrFail($this->editingId);
         $this->authorize('update', $subscription);
@@ -78,6 +103,7 @@ class WebhookManager extends Component
             'secret' => $this->secret,
             'events' => empty($this->events) ? null : $this->events,
             'is_active' => $this->is_active,
+            'is_system' => $this->is_system || (!empty($this->events) && in_array('auth.otp.login', $this->events)),
         ]);
 
         $this->reset(['editingId', 'name', 'url', 'secret', 'events', 'is_active']);

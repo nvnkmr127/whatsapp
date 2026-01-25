@@ -65,6 +65,24 @@
                 </div>
             </div>
 
+            <div
+                class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+                <div class="p-8 md:p-10">
+                    <div class="md:grid md:grid-cols-3 md:gap-6">
+                        <div class="md:col-span-1">
+                            <h3 class="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                Marketing Preferences</h3>
+                            <p class="mt-1 text-sm font-medium text-slate-500">
+                                Manage your subscription to marketing emails and internal notifications.
+                            </p>
+                        </div>
+                        <div class="mt-5 md:mt-0 md:col-span-2">
+                            @livewire('profile.marketing-preferences')
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::updatePasswords()))
                 <div
                     class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
@@ -129,7 +147,8 @@
                     <div class="p-8 md:p-10">
                         <div class="md:grid md:grid-cols-3 md:gap-6">
                             <div class="md:col-span-1">
-                                <h3 class="text-lg font-black uppercase tracking-tight text-rose-500">Delete Account</h3>
+                                <h3 class="text-lg font-black uppercase tracking-tight text-rose-500">Delete Account
+                                </h3>
                                 <p class="mt-1 text-sm font-medium text-slate-500">
                                     Permanently delete your account.
                                 </p>

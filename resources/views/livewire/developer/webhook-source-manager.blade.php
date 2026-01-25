@@ -456,6 +456,56 @@
                             </div>
                         </div>
 
+                        {{-- Action Type Selection --}}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <button wire:click="setActionType('send_template')" type="button" 
+                                class="flex items-center gap-4 p-6 rounded-[2rem] border-2 transition-all {{ $actionType === 'send_template' ? 'bg-wa-teal border-wa-teal text-white shadow-xl shadow-wa-teal/20' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-wa-teal/30' }}">
+                                <div class="w-12 h-12 rounded-2xl {{ $actionType === 'send_template' ? 'bg-white/20' : 'bg-purple-100 dark:bg-purple-900/30' }} flex items-center justify-center shrink-0">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                </div>
+                                <div class="text-left">
+                                    <h5 class="text-sm font-black uppercase tracking-tight">Standard Message</h5>
+                                    <p class="text-[10px] font-bold opacity-70 uppercase tracking-widest">Send templates based on data</p>
+                                </div>
+                            </button>
+
+                            <button wire:click="setActionType('send_otp')" type="button" 
+                                class="flex items-center gap-4 p-6 rounded-[2rem] border-2 transition-all {{ $actionType === 'send_otp' ? 'bg-orange-500 border-orange-500 text-white shadow-xl shadow-orange-500/20' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-orange-500/30' }}">
+                                <div class="w-12 h-12 rounded-2xl {{ $actionType === 'send_otp' ? 'bg-white/20' : 'bg-orange-100 dark:bg-orange-900/30' }} flex items-center justify-center shrink-0">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                </div>
+                                <div class="text-left">
+                                    <h5 class="text-sm font-black uppercase tracking-tight">OTP / Verification</h5>
+                                    <p class="text-[10px] font-bold opacity-70 uppercase tracking-widest">Auto-generate & verify codes</p>
+                                </div>
+                            </button>
+                        </div>
+
+                        {{-- OTP Config --}}
+                        @if($actionType === 'send_otp')
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <div class="space-y-4 bg-orange-50/30 dark:bg-orange-950/10 p-6 rounded-[2rem] border border-orange-100 dark:border-orange-900/20">
+                                    <x-label value="OTP Length" class="uppercase text-[10px] tracking-widest font-black text-orange-600/70" />
+                                    <select wire:model="otpLength" class="w-full bg-white dark:bg-slate-900 border-2 border-orange-100 dark:border-orange-900/20 rounded-2xl py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:border-orange-500/30 transition-all shadow-sm">
+                                        <option value="4">4 Digits</option>
+                                        <option value="6">6 Digits</option>
+                                        <option value="8">8 Digits</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-4 bg-orange-50/30 dark:bg-orange-950/10 p-6 rounded-[2rem] border border-orange-100 dark:border-orange-900/20">
+                                    <x-label value="OTP Variable Position" class="uppercase text-[10px] tracking-widest font-black text-orange-600/70" />
+                                    <select wire:model="otpParamIndex" class="w-full bg-white dark:bg-slate-900 border-2 border-orange-100 dark:border-orange-900/20 rounded-2xl py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:border-orange-500/30 transition-all shadow-sm">
+                                        @foreach($templateParams as $paramNum)
+                                            <option value="{{ $paramNum }}">Parameter {{ $paramNum }}</option>
+                                        @endforeach
+                                        @if(empty($templateParams))
+                                            <option value="1">Parameter 1</option>
+                                        @endif
+                                    </select>
+                                </div>
+                            </div>
+                        @endif
+
                         {{-- Template Selection --}}
                         <div class="space-y-4">
                             <x-label value="WhatsApp Template" class="uppercase text-[10px] tracking-widest font-black text-slate-400" />

@@ -23,6 +23,9 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
     // Messages
     Route::post('/messages', [\App\Http\Controllers\ExternalConversationController::class, 'send']);
 
+    // OTP Verification
+    Route::post('/otp/verify', [\App\Http\Controllers\Api\OTPVerificationController::class, 'verify']);
+
     // Inbound Webhooks (receive from external software)
     Route::post('/webhooks/inbound', [\App\Http\Controllers\Api\InboundWebhookController::class, 'handle']);
     Route::get('/webhooks/inbound/url', [\App\Http\Controllers\Api\InboundWebhookController::class, 'getUrl']);
