@@ -183,8 +183,9 @@ class InboundWebhookController extends Controller
         // Log the incoming webhook
         Log::info('Inbound webhook received (legacy)', [
             'team_id' => $team->id,
+            'user_id' => $request->user()?->id,
             'payload' => $request->all(),
-            'headers' => $request->headers->all(),
+            'headers' => array_keys($request->headers->all()), // Log keys only for privacy
         ]);
 
         // Store the webhook payload for processing

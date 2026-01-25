@@ -104,4 +104,40 @@ class WhatsAppWebhookTest extends TestCase
         $responseWithDbToken->assertStatus(200);
         $this->assertEquals('challenge_string', $responseWithDbToken->getContent());
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_rejects_webhook_post_with_invalid_signature()
+    {
+        // Arrange
+        config(['whatsapp.app_secret' => 'test_secret']);
+        $payload = ['object' => 'whatsapp_business_account', 'entry' => []];
+
+        // Act & Assert
+        $response = $this->withHeaders([
+            'X-Hub-Signature-256' => 'sha256=invalid_hash'
+        ])->postJson('/api/webhook/whatsapp', $payload);
+
+        $response->assertStatus(403);
+        $this->assertEquals('Invalid Signature', $response->getContent());
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_accepts_webhook_post_with_valid_signature()
+    {
+        // Arrange
+        $secret = 'test_secret';
+        config(['whatsapp.app_secret' => $secret]);
+        $payload = ['object' => 'whatsapp_business_account', 'entry' => []];
+        $jsonPayload = json_encode($payload);
+        $signature = 'sha256=' . hash_hmac('sha256', $jsonPayload, $secret);
+
+        // Act
+        $response = $this->withHeaders([
+            'X-Hub-Signature-256' => $signature
+        ])->postJson('/api/webhook/whatsapp', $payload);
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertEquals('EVENT_RECEIVED', $response->getContent());
+    }
 }

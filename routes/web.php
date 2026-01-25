@@ -83,6 +83,9 @@ Route::middleware([
 
         // Impersonation
         Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\Admin\ImpersonationController::class, 'enter'])->name('admin.impersonate.enter');
+
+        // Launch Offer Settings
+        Route::get('/admin/offer-settings', \App\Livewire\Admin\OfferSettings::class)->name('admin.offer-settings');
     });
 
     // Logout and Exit Impersonation (Universal)

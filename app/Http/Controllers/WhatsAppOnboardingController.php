@@ -18,24 +18,13 @@ class WhatsAppOnboardingController extends Controller
         ]);
 
         $shortLivedToken = $request->input('access_token');
-        $appId = config('services.facebook.client_id');
-        $appSecret = config('services.facebook.client_secret');
-
-        if (!$appId || !$appSecret) {
-            return response()->json(['status' => false, 'message' => 'Facebook App configuration missing on server.'], 500);
-        }
 
         try {
-            // 1. Exchange for Long-Lived Token
-            $response = Http::get('https://graph.facebook.com/v21.0/oauth/access_token', [
-                'grant_type' => 'fb_exchange_token',
-                'client_id' => $appId,
-                'client_secret' => $appSecret,
-                'fb_exchange_token' => $shortLivedToken,
-            ]);
+            $whatsappService = app(\App\Services\WhatsAppService::class);
+            $result = $whatsappService->exchangeToken($shortLivedToken);
 
-            if ($response->failed()) {
-                $errorDetails = $response->json();
+            if (!$result['success']) {
+                $errorDetails = $result['error'];
                 $referenceId = \App\Models\WhatsAppSetupAudit::generateReferenceId();
 
                 Log::error('WhatsApp Token Exchange Failed', [
@@ -50,10 +39,10 @@ class WhatsAppOnboardingController extends Controller
                     'message' => $humanMessage,
                     'retry_allowed' => true,
                     'reference_id' => $referenceId
-                ], 400);
+                ], $result['status_code'] ?? 400);
             }
 
-            $data = $response->json();
+            $data = $result['data'];
             $longLivedToken = $data['access_token'] ?? null;
             $expiresIn = $data['expires_in'] ?? 5184000; // 60 days default
 

@@ -11,10 +11,7 @@ class FlowEncryptionService
 
     public function __construct()
     {
-        // Load Private Key from storage or config
-        // For this MVP, we'll assume it's stored in a file or config.
-        // Ideally: config('whatsapp.flows_private_key')
-        $keyPath = storage_path('app/flow_private_key.pem');
+        $keyPath = config('whatsapp.flow_private_key_path');
         if (file_exists($keyPath)) {
             $this->privateKey = file_get_contents($keyPath);
         }

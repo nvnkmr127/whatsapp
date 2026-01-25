@@ -741,6 +741,38 @@ class WhatsAppService
     }
 
     /**
+     * Exchange short-lived user token for long-lived token.
+     */
+    public function exchangeToken(string $shortLivedToken)
+    {
+        $appId = config('whatsapp.app_id');
+        $appSecret = config('whatsapp.app_secret');
+
+        if (!$appId || !$appSecret) {
+            throw new \Exception("Facebook App configuration missing (app_id or app_secret).");
+        }
+
+        $url = "https://graph.facebook.com/" . config('whatsapp.api_version', 'v21.0') . "/oauth/access_token";
+
+        $response = Http::get($url, [
+            'grant_type' => 'fb_exchange_token',
+            'client_id' => $appId,
+            'client_secret' => $appSecret,
+            'fb_exchange_token' => $shortLivedToken,
+        ]);
+
+        if ($response->failed()) {
+            Log::error('WhatsApp Token Exchange Failed', [
+                'status' => $response->status(),
+                'error' => $response->json(),
+            ]);
+            return ['success' => false, 'error' => $response->json(), 'status_code' => $response->status()];
+        }
+
+        return ['success' => true, 'data' => $response->json()];
+    }
+
+    /**
      * Delete Template.
      */
     public function deleteTemplate($name)
@@ -765,35 +797,49 @@ class WhatsAppService
             ->withHeaders(['Content-Type' => 'application/json']);
 
         $response = null;
+        $method = strtolower($method);
 
         Log::debug("WhatsApp API Sending [$method] to $url", ['data' => $data]);
 
-        if ($method === 'post') {
-            $response = $client->post($url, $data);
-        } elseif ($method === 'get') {
-            $response = $client->get($url, $data);
-        } elseif ($method === 'delete') {
-            $response = $client->delete($url, $data);
-        } else {
-            return ['success' => false, 'error' => 'Unsupported method'];
-        }
-
-        if ($response->failed()) {
-            if ($response->status() === 401 && $this->team) {
-                $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::SUSPENDED;
-                $this->team->save();
+        try {
+            if ($method === 'post') {
+                $response = $client->post($url, $data);
+            } elseif ($method === 'get') {
+                $response = $client->get($url, $data);
+            } elseif ($method === 'delete') {
+                $response = $client->delete($url, $data);
+            } else {
+                return ['success' => false, 'error' => 'Unsupported method: ' . $method];
             }
 
-            Log::error('WhatsApp API Error', [
-                'status' => $response->status(),
-                'error' => $response->json(),
-                'payload' => $data,
-                'url' => $url,
-            ]);
-            return ['success' => false, 'error' => $response->json(), 'status_code' => $response->status()];
-        }
+            if ($response->failed()) {
+                if ($response->status() === 401 && $this->team) {
+                    $this->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
+                }
 
-        return ['success' => true, 'data' => $response->json()];
+                Log::error('WhatsApp API Error', [
+                    'status' => $response->status(),
+                    'error' => $response->json(),
+                    'payload' => $data,
+                    'url' => $url,
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $response->json(),
+                    'status_code' => $response->status(),
+                    'message' => $response->json()['error']['message'] ?? 'Unknown API Error'
+                ];
+            }
+
+            return ['success' => true, 'data' => $response->json()];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp API Exception', [
+                'message' => $e->getMessage(),
+                'url' => $url,
+                'method' => $method
+            ]);
+            return ['success' => false, 'error' => $e->getMessage(), 'status_code' => 500];
+        }
     }
 
     protected function verifyReadyToSend()

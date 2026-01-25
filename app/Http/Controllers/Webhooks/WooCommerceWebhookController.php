@@ -41,10 +41,8 @@ class WooCommerceWebhookController extends Controller
 
         $integration = Integration::where('type', 'woocommerce')
             ->where('status', '!=', \App\Enums\IntegrationState::SUSPENDED->value)
-            ->get()
-            ->first(function ($int) use ($domain) {
-                return str_contains($int->credentials['url'] ?? '', $domain);
-            });
+            ->where('credentials->url', 'LIKE', "%$domain%")
+            ->first();
 
         if (!$integration) {
             Log::info("Received WC webhook for unknown or suspended shop: {$domain}");
@@ -130,7 +128,7 @@ class WooCommerceWebhookController extends Controller
             // This is simplified extraction
         }
 
-        $this->orderService->updateStatus($order, $status, $context);
+        $this->orderService->updateStatus($order, $status, array_merge($context, ['system' => true]));
 
         return response()->json(['message' => 'Processed'], 200);
     }

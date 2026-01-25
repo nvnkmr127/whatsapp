@@ -44,10 +44,22 @@ class CreateNewUser implements CreatesNewUsers
      */
     protected function createTeam(User $user): void
     {
-        $user->ownedTeams()->save(Team::forceCreate([
+        $team = Team::forceCreate([
             'user_id' => $user->id,
-            'name' => explode(' ', $user->name, 2)[0]."'s Team",
+            'name' => explode(' ', $user->name, 2)[0] . "'s Team",
             'personal_team' => true,
-        ]));
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addMonths((int) get_setting('offer_trial_months', 6)),
+        ]);
+
+        $user->ownedTeams()->save($team);
+
+        // specific: Launch Gift
+        if (get_setting('offer_enabled', true)) {
+            $initialCredit = (float) get_setting('offer_initial_credit', 5.00);
+            if ($initialCredit > 0) {
+                app(\App\Services\BillingService::class)->deposit($team, $initialCredit, 'Welcome Gift (Launch Offer)');
+            }
+        }
     }
 }

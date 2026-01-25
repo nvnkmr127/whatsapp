@@ -424,9 +424,73 @@ class ContactManager extends Component
         $this->importResult = $result;
 
         if ($result['success_count'] > 0) {
-            audit('contact.imported', "Imported {$result['success_count']} contacts from CSV.", null, ['result' => $result]);
+            audit('contact.imported', "Imported {$result['success_count']} contacts from CSV.", null, null, ['result' => $result]);
             session()->flash('import_message', "Imported {$result['success_count']} contacts successfully.");
         }
+    }
+
+    public function export()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
+
+        $query = Contact::where('team_id', Auth::user()->currentTeam->id);
+
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhere('phone_number', 'like', '%' . $this->search . '%')
+                    ->orWhere('email', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        if ($this->filterTag) {
+            $query->whereHas('tags', function ($q) {
+                $q->where('id', $this->filterTag);
+            });
+        }
+
+        if ($this->filterStatus) {
+            $query->where('opt_in_status', $this->filterStatus);
+        }
+
+        $contacts = $query->with(['tags', 'category'])->get();
+        $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
+
+        $callback = function () use ($contacts, $customFields) {
+            $file = fopen('php://output', 'w');
+
+            // Headers
+            $headers = ['Name', 'Phone Number', 'Email', 'Opt-in Status', 'Language', 'Category', 'Tags'];
+            foreach ($customFields as $field) {
+                $headers[] = $field->label;
+            }
+            fputcsv($file, $headers);
+
+            // Data
+            foreach ($contacts as $contact) {
+                $row = [
+                    $contact->name,
+                    $contact->phone_number,
+                    $contact->email,
+                    $contact->opt_in_status,
+                    $contact->language,
+                    $contact->category?->name ?? '',
+                    $contact->tags->pluck('name')->implode(', '),
+                ];
+
+                foreach ($customFields as $field) {
+                    $row[] = $contact->custom_attributes[$field->key] ?? '';
+                }
+
+                fputcsv($file, $row);
+            }
+
+            fclose($file);
+        };
+
+        audit('contact.exported', "Exported " . $contacts->count() . " contacts to CSV.");
+
+        return response()->streamDownload($callback, 'contacts_export_' . now()->format('Y-m-d_H-i') . '.csv');
     }
 
     public function downloadSampleCsv()

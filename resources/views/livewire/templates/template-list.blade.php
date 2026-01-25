@@ -178,267 +178,297 @@
         @endif
     </div>
 
-    <!-- Create Modal -->
+    <!-- Create Modal (Enhanced) -->
     @if($showCreateModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$toggle('showCreateModal')"></div>
-            <div
-                class="relative w-full max-w-5xl max-h-[80vh] flex flex-col bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <!-- Header -->
-                <div class="p-8 pb-0 shrink-0">
+    @teleport('body')
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showCreateModal', false)"></div>
+        <div class="relative w-full max-w-6xl bg-white dark:bg-slate-950 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[95vh] animate-in fade-in zoom-in-95 duration-200">
+            <!-- Modal Header -->
+            <div class="p-8 border-b border-slate-50 dark:border-slate-900 flex justify-between items-center bg-white dark:bg-slate-950 z-10">
+                <div>
                     <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Create New <span class="text-wa-teal">Template</span>
+                        Protocol <span class="text-wa-teal">Designer</span>
                     </h2>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Configure complex message structures for Meta Approval</p>
                 </div>
+                <button wire:click="$set('showCreateModal', false)" class="text-slate-400 hover:text-rose-500 p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-                <!-- Content -->
-                <div class="p-8 overflow-y-scroll max-h-[500px]">
-                    <div class="flex flex-col md:flex-row gap-8">
-                        <!-- Form Column -->
-                        <div class="flex-1">
-                            <div class="space-y-6">
-                                <!-- Name -->
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Template Name</label>
-                                    <input wire:model="name" type="text"
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="e.g. welcome_offer">
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Lowercase, underscores only.</p>
-                                    @error('name') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+            <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+                <!-- Left Side: Configuration Form -->
+                <div class="p-10 overflow-y-auto custom-scrollbar border-r border-slate-50 dark:border-slate-900">
+                    <div class="space-y-10">
+                        <!-- Identity Section -->
+                        <section class="space-y-6">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 dark:border-slate-900 pb-2">1. Registry Identity</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Protocol Name</label>
+                                    <input type="text" wire:model="name" 
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all placeholder:text-slate-400"
+                                        placeholder="e.g. shipping_update_v1">
+                                    @error('name') <span class="text-[10px] font-bold text-rose-500 mt-2 block uppercase tracking-wide">{{ $message }}</span> @enderror
                                 </div>
-
-                                <!-- Category & Lang -->
-                                <div class="grid grid-cols-2 gap-6">
-                                    <div class="space-y-2">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Category</label>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Classification</label>
                                         <select wire:model="category"
-                                            class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                                            class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                             <option value="UTILITY">Utility</option>
                                             <option value="MARKETING">Marketing</option>
                                             <option value="AUTHENTICATION">Authentication</option>
                                         </select>
-                                        @error('category') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
                                     </div>
-                                    <div class="space-y-2">
-                                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Language</label>
-                                            <select wire:model="language"
-                                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
-                                                @foreach($languages as $code => $label)
-                                                    <option value="{{ $code }}">{{ $label }} ({{ $code }})</option>
-                                                @endforeach
-                                            </select>
-                                            @error('language') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                                        </div>
-                                </div>
-
-                                <!-- Header -->
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Header (Optional)</label>
-                                    <select wire:model.live="headerType"
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer mb-2">
-                                        <option value="NONE">None</option>
-                                        <option value="TEXT">Text</option>
-                                        <option value="IMAGE">Image</option>
-                                        <option value="VIDEO">Video</option>
-                                        <option value="DOCUMENT">Document</option>
-                                        <option value="LOCATION">Location</option>
-                                    </select>
-                                    @if ($headerType === 'TEXT')
-                                        <input wire:model.live="headerText" type="text"
-                                            class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                            placeholder="Header text...">
-                                        @error('headerText') <span class="text-rose-500 text-[10px] font-black uppercase">{{ $message }}</span> @enderror
-                                    @endif
-
-                                    @if (in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
-                                        <div class="space-y-2 mt-2">
-                                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Example {{ strtolower($headerType) }} URL (Required by Meta)</label>
-                                            <input wire:model.live="exampleMediaUrl" type="url"
-                                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                                placeholder="https://example.com/sample.{{ $headerType === 'IMAGE' ? 'jpg' : ($headerType === 'VIDEO' ? 'mp4' : 'pdf') }}">
-                                            <p class="text-[9px] text-slate-400 font-bold uppercase italic">This is only an example used for Meta's approval process.</p>
-                                        </div>
-                                    @endif
-                                </div>
-
-                                <!-- Body -->
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Body Text</label>
-                                    <textarea wire:model.live="body" rows="6"
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 resize-none"
-                                        placeholder="Hello {{1}}, welome to..."></textarea>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Use {{1}}, {{2}} for variables.</p>
-                                    @error('body') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                                </div>
-
-                                <!-- Footer -->
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-400">Footer (Optional)</label>
-                                    <input wire:model.live="footer" type="text"
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="Footer text...">
-                                </div>
-
-                                <!-- Buttons Section -->
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between">
-                                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Buttons ({{ count($buttons) }}/3)</label>
-                                        @if(count($buttons) < 3)
-                                            <button type="button" wire:click="addButton" class="text-[10px] font-black text-wa-teal uppercase hover:underline">+ Add Button</button>
-                                        @endif
-                                    </div>
-
-                                    <div class="space-y-3">
-                                        @foreach($buttons as $index => $btn)
-                                            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 relative group">
-                                                <button type="button" wire:click="removeButton({{ $index }})" 
-                                                    class="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                                                </button>
-
-                                                <div class="grid grid-cols-2 gap-4">
-                                                    <div class="space-y-1">
-                                                        <label class="text-[9px] font-black text-slate-400 uppercase">Type</label>
-                                                        <select wire:model.live="buttons.{{ $index }}.type"
-                                                            class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold">
-                                                            <option value="QUICK_REPLY">Quick Reply</option>
-                                                            <option value="URL">URL</option>
-                                                            <option value="PHONE_NUMBER">Phone</option>
-                                                            <option value="COPY_CODE">Promotion (Copy Code)</option>
-                                                            <option value="CATALOG">Catalog</option>
-                                                            <option value="MPM">Multi-Product</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="space-y-1">
-                                                        <label class="text-[9px] font-black text-slate-400 uppercase">Label</label>
-                                                        <input type="text" wire:model.live="buttons.{{ $index }}.text" maxlength="25"
-                                                            class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold"
-                                                            placeholder="Button text">
-                                                    </div>
-                                                    
-                                                    @if($buttons[$index]['type'] === 'URL')
-                                                        <div class="col-span-full space-y-1">
-                                                            <label class="text-[9px] font-black text-slate-400 uppercase">URL</label>
-                                                            <input type="url" wire:model.live="buttons.{{ $index }}.url"
-                                                                class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold"
-                                                                placeholder="https://">
-                                                        </div>
-                                                    @elseif($buttons[$index]['type'] === 'PHONE_NUMBER')
-                                                        <div class="col-span-full space-y-1">
-                                                            <label class="text-[9px] font-black text-slate-400 uppercase">Phone</label>
-                                                            <input type="text" wire:model.live="buttons.{{ $index }}.phoneNumber"
-                                                                class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold"
-                                                                placeholder="+1...">
-                                                        </div>
-                                                    @elseif($buttons[$index]['type'] === 'COPY_CODE')
-                                                        <div class="col-span-full space-y-1">
-                                                            <label class="text-[9px] font-black text-slate-400 uppercase">Offer Code</label>
-                                                            <input type="text" wire:model.live="buttons.{{ $index }}.copyCode" maxlength="15"
-                                                                class="w-full px-3 py-2 bg-white dark:bg-slate-950 border-none rounded-lg text-xs font-bold"
-                                                                placeholder="SAVE20">
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Preview Column (Fixed) -->
-                        <div class="hidden md:flex shrink-0 w-[340px] items-center justify-center bg-slate-100 dark:bg-slate-950 rounded-[2rem] p-4 border border-slate-200 dark:border-slate-800">
-                             <div class="w-[300px] h-[580px] shrink-0 bg-white dark:bg-slate-900 rounded-[3rem] border-8 border-slate-800 shadow-2xl overflow-hidden relative flex flex-col transform scale-[0.85] origin-center">
-                                 <!-- Phone Notch -->
-                                 <div class="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-6 bg-slate-800 rounded-b-xl z-10"></div>
-                                 
-                                 <!-- Phone Header -->
-                                 <div class="bg-wa-teal h-16 w-full flex items-end pb-3 px-4 shadow-sm z-0">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-full bg-white/20"></div>
-                                        <div>
-                                            <div class="w-20 h-2 bg-white/20 rounded mb-1"></div>
-                                        </div>
-                                    </div>
-                                 </div>
-
-                                 <!-- Phone Screen -->
-                                 <div class="flex-1 bg-[#e5ddd5] dark:bg-slate-800 p-3 overflow-y-auto bg-opacity-90 relative custom-scrollbar" 
-                                      style="background-color: #e5ddd5; background-image: radial-gradient(#d4d4d4 1px, transparent 1px); background-size: 20px 20px;">
-                                    
-                                    <!-- Message Bubble -->
-                                    <div class="bg-white dark:bg-slate-700 rounded-tr-lg rounded-br-lg rounded-bl-lg rounded-tl-none p-2 shadow-sm max-w-[90%] self-start float-left relative ml-2 mt-2">
-                                        <!-- Triangle -->
-                                        <div class="absolute top-0 left-[-8px] w-0 h-0 border-t-[0px] border-r-[12px] border-b-[12px] border-transparent border-r-white dark:border-r-slate-700"></div>
-
-                                        <!-- Media Header Preview -->
-                                        @if(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION']))
-                                            <div class="w-full aspect-video bg-slate-100 dark:bg-slate-600 rounded-lg mb-2 flex items-center justify-center border border-slate-200 dark:border-slate-500">
-                                                @if($headerType === 'IMAGE') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                @elseif($headerType === 'VIDEO') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                                @elseif($headerType === 'LOCATION') <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                                @else <svg class="w-8 h-8 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                                                @endif
-                                            </div>
-                                        @endif
-
-                                        @if($headerType === 'TEXT' && $headerText)
-                                            <div class="text-[13px] font-bold text-slate-900 dark:text-white mb-1 pb-1">{{ $headerText }}</div>
-                                        @endif
-                                        
-                                        <div class="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
-                                            {!! preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', e($body)) ?: '<span class="text-slate-400 italic">Message body...</span>' !!}
-                                        </div>
-
-                                        @if($footer)
-                                            <div class="text-[10px] text-slate-500 mt-1 pt-1 opacity-75">{{ $footer }}</div>
-                                        @endif
-                                        
-                                        <div class="text-[9px] text-slate-400 text-right mt-1">{{ now()->format('H:i') }}</div>
-                                    </div>
-
-                                    <!-- Buttons Preview -->
-                                    @if(!empty($buttons))
-                                        <div class="w-[90%] float-left ml-2 mt-1 space-y-1">
-                                            @foreach($buttons as $btn)
-                                                <div class="bg-white/90 dark:bg-slate-700/90 rounded-lg py-1.5 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-600 shadow-sm backdrop-blur-sm">
-                                                    @if(($btn['type'] ?? '') === 'URL') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                                                    @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                                                    @elseif(($btn['type'] ?? '') === 'COPY_CODE') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                                                    @elseif(in_array(($btn['type'] ?? ''), ['CATALOG', 'MPM'])) <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                                                    @endif
-                                                    <span class="text-[11px] font-bold text-wa-teal truncate">{{ $btn['text'] ?: 'Button Label' }}</span>
-                                                </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Language</label>
+                                        <select wire:model="language"
+                                            class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                            @foreach($languages as $code => $label)
+                                                <option value="{{ $code }}">{{ $label }} ({{ $code }})</option>
                                             @endforeach
-                                        </div>
-                                    @endif
-
-                                 </div>
-                                 
-                                 <!-- Phone Footer Input -->
-                                 <div class="bg-slate-100 dark:bg-slate-800 h-12 w-full flex items-center px-4 gap-2 border-t border-slate-200 dark:border-slate-700">
-                                    <div class="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-600"></div>
-                                    <div class="flex-1 h-8 rounded-full bg-white dark:bg-slate-700"></div>
-                                    <div class="w-6 h-6 rounded-full bg-wa-teal"></div>
-                                 </div>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </section>
+
+                        <!-- Content Section -->
+                        <section class="space-y-6">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 dark:border-slate-900 pb-2">2. Payload Architecture</h4>
+                            
+                            <!-- Header Toggle -->
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Header Component</label>
+                                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                    @foreach(['NONE', 'TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION'] as $type)
+                                        <button wire:click="$set('headerType', '{{ $type }}')"
+                                            class="px-2 py-3 rounded-xl border-2 text-[9px] font-black uppercase tracking-widest transition-all {{ $headerType === $type ? 'border-wa-teal bg-wa-teal/5 text-wa-teal shadow-lg shadow-wa-teal/5' : 'border-slate-100 dark:border-slate-900 text-slate-400 hover:border-slate-200' }}">
+                                            {{ $type }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            @if($headerType === 'TEXT')
+                                <div class="animate-in slide-in-from-top-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Header Text (Max 60)</label>
+                                    <input type="text" wire:model.live="headerText" maxlength="60"
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                        placeholder="Headline here...">
+                                </div>
+                            @elseif(in_array($headerType, ['IMAGE', 'VIDEO', 'DOCUMENT']))
+                                <div class="space-y-4 animate-in slide-in-from-top-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Example {{ strtolower($headerType) }} URL</label>
+                                    <input type="url" wire:model.live="exampleMediaUrl"
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                        placeholder="https://example.com/sample.{{ $headerType === 'IMAGE' ? 'jpg' : ($headerType === 'VIDEO' ? 'mp4' : 'pdf') }}">
+                                </div>
+                            @endif
+
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Message Body (Required)</label>
+                                <textarea wire:model.live="body" rows="5"
+                                    class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border-none rounded-3xl text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-mono"
+                                    placeholder="Enter message body... Use {{1}}, {{2}} for variables."></textarea>
+                                @error('body') <span class="text-[10px] font-bold text-rose-500 mt-2 block uppercase tracking-wide">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Footer Text (Optional)</label>
+                                <input type="text" wire:model.live="footer" maxlength="60"
+                                    class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                    placeholder="Reply STOP to unsubscribe">
+                            </div>
+                        </section>
+
+                        <!-- Interaction Triggers -->
+                        <section class="space-y-6">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-900 pb-2">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">3. Interactive Triggers</h4>
+                                @if(count($buttons) < 10)
+                                    <button type="button" wire:click="addButton" class="text-[10px] font-black text-wa-teal uppercase hover:underline">+ Add Interaction</button>
+                                @endif
+                            </div>
+
+                            <div class="space-y-4">
+                                @foreach($buttons as $index => $btn)
+                                    <div class="p-6 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-800 relative group transition-all">
+                                        <button type="button" wire:click="removeButton({{ $index }})" 
+                                            class="absolute -top-2 -right-2 p-2 bg-rose-500 text-white rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Type</label>
+                                                <select wire:model.live="buttons.{{ $index }}.type"
+                                                    class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20">
+                                                    <option value="QUICK_REPLY">Quick Reply</option>
+                                                    <option value="URL">Visit Website</option>
+                                                    <option value="PHONE_NUMBER">Call Number</option>
+                                                    <option value="COPY_CODE">Promotion (Copy Code)</option>
+                                                    <option value="CATALOG">Catalog</option>
+                                                    <option value="MPM">Multi-Product</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Display Label (Max 25)</label>
+                                                <input type="text" wire:model.live="buttons.{{ $index }}.text" maxlength="25"
+                                                    class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                                    placeholder="Button text">
+                                            </div>
+                                            
+                                            @if($buttons[$index]['type'] === 'URL')
+                                                <div class="col-span-full">
+                                                    <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Destination URL</label>
+                                                    <input type="url" wire:model.live="buttons.{{ $index }}.url"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                                        placeholder="https://">
+                                                </div>
+                                            @elseif($buttons[$index]['type'] === 'PHONE_NUMBER')
+                                                <div class="col-span-full">
+                                                    <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Phone (E.164)</label>
+                                                    <input type="text" wire:model.live="buttons.{{ $index }}.phoneNumber"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                                        placeholder="+1...">
+                                                </div>
+                                            @elseif($buttons[$index]['type'] === 'COPY_CODE')
+                                                <div class="col-span-full">
+                                                    <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Offer Code</label>
+                                                    <input type="text" wire:model.live="buttons.{{ $index }}.copyCode" maxlength="15"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                                        placeholder="SAVE20">
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+
+                        <!-- Variable Schema -->
+                        @if(!empty($variableConfig))
+                            <section class="space-y-6 animate-in slide-in-from-bottom-4">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 dark:border-slate-900 pb-2">4. Variable Schema</h4>
+                                <div class="space-y-4">
+                                    @foreach($variableConfig as $var => $config)
+                                        <div class="p-6 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-wa-teal/20 relative overflow-hidden">
+                                            <div class="absolute top-0 right-0 px-3 py-1 bg-wa-teal/10 text-wa-teal text-[10px] font-black rounded-bl-xl uppercase tracking-widest">{{ $var }}</div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                                <div>
+                                                    <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Internal Mapping</label>
+                                                    <input type="text" wire:model.live="variableConfig.{{ $var }}.name"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                                        placeholder="e.g. customer_name">
+                                                    @error('variableConfig.'.$var.'.name') <span class="text-[9px] font-bold text-rose-500 mt-1 block uppercase">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Sample Content (Approval)</label>
+                                                    <input type="text" wire:model.live="variableConfig.{{ $var }}.sample"
+                                                        class="w-full px-4 py-2 bg-white dark:bg-slate-950 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                                        placeholder="e.g. John Doe">
+                                                    @error('variableConfig.'.$var.'.sample') <span class="text-[9px] font-bold text-rose-500 mt-1 block uppercase">{{ $message }}</span> @enderror
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
                     </div>
                 </div>
 
-                <!-- Footer -->
-                <div class="p-8 bg-slate-50 dark:bg-slate-800/50 flex gap-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-                    <button wire:click="$toggle('showCreateModal')" wire:loading.attr="disabled"
-                        class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:text-slate-600 dark:hover:text-slate-200 transition-all border border-slate-100 dark:border-slate-700">
-                        Cancel
-                    </button>
-                    <button wire:click="createTemplate" wire:loading.attr="disabled"
-                        class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                        Create Template
-                    </button>
+                <!-- Right Side: Real-Time Verification Mockup -->
+                <div class="bg-slate-100 dark:bg-slate-950 p-12 flex flex-col items-center justify-center relative">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-10">Verification Preview</p>
+                    
+                    <!-- WhatsApp Mockup Bubble -->
+                    <div class="w-full max-w-[320px] bg-white dark:bg-[#0b141a] rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden border-8 border-slate-900 dark:border-slate-800 scale-[1.1]">
+                        <!-- Mock Header -->
+                        <div class="bg-[#008069] h-14 w-full px-4 flex items-center gap-3">
+                            <div class="w-8 h-8 bg-white/20 rounded-full"></div>
+                            <div class="h-2 w-24 bg-white/20 rounded-full"></div>
+                        </div>
+
+                        <!-- Chat Background -->
+                        <div class="p-4 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat min-h-[420px] flex flex-col bg-opacity-90"
+                             style="background-color: #e5ddd5; background-image: radial-gradient(#d4d4d4 0.5px, transparent 0.5px); background-size: 20px 20px;">
+                            
+                            <!-- Template Message Bubble -->
+                            <div class="bg-white dark:bg-[#202c33] rounded-2xl rounded-tl-none shadow-sm max-w-[95%] p-2 relative self-start mb-2">
+                                <!-- Remote Header -->
+                                @if($headerType !== 'NONE')
+                                    <div class="mb-2">
+                                        @if($headerType === 'TEXT')
+                                            <h4 class="text-xs font-black text-slate-900 dark:text-white uppercase">{{ $headerText ?: 'Your Headline' }}</h4>
+                                        @else
+                                            <div class="w-full aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700">
+                                                @if($headerType === 'IMAGE') <svg class="w-6 h-6 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                @elseif($headerType === 'VIDEO') <svg class="w-6 h-6 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                @elseif($headerType === 'LOCATION') <svg class="w-6 h-6 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                @else <svg class="w-6 h-6 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                                @endif
+                                                <span class="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-widest">{{ $headerType }} HEADER</span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <!-- Body -->
+                                <p class="text-[11px] text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{{ $this->previewBody ?: 'Hello, this is your message body...' }}</p>
+
+                                <!-- Footer -->
+                                @if($footer)
+                                    <p class="text-[9px] text-slate-400 mt-2 italic border-t border-slate-50 dark:border-[#2a3942] pt-1 tracking-tight">{{ $footer }}</p>
+                                @endif
+
+                                <div class="flex justify-end mt-1">
+                                    <span class="text-[8px] text-slate-400">12:00 PM</span>
+                                </div>
+                            </div>
+
+                            @foreach($buttons as $btn)
+                                <div class="bg-white dark:bg-[#202c33] rounded-xl py-2 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-800 shadow-sm w-[95%] mb-1">
+                                    @if($btn['type'] === 'URL') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                    @elseif($btn['type'] === 'PHONE_NUMBER') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                    @elseif($btn['type'] === 'COPY_CODE') <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                    @elseif(in_array($btn['type'], ['CATALOG', 'MPM'])) <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                                    @endif
+                                    <span class="text-[10px] font-black text-wa-teal uppercase tracking-widest">{{ $btn['text'] ?: 'Action' }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="mt-20 p-6 bg-wa-teal/5 dark:bg-wa-teal/10 rounded-2xl border border-wa-teal/10 max-w-xs text-center">
+                        <p class="text-[10px] text-wa-teal font-black leading-relaxed uppercase tracking-widest">Unified protocol management ensures compliance and delivery optimization.</p>
+                    </div>
                 </div>
             </div>
+
+            <!-- Modal Footer -->
+            <div class="p-8 border-t border-slate-50 dark:border-slate-900 bg-white dark:bg-slate-950 flex justify-end gap-3 z-10">
+                <button wire:click="$set('showCreateModal', false)" 
+                    class="px-8 py-3.5 bg-slate-50 dark:bg-slate-900 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-100 transition-all border border-slate-100 dark:border-slate-800">
+                    Cancel
+                </button>
+                <button wire:click="createTemplate" wire:loading.attr="disabled"
+                    class="px-10 py-3.5 bg-wa-teal text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+                    <span wire:loading.remove>Submit Protocol</span>
+                    <span wire:loading class="flex items-center gap-2">
+                        <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Deploying...
+                    </span>
+                </button>
+            </div>
         </div>
+    </div>
+    @endteleport
     @endif
 
     <!-- View Modal -->

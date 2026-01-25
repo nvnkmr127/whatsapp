@@ -41,6 +41,114 @@
         </div>
     </div>
 
+    <!-- Trial Getting Started -->
+    @if(auth()->user()->currentTeam->subscription_status === 'trial')
+        <div
+            class="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2rem] p-8 text-white relative shadow-2xl overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <div
+                            class="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-3">
+                            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                            Launch Offer Used
+                        </div>
+                        <h2 class="text-3xl font-black tracking-tight">Getting Started</h2>
+                        <p class="text-indigo-100 mt-2 font-medium max-w-xl">
+                            Welcome to your 6-month free trial! Complete these steps to unlock the full power of the
+                            platform.
+                        </p>
+                    </div>
+
+                    <div class="text-right hidden md:block">
+                        <div class="text-xs font-bold uppercase tracking-widest text-indigo-200">Trial Ends</div>
+                        <div class="text-2xl font-black">{{ auth()->user()->currentTeam->trial_ends_at?->format('d M, Y') }}
+                        </div>
+                        <div class="text-xs font-bold text-indigo-200 mt-1">
+                            {{ auth()->user()->currentTeam->trial_ends_at?->diffForHumans() }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Step 1: Connect -->
+                    <div class="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div
+                                class="p-2 {{ auth()->user()->currentTeam->whatsapp_connected ? 'bg-green-400 text-green-900' : 'bg-white/20 text-white' }} rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                </svg>
+                            </div>
+                            <span
+                                class="font-bold text-sm {{ auth()->user()->currentTeam->whatsapp_connected ? 'text-green-300' : 'text-white' }}">
+                                {{ auth()->user()->currentTeam->whatsapp_connected ? 'Connected' : 'Connect WhatsApp' }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-indigo-100 leading-relaxed">Link your Facebook Business account to start
+                            sending messages.</p>
+                        @if(!auth()->user()->currentTeam->whatsapp_connected)
+                            <a href="{{ route('teams.whatsapp_config') }}"
+                                class="mt-3 block text-center py-2 bg-white text-indigo-600 text-xs font-bold uppercase rounded-lg hover:bg-indigo-50 transition w-full">Connect
+                                Now</a>
+                        @endif
+                    </div>
+
+                    <!-- Step 2: Create Template -->
+                    <div class="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div
+                                class="p-2 {{ ($dashboardData['total_template'] ?? 0) > 0 ? 'bg-green-400 text-green-900' : 'bg-white/20 text-white' }} rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <span
+                                class="font-bold text-sm {{ ($dashboardData['total_template'] ?? 0) > 0 ? 'text-green-300' : 'text-white' }}">
+                                {{ ($dashboardData['total_template'] ?? 0) > 0 ? 'Template Created' : 'Create Template' }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-indigo-100 leading-relaxed">Templates are required to start conversations
+                            with customers.</p>
+                        @if(($dashboardData['total_template'] ?? 0) == 0)
+                            <a href="{{ route('templates.index') }}"
+                                class="mt-3 block text-center py-2 bg-white text-indigo-600 text-xs font-bold uppercase rounded-lg hover:bg-indigo-50 transition w-full">Create
+                                Template</a>
+                        @endif
+                    </div>
+
+                    <!-- Step 3: Send Message -->
+                    <div class="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div
+                                class="p-2 {{ ($dashboardData['total_message'] ?? 0) > 0 ? 'bg-green-400 text-green-900' : 'bg-white/20 text-white' }} rounded-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                            </div>
+                            <span
+                                class="font-bold text-sm {{ ($dashboardData['total_message'] ?? 0) > 0 ? 'text-green-300' : 'text-white' }}">
+                                {{ ($dashboardData['total_message'] ?? 0) > 0 ? 'First Message Sent' : 'Send Message' }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-indigo-100 leading-relaxed">Launch your first broadcast or test message to
+                            see the magic.</p>
+                        @if(($dashboardData['total_message'] ?? 0) == 0)
+                            <a href="{{ route('campaigns.create') }}"
+                                class="mt-3 block text-center py-2 bg-white text-indigo-600 text-xs font-bold uppercase rounded-lg hover:bg-indigo-50 transition w-full">Send
+                                Now</a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ($stats as $stat)

@@ -33,7 +33,7 @@ class ImpersonationController extends Controller
         Session::put('impersonated_by', $admin->id);
 
         // 4. Log in as the target user
-        Auth::login($user);
+        Auth::guard('web')->login($user);
 
         return redirect()->route('dashboard')->with('status', "Now impersonating {$user->name}");
     }
@@ -60,7 +60,7 @@ class ImpersonationController extends Controller
         Session::forget('impersonated_by');
 
         // 3. Log back in as admin
-        Auth::login($admin);
+        Auth::guard('web')->login($admin);
 
         return redirect()->route('admin.dashboard')->with('status', "Impersonation ended.");
     }

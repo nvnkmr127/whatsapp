@@ -257,7 +257,23 @@ class Team extends JetstreamTeam
             return (int) $override->value;
         }
 
-        // 2. Fallback to Plan
+        // 2. Check for "Launch Offer" (Dynamic Trial)
+        // If in trial AND offer is enabled, use settings
+        // 2. Check for "Launch Offer" (Dynamic Trial)
+        // If in trial AND offer is enabled, use settings
+        if ($this->subscription_status === 'trial' && get_setting('offer_enabled', true)) {
+            $settingMap = [
+                'message_limit' => 'offer_message_limit',
+                'agent_limit' => 'offer_agent_limit',
+                'whatsapp_limit' => 'offer_whatsapp_limit',
+            ];
+
+            if (isset($settingMap[$key])) {
+                return (int) get_setting($settingMap[$key], ($key === 'message_limit' ? 5000 : 5));
+            }
+        }
+
+        // 3. Fallback to Plan
         $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
         if (!$plan) {
             return $default;
@@ -288,7 +304,16 @@ class Team extends JetstreamTeam
             return true;
         }
 
-        // 3. Check Plan Features
+        // 3. Check Launch Offer (Dynamic Trial)
+        if ($this->subscription_status === 'trial' && get_setting('offer_enabled', true)) {
+            $included = json_decode(get_setting('offer_included_features', '[]'), true);
+            // If features logic is not array (e.g. invalid json), default to empty
+            if (is_array($included) && in_array($feature, $included)) {
+                return true;
+            }
+        }
+
+        // 4. Check Plan Features
         $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
         if ($plan && $plan->hasFeature($feature)) {
             return true;

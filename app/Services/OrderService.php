@@ -75,8 +75,11 @@ class OrderService
     public function updateStatus(Order $order, string $status, array $context = [])
     {
         $user = $context['user'] ?? auth()->user();
-        if (!$user) {
-            throw new \Exception("Authentication required to update order status.");
+
+        // If no user is present (e.g. webhook), check if we allow system-level transition
+        // or if an acting_user is provided in context (e.g. integration owner)
+        if (!$user && empty($context['system'])) {
+            throw new \Exception("Authentication or System context required to update order status.");
         }
 
         // Validate Lifecycle

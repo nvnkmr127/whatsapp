@@ -28,6 +28,7 @@ class TemplateList extends Component
     public $buttons = [];
     public $exampleMediaUrl = '';
     public $copyCode = '';
+    public $variableConfig = [];
 
     public $languages = [
         'af' => 'Afrikaans',
@@ -132,16 +133,35 @@ class TemplateList extends Component
         $this->resetPage();
     }
 
-    public function syncTemplates()
+    public function syncTemplates(\App\Services\WhatsAppService $whatsapp)
     {
         $this->syncing = true;
-        // Check if settings allow sync (for now assuming yes or handling gracefully)
-        $response = $this->loadTemplatesFromWhatsApp();
+        try {
+            $whatsapp->setTeam(auth()->user()->currentTeam);
+            $response = $whatsapp->getTemplates();
 
-        if ($response['status']) {
-            $this->dispatch('notify', message: 'Templates synced: ' . ($response['count'] ?? 0), type: 'success');
-        } else {
-            $this->dispatch('notify', message: 'Sync failed: ' . ($response['message'] ?? 'Unknown error'), type: 'error');
+            if ($response['success']) {
+                foreach ($response['data'] as $remote) {
+                    WhatsappTemplate::updateOrCreate(
+                        [
+                            'team_id' => auth()->user()->currentTeam->id,
+                            'name' => $remote['name'],
+                            'language' => $remote['language'],
+                        ],
+                        [
+                            'category' => $remote['category'],
+                            'status' => $remote['status'],
+                            'whatsapp_template_id' => $remote['id'] ?? null,
+                            'components' => $remote['components'] ?? [],
+                        ]
+                    );
+                }
+                $this->dispatch('notify', message: 'Templates synced successfully!', type: 'success');
+            } else {
+                $this->dispatch('notify', message: 'Sync failed: ' . json_encode($response['error']), type: 'error');
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', message: 'Error: ' . $e->getMessage(), type: 'error');
         }
         $this->syncing = false;
     }
@@ -157,12 +177,67 @@ class TemplateList extends Component
         if (count($this->buttons) >= 10)
             return;
         $this->buttons[] = ['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''];
+        $this->detectVariables();
     }
 
     public function removeButton($index)
     {
         unset($this->buttons[$index]);
         $this->buttons = array_values($this->buttons);
+        $this->detectVariables();
+    }
+
+    public function updatedBody()
+    {
+        $this->detectVariables();
+    }
+
+    public function updatedHeaderText()
+    {
+        $this->detectVariables();
+    }
+
+    public function detectVariables()
+    {
+        $text = $this->body . ' ' . ($this->headerType === 'TEXT' ? $this->headerText : '');
+
+        foreach ($this->buttons as $btn) {
+            if (($btn['type'] ?? '') === 'URL') {
+                $text .= ' ' . ($btn['url'] ?? '');
+            }
+        }
+
+        $service = new \App\Services\TemplateService();
+        $vars = $service->extractVariables($text);
+
+        // Sync config: Add new, remove old
+        $newConfig = [];
+        foreach ($vars as $var) {
+            if (isset($this->variableConfig[$var])) {
+                $newConfig[$var] = $this->variableConfig[$var];
+            } else {
+                $newConfig[$var] = [
+                    'name' => '',
+                    'type' => 'TEXT',
+                    'fallback' => '',
+                    'sample' => ''
+                ];
+            }
+        }
+        $this->variableConfig = $newConfig;
+    }
+
+    public function getPreviewBodyProperty()
+    {
+        $text = $this->body;
+        if (empty($text))
+            return '';
+
+        foreach ($this->variableConfig as $var => $config) {
+            $replacement = $config['sample'] ?: ($config['fallback'] ?: $var);
+            $text = str_replace($var, $replacement, $text);
+        }
+        return $text;
     }
 
     public function viewTemplate($id)
@@ -216,7 +291,13 @@ class TemplateList extends Component
 
     public function createTemplate(\App\Services\WhatsAppService $whatsapp)
     {
-        $this->validate();
+        // Add dynamic rules for variables
+        $rules = $this->rules;
+        foreach ($this->variableConfig as $var => $config) {
+            $rules['variableConfig.' . $var . '.name'] = 'required|regex:/^[a-z0-9_]+$/|max:50';
+            $rules['variableConfig.' . $var . '.sample'] = 'required|max:100';
+        }
+        $this->validate($rules);
 
         $components = [];
 
@@ -230,14 +311,12 @@ class TemplateList extends Component
             if ($this->headerType === 'TEXT') {
                 $header['text'] = $this->headerText;
             } else if (in_array($this->headerType, ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                // Media headers need examples
                 $header['example'] = [
                     'header_handle' => [
                         $this->exampleMediaUrl ?: '4'
                     ]
                 ];
             }
-            // LOCATION requires no extra creation example
             $components[] = $header;
         }
 
@@ -312,14 +391,28 @@ class TemplateList extends Component
 
             if ($response['success']) {
                 $this->showCreateModal = false;
-                $this->syncTemplates();
-                $this->dispatch('notify', message: 'Template created successfully!', type: 'success');
+
+                // 1. Sync to get the new structure
+                $this->syncTemplates($whatsapp);
+
+                // 2. Save variable_config
+                $tpl = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+                    ->where('name', $payload['name'])
+                    ->where('language', $payload['language'])
+                    ->first();
+
+                if ($tpl) {
+                    $tpl->update(['variable_config' => $this->variableConfig]);
+                }
+
+                $this->variableConfig = [];
+                $this->dispatch('notify', message: 'Template submitted and schema saved!', type: 'success');
             } else {
                 $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
                 $this->dispatch('notify', message: 'Meta Error: ' . $errorMsg, type: 'error');
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', 'Error: ' . $e->getMessage());
+            $this->dispatch('notify', message: 'Error: ' . $e->getMessage(), type: 'error');
         }
     }
 

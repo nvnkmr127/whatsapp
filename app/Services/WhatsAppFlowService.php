@@ -4,18 +4,21 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\WhatsAppFlow;
+use App\Models\WhatsAppFlowResponse;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppFlowService
 {
+    protected $whatsappService;
     protected $baseUrl;
     protected $team;
     protected $token;
     protected $wabaId;
 
-    public function __construct(Team $team = null)
+    public function __construct(WhatsAppService $whatsappService, Team $team = null)
     {
+        $this->whatsappService = $whatsappService;
         $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
         if ($team) {
             $this->setTeam($team);
@@ -116,7 +119,6 @@ class WhatsAppFlowService
         // Save local copy
         $flow->update(['flow_json' => $metaJson]);
 
-        return true;
         return true;
     }
 
@@ -488,7 +490,7 @@ class WhatsAppFlowService
 
                 // Fallback to active version if specific version not found (or not provided)
                 if (!$version) {
-                    $flow = WhatsAppFlow::find($flowId);
+                    $flow = WhatsAppFlow::where('id', $flowId)->where('team_id', $tokenData['t'] ?? $request['team_id'] ?? null)->first();
                     if ($flow && $flow->active_version_id) {
                         $version = $flow->activeVersion;
                     }
@@ -538,8 +540,23 @@ class WhatsAppFlowService
                 }
 
                 // 5. Success - Data is valid and safe.
-                // Store response? (Ideally asynchronously via Job, but here valid)
-                // Or perform the "After Submit Action" (Webhook/API)
+                // Store response
+                WhatsAppFlowResponse::create([
+                    'whatsapp_flow_id' => $flowId,
+                    'whatsapp_flow_version_id' => $version->id,
+                    'contact_id' => $tokenData['c'] ?? null,
+                    'response_data' => $validation['cleanedData']
+                ]);
+
+                // Trigger automation
+                try {
+                    $contact = \App\Models\Contact::find($tokenData['c'] ?? null);
+                    if ($contact) {
+                        $this->whatsappService->setTeam($this->team)->sendText($contact->phone_number, "Thank you! We've received your form submission.");
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Flow Automation Trigger Failed: ' . $e->getMessage());
+                }
 
                 // Determine next step
                 // Ideally, we look at the routing logic. For now, we assume this is the final submit.

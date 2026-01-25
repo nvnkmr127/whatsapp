@@ -139,6 +139,16 @@ class WhatsappConfig extends Component
         try {
             DB::beginTransaction();
 
+            // Check for duplicate WABA usage in Trial teams (Abuse Protection)
+            $duplicate = \App\Models\Team::where('whatsapp_business_account_id', $wabaId)
+                ->where('id', '!=', auth()->user()->currentTeam->id)
+                ->whereIn('subscription_status', ['trial', 'expired'])
+                ->exists();
+
+            if ($duplicate) {
+                throw new \Exception("This WhatsApp account has already been used for a trial subscription.");
+            }
+
             // 1. Exchange for Long-Lived Token
             $exchangeResult = $this->exchangeForLongLivedToken($accessToken);
             if (!$exchangeResult['status']) {
@@ -199,6 +209,17 @@ class WhatsappConfig extends Component
             }
 
             // Move to AUTHENTICATED state immediately
+
+            // Check for duplicate WABA usage in Trial teams (Abuse Protection)
+            $duplicate = \App\Models\Team::where('whatsapp_business_account_id', $this->wm_business_account_id)
+                ->where('id', '!=', auth()->user()->currentTeam->id)
+                ->whereIn('subscription_status', ['trial', 'expired'])
+                ->exists();
+
+            if ($duplicate) {
+                throw new \Exception("This WhatsApp account has already been used for a trial subscription.");
+            }
+
             $team->update([
                 'whatsapp_business_account_id' => $this->wm_business_account_id,
                 'whatsapp_access_token' => $this->wm_access_token,

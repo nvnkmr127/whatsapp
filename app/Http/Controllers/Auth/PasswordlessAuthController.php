@@ -96,13 +96,16 @@ class PasswordlessAuthController extends Controller
                     ]);
 
                     // 2. Create Personal Team (Tenant Role)
+                    $trialDays = config('whatsapp.trial_days', 14);
+                    $teamName = (explode('@', $identifier)[0] ?: $identifier) . "'s Team";
+
                     $team = \App\Models\Team::forceCreate([
                         'user_id' => $user->id,
-                        'name' => explode('@', $identifier)[0] . "'s Team",
+                        'name' => $teamName,
                         'personal_team' => true,
                         'subscription_plan' => 'trial',
                         'subscription_status' => 'trial',
-                        'trial_ends_at' => now()->addDays(14),
+                        'trial_ends_at' => now()->addDays($trialDays),
                     ]);
 
                     $user->ownedTeams()->save($team);
