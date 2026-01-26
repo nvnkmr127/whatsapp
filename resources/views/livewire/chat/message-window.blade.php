@@ -229,6 +229,13 @@
         </div>
     </div>
 
+    <!-- DEBUG INDICATOR (Remove after fixing) -->
+    <div class="bg-red-500 text-white text-xs font-bold p-1 text-center z-50">
+        DEBUG: Messages in Store: <span x-text="$store.chat.messages.length"></span> | 
+        Viewport: <span x-text="viewportHeight"></span> | 
+        Render: <span x-text="renderConfig.start"></span>-<span x-text="renderConfig.end"></span>
+    </div>
+
     <!-- Messages (Virtual Scroller) -->
     <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950 relative" 
          id="messages-container"
