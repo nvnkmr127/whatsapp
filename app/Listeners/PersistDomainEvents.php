@@ -13,35 +13,50 @@ class PersistDomainEvents implements ShouldQueue
 
     /**
      * Handle the event.
+     * 
+     * @param string|object $event
+     * @param array $payload
      */
-    public function handle(object $event): void
+    public function handle($event, $payload = []): void
     {
+        // Wildcard Event Listener passes ($eventName, $payloadArray)
+        // Standard Event Listener passes ($eventObject)
+
+        $eventObj = null;
+
+        if (is_object($event)) {
+            $eventObj = $event;
+        } elseif (is_string($event) && !empty($payload)) {
+            // Wildcard mode: $event is the string name, $payload is array containing the event object(s)
+            $eventObj = $payload[0] ?? null;
+        }
+
         // Only handle DomainEvents
-        if (!($event instanceof DomainEventContract)) {
+        if (!($eventObj instanceof DomainEventContract)) {
             return;
         }
 
         // Sampling Logic
-        if (!$this->shouldPersist($event)) {
+        if (!$this->shouldPersist($eventObj)) {
             return;
         }
 
-        $metadata = $event->metadata ?? [];
+        $metadata = $eventObj->metadata ?? [];
 
         SystemEvent::create([
-            'event_id' => $event->eventId ?? $metadata['span_id'] ?? null,
-            'event_type' => class_basename($event),
-            'source' => $event->source(),
-            'category' => $event->category(),
-            'is_signal' => $event->isSignal(),
+            'event_id' => $eventObj->eventId ?? $metadata['span_id'] ?? null,
+            'event_type' => class_basename($eventObj),
+            'source' => $eventObj->source(),
+            'category' => $eventObj->category(),
+            'is_signal' => $eventObj->isSignal(),
             'trace_id' => $metadata['trace_id'] ?? null,
             'span_id' => $metadata['span_id'] ?? null,
             'parent_id' => $metadata['parent_id'] ?? null,
             'team_id' => $metadata['team_id'] ?? null,
             'actor_id' => $metadata['actor_id'] ?? null,
-            'payload' => $event->payload ?? [],
+            'payload' => $eventObj->payload ?? [],
             'metadata' => $metadata,
-            'occurred_at' => $event->occurredAt ?? now(),
+            'occurred_at' => $eventObj->occurredAt ?? now(),
         ]);
     }
 
