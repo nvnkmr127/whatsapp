@@ -16,14 +16,8 @@ Broadcast::channel('conversations', function ($user) {
     return $user->currentTeam !== null;
 });
 
-// Single Conversation Channel (for messages)
+// Single Conversation Channel (Presence Capable)
 Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
-    $conversation = \App\Models\Conversation::find($conversationId);
-    return $conversation && $conversation->team_id === $user->currentTeam->id;
-});
-
-// Presence Channel availability for typing indicators & locks
-Broadcast::channel('presence-conversation.{conversationId}', function ($user, $conversationId) {
     $conversation = \App\Models\Conversation::find($conversationId);
     if ($conversation && $conversation->team_id === $user->currentTeam->id) {
         return ['id' => $user->id, 'name' => $user->name];
