@@ -19,9 +19,20 @@ Broadcast::channel('conversations', function ($user) {
 // Single Conversation Channel (Presence Capable)
 Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
     $conversation = \App\Models\Conversation::find($conversationId);
-    if ($conversation && $conversation->team_id === $user->currentTeam->id) {
+
+    // Debug Logging
+    \Log::info("Broadcast Auth Check: conversation.$conversationId", [
+        'user_id' => $user->id,
+        'user_team' => $user->current_team_id, // Use FK to avoid null prop error if relation fails
+        'conversation_exists' => (bool) $conversation,
+        'conv_team' => $conversation?->team_id
+    ]);
+
+    if ($conversation && (int) $conversation->team_id === (int) $user->current_team_id) {
         return ['id' => $user->id, 'name' => $user->name];
     }
+
+    return false;
 });
 
 // Campaign Progress Channel
