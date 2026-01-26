@@ -45,8 +45,5 @@ Schedule::command('broadcast:consume --seconds=55')
     ->everyMinute()
     ->withoutOverlapping();
 
-// Reverb Server Poller (Runs for 55s then exits, restarted by Cron)
-Schedule::command('reverb:run-poll --seconds=55')
-    ->everyMinute()
-    ->withoutOverlapping();
+
 
