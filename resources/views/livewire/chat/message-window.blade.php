@@ -479,8 +479,16 @@
         <div :style="{ height: renderConfig.bottom + 'px' }"></div>
     </div>
 
+    <!-- FIXED DEBUG OVERLAY (Check if component renders) -->
+    <div class="fixed bottom-10 right-10 z-[100] bg-blue-600 text-white p-4 rounded-xl shadow-2xl font-black border-4 border-white">
+        COMPONENT ACTIVE
+    </div>
+
+    <!-- STATIC FLOW MARKER -->
+    <div class="bg-purple-500 h-4 w-full shrink-0 z-50"></div>
+
     <!-- Input Area -->
-    <div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10"
+    <div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10 shrink-0"
         style="border: 5px solid red !important; display: block !important;"
         x-data="{ 
             msgBody: '',
