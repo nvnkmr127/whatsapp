@@ -192,4 +192,30 @@ class User extends Authenticatable
 
         return $this->currentTeam->hasFeature($feature);
     }
+
+    /**
+     * Check if the user is available for calls in a specific team.
+     */
+    public function isAvailableForCalls(Team $team): bool
+    {
+        $membership = $team->users()->where('users.id', $this->id)->first()?->membership;
+
+        if (!$membership || !$membership->is_call_enabled) {
+            return false;
+        }
+
+        if ($membership->call_status !== 'available') {
+            return false;
+        }
+
+        // Check cooldown
+        if ($membership->last_call_ended_at) {
+            $cooldown = $team->getCallRoutingConfig()['cooldown_seconds'] ?? 60;
+            if ($membership->last_call_ended_at->addSeconds($cooldown)->isFuture()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

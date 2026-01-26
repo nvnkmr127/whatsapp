@@ -62,6 +62,7 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
     // WhatsApp Calling API
     Route::prefix('calls')->group(function () {
         Route::post('/initiate', [\App\Http\Controllers\Api\CallController::class, 'initiate']);
+        Route::post('/check-eligibility', [\App\Http\Controllers\Api\CallController::class, 'checkEligibility']);
         Route::post('/{callId}/answer', [\App\Http\Controllers\Api\CallController::class, 'answer']);
         Route::post('/{callId}/reject', [\App\Http\Controllers\Api\CallController::class, 'reject']);
         Route::post('/{callId}/end', [\App\Http\Controllers\Api\CallController::class, 'end']);

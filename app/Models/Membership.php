@@ -12,4 +12,14 @@ class Membership extends JetstreamMembership
      * @var bool
      */
     public $incrementing = true;
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'is_call_enabled' => 'boolean',
+        'last_call_ended_at' => 'datetime',
+    ];
 }

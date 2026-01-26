@@ -114,6 +114,11 @@ class WhatsAppCallWebhookController extends Controller
             ]
         );
 
+        // If newly created, emit CallOffered event
+        if ($call->wasRecentlyCreated) {
+            event(new \App\Events\CallOffered($call));
+        }
+
         // Handle different call statuses
         switch ($status) {
             case 'ringing':

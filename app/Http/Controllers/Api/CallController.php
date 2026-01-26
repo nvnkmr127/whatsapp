@@ -47,6 +47,41 @@ class CallController extends Controller
     }
 
     /**
+     * Check eligibility for calling a contact.
+     */
+    public function checkEligibility(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'contact_id' => 'required|integer|exists:contacts,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $team = $request->user()->currentTeam;
+        $contact = $team->contacts()->findOrFail($request->contact_id);
+
+        try {
+            $eligibilityService = new \App\Services\CallEligibilityService($team);
+            $eligibility = $eligibilityService->checkEligibility($contact);
+
+            return response()->json([
+                'success' => true,
+                'data' => $eligibility,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Answer an incoming call.
      */
     public function answer(Request $request, string $callId)

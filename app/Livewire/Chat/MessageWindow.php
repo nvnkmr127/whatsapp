@@ -184,6 +184,25 @@ class MessageWindow extends Component
         }
     }
 
+    public function saveCallNote($messageId, $note)
+    {
+        $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+            ->where('id', $messageId)
+            ->first();
+
+        if ($message) {
+            $metadata = $message->metadata ?? [];
+            $metadata['agent_note'] = $note;
+            $metadata['note_saved_at'] = now()->timestamp;
+            $message->update(['metadata' => $metadata]);
+
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Call note updated.'
+            ]);
+        }
+    }
+
     public function handleIncomingMessage($event)
     {
         Log::info("MessageWindow: handleIncomingMessage received", ['event' => $event]);
@@ -587,6 +606,7 @@ class MessageWindow extends Component
                     'error_message' => $msg->error_message, // For failed status
                     'is_outbound' => $msg->direction === 'outbound',
                     'attributed_campaign_name' => $msg->attributedCampaign?->name,
+                    'metadata' => $msg->metadata,
                 ];
             })
             ->reverse() // Return chronological for the list

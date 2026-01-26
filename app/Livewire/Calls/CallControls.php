@@ -4,6 +4,7 @@ namespace App\Livewire\Calls;
 
 use App\Models\Contact;
 use App\Services\CallService;
+use App\Services\CallEligibilityService;
 use App\Services\WhatsAppService;
 use Livewire\Component;
 
@@ -12,18 +13,43 @@ class CallControls extends Component
     public Contact $contact;
     public $activeCall = null;
     public $isInitiating = false;
+    public $eligibility = null;
+    public $showEligibilityDetails = false;
+    public $teamId;
 
     protected $listeners = [
-        'echo-private:team.{teamId},call.ringing' => 'handleCallRinging',
-        'echo-private:team.{teamId},call.answered' => 'handleCallAnswered',
-        'echo-private:team.{teamId},call.ended' => 'handleCallEnded',
-        'echo-private:team.{teamId},call.failed' => 'handleCallFailed',
+        'echo-private:teams.{teamId},call.ringing' => 'handleCallRinging',
+        'echo-private:teams.{teamId},call.answered' => 'handleCallAnswered',
+        'echo-private:teams.{teamId},call.ended' => 'handleCallEnded',
+        'echo-private:teams.{teamId},call.failed' => 'handleCallFailed',
     ];
 
     public function mount(Contact $contact)
     {
         $this->contact = $contact;
+        $this->teamId = auth()->user()->currentTeam->id;
         $this->checkActiveCall();
+        $this->checkEligibility();
+    }
+
+    public function checkEligibility()
+    {
+        $team = auth()->user()->currentTeam;
+        $eligibilityService = new CallEligibilityService($team);
+
+        // Determine trigger type and context
+        $triggerType = 'user_initiated'; // Default, can be changed based on UI action
+        $context = [
+            'trigger_source' => 'in_app_action',
+            'trigger_message' => 'User clicked call button',
+            'conversation_id' => $this->contact->conversations()->latest()->first()?->id,
+        ];
+
+        $this->eligibility = $eligibilityService->checkEligibility(
+            $this->contact,
+            $triggerType,
+            $context
+        );
     }
 
     public function checkActiveCall()
@@ -39,6 +65,14 @@ class CallControls extends Component
 
     public function initiateCall()
     {
+        // Re-check eligibility before initiating
+        $this->checkEligibility();
+
+        if (!$this->eligibility['eligible']) {
+            $this->dispatch('call-error', ['message' => $this->eligibility['user_message']]);
+            return;
+        }
+
         $this->isInitiating = true;
 
         try {

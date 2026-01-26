@@ -306,84 +306,155 @@
         </div>
 
         <template x-for="message in visibleMessages" :key="message.id">
-            <div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 animate-in slide-in-from-bottom-2 duration-300']">
-                <div class="max-w-[85%] sm:max-w-[70%] group">
-                    <div :class="[
-                        'relative p-3 px-4 transition-all hover:scale-[1.01] shadow-sm',
-                        message.is_outbound 
-                            ? 'bg-wa-teal text-white rounded-2xl rounded-tr-sm shadow-xl shadow-wa-teal/10' 
-                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-700'
-                    ]">
-                        <!-- Attribution Badge -->
-                        <template x-if="message.attributed_campaign_name">
-                            <div class="mb-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-wa-teal/10 dark:bg-wa-teal/20 border border-wa-teal/20">
-                                <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167a2.405 2.405 0 011.002-2.736l3.144-1.921A1.76 1.76 0 0111 5.882zM15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">
-                                    Reply to: <span x-text="message.attributed_campaign_name"></span>
-                                </span>
+            <!-- Call Log Entry -->
+            <template x-if="message.type === 'call_log'">
+                <div class="flex justify-center mb-8 px-4">
+                    <div class="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 overflow-hidden group/call">
+                        <!-- Card Header -->
+                        <div class="p-5 flex items-center justify-between border-b border-slate-50 dark:border-slate-800/50">
+                            <div class="flex items-center gap-4">
+                                <div class="p-3 rounded-2xl" :class="message.metadata?.status === 'completed' ? 'bg-wa-teal/10 text-wa-teal' : 'bg-rose-500/10 text-rose-500'">
+                                    <template x-if="message.metadata?.status === 'completed'">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2 2m-2-2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h2M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-.311-.104a4.501 4.501 0 00-1.456-.272H10.16c-.445 0-.882.044-1.308.13l-1.488.3a4.502 4.502 0 01-1.456.272H5.16c-.618 0-1.217-.247-1.605-.729a11.95 11.95 0 01-2.649-7.521c0-.435.023-.863.068-1.285.109-1.021 1.028-1.715 2.054-1.715h3.605z" /></svg>
+                                    </template>
+                                    <template x-if="message.metadata?.status !== 'completed'">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2 2m-2-2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h2M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-.311-.104a4.501 4.501 0 00-1.456-.272H10.16c-.445 0-.882.044-1.308.13l-1.488.3a4.502 4.502 0 01-1.456.272H5.16c-.618 0-1.217-.247-1.605-.729a11.95 11.95 0 01-2.649-7.521c0-.435.023-.863.068-1.285.109-1.021 1.028-1.715 2.054-1.715h3.605z" /></svg>
+                                    </template>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400" x-text="message.metadata?.status === 'completed' ? 'VoIP Session' : 'Missed Interaction'"></span>
+                                    <span class="text-sm font-black text-slate-900 dark:text-white" x-text="message.content"></span>
+                                </div>
                             </div>
-                        </template>
+                            <span class="text-[10px] font-bold text-slate-400" x-text="message.pretty_time"></span>
+                        </div>
 
-                        <!-- Media -->
-                        <template x-if="message.media_url">
-                            <div class="mb-3 rounded-lg overflow-hidden border border-white/10">
-                                <template x-if="message.media_type && message.media_type.startsWith('image')">
-                                    <img :src="message.media_url" class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm" @click="lightboxImage = message.media_url; lightboxOpen = true">
+                        <!-- Card Body (Post-Call Actions & Notes) -->
+                        <div class="p-5 space-y-4" x-data="{ editingNote: false, noteValue: message.metadata?.agent_note || '' }">
+                            <!-- Notes Display/Input -->
+                            <div class="relative">
+                                <template x-if="!editingNote && !noteValue">
+                                    <button @click="editingNote = true" class="w-full py-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        Add Summary Note
+                                    </button>
                                 </template>
-                                <template x-if="message.media_type && message.media_type.startsWith('video')">
-                                    <video :src="message.media_url" controls class="w-full max-h-80"></video>
-                                </template>
-                                <template x-if="message.media_type && message.media_type.startsWith('audio')">
-                                    <audio :src="message.media_url" controls class="w-full"></audio>
-                                </template>
-                                <template x-if="message.media_type && !['image','video','audio'].some(t => message.media_type.startsWith(t))">
-                                    <a :href="message.media_url" target="_blank" class="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                        <span class="font-bold text-xs truncate">Document</span>
-                                    </a>
-                                </template>
-                            </div>
-                        </template>
-
-                        <!-- Text -->
-                        <template x-if="message.content && message.content !== '[Image]'">
-                            <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content"></p>
-                        </template>
-                        
-                        <!-- Caption -->
-                        <template x-if="message.caption && !message.content">
-                             <p class="text-xs font-bold italic opacity-80 mt-1" x-text="message.caption"></p>
-                        </template>
-
-                        <!-- Metadata -->
-                        <div class="text-[9px] font-black uppercase tracking-widest mt-2 flex items-center justify-end gap-1.5 opacity-60">
-                            <span x-text="message.pretty_time"></span>
-                            
-                            <template x-if="message.is_outbound">
-                                <span>
-                                    <template x-if="message.status === 'read'">
-                                        <svg class="w-3 h-3 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7M5 7l4 4 10-10" /></svg>
-                                    </template>
-                                    <template x-if="message.status === 'delivered'">
-                                        <svg class="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7M5 7l4 4 10-10" /></svg>
-                                    </template>
-                                    <template x-if="message.status === 'sent'">
-                                        <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                                    </template>
-                                    <template x-if="message.status === 'failed'">
-                                        <div class="group/error relative">
-                                            <svg class="w-3 h-3 text-rose-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <template x-if="!editingNote && noteValue">
+                                    <div class="p-4 bg-amber-50/50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20 relative group/note cursor-pointer" @click="editingNote = true">
+                                        <span class="text-xs font-medium text-amber-900 dark:text-amber-300 leading-relaxed" x-text="noteValue"></span>
+                                        <div class="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-[1px] opacity-0 group-hover/note:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                             <span class="text-[9px] font-black text-slate-900 dark:text-white uppercase">Click to edit</span>
                                         </div>
-                                    </template>
-                                    <template x-if="['queued', 'sending'].includes(message.status)">
-                                        <svg class="w-3 h-3 text-white/40 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    </template>
-                                </span>
-                            </template>
+                                    </div>
+                                </template>
+                                <template x-if="editingNote">
+                                    <div class="space-y-2">
+                                        <textarea x-model="noteValue" class="w-full p-4 bg-white dark:bg-slate-800 border-2 border-wa-teal/20 rounded-2xl text-xs font-medium focus:ring-0 focus:border-wa-teal transition-all" rows="3" placeholder="Summarize the outcome..."></textarea>
+                                        <div class="flex justify-end gap-2">
+                                            <button @click="editingNote = false" class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase">Cancel</button>
+                                            <button @click="$wire.saveCallNote(message.id, noteValue); editingNote = false; message.metadata.agent_note = noteValue" class="px-4 py-2 bg-wa-teal text-white rounded-xl text-[10px] font-black uppercase">Save Note</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Suggested Actions -->
+                            <div class="pt-2 flex flex-wrap gap-2">
+                                <template x-if="message.metadata?.status !== 'completed'">
+                                    <button @click="$wire.openTemplateList()" class="px-3 py-2 bg-wa-teal/10 text-wa-teal hover:bg-wa-teal text-[9px] font-black uppercase tracking-widest rounded-xl hover:text-white transition-all border border-wa-teal/20">
+                                        🚀 Send Follow-up
+                                    </button>
+                                </template>
+                                <button class="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all border border-slate-200 dark:border-slate-700">
+                                    🗓️ Schedule Task
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </template>
+
+            <!-- Standard Message Bubble -->
+            <template x-if="message.type !== 'call_log'">
+                <div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 animate-in slide-in-from-bottom-2 duration-300']">
+                    <div class="max-w-[85%] sm:max-w-[70%] group">
+                        <div :class="[
+                            'relative p-3 px-4 transition-all hover:scale-[1.01] shadow-sm',
+                            message.is_outbound 
+                                ? 'bg-wa-teal text-white rounded-2xl rounded-tr-sm shadow-xl shadow-wa-teal/10' 
+                                : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-700'
+                        ]">
+                            <!-- Attribution Badge -->
+                            <template x-if="message.attributed_campaign_name">
+                                <div class="mb-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-wa-teal/10 dark:bg-wa-teal/20 border border-wa-teal/20">
+                                    <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167a2.405 2.405 0 011.002-2.736l3.144-1.921A1.76 1.76 0 0111 5.882zM15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">
+                                        Reply to: <span x-text="message.attributed_campaign_name"></span>
+                                    </span>
+                                </div>
+                            </template>
+    
+                            <!-- Media -->
+                            <template x-if="message.media_url">
+                                <div class="mb-3 rounded-lg overflow-hidden border border-white/10">
+                                    <template x-if="message.media_type && message.media_type.startsWith('image')">
+                                        <img :src="message.media_url" class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm" @click="lightboxImage = message.media_url; lightboxOpen = true">
+                                    </template>
+                                    <template x-if="message.media_type && message.media_type.startsWith('video')">
+                                        <video :src="message.media_url" controls class="w-full max-h-80"></video>
+                                    </template>
+                                    <template x-if="message.media_type && message.media_type.startsWith('audio')">
+                                        <audio :src="message.media_url" controls class="w-full"></audio>
+                                    </template>
+                                    <template x-if="message.media_type && !['image','video','audio'].some(t => message.media_type.startsWith(t))">
+                                        <a :href="message.media_url" target="_blank" class="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                            <span class="font-bold text-xs truncate">Document</span>
+                                        </a>
+                                    </template>
+                                </div>
+                            </template>
+    
+                            <!-- Text -->
+                            <template x-if="message.content && message.content !== '[Image]'">
+                                <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content"></p>
+                            </template>
+                            
+                            <!-- Caption -->
+                            <template x-if="message.caption && !message.content">
+                                 <p class="text-xs font-bold italic opacity-80 mt-1" x-text="message.caption"></p>
+                            </template>
+    
+                            <!-- Metadata -->
+                            <div class="text-[9px] font-black uppercase tracking-widest mt-2 flex items-center justify-end gap-1.5 opacity-60">
+                                <span x-text="message.pretty_time"></span>
+                                
+                                <template x-if="message.is_outbound">
+                                    <span>
+                                        <template x-if="message.status === 'read'">
+                                            <svg class="w-3 h-3 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7M5 7l4 4 10-10" /></svg>
+                                        </template>
+                                        <template x-if="message.status === 'delivered'">
+                                            <svg class="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7M5 7l4 4 10-10" /></svg>
+                                        </template>
+                                        <template x-if="message.status === 'sent'">
+                                            <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                        </template>
+                                        <template x-if="message.status === 'failed'">
+                                            <div class="group/error relative">
+                                                <svg class="w-3 h-3 text-rose-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            </div>
+                                        </template>
+                                        <template x-if="['queued', 'sending'].includes(message.status)">
+                                            <svg class="w-3 h-3 text-white/40 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        </template>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </template>
         
         <div :style="{ height: renderConfig.bottom + 'px' }"></div>

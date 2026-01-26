@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Team;
 use App\Models\WhatsAppCall;
 use App\Models\Contact;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class CallService
@@ -23,20 +24,30 @@ class CallService
      */
     public function initiateCall(string $phoneNumber, array $options = []): array
     {
-        // Validate calling is enabled
-        if (!$this->team->calling_enabled) {
+        // Find or create contact
+        $contact = Contact::where('team_id', $this->team->id)
+            ->where('phone_number', $phoneNumber)
+            ->first();
+
+        if (!$contact) {
             return [
                 'success' => false,
-                'error' => 'Calling is not enabled for your account. Please contact support to enable this feature.',
+                'error' => 'Contact not found. Please add the contact first.',
             ];
         }
 
-        // Check usage limits
-        $limitCheck = $this->checkUsageLimits();
-        if (!$limitCheck['allowed']) {
+        // Run comprehensive eligibility checks
+        $eligibilityService = new CallEligibilityService($this->team);
+        $eligibility = $eligibilityService->checkEligibility($contact);
+
+        if (!$eligibility['eligible']) {
             return [
                 'success' => false,
-                'error' => $limitCheck['reason'],
+                'error' => $eligibility['user_message'],
+                'block_reason' => $eligibility['block_reason'],
+                'block_category' => $eligibility['block_category'],
+                'can_retry_at' => $eligibility['can_retry_at'],
+                'eligibility_details' => $eligibility,
             ];
         }
 
@@ -47,6 +58,7 @@ class CallService
                 Log::info("Call initiated successfully", [
                     'team_id' => $this->team->id,
                     'phone' => $phoneNumber,
+                    'contact_id' => $contact->id,
                 ]);
             }
 
@@ -212,5 +224,44 @@ class CallService
                 'initiated_at' => $call->initiated_at?->diffForHumans(),
             ];
         })->toArray();
+    }
+
+    /**
+     * Handle call completion and trigger agent cooldown.
+     */
+    public function handleCallEnded(WhatsAppCall $call): void
+    {
+        $agentId = $call->agent_id;
+        if (!$agentId)
+            return;
+
+        $user = User::find($agentId);
+        if (!$user)
+            return;
+
+        $membership = $this->team->users()->where('users.id', $agentId)->first()?->membership;
+        if (!$membership)
+            return;
+
+        // Update status to cooldown
+        $this->team->users()->updateExistingPivot($agentId, [
+            'call_status' => 'cooldown',
+            'last_call_ended_at' => now(),
+        ]);
+
+        Log::info("Agent entered cooldown", [
+            'team_id' => $this->team->id,
+            'agent_id' => $agentId,
+            'call_id' => $call->call_id,
+        ]);
+    }
+
+    /**
+     * Route a call to an appropriate agent.
+     */
+    public function routeCall(Contact $contact): array
+    {
+        $routingService = new CallRoutingService($this->team);
+        return $routingService->findAgent($contact);
     }
 }

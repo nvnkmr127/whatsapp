@@ -13,6 +13,7 @@ class Sidebar extends Component
             'menuGroups' => [
                 'Core' => $this->coreLinks(),
                 'Engagement' => $this->engagementLinks(),
+                'Communications' => $this->voiceLinks(),
                 'Commerce' => $this->commerceLinks(),
                 'Intelligence' => $this->intelligenceLinks(),
                 'Compliance' => $this->complianceLinks(),
@@ -130,6 +131,7 @@ class Sidebar extends Component
                 'children' => [
                     ['route' => 'analytics', 'label' => 'Dashboard'],
                     ['route' => 'analytics.events', 'label' => 'Customer Events'],
+                    ['route' => 'calls.analytics', 'label' => 'Voice Analytics'],
                 ]
             ],
             [
@@ -223,6 +225,21 @@ class Sidebar extends Component
                 'route' => 'settings.categories',
                 'label' => 'Categories',
                 'icon' => 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'
+            ],
+        ];
+    }
+
+    protected function voiceLinks()
+    {
+        return [
+            [
+                'route' => 'calls.history',
+                'label' => 'Voice & Calling',
+                'icon' => 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z',
+                'children' => [
+                    ['route' => 'calls.history', 'label' => 'Call Records'],
+                    ['route' => 'calls.analytics', 'label' => 'Call Analytics'],
+                ]
             ],
         ];
     }

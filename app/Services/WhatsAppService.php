@@ -838,7 +838,7 @@ class WhatsAppService
                 $conversationService = new \App\Services\ConversationService();
                 $conversation = $conversationService->ensureActiveConversation($contact);
 
-                \App\Models\WhatsAppCall::create([
+                $call = \App\Models\WhatsAppCall::create([
                     'team_id' => $this->team->id,
                     'contact_id' => $contact->id,
                     'conversation_id' => $conversation->id,
@@ -850,6 +850,13 @@ class WhatsAppService
                     'initiated_at' => now(),
                     'metadata' => $options,
                 ]);
+
+                // Emit CallOffered event
+                event(new \App\Events\CallOffered($call));
+
+                // Record for safeguards
+                $safeguardService = new \App\Services\CallSafeguardService();
+                $safeguardService->recordOutboundCall($this->team);
 
                 Log::info("Outbound call initiated", [
                     'team_id' => $this->team->id,

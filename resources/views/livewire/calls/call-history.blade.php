@@ -78,7 +78,7 @@
         <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl p-6 shadow-lg">
             <div class="text-xs font-bold uppercase tracking-wider opacity-90">Total Minutes</div>
             <div class="text-4xl font-black mt-2">{{ number_format($statistics['total_duration_minutes'], 0) }}</div>
-            <div class="text-sm mt-2 opacity-75">{{ number_format($statistics['avg_duration_seconds'] / 60, 1) }}m avg
+            <div class="text-sm mt-2 opacity-75">{{ number_format(($statistics['average_duration_seconds'] ?? 0) / 60, 1) }}m avg
             </div>
         </div>
 

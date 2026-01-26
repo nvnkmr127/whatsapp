@@ -39,20 +39,22 @@
                 <p class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">{{ $contact->phone_number }}
                 </p>
 
-                <div class="mt-3 flex items-center gap-2">
+                <div class="mt-3 flex items-center gap-3">
                     <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                                    {{ $contact->opt_in_status === 'opted_in'
+                                        {{ $contact->opt_in_status === 'opted_in'
             ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
-                                    }}">
+                                        }}">
                         <!-- Default Text -->
                         <span class="block {{ $contact->opt_in_status === 'opted_in' ? 'group-hover:hidden' : '' }}">
                             {{ $contact->opt_in_status === 'opted_in' ? 'OPTED IN' : 'OPTED OUT' }}
                         </span>
-
-                        <!-- Hover Text for Toggle Action (Only show 'OPT OUT' on hover if currently opted in, logic handled via css classes slightly complex here, keeping simpler for now) -->
-                        <!-- Actually, let's keep it simple: Status is button. Click to toggle. -->
                     </button>
+
+                    @if(auth()->user()->currentTeam->calling_enabled)
+                        <livewire:chat.whatsapp-call-button :contact="$contact" :key="'call-btn-' . $contact->id" />
+                    @endif
+
                     <span
                         class="w-1.5 h-1.5 rounded-full {{ $contact->opt_in_status === 'opted_in' ? 'bg-wa-teal animate-pulse' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
                 </div>

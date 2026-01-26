@@ -11,6 +11,10 @@ class Note extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'metadata' => 'array',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

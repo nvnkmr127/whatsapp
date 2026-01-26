@@ -127,6 +127,17 @@ class WhatsAppCall extends Model
     }
 
     /**
+     * Mark the call as offered (initiated/received).
+     */
+    public function markAsOffered(): void
+    {
+        $this->update([
+            'status' => 'initiated',
+            'initiated_at' => $this->initiated_at ?? now(),
+        ]);
+    }
+
+    /**
      * Mark the call as answered.
      */
     public function markAsAnswered(): void
@@ -165,7 +176,7 @@ class WhatsAppCall extends Model
         $this->update([
             'status' => 'failed',
             'ended_at' => now(),
-            'failure_reason' => $reason,
+            'failure_reason' => $reason ?? 'UNKNOWN_ERROR',
         ]);
     }
 

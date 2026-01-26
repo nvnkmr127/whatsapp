@@ -23,7 +23,7 @@ class Team extends JetstreamTeam
     public function users()
     {
         return $this->belongsToMany(User::class, \Laravel\Jetstream\Jetstream::membershipModel())
-            ->withPivot('role', 'receives_tickets')
+            ->withPivot('role', 'receives_tickets', 'call_status', 'is_call_enabled', 'last_call_ended_at')
             ->withTimestamps()
             ->as('membership');
     }
@@ -60,6 +60,9 @@ class Team extends JetstreamTeam
         'whatsapp_setup_state',
         'whatsapp_token_expires_at',
         'whatsapp_token_last_validated',
+        'call_routing_config',
+        'calling_safeguards',
+        'calling_suspended_until',
     ];
 
     /**
@@ -108,6 +111,9 @@ class Team extends JetstreamTeam
             'whatsapp_setup_state' => \App\Enums\IntegrationState::class,
             'whatsapp_token_expires_at' => 'datetime',
             'whatsapp_token_last_validated' => 'datetime',
+            'call_routing_config' => 'array',
+            'calling_safeguards' => 'array',
+            'calling_suspended_until' => 'datetime',
         ];
     }
 
@@ -411,5 +417,19 @@ class Team extends JetstreamTeam
             \App\Enums\WhatsAppSetupState::ACTIVE,
             \App\Enums\WhatsAppSetupState::DEGRADED,
         ]);
+    }
+
+    /**
+     * Get call routing configuration with defaults.
+     */
+    public function getCallRoutingConfig(): array
+    {
+        return array_merge([
+            'mode' => 'round_robin',
+            'role' => 'agent',
+            'cooldown_seconds' => 60,
+            'ring_timeout_seconds' => 30,
+            'fallback_action' => 'auto_reply',
+        ], $this->call_routing_config ?? []);
     }
 }
