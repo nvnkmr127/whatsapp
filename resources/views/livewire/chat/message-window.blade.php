@@ -237,12 +237,19 @@
             buffer: 5,
             viewportHeight: 0,
             scrollTop: 0,
-            init() {
+             init() {
                 $store.chat.init($wire, {{ $conversationId }});
                 this.viewportHeight = this.$el.clientHeight;
                 
+                // Debug logs
+                console.log('MessageWindow: Init', { 
+                    convId: {{ $conversationId }}, 
+                    viewport: this.viewportHeight 
+                });
+
                 // Initialize Scroll
                 this.$watch('$store.chat.messages', (val, old) => {
+                   console.log('MessageWindow: Messages Updated', { count: val.length, old: old.length });
                    if (old.length === 0 && val.length > 0) {
                        this.$nextTick(() => this.scrollToBottom());
                    }
@@ -250,7 +257,10 @@
                 
                 // Event Listeners
                 window.addEventListener('chat-scroll-bottom', () => this.scrollToBottom());
-                window.addEventListener('chat-initial-loaded', () => this.scrollToBottom());
+                window.addEventListener('chat-initial-loaded', () => {
+                    console.log('MessageWindow: Initial Load Complete', $store.chat.messages);
+                    this.scrollToBottom();
+                });
             },
             scrollToBottom() {
                 this.$el.scrollTop = this.$el.scrollHeight;
@@ -278,6 +288,8 @@
                 // Return start index and end index
                 // Note: Simple virtualization. For complex bubbles, use a library or just raw render if < 200 items.
                 const count = $store.chat.messages.length;
+                console.log('MessageWindow: RenderConfig Calc', { count, scrollTop: this.scrollTop });
+                
                 if (count < 100) return { start: 0, end: count, top: 0, bottom: 0 };
                 
                 let start = Math.max(0, this.startIndex - this.buffer);
