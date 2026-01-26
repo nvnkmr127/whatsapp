@@ -594,12 +594,20 @@ class MessageWindow extends Component
             }
         }
 
-        return $this->conversation->messages()
+        $messages = $this->conversation->messages()
             ->with(['attributedCampaign'])
             ->orderBy('created_at', 'desc')
             ->skip($offset)
             ->take($limit)
-            ->get()
+            ->get();
+
+        \Log::info("MessageWindow: loadMessagesJson", [
+            'conversation_id' => $this->conversationId,
+            'count' => $messages->count(),
+            'offset' => $offset
+        ]);
+
+        return $messages
             ->map(function ($msg) {
                 return [
                     'id' => $msg->id,
