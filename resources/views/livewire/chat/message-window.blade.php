@@ -481,6 +481,7 @@
 
     <!-- Input Area -->
     <div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10"
+        style="border: 5px solid red !important; display: block !important;"
         x-data="{ 
             msgBody: '',
             showAttach: false, 
@@ -526,7 +527,8 @@
             }
          }">
 
-        @if($isSessionOpen)
+        <!-- Forced Session Open for Debug -->
+        @if(true || $isSessionOpen) 
 
             <!-- File Preview -->
             @if($newAttachment)
