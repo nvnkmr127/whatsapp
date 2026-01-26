@@ -88,6 +88,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendMessageStatusWebhook::class
         );
 
+        // Call Billing - Process charges when calls end
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\CallEnded::class,
+            \App\Listeners\ProcessCallBilling::class
+        );
+
         // Catch-all for Domain Events (Signal Sourcing)
         \Illuminate\Support\Facades\Event::listen(
             'App\Events\*',

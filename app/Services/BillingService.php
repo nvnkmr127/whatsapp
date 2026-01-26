@@ -288,4 +288,217 @@ class BillingService
 
         return $override;
     }
+
+    /**
+     * Record call usage and deduct from wallet.
+     */
+    public function recordCallUsage(Team $team, \App\Models\WhatsAppCall $call): bool
+    {
+        // Only bill completed calls
+        if ($call->status !== 'completed' || $call->duration_seconds <= 0) {
+            return true;
+        }
+
+        // Calculate cost if not already set
+        if ($call->cost_amount <= 0) {
+            $cost = $call->calculateCost($call->duration_seconds);
+            $call->update(['cost_amount' => $cost]);
+        } else {
+            $cost = $call->cost_amount;
+        }
+
+        // Get or create wallet
+        $wallet = TeamWallet::firstOrCreate(
+            ['team_id' => $team->id],
+            ['balance' => 0]
+        );
+
+        // Check balance
+        if ($wallet->balance < $cost) {
+            Log::warning("Insufficient balance for call billing", [
+                'team_id' => $team->id,
+                'call_id' => $call->call_id,
+                'cost' => $cost,
+                'balance' => $wallet->balance,
+            ]);
+            // Allow call to complete but flag for billing
+            return false;
+        }
+
+        // Deduct cost
+        $wallet->decrement('balance', $cost);
+
+        // Create transaction record
+        TeamTransaction::create([
+            'team_id' => $team->id,
+            'amount' => -$cost,
+            'type' => 'call_charge',
+            'description' => "WhatsApp Call - {$call->formatted_duration} ({$call->direction})",
+            'metadata' => [
+                'call_id' => $call->call_id,
+                'contact_id' => $call->contact_id,
+                'duration_seconds' => $call->duration_seconds,
+            ],
+        ]);
+
+        $this->logBillingEvent($team, 'call_charged', "Call billed: {$call->formatted_duration}", [
+            'call_id' => $call->call_id,
+            'cost' => $cost,
+            'duration' => $call->duration_seconds,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Get call usage statistics for billing period.
+     */
+    public function getCallUsageStats(Team $team, ?Carbon $startDate = null, ?Carbon $endDate = null): array
+    {
+        $startDate = $startDate ?? now()->startOfMonth();
+        $endDate = $endDate ?? now()->endOfMonth();
+
+        $calls = \App\Models\WhatsAppCall::where('team_id', $team->id)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
+
+        $completedCalls = $calls->where('status', 'completed');
+
+        return [
+            'total_calls' => $calls->count(),
+            'completed_calls' => $completedCalls->count(),
+            'total_minutes' => round($completedCalls->sum('duration_seconds') / 60, 2),
+            'total_cost' => $completedCalls->sum('cost_amount'),
+            'inbound_calls' => $calls->where('direction', 'inbound')->count(),
+            'outbound_calls' => $calls->where('direction', 'outbound')->count(),
+            'failed_calls' => $calls->whereIn('status', ['failed', 'rejected', 'missed'])->count(),
+            'average_duration' => $completedCalls->count() > 0
+                ? round($completedCalls->avg('duration_seconds'), 0)
+                : 0,
+            'period_start' => $startDate->format('Y-m-d'),
+            'period_end' => $endDate->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * Check call usage limits for the team.
+     */
+    public function checkCallLimits(Team $team): array
+    {
+        if (!$team->max_call_minutes_per_month) {
+            return [
+                'has_limit' => false,
+                'allowed' => true,
+                'minutes_used' => 0,
+                'minutes_limit' => null,
+                'minutes_remaining' => null,
+                'percent_used' => 0,
+            ];
+        }
+
+        $currentMonth = now()->format('Y-m');
+        $minutesUsed = \App\Models\WhatsAppCall::where('team_id', $team->id)
+            ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+            ->sum('duration_seconds') / 60;
+
+        $limit = $team->max_call_minutes_per_month;
+        $remaining = max(0, $limit - $minutesUsed);
+        $percentUsed = $limit > 0 ? ($minutesUsed / $limit) * 100 : 0;
+
+        return [
+            'has_limit' => true,
+            'allowed' => $minutesUsed < $limit,
+            'minutes_used' => round($minutesUsed, 2),
+            'minutes_limit' => $limit,
+            'minutes_remaining' => round($remaining, 2),
+            'percent_used' => round($percentUsed, 2),
+        ];
+    }
+
+    /**
+     * Add call usage to detailed usage stats.
+     */
+    public function getDetailedUsageStatsWithCalls(Team $team): array
+    {
+        $stats = $this->getDetailedUsageStats($team);
+
+        // Add call usage stats
+        $callLimits = $this->checkCallLimits($team);
+
+        if ($callLimits['has_limit']) {
+            $stats['call_minutes'] = [
+                'usage' => $callLimits['minutes_used'],
+                'limit' => $callLimits['minutes_limit'],
+                'label' => 'Call Minutes',
+                'type' => 'monthly',
+            ];
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Generate invoice line items for calls.
+     */
+    public function getCallInvoiceItems(Team $team, Carbon $startDate, Carbon $endDate): array
+    {
+        $calls = \App\Models\WhatsAppCall::where('team_id', $team->id)
+            ->where('status', 'completed')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
+
+        if ($calls->isEmpty()) {
+            return [];
+        }
+
+        $totalMinutes = round($calls->sum('duration_seconds') / 60, 2);
+        $totalCost = $calls->sum('cost_amount');
+        $pricePerMinute = config('whatsapp.calling.price_per_minute', 0.005);
+
+        return [
+            [
+                'description' => 'WhatsApp Voice Calls',
+                'quantity' => $totalMinutes,
+                'unit' => 'minutes',
+                'unit_price' => $pricePerMinute,
+                'amount' => $totalCost,
+                'details' => [
+                    'total_calls' => $calls->count(),
+                    'inbound' => $calls->where('direction', 'inbound')->count(),
+                    'outbound' => $calls->where('direction', 'outbound')->count(),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Get call cost breakdown by day for analytics.
+     */
+    public function getCallCostBreakdown(Team $team, int $days = 30): array
+    {
+        $startDate = now()->subDays($days)->startOfDay();
+
+        $calls = \App\Models\WhatsAppCall::where('team_id', $team->id)
+            ->where('status', 'completed')
+            ->where('created_at', '>=', $startDate)
+            ->get()
+            ->groupBy(function ($call) {
+                return $call->created_at->format('Y-m-d');
+            });
+
+        $breakdown = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $dayCalls = $calls->get($date, collect());
+
+            $breakdown[] = [
+                'date' => $date,
+                'calls' => $dayCalls->count(),
+                'minutes' => round($dayCalls->sum('duration_seconds') / 60, 2),
+                'cost' => $dayCalls->sum('cost_amount'),
+            ];
+        }
+
+        return $breakdown;
+    }
 }

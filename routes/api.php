@@ -58,6 +58,19 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
 
     // Product Customization
     Route::post('/products/{product}/lock', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'lockField']);
+
+    // WhatsApp Calling API
+    Route::prefix('calls')->group(function () {
+        Route::post('/initiate', [\App\Http\Controllers\Api\CallController::class, 'initiate']);
+        Route::post('/{callId}/answer', [\App\Http\Controllers\Api\CallController::class, 'answer']);
+        Route::post('/{callId}/reject', [\App\Http\Controllers\Api\CallController::class, 'reject']);
+        Route::post('/{callId}/end', [\App\Http\Controllers\Api\CallController::class, 'end']);
+        Route::get('/', [\App\Http\Controllers\Api\CallController::class, 'index']);
+        Route::get('/active', [\App\Http\Controllers\Api\CallController::class, 'active']);
+        Route::get('/statistics', [\App\Http\Controllers\Api\CallController::class, 'statistics']);
+        Route::get('/{callId}', [\App\Http\Controllers\Api\CallController::class, 'show']);
+        Route::get('/contacts/{contactId}/history', [\App\Http\Controllers\Api\CallController::class, 'contactHistory']);
+    });
 });
 
 use App\Http\Controllers\WhatsAppWebhookController;
@@ -65,6 +78,11 @@ use App\Http\Controllers\WhatsAppWebhookController;
 Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('api.webhook.whatsapp');
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])
     ->middleware(\App\Http\Middleware\VerifyWhatsAppSignature::class);
+
+// WhatsApp Calling Webhooks
+Route::get('/webhook/whatsapp/calls', [\App\Http\Controllers\Webhooks\WhatsAppCallWebhookController::class, 'verify']);
+Route::post('/webhook/whatsapp/calls', [\App\Http\Controllers\Webhooks\WhatsAppCallWebhookController::class, 'handle']);
+
 Route::post('/whatsapp/flow', [App\Http\Controllers\WhatsAppFlowController::class, 'handle']);
 
 // Commerce Webhooks

@@ -98,6 +98,7 @@ class Team extends JetstreamTeam
             'chat_assignment_config' => 'array',
             'chat_status_rules' => 'array',
             'commerce_config' => 'array',
+            'trial_ends_at' => 'datetime',
             'subscription_ends_at' => 'datetime',
             'subscription_grace_ends_at' => 'datetime',
             'whatsapp_setup_progress' => 'array',

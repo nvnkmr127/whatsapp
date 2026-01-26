@@ -145,6 +145,10 @@ Route::middleware([
     Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware('can:manage-settings');
     Route::get('/analytics/explorer', \App\Livewire\Analytics\EventExplorer::class)->name('analytics.explorer')->middleware('can:manage-settings');
 
+    // WhatsApp Calling
+    Route::get('/calls', \App\Livewire\Calls\CallHistory::class)->name('calls.history')->middleware('can:chat-access');
+    Route::get('/calls/analytics', \App\Livewire\Calls\CallAnalytics::class)->name('calls.analytics')->middleware('can:manage-settings');
+
     // Billing Dashboard
     Route::get('/billing', \App\Livewire\Billing\BillingDashboard::class)->name('billing');
 

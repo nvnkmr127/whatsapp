@@ -49,22 +49,37 @@ class PasswordlessAuthController extends Controller
      */
     public function verifyOtp(Request $request)
     {
-        $request->validate([
-            'identifier' => 'required',
-            'type' => 'required|in:email,phone',
-            'code' => 'required|string|size:6',
-        ]);
+        // Check for auto-login in local environment
+        $autoLogin = $request->has('auto_login') && $request->auto_login === 'true' && app()->environment('local');
+
+        if ($autoLogin) {
+            // Auto-login: skip OTP verification in local environment
+            $request->validate([
+                'identifier' => 'required',
+                'type' => 'required|in:email,phone',
+            ]);
+        } else {
+            // Normal flow: validate OTP code
+            $request->validate([
+                'identifier' => 'required',
+                'type' => 'required|in:email,phone',
+                'code' => 'required|string|size:6',
+            ]);
+        }
 
         $identifier = $request->identifier;
         $type = $request->type;
-        $code = $request->code;
+        $code = $request->code ?? null;
 
-        if (!$this->otpService->verify($identifier, $code)) {
-            AuditService::log('Auth.Failure', null, $identifier, $type . '_otp', ['reason' => 'Invalid or expired OTP']);
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+        // Verify OTP only if not auto-login
+        if (!$autoLogin) {
+            if (!$this->otpService->verify($identifier, $code)) {
+                AuditService::log('Auth.Failure', null, $identifier, $type . '_otp', ['reason' => 'Invalid or expired OTP']);
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+                }
+                return redirect()->back()->withErrors(['code' => 'Invalid or expired code.']);
             }
-            return redirect()->back()->withErrors(['code' => 'Invalid or expired code.']);
         }
 
         return DB::transaction(function () use ($identifier, $type, $request) {

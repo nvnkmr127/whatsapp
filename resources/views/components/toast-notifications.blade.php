@@ -1,7 +1,8 @@
 <div x-data="{ 
         notifications: [],
+        notificationId: 0,
         add(message, type = 'success') {
-            const id = Date.now();
+            const id = ++this.notificationId;
             this.notifications.push({ id, message, type });
             setTimeout(() => this.remove(id), 5000);
         },

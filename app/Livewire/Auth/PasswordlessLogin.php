@@ -80,8 +80,28 @@ class PasswordlessLogin extends Component
         ]));
     }
 
+    public function autoLogin()
+    {
+        // Only allow auto-login in local environment
+        if (app()->environment('local')) {
+            $this->validate();
+            $this->error = '';
+
+            // Redirect to verification with auto_login flag
+            return redirect()->to(route('auth.otp.verify', [
+                'identifier' => $this->identifier,
+                'type' => $this->type,
+                'auto_login' => 'true',
+            ]));
+        }
+
+        $this->error = 'Auto-login is only available in local environment.';
+    }
+
     public function render()
     {
-        return view('livewire.auth.passwordless-login');
+        return view('livewire.auth.passwordless-login', [
+            'isLocal' => app()->environment('local'),
+        ]);
     }
 }

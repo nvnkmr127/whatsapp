@@ -795,6 +795,263 @@ class WhatsAppService
         return $this->sendRequestFullUrl($url, 'delete', ['name' => $name]);
     }
 
+    /**
+     * Initiate an outbound WhatsApp call.
+     * 
+     * @param string $to Phone number to call
+     * @param array $options Additional call options
+     * @return array Response from WhatsApp API
+     */
+    public function initiateCall(string $to, array $options = [])
+    {
+        // Verify calling is enabled for this team
+        if (!$this->team->calling_enabled) {
+            throw new \Exception("Calling is not enabled for this team.");
+        }
+
+        // Check monthly call limits
+        if ($this->team->max_call_minutes_per_month) {
+            $currentMonth = now()->format('Y-m');
+            $minutesUsed = \App\Models\WhatsAppCall::where('team_id', $this->team->id)
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+                ->sum('duration_seconds') / 60;
+
+            if ($minutesUsed >= $this->team->max_call_minutes_per_month) {
+                throw new \Exception("Monthly call limit reached ({$this->team->max_call_minutes_per_month} minutes).");
+            }
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'call',
+        ];
+
+        try {
+            $response = $this->sendRequest('calls', $payload);
+
+            if ($response['success'] ?? false) {
+                $callId = $response['data']['id'] ?? null;
+
+                // Create call record
+                $contact = $this->getOrCreateContact($to);
+                $conversationService = new \App\Services\ConversationService();
+                $conversation = $conversationService->ensureActiveConversation($contact);
+
+                \App\Models\WhatsAppCall::create([
+                    'team_id' => $this->team->id,
+                    'contact_id' => $contact->id,
+                    'conversation_id' => $conversation->id,
+                    'call_id' => $callId,
+                    'direction' => 'outbound',
+                    'status' => 'initiated',
+                    'from_number' => $this->phoneId,
+                    'to_number' => $to,
+                    'initiated_at' => now(),
+                    'metadata' => $options,
+                ]);
+
+                Log::info("Outbound call initiated", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                    'to' => $to,
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::error("Failed to initiate call", [
+                'team_id' => $this->team->id,
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Answer an incoming WhatsApp call.
+     * 
+     * @param string $callId WhatsApp call identifier
+     * @return array Response from WhatsApp API
+     */
+    public function answerCall(string $callId)
+    {
+        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+            ->where('team_id', $this->team->id)
+            ->firstOrFail();
+
+        if ($call->status !== 'ringing') {
+            throw new \Exception("Call is not in ringing state. Current status: {$call->status}");
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'call_id' => $callId,
+            'action' => 'answer',
+        ];
+
+        try {
+            $response = $this->sendRequest('calls', $payload, 'post');
+
+            if ($response['success'] ?? false) {
+                $call->markAsAnswered();
+
+                Log::info("Call answered", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::error("Failed to answer call", [
+                'team_id' => $this->team->id,
+                'call_id' => $callId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Reject an incoming WhatsApp call.
+     * 
+     * @param string $callId WhatsApp call identifier
+     * @return array Response from WhatsApp API
+     */
+    public function rejectCall(string $callId)
+    {
+        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+            ->where('team_id', $this->team->id)
+            ->firstOrFail();
+
+        if (!in_array($call->status, ['ringing', 'initiated'])) {
+            throw new \Exception("Call cannot be rejected. Current status: {$call->status}");
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'call_id' => $callId,
+            'action' => 'reject',
+        ];
+
+        try {
+            $response = $this->sendRequest('calls', $payload, 'post');
+
+            if ($response['success'] ?? false) {
+                $call->markAsRejected();
+
+                Log::info("Call rejected", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::error("Failed to reject call", [
+                'team_id' => $this->team->id,
+                'call_id' => $callId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * End an active WhatsApp call.
+     * 
+     * @param string $callId WhatsApp call identifier
+     * @return array Response from WhatsApp API
+     */
+    public function endCall(string $callId)
+    {
+        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+            ->where('team_id', $this->team->id)
+            ->firstOrFail();
+
+        if (!$call->isActive()) {
+            throw new \Exception("Call is not active. Current status: {$call->status}");
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'call_id' => $callId,
+            'action' => 'end',
+        ];
+
+        try {
+            $response = $this->sendRequest('calls', $payload, 'post');
+
+            if ($response['success'] ?? false) {
+                $call->markAsEnded();
+
+                Log::info("Call ended", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                    'duration' => $call->duration_seconds,
+                    'cost' => $call->cost_amount,
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::error("Failed to end call", [
+                'team_id' => $this->team->id,
+                'call_id' => $callId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get the status of a WhatsApp call.
+     * 
+     * @param string $callId WhatsApp call identifier
+     * @return array Call status information
+     */
+    public function getCallStatus(string $callId)
+    {
+        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+            ->where('team_id', $this->team->id)
+            ->firstOrFail();
+
+        try {
+            $response = $this->sendRequest("calls/{$callId}", [], 'get');
+
+            if ($response['success'] ?? false) {
+                // Update local call record with latest status from WhatsApp
+                $remoteStatus = $response['data']['status'] ?? null;
+                if ($remoteStatus && $remoteStatus !== $call->status) {
+                    $call->update(['status' => $remoteStatus]);
+                }
+            }
+
+            return [
+                'success' => true,
+                'data' => [
+                    'call_id' => $call->call_id,
+                    'status' => $call->status,
+                    'direction' => $call->direction,
+                    'duration_seconds' => $call->duration_seconds,
+                    'cost_amount' => $call->cost_amount,
+                    'initiated_at' => $call->initiated_at,
+                    'answered_at' => $call->answered_at,
+                    'ended_at' => $call->ended_at,
+                ],
+            ];
+        } catch (\Exception $e) {
+            Log::error("Failed to get call status", [
+                'team_id' => $this->team->id,
+                'call_id' => $callId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
     protected function sendRequest($endpoint, $data = [], $method = 'post')
     {
         $url = "{$this->baseUrl}/{$this->phoneId}/{$endpoint}";
