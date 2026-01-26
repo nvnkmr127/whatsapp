@@ -18,7 +18,7 @@ class OTPService
     /**
      * Send OTP to email or phone.
      */
-    public function send(string $identifier, string $type = 'email'): bool
+    public function send(string $identifier, string $type = 'email', ?int $teamId = null): bool
     {
         // Abuse Prevention: Dead drop check
         if ($this->isBlacklisted($identifier)) {
@@ -29,10 +29,12 @@ class OTPService
 
         $code = (string) rand(100000, 999999);
 
-        // Securely store hashed code and attempt count
+        // Securely store hashed code, attempt count, and team context
         Cache::put($this->getCacheKey($identifier), [
             'hash' => Hash::make($code),
             'attempts' => 0,
+            'team_id' => $teamId,
+            'type' => $type,
         ], $this->ttl);
 
         // Increment total requests in 24h for this identifier
@@ -45,16 +47,28 @@ class OTPService
         }
 
         if ($sent) {
-            // Dispatch system-wide webhook for Login OTP
+            $webhookService = app(\App\Services\WebhookService::class);
+            $eventData = [
+                'identifier' => $identifier,
+                'type' => $type,
+                'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists(),
+                'timestamp' => now()->toIso8601String(),
+            ];
+
+            // Dispatch system-wide webhook for Login OTP if no teamId
+            if (!$teamId) {
+                try {
+                    $webhookService->dispatch(null, 'auth.otp.login', $eventData);
+                } catch (\Exception $e) {
+                    Log::error("Failed to dispatch auth.otp.login webhook: " . $e->getMessage());
+                }
+            }
+
+            // Dispatch general otp.sent event
             try {
-                app(\App\Services\WebhookService::class)->dispatch(null, 'auth.otp.login', [
-                    'identifier' => $identifier,
-                    'type' => $type,
-                    'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists(),
-                    'timestamp' => now()->toIso8601String(),
-                ]);
+                $webhookService->dispatch($teamId, 'otp.sent', $eventData);
             } catch (\Exception $e) {
-                Log::error("Failed to dispatch auth.otp.login webhook: " . $e->getMessage());
+                Log::error("Failed to dispatch otp.sent webhook: " . $e->getMessage());
             }
         }
 
@@ -72,6 +86,9 @@ class OTPService
             return false;
         }
 
+        $teamId = $data['team_id'] ?? null;
+        $type = $data['type'] ?? 'unknown';
+
         // Increment attempts
         $data['attempts']++;
         Cache::put($this->getCacheKey($identifier), $data, $this->ttl);
@@ -80,16 +97,37 @@ class OTPService
             Cache::forget($this->getCacheKey($identifier));
             Log::warning("OTP brute force attempt detected for: {$identifier}");
             AuditService::log('Auth.Abuse.Flag', null, $identifier, null, ['reason' => 'Max attempts reached']);
+
+            app(\App\Services\WebhookService::class)->dispatch($teamId, 'otp.failed', [
+                'identifier' => $identifier,
+                'type' => $type,
+                'reason' => 'max_attempts_reached',
+                'timestamp' => now()->toIso8601String(),
+            ]);
+
             return false;
         }
 
         if (Hash::check($code, $data['hash'])) {
             Cache::forget($this->getCacheKey($identifier));
-            // Reset daily request count upon successful login? 
-            // Better to keep it to prevent "churn and burn" strategies, but we'll reset for UX.
             Cache::forget($this->getDailyCountKey($identifier));
+
+            app(\App\Services\WebhookService::class)->dispatch($teamId, 'otp.verified', [
+                'identifier' => $identifier,
+                'type' => $type,
+                'timestamp' => now()->toIso8601String(),
+            ]);
+
             return true;
         }
+
+        // Generic failure (wrong code)
+        app(\App\Services\WebhookService::class)->dispatch($teamId, 'otp.failed', [
+            'identifier' => $identifier,
+            'type' => $type,
+            'reason' => 'invalid_code',
+            'timestamp' => now()->toIso8601String(),
+        ]);
 
         return false;
     }
@@ -171,13 +209,13 @@ class OTPService
         int $otpPosition = 0
     ): bool {
         try {
-            // Securely store hashed code if not already stored
-            if (!Cache::has($this->getCacheKey($phone))) {
-                Cache::put($this->getCacheKey($phone), [
-                    'hash' => Hash::make($code),
-                    'attempts' => 0,
-                ], $this->ttl);
-            }
+            // Securely store hashed code, attempt count, and team context
+            Cache::put($this->getCacheKey($phone), [
+                'hash' => Hash::make($code),
+                'attempts' => 0,
+                'team_id' => $team->id,
+                'type' => 'phone',
+            ], $this->ttl);
 
             $whatsappService = new WhatsAppService($team);
 
@@ -194,6 +232,18 @@ class OTPService
             );
 
             if ($response['success'] ?? false) {
+                // Dispatch general otp.sent event
+                try {
+                    app(\App\Services\WebhookService::class)->dispatch($team->id, 'otp.sent', [
+                        'identifier' => $phone,
+                        'type' => 'phone',
+                        'template' => $templateName,
+                        'timestamp' => now()->toIso8601String(),
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error("Failed to dispatch otp.sent webhook: " . $e->getMessage());
+                }
+
                 return true;
             }
 

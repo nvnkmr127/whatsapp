@@ -78,6 +78,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\NotifyTeamOfBillingAlert::class
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\MessageSent::class,
+            \App\Listeners\SendMessageSentWebhook::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\MessageStatusUpdated::class,
+            \App\Listeners\SendMessageStatusWebhook::class
+        );
+
         // Catch-all for Domain Events (Signal Sourcing)
         \Illuminate\Support\Facades\Event::listen(
             'App\Events\*',

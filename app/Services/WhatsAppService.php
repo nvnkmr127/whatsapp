@@ -154,6 +154,8 @@ class WhatsAppService
                     'whatsapp_message_id' => $wamId,
                     'sent_at' => now(),
                 ]);
+
+                \App\Events\MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -235,6 +237,8 @@ class WhatsAppService
                     'whatsapp_message_id' => $wamId,
                     'sent_at' => now(),
                 ]);
+
+                \App\Events\MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -323,6 +327,8 @@ class WhatsAppService
                     'whatsapp_message_id' => $wamId,
                     'sent_at' => now(),
                 ]);
+
+                \App\Events\MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -449,6 +455,8 @@ class WhatsAppService
                     'whatsapp_message_id' => $wamId,
                     'sent_at' => now(),
                 ]);
+
+                \App\Events\MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',
@@ -661,6 +669,8 @@ class WhatsAppService
                     'whatsapp_message_id' => $wamId,
                     'sent_at' => now(),
                 ]);
+
+                \App\Events\MessageSent::dispatch($msg);
             } else {
                 $msg->update([
                     'status' => 'failed',

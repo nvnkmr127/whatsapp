@@ -24,6 +24,10 @@ class WebhookManager extends Component
         'campaign.completed' => 'Campaign Completed',
         'automation.triggered' => 'Automation Triggered',
         'auth.otp.login' => 'Auth: Login OTP Sent',
+        'otp.sent' => 'OTP Sent',
+        'otp.verified' => 'OTP Verified',
+        'otp.failed' => 'OTP Verification Failed',
+        'billing.threshold_reached' => 'Billing Threshold Reached',
     ];
 
     public function getFilteredEventsProperty()

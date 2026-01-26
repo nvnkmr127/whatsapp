@@ -38,8 +38,7 @@ Route::middleware([
         return view('dashboard');
     })->name('dashboard');
 
-    // Webhooks
-    Route::get('/webhooks', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhooks.index');
+    // Webhooks - See developer section for webhook management routes
     Route::get('/webhooks/logs', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware('can:manage-settings');
     Route::get('/webhook-workflows/{workflowId}/report', \App\Livewire\Webhooks\WebhookReport::class)->name('webhooks.report');
 

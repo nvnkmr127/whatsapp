@@ -442,9 +442,6 @@ class AutomationBuilder extends Component
 
         // Persist to session immediately so it survives any reload/redirect
         session(['automation_debug_logs' => $this->debugLogs]);
-
-        // Also log to file for permanent record
-        \Illuminate\Support\Facades\Log::info("DEBUG: " . $message, $data);
     }
 
     public function addNode($type)
