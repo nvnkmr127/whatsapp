@@ -236,7 +236,6 @@
         Render: <span x-text="renderConfig.start"></span>-<span x-text="renderConfig.end"></span>
     </div>
 
-    <!-- Messages (Virtual Scroller) -->
     <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950 relative" 
          id="messages-container"
          x-data="{
@@ -316,6 +315,21 @@
          @scroll.passive="handleScroll"
          x-init="init()"
     >
+        <!-- DEBUG INDICATOR (Inside Scope) -->
+        <div class="bg-red-500 text-white text-xs font-bold p-1 text-center mb-4">
+            DEBUG: Store: <span x-text="$store.chat.messages.length"></span> | 
+            Viewport: <span x-text="viewportHeight"></span> | 
+            Visible: <span x-text="visibleMessages.length"></span> |
+            Config: <span x-text="JSON.stringify(renderConfig)"></span>
+        </div>
+        
+        <!-- RAW DUMP (To verify iteration) -->
+        <div class="mb-4 p-2 bg-yellow-100 text-xs font-mono">
+            RAW DUMP: 
+            <template x-for="m in visibleMessages" :key="'raw-'+m.id">
+                <div x-text="m.id + '|' + m.type + '|' + m.content.substring(0,10)"></div>
+            </template>
+        </div>
 
         <div class="flex justify-center mb-8" :style="{ marginTop: renderConfig.top + 'px' }">
              <span class="px-4 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-[9px] font-bold text-amber-700 dark:text-amber-400 tracking-wide border border-amber-200 dark:border-amber-800 flex items-center gap-2 shadow-sm">
