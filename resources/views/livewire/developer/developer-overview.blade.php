@@ -92,7 +92,7 @@
             <p class="text-sm text-slate-500 font-medium">Manage your API authentication tokens</p>
         </a>
 
-        <a href="{{ route('webhooks.index') }}"
+        <a href="{{ route('webhook-sources.index') }}"
             class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center gap-4 mb-4">
                 <div

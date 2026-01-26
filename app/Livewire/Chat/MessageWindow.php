@@ -582,8 +582,17 @@ class MessageWindow extends Component
     #[\Livewire\Attributes\Renderless]
     public function loadMessagesJson($offset = 0, $limit = 50)
     {
-        if (!$this->conversation)
-            return [];
+        if (!$this->conversation) {
+            if ($this->conversationId) {
+                // Try to reload conversation if missing (Hydration issue safety)
+                $this->loadConversation();
+            }
+
+            if (!$this->conversation) {
+                \Log::error('MessageWindow: loadMessagesJson failed - No conversation found', ['id' => $this->conversationId]);
+                return [];
+            }
+        }
 
         return $this->conversation->messages()
             ->with(['attributedCampaign'])

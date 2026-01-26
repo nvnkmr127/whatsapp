@@ -17,7 +17,7 @@
                             Workflow Report <span class="text-blue-500">#{{ $this->workflow->id }}</span>
                         </h3>
                     </div>
-                    <a href="{{ route('webhooks.index') }}" class="text-slate-400 hover:text-slate-500">
+                    <a href="{{ route('webhook-sources.index') }}" class="text-slate-400 hover:text-slate-500">
                         <svg class="h-6 w-6" fill="none" class="h-6 w-6" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
@@ -44,7 +44,8 @@
                         <div>
                             <div class="text-xs font-bold uppercase text-slate-500 mb-1">Template</div>
                             <div class="text-sm font-bold text-slate-900 dark:text-white">
-                                {{ $this->workflow->template->name }}</div>
+                                {{ $this->workflow->template->name }}
+                            </div>
                         </div>
                     </div>
                     <!-- Workflow Status -->
@@ -60,7 +61,8 @@
                             <div class="text-xs font-bold uppercase text-slate-500 mb-1">Status</div>
                             <div
                                 class="text-sm font-bold {{ $this->workflow->status ? 'text-green-500' : 'text-red-500' }}">
-                                {{ $this->workflow->status ? 'Active' : 'Inactive' }}</div>
+                                {{ $this->workflow->status ? 'Active' : 'Inactive' }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -187,7 +189,8 @@
                                 <span class="text-slate-400">{{ $stats['failed'] }}</span>
                             </div>
                             <div class="text-[10px] text-slate-400 mb-1">Failed
-                                ({{ $stats['total'] > 0 ? round(($stats['failed'] / $stats['total']) * 100) : 0 }}%)</div>
+                                ({{ $stats['total'] > 0 ? round(($stats['failed'] / $stats['total']) * 100) : 0 }}%)
+                            </div>
                             <div class="h-1 bg-slate-100 rounded-full w-full overflow-hidden">
                                 <div class="h-full bg-gray-500"
                                     style="width: {{ $stats['total'] > 0 ? ($stats['failed'] / $stats['total']) * 100 : 0 }}%">
