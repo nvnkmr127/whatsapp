@@ -339,6 +339,7 @@
         </div>
 
         <template x-for="message in visibleMessages" :key="message.id">
+            <div class="w-full">
             <!-- Call Log Entry -->
             <template x-if="message.type === 'call_log'">
                 <div class="flex justify-center mb-8 px-4">
@@ -487,7 +488,7 @@
                         </div>
                     </div>
                 </div>
-            </template>
+            </div>
         </template>
         
         <div :style="{ height: renderConfig.bottom + 'px' }"></div>
