@@ -409,7 +409,7 @@
 
             <!-- Standard Message Bubble -->
             <template x-if="message.type !== 'call_log'">
-                <div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 animate-in slide-in-from-bottom-2 duration-300']">
+                <div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6']">
                     <div class="max-w-[85%] sm:max-w-[70%] group">
                         <div :class="[
                             'relative p-3 px-4 transition-all hover:scale-[1.01] shadow-sm',
