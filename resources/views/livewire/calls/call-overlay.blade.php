@@ -244,7 +244,9 @@
                 remoteAudio.srcObject = null;
             }
         }
-    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" @call-stopped.window="stopCalling()"
+    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" 
+    @call-stopped.window="stopCalling()"
+    @play-ringing-sound.window="playRinging()"
     class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
     <!-- Overlay Container -->
     <div x-show="status !== 'idle'" x-transition:enter="transition ease-out duration-500"
@@ -265,8 +267,6 @@
 
         <audio id="remote-audio" autoplay></audio>
 
-        @play-ringing-sound.window="playRinging()"
-        @call-sync.window="syncFromOtherTab($event.detail)"
         <!-- Background Decorative Elements -->
         <div class="absolute -top-24 -right-24 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-black/10 rounded-full blur-2xl"></div>
