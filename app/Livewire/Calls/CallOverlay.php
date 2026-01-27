@@ -46,7 +46,7 @@ class CallOverlay extends Component
 
         if ($activeCall) {
             $this->callId = $activeCall->call_id;
-            $this->status = $activeCall->status;
+            $this->status = $activeCall->status === 'in_progress' ? 'active' : $activeCall->status;
             $this->direction = $activeCall->direction;
             $this->contactName = $activeCall->contact->name ?? $activeCall->from_number;
             $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;

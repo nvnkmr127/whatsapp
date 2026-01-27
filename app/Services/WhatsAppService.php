@@ -1089,7 +1089,7 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'call_id' => $callId,
-            'action' => 'answer',
+            'action' => 'ACCEPT',
         ];
 
         try {
@@ -1097,6 +1097,9 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $call->markAsAnswered();
+
+                // Dispatch event for real-time UI updates
+                event(new \App\Events\CallAnswered($call));
 
                 Log::info("Call answered", [
                     'team_id' => $this->team->id,
@@ -1134,7 +1137,7 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'call_id' => $callId,
-            'action' => 'reject',
+            'action' => 'REJECT',
         ];
 
         try {
@@ -1142,6 +1145,9 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $call->markAsRejected();
+
+                // Dispatch event for real-time UI updates
+                event(new \App\Events\CallRejected($call));
 
                 Log::info("Call rejected", [
                     'team_id' => $this->team->id,
@@ -1179,7 +1185,7 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'call_id' => $callId,
-            'action' => 'end',
+            'action' => 'TERMINATE',
         ];
 
         try {
@@ -1187,6 +1193,9 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $call->markAsEnded();
+
+                // Dispatch event for real-time UI updates
+                event(new \App\Events\CallEnded($call));
 
                 Log::info("Call ended", [
                     'team_id' => $this->team->id,
