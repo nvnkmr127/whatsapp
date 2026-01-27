@@ -21,6 +21,8 @@ class CallOverlay extends Component
 
     protected $listeners = [
         'initiate-whatsapp-call' => 'handleInitiation',
+        'echo-private:teams.{teamId},call.offered' => 'handleOffered',
+        'echo-private:teams.{teamId},call.ringing' => 'handleRinging',
         'echo-private:teams.{teamId},call.answered' => 'handleAnswered',
         'echo-private:teams.{teamId},call.ended' => 'handleEnded',
         'echo-private:teams.{teamId},call.failed' => 'handleFailed',
@@ -44,6 +46,25 @@ class CallOverlay extends Component
 
         // In a real app, we'd get a call ID from the service
         // For simulation, we'll just track it locally
+    }
+
+    public function handleOffered($event)
+    {
+        Log::info("CallOverlay: Received CallOffered event", ['event' => $event]);
+
+        $this->callId = $event['call_id'];
+        $this->status = 'ringing';
+        $this->direction = $event['direction'] ?? 'inbound';
+        $this->contactName = $event['from'] ?? 'Unknown Caller';
+        $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
+        $this->startTime = null;
+    }
+
+    public function handleRinging($event)
+    {
+        if ($this->status === 'idle') {
+            $this->handleOffered($event);
+        }
     }
 
     public function handleAnswered($event)
@@ -94,10 +115,59 @@ class CallOverlay extends Component
         }
     }
 
+    public function answerCall()
+    {
+        if (!$this->callId)
+            return;
+
+        try {
+            $team = auth()->user()->currentTeam;
+            $whatsappService = new \App\Services\WhatsAppService($team);
+            $response = $whatsappService->answerCall($this->callId);
+
+            if ($response['success']) {
+                $this->status = 'active';
+                $this->startTime = now()->timestamp;
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function rejectCall()
+    {
+        if (!$this->callId)
+            return;
+
+        try {
+            $team = auth()->user()->currentTeam;
+            $whatsappService = new \App\Services\WhatsAppService($team);
+            $response = $whatsappService->rejectCall($this->callId);
+
+            if ($response['success']) {
+                $this->resetOverlay();
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+            $this->resetOverlay();
+        }
+    }
+
     public function endCall()
     {
-        // Integration with Service would go here
-        $this->handleEnded([]);
+        if (!$this->callId) {
+            $this->handleEnded([]);
+            return;
+        }
+
+        try {
+            $team = auth()->user()->currentTeam;
+            $whatsappService = new \App\Services\WhatsAppService($team);
+            $whatsappService->endCall($this->callId);
+            $this->handleEnded([]);
+        } catch (\Exception $e) {
+            $this->handleEnded([]);
+        }
     }
 
     public function resetOverlay()

@@ -179,6 +179,19 @@ class ProcessWebhookJob implements ShouldQueue
                 }
             }
 
+            // 5. Handle Calls
+            if (isset($change['calls']) && is_array($change['calls'])) {
+                if ($teamId) {
+                    $team = Team::find($teamId);
+                    if ($team) {
+                        $callProcessor = new \App\Services\WhatsAppCallProcessor();
+                        $callProcessor->process($team, $change['calls']);
+                    }
+                } else {
+                    Log::warning("Received call event but couldn't resolve Team.", ['phone_id' => $phoneId]);
+                }
+            }
+
             if (($change['field'] ?? '') === 'account_update' || ($change['field'] ?? '') === 'account_settings_update') {
                 Log::info("WhatsApp Account Update Received", ['payload' => $change]);
                 // Dispatch event for system to react (e.g., update local DB)

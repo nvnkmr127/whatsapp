@@ -6,6 +6,7 @@
         timer: null,
         isProcessing: false,
         bc: null,
+        direction: @entangle('direction'),
         
         init() {
             this.bc = new BroadcastChannel('whatsapp_calls_sync');
@@ -124,23 +125,47 @@
 
             <!-- Right: Actions -->
             <div class="flex items-center gap-2">
-                <!-- End Call Button -->
-                <button @click="performAction('endCall')"
-                    class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
-                    :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
-                    <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
-                        <path
-                            d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
-                    </svg>
-                    <svg x-show="isProcessing" class="animate-spin h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                        </circle>
-                        <path class="opacity-75" fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                        </path>
-                    </svg>
-                </button>
+                <template x-if="status === 'ringing' && direction === 'inbound'">
+                    <div class="flex items-center gap-2">
+                        <!-- Reject Button -->
+                        <button @click="performAction('rejectCall')"
+                            class="p-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
+                            :disabled="isProcessing">
+                            <svg class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
+                            </svg>
+                        </button>
+
+                        <!-- Answer Button -->
+                        <button @click="performAction('answerCall')"
+                            class="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg animate-bounce"
+                            :disabled="isProcessing">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
+                            </svg>
+                        </button>
+                    </div>
+                </template>
+
+                <!-- End Call Button (Show for active calls or outbound ringing) -->
+                <template x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
+                    <button @click="performAction('endCall')"
+                        class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
+                        :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
+                        <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
+                        </svg>
+                        <svg x-show="isProcessing" class="animate-spin h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </button>
+                </template>
             </div>
         </div>
 

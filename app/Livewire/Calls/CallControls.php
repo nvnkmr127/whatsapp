@@ -18,6 +18,7 @@ class CallControls extends Component
     public $teamId;
 
     protected $listeners = [
+        'echo-private:teams.{teamId},call.offered' => 'handleCallOffered',
         'echo-private:teams.{teamId},call.ringing' => 'handleCallRinging',
         'echo-private:teams.{teamId},call.answered' => 'handleCallAnswered',
         'echo-private:teams.{teamId},call.ended' => 'handleCallEnded',
@@ -158,6 +159,13 @@ class CallControls extends Component
     }
 
     // Real-time event handlers
+    public function handleCallOffered($event)
+    {
+        if ($event['contact_id'] == $this->contact->id) {
+            $this->checkActiveCall();
+        }
+    }
+
     public function handleCallRinging($event)
     {
         if ($event['contact_id'] == $this->contact->id) {
