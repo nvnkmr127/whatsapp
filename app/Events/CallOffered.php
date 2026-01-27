@@ -7,11 +7,11 @@ use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CallOffered implements ShouldBroadcast
+class CallOffered implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -24,7 +24,7 @@ class CallOffered implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('team.' . $this->call->team_id);
+        return new PrivateChannel('teams.' . $this->call->team_id);
     }
 
     public function broadcastAs()

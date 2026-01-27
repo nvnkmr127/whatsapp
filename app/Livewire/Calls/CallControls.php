@@ -17,13 +17,16 @@ class CallControls extends Component
     public $showEligibilityDetails = false;
     public $teamId;
 
-    protected $listeners = [
-        'echo-private:teams.{teamId},call.offered' => 'handleCallOffered',
-        'echo-private:teams.{teamId},call.ringing' => 'handleCallRinging',
-        'echo-private:teams.{teamId},call.answered' => 'handleCallAnswered',
-        'echo-private:teams.{teamId},call.ended' => 'handleCallEnded',
-        'echo-private:teams.{teamId},call.failed' => 'handleCallFailed',
-    ];
+    public function getListeners()
+    {
+        return [
+            "echo-private:teams.{$this->teamId},call.offered" => 'handleCallOffered',
+            "echo-private:teams.{$this->teamId},call.ringing" => 'handleCallRinging',
+            "echo-private:teams.{$this->teamId},call.answered" => 'handleCallAnswered',
+            "echo-private:teams.{$this->teamId},call.ended" => 'handleCallEnded',
+            "echo-private:teams.{$this->teamId},call.failed" => 'handleCallFailed',
+        ];
+    }
 
     public function mount(Contact $contact)
     {

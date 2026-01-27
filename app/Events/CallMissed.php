@@ -22,7 +22,7 @@ class CallMissed implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('team.' . $this->call->team_id);
+        return new PrivateChannel('teams.' . $this->call->team_id);
     }
 
     public function broadcastAs()

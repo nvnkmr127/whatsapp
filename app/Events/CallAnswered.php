@@ -6,11 +6,11 @@ use App\Models\WhatsAppCall;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CallAnswered implements ShouldBroadcast
+class CallAnswered implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -23,7 +23,7 @@ class CallAnswered implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('team.' . $this->call->team_id);
+        return new PrivateChannel('teams.' . $this->call->team_id);
     }
 
     public function broadcastAs()

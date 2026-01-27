@@ -19,19 +19,39 @@ class CallOverlay extends Component
     public $occupiedBy = null; // Name of agent who took the call
     public $teamId;
 
-    protected $listeners = [
-        'initiate-whatsapp-call' => 'handleInitiation',
-        'echo-private:teams.{teamId},call.offered' => 'handleOffered',
-        'echo-private:teams.{teamId},call.ringing' => 'handleRinging',
-        'echo-private:teams.{teamId},call.answered' => 'handleAnswered',
-        'echo-private:teams.{teamId},call.ended' => 'handleEnded',
-        'echo-private:teams.{teamId},call.failed' => 'handleFailed',
-        'echo-private:teams.{teamId},call.taken' => 'handleCallTaken',
-    ];
+    public function getListeners()
+    {
+        return [
+            'initiate-whatsapp-call' => 'handleInitiation',
+            "echo-private:teams.{$this->teamId},call.offered" => 'handleOffered',
+            "echo-private:teams.{$this->teamId},call.ringing" => 'handleRinging',
+            "echo-private:teams.{$this->teamId},call.answered" => 'handleAnswered',
+            "echo-private:teams.{$this->teamId},call.ended" => 'handleEnded',
+            "echo-private:teams.{$this->teamId},call.failed" => 'handleFailed',
+            "echo-private:teams.{$this->teamId},call.taken" => 'handleCallTaken',
+        ];
+    }
 
     public function mount()
     {
-        $this->teamId = auth()->user()->currentTeam->id;
+        $team = auth()->user()->currentTeam;
+        $this->teamId = $team->id;
+
+        // Recovery: Check if there's an active call for this team that involves the current user (if routing is implemented)
+        // For now, any active call for the team will be shown in the overlay
+        $activeCall = WhatsAppCall::where('team_id', $this->teamId)
+            ->whereIn('status', ['initiated', 'ringing', 'in_progress'])
+            ->latest()
+            ->first();
+
+        if ($activeCall) {
+            $this->callId = $activeCall->call_id;
+            $this->status = $activeCall->status;
+            $this->direction = $activeCall->direction;
+            $this->contactName = $activeCall->contact->name ?? $activeCall->from_number;
+            $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
+            $this->startTime = $activeCall->answered_at?->timestamp;
+        }
     }
 
     public function handleInitiation($data)
