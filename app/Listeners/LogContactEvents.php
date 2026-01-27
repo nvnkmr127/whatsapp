@@ -44,6 +44,7 @@ class LogContactEvents implements ShouldQueue
                 'new_state' => $event->newState,
             ],
             'occurred_at' => now(),
+            'idempotency_key' => $idempotencyKey,
         ]);
 
         Cache::put($idempotencyKey, true, 60);
@@ -53,6 +54,8 @@ class LogContactEvents implements ShouldQueue
     {
         $contact = $event->contact;
 
+        $idempotencyKey = "log_optout:{$contact->id}:" . now()->timestamp;
+
         ContactEvent::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
@@ -61,6 +64,7 @@ class LogContactEvents implements ShouldQueue
                 'source' => $contact->opt_in_source ?? 'Unknown',
             ],
             'occurred_at' => now(),
+            'idempotency_key' => $idempotencyKey,
         ]);
     }
 }

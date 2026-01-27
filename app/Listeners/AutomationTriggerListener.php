@@ -27,7 +27,7 @@ class AutomationTriggerListener implements ShouldQueue
         $content = $message->content; // Or use raw content if needed for matching
 
         try {
-            $automationService = new AutomationService(new WhatsAppService());
+            $automationService = app(AutomationService::class);
             $handoffService = new \App\Services\BotHandoffService();
 
             // 1. Global Handoff Keywords
@@ -36,7 +36,7 @@ class AutomationTriggerListener implements ShouldQueue
             foreach ($handoffKeywords as $kw) {
                 if ($cleanContent === $kw) {
                     $handoffService->pause($contact, 'keyword_trigger');
-                    (new \App\Services\AssignmentService())->assignToBestAgent($contact->team, $contact);
+                    (new \App\Services\AssignmentService())->assign($contact);
                     return;
                 }
             }
