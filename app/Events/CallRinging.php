@@ -40,6 +40,7 @@ class CallRinging implements ShouldBroadcastNow
             'from' => $this->call->from_number,
             'to' => $this->call->to_number,
             'contact_id' => $this->call->contact_id,
+            'sdp' => $this->call->metadata['sdp'] ?? null,
         ];
     }
 }

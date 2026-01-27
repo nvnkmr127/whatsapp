@@ -52,6 +52,7 @@ class CallOverlay extends Component
             $this->contactName = $activeCall->contact->name ?? $activeCall->from_number;
             $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
             $this->startTime = $activeCall->answered_at?->timestamp;
+            $this->offerSdp = $activeCall->metadata['sdp'] ?? null;
         }
     }
 
@@ -135,6 +136,7 @@ class CallOverlay extends Component
         $this->startTime = $data['startTime'] ?? null;
         $this->contactName = $data['contactName'] ?? '';
         $this->contactAvatar = $data['contactAvatar'] ?? '';
+        $this->offerSdp = $data['offerSdp'] ?? $this->offerSdp; // Recover SDP if synced
 
         if ($this->status === 'ended') {
             $this->dispatch('auto-hide-overlay');

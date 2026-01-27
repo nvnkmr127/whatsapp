@@ -38,7 +38,8 @@
                             status: value,
                             startTime: $wire.startTime,
                             contactName: $wire.contactName,
-                            contactAvatar: $wire.contactAvatar
+                            contactAvatar: $wire.contactAvatar,
+                            offerSdp: this.offerSdp
                         }
                     });
                 }
