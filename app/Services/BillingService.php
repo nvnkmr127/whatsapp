@@ -329,17 +329,26 @@ class BillingService
         $wallet->decrement('balance', $cost);
 
         // Create transaction record
-        TeamTransaction::create([
+        $transactionData = [
             'team_id' => $team->id,
             'amount' => -$cost,
             'type' => 'call_charge',
             'description' => "WhatsApp Call - {$call->formatted_duration} ({$call->direction})",
-            'metadata' => [
+        ];
+
+        // Check if metadata column exists (resiliency for pending migrations)
+        if (\Illuminate\Support\Facades\Schema::hasColumn('team_transactions', 'metadata')) {
+            $transactionData['metadata'] = [
                 'call_id' => $call->call_id,
                 'contact_id' => $call->contact_id,
                 'duration_seconds' => $call->duration_seconds,
-            ],
-        ]);
+            ];
+        } else {
+            // Fallback: Append call ID to description if metadata column is missing
+            $transactionData['description'] .= " [Ref: " . substr($call->call_id, -8) . "]";
+        }
+
+        TeamTransaction::create($transactionData);
 
         $this->logBillingEvent($team, 'call_charged', "Call billed: {$call->formatted_duration}", [
             'call_id' => $call->call_id,
