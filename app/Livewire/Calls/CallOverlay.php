@@ -23,12 +23,12 @@ class CallOverlay extends Component
     {
         return [
             'initiate-whatsapp-call' => 'handleInitiation',
-            "echo-private:teams.{$this->teamId},call.offered" => 'handleOffered',
-            "echo-private:teams.{$this->teamId},call.ringing" => 'handleRinging',
-            "echo-private:teams.{$this->teamId},call.answered" => 'handleAnswered',
-            "echo-private:teams.{$this->teamId},call.ended" => 'handleEnded',
-            "echo-private:teams.{$this->teamId},call.failed" => 'handleFailed',
-            "echo-private:teams.{$this->teamId},call.taken" => 'handleCallTaken',
+            "echo-private:teams.{$this->teamId},.call.offered" => 'handleOffered',
+            "echo-private:teams.{$this->teamId},.call.ringing" => 'handleRinging',
+            "echo-private:teams.{$this->teamId},.call.answered" => 'handleAnswered',
+            "echo-private:teams.{$this->teamId},.call.ended" => 'handleEnded',
+            "echo-private:teams.{$this->teamId},.call.failed" => 'handleFailed',
+            "echo-private:teams.{$this->teamId},.call.taken" => 'handleCallTaken',
         ];
     }
 
@@ -78,6 +78,10 @@ class CallOverlay extends Component
         $this->contactName = $event['from'] ?? 'Unknown Caller';
         $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
         $this->startTime = null;
+
+        if ($this->direction === 'inbound') {
+            $this->dispatch('play-ringing-sound');
+        }
     }
 
     public function handleRinging($event)

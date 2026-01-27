@@ -7,8 +7,10 @@
         isProcessing: false,
         bc: null,
         direction: @entangle('direction'),
+        ringingSound: null,
         
         init() {
+            this.ringingSound = document.getElementById('call-ringing-sound');
             this.bc = new BroadcastChannel('whatsapp_calls_sync');
             this.bc.onmessage = (event) => {
                 if (event.data.type === 'SYNC_STATE') {
@@ -17,8 +19,9 @@
             };
 
             $watch('status', value => {
-                if (value === 'active') this.startTimer();
-                if (value === 'ended' || value === 'idle') this.stopTimer();
+                if (value === 'ringing' && this.direction === 'inbound') this.playRinging();
+                if (value === 'active') { this.startTimer(); this.stopRinging(); }
+                if (value === 'ended' || value === 'idle' || value === 'failed') { this.stopTimer(); this.stopRinging(); }
                 
                 // Sync other tabs
                 if (!this.isProcessing) {
@@ -33,6 +36,18 @@
                     });
                 }
             });
+        },
+        playRinging() {
+            if (this.ringingSound) {
+                this.ringingSound.currentTime = 0;
+                this.ringingSound.play().catch(e => console.log('Audio autoplay blocked:', e));
+            }
+        },
+        stopRinging() {
+            if (this.ringingSound) {
+                this.ringingSound.pause();
+                this.ringingSound.currentTime = 0;
+            }
         },
         
         startTimer() {
@@ -79,6 +94,12 @@
             'bg-wa-teal/90': (status === 'active' && !occupiedBy),
             'bg-rose-600/90': status === 'ended'
         }">
+        <audio id="call-ringing-sound" loop preload="auto">
+            <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
+        </audio>
+        
+        @play-ringing-sound.window="playRinging()"
+        @call-sync.window="syncFromOtherTab($event.detail)"
         <!-- Background Decorative Elements -->
         <div class="absolute -top-24 -right-24 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-black/10 rounded-full blur-2xl"></div>
@@ -132,7 +153,8 @@
                             class="p-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
                             :disabled="isProcessing">
                             <svg class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
+                                <path
+                                    d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
                             </svg>
                         </button>
 
@@ -141,18 +163,21 @@
                             class="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg animate-bounce"
                             :disabled="isProcessing">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
+                                <path
+                                    d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
                             </svg>
                         </button>
                     </div>
                 </template>
 
                 <!-- End Call Button (Show for active calls or outbound ringing) -->
-                <template x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
+                <template
+                    x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
                     <button @click="performAction('endCall')"
                         class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
                         :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
-                        <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+                        <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor"
+                            viewBox="0 0 24 24">
                             <path
                                 d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
                         </svg>

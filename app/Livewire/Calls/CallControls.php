@@ -20,11 +20,11 @@ class CallControls extends Component
     public function getListeners()
     {
         return [
-            "echo-private:teams.{$this->teamId},call.offered" => 'handleCallOffered',
-            "echo-private:teams.{$this->teamId},call.ringing" => 'handleCallRinging',
-            "echo-private:teams.{$this->teamId},call.answered" => 'handleCallAnswered',
-            "echo-private:teams.{$this->teamId},call.ended" => 'handleCallEnded',
-            "echo-private:teams.{$this->teamId},call.failed" => 'handleCallFailed',
+            "echo-private:teams.{$this->teamId},.call.offered" => 'handleCallOffered',
+            "echo-private:teams.{$this->teamId},.call.ringing" => 'handleCallRinging',
+            "echo-private:teams.{$this->teamId},.call.answered" => 'handleCallAnswered',
+            "echo-private:teams.{$this->teamId},.call.ended" => 'handleCallEnded',
+            "echo-private:teams.{$this->teamId},.call.failed" => 'handleCallFailed',
         ];
     }
 
