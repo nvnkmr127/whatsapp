@@ -178,9 +178,18 @@
                     throw new Error('No offer SDP available to answer.');
                 }
 
+                // Robust SDP sanitization for the browser
+                const sanitizedOffer = this.offerSdp
+                    .replace(/[^\x20-\x7E\r\n]/g, '') // Remove non-printable
+                    .replace(/\r\n|\r|\n/g, '\n')     // Normalize to \n
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .join('\r\n') + '\r\n';
+
                 await this.pc.setRemoteDescription({
                     type: 'offer',
-                    sdp: this.offerSdp
+                    sdp: sanitizedOffer
                 });
 
                 const answer = await this.pc.createAnswer();

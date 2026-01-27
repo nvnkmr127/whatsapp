@@ -100,9 +100,11 @@ class WhatsAppCallProcessor
     {
         // If it has an SDP offer, it's ringing for the agent
         if (isset($callData['session']['sdp_type']) && $callData['session']['sdp_type'] === 'offer') {
+            $sdp = \App\Services\SDPValidator::sanitize($callData['session']['sdp']);
+
             $call->update([
                 'status' => 'ringing',
-                'metadata' => array_merge($call->metadata ?? [], ['sdp' => $callData['session']['sdp']])
+                'metadata' => array_merge($call->metadata ?? [], ['sdp' => $sdp])
             ]);
 
             // Record SDP offer received for quality tracking

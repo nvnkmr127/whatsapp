@@ -201,16 +201,31 @@ class SDPValidator
      */
     public static function sanitize(string $sdp): string
     {
-        // Remove any null bytes
-        $sdp = str_replace("\0", '', $sdp);
+        // Remove any null bytes or non-printable characters (except \r and \n)
+        $sdp = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $sdp);
 
-        // Ensure proper line endings (CRLF)
-        $sdp = preg_replace('/\r\n|\r|\n/', "\r\n", $sdp);
+        // Normalize line endings to \n first
+        $sdp = preg_replace('/\r\n|\r|\n/', "\n", $sdp);
 
-        // Trim whitespace
-        $sdp = trim($sdp);
+        // Split into lines to clean up each line
+        $lines = explode("\n", $sdp);
+        $cleanedLines = [];
 
-        return $sdp;
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line))
+                continue;
+
+            // Fix common ssrc line spacing issues: a=ssrc:123  cname:abc -> a=ssrc:123 cname:abc
+            if (strpos($line, 'a=ssrc:') === 0) {
+                $line = preg_replace('/\s+/', ' ', $line);
+            }
+
+            $cleanedLines[] = $line;
+        }
+
+        // Join with proper CRLF
+        return implode("\r\n", $cleanedLines) . "\r\n";
     }
 
     /**
