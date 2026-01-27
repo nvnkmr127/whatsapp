@@ -51,6 +51,11 @@
 
             <div class="p-8 space-y-8">
 
+                <!-- Analytics Funnel -->
+                <div class="mb-8">
+                    <livewire:analytics.campaign-funnel :campaignId="$campaign->id" />
+                </div>
+
                 <!-- Use grid for Top Row: Template & Status -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Template Card -->
@@ -301,13 +306,14 @@
                                                                     <div class="flex flex-col">
                                                                         <span
                                                                             class="text-sm font-bold text-gray-900 dark:text-white">{{ $msg->contact->name ?? 'Unknown' }}</span>
-                                                                        <span class="text-xs text-gray-400">{{ $msg->contact->phone_number }}</span>
+                                                                        <span
+                                                                            class="text-xs text-gray-400">{{ $msg->phone ?? $msg->contact->phone_number }}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td class="px-8 py-4">
                                                                     <span
                                                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                                                                                                                                                            {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
+                                                                                                                                                                                                                        {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
                                     ($msg->status == 'delivered' ? 'bg-blue-100 text-blue-800' :
                                         ($msg->status == 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
                                                                         {{ $msg->status }}
@@ -317,10 +323,12 @@
                                                                     {{ $msg->created_at->format('d M H:i') }}
                                                                 </td>
                                                                 <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ $msg->delivered_at ? $msg->delivered_at->format('d M H:i') : '-' }}
+                                                                    {{-- CampaignDetail doesn't track exact delivered_at, using updated_at if status
+                                                                    match --}}
+                                                                    {{ ($msg->status == 'delivered' || $msg->status == 'read') ? $msg->updated_at->format('d M H:i') : '-' }}
                                                                 </td>
                                                                 <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ $msg->read_at ? $msg->read_at->format('d M H:i') : '-' }}
+                                                                    {{ ($msg->status == 'read') ? $msg->updated_at->format('d M H:i') : '-' }}
                                                                 </td>
                                                             </tr>
                                 @empty

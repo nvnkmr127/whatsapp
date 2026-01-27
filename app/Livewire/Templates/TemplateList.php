@@ -11,6 +11,7 @@ class TemplateList extends Component
 {
     use WhatsApp;
     use WithPagination;
+    use \Livewire\WithFileUploads;
 
     public $search = '';
     public $syncing = false;
@@ -26,9 +27,12 @@ class TemplateList extends Component
     public $body = '';
     public $footer = '';
     public $buttons = [];
-    public $exampleMediaUrl = '';
+    public $headerMedia; // For file uploads
+    public $exampleMediaUrl = ''; // Keep for view-only or fallback
     public $copyCode = '';
     public $variableConfig = [];
+    public $validationWarnings = [];
+    public $ignoreWarnings = false;
 
     public $languages = [
         'af' => 'Afrikaans',
@@ -112,20 +116,25 @@ class TemplateList extends Component
 
     protected $listeners = ['refreshComponent' => '$refresh'];
 
-    protected $rules = [
-        'name' => 'required|regex:/^[a-z0-9_]+$/|max:512',
-        'category' => 'required|in:UTILITY,MARKETING,AUTHENTICATION',
-        'language' => 'required|string',
-        'body' => 'required|max:1024',
-        'headerType' => 'in:NONE,TEXT,IMAGE,VIDEO,DOCUMENT,LOCATION',
-        'headerText' => 'required_if:headerType,TEXT|max:60',
-        'footer' => 'nullable|max:60',
-        'buttons.*.text' => 'required|string|max:25',
-        'buttons.*.type' => 'required|in:QUICK_REPLY,URL,PHONE_NUMBER,COPY_CODE,CATALOG,MPM',
-        'buttons.*.url' => 'required_if:buttons.*.type,URL',
-        'buttons.*.phoneNumber' => 'required_if:buttons.*.type,PHONE_NUMBER',
-        'buttons.*.copyCode' => 'required_if:buttons.*.type,COPY_CODE|max:15',
-    ];
+    protected function rules()
+    {
+        return [
+            'name' => 'required|regex:/^[a-z0-9_]+$/|max:512',
+            'category' => 'required|in:UTILITY,MARKETING,AUTHENTICATION',
+            'language' => 'required|string',
+            'body' => 'required|max:1024',
+            'headerType' => 'in:NONE,TEXT,IMAGE,VIDEO,DOCUMENT,LOCATION',
+            'headerText' => 'required_if:headerType,TEXT|max:60',
+            // Media Validation
+            'headerMedia' => 'required_if:headerType,IMAGE,VIDEO,DOCUMENT|max:10240', // Max 10MB
+            'footer' => 'nullable|max:60',
+            'buttons.*.text' => 'required|string|max:25',
+            'buttons.*.type' => 'required|in:QUICK_REPLY,URL,PHONE_NUMBER,COPY_CODE,CATALOG,MPM',
+            'buttons.*.url' => 'required_if:buttons.*.type,URL',
+            'buttons.*.phoneNumber' => 'required_if:buttons.*.type,PHONE_NUMBER',
+            'buttons.*.copyCode' => 'required_if:buttons.*.type,COPY_CODE|max:15',
+        ];
+    }
 
     // Reset pagination when searching
     public function updatedSearch()
@@ -141,6 +150,7 @@ class TemplateList extends Component
             $response = $whatsapp->getTemplates();
 
             if ($response['success']) {
+                $syncedNames = [];
                 foreach ($response['data'] as $remote) {
                     WhatsappTemplate::updateOrCreate(
                         [
@@ -155,8 +165,15 @@ class TemplateList extends Component
                             'components' => $remote['components'] ?? [],
                         ]
                     );
+                    $syncedNames[] = $remote['name'];
                 }
-                $this->dispatch('notify', message: 'Templates synced successfully!', type: 'success');
+
+                // Prune deleted templates
+                WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+                    ->whereNotIn('name', $syncedNames)
+                    ->delete();
+
+                $this->dispatch('notify', message: 'Templates synced and pruned successfully!', type: 'success');
             } else {
                 $this->dispatch('notify', message: 'Sync failed: ' . json_encode($response['error']), type: 'error');
             }
@@ -168,15 +185,28 @@ class TemplateList extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['name', 'category', 'language', 'headerType', 'headerText', 'body', 'footer', 'buttons']);
+        $this->reset(['name', 'category', 'language', 'headerType', 'headerText', 'body', 'footer', 'buttons', 'headerMedia', 'validationWarnings', 'ignoreWarnings']);
         $this->showCreateModal = true;
     }
 
     public function addButton()
     {
+        // Button Limit Logic
+        $qrCount = collect($this->buttons)->where('type', 'QUICK_REPLY')->count();
+        $ctaCount = collect($this->buttons)->whereIn('type', ['URL', 'PHONE_NUMBER', 'COPY_CODE'])->count();
+
+        // If we have Mixed types, that's invalid, but we'll enforce that via validation or UI.
+        // Hard Limit: 10 total (WhatsApp limit), but usually less relative to mix.
+        // We will default to QUICK_REPLY unless we already have CTAs.
+
         if (count($this->buttons) >= 10)
             return;
-        $this->buttons[] = ['type' => 'QUICK_REPLY', 'text' => '', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''];
+
+        $type = 'QUICK_REPLY';
+        if ($ctaCount > 0)
+            $type = 'URL'; // Stick to CTA if started
+
+        $this->buttons[] = ['type' => $type, 'text' => '', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''];
         $this->detectVariables();
     }
 
@@ -292,11 +322,29 @@ class TemplateList extends Component
     public function createTemplate(\App\Services\WhatsAppService $whatsapp)
     {
         // Add dynamic rules for variables
-        $rules = $this->rules;
+        $rules = $this->rules(); // Check method now
         foreach ($this->variableConfig as $var => $config) {
             $rules['variableConfig.' . $var . '.name'] = 'required|regex:/^[a-z0-9_]+$/|max:50';
             $rules['variableConfig.' . $var . '.sample'] = 'required|max:100';
         }
+
+        // Custom Validation for Mixed Buttons
+        $qrCount = collect($this->buttons)->where('type', 'QUICK_REPLY')->count();
+        $ctaCount = collect($this->buttons)->whereIn('type', ['URL', 'PHONE_NUMBER', 'COPY_CODE'])->count();
+
+        if ($qrCount > 0 && $ctaCount > 0) {
+            $this->addError('buttons', 'Cannot mix Quick Reply and Call-to-Action buttons.');
+            return;
+        }
+        if ($qrCount > 3) {
+            $this->addError('buttons', 'Max 3 Quick Reply buttons allowed.');
+            return;
+        }
+        if ($ctaCount > 2) {
+            $this->addError('buttons', 'Max 2 Call-to-Action buttons allowed.');
+            return;
+        }
+
         $this->validate($rules);
 
         $components = [];
@@ -310,21 +358,50 @@ class TemplateList extends Component
 
             if ($this->headerType === 'TEXT') {
                 $header['text'] = $this->headerText;
+                // HEADER VARIABLES
+                $service = new \App\Services\TemplateService();
+                $vars = $service->extractVariables($this->headerText);
+                if (!empty($vars)) {
+                    $examples = [];
+                    foreach ($vars as $var) {
+                        $examples[] = $this->variableConfig[$var]['sample'] ?? 'sample';
+                    }
+                    $header['example'] = ['header_text' => $examples];
+                }
             } else if (in_array($this->headerType, ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                $header['example'] = [
-                    'header_handle' => [
-                        $this->exampleMediaUrl ?: '4'
-                    ]
-                ];
+                // UPLOAD MEDIA TO META
+                try {
+                    $handle = $whatsapp->uploadMediaForTemplate($this->headerMedia);
+                    $header['example'] = [
+                        'header_handle' => [$handle]
+                    ];
+                } catch (\Exception $e) {
+                    $this->addError('headerMedia', 'Upload Failed: ' . $e->getMessage());
+                    return;
+                }
             }
             $components[] = $header;
         }
 
         // Body
-        $components[] = [
+        $bodyComponent = [
             'type' => 'BODY',
             'text' => $this->body
         ];
+
+        // BODY VARIABLES
+        $service = new \App\Services\TemplateService(); // Reuse or new
+        $vars = $service->extractVariables($this->body);
+        if (!empty($vars)) {
+            $examples = [];
+            foreach ($vars as $var) {
+                $examples[] = $this->variableConfig[$var]['sample'] ?? 'sample';
+            }
+            // Body expects array of arrays
+            $bodyComponent['example'] = ['body_text' => [$examples]];
+        }
+
+        $components[] = $bodyComponent;
 
         // Footer
         if ($this->footer) {
@@ -384,6 +461,33 @@ class TemplateList extends Component
             'language' => $this->language,
             'components' => $components,
         ];
+
+        // --- PRE-SUBMISSION LINTING ---
+        if (!$this->ignoreWarnings) {
+            $tempTemplate = new WhatsappTemplate([
+                'name' => $this->name,
+                'category' => $this->category,
+                'status' => 'APPROVED', // Assume approved for lifecycle checks
+                'is_paused' => false,
+                'components' => $components // Model casts this to array/json automatically if configured? 
+                // Wait, model might expect JSON string or array depending on casts. 
+                // Let's pass array, assuming strict validation handles it or we cast to array manually in validator.
+                // TemplateValidator expects array for components in logic: $template->components ?? []
+            ]);
+            // Force component attribute storage if model doesn't cast on fill
+            $tempTemplate->components = $components;
+
+            $validator = new \App\Validators\TemplateValidator();
+            // We pass [] for runtimeParams as this is static check
+            $result = $validator->validate($tempTemplate, []);
+
+            if (!$result->isValid()) {
+                $this->validationWarnings = array_map(function ($e) {
+                    return ['code' => $e->code, 'message' => $e->message, 'severity' => $e->severity];
+                }, $result->getErrors());
+                return; // HALT for user review
+            }
+        }
 
         try {
             $whatsapp->setTeam(auth()->user()->currentTeam);
@@ -450,6 +554,32 @@ class TemplateList extends Component
             }
         }
         return 'NONE';
+    }
+
+    public function getHealthStatus($template)
+    {
+        // Simple optimization: If REJECTED/FLAGGED, it's CRITICAL.
+        if (in_array($template->status, ['REJECTED', 'FLAGGED', 'DISABLED']))
+            return 'CRITICAL';
+        if ($template->is_paused)
+            return 'WARNING';
+
+        // OPTIMIZATION: Use stored score if available (populated by Sync or Create)
+        // If readiness_score exists and is > 0, trust it.
+        // If validation_results is not null, trust it.
+        if ($template->readiness_score !== null && $template->readiness_score < 100) {
+            // If score < 100, checking severity of stored errors is faster than re-running regex
+            $errors = $template->validation_results ?? [];
+            foreach ($errors as $err) {
+                if (($err['severity'] ?? '') === 'error')
+                    return 'HIGH_RISK';
+            }
+            return 'WARNING';
+        }
+
+        // If no stored data (legacy), fallback to live calculation?
+        // Or assume safe if approved.
+        return 'SAFE';
     }
 
     public function render()

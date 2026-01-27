@@ -96,6 +96,16 @@ class SendCampaignMessageJob implements ShouldQueue
         }, $bodyVars);
 
         try {
+            // --- SAFEGUARD: Check Template Status ---
+            // Prevent sending if template was paused/rejected mid-campaign
+            $tpl = \App\Models\WhatsappTemplate::where('team_id', $campaign->team_id)
+                ->where('name', $campaign->template_name)
+                ->first();
+
+            if ($tpl && $tpl->status !== 'APPROVED') {
+                throw new \Exception("Safeguard Block: Template '{$campaign->template_name}' is {$tpl->status}.");
+            }
+
             // Find or Create the attempt record
             $message = Message::where('campaign_id', $this->campaignId)
                 ->where('contact_id', $this->contactId)

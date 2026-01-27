@@ -152,6 +152,36 @@ class WebhookMappingService
     }
 
     /**
+     * Extract unique external ID from payload or headers
+     */
+    public function extractExternalId(array $payload, array $headers, ?string $platform = null): ?string
+    {
+        // Platform specific common locations
+        if ($platform === 'shopify') {
+            return $headers['x-shopify-webhook-id'][0] ?? null;
+        }
+
+        if ($platform === 'woocommerce') {
+            return $headers['x-wc-webhook-id'][0] ?? null;
+        }
+
+        if ($platform === 'stripe') {
+            return $payload['id'] ?? null;
+        }
+
+        // Generic fallback
+        return $payload['id'] ?? $payload['uuid'] ?? $payload['guid'] ?? null;
+    }
+
+    /**
+     * Generate a unique hash for the payload content
+     */
+    public function generateDeduplicationHash(array $payload): string
+    {
+        return md5(json_encode($payload));
+    }
+
+    /**
      * Validate mapped data
      */
     public function validateMappedData(array $data, array $rules = []): bool

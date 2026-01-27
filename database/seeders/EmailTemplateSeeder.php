@@ -43,6 +43,17 @@ class EmailTemplateSeeder extends Seeder
                 'variable_schema' => ['name'],
                 'is_locked' => false,
                 'description' => 'Welcome email for new signups.',
+            ],
+            [
+                'type' => EmailUseCase::ALERT,
+                'name' => 'WhatsApp Health Alert',
+                'slug' => 'whatsapp-health-alert',
+                'subject' => '🚨 WhatsApp Health Issue: {{ team_name }}',
+                'content_html' => '<div style="font-family: sans-serif;"><h2>WhatsApp Alert</h2><p>Team: {{ team_name }}</p><p><strong>Message:</strong> {{ message }}</p><p>Severity: {{ severity }}</p><p><a href="{{ dashboard_url }}">Go to Dashboard</a></p></div>',
+                'content_text' => "WhatsApp Alert\nTeam: {{ team_name }}\nMessage: {{ message }}\nSeverity: {{ severity }}\nDashboard: {{ dashboard_url }}",
+                'variable_schema' => ['team_name', 'message', 'severity', 'dashboard_url'],
+                'is_locked' => true,
+                'description' => 'Sent when a team\'s WhatsApp health degrades.',
             ]
         ];
 

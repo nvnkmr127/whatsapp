@@ -45,5 +45,8 @@ Schedule::command('broadcast:consume --seconds=55')
     ->everyMinute()
     ->withoutOverlapping();
 
+// Compliance Audits
+Schedule::command('whatsapp:audit-compliance')->weekly()->sundays()->at('04:00');
+
 
 

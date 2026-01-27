@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Contact extends Model
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use \App\Traits\HasTeam;
+
     protected $guarded = [];
 
     protected $casts = [

@@ -59,7 +59,15 @@ class ValidateWhatsAppTokens extends Command
                     $result = $service->getBusinessProfile();
 
                     if (isset($result['error'])) {
-                        $this->handleTokenError($team, $result['error']);
+                        $isPermanent = $this->handleTokenError($team, $result['error']);
+                        if ($isPermanent) {
+                            $team->update([
+                                'whatsapp_connected' => false,
+                                'whatsapp_setup_state' => \App\Enums\IntegrationState::DISCONNECTED,
+                                'whatsapp_token_expires_at' => null
+                            ]);
+                            $this->error("Auto-Disconnected Team {$team->id} due to permanent auth failure.");
+                        }
                         $tokensInvalid++;
                     } else {
                         $team->update(['whatsapp_token_last_validated' => now()]);
@@ -99,24 +107,26 @@ class ValidateWhatsAppTokens extends Command
 
     /**
      * Handle token error
+     * @return bool True if permanent failure
      */
-    private function handleTokenError(Team $team, array $error): void
+    private function handleTokenError(Team $team, array $error): bool
     {
         $message = $error['message'] ?? 'Unknown error';
         $code = $error['code'] ?? null;
 
         // Check if it's an auth error
-        if (str_contains(strtolower($message), 'token') || $code == 190) {
+        if (str_contains(strtolower($message), 'token') || $code == 190 || $code == 102) {
             Log::error("WhatsApp token invalid for team {$team->id}", [
                 'error' => $error
             ]);
 
-            // TODO: Send notification
-            // $team->owner->notify(new WhatsAppTokenInvalid($team, $error));
+            // Return true to trigger auto-disconnect
+            return true;
         } else {
             Log::warning("WhatsApp API error for team {$team->id}", [
                 'error' => $error
             ]);
         }
+        return false;
     }
 }

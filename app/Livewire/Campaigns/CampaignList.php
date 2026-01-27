@@ -47,6 +47,53 @@ class CampaignList extends Component
         $this->confirmingDeletion = false;
     }
 
+    // Retargeting
+    public $showRetargetModal = false;
+    public $retargetingCriteria = 'not_read';
+    public $selectedCampaignId = null;
+
+    public function openRetargetModal($campaignId)
+    {
+        $this->selectedCampaignId = $campaignId;
+        $this->showRetargetModal = true;
+    }
+
+    public function retarget()
+    {
+        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($this->selectedCampaignId);
+        $query = \App\Models\CampaignDetail::where('campaign_id', $this->selectedCampaignId);
+
+        switch ($this->retargetingCriteria) {
+            case 'not_delivered':
+                $query->whereIn('status', ['failed', 'pending', 'sent']);
+                break;
+            case 'not_read':
+                $query->where('status', 'delivered');
+                break;
+            case 'read':
+                $query->where('status', 'read');
+                break;
+            case 'failed':
+                $query->where('status', 'failed');
+                break;
+        }
+
+        $contactIds = $query->pluck('contact_id')->unique()->toArray();
+
+        if (empty($contactIds)) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'No contacts found matching criteria.'
+            ]);
+            return;
+        }
+
+        return redirect()->route('campaigns.create', [
+            'retarget_ids' => $contactIds,
+            'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
+        ]);
+    }
+
     #[Layout('components.layouts.app')]
     public function render()
     {

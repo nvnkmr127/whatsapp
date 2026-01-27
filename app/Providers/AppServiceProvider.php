@@ -104,6 +104,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SyncCallToInboxListener::class
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\WhatsAppAccountRisk::class,
+            \App\Listeners\MonitorAccountHealth::class
+        );
+
         // Catch-all for Domain Events (Signal Sourcing)
         \Illuminate\Support\Facades\Event::listen(
             'App\Events\*',

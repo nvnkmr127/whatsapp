@@ -18,6 +18,7 @@ class WhatsAppOnboardingController extends Controller
         ]);
 
         $shortLivedToken = $request->input('access_token');
+        $team = $request->user()->currentTeam; // Define $team early for logging
 
         try {
             $whatsappService = app(\App\Services\WhatsAppService::class);
@@ -26,6 +27,13 @@ class WhatsAppOnboardingController extends Controller
             if (!$result['success']) {
                 $errorDetails = $result['error'];
                 $referenceId = \App\Models\WhatsAppSetupAudit::generateReferenceId();
+
+                // Log interaction for failed token exchange
+                if ($team) {
+                    $endpoint = 'token_exchange'; // Assuming this is the endpoint for logging
+                    $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8) . '...'];
+                    \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => $errorDetails]);
+                }
 
                 Log::error('WhatsApp Token Exchange Failed', [
                     'error' => $errorDetails,
@@ -47,13 +55,35 @@ class WhatsAppOnboardingController extends Controller
             $expiresIn = $data['expires_in'] ?? 5184000; // 60 days default
 
             if (!$longLivedToken) {
+                // Log interaction for missing token in successful response
+                if ($team) {
+                    $endpoint = 'token_exchange';
+                    $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8) . '...'];
+                    \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => 'No access token received from Facebook.']);
+                }
                 return response()->json(['status' => false, 'message' => 'No access token received from Facebook.'], 400);
+            }
+
+            // [FIX] Persist Token Immediately
+            $team = $request->user()->currentTeam;
+            if ($team) {
+                $team->forceFill([
+                    'whatsapp_access_token' => $longLivedToken,
+                    'whatsapp_token_expires_at' => now()->addSeconds($expiresIn),
+                ])->save();
+
+                \App\Services\WhatsAppEventBridge::auditConfig($team, 'token_exchange', 'completed', [
+                    'expires_at' => now()->addSeconds($expiresIn)->toDateTimeString(),
+                    'token_preview' => substr($longLivedToken, 0, 8) . '...'
+                ]);
+
+                Log::info("WhatsApp Token Persisted for Team {$team->id}");
             }
 
             // 2. Return token with expiration info
             return response()->json([
                 'status' => true,
-                'access_token' => $longLivedToken,
+                'access_token' => $longLivedToken, // Optional to return since we saved it
                 'expires_in' => $expiresIn,
                 'expires_at' => now()->addSeconds($expiresIn)->toIso8601String()
             ]);

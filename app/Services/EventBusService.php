@@ -10,18 +10,19 @@ class EventBusService
     /**
      * Publish an event to the Database.
      */
-    public function publish(string $stream, string $eventType, array $payload): ?string
+    public function publish(string $stream, string $eventType, array $payload, ?int $teamId = null): ?string
     {
         // Database Implementation (Essential for cPanel/Shared Hosting)
         try {
             $id = DB::table('broadcast_events')->insertGetId([
+                'team_id' => $teamId,
                 'event_type' => $eventType,
                 'payload' => json_encode($payload),
                 'status' => 'pending',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            Log::debug("EventBus: Published to Database", ['id' => $id, 'type' => $eventType]);
+            Log::debug("EventBus: Published to Database", ['id' => $id, 'type' => $eventType, 'team_id' => $teamId]);
             return (string) $id;
         } catch (\Exception $e) {
             Log::error("EventBus: Failed to publish to Database: " . $e->getMessage());

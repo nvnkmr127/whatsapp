@@ -23,19 +23,17 @@
             @if($is_whatsmark_connected)
                 <div class="flex flex-col items-end gap-2">
                     <div
-                        class="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-2xl border border-green-100 dark:border-green-800">
+                        class="flex items-center gap-3 bg-{{ $integrationStateColor }}-50 dark:bg-{{ $integrationStateColor }}-900/20 px-4 py-2 rounded-2xl border border-{{ $integrationStateColor }}-100 dark:border-{{ $integrationStateColor }}-800">
                         <span class="relative flex h-3 w-3">
-                            <span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-wa-teal"></span>
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-{{ $integrationStateColor }}-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-{{ $integrationStateColor === 'green' ? 'wa-teal' : $integrationStateColor . '-500' }}"></span>
                         </span>
-                        <span class="text-sm font-bold text-green-700 dark:text-green-400">CONNECTED</span>
-                    </div>
-                    <div class="flex items-center gap-2 px-3 py-1 bg-{{ $integrationStateColor }}-100 dark:bg-{{ $integrationStateColor }}-900/30 rounded-full border border-{{ $integrationStateColor }}-200 dark:border-{{ $integrationStateColor }}-800">
-                        <span class="w-1.5 h-1.5 rounded-full bg-{{ $integrationStateColor }}-500 animate-pulse"></span>
-                        <span class="text-[10px] font-black text-{{ $integrationStateColor }}-700 dark:text-{{ $integrationStateColor }}-400 uppercase tracking-widest">
-                            {{ $integrationStateLabel }}
-                        </span>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-bold text-{{ $integrationStateColor }}-700 dark:text-{{ $integrationStateColor }}-400 uppercase tracking-tight">{{ $is_whatsmark_connected ? 'Connected' : 'Disconnected' }}</span>
+                            @if($tokenLastValidated)
+                                <span class="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Validated {{ $tokenLastValidated->diffForHumans() }}</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @else
@@ -54,8 +52,9 @@
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-50 dark:border-slate-800">
         @if($is_whatsmark_connected)
                 <!-- Critical Alert Banner -->
-                @if(in_array($integrationState, ['suspended', 'restricted']))
-                    <div class="mb-10 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800/50 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-rose-100 dark:shadow-none animate-bounce-subtle">
+                <!-- Health & Governance Alert Banner -->
+                @if(in_array($integrationState, ['suspended', 'restricted']) || $tokenDaysUntilExpiry < 7 || $wm_quality_rating === 'RED')
+                    <div class="mb-10 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800/50 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-rose-100 dark:shadow-none">
                         <div class="flex items-center gap-5 text-center md:text-left">
                             <div class="p-4 bg-rose-500 text-white rounded-2xl shadow-xl shadow-rose-200 dark:shadow-none">
                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,20 +62,26 @@
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="text-lg font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter">ACTION REQUIRED: {{ $integrationStateLabel }}</h4>
+                                <h4 class="text-lg font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter">CRITICAL GOVERNANCE ALERT</h4>
                                 <p class="text-sm font-bold text-rose-700 dark:text-rose-400 opacity-80 uppercase tracking-widest">
-                                    {{ $integrationState === 'suspended' ? 'Your Meta session has expired or been revoked. Messaging is blocked.' : 'Your account is restricted by Meta due to policy violations.' }}
+                                    @if($wm_quality_rating === 'RED')
+                                        Account Quality is RED. Campaign launching is blocked to prevent banning.
+                                    @elseif($tokenDaysUntilExpiry < 7)
+                                        WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }} days. Re-connect soon.
+                                    @else
+                                        {{ $integrationState === 'suspended' ? 'Your Meta session has expired. Messaging is blocked.' : 'Your account is restricted by Meta.' }}
+                                    @endif
                                 </p>
                             </div>
                         </div>
                         <div class="flex gap-4">
-                            @if($integrationState === 'suspended')
+                            @if($integrationState === 'suspended' || $tokenDaysUntilExpiry < 7)
                                 <button onclick="launchWhatsAppSignup()" class="px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
-                                    RE-AUTHENTICATE NOW
+                                    {{ $tokenDaysUntilExpiry < 7 ? 'REFRESH CONNECTION' : 'RE-AUTHENTICATE NOW' }}
                                 </button>
                             @endif
                             <button wire:click="validateConnection" class="px-8 py-4 bg-white dark:bg-slate-800 text-rose-600 border-2 border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-50 transition-all">
-                                RE-CHECK STATUS
+                                RE-CHECK 
                             </button>
                         </div>
                     </div>
@@ -146,7 +151,18 @@
                                             d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                     </svg>
                                 </div>
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Limit</span>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                    Limit
+                                    <div class="group relative inline-block">
+                                        <svg class="w-3 h-3 text-slate-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div class="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-[10px] text-white rounded-lg w-48 shadow-xl">
+                                            Meta limits the number of business-initiated conversations you can start in 24h. 
+                                            Tier 1K (1,000), 10K, 100K, or Unlimited.
+                                        </div>
+                                    </div>
+                                </span>
                             </div>
                             <div class="text-4xl font-bold text-slate-900 dark:text-white">{{ $wm_messaging_limit ?? '1K' }}
                             </div>
@@ -527,6 +543,126 @@
 
                 <div class="border-t border-slate-100 dark:border-slate-800"></div>
 
+                <!-- Business Behavior Section (Merged) -->
+                <div class="py-12">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">BUSINESS <span class="text-wa-teal">BEHAVIOR</span></h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                         <!-- Time & Hours -->
+                         <div class="space-y-6">
+                             <div>
+                                <x-label for="timezone" value="Timezone" class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                                <select id="timezone" wire:model="timezone"
+                                    class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all">
+                                    @foreach($this->timezones as $tz)
+                                        <option value="{{ $tz }}">{{ $tz }}</option>
+                                    @endforeach
+                                </select>
+                             </div>
+
+                             <div>
+                                <x-label value="Business Hours (Mon-Fri)" class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                                <div class="flex items-center gap-2">
+                                    <input type="time" wire:model="openTime"
+                                        class="rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal">
+                                    <span class="text-slate-400 font-bold text-xs">TO</span>
+                                    <input type="time" wire:model="closeTime"
+                                        class="rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal">
+                                </div>
+                                <p class="mt-2 text-[11px] text-slate-400">Messages received outside these hours may trigger the Away Message.</p>
+                             </div>
+
+                             <div class="pt-4">
+                                <label class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                    <input type="checkbox" wire:model="awayMessageEnabled" class="mt-1 rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900">
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Away Message</span>
+                                        <span class="block text-xs text-slate-500 mt-0.5">Auto-reply when closed.</span>
+                                    </div>
+                                </label>
+
+                                @if($awayMessageEnabled)
+                                    <div class="mt-4 animate-in fade-in slide-in-from-top-2">
+                                        <x-label for="awayMessage" value="Away Message Content" class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                                        <textarea wire:model="awayMessage" rows="3"
+                                            class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all"></textarea>
+                                    </div>
+                                @endif
+                             </div>
+                         </div>
+
+                         <!-- Call Settings -->
+                         <div class="space-y-6">
+                             <h4 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">WhatsApp Calling</h4>
+                             
+                             <div class="space-y-3">
+                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                                    <div class="flex-shrink-0">
+                                        <input type="checkbox" wire:model="callingEnabled" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Calling</span>
+                                        <span class="block text-xs text-slate-500">Allow customers to voice/video call you.</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                                    <div class="flex-shrink-0">
+                                        <input type="checkbox" wire:model="callButtonVisible" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Show Call Button</span>
+                                        <span class="block text-xs text-slate-500">Display the phone icon in the chat thread.</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                                    <div class="flex-shrink-0">
+                                        <input type="checkbox" wire:model="syncCallHours" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Sync Business Hours</span>
+                                        <span class="block text-xs text-slate-500">Restrict calls to the business hours defined on the left.</span>
+                                    </div>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                                    <div class="flex-shrink-0">
+                                        <input type="checkbox" wire:model="callbackPermissionEnabled" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Callback Requests</span>
+                                        <span class="block text-xs text-slate-500">Allow customers to request a callback when unavailable.</span>
+                                    </div>
+                                </label>
+                             </div>
+                         </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button wire:click="updateBehaviorSettings" wire:loading.attr="disabled"
+                            class="bg-slate-900 dark:bg-white dark:text-slate-900 rounded-2xl px-8 py-3 shadow-lg transition-all hover:scale-105 font-bold text-xs uppercase tracking-widest text-white">
+                            <span wire:loading.remove>SAVE BEHAVIOR SETTINGS</span>
+                            <span wire:loading class="flex items-center">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                SAVING...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-100 dark:border-slate-800"></div>
+
                 <!-- API Credentials & Connection -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div class="space-y-8">
@@ -589,11 +725,27 @@
                             </div>
 
                             <div class="pt-2 text-right">
-                                <button wire:click="disconnect"
-                                    wire:confirm="Are you sure you want to disconnect your WhatsApp account?"
-                                    class="text-xs font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest transition-opacity hover:opacity-80">
-                                    &times; DISCONNECT ACCOUNT
-                                </button>
+                                @if(!$confirmingDisconnect)
+                                    <button wire:click="confirmDisconnect"
+                                        class="text-xs font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest transition-opacity hover:opacity-80">
+                                        &times; DISCONNECT ACCOUNT
+                                    </button>
+                                @else
+                                    <div class="flex flex-col items-end gap-3 p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200 dark:border-rose-800">
+                                        <label class="text-[10px] font-black text-rose-600 uppercase">Type 'DISCONNECT' to confirm</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" wire:model="disconnectConfirmation" placeholder="Type here..." 
+                                                class="text-xs rounded-xl border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 focus:ring-rose-500">
+                                            <button wire:click="disconnect" class="px-4 py-2 bg-rose-600 text-white text-[10px] font-black rounded-xl">CONFIRM</button>
+                                            <button wire:click="cancelDisconnect" class="text-slate-400 hover:text-slate-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <p class="text-[9px] text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning: This will stop all active bot automations instantly.</p>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -829,6 +981,25 @@
 
 <script>
     document.addEventListener('livewire:initialized', () => {
+        let sdkInitialized = false;
+
+        const checkHttps = () => {
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                const fbBtn = document.getElementById('fb-login-btn');
+                if (fbBtn) {
+                    fbBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    fbBtn.disabled = true;
+                    fbBtn.innerHTML = 'HTTPS REQUIRED';
+                }
+                const warning = document.getElementById('https-warning');
+                if (warning) {
+                    warning.classList.remove('hidden');
+                }
+                return false;
+            }
+            return true;
+        };
+
         if (typeof launchWhatsAppSignup !== 'function') {
             window.fbAsyncInit = function () {
                 FB.init({
@@ -837,6 +1008,8 @@
                     xfbml: true,
                     version: 'v21.0'
                 });
+                sdkInitialized = true;
+                console.log('FB SDK Initialized');
             };
 
             (function (d, s, id) {
@@ -848,41 +1021,42 @@
             }(document, 'script', 'facebook-jssdk'));
 
             window.launchWhatsAppSignup = function () {
+                if (!checkHttps()) return;
+
+                if (!sdkInitialized || typeof FB === 'undefined') {
+                    alert('Facebook SDK is still loading. Please wait a moment.');
+                    return;
+                }
+
                 FB.login(function (response) {
                     if (response.authResponse) {
                         const code = response.authResponse.accessToken;
-                        axios.post('{{ route("whatsapp.onboard.exchange") }}', { access_token: code })
-                            .then(function (res) {
-                                if (res.data.status) {
-                                    @this.handleEmbeddedSuccess(res.data.access_token);
-                                } else {
-                                    alert('Error: ' + res.data.message);
-                                }
-                            })
-                            .catch(function (error) {
-                                alert('System error during token exchange');
-                            });
+                        // Use window.axios to be safe
+                        (window.axios || axios).post('{{ route("whatsapp.onboard.exchange") }}', { 
+                            access_token: code,
+                            waba_id: response.authResponse.userID //userID might not be wabaId, but the scope includes it
+                        })
+                        .then(function (res) {
+                            if (res.data.status) {
+                                @this.handleEmbeddedSuccess(res.data.access_token, res.data.waba_id);
+                            } else {
+                                alert('Error: ' + res.data.message);
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error(error);
+                            alert('System error during token exchange. Check console for details.');
+                        });
                     }
                 }, {
-                    scope: 'whatsapp_business_management, whatsapp_business_messaging',
-                    extras: { feature: 'whatsapp_embedded_signup', sessionInfoVersion: '2' }
+                    scope: 'whatsapp_business_management, whatsapp_business_messaging, business_management',
+                    extras: { 
+                        feature: 'whatsapp_embedded_signup', 
+                        sessionInfoVersion: '2' 
+                    }
                 });
             };
         }
-
-        const checkHttps = () => {
-            if (window.location.protocol !== 'https:') {
-                const fbBtn = document.getElementById('fb-login-btn');
-                if (fbBtn) {
-                    fbBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    fbBtn.setAttribute('disabled', 'disabled');
-                }
-                const warning = document.getElementById('https-warning');
-                if (warning) {
-                    warning.classList.remove('hidden');
-                }
-            }
-        };
 
         checkHttps();
     });

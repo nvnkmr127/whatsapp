@@ -98,7 +98,10 @@ class CampaignCreator extends Component
     #[Computed]
     public function templates()
     {
-        return WhatsappTemplate::where('team_id', auth()->user()->current_team_id)->where('status', 'APPROVED')->get();
+        return WhatsappTemplate::where('team_id', auth()->user()->current_team_id)
+            ->where('category', '!=', 'AUTHENTICATION') // Policy: Auth templates cannot be used in Broadcasts
+            ->safeForSending()
+            ->get();
     }
 
     // Toggle "Select All"
@@ -134,10 +137,51 @@ class CampaignCreator extends Component
             $template = WhatsappTemplate::where('team_id', auth()->user()->current_team_id)->findOrFail($this->template_id);
             $headerFormat = $template->header_data_format ?? 'TEXT';
 
+            // --- VALIDATION: Check Template Variables ---
+            // Header Params
+            $requiredHeader = $template->header_params_count ?? 0;
+            if (count(array_filter($this->headerInputs)) < $requiredHeader) {
+                $this->addError('general', "Please fill in all {$requiredHeader} header variables.");
+                return;
+            }
+            foreach ($this->headerInputs as $index => $val) {
+                if (strlen($val) > 1024) {
+                    $this->addError("headerInputs.{$index}", "Header variable " . ($index + 1) . " exceeds 1024 characters.");
+                    return;
+                }
+            }
+
+            // Body Params
+            $requiredBody = $template->body_params_count ?? 0;
+            if (count(array_filter($this->bodyInputs)) < $requiredBody) {
+                $this->addError('general', "Please fill in all {$requiredBody} body variables.");
+                return;
+            }
+            foreach ($this->bodyInputs as $index => $val) {
+                if (strlen($val) > 1024) {
+                    $this->addError("bodyInputs.{$index}", "Body variable " . ($index + 1) . " exceeds 1024 characters.");
+                    return;
+                }
+            }
+
+            // Footer Params
+            foreach ($this->footerInputs as $index => $val) {
+                if (strlen($val) > 1024) {
+                    $this->addError("footerInputs.{$index}", "Footer variable " . ($index + 1) . " exceeds 1024 characters.");
+                    return;
+                }
+            }
+
             // Handle File
             if ($this->file) {
                 $this->validate(['file' => 'required|file|max:10240']); // 10MB
                 $this->filename = $this->file->store('campaigns', 'public');
+
+                // Inject public URL into header params for WhatsApp to download
+                // Assuming the first header param is the media handle/url
+                if (isset($this->headerInputs)) {
+                    $this->headerInputs[0] = asset('storage/' . $this->filename);
+                }
             }
 
             // Create Campaign
@@ -147,35 +191,24 @@ class CampaignCreator extends Component
                 'template_id' => $template->template_id,
                 'template_name' => $template->template_name,
                 'scheduled_send_time' => $this->send_now ? now() : Carbon::parse($this->scheduled_send_time),
-                'status' => $this->send_now ? 'processing' : 'scheduled',
+                'status' => 'preparing', // Wait for background job
                 'header_params' => json_encode($this->headerInputs),
                 'body_params' => json_encode($this->bodyInputs),
                 'footer_params' => json_encode($this->footerInputs),
                 'filename' => $this->filename,
-                'total_contacts' => $this->isChecked ? Contact::where('team_id', auth()->user()->current_team_id)->count() : count($this->relation_type_dynamic),
+                'total_contacts' => 0, // Will be updated by job
             ]);
 
-            // Create Campaign Details (Recipients)
-            $query = Contact::where('team_id', auth()->user()->current_team_id);
-            if (!$this->isChecked) {
-                $query->whereIn('id', $this->relation_type_dynamic);
-            }
+            // Dispatch Background Preparation
+            $criteria = [
+                'selection_type' => $this->isChecked ? 'all' : 'ids',
+                'ids' => $this->isChecked ? [] : $this->relation_type_dynamic
+            ];
 
-            $query->chunk(100, function ($contacts) use ($campaign) {
-                $details = [];
-                foreach ($contacts as $contact) {
-                    $details[] = [
-                        'campaign_id' => $campaign->id,
-                        'rel_id' => $contact->id,
-                        'rel_type' => 'contact',
-                        'phone' => $contact->phone,
-                        'status' => 'pending',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-                }
-                CampaignDetail::insert($details);
-            });
+            \App\Jobs\PrepareCampaignJob::dispatch($campaign->id, $criteria);
+
+            // Note: The previous sync logic for CampaignDetail creation is removed 
+            // and handled by the job to prevent timeouts with large lists.
 
             $this->dispatch('notify', 'Campaign created successfully!');
             return redirect()->route('campaigns.index');

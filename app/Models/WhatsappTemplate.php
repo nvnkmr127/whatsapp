@@ -4,8 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class WhatsappTemplate extends Model
 {
+    use SoftDeletes;
     protected $guarded = [];
 
     protected $casts = [
@@ -14,6 +17,8 @@ class WhatsappTemplate extends Model
         'readiness_score' => 'integer',
         'is_paused' => 'boolean',
         'variable_config' => 'array',
+        'total_sent' => 'integer',
+        'total_read' => 'integer',
     ];
 
     public function team()

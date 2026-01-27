@@ -60,6 +60,37 @@ class InboundWebhookController extends Controller
         // Get payload
         $payload = $request->all();
 
+        // Extract External ID and Generate Hash for Deduplication
+        $externalId = $this->mappingService->extractExternalId($payload, $request->headers->all(), $source->platform);
+        $dedupeHash = $this->mappingService->generateDeduplicationHash($payload);
+
+        // Deduplication Check: Look for existing payload from same source with same ID or Hash in last 24h
+        $duplicate = WebhookPayload::where('webhook_source_id', $source->id)
+            ->where(function ($query) use ($externalId, $dedupeHash) {
+                if ($externalId) {
+                    $query->where('external_id', $externalId);
+                } else {
+                    $query->where('deduplication_hash', $dedupeHash);
+                }
+            })
+            ->where('created_at', '>', now()->subHours(24))
+            ->whereIn('status', ['pending', 'processing', 'processed'])
+            ->first();
+
+        if ($duplicate) {
+            Log::info('Duplicate inbound webhook ignored', [
+                'source' => $source->name,
+                'external_id' => $externalId,
+                'status' => $duplicate->status
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Duplicate webhook ignored (already processed)',
+                'duplicate_id' => $duplicate->id
+            ], 200);
+        }
+
         // Extract event type
         $eventType = $this->mappingService->extractEventType(
             $payload,
@@ -69,6 +100,7 @@ class InboundWebhookController extends Controller
         Log::info('Inbound webhook received', [
             'source' => $source->name,
             'event_type' => $eventType,
+            'external_id' => $externalId,
             'payload_size' => strlen(json_encode($payload)),
         ]);
 
@@ -80,6 +112,8 @@ class InboundWebhookController extends Controller
                 'webhook_source_id' => $source->id,
                 'payload' => $payload,
                 'event_type' => $eventType,
+                'external_id' => $externalId,
+                'deduplication_hash' => $dedupeHash,
                 'signature' => $request->header('X-Webhook-Signature')
                     ?? $request->header('X-Shopify-Hmac-SHA256')
                     ?? $request->header('Stripe-Signature')
@@ -117,6 +151,8 @@ class InboundWebhookController extends Controller
                 'payload' => $payload,
                 'mapped_data' => $mappedData,
                 'event_type' => $eventType,
+                'external_id' => $externalId,
+                'deduplication_hash' => $dedupeHash,
                 'signature' => $request->header('X-Webhook-Signature')
                     ?? $request->header('X-Shopify-Hmac-SHA256')
                     ?? $request->header('Stripe-Signature')

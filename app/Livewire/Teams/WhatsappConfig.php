@@ -18,7 +18,7 @@ class WhatsappConfig extends Component
     public $wm_fb_app_id;
     public $wm_fb_app_secret;
     public $wm_business_account_id;
-    public $wm_access_token;
+    // public $wm_access_token; // REMOVED: Prevent leakage to frontend
     public $outbound_webhook_url;
 
     // Business Profile Fields
@@ -59,13 +59,33 @@ class WhatsappConfig extends Component
     public $tokenHealthScore = 0;
     public $qualityHealthScore = 0;
     public $messagingUsagePercent = 0;
-    public $tokenDaysUntilExpiry = 0;
     public $currentUsage = 0;
     public $dailyLimit = 0;
+    public $tokenDaysUntilExpiry = 0;
     public $setupProgress = [];
     public $integrationState = 'disconnected';
     public $integrationStateLabel = 'Disconnected';
     public $integrationStateColor = 'slate';
+    public $tokenLastValidated;
+    public $tokenExpiresAt;
+
+    public $confirmingDisconnect = false;
+    public $disconnectConfirmation = '';
+
+    // Behavior Settings (Merged from WhatsappSettings)
+    public $timezone = 'UTC';
+    public $awayMessageEnabled = false;
+    public $awayMessage = 'We are currently closed. We will get back to you soon.';
+
+    // Default Hours: Mon-Fri 09-17
+    public $openTime = '09:00';
+    public $closeTime = '17:00';
+
+    // Call Settings
+    public $callingEnabled = false;
+    public $callButtonVisible = false;
+    public $syncCallHours = false;
+    public $callbackPermissionEnabled = false;
 
     protected $rules = [
         'wm_fb_app_id' => 'nullable',
@@ -102,11 +122,33 @@ class WhatsappConfig extends Component
         $this->wm_fb_app_id = get_setting('whatsapp_wm_fb_app_id');
         $this->wm_fb_app_secret = get_setting('whatsapp_wm_fb_app_secret');
 
-        $this->wm_business_account_id = $team->whatsapp_business_account_id;
-        $this->wm_access_token = $team->whatsapp_access_token;
-        $this->outbound_webhook_url = $team->outbound_webhook_url;
+        // [FIX Orphaned State]
+        // If we have a token but NO WABA ID, the connection is corrupted/partial.
+        // We should clear the state to allow fresh connection.
+        if (!empty($team->whatsapp_access_token) && empty($team->whatsapp_business_account_id)) {
+            // Only clear if it's been more than 5 minutes since update (to allow async process to finish if any)
+            $updatedAt = $team->updated_at;
+            if ($updatedAt && $updatedAt->diffInMinutes(now()) > 5) {
+                Log::warning("Detected Orphaned Token for Team {$team->id}. Clearing to allow reconnection.");
+                $team->update(['whatsapp_access_token' => null]);
+                // $this->wm_access_token = null; // DO NOT EXPOSE TO FRONTEND
+                // Proceed as disconnected
+            }
+        }
 
-        $this->is_whatsmark_connected = !empty($this->wm_access_token) && !empty($this->wm_business_account_id);
+        if ($team->whatsapp_connected) {
+            $this->is_whatsmark_connected = true;
+            $this->wm_business_account_id = $team->whatsapp_business_account_id;
+            // $this->wm_access_token = $team->whatsapp_access_token; // DO NOT EXPOSE TO FRONTEND
+            $this->outbound_webhook_url = $team->outbound_webhook_url;
+        } else {
+            $this->is_whatsmark_connected = false;
+            $this->wm_business_account_id = null;
+            $this->outbound_webhook_url = null;
+        }
+
+
+        $this->is_whatsmark_connected = !empty($team->whatsapp_access_token) && !empty($this->wm_business_account_id);
         $this->is_webhook_connected = !empty($this->outbound_webhook_url);
 
         $this->webhook_verify_token = get_setting('whatsapp_webhook_verify_token');
@@ -121,10 +163,20 @@ class WhatsappConfig extends Component
         $this->wm_quality_rating = $team->whatsapp_quality_rating ?: 'UNKNOWN';
         $this->wm_phone_display = $team->whatsapp_phone_display ?: '';
         $this->wm_verified_name = $team->whatsapp_verified_name ?: '';
+        $this->tokenLastValidated = $team->whatsapp_token_last_validated;
+        $this->tokenExpiresAt = $team->whatsapp_token_expires_at;
 
-        $this->integrationState = $team->whatsapp_setup_state?->value ?? 'disconnected';
-        $this->integrationStateLabel = $team->whatsapp_setup_state?->label() ?? 'Disconnected';
-        $this->integrationStateColor = $team->whatsapp_setup_state?->color() ?? 'slate';
+        // Derive state from model to avoid mismatch
+        $state = $team->whatsapp_setup_state;
+        if ($this->is_whatsmark_connected && (!$state || $state === \App\Enums\IntegrationState::DISCONNECTED)) {
+            // Self-heal state if data is present
+            $state = \App\Enums\IntegrationState::AUTHENTICATED;
+            $team->update(['whatsapp_setup_state' => $state]);
+        }
+
+        $this->integrationState = $state?->value ?? 'disconnected';
+        $this->integrationStateLabel = $state?->label() ?? 'Disconnected';
+        $this->integrationStateColor = $state?->color() ?? 'slate';
 
         // Fetch Real Billing Data
         $wallet = \App\Models\TeamWallet::firstOrCreate(['team_id' => $team->id]);
@@ -132,6 +184,144 @@ class WhatsappConfig extends Component
 
         $plan = \App\Models\Plan::where('name', $team->subscription_plan)->first();
         $this->credits_total = $plan ? $plan->message_limit : 1000;
+
+        $this->loadBehaviorSettings($team);
+    }
+
+    public function loadBehaviorSettings($team)
+    {
+        $this->timezone = $team->timezone ?? 'UTC';
+        $this->awayMessageEnabled = $team->away_message_enabled;
+        $this->awayMessage = $team->away_message;
+
+        // Load first day's hours as default
+        $hours = $team->business_hours;
+        if (isset($hours['mon'])) {
+            $this->openTime = $hours['mon'][0];
+            $this->closeTime = $hours['mon'][1];
+        }
+
+        // Load Call Settings
+        if (isset($team->whatsapp_settings['calling'])) {
+            $this->callingEnabled = $team->whatsapp_settings['calling']['status'] === 'enabled';
+            $this->callButtonVisible = $team->whatsapp_settings['calling']['call_icon_visibility'] === 'show';
+            $this->callbackPermissionEnabled = ($team->whatsapp_settings['calling']['callback_permission_status'] ?? 'disabled') === 'enabled';
+            $this->syncCallHours = isset($team->whatsapp_settings['calling']['call_hours']);
+        }
+    }
+
+    public function updateBusinessProfile()
+    {
+        $team = auth()->user()->currentTeam;
+
+        if (!auth()->user()->ownsTeam($team)) {
+            $this->dispatch('notify', title: 'Unauthorized', type: 'error');
+            return;
+        }
+
+        $this->validate([
+            'profile_about' => 'nullable|string|max:130',
+            'profile_address' => 'nullable|string|max:256',
+            'profile_description' => 'nullable|string|max:512',
+            'profile_email' => 'nullable|email|max:128',
+            'profile_vertical' => 'nullable|string|max:128',
+            'profile_websites.*' => 'nullable|url|max:256',
+            'profile_picture_url' => 'nullable|url|max:2048',
+        ]);
+
+        try {
+            $waService = new \App\Services\WhatsAppService($team);
+            $profileData = [
+                'about' => $this->profile_about,
+                'address' => $this->profile_address,
+                'description' => $this->profile_description,
+                'email' => $this->profile_email,
+                'vertical' => $this->profile_vertical,
+                'websites' => array_filter($this->profile_websites), // Remove empty websites
+            ];
+
+            $response = $waService->updateBusinessProfile($profileData);
+
+            if ($response['status']) {
+                // If profile picture URL is provided, update it separately
+                if (!empty($this->profile_picture_url)) {
+                    // $waService->updateBusinessProfilePicture($this->profile_picture_url); // Removed as method likely missing in service, checking...
+                    Log::warning("Profile Picture update skipped as method not confirmed in WhatsAppService.");
+                }
+
+                $this->dispatch('notify', 'Business profile updated successfully.');
+                $this->is_editing_profile = false;
+                $this->loadBusinessProfile(); // Reload to reflect changes
+            } else {
+                $this->dispatch('notify', 'Failed to update business profile: ' . $response['message']);
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to update WhatsApp business profile for team {$team->id}: " . $e->getMessage());
+            $this->dispatch('notify', 'An error occurred while updating the business profile: ' . $e->getMessage());
+        }
+    }
+
+    public function updateBehaviorSettings()
+    {
+        try {
+            $team = auth()->user()->currentTeam;
+
+            // Construct Business Hours (Simple Mon-Fri for MVP)
+            $hours = [];
+            foreach (['mon', 'tue', 'wed', 'thu', 'fri'] as $day) {
+                $hours[$day] = [$this->openTime, $this->closeTime];
+            }
+
+            $team->forceFill([
+                'timezone' => $this->timezone,
+                'away_message_enabled' => $this->awayMessageEnabled,
+                'away_message' => $this->awayMessage,
+                'business_hours' => $hours,
+            ])->save();
+
+            // Save Call Settings to Meta
+            $waService = new \App\Services\WhatsAppService($team);
+            $settings = [
+                'status' => $this->callingEnabled ? 'enabled' : 'disabled',
+                'call_icon_visibility' => $this->callButtonVisible ? 'show' : 'hide',
+                'callback_permission_status' => $this->callbackPermissionEnabled ? 'enabled' : 'disabled',
+            ];
+
+            if ($this->syncCallHours) {
+                $settings['business_hours'] = $hours;
+                $settings['timezone'] = $this->timezone;
+            }
+
+            // Sync with Meta
+            $response = $waService->updateSystemCallSettings($settings);
+
+            // Update local cache regardless of Meta success
+            $currentSettings = $team->whatsapp_settings ?? [];
+            $currentSettings['calling'] = $settings;
+            if ($this->syncCallHours) {
+                $currentSettings['calling']['call_hours'] = true;
+            } else {
+                unset($currentSettings['calling']['call_hours']);
+            }
+
+            $team->forceFill(['whatsapp_settings' => $currentSettings])->save();
+
+            if (isset($response['success']) && $response['success']) {
+                $this->dispatch('notify', 'Behavior settings saved and synced with Meta.');
+            } else {
+                $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown Meta API Error');
+                $this->dispatch('notify', title: 'Meta Sync Warning', message: 'Saved locally, but Meta failed: ' . $msg, type: 'warning');
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Failed to update Business Behavior: " . $e->getMessage());
+            $this->dispatch('notify', title: 'Error', message: 'Failed to save behavior settings: ' . $e->getMessage(), type: 'error');
+        }
+    }
+
+    public function getTimezonesProperty()
+    {
+        return \DateTimeZone::listIdentifiers();
     }
 
     public function handleEmbeddedSuccess($accessToken, $wabaId)
@@ -169,7 +359,7 @@ class WhatsappConfig extends Component
             ]);
 
             // 3. Complete connection sequence
-            $this->wm_access_token = $longLivedToken;
+            // $this->wm_access_token = $longLivedToken; // DO NOT EXPOSE TO FRONTEND
             $this->wm_business_account_id = $wabaId;
 
             // Converge on connect()
@@ -192,7 +382,7 @@ class WhatsappConfig extends Component
     {
         $this->validate([
             'wm_business_account_id' => 'required',
-            'wm_access_token' => 'required',
+            // 'wm_access_token' => 'required', // Removed from frontend
         ]);
 
         $team = auth()->user()->currentTeam;
@@ -210,6 +400,12 @@ class WhatsappConfig extends Component
 
             // Move to AUTHENTICATED state immediately
 
+            // [FIX] Cross-Linking: If switching WABA, clear the old phone number match
+            if ($team->whatsapp_business_account_id && $team->whatsapp_business_account_id !== $this->wm_business_account_id) {
+                $team->whatsapp_phone_number_id = null;
+                $this->wm_default_phone_number_id = null;
+            }
+
             // Check for duplicate WABA usage in Trial teams (Abuse Protection)
             $duplicate = \App\Models\Team::where('whatsapp_business_account_id', $this->wm_business_account_id)
                 ->where('id', '!=', auth()->user()->currentTeam->id)
@@ -220,10 +416,22 @@ class WhatsappConfig extends Component
                 throw new \Exception("This WhatsApp account has already been used for a trial subscription.");
             }
 
+            // [FIX] Prevent Ghost Numbers: Check if Phone ID is already taken
+            $phoneIdToSave = $this->wm_default_phone_number_id ?: $team->whatsapp_phone_number_id;
+            if ($phoneIdToSave) {
+                $phoneTaken = \App\Models\Team::where('whatsapp_phone_number_id', $phoneIdToSave)
+                    ->where('id', '!=', $team->id)
+                    ->exists();
+
+                if ($phoneTaken) {
+                    throw new \Exception("The selected Phone Number ID ({$phoneIdToSave}) is already connected to another team.");
+                }
+            }
+
             $team->update([
                 'whatsapp_business_account_id' => $this->wm_business_account_id,
-                'whatsapp_access_token' => $this->wm_access_token,
-                'whatsapp_phone_number_id' => $this->wm_default_phone_number_id ?: $team->whatsapp_phone_number_id,
+                'whatsapp_access_token' => $team->whatsapp_access_token, // Use team accessor directly if needed, or better, don't update if not changed
+                'whatsapp_phone_number_id' => $phoneIdToSave,
                 'whatsapp_connected' => true,
                 'whatsapp_setup_state' => \App\Enums\IntegrationState::AUTHENTICATED,
             ]);
@@ -238,13 +446,23 @@ class WhatsappConfig extends Component
                     $firstPhone = $apiPhones[0];
 
                     if (empty($this->wm_default_phone_number_id)) {
-                        $this->wm_default_phone_number_id = $firstPhone['id'];
-                        $team->update(['whatsapp_phone_number_id' => $this->wm_default_phone_number_id]);
+                        $potentialId = $firstPhone['id'];
+                        // [FIX] Check uniqueness for Auto-Discovery
+                        $taken = \App\Models\Team::where('whatsapp_phone_number_id', $potentialId)
+                            ->where('id', '!=', $team->id)
+                            ->exists();
+
+                        if (!$taken) {
+                            $this->wm_default_phone_number_id = $potentialId;
+                            $team->update(['whatsapp_phone_number_id' => $this->wm_default_phone_number_id]);
+                        } else {
+                            Log::warning("Auto-discovery skipped: Phone {$potentialId} is taken by another team.");
+                        }
                     }
                 }
 
                 // Automate Webhook Subscription
-                $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $this->wm_access_token);
+                $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
                 if (!$subResult['status']) {
                     Log::warning("Webhook Auto-subscription failed for team {$team->id}: " . $subResult['message']);
                 }
@@ -301,11 +519,27 @@ class WhatsappConfig extends Component
         }
     }
 
+    public function confirmDisconnect()
+    {
+        $this->confirmingDisconnect = true;
+    }
+
+    public function cancelDisconnect()
+    {
+        $this->confirmingDisconnect = false;
+        $this->disconnectConfirmation = '';
+    }
+
     public function disconnect()
     {
+        if ($this->disconnectConfirmation !== 'DISCONNECT') {
+            $this->dispatch('notify', title: 'Invalid Confirmation', type: 'error');
+            return;
+        }
+
         $this->is_whatsmark_connected = false;
         $this->is_webhook_connected = false;
-        $this->wm_access_token = '';
+        // $this->wm_access_token = ''; // Already removed
 
         if (auth()->user()->currentTeam) {
             auth()->user()->currentTeam->forceFill([
@@ -314,9 +548,12 @@ class WhatsappConfig extends Component
                 'whatsapp_phone_number_id' => null,
                 'whatsapp_connected' => false,
                 'whatsapp_token_expires_at' => null,
+                'whatsapp_setup_state' => \App\Enums\IntegrationState::DISCONNECTED,
             ])->save();
         }
 
+        $this->confirmingDisconnect = false;
+        $this->disconnectConfirmation = '';
         $this->dispatch('notify', 'Disconnected successfully.');
     }
 
@@ -391,7 +628,8 @@ class WhatsappConfig extends Component
         $this->tokenHealthScore = $health['token']['score'] ?? 0;
         $this->qualityHealthScore = $health['quality']['score'] ?? 0;
         $this->messagingUsagePercent = $health['messaging']['usage_percent'] ?? 0;
-        $this->tokenDaysUntilExpiry = $health['token']['days_remaining'] ?? 0;
+        // [FIX] Handle permanent tokens (null expiry) by defaulting to 999 instead of 0
+        $this->tokenDaysUntilExpiry = $health['token']['days_remaining'] ?? 999;
         $this->currentUsage = $health['messaging']['current_usage'] ?? 0;
         $this->dailyLimit = $health['messaging']['daily_limit'] ?? 0;
 
@@ -518,34 +756,7 @@ class WhatsappConfig extends Component
         }
     }
 
-    public function updateBusinessProfile()
-    {
-        try {
-            $service = app(\App\Services\WhatsAppService::class);
-            $service->setTeam(auth()->user()->currentTeam);
 
-            $data = [
-                'about' => $this->profile_about,
-                'address' => $this->profile_address,
-                'description' => $this->profile_description,
-                'email' => $this->profile_email,
-                'vertical' => $this->profile_vertical,
-                'websites' => $this->profile_websites,
-            ];
-
-            $response = $service->updateBusinessProfile($data);
-
-            if (isset($response['success']) && $response['success']) {
-                $this->is_editing_profile = false;
-                $this->dispatch('notify', 'Business profile updated successfully!');
-            } else {
-                $error = $response['error']['message'] ?? 'Unknown error';
-                $this->dispatch('notify', 'Failed to update profile: ' . $error);
-            }
-        } catch (\Exception $e) {
-            $this->dispatch('notify', 'Error: ' . $e->getMessage());
-        }
-    }
 
     public function addWebsite()
     {

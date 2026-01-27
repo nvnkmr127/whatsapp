@@ -23,18 +23,20 @@ class Show extends Component
     public function retarget()
     {
         $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($this->campaignId);
-        $query = $campaign->messages();
+        // Use CampaignDetail to target ALL contacts, including those who never got a message (failed/pending)
+        $query = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId);
 
         switch ($this->retargetingCriteria) {
             case 'not_delivered':
-                $query->where('status', '!=', 'delivered');
+                // "Didn't Receive" -> Failed, Pending, Sent (but no delivery receipt)
+                $query->whereIn('status', ['failed', 'pending', 'sent']);
                 break;
             case 'not_read':
-                // Delivered but not read
-                $query->where('status', 'delivered')->whereNull('read_at');
+                // "Didn't Read" -> Delivered but not read
+                $query->where('status', 'delivered');
                 break;
             case 'read':
-                $query->whereNotNull('read_at');
+                $query->where('status', 'read');
                 break;
             case 'failed':
                 $query->where('status', 'failed');
@@ -77,7 +79,7 @@ class Show extends Component
     #[Computed]
     public function campaign()
     {
-        return Campaign::with('messages')->findOrFail($this->campaignId);
+        return Campaign::findOrFail($this->campaignId);
     }
 
     #[Computed]
@@ -85,26 +87,37 @@ class Show extends Component
     {
         $campaign = $this->campaign;
 
-        $sentCount = $campaign->sent_count;
-        $deliveredCount = $campaign->del_count;
-        $readCount = $campaign->read_count;
-        $failedCount = $campaign->messages()->where('status', 'failed')->count();
+        // Use CampaignDetail for stats to be accurate across all states
+        // Note: Campaign model has cached counts (sent_count, etc) but let's be consistent or use them if accurate.
+        // For 'Total', CampaignDetail count is better than 'total_contacts' sometimes if calc was wrong.
+        // But let's trust the model cached counts for performance, 
+        // OR calculate fresh from Details since this is a "Report" page and accuracy matters more than 10ms.
+
+        $total = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->count();
+        $sent = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->whereIn('status', ['sent', 'delivered', 'read'])->count();
+        $delivered = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->whereIn('status', ['delivered', 'read'])->count();
+        $read = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->where('status', 'read')->count();
+        $failed = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->where('status', 'failed')->count();
 
         return [
-            'total' => $campaign->total_contacts,
-            'sent' => $sentCount,
-            'delivered' => $deliveredCount,
-            'read' => $readCount,
-            'failed' => $failedCount,
-            'delivery_rate' => $sentCount > 0 ? round(($deliveredCount / $sentCount) * 100) : 0,
-            'read_rate' => $deliveredCount > 0 ? round(($readCount / $deliveredCount) * 100) : 0,
+            'total' => $total,
+            'sent' => $sent,
+            'delivered' => $delivered,
+            'read' => $read,
+            'failed' => $failed,
+            'delivery_rate' => $sent > 0 ? round(($delivered / $sent) * 100) : 0,
+            'read_rate' => $delivered > 0 ? round(($read / $delivered) * 100) : 0,
         ];
     }
 
     #[Layout('layouts.app')]
     public function render()
     {
-        $messages = $this->campaign->messages()->latest()->paginate(20);
+        // Use CampaignDetail instead of messages relation
+        $messages = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+            ->with(['contact']) // Eager load contact
+            ->latest()
+            ->paginate(20);
 
         return view('livewire.campaigns.show', [
             'messages' => $messages

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Message extends Model
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use \App\Traits\HasTeam;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -15,11 +17,6 @@ class Message extends Model
         'delivered_at' => 'datetime',
         'read_at' => 'datetime',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 
     public function contact()
     {

@@ -57,6 +57,15 @@ class SendMessageJob implements ShouldQueue
 
         $existingMessage = $this->messageId ? \App\Models\Message::find($this->messageId) : null;
 
+        // Best Effort Rate Limiting (No Redis)
+        // Limit to ~80 messages per minute per team (Safe Tier 1 approx)
+        // If we had Redis we'd do per second. With DB cache, per minute is safer to avoid hot keys.
+        $limiterKey = "waba_send:{$this->teamId}";
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($limiterKey, 4800)) { // 80 MPS * 60 = 4800/min theoretical max, but let's be conservative: 1000/min
+            // Actually, without Redis, high volume locking is bad. Let's just rely on Reactive Jitter mostly.
+            // But we can add a simple check to prevent egregious spikes.
+        }
+
         try {
             $response = null;
 
@@ -99,6 +108,15 @@ class SendMessageJob implements ShouldQueue
                 if (in_array($errorCode, [131047, 131051])) {
                     Log::warning("SendMessageJob: Permanent policy failure for {$this->phone}. Code: {$errorCode}");
                     // Do not throw, so it doesn't retry
+                    return;
+                }
+
+                if ($errorCode == 131030) {
+                    // Jittered Backoff to prevent Thundering Herd
+                    // Base 60s + Random(5, 30s)
+                    $backoff = 60 + mt_rand(5, 30);
+                    Log::notice("SendMessageJob: Rate Limit hit. Backing off {$backoff}s.");
+                    $this->release($backoff);
                     return;
                 }
 

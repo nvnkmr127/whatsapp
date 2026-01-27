@@ -111,14 +111,30 @@ class WhatsAppHealthMonitor
             $issues[] = 'Never validated';
         }
 
-        return [
+        $tokenResults = [
             'score' => max(0, $score),
             'valid' => $valid,
+            'is_permanent' => is_null($team->whatsapp_token_expires_at),
             'expires_at' => $team->whatsapp_token_expires_at,
             'days_remaining' => $team->whatsapp_token_expires_at?->diffInDays(),
             'last_validated' => $team->whatsapp_token_last_validated,
             'issues' => $issues,
         ];
+
+        // [AUTO-ALERT] Critical Token Health
+        // Skip alert if it's a permanent token (no expiry) unless there's another non-expiry issue
+        if ($score < 50 && $team && $team->owner && !is_null($team->whatsapp_token_expires_at)) {
+            $msg = !empty($issues) ? $issues[0] : "Token health is critical ({$score}%)";
+            $this->createAlert($team, AlertSeverity::CRITICAL, 'token', 'token_expiry', $msg);
+
+            try {
+                $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification($team, 'token_expiry', $msg));
+            } catch (\Exception $e) {
+                Log::error("Failed to notify token alert: " . $e->getMessage());
+            }
+        }
+
+        return $tokenResults;
     }
 
     /**
@@ -214,6 +230,11 @@ class WhatsAppHealthMonitor
             $issues[] = 'Quality rating is YELLOW - sending limited';
         } elseif ($rating === 'UNKNOWN') {
             $issues[] = 'Quality rating unknown';
+        }
+
+        // [AUTO-ALERT] Quality Rating
+        if ($rating === 'RED' && $team && $team->owner) {
+            $this->createAlert($team, AlertSeverity::CRITICAL, 'quality', 'quality_red', "Your WhatsApp Quality has dropped to RED. Sending is disabled.");
         }
 
         return [
@@ -463,7 +484,7 @@ class WhatsAppHealthMonitor
      */
     public function createAlert(Team $team, AlertSeverity $severity, string $dimension, string $alertType, string $message, array $metadata = []): WhatsAppHealthAlert
     {
-        return WhatsAppHealthAlert::create([
+        $alert = WhatsAppHealthAlert::create([
             'team_id' => $team->id,
             'severity' => $severity->value,
             'dimension' => $dimension,
@@ -471,5 +492,29 @@ class WhatsAppHealthMonitor
             'message' => $message,
             'metadata' => $metadata,
         ]);
+
+        // Bridge to general Alert Engine if a matching rule exists
+        $slug = match ($alertType) {
+            'quality_red' => 'whatsapp-quality-red',
+            'webhook_pulse' => 'whatsapp-pulse-loss',
+            default => null
+        };
+
+        if ($slug) {
+            $rule = \App\Models\AlertRule::where('slug', $slug)->first();
+            if ($rule) {
+                \App\Models\AlertLog::create([
+                    'rule_id' => $rule->id,
+                    'team_id' => $team->id,
+                    'suppression_key' => md5($slug . $team->id . floor(time() / $rule->throttle_seconds)),
+                    'status' => 'processed',
+                    'severity' => $severity,
+                    'payload' => array_merge(['message' => $message], $metadata),
+                    'triggered_at' => now(),
+                ]);
+            }
+        }
+
+        return $alert;
     }
 }

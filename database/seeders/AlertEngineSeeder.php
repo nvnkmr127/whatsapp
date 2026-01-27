@@ -62,5 +62,33 @@ class AlertEngineSeeder extends Seeder
                 ],
             ]
         );
+
+        // 4. WhatsApp Quality Critical
+        AlertRule::updateOrCreate(
+            ['slug' => 'whatsapp-quality-red'],
+            [
+                'name' => 'WhatsApp Quality Rating RED',
+                'alert_type' => AlertType::COMPLIANCE,
+                'severity' => AlertSeverity::CRITICAL,
+                'is_active' => true,
+                'template_slug' => 'whatsapp-health-alert',
+                'throttle_seconds' => 43200, // 12 hours
+                'escalation_path' => [
+                    ['level' => 2, 'delay_mins' => 60, 'emails' => ['whatsapp-support@example.com']],
+                ],
+            ]
+        );
+
+        // 5. WhatsApp Connection Pulse Loss
+        AlertRule::updateOrCreate(
+            ['slug' => 'whatsapp-pulse-loss'],
+            [
+                'name' => 'WhatsApp Webhook Pulse Loss',
+                'alert_type' => AlertType::OPERATIONAL,
+                'severity' => AlertSeverity::WARNING,
+                'is_active' => true,
+                'throttle_seconds' => 21600, // 6 hours
+            ]
+        );
     }
 }

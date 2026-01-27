@@ -81,7 +81,7 @@ class ContactManager extends Component
     public function render()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
-        $query = Contact::where('team_id', Auth::user()->currentTeam->id);
+        $query = Contact::query();
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -102,10 +102,9 @@ class ContactManager extends Component
         }
 
         $contacts = $query->with(['tags', 'category'])->latest()->paginate(15);
-        $tags = ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
-        $customFields = \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->get();
-        $categories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
-            ->whereIn('target_module', ['all', 'contacts'])
+        $tags = ContactTag::all();
+        $customFields = \App\Models\ContactField::all();
+        $categories = \App\Models\Category::whereIn('target_module', ['all', 'contacts'])
             ->get();
 
         return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'));
@@ -126,13 +125,13 @@ class ContactManager extends Component
 
     public function viewContact($id)
     {
-        $this->viewingContact = Contact::with('tags')->where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $this->viewingContact = Contact::with('tags')->findOrFail($id);
         $this->isViewModalOpen = true;
     }
 
     public function getConversationRoute($contactId)
     {
-        $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->find($contactId);
+        $contact = Contact::find($contactId);
         if (!$contact)
             return route('chat');
 
@@ -155,7 +154,7 @@ class ContactManager extends Component
         $this->isViewModalOpen = false;
         $this->viewingContact = null;
 
-        $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $contact = Contact::findOrFail($id);
         $this->contactId = $id;
         $this->name = $contact->name;
 
@@ -246,7 +245,7 @@ class ContactManager extends Component
     public function delete()
     {
         if ($this->contactId) {
-            $contact = Contact::where('team_id', Auth::user()->currentTeam->id)->find($this->contactId);
+            $contact = Contact::find($this->contactId);
             if ($contact) {
                 $contact->delete();
                 audit('contact.deleted', "Deleted contact '{$contact->name}' ({$contact->phone_number})", $contact);
@@ -433,7 +432,7 @@ class ContactManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
 
-        $query = Contact::where('team_id', Auth::user()->currentTeam->id);
+        $query = Contact::query();
 
         if ($this->search) {
             $query->where(function ($q) {

@@ -580,15 +580,26 @@ class WhatsAppService
         if ($category === 'MARKETING' && !$contact->hasValidConsent()) {
             return [
                 'success' => false,
-                'error' => "CAT_MARKETING_NO_OPT_IN: Marketing message blocked."
+                'error' => "CAT_MARKETING_NO_OPT_IN: Marketing message blocked. Contact has not opted-in."
             ];
         }
 
         if ($category === 'UTILITY' && $contact->opt_in_status === 'opted_out') {
             return [
                 'success' => false,
-                'error' => "CAT_UTILITY_BLOCKED: Transactional message blocked."
+                'error' => "CAT_UTILITY_BLOCKED: Transactional message blocked by user opt-out."
             ];
+        }
+
+        if ($category === 'AUTHENTICATION') {
+            // AUTH templates should ideally use the dedicated Authentication API, not general messages.
+            // But if used here, strict consent is required.
+            if (!$contact->hasValidConsent()) {
+                return [
+                    'success' => false,
+                    'error' => "CAT_AUTH_BLOCKED: Authentication message requires explicit consent."
+                ];
+            }
         }
 
         if (!$policy->canSendTemplate($contact, strtolower($category))) {
@@ -606,6 +617,29 @@ class WhatsAppService
         if (!$allowed) {
             return ['success' => false, 'error' => 'Insufficient Wallet Funds'];
         }
+
+        // --- STATUS CHECK (Safety Gate) ---
+        // Verify template is actually safe to send right now.
+        $templateModel = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
+            ->where('name', $templateName)
+            ->where('language', $language)
+            ->first();
+
+        if ($templateModel) {
+            // ... (existing status checks) ...
+
+            // --- COOLDOWN CHECK (Spam Prevention) ---
+            $healthService = new \App\Services\TemplateHealthService();
+            if (!$healthService->checkCooldown($contact, $templateModel->category)) {
+                return ['success' => false, 'error' => "Message blocked by cooldown rules ({$templateModel->category})."];
+            }
+        }
+
+        // --- SANITIZATION ---
+        $tplService = new \App\Services\TemplateService();
+        $bodyParams = $tplService->sanitizeVariables($bodyParams);
+        $headerParams = $tplService->sanitizeVariables($headerParams);
+        $footerParams = $tplService->sanitizeVariables($footerParams);
 
         // --- PRE-PERSISTENCE or USE EXISTING ---
         $conversationService = new \App\Services\ConversationService();
@@ -670,6 +704,11 @@ class WhatsAppService
                     'sent_at' => now(),
                 ]);
 
+                // Record Usage for Cooldowns
+                if (isset($templateModel)) {
+                    (new \App\Services\TemplateHealthService)->recordUsage($contact, $templateModel->category);
+                }
+
                 \App\Events\MessageSent::dispatch($msg);
             } else {
                 $msg->update([
@@ -727,14 +766,34 @@ class WhatsAppService
     /**
      * Get Templates.
      */
+    /**
+     * Get Templates (With Pagination).
+     */
     public function getTemplates()
     {
         $wabaId = $this->team->whatsapp_business_account_id;
         if (!$wabaId) {
             throw new \Exception("WABA ID is not configured.");
         }
+
         $url = "{$this->baseUrl}/{$wabaId}/message_templates";
-        return $this->sendRequestFullUrl($url, 'get');
+        $allItems = [];
+
+        do {
+            $response = $this->sendRequestFullUrl($url, 'get');
+
+            if (!($response['success'] ?? false)) {
+                return $response; // Return error immediately if any page fails
+            }
+
+            $data = $response['data'] ?? [];
+            $allItems = array_merge($allItems, $data['data'] ?? []);
+
+            $url = $data['paging']['next'] ?? null;
+
+        } while ($url);
+
+        return ['success' => true, 'data' => $allItems];
     }
 
     /**
@@ -793,6 +852,141 @@ class WhatsAppService
         }
         $url = "{$this->baseUrl}/{$wabaId}/message_templates";
         return $this->sendRequestFullUrl($url, 'delete', ['name' => $name]);
+    }
+
+    /**
+     * Upload Media for Template (Resumable Upload).
+     */
+    public function uploadMediaForTemplate($file)
+    {
+        $appId = config('whatsapp.app_id');
+        if (!$appId) {
+            throw new \Exception("Facebook App ID is not configured.");
+        }
+
+        // 1. Start Upload Session
+        $sessionUrl = "https://graph.facebook.com/" . config('whatsapp.api_version', 'v21.0') . "/{$appId}/uploads";
+
+        $response = Http::post($sessionUrl, [
+            'file_length' => $file->getSize(),
+            'file_type' => $file->getMimeType(),
+            'access_token' => $this->team->whatsapp_access_token, // Use team token
+        ]);
+
+        if ($response->failed()) {
+            throw new \Exception("Failed to start upload session: " . $response->body());
+        }
+
+        $sessionId = $response->json()['id'];
+
+        // 2. Upload File Content
+        $uploadUrl = "https://graph.facebook.com/" . config('whatsapp.api_version', 'v21.0') . "/{$sessionId}";
+
+        $uploadResponse = Http::withHeaders([
+            'Authorization' => 'OAuth ' . $this->team->whatsapp_access_token,
+            'file_offset' => 0,
+        ])->withBody(
+                file_get_contents($file->getRealPath()),
+                $file->getMimeType()
+            )->post($uploadUrl);
+
+        if ($uploadResponse->failed()) {
+            throw new \Exception("Failed to upload file content: " . $uploadResponse->body());
+        }
+
+        // 3. Return Handle
+        return $uploadResponse->json()['h'] ?? null;
+    }
+
+    /**
+     * Get System Call Settings.
+     * GET /<PHONE_ID>/settings
+     */
+    public function getSystemCallSettings()
+    {
+        if (!$this->phoneId) {
+            throw new \Exception("Phone ID is not configured.");
+        }
+
+        $url = "{$this->baseUrl}/{$this->phoneId}/settings";
+        return $this->sendRequestFullUrl($url, 'get', ['include_sip_credentials' => 'true']);
+    }
+
+    /**
+     * Update System Call Settings.
+     * POST /<PHONE_ID>/settings
+     */
+    public function updateSystemCallSettings(array $settings)
+    {
+        if (!$this->phoneId) {
+            throw new \Exception("Phone ID is not configured.");
+        }
+
+        // Prepare Calling Features payload
+        $callingPayload = [];
+
+        // 1. Status (Meta expects ENABLED/DISABLED)
+        if (isset($settings['status'])) {
+            $callingPayload['status'] = strtoupper($settings['status']);
+        }
+
+        // 2. Call Icon Visibility (Meta expects DEFAULT/DISABLE_ALL)
+        if (isset($settings['call_icon_visibility'])) {
+            $val = strtolower($settings['call_icon_visibility']);
+            $callingPayload['call_icon_visibility'] = ($val === 'show' || $val === 'default') ? 'DEFAULT' : 'DISABLE_ALL';
+        }
+
+        // 3. Callback Permission (Meta expects ENABLED/DISABLED)
+        if (isset($settings['callback_permission_status'])) {
+            $callingPayload['callback_permission_status'] = strtoupper($settings['callback_permission_status']);
+        }
+
+        // 4. Call Hours
+        if (isset($settings['business_hours']) && is_array($settings['business_hours'])) {
+            $weeklyHours = [];
+            $daysMap = [
+                'mon' => 'MONDAY',
+                'tue' => 'TUESDAY',
+                'wed' => 'WEDNESDAY',
+                'thu' => 'THURSDAY',
+                'fri' => 'FRIDAY',
+                'sat' => 'SATURDAY',
+                'sun' => 'SUNDAY'
+            ];
+
+            foreach ($settings['business_hours'] as $dayKey => $times) {
+                if (isset($daysMap[$dayKey]) && count($times) === 2) {
+                    $open = str_replace(':', '', $times[0]);
+                    $close = str_replace(':', '', $times[1]);
+
+                    $weeklyHours[] = [
+                        'day_of_week' => $daysMap[$dayKey],
+                        'open_time' => $open,
+                        'close_time' => $close
+                    ];
+                }
+            }
+
+            if (!empty($weeklyHours)) {
+                $callingPayload['call_hours'] = [
+                    'status' => 'ENABLED',
+                    'timezone_id' => $settings['timezone'] ?? 'UTC',
+                    'weekly_operating_hours' => $weeklyHours
+                ];
+            }
+        } elseif (isset($settings['call_hours'])) {
+            $callingPayload['call_hours'] = $settings['call_hours'];
+        }
+
+        if (empty($callingPayload)) {
+            return ['success' => true, 'message' => 'No settings to update'];
+        }
+
+        // Meta expects 'calling' wrapper for these settings
+        $payload = ['calling' => $callingPayload];
+
+        $url = "{$this->baseUrl}/{$this->phoneId}/settings";
+        return $this->sendRequestFullUrl($url, 'post', $payload);
     }
 
     /**
@@ -1062,10 +1256,10 @@ class WhatsAppService
     protected function sendRequest($endpoint, $data = [], $method = 'post')
     {
         $url = "{$this->baseUrl}/{$this->phoneId}/{$endpoint}";
-        return $this->sendRequestFullUrl($url, $method, $data);
+        return $this->sendRequestFullUrl($url, $method, $data, $endpoint);
     }
 
-    protected function sendRequestFullUrl($url, $method, $data = [])
+    protected function sendRequestFullUrl($url, $method, $data = [], $endpoint = 'unknown')
     {
         $client = Http::withToken($this->token)
             ->withHeaders(['Content-Type' => 'application/json']);
@@ -1089,6 +1283,9 @@ class WhatsAppService
             if ($response->failed()) {
                 if ($response->status() === 401 && $this->team) {
                     $this->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
+                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'critical', $data, ['error' => $response->json()]);
+                } elseif ($this->team) {
+                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'failed', $data, ['error' => $response->json()]);
                 }
 
                 Log::error('WhatsApp API Error', [
@@ -1103,6 +1300,10 @@ class WhatsAppService
                     'status_code' => $response->status(),
                     'message' => $response->json()['error']['message'] ?? 'Unknown API Error'
                 ];
+            }
+
+            if ($this->team) {
+                \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'success', $data, ['url' => $url]);
             }
 
             return ['success' => true, 'data' => $response->json()];

@@ -68,11 +68,43 @@ class ConsumeBroadcastEvents extends Command
                     continue;
                 }
 
-                $dbEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
+                // --- FAIR-SHARE FETCHING ---
+                // We want to avoid one tenant with 10k events blocking another with 1.
+                // Fetch up to $count events, but interleave them in PHP if needed, 
+                // or just fetch by Team if there are many teams.
+
+                $dbEvents = collect();
+                $pendingTeams = \Illuminate\Support\Facades\DB::table('broadcast_events')
                     ->where('status', 'pending')
-                    ->orderBy('id', 'asc')
-                    ->limit($count)
-                    ->get();
+                    ->distinct()
+                    ->pluck('team_id')
+                    ->take(20); // Limit number of teams per cycle to avoid huge memory usage
+
+                if ($pendingTeams->isNotEmpty()) {
+                    $perTeamCount = max(1, ceil($count / $pendingTeams->count()));
+
+                    foreach ($pendingTeams as $tId) {
+                        $teamEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
+                            ->where('status', 'pending')
+                            ->where('team_id', $tId)
+                            ->orderBy('id', 'asc')
+                            ->limit($perTeamCount)
+                            ->get();
+
+                        $dbEvents = $dbEvents->concat($teamEvents);
+                    }
+
+                    // Shuffle or Interleave the collection if we want truly mixed processing in one batch
+                    $dbEvents = $dbEvents->shuffle();
+                } else {
+                    // Fallback for events without team_id (legacy or system events)
+                    $dbEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
+                        ->where('status', 'pending')
+                        ->whereNull('team_id')
+                        ->orderBy('id', 'asc')
+                        ->limit($count)
+                        ->get();
+                }
 
                 if ($dbEvents->isNotEmpty()) {
                     foreach ($dbEvents as $event) {

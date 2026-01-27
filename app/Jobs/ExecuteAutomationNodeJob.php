@@ -73,7 +73,8 @@ class ExecuteAutomationNodeJob implements ShouldQueue
 
         // 3. Execution with Transactional Ledger Logging
         try {
-            $service = new AutomationService($whatsapp);
+            // Use Container to resolve dependencies (HealthMonitor, PolicyService)
+            $service = app(AutomationService::class);
 
             DB::transaction(function () use ($service, $run) {
                 // Increment version for optimistic locking if needed
@@ -108,7 +109,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
 
     protected function dispatchNext(AutomationRun $run)
     {
-        $service = new AutomationService(new WhatsAppService());
+        $service = app(AutomationService::class);
         $service->moveToNextNode($run);
     }
 }

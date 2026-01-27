@@ -15,30 +15,30 @@ class AuditService
      */
     public static function log(string $event, $userId = null, $identifier = null, ?string $provider = null, array $metadata = []): void
     {
-        // Polymorphic userId: If a User model is passed
-        if ($userId instanceof Model) {
-            $model = $userId;
-            $userId = $model->id;
+        $teamId = null;
 
-            // If identifier wasn't provided, try to get it from the model
-            if (is_null($identifier)) {
-                $identifier = $model->email ?? $model->phone ?? $model->name ?? null;
-            }
-        }
-        // Polymorphic userId: If a string description is passed (from legacy-style audit calls)
-        elseif (is_string($userId) && !is_numeric($userId)) {
+        // Try to resolve Team ID and User ID from objects if provided
+        if ($userId instanceof Model) {
+            $teamId = $userId->current_team_id ?? null;
+            $userId = $userId->id;
+        } elseif (is_string($userId) && !is_numeric($userId)) {
             $metadata['description'] = $userId;
             $userId = null;
         }
 
-        // Polymorphic identifier: If a model is passed as third arg
         if ($identifier instanceof Model) {
-            $userId = $userId ?? $identifier->id;
+            $teamId = $teamId ?? $identifier->team_id ?? null;
             $identifier = $identifier->email ?? $identifier->phone ?? $identifier->name ?? (string) $identifier;
+        }
+
+        // Final fallback for team_id from session
+        if (!$teamId && auth()->check()) {
+            $teamId = auth()->user()->current_team_id;
         }
 
         AuditLog::create([
             'user_id' => $userId,
+            'team_id' => $teamId,
             'event_type' => $event,
             'identifier' => is_string($identifier) ? $identifier : json_encode($identifier),
             'provider' => $provider,

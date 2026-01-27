@@ -77,20 +77,20 @@
                     <div class="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
                         <div class="flex items-center gap-3 mb-2">
                             <div
-                                class="p-2 {{ auth()->user()->currentTeam->whatsapp_connected ? 'bg-green-400 text-green-900' : 'bg-white/20 text-white' }} rounded-lg">
+                                class="p-2 {{ auth()->user()->currentTeam->whatsapp_access_token ? 'bg-green-400 text-green-900' : 'bg-white/20 text-white' }} rounded-lg">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                         d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                                 </svg>
                             </div>
                             <span
-                                class="font-bold text-sm {{ auth()->user()->currentTeam->whatsapp_connected ? 'text-green-300' : 'text-white' }}">
-                                {{ auth()->user()->currentTeam->whatsapp_connected ? 'Connected' : 'Connect WhatsApp' }}
+                                class="font-bold text-sm {{ auth()->user()->currentTeam->whatsapp_access_token ? 'text-green-300' : 'text-white' }}">
+                                {{ auth()->user()->currentTeam->whatsapp_access_token ? 'Connected' : 'Connect WhatsApp' }}
                             </span>
                         </div>
                         <p class="text-xs text-indigo-100 leading-relaxed">Link your Facebook Business account to start
                             sending messages.</p>
-                        @if(!auth()->user()->currentTeam->whatsapp_connected)
+                        @if(!auth()->user()->currentTeam->whatsapp_access_token)
                             <a href="{{ route('teams.whatsapp_config') }}"
                                 class="mt-3 block text-center py-2 bg-white text-indigo-600 text-xs font-bold uppercase rounded-lg hover:bg-indigo-50 transition w-full">Connect
                                 Now</a>

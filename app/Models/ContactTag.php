@@ -6,10 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ContactTag extends Model
 {
-    protected $guarded = [];
+    use \App\Traits\HasTeam;
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
+    protected $guarded = [];
 }

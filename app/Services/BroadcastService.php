@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\Log;
 class BroadcastService
 {
     protected $snapshotService;
+    protected $healthMonitor;
 
-    public function __construct(CampaignSnapshotService $snapshotService)
+    public function __construct(CampaignSnapshotService $snapshotService, WhatsAppHealthMonitor $healthMonitor)
     {
         $this->snapshotService = $snapshotService;
+        $this->healthMonitor = $healthMonitor;
     }
 
     /**
@@ -32,6 +34,9 @@ class BroadcastService
             $campaign->update(['status' => 'failed', 'error_message' => 'Monthly message limit reached.']);
             throw new \Exception("Campaign launch aborted: Message limit reached for team {$campaign->team->id}");
         }
+
+        // 0.1 WhatsApp Health Check (CRITICAL)
+        $this->verifyHealth($campaign->team);
 
         // Commerce Readiness Check
         $template = $campaign->template;
@@ -60,9 +65,6 @@ class BroadcastService
         return $snapshot;
     }
 
-    /**
-     * Cancel a running campaign (Placeholder for event-based cancellation)
-     */
     public function cancel(Campaign $campaign)
     {
         // In an event-driven system, we might place a "cancellation" flag in Redis 
@@ -71,5 +73,18 @@ class BroadcastService
         Log::info("Campaign {$campaign->id} marked as cancelled.");
 
         return true;
+    }
+
+    protected function verifyHealth(\App\Models\Team $team)
+    {
+        // Check for specific blocking issues from Health Monitor
+        $issues = $this->healthMonitor->getBlockingIssues($team);
+
+        if (!empty($issues)) {
+            $reason = implode(', ', $issues);
+            Log::warning("Campaign Launch Blocked for Team {$team->id}: {$reason}");
+            // Throwing exception here to be caught by Controller/Job
+            throw new \Exception("Campaign launch aborted: WhatsApp Health Issues Detected ({$reason})");
+        }
     }
 }

@@ -25,7 +25,7 @@ class PolicyService
     public function canSendFreeMessage(Contact $contact): bool
     {
         // Global Block: If user explicitly opted out (STOP), we should respect that even for free messages?
-        // Usually 24h window allows replies, but STOP means STOP.
+        // Yes, ensuring strict compliance
         if ($contact->opt_in_status === 'opted_out') {
             return false;
         }

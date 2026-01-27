@@ -8,6 +8,19 @@ use App\Models\WhatsappTemplate;
 
 class TemplateValidator
 {
+    const MARKETING_KEYWORDS = [
+        'offer',
+        'discount',
+        'free',
+        'sale',
+        'deal',
+        'limited time',
+        'buy one',
+        'promo',
+        'coupon',
+        'exclusive'
+    ];
+
     /**
      * Validate template and return a comprehensive readiness profile
      */
@@ -39,6 +52,15 @@ class TemplateValidator
         // 2. Structural Integrity
         $components = $template->components ?? [];
         $category = $template->category;
+
+        // 3. Compliance Guardrails (NEW)
+        if ($category === 'UTILITY') {
+            $qualityWarnings = $this->validateUtilityCompliance($components);
+            foreach ($qualityWarnings as $warn) {
+                $score -= 20;
+                $errors[] = $warn;
+            }
+        }
 
         foreach ($components as $component) {
             // Category-specific structural rules (UC-06)
@@ -75,6 +97,16 @@ class TemplateValidator
                         'severity' => 'error'
                     ];
                 }
+
+                // Generic Content / Ambiguity Check
+                if ($this->isContentTooGeneric($component['text'])) {
+                    $score -= 30;
+                    $errors[] = [
+                        'code' => 'CONTENT_TOO_GENERIC',
+                        'description' => "Template body is too generic. Add more context around variables to avoid rejection.",
+                        'severity' => 'warning'
+                    ];
+                }
             }
 
             if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
@@ -97,6 +129,19 @@ class TemplateValidator
                                 'code' => 'BUTTON_VARIABLE_INVALID',
                                 'description' => "Dynamic buttons must use {{1}} suffix",
                                 'severity' => 'error'
+                            ];
+                        }
+                    }
+
+                    // CTA Safety Check (Utility shouldn't have shop links ideally)
+                    if ($category === 'UTILITY' && ($btn['type'] ?? '') === 'URL') {
+                        $url = strtolower($btn['url'] ?? '');
+                        if (str_contains($url, 'shop') || str_contains($url, 'buy') || str_contains($url, 'store')) {
+                            $score -= 10;
+                            $errors[] = [
+                                'code' => 'CTA_MISMATCH_RISK',
+                                'description' => "Utility template contains 'Shopping' related URL. May be re-categorized as Marketing.",
+                                'severity' => 'warning'
                             ];
                         }
                     }
@@ -160,6 +205,47 @@ class TemplateValidator
         }
 
         return $result;
+    }
+
+    protected function validateUtilityCompliance(array $components): array
+    {
+        $warnings = [];
+        foreach ($components as $component) {
+            $text = '';
+            if (isset($component['text']))
+                $text .= $component['text'];
+
+            // Check headers too
+
+            if ($text) {
+                foreach (self::MARKETING_KEYWORDS as $keyword) {
+                    if (stripos($text, $keyword) !== false) {
+                        $warnings[] = [
+                            'code' => 'CAT_UTILITY_MARKETING_DETECTED',
+                            'description' => "Utility template contains verification keyword '{$keyword}'. High risk of rejection or re-categorization.",
+                            'severity' => 'error' // Treat as error for strict compliance
+                        ];
+                        // Break after first match to avoid noise
+                        break;
+                    }
+                }
+            }
+        }
+        return $warnings;
+    }
+
+    protected function isContentTooGeneric(string $text): bool
+    {
+        // Remove variables {{n}}
+        $clean = preg_replace('/\{\{\d+\}\}/', '', $text);
+        // Remove whitespace
+        $clean = trim($clean);
+
+        // If remaining text is very short (e.g. just punctuation or "Hi"), it's risky
+        // Threshold: 10 chars is a safe bet for "Context".
+        // "Hi {{1}}, here is your code {{2}}" -> "Hi , here is your code " (Length ~20. OK)
+        // "Hi {{1}}" -> "Hi " (Length 3. FAIL)
+        return strlen($clean) < 10;
     }
 
     protected function validateVariablesSequential(string $text): bool

@@ -30,7 +30,7 @@ class VerifyWhatsAppSignature
             return response('Missing Signature', 403);
         }
 
-        $appSecret = config('services.whatsapp.client_secret'); // Make sure this is set in .env
+        $appSecret = config('whatsapp.app_secret'); // Centralized config source
 
         if (!$appSecret) {
             if (app()->environment('production')) {

@@ -47,8 +47,8 @@ class SyncWhatsappTemplates extends Command
                     continue;
                 }
 
-                $count = $service->syncTemplates($team);
-                $this->info("Synced {$count} templates.");
+                $syncedNames = $service->syncTemplates($team);
+                $this->info("Synced " . count($syncedNames) . " templates.");
 
             } catch (\Exception $e) {
                 $this->error("Failed to sync Team {$team->id}: " . $e->getMessage());

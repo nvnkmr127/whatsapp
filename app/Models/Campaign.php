@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Campaign extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -29,11 +31,6 @@ class Campaign extends Model
                 $campaign->campaign_name = $campaign->name;
             }
         });
-    }
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
     }
 
     public function template()

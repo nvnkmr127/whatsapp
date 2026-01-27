@@ -45,18 +45,13 @@ class WhatsAppWebhookController extends Controller
         $data = $request->all();
         $signature = $request->header('X-Hub-Signature-256');
 
-        // Verify Signature (Security Enforcement)
-        if (!$this->verifySignature($request->getContent(), $signature)) {
-            Log::warning("WhatsApp Webhook: Invalid Signature rejected.");
-            return response('Invalid Signature', 403);
-        }
-
         // Store Raw Payload
         try {
             $payloadRecord = \App\Models\WebhookPayload::create([
                 'payload' => $data,
                 'signature' => $signature,
                 'status' => 'pending',
+                'waba_id' => $data['entry'][0]['id'] ?? null, // Extract WABA ID if possible
             ]);
 
             // Dispatch Job with Trace Context
@@ -69,31 +64,6 @@ class WhatsAppWebhookController extends Controller
         }
 
         return response('EVENT_RECEIVED', 200);
-    }
-
-    /**
-     * Verify the X-Hub-Signature-256 header.
-     */
-    protected function verifySignature($payload, $signature)
-    {
-        if (!$signature) {
-            return false;
-        }
-
-        $appSecret = config('whatsapp.app_secret');
-        if (empty($appSecret)) {
-            Log::warning("WhatsApp App Secret not configured. Skipping signature verification (Not Recommended).");
-            return true; // Fallback to allow if not configured, but log warning
-        }
-
-        // Meta signature format is 'sha256={hash}'
-        $parts = explode('=', $signature);
-        if (count($parts) !== 2 || $parts[0] !== 'sha256') {
-            return false;
-        }
-
-        $expectedHash = hash_hmac('sha256', $payload, $appSecret);
-        return hash_equals($expectedHash, $parts[1]);
     }
 
 }

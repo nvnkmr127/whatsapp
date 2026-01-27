@@ -149,8 +149,17 @@ class MonitorWhatsAppPhoneStatus extends Command
             'quality_rating' => $data['quality_rating'] ?? null,
         ]);
 
-        // TODO: Send notification to team owner
-        // $team->owner->notify(new WhatsAppPhoneStatusAlert($team, $newStatus, $data));
+        // Send notification to team owner
+        try {
+            $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                $team,
+                'status_change',
+                "Your WhatsApp phone status changed from {$previousStatus} to {$newStatus}.",
+                $data
+            ));
+        } catch (\Exception $e) {
+            Log::error("Failed to send status change notification: " . $e->getMessage());
+        }
     }
 
     /**
@@ -194,8 +203,17 @@ class MonitorWhatsAppPhoneStatus extends Command
                 $this->warn("Paused {$pausedCount} campaigns for team {$team->id}");
             }
 
-            // TODO: Send critical notification
-            // $team->owner->notify(new CriticalQualityRatingAlert($team, $newRating));
+            // Send critical notification
+            try {
+                $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                    $team,
+                    'quality_red',
+                    "CRITICAL: Your WhatsApp Quality Rating has dropped to RED. Sending is now restricted to prevent a permanent ban.",
+                    $data
+                ));
+            } catch (\Exception $e) {
+                Log::error("Failed to send critical quality notification: " . $e->getMessage());
+            }
 
         } elseif ($severity === 'warning') {
             $this->warn("WARNING: Team {$team->id} quality rating is YELLOW");
@@ -205,8 +223,17 @@ class MonitorWhatsAppPhoneStatus extends Command
                 'new' => $newRating,
             ]);
 
-            // TODO: Send warning notification
-            // $team->owner->notify(new QualityRatingWarning($team, $newRating));
+            // Send warning notification
+            try {
+                $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                    $team,
+                    'quality_yellow',
+                    "WARNING: Your WhatsApp Quality Rating is YELLOW. Please review your recently sent messages for compliance issues.",
+                    ['new_rating' => $newRating]
+                ));
+            } catch (\Exception $e) {
+                Log::error("Failed to send quality warning notification: " . $e->getMessage());
+            }
         } else {
             $this->info("Team {$team->id}: Quality rating changed from {$oldRating} to {$newRating}");
         }

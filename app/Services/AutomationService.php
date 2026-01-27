@@ -15,13 +15,17 @@ class AutomationService
 {
     protected $whatsapp;
     protected $handoff;
+    protected $healthMonitor;
+    protected $policyService;
     protected const MAX_STEPS = 50;
 
-    public function __construct(WhatsAppService $whatsapp)
+    public function __construct(WhatsAppService $whatsapp, WhatsAppHealthMonitor $healthMonitor, PolicyService $policyService)
     {
         $this->whatsapp = $whatsapp;
         $this->whatsapp->isBot = true;
         $this->handoff = new BotHandoffService();
+        $this->healthMonitor = $healthMonitor;
+        $this->policyService = $policyService;
     }
 
     /**
@@ -180,6 +184,13 @@ class AutomationService
                 return;
             }
 
+            // Health Check Enforcement
+            $health = $this->healthMonitor->checkHealth($automation->team);
+            if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= 35) {
+                Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).");
+                return;
+            }
+
             // Interrupt existing runs
             AutomationRun::where('contact_id', $contact->id)
                 ->whereIn('status', ['active', 'waiting_input', 'paused'])
@@ -310,6 +321,12 @@ class AutomationService
         switch ($node['type']) {
             case 'text':
             case 'message':
+                // Policy Check: 24h Window
+                if (!$this->policyService->canSendFreeMessage($run->contact)) {
+                    $this->failRun($run, "Validation Failed: Cannot send text message outside 24-hour window.");
+                    return 'pause'; // Stop execution
+                }
+
                 $this->whatsapp->sendText($run->contact->phone_number, $node['data']['text'] ?? '');
                 return 'continue';
 

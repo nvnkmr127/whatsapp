@@ -22,6 +22,27 @@ class RateLimitService
      */
     public function canSend(int $teamId, string $phoneNumber): bool
     {
+        // 1. Check Global/Tenant Pause
+        if ($this->isPaused($teamId, $phoneNumber)) {
+            return false;
+        }
+
+        // 2. Check Daily Tier Limit
+        $tier = $this->getWabaTier($phoneNumber);
+        $dailyLimit = $this->getTierDailyLimit($tier);
+
+        $todayKey = "ratelimit:daily:{$phoneNumber}:" . now()->format('Y-m-d');
+        $dailyCount = Cache::increment($todayKey);
+        if ($dailyCount === 1) {
+            Cache::put($todayKey, 1, 86400); // 24h checks
+        }
+
+        if ($dailyLimit !== -1 && $dailyCount > $dailyLimit) {
+            Log::warning("RateLimit: Daily Limit ({$dailyLimit}) hit for {$phoneNumber}");
+            return false;
+        }
+
+        // 3. Check RPS (Throttling)
         $limit = $this->getEffectiveRps($teamId, $phoneNumber);
         $key = "ratelimit:rps:{$phoneNumber}";
 
@@ -37,6 +58,17 @@ class RateLimitService
         }
 
         return true;
+    }
+
+    protected function getTierDailyLimit(string $tier): int
+    {
+        return match ($tier) {
+            '1K' => 1000,
+            '10K' => 10000,
+            '100K' => 100000,
+            'UNLIMITED' => -1,
+            default => 250 // Sandbox/Unverified default
+        };
     }
 
     /**

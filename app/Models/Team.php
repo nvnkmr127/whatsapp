@@ -63,6 +63,8 @@ class Team extends JetstreamTeam
         'call_routing_config',
         'calling_safeguards',
         'calling_suspended_until',
+        'whatsapp_connected',
+        'whatsapp_settings',
     ];
 
     /**
@@ -114,6 +116,7 @@ class Team extends JetstreamTeam
             'call_routing_config' => 'array',
             'calling_safeguards' => 'array',
             'calling_suspended_until' => 'datetime',
+            'whatsapp_settings' => 'array',
         ];
     }
 
