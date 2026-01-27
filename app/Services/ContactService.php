@@ -77,8 +77,7 @@ class ContactService
             // Trigger automation if this is a new contact
             if ($contact->wasRecentlyCreated) {
                 try {
-                    $whatsappService = new WhatsAppService();
-                    $automationService = new AutomationService($whatsappService);
+                    $automationService = app(AutomationService::class);
                     $automationService->checkSpecialTriggers($contact, 'contact_added');
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error('Contact Added Automation Trigger Failed: ' . $e->getMessage());
@@ -204,8 +203,7 @@ class ContactService
     {
         if (!empty($ids)) {
             try {
-                $whatsappService = new WhatsAppService();
-                $automationService = new AutomationService($whatsappService);
+                $automationService = app(AutomationService::class);
                 $automationService->checkSpecialTriggers($contact, 'tag_assigned');
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());

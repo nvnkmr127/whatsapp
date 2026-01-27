@@ -177,7 +177,7 @@ class WhatsAppCallProcessor
                     'team_id' => $team->id,
                     'phone_number' => $phoneNumber,
                     'name' => $phoneNumber,
-                    'source' => 'whatsapp_call',
+                    'opt_in_source' => 'whatsapp_call',
                 ]);
             }
 

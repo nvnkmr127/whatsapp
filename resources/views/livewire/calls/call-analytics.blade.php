@@ -214,7 +214,7 @@
                                     <div class="font-semibold text-slate-900 dark:text-white">
                                         {{ $item['contact']->name ?? 'Unknown' }}</div>
                                     <div class="text-xs text-slate-500 dark:text-slate-400">
-                                        {{ $item['contact']->phone_number }}</div>
+                                        {{ $item['contact']->phone_number ?? 'No number' }}</div>
                                 </td>
                                 <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">
                                     {{ $item['total_calls'] }}</td>
