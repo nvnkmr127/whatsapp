@@ -192,10 +192,45 @@ class ProcessWebhookJob implements ShouldQueue
                 }
             }
 
-            if (($change['field'] ?? '') === 'account_update' || ($change['field'] ?? '') === 'account_settings_update') {
-                Log::info("WhatsApp Account Update Received", ['payload' => $change]);
-                // Dispatch event for system to react (e.g., update local DB)
+            // 6. Handle Account Settings Updates (Call Settings)
+            if (($change['field'] ?? '') === 'account_settings_update') {
+                Log::info("WhatsApp Account Settings Update Received", ['payload' => $change]);
+
+                if ($teamId && $phoneId) {
+                    $team = Team::find($teamId);
+                    if ($team) {
+                        // Update call settings if calling-related changes
+                        $this->handleCallSettingsUpdate($team, $phoneId, $change);
+                    }
+                }
+
+                // Dispatch event for system to react
                 \App\Events\WhatsAppAccountUpdated::dispatch($change);
+            }
+
+            // 7. Handle Account Updates (Quality, Restrictions, etc.)
+            if (($change['field'] ?? '') === 'account_update') {
+                Log::info("WhatsApp Account Update Received", ['payload' => $change]);
+
+                if ($teamId && $phoneId) {
+                    $team = Team::find($teamId);
+                    if ($team) {
+                        // Handle call restrictions
+                        $this->handleCallRestrictions($team, $phoneId, $change);
+                    }
+                }
+
+                // Dispatch event for system to react
+                \App\Events\WhatsAppAccountUpdated::dispatch($change);
+            }
+
+            // 8. Handle Interactive Message Responses (Permission Grants)
+            if (isset($change['messages']) && is_array($change['messages'])) {
+                foreach ($change['messages'] as $messageData) {
+                    if (($messageData['type'] ?? '') === 'interactive') {
+                        $this->handleInteractiveResponse($messageData, $teamId);
+                    }
+                }
             }
 
             $payloadRecord->update(['status' => 'processed']);
@@ -217,6 +252,125 @@ class ProcessWebhookJob implements ShouldQueue
             $payloadRecord->update(['error_message' => $e->getMessage()]); // Keep trace
 
             throw $e;
+        }
+    }
+
+    /**
+     * Handle call settings updates from webhook
+     */
+    protected function handleCallSettingsUpdate(Team $team, string $phoneId, array $change): void
+    {
+        $settings = \App\Models\CallSettings::where('team_id', $team->id)
+            ->where('phone_number_id', $phoneId)
+            ->first();
+
+        if (!$settings) {
+            return; // No local settings to update
+        }
+
+        // Update based on webhook data
+        if (isset($change['calling'])) {
+            $callingData = $change['calling'];
+
+            $updates = [];
+            if (isset($callingData['status'])) {
+                $updates['calling_enabled'] = strtoupper($callingData['status']) === 'ENABLED';
+            }
+            if (isset($callingData['call_icon_visibility'])) {
+                $updates['call_icon_visibility'] = strtoupper($callingData['call_icon_visibility']) === 'DEFAULT' ? 'show' : 'hide';
+            }
+            if (isset($callingData['callback_permission_status'])) {
+                $updates['callback_permission_enabled'] = strtoupper($callingData['callback_permission_status']) === 'ENABLED';
+            }
+
+            if (!empty($updates)) {
+                $settings->update($updates);
+                Log::info('Call settings updated from webhook', [
+                    'team_id' => $team->id,
+                    'phone_id' => $phoneId,
+                    'updates' => $updates,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Handle call restrictions from webhook
+     */
+    protected function handleCallRestrictions(Team $team, string $phoneId, array $change): void
+    {
+        $settings = \App\Models\CallSettings::where('team_id', $team->id)
+            ->where('phone_number_id', $phoneId)
+            ->first();
+
+        if (!$settings) {
+            return;
+        }
+
+        // Check for enforcement actions
+        if (isset($change['enforcement_action'])) {
+            $action = $change['enforcement_action'];
+            $reason = $change['enforcement_reason'] ?? 'Unknown';
+
+            if ($action === 'CALLING_RESTRICTED' || $action === 'CALLING_DISABLED') {
+                $settings->applyRestriction($reason);
+
+                Log::critical('Call restriction applied', [
+                    'team_id' => $team->id,
+                    'phone_id' => $phoneId,
+                    'action' => $action,
+                    'reason' => $reason,
+                ]);
+
+                // Dispatch alert event
+                \App\Events\CallRestrictionApplied::dispatch($team, $settings, $reason);
+            }
+        }
+
+        // Check for low pickup rate or negative feedback
+        if (isset($change['call_quality_issue'])) {
+            $issue = $change['call_quality_issue'];
+
+            Log::warning('Call quality issue reported', [
+                'team_id' => $team->id,
+                'phone_id' => $phoneId,
+                'issue' => $issue,
+            ]);
+        }
+    }
+
+    /**
+     * Handle interactive message responses (e.g., permission grants)
+     */
+    protected function handleInteractiveResponse(array $messageData, ?int $teamId): void
+    {
+        if (!$teamId) {
+            return;
+        }
+
+        $buttonReply = $messageData['interactive']['button_reply'] ?? null;
+        if (!$buttonReply) {
+            return;
+        }
+
+        $payload = json_decode($buttonReply['payload'] ?? '{}', true);
+
+        if (($payload['action'] ?? '') === 'grant_call_permission') {
+            $permissionId = $payload['permission_id'] ?? null;
+
+            if ($permissionId) {
+                $permission = \App\Models\CallPermission::find($permissionId);
+
+                if ($permission && $permission->permission_status === 'requested') {
+                    $permissionService = new \App\Services\CallPermissionService();
+                    $permissionService->grantPermission($permission);
+
+                    Log::info('Call permission granted via interactive response', [
+                        'permission_id' => $permissionId,
+                        'contact_id' => $permission->contact_id,
+                    ]);
+                }
+            }
         }
     }
 

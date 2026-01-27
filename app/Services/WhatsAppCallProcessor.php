@@ -105,6 +105,9 @@ class WhatsAppCallProcessor
                 'metadata' => array_merge($call->metadata ?? [], ['sdp' => $callData['session']['sdp']])
             ]);
 
+            // Record SDP offer received for quality tracking
+            $call->recordSdpOfferReceived();
+
             Log::info("Dispatching CallOffered for inbound call: {$call->call_id}");
             event(new CallOffered($call));
         } else {

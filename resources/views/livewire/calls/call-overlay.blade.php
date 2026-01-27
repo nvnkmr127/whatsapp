@@ -7,6 +7,9 @@
         isProcessing: false,
         bc: null,
         direction: @entangle('direction'),
+        offerSdp: @entangle('offerSdp'),
+        pc: null,
+        remoteStream: null,
         ringingSound: null,
         
         init() {
@@ -17,6 +20,10 @@
                     $wire.syncCallState(event.data.payload);
                 }
             };
+
+            window.addEventListener('call-stopped', () => {
+                this.stopCalling();
+            });
 
             $watch('status', value => {
                 if (value === 'ringing' && this.direction === 'inbound') this.playRinging();
@@ -74,12 +81,160 @@
             this.isProcessing = true;
             
             try {
-                await $wire[action]();
+                if (action === 'answerCall') {
+                    await this.handleAnswer();
+                } else {
+                    await $wire[action]();
+                }
             } finally {
                 this.isProcessing = false;
             }
+        },
+
+        async handleAnswer() {
+            try {
+                // Configure STUN/TURN servers for better connectivity
+                const iceServers = [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ];
+
+                this.pc = new RTCPeerConnection({
+                    iceServers: iceServers,
+                    iceCandidatePoolSize: 10
+                });
+
+                // Track ICE candidates
+                let iceCandidatesCount = 0;
+                let connectionType = null;
+
+                this.pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        iceCandidatesCount++;
+                        console.log('ICE candidate gathered:', event.candidate.type);
+                    }
+                };
+
+                // Monitor connection state
+                this.pc.onconnectionstatechange = () => {
+                    console.log('Connection state:', this.pc.connectionState);
+                    
+                    if (this.pc.connectionState === 'connected') {
+                        // Record connection established
+                        $wire.recordConnectionEstablished(iceCandidatesCount, connectionType);
+                    } else if (this.pc.connectionState === 'failed') {
+                        $dispatch('notify', { 
+                            type: 'error', 
+                            message: 'Call connection failed. Please try again.' 
+                        });
+                        this.stopCalling();
+                    } else if (this.pc.connectionState === 'disconnected') {
+                        $dispatch('notify', { 
+                            type: 'warning', 
+                            message: 'Call connection lost.' 
+                        });
+                    }
+                };
+
+                // Monitor ICE connection state
+                this.pc.oniceconnectionstatechange = () => {
+                    console.log('ICE connection state:', this.pc.iceConnectionState);
+                    
+                    if (this.pc.iceConnectionState === 'connected' || 
+                        this.pc.iceConnectionState === 'completed') {
+                        // Get selected candidate pair to determine connection type
+                        this.pc.getStats().then(stats => {
+                            stats.forEach(report => {
+                                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                    connectionType = report.currentRoundTripTime ? 'relay' : 'direct';
+                                }
+                            });
+                        });
+                    }
+                };
+
+                this.pc.ontrack = (event) => {
+                    this.remoteStream = event.streams[0];
+                    const remoteAudio = document.getElementById('remote-audio');
+                    if (remoteAudio) {
+                        remoteAudio.srcObject = this.remoteStream;
+                    }
+                };
+
+                // Add local audio track
+                const localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                localStream.getTracks().forEach(track => this.pc.addTrack(track, localStream));
+
+                // Set remote description (the offer from Meta)
+                if (!this.offerSdp) {
+                    throw new Error('No offer SDP available to answer.');
+                }
+
+                await this.pc.setRemoteDescription({
+                    type: 'offer',
+                    sdp: this.offerSdp
+                });
+
+                const answer = await this.pc.createAnswer();
+                await this.pc.setLocalDescription(answer);
+
+                // Implement timeout for answer
+                const answerTimeout = setTimeout(() => {
+                    if (this.pc && this.pc.connectionState !== 'connected') {
+                        throw new Error('Call answer timeout - connection not established within 30 seconds');
+                    }
+                }, 30000);
+
+                // Send answer to backend
+                await $wire.answerCall(answer.sdp);
+                
+                clearTimeout(answerTimeout);
+
+            } catch (error) {
+                console.error('Failed to answer call:', error);
+                
+                // Provide user-friendly error messages
+                let errorMessage = 'Failed to answer call: ';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Microphone access denied. Please allow microphone access and try again.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No microphone found. Please connect a microphone and try again.';
+                } else if (error.message.includes('timeout')) {
+                    errorMessage += 'Connection timeout. Please check your internet connection.';
+                } else if (error.message.includes('SDP')) {
+                    errorMessage += 'Invalid call data. Please try again.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                $dispatch('notify', { type: 'error', message: errorMessage });
+                this.stopCalling();
+                throw error;
+            }
+        },
+
+        stopCalling() {
+            if (this.pc) {
+                this.pc.close();
+                this.pc = null;
+            }
+            if (this.remoteStream) {
+                this.remoteStream.getTracks().forEach(track => track.stop());
+                this.remoteStream = null;
+            }
+            const remoteAudio = document.getElementById('remote-audio');
+            if (remoteAudio) {
+                remoteAudio.srcObject = null;
+            }
         }
-    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)"
+    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" @call-stopped.window="stopCalling()"
     class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
     <!-- Overlay Container -->
     <div x-show="status !== 'idle'" x-transition:enter="transition ease-out duration-500"
@@ -97,7 +252,9 @@
         <audio id="call-ringing-sound" loop preload="auto">
             <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
         </audio>
-        
+
+        <audio id="remote-audio" autoplay></audio>
+
         @play-ringing-sound.window="playRinging()"
         @call-sync.window="syncFromOtherTab($event.detail)"
         <!-- Background Decorative Elements -->

@@ -11,15 +11,18 @@ return new class extends Migration {
     public function up(): void
     {
         // First, clean up any duplicate whatsapp_message_id values
-        // Keep the oldest message for each duplicate whatsapp_message_id
+        // Remove duplicates before adding unique constraint
+        // MySQL workaround: can't specify target table in FROM clause
         DB::statement("
             DELETE FROM messages 
             WHERE id IN (
-                SELECT m1.id 
-                FROM messages m1
-                INNER JOIN messages m2 ON m1.whatsapp_message_id = m2.whatsapp_message_id
-                WHERE m1.id > m2.id
-                AND m1.whatsapp_message_id IS NOT NULL
+                SELECT id FROM (
+                    SELECT m1.id 
+                    FROM messages m1
+                    INNER JOIN messages m2 ON m1.whatsapp_message_id = m2.whatsapp_message_id
+                    WHERE m1.id > m2.id
+                    AND m1.whatsapp_message_id IS NOT NULL
+                ) AS duplicates
             )
         ");
 

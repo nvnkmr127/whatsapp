@@ -87,6 +87,16 @@ class WhatsappConfig extends Component
     public $syncCallHours = false;
     public $callbackPermissionEnabled = false;
 
+    // Advanced Calling Configuration (Phase 5)
+    public $stunServers = [];
+    public $turnServers = [];
+    public $callTimeout = 30; // seconds
+    public $maxRetryAttempts = 2;
+    public $enableQualityMonitoring = true;
+    public $sdpValidationLevel = 'strict'; // strict, moderate, lenient
+    public $connectionTimeout = 30; // seconds
+    public $iceGatheringTimeout = 10; // seconds
+
     protected $rules = [
         'wm_fb_app_id' => 'nullable',
         'wm_fb_app_secret' => 'nullable',
@@ -207,6 +217,26 @@ class WhatsappConfig extends Component
             $this->callButtonVisible = $team->whatsapp_settings['calling']['call_icon_visibility'] === 'show';
             $this->callbackPermissionEnabled = ($team->whatsapp_settings['calling']['callback_permission_status'] ?? 'disabled') === 'enabled';
             $this->syncCallHours = isset($team->whatsapp_settings['calling']['call_hours']);
+        }
+
+        // Load Advanced Calling Configuration (Phase 5)
+        if (isset($team->whatsapp_settings['calling']['advanced'])) {
+            $advanced = $team->whatsapp_settings['calling']['advanced'];
+            $this->stunServers = $advanced['stun_servers'] ?? [];
+            $this->turnServers = $advanced['turn_servers'] ?? [];
+            $this->callTimeout = $advanced['call_timeout'] ?? 30;
+            $this->maxRetryAttempts = $advanced['max_retry_attempts'] ?? 2;
+            $this->enableQualityMonitoring = $advanced['enable_quality_monitoring'] ?? true;
+            $this->sdpValidationLevel = $advanced['sdp_validation_level'] ?? 'strict';
+            $this->connectionTimeout = $advanced['connection_timeout'] ?? 30;
+            $this->iceGatheringTimeout = $advanced['ice_gathering_timeout'] ?? 10;
+        } else {
+            // Set defaults if not configured
+            $this->stunServers = [
+                'stun:stun.l.google.com:19302',
+                'stun:stun1.l.google.com:19302',
+            ];
+            $this->turnServers = [];
         }
     }
 

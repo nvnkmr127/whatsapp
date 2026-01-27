@@ -148,6 +148,7 @@ Route::middleware([
     // WhatsApp Calling
     Route::get('/calls', \App\Livewire\Calls\CallHistory::class)->name('calls.history')->middleware('can:chat-access');
     Route::get('/calls/analytics', \App\Livewire\Calls\CallAnalytics::class)->name('calls.analytics')->middleware('can:manage-settings');
+    Route::get('/calls/settings', \App\Livewire\Whatsapp\CallSettingsManager::class)->name('calls.settings')->middleware('can:manage-settings');
 
     // Billing Dashboard
     Route::get('/billing', \App\Livewire\Billing\BillingDashboard::class)->name('billing');

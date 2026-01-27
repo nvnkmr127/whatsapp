@@ -15,6 +15,7 @@ class CallOverlay extends Component
     public $contactName = '';
     public $contactAvatar = '';
     public $startTime = null;
+    public $offerSdp = null; // Store incoming offer SDP
     public $isLocked = false; // Prevents double actions
     public $occupiedBy = null; // Name of agent who took the call
     public $teamId;
@@ -78,6 +79,7 @@ class CallOverlay extends Component
         $this->contactName = $event['from'] ?? 'Unknown Caller';
         $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
         $this->startTime = null;
+        $this->offerSdp = $event['sdp'] ?? null;
 
         if ($this->direction === 'inbound') {
             $this->dispatch('play-ringing-sound');
@@ -139,7 +141,7 @@ class CallOverlay extends Component
         }
     }
 
-    public function answerCall()
+    public function answerCall($answerSdp = null)
     {
         if (!$this->callId)
             return;
@@ -147,7 +149,16 @@ class CallOverlay extends Component
         try {
             $team = auth()->user()->currentTeam;
             $whatsappService = new \App\Services\WhatsAppService($team);
-            $response = $whatsappService->answerCall($this->callId);
+
+            $session = null;
+            if ($answerSdp) {
+                $session = [
+                    'sdp' => $answerSdp,
+                    'type' => 'answer'
+                ];
+            }
+
+            $response = $whatsappService->answerCall($this->callId, $session);
 
             if ($response['success']) {
                 $this->status = 'active';
@@ -155,6 +166,38 @@ class CallOverlay extends Component
             }
         } catch (\Exception $e) {
             $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function recordConnectionEstablished($iceCandidatesCount = 0, $connectionType = null)
+    {
+        if (!$this->callId)
+            return;
+
+        try {
+            $call = \App\Models\WhatsAppCall::where('call_id', $this->callId)
+                ->where('team_id', auth()->user()->currentTeam->id)
+                ->first();
+
+            if ($call && $call->qualityMetric) {
+                $call->qualityMetric->update([
+                    'connection_established_at' => now(),
+                    'ice_candidates_count' => $iceCandidatesCount,
+                    'connection_type' => $connectionType,
+                    'webrtc_state' => 'connected',
+                ]);
+
+                // Calculate connection latency
+                if ($call->qualityMetric->sdp_answer_sent_at) {
+                    $latency = $call->qualityMetric->sdp_answer_sent_at->diffInMilliseconds(now());
+                    $call->qualityMetric->update(['connection_latency_ms' => $latency]);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to record connection established', [
+                'call_id' => $this->callId,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

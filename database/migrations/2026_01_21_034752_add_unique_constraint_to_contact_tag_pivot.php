@@ -15,10 +15,12 @@ return new class extends Migration {
         DB::statement('
             DELETE FROM contact_tag_pivot 
             WHERE id IN (
-                SELECT t1.id 
-                FROM contact_tag_pivot t1
-                INNER JOIN contact_tag_pivot t2 ON t1.contact_id = t2.contact_id AND t1.tag_id = t2.tag_id
-                WHERE t1.id > t2.id
+                SELECT id FROM (
+                    SELECT t1.id 
+                    FROM contact_tag_pivot t1
+                    INNER JOIN contact_tag_pivot t2 ON t1.contact_id = t2.contact_id AND t1.tag_id = t2.tag_id
+                    WHERE t1.id > t2.id
+                ) AS temp
             )
         ');
 

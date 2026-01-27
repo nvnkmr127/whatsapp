@@ -72,6 +72,22 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
         Route::get('/{callId}', [\App\Http\Controllers\Api\CallController::class, 'show']);
         Route::get('/contacts/{contactId}/history', [\App\Http\Controllers\Api\CallController::class, 'contactHistory']);
     });
+
+    // WhatsApp Call Settings & Permissions
+    Route::prefix('whatsapp')->group(function () {
+        // Call Settings
+        Route::post('/{phoneNumberId}/settings', [\App\Http\Controllers\CallSettingsController::class, 'update']);
+        Route::get('/{phoneNumberId}/settings', [\App\Http\Controllers\CallSettingsController::class, 'show']);
+
+        // Call Permissions
+        Route::post('/calls/request-permission', [\App\Http\Controllers\CallPermissionController::class, 'requestPermission']);
+        Route::get('/calls/permission/{contactId}', [\App\Http\Controllers\CallPermissionController::class, 'checkPermission']);
+        Route::post('/calls/initiate', [\App\Http\Controllers\CallPermissionController::class, 'initiateCall']);
+
+        // Call Links
+        Route::post('/calls/generate-link', [\App\Http\Controllers\CallSettingsController::class, 'generateLink']);
+    });
+
 });
 
 use App\Http\Controllers\WhatsAppWebhookController;

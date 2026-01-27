@@ -64,6 +64,53 @@ class WhatsAppCall extends Model
     }
 
     /**
+     * Get the quality metric for this call.
+     */
+    public function qualityMetric()
+    {
+        return $this->hasOne(CallQualityMetric::class, 'whatsapp_call_id');
+    }
+
+    /**
+     * Record SDP offer received timestamp
+     */
+    public function recordSdpOfferReceived()
+    {
+        $this->qualityMetric()->updateOrCreate(
+            ['whatsapp_call_id' => $this->id],
+            ['sdp_offer_received_at' => now()]
+        );
+    }
+
+    /**
+     * Record SDP answer sent with timing and validation info
+     */
+    public function recordSdpAnswerSent(array $validationResult = [], int $retryAttempts = 0)
+    {
+        $data = [
+            'sdp_answer_sent_at' => now(),
+            'retry_attempts' => $retryAttempts,
+            'validation_passed' => $validationResult['valid'] ?? true,
+        ];
+
+        if (!empty($validationResult['warnings'])) {
+            $data['validation_warnings'] = $validationResult['warnings'];
+        }
+
+        // Calculate answer latency if offer was recorded
+        $metric = $this->qualityMetric;
+        if ($metric && $metric->sdp_offer_received_at) {
+            $data['answer_latency_ms'] = $metric->sdp_offer_received_at->diffInMilliseconds(now());
+        }
+
+        $this->qualityMetric()->updateOrCreate(
+            ['whatsapp_call_id' => $this->id],
+            $data
+        );
+    }
+
+
+    /**
      * Scope a query to only include inbound calls.
      */
     public function scopeInbound($query)

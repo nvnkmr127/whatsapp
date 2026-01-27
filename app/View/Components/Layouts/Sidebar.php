@@ -239,6 +239,7 @@ class Sidebar extends Component
                 'children' => [
                     ['route' => 'calls.history', 'label' => 'Call Records'],
                     ['route' => 'calls.analytics', 'label' => 'Call Analytics'],
+                    ['route' => 'calls.settings', 'label' => 'Call Settings'],
                 ]
             ],
         ];

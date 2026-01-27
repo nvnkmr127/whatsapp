@@ -41,6 +41,8 @@ class CallOffered implements ShouldBroadcastNow
             'to' => $this->call->to_number,
             'contact_id' => $this->call->contact_id,
             'timestamp' => $this->call->initiated_at?->toIso8601String(),
+            'sdp' => $this->call->metadata['sdp'] ?? null,
+            'sdp_type' => 'offer',
         ];
     }
 }

@@ -990,6 +990,136 @@ class WhatsAppService
     }
 
     /**
+     * Request permission to call a contact
+     * 
+     * @param int $contactId Contact ID
+     * @return array Response with permission status
+     * @throws \Exception
+     */
+    public function requestCallPermission(int $contactId): array
+    {
+        $contact = \App\Models\Contact::findOrFail($contactId);
+        $permissionService = new \App\Services\CallPermissionService();
+
+        // Validate permission request
+        $validation = $permissionService->validatePermissionRequest($contact, $this->team);
+
+        if (!$validation['allowed']) {
+            return $validation;
+        }
+
+        // Track the permission request
+        $permission = $permissionService->trackPermissionRequest(
+            $contact,
+            $this->team,
+            $this->phoneId
+        );
+
+        // Send permission request message via WhatsApp
+        // This uses a template message with a call permission button
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $contact->phone,
+            'type' => 'template',
+            'template' => [
+                'name' => 'call_permission_request', // Must be pre-approved template
+                'language' => ['code' => 'en'],
+                'components' => [
+                    [
+                        'type' => 'button',
+                        'sub_type' => 'quick_reply',
+                        'index' => 0,
+                        'parameters' => [
+                            [
+                                'type' => 'payload',
+                                'payload' => json_encode([
+                                    'action' => 'grant_call_permission',
+                                    'permission_id' => $permission->id
+                                ])
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        try {
+            $response = $this->sendRequest('messages', $payload);
+
+            if ($response['success'] ?? false) {
+                Log::info('Call permission request sent', [
+                    'team_id' => $this->team->id,
+                    'contact_id' => $contactId,
+                    'permission_id' => $permission->id,
+                ]);
+
+                return [
+                    'success' => true,
+                    'permission' => $permission,
+                    'message' => 'Permission request sent successfully',
+                ];
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::error('Failed to send call permission request', [
+                'team_id' => $this->team->id,
+                'contact_id' => $contactId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate a call link for the configured phone number
+     * 
+     * @return string WhatsApp call link
+     */
+    public function generateCallLink(): string
+    {
+        if (!$this->phoneId) {
+            throw new \Exception("Phone ID is not configured.");
+        }
+
+        // Format: https://wa.me/{phone_number}?call=1
+        $phoneNumber = str_replace('+', '', $this->phoneId);
+        return "https://wa.me/{$phoneNumber}?call=1";
+    }
+
+    /**
+     * Initiate an outbound WhatsApp call with permission validation
+     * 
+     * @param string $to Phone number to call
+     * @param int|null $permissionId Optional permission ID to validate
+     * @param array $options Additional call options
+     * @return array Response from WhatsApp API
+     * @throws \Exception
+     */
+    public function initiateCallWithPermission(string $to, ?int $permissionId = null, array $options = []): array
+    {
+        $contact = $this->getOrCreateContact($to);
+        $permissionService = new \App\Services\CallPermissionService();
+
+        // If permission ID provided, validate it
+        if ($permissionId) {
+            $permission = \App\Models\CallPermission::findOrFail($permissionId);
+
+            if (!$permissionService->validateCallingWindow($permission)) {
+                throw new \Exception("Call permission has expired or is not valid.");
+            }
+
+            // Record the call against this permission
+            $permissionService->recordCall($permission);
+        }
+
+        // Call the existing initiateCall method
+        $response = $this->initiateCall($to, $options);
+
+        return $response;
+    }
+
+    /**
      * Initiate an outbound WhatsApp call.
      * 
      * @param string $to Phone number to call
@@ -1074,9 +1204,11 @@ class WhatsAppService
      * Answer an incoming WhatsApp call.
      * 
      * @param string $callId WhatsApp call identifier
+     * @param array|null $session Session data (SDP) for VOIP answering
      * @return array Response from WhatsApp API
+     * @throws \Exception
      */
-    public function answerCall(string $callId)
+    public function answerCall(string $callId, ?array $session = null)
     {
         $call = \App\Models\WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
@@ -1086,36 +1218,128 @@ class WhatsAppService
             throw new \Exception("Call is not in ringing state. Current status: {$call->status}");
         }
 
+        // Validate SDP if provided
+        if ($session && isset($session['sdp'])) {
+            $validation = \App\Services\SDPValidator::validate($session['sdp']);
+
+            if (!$validation['valid']) {
+                $errorMsg = \App\Services\SDPValidator::getValidationSummary($validation);
+
+                Log::error("SDP validation failed", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                    'errors' => $validation['errors'],
+                    'warnings' => $validation['warnings'],
+                ]);
+
+                throw new \Exception("Invalid SDP: {$errorMsg}");
+            }
+
+            // Log warnings if any
+            if (!empty($validation['warnings'])) {
+                Log::warning("SDP validation warnings", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                    'warnings' => $validation['warnings'],
+                ]);
+            }
+
+            // Sanitize SDP
+            $session['sdp'] = \App\Services\SDPValidator::sanitize($session['sdp']);
+
+            // Log SDP exchange
+            Log::info("SDP answer generated", [
+                'team_id' => $this->team->id,
+                'call_id' => $callId,
+                'codecs' => \App\Services\SDPValidator::extractCodecs($session['sdp']),
+            ]);
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'call_id' => $callId,
             'action' => 'ACCEPT',
         ];
 
-        try {
-            $response = $this->sendRequest('calls', $payload, 'post');
+        if ($session) {
+            $payload['session'] = $session;
+        }
 
-            if ($response['success'] ?? false) {
-                $call->markAsAnswered();
+        // Retry logic with exponential backoff
+        $maxRetries = 2;
+        $retryDelay = 500; // milliseconds
+        $lastException = null;
 
-                // Dispatch event for real-time UI updates
-                event(new \App\Events\CallAnswered($call));
+        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $startTime = microtime(true);
 
-                Log::info("Call answered", [
+                $response = $this->sendRequest('calls', $payload, 'post');
+
+                $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
+                if ($response['success'] ?? false) {
+                    $call->markAsAnswered();
+
+                    // Update metadata with timing info
+                    $metadata = $call->metadata ?? [];
+                    $metadata['answer_sent_at'] = now()->toIso8601String();
+                    $metadata['response_time_ms'] = $responseTime;
+                    $metadata['retry_attempts'] = $attempt;
+                    $call->update(['metadata' => $metadata]);
+
+                    // Dispatch event for real-time UI updates
+                    event(new \App\Events\CallAnswered($call));
+
+                    Log::info("Call answered successfully", [
+                        'team_id' => $this->team->id,
+                        'call_id' => $callId,
+                        'response_time_ms' => $responseTime,
+                        'attempts' => $attempt + 1,
+                    ]);
+
+                    return $response;
+                }
+
+                // If not successful but no exception, log and retry
+                Log::warning("Call answer response not successful", [
                     'team_id' => $this->team->id,
                     'call_id' => $callId,
+                    'response' => $response,
+                    'attempt' => $attempt + 1,
                 ]);
-            }
 
-            return $response;
-        } catch (\Exception $e) {
-            Log::error("Failed to answer call", [
-                'team_id' => $this->team->id,
-                'call_id' => $callId,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+                if ($attempt < $maxRetries) {
+                    usleep($retryDelay * 1000);
+                    $retryDelay *= 2; // Exponential backoff
+                }
+
+            } catch (\Exception $e) {
+                $lastException = $e;
+
+                Log::error("Failed to answer call (attempt " . ($attempt + 1) . ")", [
+                    'team_id' => $this->team->id,
+                    'call_id' => $callId,
+                    'error' => $e->getMessage(),
+                    'attempt' => $attempt + 1,
+                ]);
+
+                // Don't retry on validation errors
+                if (strpos($e->getMessage(), 'Invalid SDP') !== false) {
+                    throw $e;
+                }
+
+                if ($attempt < $maxRetries) {
+                    usleep($retryDelay * 1000);
+                    $retryDelay *= 2; // Exponential backoff
+                } else {
+                    throw $e;
+                }
+            }
         }
+
+        // If we get here, all retries failed
+        throw $lastException ?? new \Exception("Failed to answer call after {$maxRetries} retries");
     }
 
     /**
