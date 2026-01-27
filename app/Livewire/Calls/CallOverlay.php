@@ -156,7 +156,6 @@ class CallOverlay extends Component
             if ($answerSdp) {
                 $session = [
                     'sdp' => $answerSdp,
-                    'type' => 'answer'
                 ];
             }
 
