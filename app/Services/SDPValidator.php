@@ -224,8 +224,8 @@ class SDPValidator
             $cleanedLines[] = $line;
         }
 
-        // Join with proper CRLF
-        return implode("\r\n", $cleanedLines) . "\r\n";
+        // Join with strict CRLF
+        return implode("\r\n", $cleanedLines);
     }
 
     /**

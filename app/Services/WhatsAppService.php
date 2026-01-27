@@ -1255,6 +1255,10 @@ class WhatsAppService
             ]);
         }
 
+        if ($session && isset($session['sdp'])) {
+            $session['sdp_type'] = 'answer';
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'call_id' => $callId,
