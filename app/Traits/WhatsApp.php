@@ -43,14 +43,27 @@ trait WhatsApp
             }
 
             $appId = config('whatsapp.app_id');
-            $response = Http::get(self::getBaseUrl() . "{$accountId}/", [
+            $url = self::getBaseUrl() . "{$accountId}/";
+
+            Log::debug("WhatsApp Trait: Syncing templates for Account {$accountId}", [
+                'url' => $url,
+                'app_id' => $appId,
+                'token_prefix' => substr($token, 0, 8) . '...'
+            ]);
+
+            $response = Http::get($url, [
                 'fields' => 'id,name,message_templates,phone_numbers',
                 'access_token' => $token,
                 'app_id' => $appId,
             ]);
 
             if ($response->failed()) {
-                throw new \Exception($response->json('error.message'));
+                Log::error("WhatsApp Trait: API Call Failed", [
+                    'status' => $response->status(),
+                    'error' => $response->json(),
+                    'waba_id' => $accountId
+                ]);
+                throw new \Exception($response->json('error.message') ?? 'API Error ' . $response->status());
             }
 
             $messageTemplates = $response->json('message_templates.data');
@@ -191,12 +204,18 @@ trait WhatsApp
     public function exchangeForLongLivedToken(string $shortLivedToken): array
     {
         try {
-            $appId = config('services.facebook.client_id');
-            $appSecret = config('services.facebook.client_secret');
+            $appId = config('whatsapp.app_id');
+            $appSecret = config('whatsapp.app_secret');
 
             if (empty($appId) || empty($appSecret)) {
-                return ['status' => false, 'message' => 'Facebook App ID or Secret not configured in services.php'];
+                Log::error("WhatsApp Trait: config(whatsapp.app_id) or app_secret missing during exchange.");
+                return ['status' => false, 'message' => 'Facebook App ID or Secret not configured in whatsapp.php'];
             }
+
+            Log::debug("WhatsApp Trait: Exchanging token", [
+                'app_id' => $appId,
+                'token_prefix' => substr($shortLivedToken, 0, 8) . '...'
+            ]);
 
             $response = Http::get(self::$facebookAPI . 'oauth/access_token', [
                 'grant_type' => 'fb_exchange_token',
@@ -206,6 +225,10 @@ trait WhatsApp
             ]);
 
             if ($response->failed()) {
+                Log::error("WhatsApp Trait: Token Exchange Failed", [
+                    'status' => $response->status(),
+                    'error' => $response->json()
+                ]);
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Token exchange failed'];
             }
 
@@ -243,13 +266,17 @@ trait WhatsApp
         }
     }
 
-    /**
-     * Debug an access token to see its scopes and validity.
-     */
     public function debugToken(string $token): array
     {
         try {
-            $appToken = config('services.facebook.client_id') . '|' . config('services.facebook.client_secret');
+            $appId = config('whatsapp.app_id');
+            $appSecret = config('whatsapp.app_secret');
+            $appToken = $appId . '|' . $appSecret;
+
+            Log::debug("WhatsApp Trait: Debugging token", [
+                'app_id' => $appId,
+                'token_prefix' => substr($token, 0, 8) . '...'
+            ]);
 
             $response = Http::get(self::$facebookAPI . 'debug_token', [
                 'input_token' => $token,
@@ -257,6 +284,10 @@ trait WhatsApp
             ]);
 
             if ($response->failed()) {
+                Log::error("WhatsApp Trait: Token Debug Failed", [
+                    'status' => $response->status(),
+                    'error' => $response->json(),
+                ]);
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Token debug failed'];
             }
 

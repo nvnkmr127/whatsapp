@@ -356,6 +356,11 @@ class WhatsappConfig extends Component
 
     public function handleEmbeddedSuccess($accessToken, $wabaId)
     {
+        Log::debug("WhatsApp Setup: Received handleEmbeddedSuccess", [
+            'waba_id' => $wabaId,
+            'token_prefix' => substr($accessToken, 0, 8) . '...'
+        ]);
+
         try {
             DB::beginTransaction();
 
@@ -366,18 +371,22 @@ class WhatsappConfig extends Component
                 ->exists();
 
             if ($duplicate) {
+                Log::warning("WhatsApp Setup: Duplicate WABA detected", ['waba_id' => $wabaId]);
                 throw new \Exception("This WhatsApp account has already been used for a trial subscription.");
             }
 
             // 1. Exchange for Long-Lived Token
             $exchangeResult = $this->exchangeForLongLivedToken($accessToken);
             if (!$exchangeResult['status']) {
+                Log::error("WhatsApp Setup: Token exchange failed during embedded signup", ['error' => $exchangeResult['message']]);
                 throw new \Exception("Token Exchange Failed: " . $exchangeResult['message']);
             }
 
             $longLivedToken = $exchangeResult['access_token'];
             $expiresIn = $exchangeResult['expires_in'] ?? null;
             $expiresAt = $expiresIn ? now()->addSeconds($expiresIn) : now()->addDays(60);
+
+            Log::debug("WhatsApp Setup: Long-lived token acquired", ['expires_at' => $expiresAt]);
 
             // 2. Pre-Save to Team for subsequent calls
             $team = auth()->user()->currentTeam;
@@ -389,7 +398,6 @@ class WhatsappConfig extends Component
             ]);
 
             // 3. Complete connection sequence
-            // $this->wm_access_token = $longLivedToken; // DO NOT EXPOSE TO FRONTEND
             $this->wm_business_account_id = $wabaId;
 
             // Converge on connect()
@@ -400,7 +408,10 @@ class WhatsappConfig extends Component
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Embedded Signup Completion Failed: " . $e->getMessage());
+            Log::error("WhatsApp Setup: Embedded Signup Completion Failed", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             $this->dispatch('notify', 'Connection failed: ' . $e->getMessage());
 
             // Re-load settings to clear partial state
@@ -410,9 +421,12 @@ class WhatsappConfig extends Component
 
     public function connect()
     {
+        Log::debug("WhatsApp Setup: Entering connect()", [
+            'waba_id' => $this->wm_business_account_id
+        ]);
+
         $this->validate([
             'wm_business_account_id' => 'required',
-            // 'wm_access_token' => 'required', // Removed from frontend
         ]);
 
         $team = auth()->user()->currentTeam;
@@ -428,10 +442,12 @@ class WhatsappConfig extends Component
                 $startedTransaction = true;
             }
 
-            // Move to AUTHENTICATED state immediately
-
             // [FIX] Cross-Linking: If switching WABA, clear the old phone number match
             if ($team->whatsapp_business_account_id && $team->whatsapp_business_account_id !== $this->wm_business_account_id) {
+                Log::info("WhatsApp Setup: WABA mismatch, clearing phone ID", [
+                    'old' => $team->whatsapp_business_account_id,
+                    'new' => $this->wm_business_account_id
+                ]);
                 $team->whatsapp_phone_number_id = null;
                 $this->wm_default_phone_number_id = null;
             }
@@ -443,33 +459,30 @@ class WhatsappConfig extends Component
                 ->exists();
 
             if ($duplicate) {
+                Log::warning("WhatsApp Setup: Duplicate WABA detected", ['waba_id' => $this->wm_business_account_id]);
                 throw new \Exception("This WhatsApp account has already been used for a trial subscription.");
             }
 
-            // [FIX] Prevent Ghost Numbers: Check if Phone ID is already taken
             $phoneIdToSave = $this->wm_default_phone_number_id ?: $team->whatsapp_phone_number_id;
-            if ($phoneIdToSave) {
-                $phoneTaken = \App\Models\Team::where('whatsapp_phone_number_id', $phoneIdToSave)
-                    ->where('id', '!=', $team->id)
-                    ->exists();
 
-                if ($phoneTaken) {
-                    throw new \Exception("The selected Phone Number ID ({$phoneIdToSave}) is already connected to another team.");
-                }
-            }
+            Log::debug("WhatsApp Setup: Updating team details", [
+                'waba_id' => $this->wm_business_account_id,
+                'phone_id' => $phoneIdToSave
+            ]);
 
             $team->update([
                 'whatsapp_business_account_id' => $this->wm_business_account_id,
-                'whatsapp_access_token' => $team->whatsapp_access_token, // Use team accessor directly if needed, or better, don't update if not changed
                 'whatsapp_phone_number_id' => $phoneIdToSave,
                 'whatsapp_connected' => true,
                 'whatsapp_setup_state' => \App\Enums\IntegrationState::AUTHENTICATED,
             ]);
 
             // Try to sync Templates (Functional check)
+            Log::debug("WhatsApp Setup: Attempting initial template sync");
             $response = $this->loadTemplatesFromWhatsApp();
 
             if ($response['status']) {
+                Log::debug("WhatsApp Setup: Templates synced successfully", ['count' => $response['count'] ?? 0]);
                 // Handle Phone Numbers with auto-discovery if missing
                 if (!empty($response['phone_numbers'])) {
                     $apiPhones = $response['phone_numbers'];
@@ -483,19 +496,23 @@ class WhatsappConfig extends Component
                             ->exists();
 
                         if (!$taken) {
+                            Log::info("WhatsApp Setup: Auto-discovered phone ID: {$potentialId}");
                             $this->wm_default_phone_number_id = $potentialId;
                             $team->update(['whatsapp_phone_number_id' => $this->wm_default_phone_number_id]);
                         } else {
-                            Log::warning("Auto-discovery skipped: Phone {$potentialId} is taken by another team.");
+                            Log::warning("WhatsApp Setup: Auto-discovery skipped: Phone {$potentialId} is taken by another team.");
                         }
                     }
                 }
 
                 // Automate Webhook Subscription
+                Log::debug("WhatsApp Setup: Subscribing to webhooks");
                 $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
                 if (!$subResult['status']) {
-                    Log::warning("Webhook Auto-subscription failed for team {$team->id}: " . $subResult['message']);
+                    Log::warning("WhatsApp Setup: Webhook Auto-subscription failed: " . $subResult['message']);
                 }
+            } else {
+                Log::error("WhatsApp Setup: Initial template sync failed", ['error' => $response['message']]);
             }
 
             $this->completeAudit($auditId, 'completed');
@@ -505,6 +522,7 @@ class WhatsappConfig extends Component
             }
 
             // Run Verification Engine to determine final state (PROVISIONED or READY)
+            Log::debug("WhatsApp Setup: Running verification engine");
             $this->validateConnection();
 
             $this->loadSettings();
@@ -524,7 +542,10 @@ class WhatsappConfig extends Component
             ]);
             $this->is_whatsmark_connected = false;
 
-            Log::error("Connection Flow Failed: " . $e->getMessage());
+            Log::error("WhatsApp Setup: Connection Flow Failed", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             $this->dispatch('notify', 'Connection failed: ' . $e->getMessage());
 
             if (!$startedTransaction) {
