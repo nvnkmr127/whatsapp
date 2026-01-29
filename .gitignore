@@ -58,6 +58,7 @@ _ide_helper_models.php
 ehthumbs.db
 Thumbs.db
 desktop.ini
+cpanel_deploy.sh
 
 # NPM and Node
 node_modules/
