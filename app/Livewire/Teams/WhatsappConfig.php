@@ -472,12 +472,20 @@ class WhatsappConfig extends Component
 
             $team->update([
                 'whatsapp_business_account_id' => $this->wm_business_account_id,
+                'whatsapp_access_token' => $this->wm_access_token ?: $team->whatsapp_access_token,
                 'whatsapp_phone_number_id' => $phoneIdToSave,
                 'whatsapp_connected' => true,
                 'whatsapp_setup_state' => \App\Enums\IntegrationState::AUTHENTICATED,
             ]);
 
-            // Try to sync Templates (Functional check)
+            // 1. Automate Webhook Subscription (Links App to WABA)
+            Log::debug("WhatsApp Setup: Subscribing to webhooks");
+            $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
+            if (!$subResult['status']) {
+                Log::warning("WhatsApp Setup: Webhook Auto-subscription failed: " . $subResult['message']);
+            }
+
+            // 2. Try to sync Templates (Functional check)
             Log::debug("WhatsApp Setup: Attempting initial template sync");
             $response = $this->loadTemplatesFromWhatsApp();
 
@@ -503,13 +511,6 @@ class WhatsappConfig extends Component
                             Log::warning("WhatsApp Setup: Auto-discovery skipped: Phone {$potentialId} is taken by another team.");
                         }
                     }
-                }
-
-                // Automate Webhook Subscription
-                Log::debug("WhatsApp Setup: Subscribing to webhooks");
-                $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
-                if (!$subResult['status']) {
-                    Log::warning("WhatsApp Setup: Webhook Auto-subscription failed: " . $subResult['message']);
                 }
             } else {
                 Log::error("WhatsApp Setup: Initial template sync failed", ['error' => $response['message']]);

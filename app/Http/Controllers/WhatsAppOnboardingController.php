@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppOnboardingController extends Controller
 {
+    use \App\Traits\WhatsApp;
+
     /**
      * Exchange short-lived user token for long-lived token.
      */
@@ -72,18 +74,40 @@ class WhatsAppOnboardingController extends Controller
                     'whatsapp_token_expires_at' => now()->addSeconds($expiresIn),
                 ])->save();
 
+                // [NEW] Attempt to find WABA ID automatically if not provided or to verify
+                $wabaId = $request->input('waba_id');
+
+                // If the JS provided a User ID (usually shorter or different) instead of WABA ID, 
+                // or if we just want to be sure, we can fetch it from Meta.
+                $debug = $this->debugToken($longLivedToken);
+                if ($debug['status'] && !empty($debug['data']['granular_scopes'])) {
+                    foreach ($debug['data']['granular_scopes'] as $scope) {
+                        if ($scope['scope'] === 'whatsapp_business_management' && !empty($scope['target_ids'])) {
+                            $wabaId = $scope['target_ids'][0]; // Take the first WABA ID found
+                            Log::info("WhatsApp Onboarding: Auto-discovered WABA ID {$wabaId} from token scopes.");
+                            break;
+                        }
+                    }
+                }
+
+                if ($wabaId) {
+                    $team->update(['whatsapp_business_account_id' => $wabaId]);
+                }
+
                 \App\Services\WhatsAppEventBridge::auditConfig($team, 'token_exchange', 'completed', [
                     'expires_at' => now()->addSeconds($expiresIn)->toDateTimeString(),
-                    'token_preview' => substr($longLivedToken, 0, 8) . '...'
+                    'token_preview' => substr($longLivedToken, 0, 8) . '...',
+                    'waba_id' => $wabaId
                 ]);
 
-                Log::info("WhatsApp Token Persisted for Team {$team->id}");
+                Log::info("WhatsApp Token & WABA ID Persisted for Team {$team->id}");
             }
 
-            // 2. Return token with expiration info
+            // 2. Return token with expiration info AND the discovered WABA ID
             return response()->json([
                 'status' => true,
-                'access_token' => $longLivedToken, // Optional to return since we saved it
+                'access_token' => $longLivedToken,
+                'waba_id' => $wabaId ?? $team->whatsapp_business_account_id,
                 'expires_in' => $expiresIn,
                 'expires_at' => now()->addSeconds($expiresIn)->toIso8601String()
             ]);

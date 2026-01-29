@@ -45,23 +45,31 @@ trait WhatsApp
             $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
             $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
 
-            // Calculate security proof
+            // System Tokens (prefix EAAB...) usually carry their own app context 
+            // and fail with "Provide valid app ID" if app_id is explicitly passed.
+            $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
             $url = self::getBaseUrl() . "{$accountId}/";
 
-            Log::debug("WhatsApp Trait: Syncing templates", [
-                'waba_id' => $accountId,
-                'app_id' => $appId,
-                'use_proof' => !empty($appSecret)
-            ]);
-
-            $response = Http::get($url, [
+            $params = [
                 'fields' => 'id,name,message_templates,phone_numbers',
                 'access_token' => $token,
-                'app_id' => $appId,
-                'appsecret_proof' => $appSecretProof,
+            ];
+
+            // Only add app_id and proof if it's NOT a system token
+            if (!$isSystemToken) {
+                $params['app_id'] = $appId;
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            Log::debug("WhatsApp Trait: Syncing templates", [
+                'waba_id' => $accountId,
+                'is_system_token' => $isSystemToken,
+                'app_id_sent' => $isSystemToken ? 'skipped' : $appId
             ]);
+
+            $response = Http::get($url, $params);
 
             if ($response->failed()) {
                 Log::error("WhatsApp Trait: API Call Failed", [
@@ -262,14 +270,21 @@ trait WhatsApp
             $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
             $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
             $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+
+            $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
-            $response = Http::withToken($token)->post($url, [
-                'app_id' => $appId,
-                'appsecret_proof' => $appSecretProof,
-            ]);
+            $params = ['app_id' => $appId];
+            if (!$isSystemToken) {
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            Log::debug("WhatsApp Trait: Subscribing to webhooks", ['waba_id' => $wabaId, 'is_system_token' => $isSystemToken]);
+
+            $response = Http::withToken($token)->post($url, $params);
 
             if ($response->failed()) {
+                Log::error("WhatsApp Trait: Webhook Subscription Failed", ['status' => $response->status(), 'error' => $response->json()]);
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook subscription failed'];
             }
 
@@ -323,11 +338,20 @@ trait WhatsApp
         try {
             $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
             $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
-            $response = Http::withToken($token)->get($url, [
-                'app_id' => $appId
-            ]);
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+
+            $isSystemToken = str_starts_with($token, 'EAAB');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
+            $params = ['app_id' => $appId];
+            if (!$isSystemToken) {
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            $response = Http::withToken($token)->get($url, $params);
 
             if ($response->failed()) {
+                Log::error("WhatsApp Trait: Webhook Check Failed", ['error' => $response->json()]);
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook check failed'];
             }
 
