@@ -183,12 +183,14 @@ echo "⚡ Optimizing application..."
 php artisan optimize || print_warning "Optimization had warnings"
 print_success "Application optimized"
 
-# Step 11: Restart queue workers (if using queues)
-echo "🔄 Restarting queue workers..."
+# Step 11: Restart queue workers and services
+echo "🔄 Restarting queue workers and services..."
 php artisan queue:restart 2>/dev/null || print_warning "Queue workers not running"
+sudo supervisorctl restart all 2>/dev/null || print_warning "Supervisor not found or access denied"
 
-# Step 12: Set proper permissions (cPanel specific)
+# Step 12: Set proper permissions (DigitalOcean/cPanel compatible)
 echo "🔐 Setting proper permissions..."
+sudo chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null || chmod -R 755 storage bootstrap/cache
 print_success "Permissions set"
 
@@ -207,7 +209,7 @@ print_info "Deployed Version:"
 echo "  Commit: ${NEW_COMMIT:0:8}"
 git log -1 --pretty=format:"  Message: %s%n  Author: %an%n  Date: %ar%n" HEAD
 echo ""
-echo "📊 Quick health check:"
-echo "   • Check site: https://digichatify.tribebella.com"
+print_info "📊 Quick health check:"
+echo "   • Check site: https://flow.watxio.com"
 echo "   • View logs: tail -f storage/logs/laravel.log"
 echo ""
