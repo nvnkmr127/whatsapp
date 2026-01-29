@@ -24,6 +24,7 @@ class EventFactory
                 'provider_id' => $message['id'],
                 'from_phone' => $message['from'],
                 'to_phone_id' => $metadata['phone_number_id'],
+                'waba_id' => $webhookData['entry'][0]['id'] ?? null,
                 'contact_name' => $contact['profile']['name'] ?? null,
                 'message_type' => $message['type'],
                 'content' => $message, // Raw message content (text, image, etc.)

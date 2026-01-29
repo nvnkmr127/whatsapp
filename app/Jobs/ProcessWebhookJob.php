@@ -91,6 +91,23 @@ class ProcessWebhookJob implements ShouldQueue
                 });
             }
 
+            // Fallback: Resolve via WABA ID (entry[0].id)
+            if (!$teamId) {
+                $wabaId = $body['entry'][0]['id'] ?? null;
+                if ($wabaId) {
+                    $teamId = \Illuminate\Support\Facades\Cache::remember("team_id_by_waba_id:{$wabaId}", 3600, function () use ($wabaId) {
+                        return Team::where('whatsapp_business_account_id', $wabaId)->value('id');
+                    });
+                }
+            }
+
+            if (!$teamId) {
+                Log::warning("WhatsApp Webhook: Could not resolve Team ID", [
+                    'phone_id' => $phoneId,
+                    'waba_id' => $body['entry'][0]['id'] ?? 'N/A'
+                ]);
+            }
+
             // 1. Handle Messages (Inbound)
             if (isset($change['messages']) && is_array($change['messages'])) {
                 foreach ($change['messages'] as $messageData) {

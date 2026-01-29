@@ -40,8 +40,16 @@ class PersistMessageJob implements ShouldQueue
         $phoneId = $data['to_phone_id'];
         $team = Team::where('whatsapp_phone_number_id', $phoneId)->first();
 
+        // Fallback: Resolve via WABA ID
         if (!$team) {
-            Log::error("PersistMessageJob: Team not found for Phone ID: {$phoneId}");
+            $wabaId = $data['waba_id'] ?? null;
+            if ($wabaId) {
+                $team = Team::where('whatsapp_business_account_id', $wabaId)->first();
+            }
+        }
+
+        if (!$team) {
+            Log::error("PersistMessageJob: Team not found for Phone ID: {$phoneId} or WABA ID: " . ($data['waba_id'] ?? 'N/A'));
             return;
         }
 

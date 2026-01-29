@@ -81,9 +81,12 @@ class ConsumeBroadcastEvents extends Command
                     ->take(20); // Limit number of teams per cycle to avoid huge memory usage
 
                 if ($pendingTeams->isNotEmpty()) {
-                    $perTeamCount = max(1, ceil($count / $pendingTeams->count()));
+                    $perTeamCount = max(1, ceil($count / ($pendingTeams->count() + 1)));
 
+                    // 1. Process teams
                     foreach ($pendingTeams as $tId) {
+                        if (is_null($tId))
+                            continue;
                         $teamEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
                             ->where('status', 'pending')
                             ->where('team_id', $tId)
@@ -94,7 +97,16 @@ class ConsumeBroadcastEvents extends Command
                         $dbEvents = $dbEvents->concat($teamEvents);
                     }
 
-                    // Shuffle or Interleave the collection if we want truly mixed processing in one batch
+                    // 2. Always check for null team events (fallbacks/system)
+                    $nullEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
+                        ->where('status', 'pending')
+                        ->whereNull('team_id')
+                        ->orderBy('id', 'asc')
+                        ->limit($perTeamCount)
+                        ->get();
+                    $dbEvents = $dbEvents->concat($nullEvents);
+
+                    // Shuffle or Interleave the collection
                     $dbEvents = $dbEvents->shuffle();
                 } else {
                     // Fallback for events without team_id (legacy or system events)
