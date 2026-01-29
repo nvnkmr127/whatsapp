@@ -50,6 +50,8 @@ class ProcessWebhookJob implements ShouldQueue
      */
     public function handle(\App\Services\EventBusService $eventBus): void
     {
+        Log::debug("ProcessWebhookJob: Handle method called (Starting execution)");
+
         // Restore Trace Context
         if ($this->traceId) {
             \App\Services\TraceContext::set($this->traceId);
