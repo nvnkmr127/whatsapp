@@ -12,7 +12,7 @@ trait WhatsApp
 
     protected static function getApiVersion(): string
     {
-        return 'v18.0'; // Default valid version
+        return config('whatsapp.api_version', 'v21.0');
     }
 
     protected static function getBaseUrl(): string
@@ -42,11 +42,11 @@ trait WhatsApp
                 // But for MVP, we might want to fail gracefully.
             }
 
-            $appId = config('whatsapp.app_id');
+            $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
             $url = self::getBaseUrl() . "{$accountId}/";
 
-            Log::debug("WhatsApp Trait: Syncing templates for Account {$accountId}", [
-                'url' => $url,
+            Log::debug("WhatsApp Trait: Syncing templates", [
+                'waba_id' => $accountId,
                 'app_id' => $appId,
                 'token_prefix' => substr($token, 0, 8) . '...'
             ]);
@@ -61,7 +61,8 @@ trait WhatsApp
                 Log::error("WhatsApp Trait: API Call Failed", [
                     'status' => $response->status(),
                     'error' => $response->json(),
-                    'waba_id' => $accountId
+                    'waba_id' => $accountId,
+                    'app_id_sent' => $appId // Added to verify what we actually sent
                 ]);
                 throw new \Exception($response->json('error.message') ?? 'API Error ' . $response->status());
             }
@@ -308,7 +309,7 @@ trait WhatsApp
     {
         try {
             $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
-            $appId = config('whatsapp.app_id');
+            $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
             $response = Http::withToken($token)->get($url, [
                 'app_id' => $appId
             ]);
@@ -318,7 +319,7 @@ trait WhatsApp
             }
 
             $subscriptions = $response->json('data');
-            $isSubscribed = collect($subscriptions)->contains('id', config('services.facebook.client_id'));
+            $isSubscribed = collect($subscriptions)->contains('id', $appId);
 
             return [
                 'status' => true,
