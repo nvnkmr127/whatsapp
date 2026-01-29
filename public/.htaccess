@@ -18,6 +18,11 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
+    # Reverb Proxy
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteRule ^app/(.*) ws://127.0.0.1:8081/app/$1 [P,L]
+    RewriteRule ^app/(.*) http://127.0.0.1:8081/app/$1 [P,L]
+
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
