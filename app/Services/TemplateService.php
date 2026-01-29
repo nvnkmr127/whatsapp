@@ -37,18 +37,14 @@ class TemplateService
 
         $allRemoteTemplates = [];
         $appId = config('whatsapp.app_id');
-        $nextUrl = "{$this->baseUrl}/{$wabaId}/message_templates";
+        $nextUrl = "{$this->baseUrl}/{$wabaId}/message_templates?limit=100";
+
+        if ($appId) {
+            $nextUrl .= "&app_id={$appId}";
+        }
 
         do {
-            $queryParams = [
-                'limit' => 100,
-            ];
-
-            if ($appId) {
-                $queryParams['app_id'] = $appId;
-            }
-
-            $response = Http::withToken($accessToken)->get($nextUrl, $queryParams);
+            $response = Http::withToken($accessToken)->get($nextUrl);
 
             if ($response->failed()) {
                 throw new \Exception("Failed to fetch templates: " . $response->body());
