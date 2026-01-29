@@ -19,6 +19,7 @@
         "laravel/tinker": "^2.10.1",
         "league/csv": "^9.28",
         "livewire/livewire": "^3.6.4",
+        "opcodesio/log-viewer": "^3.21",
         "smalot/pdfparser": "^2.12"
     },
     "require-dev": {

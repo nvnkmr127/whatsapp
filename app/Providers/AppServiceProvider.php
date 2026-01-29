@@ -134,5 +134,10 @@ class AppServiceProvider extends ServiceProvider
                 return $user->hasTeamPermission($user->currentTeam, $permission) || $user->ownsTeam($user->currentTeam);
             });
         }
+
+        \Illuminate\Support\Facades\Gate::define('viewLogViewer', function ($user = null) {
+            // In production, you should restrict this to specific emails
+            return true;
+        });
     }
 }
