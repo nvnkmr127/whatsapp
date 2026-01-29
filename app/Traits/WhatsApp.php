@@ -43,18 +43,24 @@ trait WhatsApp
             }
 
             $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+
+            // Calculate security proof
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
             $url = self::getBaseUrl() . "{$accountId}/";
 
             Log::debug("WhatsApp Trait: Syncing templates", [
                 'waba_id' => $accountId,
                 'app_id' => $appId,
-                'token_prefix' => substr($token, 0, 8) . '...'
+                'use_proof' => !empty($appSecret)
             ]);
 
             $response = Http::get($url, [
                 'fields' => 'id,name,message_templates,phone_numbers',
                 'access_token' => $token,
                 'app_id' => $appId,
+                'appsecret_proof' => $appSecretProof,
             ]);
 
             if ($response->failed()) {
@@ -139,6 +145,8 @@ trait WhatsApp
     {
         try {
             $token = $this->getToken();
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
             if (empty($token)) {
                 return ['status' => false, 'message' => 'Access token not configured.'];
@@ -147,6 +155,7 @@ trait WhatsApp
             $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", [
                 'fields' => 'display_phone_number,verified_name,quality_rating,messaging_limit_tier',
                 'access_token' => $token,
+                'appsecret_proof' => $appSecretProof,
             ]);
 
             if ($response->failed()) {
@@ -251,9 +260,13 @@ trait WhatsApp
     {
         try {
             $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
-            $appId = config('whatsapp.app_id');
+            $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
             $response = Http::withToken($token)->post($url, [
-                'app_id' => $appId
+                'app_id' => $appId,
+                'appsecret_proof' => $appSecretProof,
             ]);
 
             if ($response->failed()) {
