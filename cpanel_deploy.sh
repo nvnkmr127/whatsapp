@@ -134,9 +134,9 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 # Pull latest changes
-if git pull origin main 2>/dev/null; then
+if git pull origin main; then
     print_success "Code updated from main branch"
-elif git pull origin master 2>/dev/null; then
+elif git pull origin master; then
     print_success "Code updated from master branch"
 else
     print_error "Failed to pull from repository"
@@ -149,6 +149,7 @@ composer install --no-dev --optimize-autoloader --no-interaction || {
     print_error "Composer install failed"
     exit 1
 }
+php artisan vendor:publish --tag=log-viewer-assets --ansi --force
 print_success "Composer dependencies installed"
 
 # Step 6: Install/Update NPM dependencies and build assets
