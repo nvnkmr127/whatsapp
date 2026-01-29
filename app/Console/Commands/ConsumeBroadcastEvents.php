@@ -169,6 +169,7 @@ class ConsumeBroadcastEvents extends Command
                     break;
 
                 case 'message.inbound':
+                    Log::debug("BroadcastConsumer: Processing Inbound Message Event", ['event_id' => $id]);
                     // Dispatch Job to persist inbound message
                     \App\Jobs\PersistMessageJob::dispatch($payload)->onQueue('messages');
                     $this->info("Dispatched PersistMessageJob for Event {$id}");

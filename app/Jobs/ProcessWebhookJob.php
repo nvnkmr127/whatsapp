@@ -101,11 +101,14 @@ class ProcessWebhookJob implements ShouldQueue
                 }
             }
 
+            Log::debug("WhatsApp Webhook: Resolution Check", [
+                'extracted_phone_id' => $phoneId,
+                'extracted_waba_id' => $body['entry'][0]['id'] ?? 'N/A',
+                'resolved_team_id' => $teamId
+            ]);
+
             if (!$teamId) {
-                Log::warning("WhatsApp Webhook: Could not resolve Team ID", [
-                    'phone_id' => $phoneId,
-                    'waba_id' => $body['entry'][0]['id'] ?? 'N/A'
-                ]);
+                Log::warning("WhatsApp Webhook: Could not resolve Team ID targeting Phone: {$phoneId} or WABA: " . ($body['entry'][0]['id'] ?? 'N/A'));
             }
 
             // 1. Handle Messages (Inbound)
@@ -123,10 +126,18 @@ class ProcessWebhookJob implements ShouldQueue
                     // Construct standardized event
                     $event = \App\Factories\EventFactory::makeInboundMessage($body);
 
+                    Log::debug("WhatsApp Webhook: Publishing to EventBus", [
+                        'stream' => 'whatsapp_events',
+                        'type' => 'message.inbound',
+                        'team_id' => $teamId,
+                        'event_id' => $event['event_id'] ?? 'N/A'
+                    ]);
+
                     // Publish to stream
                     $id = $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $teamId);
 
                     if (!$id) {
+                        Log::error("WhatsApp Webhook: EventBus failed to publish Inbound Message Event", ['event' => $event]);
                         throw new \Exception("EventBus failed to publish Inbound Message Event");
                     }
 

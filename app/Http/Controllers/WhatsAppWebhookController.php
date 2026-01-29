@@ -47,19 +47,24 @@ class WhatsAppWebhookController extends Controller
 
         // Store Raw Payload
         try {
+            Log::debug("WhatsApp Webhook: Attempting to store payload", ['waba_id' => $data['entry'][0]['id'] ?? 'N/A']);
             $payloadRecord = \App\Models\WebhookPayload::create([
                 'payload' => $data,
                 'signature' => $signature,
                 'status' => 'pending',
-                'waba_id' => $data['entry'][0]['id'] ?? null, // Extract WABA ID if possible
+                'waba_id' => $data['entry'][0]['id'] ?? null,
             ]);
+
+            Log::debug("WhatsApp Webhook: Payload stored", ['payload_id' => $payloadRecord->id]);
 
             // Dispatch Job with Trace Context
             $traceId = \App\Services\TraceContext::getTraceId();
             \App\Jobs\ProcessWebhookJob::dispatch($payloadRecord->id, $traceId);
 
+            Log::debug("WhatsApp Webhook: ProcessWebhookJob dispatched", ['payload_id' => $payloadRecord->id, 'trace_id' => $traceId]);
+
         } catch (\Exception $e) {
-            Log::error("Failed to store webhook: " . $e->getMessage());
+            Log::error("WhatsApp Webhook: Failed to store or dispatch: " . $e->getMessage());
             return response('Internal Error', 500);
         }
 

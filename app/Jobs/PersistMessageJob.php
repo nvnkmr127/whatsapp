@@ -48,6 +48,12 @@ class PersistMessageJob implements ShouldQueue
             }
         }
 
+        Log::debug("PersistMessageJob: Team Resolution", [
+            'attempted_phone_id' => $phoneId,
+            'attempted_waba_id' => $data['waba_id'] ?? 'N/A',
+            'team_found' => $team ? $team->id : 'NONE'
+        ]);
+
         if (!$team) {
             Log::error("PersistMessageJob: Team not found for Phone ID: {$phoneId} or WABA ID: " . ($data['waba_id'] ?? 'N/A'));
             return;

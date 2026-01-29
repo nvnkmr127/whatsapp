@@ -22,7 +22,11 @@ class EventBusService
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            Log::debug("EventBus: Published to Database", ['id' => $id, 'type' => $eventType, 'team_id' => $teamId]);
+            Log::debug("EventBus: Successfully published to Database", [
+                'event_id' => $id,
+                'type' => $eventType,
+                'team_id' => $teamId
+            ]);
             return (string) $id;
         } catch (\Exception $e) {
             Log::error("EventBus: Failed to publish to Database: " . $e->getMessage());
