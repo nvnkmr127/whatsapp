@@ -776,11 +776,17 @@ class WhatsAppService
             throw new \Exception("WABA ID is not configured.");
         }
 
+        $appId = config('whatsapp.app_id');
         $url = "{$this->baseUrl}/{$wabaId}/message_templates";
         $allItems = [];
 
         do {
-            $response = $this->sendRequestFullUrl($url, 'get');
+            $params = [];
+            if ($appId) {
+                $params['app_id'] = $appId;
+            }
+
+            $response = $this->sendRequestFullUrl($url, 'get', $params);
 
             if (!($response['success'] ?? false)) {
                 return $response; // Return error immediately if any page fails
