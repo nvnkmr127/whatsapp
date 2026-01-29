@@ -42,9 +42,11 @@ trait WhatsApp
                 // But for MVP, we might want to fail gracefully.
             }
 
+            $appId = config('whatsapp.app_id');
             $response = Http::get(self::getBaseUrl() . "{$accountId}/", [
                 'fields' => 'id,name,message_templates,phone_numbers',
                 'access_token' => $token,
+                'app_id' => $appId,
             ]);
 
             if ($response->failed()) {
@@ -225,8 +227,10 @@ trait WhatsApp
     {
         try {
             $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
-
-            $response = Http::withToken($token)->post($url);
+            $appId = config('whatsapp.app_id');
+            $response = Http::withToken($token)->post($url, [
+                'app_id' => $appId
+            ]);
 
             if ($response->failed()) {
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook subscription failed'];
@@ -273,7 +277,10 @@ trait WhatsApp
     {
         try {
             $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
-            $response = Http::withToken($token)->get($url);
+            $appId = config('whatsapp.app_id');
+            $response = Http::withToken($token)->get($url, [
+                'app_id' => $appId
+            ]);
 
             if ($response->failed()) {
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook check failed'];
