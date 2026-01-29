@@ -18,7 +18,7 @@ class WhatsappConfig extends Component
     public $wm_fb_app_id;
     public $wm_fb_app_secret;
     public $wm_business_account_id;
-    // public $wm_access_token; // REMOVED: Prevent leakage to frontend
+    public $wm_access_token;
     public $outbound_webhook_url;
 
     // Business Profile Fields
@@ -399,6 +399,7 @@ class WhatsappConfig extends Component
 
             // 3. Complete connection sequence
             $this->wm_business_account_id = $wabaId;
+            $this->wm_access_token = $longLivedToken;
 
             // Converge on connect()
             $this->connect();

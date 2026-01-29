@@ -50,23 +50,23 @@ trait WhatsApp
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
-            $url = self::getBaseUrl() . "{$accountId}/";
+            $url = self::getBaseUrl() . "{$accountId}"; // No trailing slash
 
             $params = [
                 'fields' => 'id,name,message_templates,phone_numbers',
                 'access_token' => $token,
             ];
 
-            // Only add app_id and proof if it's NOT a system token
-            if (!$isSystemToken) {
-                $params['app_id'] = $appId;
+            // Only add appsecret_proof if we have a secret and it's NOT a system token
+            // This is safer than app_id which often causes the #200 error
+            if (!$isSystemToken && $appSecret) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
             Log::debug("WhatsApp Trait: Syncing templates", [
                 'waba_id' => $accountId,
                 'is_system_token' => $isSystemToken,
-                'app_id_sent' => $isSystemToken ? 'skipped' : $appId
+                'url' => $url
             ]);
 
             $response = Http::get($url, $params);
@@ -154,17 +154,19 @@ trait WhatsApp
         try {
             $token = $this->getToken();
             $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
-            if (empty($token)) {
-                return ['status' => false, 'message' => 'Access token not configured.'];
-            }
-
-            $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", [
+            $params = [
                 'fields' => 'display_phone_number,verified_name,quality_rating,messaging_limit_tier',
                 'access_token' => $token,
-                'appsecret_proof' => $appSecretProof,
-            ]);
+            ];
+
+            if (!$isSystemToken && $appSecret) {
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
 
             if ($response->failed()) {
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'API Error'];
@@ -197,12 +199,27 @@ trait WhatsApp
                 return ['status' => false, 'message' => 'Access token not configured.'];
             }
 
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $isSystemToken = str_starts_with($token, 'EAAB');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
             $url = self::getBaseUrl() . "{$phoneNumberId}/register";
 
-            $response = Http::withToken($token)->post($url, [
+            $params = [
                 'messaging_product' => 'whatsapp',
                 'pin' => $pin
+            ];
+
+            if (!$isSystemToken && $appSecret) {
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            Log::debug("WhatsApp Trait: Registering phone", [
+                'phone_id' => $phoneNumberId,
+                'is_system_token' => $isSystemToken
             ]);
+
+            $response = Http::withToken($token)->post($url, $params);
 
             if ($response->failed()) {
                 return ['status' => false, 'message' => $response->json('error.message') ?? 'Registration Failed'];
