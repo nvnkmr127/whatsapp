@@ -72,6 +72,8 @@ class CallConsentService
      */
     protected function validateTriggerType(string $triggerType, array $context): array
     {
+        Log::info('CallConsentService: Validating Trigger', ['type' => $triggerType, 'context' => $context]);
+
         $validTriggers = ['user_initiated', 'agent_offered'];
 
         if (!in_array($triggerType, $validTriggers)) {

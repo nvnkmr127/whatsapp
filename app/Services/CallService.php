@@ -38,7 +38,9 @@ class CallService
 
         // Run comprehensive eligibility checks
         $eligibilityService = new CallEligibilityService($this->team);
-        $eligibility = $eligibilityService->checkEligibility($contact);
+        $eligibility = $eligibilityService->checkEligibility($contact, 'user_initiated', [
+            'trigger_source' => 'in_app_action'
+        ]);
 
         if (!$eligibility['eligible']) {
             return [

@@ -25,7 +25,9 @@ class WhatsappCallButton extends Component
         try {
             $service = new CallEligibilityService(auth()->user()->currentTeam);
             // Defaulting trigger to 'user_initiated' for manual clicks
-            $this->eligibility = $service->checkEligibility($this->contact, 'user_initiated');
+            $this->eligibility = $service->checkEligibility($this->contact, 'user_initiated', [
+                'trigger_source' => 'in_app_action'
+            ]);
         } catch (\Exception $e) {
             Log::error("Call eligibility check failed: " . $e->getMessage());
             $this->eligibility = [
