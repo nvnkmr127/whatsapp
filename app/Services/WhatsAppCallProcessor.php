@@ -167,16 +167,19 @@ class WhatsAppCallProcessor
     protected function ensureContactAndConversation(Team $team, WhatsAppCall $call, string $phoneNumber)
     {
         try {
+            // Normalize phone number to prevent duplicates
+            $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+
             // Find or create contact
             $contact = Contact::where('team_id', $team->id)
-                ->where('phone_number', $phoneNumber)
+                ->where('phone_number', $normalizedPhone)
                 ->first();
 
             if (!$contact) {
                 $contact = Contact::create([
                     'team_id' => $team->id,
-                    'phone_number' => $phoneNumber,
-                    'name' => $phoneNumber,
+                    'phone_number' => $normalizedPhone,
+                    'name' => $normalizedPhone,
                     'opt_in_source' => 'whatsapp_call',
                 ]);
             }

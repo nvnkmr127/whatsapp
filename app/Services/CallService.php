@@ -25,8 +25,9 @@ class CallService
     public function initiateCall(string $phoneNumber, array $options = []): array
     {
         // Find or create contact
+        $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
         $contact = Contact::where('team_id', $this->team->id)
-            ->where('phone_number', $phoneNumber)
+            ->where('phone_number', $normalizedPhone)
             ->first();
 
         if (!$contact) {
@@ -54,12 +55,12 @@ class CallService
         }
 
         try {
-            $response = $this->whatsappService->initiateCall($phoneNumber, $options);
+            $response = $this->whatsappService->initiateCall($normalizedPhone, $options);
 
             if ($response['success'] ?? false) {
                 Log::info("Call initiated successfully", [
                     'team_id' => $this->team->id,
-                    'phone' => $phoneNumber,
+                    'phone' => $normalizedPhone,
                     'contact_id' => $contact->id,
                 ]);
             }
