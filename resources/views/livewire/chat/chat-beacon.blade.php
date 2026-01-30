@@ -1,7 +1,9 @@
 <div x-data="{ 
     expanded: false,
-    showPanel: @entangle('isOpen')
-}" class="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-4"
+    showPanel: @entangle('isOpen'),
+    unreadCount: @entangle('unreadCount')
+}" x-init="console.log('ChatBeacon initialized. unreadCount:', unreadCount)"
+    class="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-4"
     @play-sound.window="document.getElementById('global-notification-sound').play().catch(e => console.log('Autoplay blocked'))">
 
     <audio id="global-notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"
