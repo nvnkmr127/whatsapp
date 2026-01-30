@@ -128,22 +128,18 @@ class ProcessWebhookJob implements ShouldQueue
                     // Construct standardized event
                     $event = \App\Factories\EventFactory::makeInboundMessage($body);
 
-                    Log::debug("WhatsApp Webhook: Publishing to EventBus", [
-                        'stream' => 'whatsapp_events',
-                        'type' => 'message.inbound',
+                    Log::debug("WhatsApp Webhook: Immediate Dispatch for Inbound Message", [
                         'team_id' => $teamId,
-                        'event_id' => $event['event_id'] ?? 'N/A'
+                        'message_id' => $wamid
                     ]);
 
-                    // Publish to stream
-                    $id = $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $teamId);
+                    // ⚡ SPEED OPTIMIZATION: Dispatch immediately instead of waiting for the Polling Consumer
+                    \App\Jobs\PersistMessageJob::dispatch($event['payload'])->onQueue('messages');
 
-                    if (!$id) {
-                        Log::error("WhatsApp Webhook: EventBus failed to publish Inbound Message Event", ['event' => $event]);
-                        throw new \Exception("EventBus failed to publish Inbound Message Event");
-                    }
+                    // Still publish to EventBus for audit/fan-out
+                    $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $teamId);
 
-                    Log::info("Published Inbound Event: {$id}");
+                    Log::info("Handled Inbound Message (Direct Dispatch): {$wamid}");
                 }
             }
 
@@ -156,16 +152,23 @@ class ProcessWebhookJob implements ShouldQueue
                     // Optional: Deduplicate status updates if needed, but usually idempotent updates are fine.
                     // We can check if the message is already in that status to save DB writes, but it's optimization, not critical reliability.
 
-                    $id = $eventBus->publish('whatsapp_events', 'message.status', [
+                    $payload = [
                         'provider_message_id' => $statusData['id'],
                         'status' => $statusData['status'],
                         'timestamp' => $statusData['timestamp'] ?? time(),
                         'details' => $statusData
-                    ], $teamId);
+                    ];
 
-                    if (!$id) {
-                        throw new \Exception("EventBus failed to publish Status Event for {$wamid}");
-                    }
+                    Log::debug("WhatsApp Webhook: Immediate Dispatch for Status Update", [
+                        'message_id' => $wamid,
+                        'status' => $newStatus
+                    ]);
+
+                    // ⚡ SPEED OPTIMIZATION: Dispatch immediately
+                    \App\Jobs\UpdateMessageStatusJob::dispatch($payload)->onQueue('messages');
+
+                    // Still publish to EventBus
+                    $eventBus->publish('whatsapp_events', 'message.status', $payload, $teamId);
                 }
             }
 

@@ -1,8 +1,10 @@
 <div class="flex flex-col flex-1 min-h-0 h-full relative bg-dots-pattern" x-data="{ 
         isTyping: false,
         typingUser: '',
+        isCustomerTyping: false,
         activeUsers: [],
         pChannel: null,
+        isDragging: false,
         lightboxOpen: false,
         lightboxImage: '',
         init() {
@@ -25,17 +27,28 @@
             })
             .listen('.MessageReceived', (e) => {
                 console.log('Front (pChannel): MessageReceived', e);
-                $store.chat.syncLatest();
+                if (e.message && e.message.conversation_id == {{ $conversationId }}) {
+                    $store.chat.receiveMessage(e.message);
+                }
             })
             .listen('.MessageStatusUpdated', (e) => {
                  console.log('Front (pChannel): MessageStatusUpdated', e);
                  if(e.message) {
                      let msg = $store.chat.messages.find(m => m.id === e.message.id);
-                     if(msg) msg.status = e.message.status;
+                     if(msg) {
+                         msg.status = e.message.status;
+                     } else {
+                         // If we missed the message arrival but got status, sync once
+                         $store.chat.syncLatest();
+                     }
                  }
             })
             .listenForWhisper('typing', (e) => {
-                if (e.id !== {{ auth()->id() }}) {
+                if (e.id === 'customer') {
+                    this.isCustomerTyping = true;
+                    if (this.customerTypingTimer) clearTimeout(this.customerTypingTimer);
+                    this.customerTypingTimer = setTimeout(() => this.isCustomerTyping = false, 3000);
+                } else if (e.id !== {{ auth()->id() }}) {
                     this.isTyping = true;
                     this.typingUser = e.name;
                     if (this.typingTimer) clearTimeout(this.typingTimer);
@@ -50,7 +63,7 @@
             channel.listen('.MessageReceived', (e) => { 
                 console.log('Front (Team): MessageReceived', e);
                 if (e.message && e.message.conversation_id == {{ $conversationId }}) {
-                    $store.chat.syncLatest(); 
+                    $store.chat.receiveMessage(e.message);
                 }
             });
 
@@ -58,7 +71,9 @@
                  console.log('Front (Team): MessageStatusUpdated', e);
                  if (e.message) {
                      let msg = $store.chat.messages.find(m => m.id === e.message.id);
-                     if (msg) msg.status = e.message.status;
+                     if (msg) {
+                         msg.status = e.message.status;
+                     }
                  }
             });
 
@@ -82,18 +97,8 @@
                 }
             });
         }
-    }" @play-sound.window="
-        document.getElementById('notification-sound').play().catch(error => {
-            console.log('Audio autoplay blocked until user interaction:', error);
-        });
-        if (Notification.permission === 'granted') {
-            new Notification('New Message', { body: 'You have received a new message.', icon: '/favicon.ico' });
-        } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission();
-        }
-    ">
-    <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"
-        preload="auto"></audio>
+    }"
+    @set-message-body.window="window.dispatchEvent(new CustomEvent('update-message-body', { detail: $event.detail }))">
 
     <!-- Connection Status Banner -->
     <div x-show="$store.chat.connectionState !== 'connected'" x-cloak x-transition
@@ -118,6 +123,40 @@
         </div>
     </div>
 
+    <style>
+        @keyframes waveform {
+
+            0%,
+            100% {
+                transform: scaleY(1);
+            }
+
+            50% {
+                transform: scaleY(2.5);
+            }
+        }
+
+        .animate-waveform {
+            animation: waveform 0.8s ease-in-out infinite;
+        }
+
+        .message-appear {
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+
     <!-- Header -->
     <div
         class="px-6 py-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10 sticky top-0 shadow-sm">
@@ -127,7 +166,7 @@
                 class="h-10 w-10 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-lg shadow-wa-teal/20 mr-4">
             <div>
                 <h2
-                    class="font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase text-sm mb-0.5">
+                    class="font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase text-sm mb-0.5 whitespace-nowrap">
                     {{ $conversation->contact->name ?? $conversation->contact->phone_number }}
                 </h2>
                 <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
@@ -138,60 +177,152 @@
                         <span x-text="typingUser"></span> IS TYPING...
                     </span>
 
-                    @if($conversation->contact->is_bot_paused)
-                        <span class="text-slate-300 dark:text-slate-700">|</span>
-                        <span class="flex items-center gap-1 text-rose-500 font-black">
-                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            BOT PAUSED
-                            @if($conversation->contact->bot_paused_reason)
-                                <span class="text-[8px] opacity-60">({{ $conversation->contact->bot_paused_reason }})</span>
-                            @endif
-                        </span>
-                    @else
-                        <span class="text-slate-300 dark:text-slate-700">|</span>
-                        <span class="flex items-center gap-1 text-emerald-500 font-black">
-                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            BOT ACTIVE
-                        </span>
-                    @endif
+                    <span x-show="isCustomerTyping" x-transition
+                        class="text-emerald-500 animate-bounce font-black flex items-center gap-1">
+                        CUSTOMER IS TYPING...
+                    </span>
+
+                    <template x-if="activeAgents.length > 1">
+                        <div
+                            class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                            <span class="relative flex h-1.5 w-1.5">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-wa-teal opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-wa-teal"></span>
+                            </span>
+                            <span x-text="activeAgents.length + ' AGENTS ONLINE'"></span>
+                        </div>
+                    </template>
 
                     @if($conversation->last_message_at)
-                        <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping">|</span>
+                        <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping && !isCustomerTyping">|</span>
                         <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}"
-                            x-show="!isTyping">
+                            x-show="!isTyping && !isCustomerTyping">
                             {{ $conversation->last_message_at->diffForHumans() }}
                         </span>
                     @endif
                 </div>
+
+                <!-- Active Tags -->
+                @php $activeTags = $conversation->metadata['tags'] ?? []; @endphp
+                <div class="flex flex-wrap gap-1 mt-1">
+                    @foreach($activeTags as $tagId)
+                        @php $category = collect($availableCategories)->firstWhere('id', $tagId); @endphp
+                        @if($category)
+                            <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shadow-sm"
+                                style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}30">
+                                {{ $category->name }}
+                            </span>
+                        @endif
+                    @endforeach
+                </div>
             </div>
         </div>
 
-        <!-- Multi-Agent Presence & Actions -->
+        <!-- Actions -->
         <div class="flex items-center gap-4">
-            <!-- Presence Pile -->
-            <div class="flex -space-x-2 overflow-hidden">
-                <template x-for="user in activeUsers" :key="user.id">
-                    <div class="relative group/avatar cursor-help">
-                        <img :src="user.profile_photo_url || `https://ui-avatars.com/api/?name=${user.name}&background=random`"
-                            :alt="user.name"
-                            class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-900"
-                            :title="user.name">
-                        <div
-                            class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white dark:border-slate-900">
+            <!-- Agent Presence Stacks -->
+            <div class="hidden lg:flex -space-x-2 overflow-hidden mr-2">
+                @foreach($activeAgents as $agent)
+                    @if($agent['id'] != Auth::id())
+                        <div class="inline-block h-8 w-8 rounded-full ring-4 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 border-2 border-wa-teal/20"
+                            title="{{ $agent['name'] }} viewing">
+                            <img class="h-full w-full rounded-full"
+                                src="https://api.dicebear.com/9.x/micah/svg?seed={{ $agent['name'] }}"
+                                alt="{{ $agent['name'] }}">
                         </div>
-                    </div>
-                </template>
+                    @endif
+                @endforeach
             </div>
 
-            <div class="flex items-center gap-3" x-data="{ showCloseModal: false }">
+            <!-- Tagging Action -->
+            <div x-data="{ showTags: false }" class="relative">
+                <button @click="showTags = !showTags"
+                    class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal/10 rounded-xl transition-all text-slate-500 hover:text-wa-teal border border-slate-100 dark:border-slate-700"
+                    title="Label Conversation">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                </button>
+                <div x-show="showTags" x-cloak @click.away="showTags = false"
+                    class="absolute top-12 right-0 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-56 animate-in fade-in zoom-in duration-200">
+                    <p
+                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                        Label Categories</p>
+                    <div class="space-y-1">
+                        @foreach($availableCategories as $category)
+                            <button wire:click="toggleCategory({{ $category->id }})"
+                                class="w-full flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors group">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full" style="background-color: {{ $category->color }}">
+                                    </div>
+                                    <span
+                                        class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $category->name }}</span>
+                                </div>
+                                @if(in_array($category->id, $activeTags))
+                                    <svg class="w-4 h-4 text-wa-teal" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                @endif
+                            </button>
+                        @endforeach
+                        @if($availableCategories->isEmpty())
+                            <p class="text-[10px] text-slate-400 italic p-2 line-height-relaxed">No categories defined.
+                                Configure them in Settings Hub.</p>
+                        @endif
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <a href="{{ route('settings.categories') }}" target="_blank"
+                            class="flex items-center gap-2 px-2 py-1.5 text-[10px] font-black text-wa-teal uppercase tracking-widest hover:bg-wa-teal/5 rounded-lg transition-all">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Manage Labels
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div x-data="{ showTransferModal: false }" class="relative">
+                <button @click="showTransferModal = !showTransferModal"
+                    class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
+                    title="Transfer Conversation">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                </button>
+                <!-- Transfer Modal -->
+                <div x-show="showTransferModal" x-cloak
+                    class="absolute top-12 right-0 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
+                    @click.away="showTransferModal = false">
+                    <p
+                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                        Assign to Agent</p>
+                    <div class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                        @foreach($this->agents as $agent)
+                            <button wire:click="transferConversation({{ $agent->id }})" @click="showTransferModal = false"
+                                class="w-full flex items-center gap-3 p-2 hover:bg-wa-teal/5 rounded-xl transition-colors text-left group">
+                                <div
+                                    class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:bg-wa-teal/10 group-hover:text-wa-teal">
+                                    {{ substr($agent->name, 0, 1) }}
+                                </div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $agent->name }}</span>
+                            </button>
+                        @endforeach
+                        @if($this->agents->isEmpty())
+                            <p class="text-[10px] text-slate-400 italic p-2">No other agents online.</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <livewire:chat.whatsapp-call-button :contact="$conversation->contact" :key="'call-' . $conversation->id" />
+
+            <div class="flex items-center gap-2" x-data="{ showCloseModal: false }">
                 <button @click="$dispatch('toggle-details')"
                     class="hidden xl:flex p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
                     title="Toggle Contact Info">
@@ -219,12 +350,10 @@
                     @endif
                 </button>
 
-                <span
-                    class="px-2 py-1 text-[9px] font-black rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 uppercase tracking-widest">{{ $conversation->status }}</span>
-
                 @if($conversation->status !== 'closed')
                     <button @click="showCloseModal = !showCloseModal"
-                        class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
+                        class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500"
+                        title="Close Conversation">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
@@ -263,7 +392,19 @@
             buffer: 5,
             viewportHeight: 0,
             scrollTop: 0,
+            isDragging: false,
              init() {
+                // Drag and Drop Listeners
+                window.addEventListener('dragover', (e) => { e.preventDefault(); this.isDragging = true; });
+                window.addEventListener('dragleave', (e) => { e.preventDefault(); if (e.relatedTarget === null) this.isDragging = false; });
+                window.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.isDragging = false;
+                    if (e.dataTransfer.files.length > 0) {
+                        @this.upload('newAttachment', e.dataTransfer.files[0]);
+                    }
+                });
+
                 $store.chat.init($wire, {{ $conversationId }});
                 this.viewportHeight = this.$el.clientHeight;
                 
@@ -345,8 +486,33 @@
             </span>
         </div>
 
-        <template x-for="message in visibleMessages" :key="message.id">
+        <!-- Drag and Drop Overlay -->
+        <div x-show="isDragging" x-cloak x-transition
+            class="absolute inset-0 z-50 bg-wa-teal/10 backdrop-blur-[2px] border-4 border-dashed border-wa-teal m-4 rounded-[2rem] flex flex-col items-center justify-center pointer-events-none">
+            <div class="p-6 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
+                <div
+                    class="w-16 h-16 bg-wa-teal/10 text-wa-teal rounded-full flex items-center justify-center animate-bounce">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                </div>
+                <p class="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Drop to upload
+                    media</p>
+            </div>
+        </div>
+
+        <template x-for="(message, index) in visibleMessages" :key="message.id">
             <div class="w-full">
+                <!-- Date Divider -->
+                <template x-if="$store.chat.shouldShowDateDivider(index)">
+                    <div class="flex justify-center my-8 sticky top-4 z-20">
+                        <span
+                            class="px-6 py-2 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-full text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] shadow-xl shadow-slate-200/20 dark:shadow-black/20 border border-white/20 dark:border-slate-800/50 transition-all hover:scale-105"
+                            x-text="$store.chat.getDateLabel(message.created_at)"></span>
+                    </div>
+                </template>
+
                 <!-- Call Log Entry -->
                 <template x-if="message.type === 'call_log'">
                     <div class="flex justify-center mb-8 px-4">
@@ -445,10 +611,41 @@
                     </div>
                 </template>
 
+                <!-- Internal Note -->
+                <template x-if="message.type === 'internal_note'">
+                    <div class="flex justify-center mb-6 px-10">
+                        <div
+                            class="px-6 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-2xl shadow-sm text-center relative max-w-md group">
+                            <div
+                                class="absolute -top-2 left-4 px-2 bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-400 text-[8px] font-black uppercase tracking-widest rounded-full">
+                                Internal Note
+                            </div>
+                            <p class="text-[11px] font-bold text-amber-900 dark:text-amber-200 leading-relaxed italic"
+                                x-text="message.content"></p>
+                            <div
+                                class="mt-1 text-[8px] font-black text-amber-600/50 uppercase tracking-widest flex items-center justify-center gap-2">
+                                <span x-text="message.metadata?.agent_name || 'System'"></span>
+                                <span>•</span>
+                                <span x-text="message.pretty_time"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
                 <!-- Standard Message Bubble -->
-                <template x-if="message.type !== 'call_log'">
-                    <div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6']">
-                        <div class="max-w-[85%] sm:max-w-[70%] group">
+                <template x-if="message.type !== 'call_log' && message.type !== 'internal_note'">
+                    <div
+                        :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 message-appear relative group/msg']">
+                        <!-- Reaction Picker (Hover) -->
+                        <div class="absolute -top-8 z-30 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-slate-700 rounded-full px-2 py-1"
+                            :class="message.is_outbound ? 'right-0' : 'left-0'">
+                            @foreach(['👍', '❤️', '😂', '😮', '😢', '🙏'] as $emoji)
+                                <button @click="$wire.addReaction(message.id, '{{ $emoji }}')"
+                                    class="hover:scale-125 transition-transform p-1 text-sm">{{ $emoji }}</button>
+                            @endforeach
+                        </div>
+
+                        <div class="max-w-[85%] sm:max-w-[70%] group relative">
                             <div :class="[
                             'relative p-3 px-4 transition-all hover:scale-[1.01] shadow-sm',
                             message.is_outbound 
@@ -540,7 +737,10 @@
                                                 </svg>
                                             </template>
                                             <template x-if="message.status === 'failed'">
-                                                <div class="group/error relative">
+                                                <div class="group/error relative flex items-center gap-1">
+                                                    <span
+                                                        class="text-[8px] font-black text-rose-300 uppercase cursor-pointer hover:underline"
+                                                        @click="$store.chat.retryMessage(message.id)">Retry</span>
                                                     <svg class="w-3 h-3 text-rose-300 cursor-help" fill="none"
                                                         stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -561,18 +761,33 @@
                                     </template>
                                 </div>
                             </div>
+
+                            <!-- Active Reactions -->
+                            <template
+                                x-if="message.metadata?.reactions && Object.keys(message.metadata.reactions).length > 0">
+                                <div class="absolute -bottom-3 flex flex-wrap gap-0.5"
+                                    :class="message.is_outbound ? 'right-2' : 'left-2'">
+                                    <template x-for="(emoji, agentId) in message.metadata.reactions">
+                                        <div class="bg-white dark:bg-slate-700 shadow-md border border-slate-100 dark:border-slate-600 rounded-full px-1.5 py-0.5 text-[10px] transform hover:scale-110 transition-transform cursor-pointer"
+                                            :title="'Agent ' + agentId">
+                                            <span x-text="emoji"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </div>
-                </template>
             </div>
         </template>
-
-        <div :style="{ height: renderConfig.bottom + 'px' }"></div>
     </div>
+    </template>
 
-    <!-- Input Area -->
-            <div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10 shrink-0"
-                x-data="{
+    <div :style="{ height: renderConfig.bottom + 'px' }"></div>
+</div>
+
+<!-- Input Area -->
+<div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10 shrink-0"
+    x-data="{
             msgBody: '',
             showAttach: false,
             showEmoji: false,
@@ -599,8 +814,17 @@
                 this.msgBody = (this.msgBody || '') + emoji;
                 this.showEmoji = false;
             },
-            async handleSubmit() {
+             async handleSubmit() {
                 if (this.msgBody.trim() === '' && !$wire.newAttachment) return;
+
+                // Handle Internal Note
+                if (this.isNoteMode) {
+                    $wire.set('messageBody', this.msgBody);
+                    await $wire.saveInternalNote();
+                    this.msgBody = '';
+                    this.isNoteMode = false;
+                    return;
+                }
 
                 // Check for attachment (Legacy Path)
                 if ($wire.newAttachment) {
@@ -614,704 +838,835 @@
                 const body = this.msgBody;
                 this.msgBody = ''; // Clear immediately
                 $store.chat.sendMessage(body);
+            },
+            isNoteMode: false,
+            isRecording: false,
+            recordingTime: '0:00',
+            mediaRecorder: null,
+            audioChunks: [],
+            init() {
+                window.addEventListener('update-message-body', (e) => {
+                    this.msgBody = e.detail.body;
+                    $refs.messageInput.focus();
+                });
+            },
+            async startRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.mediaRecorder = new MediaRecorder(stream);
+                    this.audioChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (e) => {
+                        this.audioChunks.push(e.data);
+                    };
+
+                    this.mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
+                        if (this.shouldSendRecording) {
+                           // Upload to Livewire
+                           @this.upload('newAttachment', audioBlob, (uploadedFilename) => {
+                               @this.sendVoiceNote(uploadedFilename);
+                           });
+                        }
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+                    this.shouldSendRecording = false;
+
+                    let sec = 0;
+                    this.recInterval = setInterval(() => {
+                        sec++;
+                        let m = Math.floor(sec / 60);
+                        let s = sec % 60;
+                        this.recordingTime = `${m}:${s < 10 ? '0' : ''}${s}`;
+                    }, 1000);
+                } catch (err) {
+                    alert('Could not access microphone: ' + err.message);
+                }
+            },
+            stopRecording(send = true) {
+                this.isRecording = false;
+                this.shouldSendRecording = send;
+                if (this.mediaRecorder) {
+                    this.mediaRecorder.stop();
+                }
+                clearInterval(this.recInterval);
             }
-         }">
+         }" x-init="init()">
 
-                @if($isSessionOpen)
+    @if($isSessionOpen)
 
-                    <!-- File Preview -->
-                    @if($newAttachment)
-                        <div
-                            class="mb-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-between animate-in slide-in-from-bottom-2">
-                            <div class="flex items-center gap-3">
-                                @if(Str::startsWith($newAttachment->getMimeType(), 'image'))
-                                    <img src="{{ $newAttachment->temporaryUrl() }}" class="h-12 w-12 rounded-lg object-cover">
-                                @else
-                                    <div class="h-12 w-12 bg-white dark:bg-slate-700 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                @endif
-                                <div>
-                                    <p class="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                        {{ $newAttachment->getClientOriginalName() }}
-                                    </p>
-                                    <p class="text-[10px] text-slate-500">
-                                        {{ number_format($newAttachment->getSize() / 1024, 1) }} KB
-                                    </p>
-                                </div>
-                            </div>
-                            <button wire:click="deleteAttachment"
-                                class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-500 transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+        <!-- File Preview -->
+        @if($newAttachment)
+            <div
+                class="mb-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-between animate-in slide-in-from-bottom-2">
+                <div class="flex items-center gap-3">
+                    @if(Str::startsWith($newAttachment->getMimeType(), 'image'))
+                        <img src="{{ $newAttachment->temporaryUrl() }}" class="h-12 w-12 rounded-lg object-cover">
+                    @else
+                        <div class="h-12 w-12 bg-white dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                         </div>
                     @endif
-
-                    <form @submit.prevent="handleSubmit" class="flex items-center gap-2 relative">
-
-                        <!-- Lock Banner -->
-                        <div x-show="$store.chat.isLockedForMe()" x-transition x-cloak
-                            class="absolute bottom-full left-0 w-full mb-4 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs z-20">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                                <span class="font-bold text-slate-500">
-                                    Reply Locked: <span class="text-slate-800 dark:text-slate-200"
-                                        x-text="$store.chat.lockedBy ? $store.chat.lockedBy.name : 'Another Agent'"></span>
-                                    is writing...
-                                </span>
-                            </div>
-                            <button type="button" @click="$store.chat.takeOver()"
-                                class="text-wa-teal font-bold hover:underline">
-                                Take Over
-                            </button>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            {{ $newAttachment->getClientOriginalName() }}
+                        </p>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 h-1 rounded-full mt-1 overflow-hidden"
+                            wire:loading.class="animate-pulse">
+                            <div class="bg-wa-teal h-full transition-all duration-300" style="width: 100%"></div>
                         </div>
-
-                        <!-- Hidden File Input -->
-                        <input type="file" wire:model="newAttachment" class="hidden" x-ref="fileInput"
-                            x-on:livewire-upload-error="uploadError = 'File upload failed. The file may be too large (Server Limit) or the format is invalid.'; showUploadErrorModal = true;"
-                            accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-
-                        <!-- Attach Button (Popover) -->
-                        <div class="relative">
-                            <button type="button" @click="if(!$store.chat.isLockedForMe()) showAttach = !showAttach"
-                                :disabled="$store.chat.isLockedForMe()"
-                                :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed' : 'hover:text-wa-teal hover:bg-wa-teal/5'"
-                                class="p-3 text-slate-400 rounded-xl transition-all">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                </svg>
-                            </button>
-                            <!-- ... attach menu ... -->
-                            <div x-show="showAttach" @click.away="showAttach = false" x-cloak
-                                class="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-2 overflow-hidden animate-in slide-in-from-bottom-2 z-50">
-                                <button type="button" @click="$refs.fileInput.click(); showAttach = false"
-                                    class="flex items-center gap-3 w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-left">
-                                    <div
-                                        class="h-8 w-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Document/Media</span>
-                                </button>
-
-                                <button type="button" wire:click="openInteractiveButtonsModal" @click="showAttach = false"
-                                    class="flex items-center gap-3 w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-left">
-                                    <div
-                                        class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                                        </svg>
-                                    </div>
-                                    <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Quick Buttons</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Emoji Button -->
-                        <div class="relative">
-                            <button type="button" @click="if(!$store.chat.isLockedForMe()) showEmoji = !showEmoji"
-                                :disabled="$store.chat.isLockedForMe()"
-                                :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed' : 'hover:text-wa-teal hover:bg-wa-teal/5'"
-                                class="p-3 text-slate-400 rounded-xl transition-all">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </button>
-                            <div x-show="showEmoji" @click.away="showEmoji = false" x-cloak
-                                class="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-3 grid grid-cols-6 gap-1 animate-in slide-in-from-bottom-2 max-h-48 overflow-y-auto custom-scrollbar z-50">
-                                @foreach(['😀', '😂', '😍', '😭', '👍', '🙏', '🔥', '🎉', '❤️', '👋', '🤔', '🤝', '✅', '❌', '💪', '✨', '🚫', '⚠️'] as $em)
-                                    <button type="button" @click="insertEmoji('{{ $em }}')"
-                                        class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-xl transition-colors">{{ $em }}</button>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <!-- Input Field -->
-                        <div class="flex-1 relative group">
-                            <textarea x-model="msgBody" @keydown.enter.prevent="handleSubmit" x-ref="messageInput"
-                                @focus="$store.chat.requestLock()" @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
-                                @keyup="checkQR(); pChannel.whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()"
-                                placeholder="Type a message (or / for templates)..." rows="1"
-                                :disabled="$store.chat.isLockedForMe()"
-                                :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50'"
-                                class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
-                                style="min-height: 56px;"></textarea>
-
-                            <!-- Quick Replies Popover -->
-                            <div x-show="showQR" @click.away="showQR = false" x-transition x-cloak
-                                class="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50">
-                                <div
-                                    class="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Quick Replies
-                                </div>
-                                <div class="max-h-60 overflow-y-auto">
-                                    <template
-                                        x-for="qr in quickReplies.filter(q => q.code.toLowerCase().includes(qrFilter) || q.text.toLowerCase().includes(qrFilter))"
-                                        :key="qr.code">
-                                        <button type="button" @click="selectQR(qr.text)"
-                                            class="w-full text-left px-4 py-3 hover:bg-wa-teal/5 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0 flex flex-col">
-                                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200"
-                                                x-text="'/' + qr.code"></span>
-                                            <span class="text-[10px] text-slate-500 truncate" x-text="qr.text"></span>
-                                        </button>
-                                    </template>
-                                    <div x-show="quickReplies.filter(q => q.code.toLowerCase().includes(qrFilter) || q.text.toLowerCase().includes(qrFilter)).length === 0"
-                                        class="p-4 text-center text-xs text-slate-400 italic">
-                                        No matching replies...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" :disabled="$store.chat.isLockedForMe()"
-                            :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-400' : 'bg-slate-900 dark:bg-wa-teal hover:scale-105 active:scale-95 shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20'"
-                            class="h-14 w-14 flex items-center justify-center text-white rounded-[1.5rem] transition-all group"
-                            wire:loading.attr="disabled">
-                            <svg class="w-5 h-5 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
-                        </button>
-                    </form>
-                @else
-
-                    <div
-                        class="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-200 dark:border-slate-700 text-center space-y-4">
-                        <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-500">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white mb-1">
-                                Session
-                                Expired</p>
-                            <p class="text-xs font-bold text-slate-500 max-w-xs mx-auto">The 24-hour service window has
-                                closed. Use
-                                an approved template to re-initiate contact.</p>
-                        </div>
-                        <button wire:click="openTemplateList"
-                            class="px-6 py-3 bg-wa-teal hover:bg-wa-teal/90 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Start New Conversation
-                        </button>
                     </div>
-                @endif
+                </div>
+                <button wire:click="deleteAttachment"
+                    class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-500 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        @endif
+
+        <!-- Voice Recording Overlay -->
+        <div x-show="isRecording" x-cloak x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+            class="mb-4 p-5 bg-gradient-to-r from-rose-600 to-rose-500 text-white rounded-[2.5rem] flex items-center justify-between shadow-2xl shadow-rose-500/20 relative overflow-hidden">
+            <!-- Waveform Decoration -->
+            <div class="absolute inset-0 opacity-10 flex items-center justify-center gap-1 pointer-events-none">
+                @foreach(range(1, 20) as $i)
+                    <div class="w-1 bg-white rounded-full animate-waveform"
+                        style="height: {{ rand(20, 80) }}%; animation-delay: {{ $i * 0.1 }}s"></div>
+                @endforeach
             </div>
 
-            <!-- Template List Modal -->
-            @if($showTemplateListModal)
-                @teleport('body')
-                <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data
-                    @keydown.escape.window="$wire.closeTemplateModals()">
-                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeTemplateModals"></div>
+            <div class="flex items-center gap-5 z-10">
+                <div class="relative">
+                    <div class="w-3 h-3 rounded-full bg-white animate-ping"></div>
+                    <div class="absolute inset-0 w-3 h-3 rounded-full bg-white"></div>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-rose-100">Live Recording</span>
+                    <span class="text-lg font-mono font-black tabular-nums" x-text="recordingTime">0:00</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 z-10">
+                <button @click="stopRecording(false)"
+                    class="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all hover:rotate-90">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <button @click="stopRecording(true)"
+                    class="px-8 py-3 bg-white text-rose-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all">
+                    Send Note
+                </button>
+            </div>
+        </div>
+
+        <form @submit.prevent="handleSubmit" class="flex items-center gap-2 relative">
+
+            <!-- Lock Banner -->
+            <div x-show="$store.chat.isLockedForMe()" x-transition x-cloak
+                class="absolute bottom-full left-0 w-full mb-4 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs z-20">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span class="font-bold text-slate-500">
+                        Reply Locked: <span class="text-slate-800 dark:text-slate-200"
+                            x-text="$store.chat.lockedBy ? $store.chat.lockedBy.name : 'Another Agent'"></span>
+                        is writing...
+                    </span>
+                </div>
+                <button type="button" @click="$store.chat.takeOver()" class="text-wa-teal font-bold hover:underline">
+                    Take Over
+                </button>
+            </div>
+
+            <!-- Hidden File Input -->
+            <input type="file" wire:model="newAttachment" class="hidden" x-ref="fileInput"
+                x-on:livewire-upload-error="uploadError = 'File upload failed. The file may be too large (Server Limit) or the format is invalid.'; showUploadErrorModal = true;"
+                accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+
+            <!-- Attach Button (Popover) -->
+            <div class="relative">
+                <button type="button" @click="if(!$store.chat.isLockedForMe()) showAttach = !showAttach"
+                    :disabled="$store.chat.isLockedForMe()"
+                    :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed' : 'hover:text-wa-teal hover:bg-wa-teal/5'"
+                    class="p-3 text-slate-400 rounded-xl transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                </button>
+                <!-- ... attach menu ... -->
+                <div x-show="showAttach" @click.away="showAttach = false" x-cloak
+                    class="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-2 overflow-hidden animate-in slide-in-from-bottom-2 z-50">
+                    <button type="button" @click="$refs.fileInput.click(); showAttach = false"
+                        class="flex items-center gap-3 w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-left">
+                        <div class="h-8 w-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Document/Media</span>
+                    </button>
+
+                    <button type="button" wire:click="openInteractiveButtonsModal" @click="showAttach = false"
+                        class="flex items-center gap-3 w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-left">
+                        <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Quick Buttons</span>
+                    </button>
+
+                    <button type="button" @click="isNoteMode = !isNoteMode; showAttach = false"
+                        class="flex items-center gap-3 w-full p-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-left">
+                        <div class="h-8 w-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Internal Note</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Emoji Button -->
+            <div class="relative">
+                <button type="button" @click="if(!$store.chat.isLockedForMe()) showEmoji = !showEmoji"
+                    :disabled="$store.chat.isLockedForMe()"
+                    :class="$store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed' : 'hover:text-wa-teal hover:bg-wa-teal/5'"
+                    class="p-3 text-slate-400 rounded-xl transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+                <div x-show="showEmoji" @click.away="showEmoji = false" x-cloak
+                    class="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-3 grid grid-cols-6 gap-1 animate-in slide-in-from-bottom-2 max-h-48 overflow-y-auto custom-scrollbar z-50">
+                    @foreach(['😀', '😂', '😍', '😭', '👍', '🙏', '🔥', '🎉', '❤️', '👋', '🤔', '🤝', '✅', '❌', '💪', '✨', '🚫', '⚠️'] as $em)
+                        <button type="button" @click="insertEmoji('{{ $em }}')"
+                            class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-xl transition-colors">{{ $em }}</button>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Input Field -->
+            <div class="flex-1 relative group">
+                <!-- AI Draft Button -->
+                <button type="button" wire:click="draftAIResponse" wire:loading.attr="disabled"
+                    class="absolute -top-14 right-0 p-3 bg-gradient-to-tr from-wa-teal to-sky-400 text-white rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group/ai overflow-hidden">
+                    <!-- AI Particle Effect -->
                     <div
-                        class="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <!-- Modal Header -->
-                        <div class="p-8 pb-0 flex justify-between items-center">
-                            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                Approved <span class="text-wa-teal">Templates</span>
-                            </h2>
-                            <button wire:click="closeTemplateModals"
-                                class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                        class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/ai:translate-x-[100%] transition-transform duration-700 skew-x-12">
+                    </div>
+
+                    <div wire:loading.remove wire:target="draftAIResponse" class="flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 11-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM11 2a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0V6h-1a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span>Draft with AI</span>
+                    </div>
+
+                    <div wire:loading wire:target="draftAIResponse" class="flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        <span>Thinking...</span>
+                    </div>
+                </button>
+
+                <template x-if="isNoteMode">
+                    <div
+                        class="absolute -top-6 left-6 px-3 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest rounded-t-lg border-t border-x border-amber-200 dark:border-amber-800">
+                        NOTE MODE
+                    </div>
+                </template>
+                <textarea x-model="msgBody" @keydown.enter.prevent="handleSubmit" x-ref="messageInput"
+                    @focus="$store.chat.requestLock()" @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
+                    @keyup="checkQR(); pChannel.whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()"
+                    placeholder="Type a message (or / for templates)..." rows="1" :disabled="$store.chat.isLockedForMe()"
+                    :class="[
+                                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                        ]"
+                    class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
+                    style="min-height: 56px;"></textarea>
+
+                <!-- Quick Replies Popover -->
+                <div x-show="showQR" @click.away="showQR = false" x-transition x-cloak
+                    class="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50">
+                    <div
+                        class="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Quick Replies
+                    </div>
+                    <div class="max-h-60 overflow-y-auto">
+                        <template
+                            x-for="qr in quickReplies.filter(q => q.code.toLowerCase().includes(qrFilter) || q.text.toLowerCase().includes(qrFilter))"
+                            :key="qr.code">
+                            <button type="button" @click="selectQR(qr.text)"
+                                class="w-full text-left px-4 py-3 hover:bg-wa-teal/5 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0 flex flex-col">
+                                <span class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                                    x-text="'/' + qr.code"></span>
+                                <span class="text-[10px] text-slate-500 truncate" x-text="qr.text"></span>
                             </button>
-                        </div>
-
-                        <!-- Search -->
-                        <div class="p-8 pt-4">
-                            <div class="relative">
-                                <input type="text" wire:model.live.debounce.300ms="templateSearch"
-                                    placeholder="Search templates..."
-                                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400">
-                                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        <!-- List - Scrollable Area -->
-                        <div class="px-8 pb-8 overflow-y-scroll max-h-[400px]"
-                            style="scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / 0.5) transparent;">
-                            <div class="space-y-3">
-                                @forelse($this->filtered_templates as $template)
-                                    <button wire:click="selectTemplate({{ $template->id }})"
-                                        class="w-full text-left p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl hover:bg-wa-teal/5 dark:hover:bg-wa-teal/10 transition-colors group border border-slate-100 dark:border-slate-700">
-                                        <div class="flex items-start justify-between gap-4">
-                                            <div class="flex-1 min-w-0">
-                                                <div class="flex items-center gap-3 mb-2">
-                                                    <h3
-                                                        class="text-sm font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors truncate">
-                                                        {{ $template->name }}
-                                                    </h3>
-                                                    <span
-                                                        class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal border border-wa-teal/20 rounded text-[9px] font-black uppercase tracking-widest shrink-0">
-                                                        {{ $template->status }}
-                                                    </span>
-                                                </div>
-                                                <div class="flex items-center gap-3">
-                                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                                                        {{ $template->category }}
-                                                    </span>
-                                                    <span class="text-slate-300 dark:text-slate-700">•</span>
-                                                    <span
-                                                        class="text-[10px] font-bold text-slate-500 dark:text-slate-400">{{ $template->language }}</span>
-                                                </div>
-                                            </div>
-                                            <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors shrink-0 mt-1"
-                                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </div>
-                                    </button>
-                                @empty
-                                    <div class="py-12 text-center">
-                                        <div
-                                            class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-800 mb-4">
-                                            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                        <p class="text-slate-500 font-medium text-sm">No templates found matching your search.
-                                        </p>
-                                    </div>
-                                @endforelse
-                            </div>
+                        </template>
+                        <div x-show="quickReplies.filter(q => q.code.toLowerCase().includes(qrFilter) || q.text.toLowerCase().includes(qrFilter)).length === 0"
+                            class="p-4 text-center text-xs text-slate-400 italic">
+                            No matching replies...
                         </div>
                     </div>
                 </div>
-                @endteleport
-            @endif
+            </div>
 
+            <button type="submit" :disabled="$store.chat.isLockedForMe()"
+                class="h-14 w-14 flex items-center justify-center text-white rounded-[1.5rem] transition-all group"
+                :class="msgBody.trim() || $wire.newAttachment ? 'bg-wa-teal shadow-wa-teal/20' : 'bg-slate-900 shadow-slate-900/10 hover:scale-105 active:scale-95'"
+                wire:loading.attr="disabled">
+                <template x-if="msgBody.trim() || $wire.newAttachment || isNoteMode">
+                    <svg class="w-5 h-5 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                </template>
+                <template x-if="!msgBody.trim() && !$wire.newAttachment && !isNoteMode">
+                    <svg @click.prevent="startRecording()" class="w-5 h-5" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                </template>
+            </button>
+        </form>
+    @else
 
-            <!-- Template Preview Modal -->
-            @if($showTemplatePreviewModal && $selectedTemplate)
-                @teleport('body')
-                <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm shadow-2xl"
-                    x-data @keydown.escape.window="$wire.closeTemplateModals()">
-                    <div
-                        class="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
-                        <!-- Header -->
-                        <div
-                            class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <div>
-                                <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Template
-                                    Message</h2>
-                                <p class="text-sm font-medium text-slate-500">Review and customize your message before
-                                    sending.</p>
-                            </div>
-                            <button wire:click="closeTemplateModals"
-                                class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800 rounded-xl">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+        <div
+            class="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-200 dark:border-slate-700 text-center space-y-4">
+            <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white mb-1">
+                    Session
+                    Expired</p>
+                <p class="text-xs font-bold text-slate-500 max-w-xs mx-auto">The 24-hour service window has
+                    closed. Use
+                    an approved template to re-initiate contact.</p>
+            </div>
+            <button wire:click="openTemplateList"
+                class="px-6 py-3 bg-wa-teal hover:bg-wa-teal/90 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Start New Conversation
+            </button>
+        </div>
+    @endif
+</div>
 
-                        <div class="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
-                            <!-- Left: Variables Input -->
-                            <div
-                                class="p-8 overflow-y-scroll max-h-[500px] border-r border-slate-100 dark:border-slate-800">
-                                <section class="mb-8">
-                                    <h3
-                                        class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        Rich Assets
-                                    </h3>
+<!-- Template List Modal -->
+@if($showTemplateListModal)
+    @teleport('body')
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data
+        @keydown.escape.window="$wire.closeTemplateModals()">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeTemplateModals"></div>
+        <div
+            class="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Modal Header -->
+            <div class="p-8 pb-0 flex justify-between items-center">
+                <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    Approved <span class="text-wa-teal">Templates</span>
+                </h2>
+                <button wire:click="closeTemplateModals"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-                                    @php
-                                        $header = $this->getTemplateComponent('HEADER');
-                                    @endphp
-
-                                    @if($this->hasMediaHeader)
-                                        <div class="space-y-4">
-                                            <div class="p-4 bg-wa-teal/5 border border-wa-teal/10 rounded-2xl">
-                                                <label
-                                                    class="block text-xs font-black text-wa-teal uppercase tracking-widest mb-2">
-                                                    {{ $header['format'] }} Header URL
-                                                </label>
-                                                <input type="url" wire:model.live="templateMediaUrl"
-                                                    class="w-full px-4 py-3 bg-white dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-wa-teal/20"
-                                                    placeholder="https://example.com/image.jpg">
-                                                <p class="text-[10px] text-slate-400 mt-2 italic font-medium">Link a direct URL
-                                                    for the {{ strtolower($header['format']) }} header.</p>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <div
-                                            class="p-6 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center opacity-60">
-                                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Media
-                                                Header Required</p>
-                                        </div>
-                                    @endif
-                                </section>
-
-                                <section>
-                                    <h3
-                                        class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Message Parameters
-                                    </h3>
-
-                                    <div class="space-y-6">
-                                        @if(empty($templateVariables))
-                                            <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-center">
-                                                <p class="text-sm font-bold text-slate-500">No variables required</p>
-                                                <p class="text-xs text-slate-400 mt-1">This protocol contains no dynamic
-                                                    segments.</p>
-                                            </div>
-                                        @else
-                                            @foreach($templateVariables as $key => $value)
-                                                <div class="space-y-2">
-                                                    <label
-                                                        class="text-xs font-bold text-slate-700 dark:text-slate-300 flex justify-between items-center">
-                                                        <span>Variable {{ '{' . '{' . $key . '}' . '}' }}</span>
-                                                        <span class="text-[10px] text-slate-400 font-mono">Slot {{ $key }}</span>
-                                                    </label>
-                                                    <input type="text" wire:model.live="templateVariables.{{ $key }}"
-                                                        class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
-                                                        placeholder="Enter value for {{ '{' . '{' . $key . '}' . '}' }}...">
-                                                </div>
-                                            @endforeach
-                                        @endif
-                                    </div>
-                                </section>
-                            </div>
-
-                            <!-- Right: Preview -->
-                            <div
-                                class="p-8 bg-slate-100 dark:bg-slate-950/50 overflow-y-auto max-h-[500px] flex flex-col items-center justify-center">
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">
-                                    Transmission Preview</p>
-
-                                <!-- Preview Device Mockup -->
-                                <div
-                                    class="w-full max-w-[320px] bg-white dark:bg-[#0b141a] rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative transform scale-95 transition-transform">
-                                    <!-- WhatsApp Header Mock -->
-                                    <div class="bg-[#008069] h-12 w-full flex items-center px-4 gap-3">
-                                        <div class="w-7 h-7 rounded-full bg-white/20"></div>
-                                        <div class="h-1.5 w-24 bg-white/20 rounded"></div>
-                                    </div>
-
-                                    <!-- Chat Area -->
-                                    <div
-                                        class="p-4 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat min-h-[400px] flex flex-col">
-
-                                        <!-- Message Bubble -->
-                                        <div
-                                            class="bg-white dark:bg-[#202c33] p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[95%] self-start relative border border-white dark:border-slate-800">
-                                            <!-- Header Media Preview -->
-                                            @if($this->hasMediaHeader)
-                                                <div class="mb-2 shrink-0">
-                                                    @if($templateMediaUrl)
-                                                        @if($header['format'] === 'IMAGE')
-                                                            <img src="{{ $templateMediaUrl }}"
-                                                                class="w-full aspect-video object-cover rounded-lg shadow-inner">
-                                                        @else
-                                                            <div
-                                                                class="w-full aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700">
-                                                                <svg class="w-8 h-8 text-slate-300 mb-2" fill="none"
-                                                                    stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2"
-                                                                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                                </svg>
-                                                                <span
-                                                                    class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ $header['format'] }}
-                                                                    ATTACHED</span>
-                                                            </div>
-                                                        @endif
-                                                    @else
-                                                        <div
-                                                            class="w-full aspect-video bg-slate-50 dark:bg-slate-800/50 rounded-lg flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 opacity-40">
-                                                            <span
-                                                                class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Awaiting
-                                                                Media URL</span>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            @endif
-
-                                            <h4
-                                                class="font-black text-[10px] text-wa-teal uppercase tracking-widest mb-1 pb-1 border-b border-wa-teal/5">
-                                                {{ $selectedTemplate->name }}
-                                            </h4>
-
-                                            <p
-                                                class="text-[11px] text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed">
-                                                {{ $this->live_preview_text }}
-                                            </p>
-
-                                            <!-- Footer -->
-                                            @if($footerComp = $this->getTemplateComponent('FOOTER'))
-                                                <p
-                                                    class="text-[9px] text-slate-400 mt-2 italic border-t border-slate-50 dark:border-slate-800 pt-1">
-                                                    {{ $footerComp['text'] }}
-                                                </p>
-                                            @endif
-
-                                            <div class="mt-1.5 flex justify-end">
-                                                <span class="text-[8px] text-slate-400">12:00 PM</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Buttons Preview -->
-                                        @if($buttonComp = $this->getTemplateComponent('BUTTONS'))
-                                            <div class="mt-2 space-y-1 w-full max-w-[95%]">
-                                                @foreach($buttonComp['buttons'] as $btn)
-                                                    <div
-                                                        class="bg-white/90 dark:bg-[#202c33]/90 rounded-xl py-2 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-800 shadow-sm backdrop-blur-sm">
-                                                        @if(($btn['type'] ?? '') === 'URL') <svg class="w-3 h-3 text-wa-teal"
-                                                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                            </svg>
-                                                        @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER') <svg
-                                                                class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                            </svg>
-                                                        @endif
-                                                        <span
-                                                            class="text-[10px] font-black text-wa-teal uppercase tracking-widest text-center">{{ $btn['text'] }}</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Footer -->
-                        <div
-                            class="px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3">
-                            <button wire:click="closeTemplateModals"
-                                class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-500 font-bold uppercase tracking-widest text-xs rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
-                                Cancel
-                            </button>
-                            <button wire:click="sendTemplateWithVariables"
-                                class="px-8 py-3 bg-wa-teal hover:bg-wa-teal/90 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                                Send Template
-                            </button>
-                        </div>
-                    </div>
+            <!-- Search -->
+            <div class="p-8 pt-4">
+                <div class="relative">
+                    <input type="text" wire:model.live.debounce.300ms="templateSearch" placeholder="Search templates..."
+                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400">
+                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                 </div>
-                @endteleport
-            @endif
-            <!-- Interactive Buttons Modal -->
-            @if($showInteractiveButtonsModal)
-                @teleport('body')
-                <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm shadow-2xl"
-                    x-data @keydown.escape.window="$wire.set('showInteractiveButtonsModal', false)">
-                    <div
-                        class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-                        <!-- Header -->
-                        <div
-                            class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <div>
-                                <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Quick
-                                    <span class="text-wa-teal">Buttons</span>
-                                </h2>
-                                <p class="text-sm font-medium text-slate-500">Send up to 3 interactive reply buttons.</p>
-                            </div>
-                            <button wire:click="$set('showInteractiveButtonsModal', false)"
-                                class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800 rounded-xl">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+            </div>
 
-                        <div class="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
-                            <!-- Left: Configuration -->
-                            <div class="p-8 overflow-y-auto space-y-6 border-r border-slate-100 dark:border-slate-800">
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Message
-                                        Body</label>
-                                    <textarea wire:model="buttonBody" rows="4"
-                                        class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
-                                        placeholder="Enter your message text..."></textarea>
-                                    @error('buttonBody') <span
-                                        class="text-[10px] font-bold text-rose-500">{{ $message }}</span>
-                                    @enderror
+            <!-- List - Scrollable Area -->
+            <div class="px-8 pb-8 overflow-y-scroll max-h-[400px]"
+                style="scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / 0.5) transparent;">
+                <div class="space-y-3">
+                    @forelse($this->filtered_templates as $template)
+                        <button wire:click="selectTemplate({{ $template->id }})"
+                            class="w-full text-left p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl hover:bg-wa-teal/5 dark:hover:bg-wa-teal/10 transition-colors group border border-slate-100 dark:border-slate-700">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3
+                                            class="text-sm font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors truncate">
+                                            {{ $template->name }}
+                                        </h3>
+                                        <span
+                                            class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal border border-wa-teal/20 rounded text-[9px] font-black uppercase tracking-widest shrink-0">
+                                            {{ $template->status }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                            {{ $template->category }}
+                                        </span>
+                                        <span class="text-slate-300 dark:text-slate-700">•</span>
+                                        <span
+                                            class="text-[10px] font-bold text-slate-500 dark:text-slate-400">{{ $template->language }}</span>
+                                    </div>
                                 </div>
+                                <svg class="w-5 h-5 text-slate-400 group-hover:text-wa-teal transition-colors shrink-0 mt-1"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </div>
+                        </button>
+                    @empty
+                        <div class="py-12 text-center">
+                            <div
+                                class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-800 mb-4">
+                                <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <p class="text-slate-500 font-medium text-sm">No templates found matching your search.
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+    @endteleport
+@endif
 
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between">
+
+<!-- Template Preview Modal -->
+@if($showTemplatePreviewModal && $selectedTemplate)
+    @teleport('body')
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm shadow-2xl"
+        x-data @keydown.escape.window="$wire.closeTemplateModals()">
+        <div
+            class="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Header -->
+            <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Template
+                        Message</h2>
+                    <p class="text-sm font-medium text-slate-500">Review and customize your message before
+                        sending.</p>
+                </div>
+                <button wire:click="closeTemplateModals"
+                    class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+                <!-- Left: Variables Input -->
+                <div class="p-8 overflow-y-scroll max-h-[500px] border-r border-slate-100 dark:border-slate-800">
+                    <section class="mb-8">
+                        <h3
+                            class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Rich Assets
+                        </h3>
+
+                        @php
+                            $header = $this->getTemplateComponent('HEADER');
+                        @endphp
+
+                        @if($this->hasMediaHeader)
+                            <div class="space-y-4">
+                                <div class="p-4 bg-wa-teal/5 border border-wa-teal/10 rounded-2xl">
+                                    <label class="block text-xs font-black text-wa-teal uppercase tracking-widest mb-2">
+                                        {{ $header['format'] }} Header URL
+                                    </label>
+                                    <input type="url" wire:model.live="templateMediaUrl"
+                                        class="w-full px-4 py-3 bg-white dark:bg-slate-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-wa-teal/20"
+                                        placeholder="https://example.com/image.jpg">
+                                    <p class="text-[10px] text-slate-400 mt-2 italic font-medium">Link a direct URL
+                                        for the {{ strtolower($header['format']) }} header.</p>
+                                </div>
+                            </div>
+                        @else
+                            <div
+                                class="p-6 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center opacity-60">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Media
+                                    Header Required</p>
+                            </div>
+                        @endif
+                    </section>
+
+                    <section>
+                        <h3
+                            class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Message Parameters
+                        </h3>
+
+                        <div class="space-y-6">
+                            @if(empty($templateVariables))
+                                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-center">
+                                    <p class="text-sm font-bold text-slate-500">No variables required</p>
+                                    <p class="text-xs text-slate-400 mt-1">This protocol contains no dynamic
+                                        segments.</p>
+                                </div>
+                            @else
+                                @foreach($templateVariables as $key => $value)
+                                    <div class="space-y-2">
                                         <label
-                                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buttons
-                                            ({{ count($interactiveButtons) }}/3)</label>
-                                        @if(count($interactiveButtons) < 3)
-                                            <button type="button" wire:click="addInteractiveButton"
-                                                class="text-xs font-bold text-wa-teal hover:underline">+ Add Button</button>
+                                            class="text-xs font-bold text-slate-700 dark:text-slate-300 flex justify-between items-center">
+                                            <span>Variable {{ '{' . '{' . $key . '}' . '}' }}</span>
+                                            <span class="text-[10px] text-slate-400 font-mono">Slot {{ $key }}</span>
+                                        </label>
+                                        <input type="text" wire:model.live="templateVariables.{{ $key }}"
+                                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
+                                            placeholder="Enter value for {{ '{' . '{' . $key . '}' . '}' }}...">
+                                    </div>
+                                @endforeach
+                            @endif
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right: Preview -->
+                <div
+                    class="p-8 bg-slate-100 dark:bg-slate-950/50 overflow-y-auto max-h-[500px] flex flex-col items-center justify-center">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">
+                        Transmission Preview</p>
+
+                    <!-- Preview Device Mockup -->
+                    <div
+                        class="w-full max-w-[320px] bg-white dark:bg-[#0b141a] rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden relative transform scale-95 transition-transform">
+                        <!-- WhatsApp Header Mock -->
+                        <div class="bg-[#008069] h-12 w-full flex items-center px-4 gap-3">
+                            <div class="w-7 h-7 rounded-full bg-white/20"></div>
+                            <div class="h-1.5 w-24 bg-white/20 rounded"></div>
+                        </div>
+
+                        <!-- Chat Area -->
+                        <div
+                            class="p-4 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat min-h-[400px] flex flex-col">
+
+                            <!-- Message Bubble -->
+                            <div
+                                class="bg-white dark:bg-[#202c33] p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[95%] self-start relative border border-white dark:border-slate-800">
+                                <!-- Header Media Preview -->
+                                @if($this->hasMediaHeader)
+                                    <div class="mb-2 shrink-0">
+                                        @if($templateMediaUrl)
+                                            @if($header['format'] === 'IMAGE')
+                                                <img src="{{ $templateMediaUrl }}"
+                                                    class="w-full aspect-video object-cover rounded-lg shadow-inner">
+                                            @else
+                                                <div
+                                                    class="w-full aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700">
+                                                    <svg class="w-8 h-8 text-slate-300 mb-2" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span
+                                                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ $header['format'] }}
+                                                        ATTACHED</span>
+                                                </div>
+                                            @endif
+                                        @else
+                                            <div
+                                                class="w-full aspect-video bg-slate-50 dark:bg-slate-800/50 rounded-lg flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 opacity-40">
+                                                <span
+                                                    class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Awaiting
+                                                    Media URL</span>
+                                            </div>
                                         @endif
                                     </div>
+                                @endif
 
-                                    <div class="space-y-3">
-                                        @foreach($interactiveButtons as $index => $btn)
-                                            <div class="flex items-center gap-2 group">
-                                                <div class="relative flex-1">
-                                                    <input type="text" wire:model="interactiveButtons.{{ $index }}"
-                                                        maxlength="20"
-                                                        class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
-                                                        placeholder="Button Title">
-                                                    <span
-                                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400">
-                                                        {{ strlen($interactiveButtons[$index] ?? '') }}/20
-                                                    </span>
-                                                </div>
-                                                <button type="button" wire:click="removeInteractiveButton({{ $index }})"
-                                                    class="p-2 text-slate-400 hover:text-rose-500 transition-colors">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    @error('interactiveButtons') <span
-                                    class="text-[10px] font-bold text-rose-500">{{ $message }}</span> @enderror
-                                </div>
-                            </div>
+                                <h4
+                                    class="font-black text-[10px] text-wa-teal uppercase tracking-widest mb-1 pb-1 border-b border-wa-teal/5">
+                                    {{ $selectedTemplate->name }}
+                                </h4>
 
-                            <!-- Right: Preview -->
-                            <div
-                                class="p-8 bg-slate-50/50 dark:bg-slate-950 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800">
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Live Preview
+                                <p
+                                    class="text-[11px] text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed">
+                                    {{ $this->live_preview_text }}
                                 </p>
 
-                                <div
-                                    class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
-                                    <div class="p-3 border-b border-slate-50 dark:border-slate-800/50">
-                                        <p
-                                            class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed break-words whitespace-pre-wrap">
-                                            {{ $buttonBody ?: 'Your message text...' }}
-                                        </p>
-                                    </div>
-                                    <div class="flex flex-col">
-                                        @foreach($interactiveButtons as $btn)
-                                            <div
-                                                class="py-2.5 px-3 border-b border-slate-50 dark:border-slate-800/50 last:border-0 text-center">
-                                                <span class="text-xs font-bold text-wa-teal truncate block">
-                                                    {{ $btn ?: 'Button Text' }}
-                                                </span>
-                                            </div>
-                                        @endforeach
-                                    </div>
+                                <!-- Footer -->
+                                @if($footerComp = $this->getTemplateComponent('FOOTER'))
+                                    <p
+                                        class="text-[9px] text-slate-400 mt-2 italic border-t border-slate-50 dark:border-slate-800 pt-1">
+                                        {{ $footerComp['text'] }}
+                                    </p>
+                                @endif
+
+                                <div class="mt-1.5 flex justify-end">
+                                    <span class="text-[8px] text-slate-400">12:00 PM</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Footer -->
-                        <div
-                            class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3">
-                            <button wire:click="$set('showInteractiveButtonsModal', false)"
-                                class="px-6 py-3 text-slate-500 font-bold uppercase tracking-widest text-xs">
-                                Cancel
-                            </button>
-                            <button wire:click="sendInteractiveButtons"
-                                class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all">
-                                Send Buttons
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                @endteleport
-            @endif
+                            <!-- Buttons Preview -->
+                            @if($buttonComp = $this->getTemplateComponent('BUTTONS'))
+                                <div class="mt-2 space-y-1 w-full max-w-[95%]">
+                                    @foreach($buttonComp['buttons'] as $btn)
+                                        <div
+                                            class="bg-white/90 dark:bg-[#202c33]/90 rounded-xl py-2 px-3 flex items-center justify-center gap-2 border border-white dark:border-slate-800 shadow-sm backdrop-blur-sm">
+                                            @if(($btn['type'] ?? '') === 'URL') <svg class="w-3 h-3 text-wa-teal" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                            @elseif(($btn['type'] ?? '') === 'PHONE_NUMBER') <svg class="w-3 h-3 text-wa-teal"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                </svg>
+                                            @endif
+                                            <span
+                                                class="text-[10px] font-black text-wa-teal uppercase tracking-widest text-center">{{ $btn['text'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
 
-            <!-- Lightbox Modal -->
-            <template x-teleport="body">
-                <div x-show="lightboxOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
-                    @keydown.escape.window="lightboxOpen = false" x-cloak>
-
-                    <!-- Backdrop -->
-                    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl"
-                        @click="lightboxOpen = false" x-show="lightboxOpen"
-                        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
-                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
-
-                    <!-- Modal Content -->
-                    <div class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
-                        x-show="lightboxOpen" x-transition:enter="transition ease-out duration-300"
-                        x-transition:enter-start="opacity-0 scale-95 translate-y-4"
-                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                        x-transition:leave="transition ease-in duration-200"
-                        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                        x-transition:leave-end="opacity-0 scale-95 translate-y-4">
-
-                        <!-- Modal Header -->
-                        <div
-                            class="px-6 py-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 z-10">
-                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Image Preview</h3>
-                            <div class="flex items-center gap-2">
-                                <a :href="lightboxImage" download
-                                    class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
-                                    title="Download">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                </a>
-                                <button @click="lightboxOpen = false"
-                                    class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Image Container -->
-                        <div
-                            class="p-6 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-center min-h-[300px] max-h-[70vh] overflow-hidden">
-                            <img :src="lightboxImage"
-                                class="max-w-full max-h-full object-contain rounded-xl shadow-lg animate-in zoom-in duration-300">
                         </div>
                     </div>
                 </div>
-            </template>
+            </div>
+
+            <!-- Footer -->
+            <div
+                class="px-8 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3">
+                <button wire:click="closeTemplateModals"
+                    class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-500 font-bold uppercase tracking-widest text-xs rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
+                    Cancel
+                </button>
+                <button wire:click="sendTemplateWithVariables"
+                    class="px-8 py-3 bg-wa-teal hover:bg-wa-teal/90 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Send Template
+                </button>
+            </div>
+        </div>
     </div>
+    @endteleport
+@endif
+<!-- Interactive Buttons Modal -->
+@if($showInteractiveButtonsModal)
+    @teleport('body')
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm shadow-2xl"
+        x-data @keydown.escape.window="$wire.set('showInteractiveButtonsModal', false)">
+        <div
+            class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            <!-- Header -->
+            <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Quick
+                        <span class="text-wa-teal">Buttons</span>
+                    </h2>
+                    <p class="text-sm font-medium text-slate-500">Send up to 3 interactive reply buttons.</p>
+                </div>
+                <button wire:click="$set('showInteractiveButtonsModal', false)"
+                    class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+                <!-- Left: Configuration -->
+                <div class="p-8 overflow-y-auto space-y-6 border-r border-slate-100 dark:border-slate-800">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Message
+                            Body</label>
+                        <textarea wire:model="buttonBody" rows="4"
+                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
+                            placeholder="Enter your message text..."></textarea>
+                        @error('buttonBody') <span class="text-[10px] font-bold text-rose-500">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buttons
+                                ({{ count($interactiveButtons) }}/3)</label>
+                            @if(count($interactiveButtons) < 3)
+                                <button type="button" wire:click="addInteractiveButton"
+                                    class="text-xs font-bold text-wa-teal hover:underline">+ Add Button</button>
+                            @endif
+                        </div>
+
+                        <div class="space-y-3">
+                            @foreach($interactiveButtons as $index => $btn)
+                                <div class="flex items-center gap-2 group">
+                                    <div class="relative flex-1">
+                                        <input type="text" wire:model="interactiveButtons.{{ $index }}" maxlength="20"
+                                            class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
+                                            placeholder="Button Title">
+                                        <span
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400">
+                                            {{ strlen($interactiveButtons[$index] ?? '') }}/20
+                                        </span>
+                                    </div>
+                                    <button type="button" wire:click="removeInteractiveButton({{ $index }})"
+                                        class="p-2 text-slate-400 hover:text-rose-500 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                        @error('interactiveButtons') <span class="text-[10px] font-bold text-rose-500">{{ $message }}</span>
+                        @enderror
+                    </div>
+                </div>
+
+                <!-- Right: Preview -->
+                <div
+                    class="p-8 bg-slate-50/50 dark:bg-slate-950 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Live Preview
+                    </p>
+
+                    <div
+                        class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                        <div class="p-3 border-b border-slate-50 dark:border-slate-800/50">
+                            <p
+                                class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed break-words whitespace-pre-wrap">
+                                {{ $buttonBody ?: 'Your message text...' }}
+                            </p>
+                        </div>
+                        <div class="flex flex-col">
+                            @foreach($interactiveButtons as $btn)
+                                <div
+                                    class="py-2.5 px-3 border-b border-slate-50 dark:border-slate-800/50 last:border-0 text-center">
+                                    <span class="text-xs font-bold text-wa-teal truncate block">
+                                        {{ $btn ?: 'Button Text' }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div
+                class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3">
+                <button wire:click="$set('showInteractiveButtonsModal', false)"
+                    class="px-6 py-3 text-slate-500 font-bold uppercase tracking-widest text-xs">
+                    Cancel
+                </button>
+                <button wire:click="sendInteractiveButtons"
+                    class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all">
+                    Send Buttons
+                </button>
+            </div>
+        </div>
+    </div>
+    @endteleport
+@endif
+
+<!-- Lightbox Modal -->
+<template x-teleport="body">
+    <div x-show="lightboxOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
+        @keydown.escape.window="lightboxOpen = false" x-cloak>
+
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl" @click="lightboxOpen = false"
+            x-show="lightboxOpen" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"></div>
+
+        <!-- Modal Content -->
+        <div class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
+            x-show="lightboxOpen" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+            <!-- Modal Header -->
+            <div
+                class="px-6 py-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 z-10">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Image Preview</h3>
+                <div class="flex items-center gap-2">
+                    <a :href="lightboxImage" download
+                        class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
+                        title="Download">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                    </a>
+                    <button @click="lightboxOpen = false"
+                        class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Image Container -->
+            <div
+                class="p-6 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-center min-h-[300px] max-h-[70vh] overflow-hidden">
+                <img :src="lightboxImage"
+                    class="max-w-full max-h-full object-contain rounded-xl shadow-lg animate-in zoom-in duration-300">
+            </div>
+        </div>
+    </div>
+</template>
+</div>

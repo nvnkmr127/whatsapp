@@ -60,10 +60,10 @@
             <div class="grid grid-cols-1 gap-3">
                 <!-- Read Status -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Signal Status</label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Message Status</label>
                     <select wire:model.live="filterReadStatus"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
-                        <option value="all">All Signals</option>
+                        <option value="all">All Messages</option>
                         <option value="unread">Unread</option>
                         <option value="read">Read</option>
                     </select>
@@ -71,8 +71,8 @@
 
                 <!-- Opt-In -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Consent
-                        Protocol</label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Subscription
+                        Status</label>
                     <select wire:model.live="filterOptIn"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
                         <option value="all">Any Status</option>
@@ -83,8 +83,8 @@
 
                 <!-- Blocked -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Transmission
-                        Line</label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contact
+                        Privacy</label>
                     <select wire:model.live="filterBlocked"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
                         <option value="all">All Lines</option>
@@ -96,7 +96,7 @@
 
             <button wire:click="resetFilters"
                 class="w-full py-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors">
-                Reset Protocols
+                Clear All Filters
             </button>
         </div>
     </div>
@@ -130,20 +130,31 @@
             @php
                 $initials = substr($conversation->contact->name ?? '?', 0, 1);
                 $isActive = $activeConversationId == $conversation->id;
+                $isSlaBreached = $conversation->sla_due_at && $conversation->sla_due_at->isPast() && $conversation->status !== 'closed';
+                $isSlaWarning = $conversation->sla_due_at && $conversation->sla_due_at->diffInMinutes(now()) < 60 && !$isSlaBreached && $conversation->status !== 'closed';
+                $tags = $conversation->metadata['tags'] ?? [];
             @endphp
             <div wire:click="selectConversation({{ $conversation->id }}); mobilePane = 'messages'"
                 wire:key="{{ $conversation->id }}"
-                class="group flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent {{ $isActive ? 'bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 border-slate-100 dark:border-slate-700 relative z-10 scale-[1.02]' : 'hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-slate-100 dark:hover:border-slate-800' }}">
+                class="group flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent 
+                        {{ $isActive ? 'bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 border-slate-100 dark:border-slate-700 relative z-10 scale-[1.02]' : 'hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-slate-100 dark:hover:border-slate-800' }}
+                        {{ $isSlaBreached ? 'ring-2 ring-rose-500/50 bg-rose-50/10' : ($isSlaWarning ? 'ring-2 ring-amber-500/30 bg-amber-50/5' : '') }}">
 
                 <!-- Avatar Status -->
                 <div class="flex-shrink-0 mr-4 relative">
-                    <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
-                        alt="{{ $conversation->contact->name ?? 'Unknown' }}"
-                        class="h-12 w-12 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-sm transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy">
-                    @if($conversation->status === 'open')
+                    <div class="relative">
+                        @if($conversation->hasActiveCall)
+                            <div class="absolute -inset-1.5 bg-emerald-500/30 rounded-full animate-ping"></div>
+                        @endif
+                        <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
+                            alt="{{ $conversation->contact->name ?? 'Unknown' }}"
+                            class="relative h-12 w-12 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-sm transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy">
+                    </div>
+                    @if($conversation->unread_count > 0)
                         <div
-                            class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-wa-teal border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
+                            class="absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full bg-wa-teal border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
+                            <span class="text-[9px] font-black text-white leading-none">{{ $conversation->unread_count }}</span>
                         </div>
                     @endif
                 </div>
@@ -159,10 +170,21 @@
                             {{ $conversation->last_message_at ? $conversation->last_message_at->format('H:i') : '' }}
                         </span>
                     </div>
-                    <p
-                        class="text-[11px] font-medium {{ $isActive ? 'text-slate-500 dark:text-slate-300' : 'text-slate-400' }} truncate">
-                        {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? '[MEDIA PACKET]', 35) : 'Initialize link...' }}
+                    {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? '[MEDIA PACKET]', 35) : 'Initialize link...' }}
                     </p>
+                    @if(!empty($tags))
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            @foreach($tags as $tagId)
+                                @php $category = collect($availableCategories)->firstWhere('id', $tagId); @endphp
+                                @if($category)
+                                    <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider"
+                                        style="background-color: {{ $category->color }}20; color: {{ $category->color }}">
+                                        {{ $category->name }}
+                                    </span>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Indicators -->

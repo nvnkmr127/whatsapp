@@ -31,7 +31,7 @@ class CategoryManager extends Component
         'color' => 'required|string|max:7',
         'icon' => 'nullable|string|max:10',
         'is_active' => 'boolean',
-        'target_module' => 'required|string|in:all,contacts,products',
+        'target_module' => 'required|string|in:all,contacts,products,chat',
     ];
 
     public function render()

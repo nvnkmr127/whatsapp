@@ -1,37 +1,24 @@
 <?php
+/** @var \Illuminate\Database\Eloquent\Factory $factory */
 
 namespace Database\Factories;
 
-use App\Models\Contact;
 use App\Models\Message;
-use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Message>
- */
 class MessageFactory extends Factory
 {
-    protected $model = Message::class;
+    protected $model = Message;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    public function definition(): array
+    public function definition()
     {
         return [
-            'team_id' => Team::factory(),
-            'contact_id' => Contact::factory(),
-            'whatsapp_message_id' => 'wamid.' . $this->faker->uuid(),
-            'direction' => 'inbound',
+            'team_id' => 1,
+            'content' => $this->faker->sentence,
             'type' => 'text',
-            'content' => $this->faker->sentence(),
-            'metadata' => ['key' => 'value'],
-            'status' => 'delivered',
-            'sent_at' => now(),
-            'delivered_at' => now(),
+            'status' => 'sent',
+            'is_outbound' => false,
+            'message_id' => 'mid.' . $this->faker->uuid,
         ];
     }
 }

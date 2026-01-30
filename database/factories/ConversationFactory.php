@@ -1,24 +1,19 @@
 <?php
+/** @var \Illuminate\Database\Eloquent\Factory $factory */
 
 namespace Database\Factories;
 
+use App\Models\Conversation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Conversation>
- */
 class ConversationFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    public function definition(): array
+    protected $model = Conversation::class;
+
+    public function definition()
     {
         return [
-            'team_id' => \App\Models\Team::factory(),
-            'contact_id' => \App\Models\Contact::factory(),
+            'team_id' => 1,
             'status' => 'open',
             'last_message_at' => now(),
         ];

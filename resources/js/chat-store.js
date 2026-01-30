@@ -62,7 +62,7 @@ document.addEventListener('alpine:init', () => {
                 direction: 'outbound',
                 content: body,
                 type: 'text',
-                status: 'sending', // sending, queued, delivered, read, failed
+                status: 'sending',
                 created_at: Math.floor(Date.now() / 1000),
                 pretty_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 is_outbound: true,
@@ -70,18 +70,19 @@ document.addEventListener('alpine:init', () => {
             };
 
             this.messages.push(optimisticMsg);
-
-            // Trigger scroll to bottom in UI
             window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
 
             try {
                 const wire = this._wire || this.wire;
                 const result = await wire.call('sendMessageJson', body, tempId);
 
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+
                 // Reconcile ID and Status
                 const index = this.messages.findIndex(m => m.id === tempId);
                 if (index !== -1) {
-                    // Merge result (which has real ID and created_at)
                     this.messages[index] = { ...this.messages[index], ...result };
                 }
             } catch (e) {
@@ -89,7 +90,31 @@ document.addEventListener('alpine:init', () => {
                 const index = this.messages.findIndex(m => m.id === tempId);
                 if (index !== -1) {
                     this.messages[index].status = 'failed';
+                    this.messages[index].error_message = e.message;
                 }
+            }
+        },
+
+        async retryMessage(id) {
+            const index = this.messages.findIndex(m => m.id === id);
+            if (index === -1) return;
+
+            const body = this.messages[index].content;
+            this.messages[index].status = 'sending';
+
+            try {
+                const wire = this._wire || this.wire;
+                const result = await wire.call('sendMessageJson', body, id);
+
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+
+                this.messages[index] = { ...this.messages[index], ...result };
+            } catch (e) {
+                console.error('Retry failed', e);
+                this.messages[index].status = 'failed';
+                this.messages[index].error_message = e.message;
             }
         },
 
@@ -101,7 +126,38 @@ document.addEventListener('alpine:init', () => {
             // This is for incoming from OTHER people or if sendMessageJson didn't return yet.
 
             this.messages.push(msg);
+
+            // Re-sort to ensure order if messages arrive slightly out of sequence
+            this.messages.sort((a, b) => a.created_at - b.created_at);
+
             window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
+        },
+
+        getDateLabel(timestamp) {
+            // Ensure timestamp is a number and convert to milliseconds if it's in seconds
+            const ts = typeof timestamp === 'number' ? timestamp * 1000 : Date.parse(timestamp);
+            if (isNaN(ts)) return ''; // Handle invalid timestamps
+
+            const date = new Date(ts);
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+
+            if (date.toDateString() === today.toDateString()) return 'Today';
+            if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+            return date.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+        },
+
+        shouldShowDateDivider(index) {
+            if (index === 0) return true;
+            const current = this.messages[index];
+            const previous = this.messages[index - 1];
+
+            // Ensure created_at exists before comparing
+            if (!current || !previous || !current.created_at || !previous.created_at) return false;
+
+            return this.getDateLabel(current.created_at) !== this.getDateLabel(previous.created_at);
         },
 
         // --- Multi-Agent Locking ---

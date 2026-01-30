@@ -65,7 +65,7 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-                @foreach(['' => 'All Areas', 'contacts' => 'Contacts', 'products' => 'Products', 'all' => 'Global'] as $val => $label)
+                @foreach(['' => 'All Areas', 'chat' => 'Messaging/Chat', 'contacts' => 'Contacts', 'products' => 'Products', 'all' => 'Global'] as $val => $label)
                     <button wire:click="$set('filterModule', '{{ $val }}')"
                         class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all {{ $filterModule === $val ? 'bg-wa-teal text-white shadow-lg shadow-wa-teal/20' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600' }}">
                         {{ $label }}
@@ -243,7 +243,7 @@
                             <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Area /
                                 Module</label>
                             <div class="grid grid-cols-3 gap-3">
-                                @foreach(['all' => 'Global', 'contacts' => 'Contacts', 'products' => 'Products'] as $val => $label)
+                                @foreach(['all' => 'Global', 'chat' => 'Chat/Inbox', 'contacts' => 'Contacts', 'products' => 'Products'] as $val => $label)
                                     <button wire:click="$set('target_module', '{{ $val }}')"
                                         class="py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border {{ $target_module === $val ? 'bg-wa-teal border-wa-teal text-white shadow-lg shadow-wa-teal/20' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400 hover:border-slate-200 dark:hover:border-slate-700' }}">
                                         {{ $label }}

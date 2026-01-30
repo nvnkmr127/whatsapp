@@ -23,6 +23,15 @@ class CallHistory extends Component
     public $sortBy = 'created_at';
     public $sortDirection = 'desc';
 
+    public function getListeners()
+    {
+        $teamId = auth()->user()->currentTeam->id;
+        return [
+            "echo-private:teams.{$teamId},.call.offered" => '$refresh',
+            "echo-private:teams.{$teamId},.call.ended" => '$refresh',
+        ];
+    }
+
     protected $queryString = [
         'filters' => ['except' => ['direction' => '', 'status' => '', 'from_date' => '', 'to_date' => '', 'search' => '']],
         'sortBy' => ['except' => 'created_at'],

@@ -11,6 +11,8 @@
         pc: null,
         remoteStream: null,
         ringingSound: null,
+        signalQuality: 100, // 0-100%
+        connectionType: 'direct',
         
         init() {
             this.ringingSound = document.getElementById('call-ringing-sound');
@@ -42,6 +44,14 @@
                             offerSdp: this.offerSdp
                         }
                     });
+                }
+            });
+
+            // Auto-answer for outbound calls once we get the SDP offer from Meta
+            $watch('offerSdp', value => {
+                if (value && this.status === 'ringing' && this.direction === 'outbound' && !this.pc) {
+                    console.log('CallOverlay: Auto-answering outbound call offer...');
+                    this.performAction('answerCall');
                 }
             });
         },
@@ -79,6 +89,18 @@
 
         async performAction(action) {
             if (this.isProcessing || this.isLocked) return;
+            
+            // Pre-check microphone for entering active calls
+            if (action === 'answerCall') {
+                try {
+                    const permission = await navigator.permissions.query({ name: 'microphone' });
+                    if (permission.state === 'denied') {
+                        $dispatch('notify', { type: 'error', message: 'Microphone permission denied. Please enable it in browser settings.' });
+                        return;
+                    }
+                } catch(e) { /* Falls back to usual error handling in handleAnswer */ }
+            }
+
             this.isProcessing = true;
             
             try {
@@ -94,16 +116,22 @@
 
         async handleAnswer() {
             try {
-                // Configure STUN/TURN servers for better connectivity
+                // Optimized STUN/TURN configuration for faster NAT traversal
                 const iceServers = [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    { urls: 'stun:stun.voiparound.com' },
+                    { urls: 'stun:stun.voipstunt.com' }
                 ];
 
                 this.pc = new RTCPeerConnection({
                     iceServers: iceServers,
-                    iceCandidatePoolSize: 10
+                    iceCandidatePoolSize: 20, // Increased for faster connection
+                    bundlePolicy: 'max-bundle',
+                    rtcpMuxPolicy: 'require'
                 });
 
                 // Track ICE candidates
@@ -144,14 +172,26 @@
                     
                     if (this.pc.iceConnectionState === 'connected' || 
                         this.pc.iceConnectionState === 'completed') {
-                        // Get selected candidate pair to determine connection type
-                        this.pc.getStats().then(stats => {
-                            stats.forEach(report => {
-                                if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                                    connectionType = report.currentRoundTripTime ? 'relay' : 'direct';
-                                }
+                        // Monitor Signal Quality periodically
+                        const statsInterval = setInterval(() => {
+                            if (!this.pc || this.pc.connectionState !== 'connected') {
+                                clearInterval(statsInterval);
+                                return;
+                            }
+
+                            this.pc.getStats().then(stats => {
+                                stats.forEach(report => {
+                                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                        this.connectionType = report.currentRoundTripTime ? 'relay' : 'direct';
+                                        // Simple quality metric based on RTT (if available)
+                                        if (report.currentRoundTripTime) {
+                                            const rtt = report.currentRoundTripTime * 1000;
+                                            this.signalQuality = Math.max(0, 100 - (rtt / 5)); // Penalty for higher RTT
+                                        }
+                                    }
+                                });
                             });
-                        });
+                        }, 2000);
                     }
                 };
 
@@ -163,12 +203,15 @@
                     }
                 };
 
-                // Add local audio track
+                // High-fidelity business audio constraints
                 const localStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
+                        echoCancellation: { ideal: true },
+                        noiseSuppression: { ideal: true },
+                        autoGainControl: { ideal: true },
+                        channelCount: 1,
+                        sampleRate: 48000,
+                        sampleSize: 16
                     } 
                 });
                 localStream.getTracks().forEach(track => this.pc.addTrack(track, localStream));
@@ -244,8 +287,7 @@
                 remoteAudio.srcObject = null;
             }
         }
-    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" 
-    @call-stopped.window="stopCalling()"
+    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" @call-stopped.window="stopCalling()"
     @play-ringing-sound.window="playRinging()"
     class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
     <!-- Overlay Container -->
@@ -304,11 +346,27 @@
                 </div>
             </div>
 
-            <!-- Middle/Right: Duration (Only if active) -->
-            <div x-show="status === 'active'" class="flex flex-col items-center">
-                <span class="text-lg font-mono font-black text-white tracking-tighter"
-                    x-text="formatDuration(duration)">0:00</span>
-                <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]">Duration</span>
+            <!-- Middle/Right: Duration & Signal -->
+            <div x-show="status === 'active'" class="flex items-center gap-6">
+                <div class="flex flex-col items-center">
+                    <span class="text-lg font-mono font-black text-white tracking-tighter"
+                        x-text="formatDuration(duration)">0:00</span>
+                    <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]">Duration</span>
+                </div>
+
+                <!-- Signal Bars -->
+                <div class="flex flex-col items-center">
+                    <div class="flex items-end gap-0.5 h-4 mb-0.5">
+                        <template x-for="i in 4">
+                            <div class="w-1.5 rounded-full transition-all duration-500" :class="{
+                                    'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]': signalQuality >= (i * 25),
+                                    'bg-white/20': signalQuality < (i * 25)
+                                }" :style="{ height: (i * 25) + '%' }"></div>
+                        </template>
+                    </div>
+                    <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]"
+                        x-text="connectionType"></span>
+                </div>
             </div>
 
             <!-- Right: Actions -->

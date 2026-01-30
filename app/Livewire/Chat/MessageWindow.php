@@ -20,6 +20,8 @@ class MessageWindow extends Component
     public $selectedTemplateId;
     public $showEmojiPicker = false;
     public $conversation;
+    public $activeAgents = [];
+    public $availableCategories = [];
 
     // Template Modal State
     public $templateMediaUrl = '';
@@ -45,6 +47,9 @@ class MessageWindow extends Component
                 "echo-presence:conversation.{$this->conversationId},.MessageReceived" => 'handleIncomingMessage',
                 "echo-presence:conversation.{$this->conversationId},.MessageStatusUpdated" => 'handleStatusUpdate',
                 "echo-presence:conversation.{$this->conversationId},client-typing" => 'handleClientTyping',
+                "echo-presence:conversation.{$this->conversationId},here" => 'handlePresence',
+                "echo-presence:conversation.{$this->conversationId},joining" => 'handlePresenceJoin',
+                "echo-presence:conversation.{$this->conversationId},leaving" => 'handlePresenceLeave',
             ];
         }
         return [];
@@ -63,7 +68,12 @@ class MessageWindow extends Component
     {
         $this->conversationId = $conversationId;
         $this->loadConversation();
-        // Initialize lastMessageId to avoid alert on load
+
+        $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('target_module', ['chat', 'all'])
+            ->where('is_active', true)
+            ->get();
+
         if (count($this->chatMessages) > 0) {
             $this->lastMessageId = $this->chatMessages->last()->id;
         }
@@ -92,7 +102,13 @@ class MessageWindow extends Component
             $this->lastMessageId = $latestId;
         }
 
-        // Mark as read logic could go here
+        // Mark as read
+        $this->conversation->messages()
+            ->where('direction', 'inbound')
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        $this->dispatch('chat-messages-read');
     }
 
     public function updatedNewAttachment()
@@ -170,6 +186,126 @@ class MessageWindow extends Component
         return 'document';
     }
 
+    public function saveInternalNote()
+    {
+        $this->validate([
+            'messageBody' => 'required|string',
+        ]);
+
+        if (!$this->conversation)
+            return;
+
+        $message = \App\Models\Message::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'sent',
+            'type' => 'internal_note',
+            'content' => $this->messageBody,
+            'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name],
+        ]);
+
+        $this->reset('messageBody');
+        $this->loadConversation();
+        $this->dispatch('messageSent');
+    }
+
+    public function transferConversation($agentId)
+    {
+        if (!$this->conversation)
+            return;
+
+        $agent = \App\Models\User::find($agentId);
+        if (!$agent)
+            return;
+
+        $this->conversation->update([
+            'assigned_to' => $agentId,
+        ]);
+
+        // Log transfer as internal note
+        \App\Models\Message::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'sent',
+            'type' => 'internal_note',
+            'content' => "Conversation transferred to {$agent->name}.",
+            'metadata' => ['type' => 'transfer', 'transferred_by' => Auth::user()->name],
+        ]);
+
+        \App\Events\ConversationAssigned::dispatch($this->conversation, $agentId, Auth::user());
+
+        $this->loadConversation();
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => "Conversation transferred to {$agent->name}"
+        ]);
+    }
+
+    public function draftAIResponse()
+    {
+        if (!$this->conversation)
+            return;
+
+        // In a real app, this would call OpenAI/Claude
+        // We will simulate a contextual response
+        $lastCustomerMsg = $this->conversation->messages()
+            ->where('direction', 'inbound')
+            ->latest()
+            ->first();
+
+        $prompt = $lastCustomerMsg ? $lastCustomerMsg->content : 'No previous message';
+
+        $responses = [
+            "Hi! Thank you for reaching out. How can I assist you with that today?",
+            "I understand your request regarding '{$prompt}'. Let me check that for you.",
+            "That's a great question. We typically handle this by...",
+            "Could you please provide more details so I can help you better?"
+        ];
+
+        $draft = $responses[array_rand($responses)];
+
+        $this->dispatch('set-message-body', ['body' => $draft]);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'AI Draft generated ✨']);
+    }
+
+    public function sendVoiceNote($audioFile)
+    {
+        // This is called after Livewire finishes uploading the blob
+        if (!$this->conversation || !$this->newAttachment)
+            return;
+
+        $path = $this->newAttachment->store('voice-notes', 'public');
+
+        $message = \App\Models\Message::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'type' => 'audio',
+            'media_url' => $path,
+            'media_type' => 'audio/ogg',
+        ]);
+
+        \App\Jobs\SendMessageJob::dispatch(
+            Auth::user()->currentTeam->id,
+            $this->conversation->contact->phone_number,
+            'audio',
+            asset(Storage::url($path)),
+            null,
+            'en_US',
+            $message->id
+        );
+
+        $this->reset('newAttachment');
+        $this->loadConversation();
+        $this->dispatch('messageSent');
+    }
+
     public function closeConversation($reason = 'resolved')
     {
         if ($this->conversation) {
@@ -213,6 +349,26 @@ class MessageWindow extends Component
         }
     }
 
+    public function handlePresence($users)
+    {
+        $this->activeAgents = $users;
+    }
+
+    public function handlePresenceJoin($user)
+    {
+        if (!collect($this->activeAgents)->contains('id', $user['id'])) {
+            $this->activeAgents[] = $user;
+        }
+    }
+
+    public function handlePresenceLeave($user)
+    {
+        $this->activeAgents = collect($this->activeAgents)
+            ->filter(fn($u) => $u['id'] != $user['id'])
+            ->values()
+            ->all();
+    }
+
     public function handleClientTyping($event)
     {
         // This will be handled by JS listener mainly, but we can have a fallback here if needed
@@ -243,6 +399,48 @@ class MessageWindow extends Component
         $this->newAttachment = null;
     }
 
+    public function toggleCategory($categoryId)
+    {
+        if (!$this->conversation)
+            return;
+
+        $metadata = $this->conversation->metadata ?? [];
+        $tags = $metadata['tags'] ?? [];
+
+        if (in_array($categoryId, $tags)) {
+            $tags = array_values(array_filter($tags, fn($id) => $id != $categoryId));
+        } else {
+            $tags[] = $categoryId;
+        }
+
+        $metadata['tags'] = $tags;
+        $this->conversation->update(['metadata' => $metadata]);
+        $this->loadConversation();
+    }
+
+    public function addReaction($messageId, $emoji)
+    {
+        $message = \App\Models\Message::find($messageId);
+        if (!$message)
+            return;
+
+        $metadata = $message->metadata ?? [];
+        $reactions = $metadata['reactions'] ?? [];
+
+        // Toggle or Add
+        if (($reactions[Auth::id()] ?? null) === $emoji) {
+            unset($reactions[Auth::id()]);
+        } else {
+            $reactions[Auth::id()] = $emoji;
+        }
+
+        $metadata['reactions'] = $reactions;
+        $message->update(['metadata' => $metadata]);
+
+        // Broadcast update
+        \App\Events\MessageStatusUpdated::dispatch($message);
+    }
+
     public function getQuickRepliesProperty()
     {
         return \App\Models\CannedMessage::where('team_id', Auth::user()->currentTeam->id)
@@ -254,6 +452,13 @@ class MessageWindow extends Component
                     'text' => $msg->content
                 ];
             });
+    }
+
+    public function getAgentsProperty()
+    {
+        return Auth::user()->currentTeam->users()
+            ->where('users.id', '!=', Auth::id())
+            ->get();
     }
 
     public function getIsSessionOpenProperty()

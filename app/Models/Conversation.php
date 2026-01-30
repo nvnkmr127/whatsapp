@@ -15,6 +15,7 @@ class Conversation extends Model
         'last_message_at' => 'datetime',
         'sla_due_at' => 'datetime',
         'closed_at' => 'datetime',
+        'metadata' => 'array',
     ];
 
     public function team()
@@ -45,5 +46,15 @@ class Conversation extends Model
     public function notes()
     {
         return $this->hasMany(InternalNote::class)->orderBy('created_at', 'desc');
+    }
+
+    public function calls()
+    {
+        return $this->hasMany(WhatsAppCall::class);
+    }
+
+    public function getHasActiveCallAttribute()
+    {
+        return $this->calls()->whereIn('status', ['initiated', 'ringing', 'in_progress'])->exists();
     }
 }

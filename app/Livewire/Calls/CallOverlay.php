@@ -66,8 +66,20 @@ class CallOverlay extends Component
         $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . ($contact->name ?? $data['phone_number']);
         $this->startTime = null;
 
-        // In a real app, we'd get a call ID from the service
-        // For simulation, we'll just track it locally
+        try {
+            $whatsappService = new \App\Services\WhatsAppService(auth()->user()->currentTeam);
+            $response = $whatsappService->initiateCall($data['phone_number']);
+
+            if ($response['success']) {
+                $this->callId = $response['data']['id'] ?? null;
+                Log::info("CallOverlay: Call initiated successfully", ['call_id' => $this->callId]);
+            } else {
+                $this->handleFailed(['message' => $response['message'] ?? 'Failed to initiate call']);
+            }
+        } catch (\Exception $e) {
+            Log::error("CallOverlay: Failed to initiate call", ['error' => $e->getMessage()]);
+            $this->handleFailed(['message' => $e->getMessage()]);
+        }
     }
 
     public function handleOffered($event)

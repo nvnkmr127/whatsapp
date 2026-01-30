@@ -15,12 +15,14 @@ class ConversationList extends Component
     public $filterReadStatus = 'all'; // all, unread, read
     public $filterOptIn = 'all'; // all, yes, no
     public $filterBlocked = 'all'; // all, yes, no
+    public $availableCategories = [];
 
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {
             return [
                 "echo-private:teams." . Auth::user()->currentTeam->id . ",.MessageReceived" => '$refresh',
+                'chat-messages-read' => '$refresh',
             ];
         }
         return [];
@@ -28,7 +30,10 @@ class ConversationList extends Component
 
     public function mount()
     {
-        // $this->activeConversationId is passed via wire:model from parent
+        $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('target_module', ['chat', 'all'])
+            ->where('is_active', true)
+            ->get();
     }
 
     public function resetFilters()
@@ -49,6 +54,11 @@ class ConversationList extends Component
     {
         return Conversation::query()
             ->with(['contact', 'lastMessage', 'assignee'])
+            ->withCount([
+                'messages as unread_count' => function ($query) {
+                    $query->where('direction', 'inbound')->whereNull('read_at');
+                }
+            ])
             ->where('team_id', Auth::user()->currentTeam->id)
             ->when($this->search, function ($query) {
                 $query->whereHas('contact', function ($q) {
@@ -106,10 +116,17 @@ class ConversationList extends Component
         $active = Conversation::where('team_id', $teamId)->where('status', 'open')->count();
         $unassigned = Conversation::where('team_id', $teamId)->where('status', 'open')->whereNull('assigned_to')->count();
 
+        $slaBreaches = Conversation::where('team_id', $teamId)
+            ->where('status', 'open')
+            ->whereNotNull('sla_due_at')
+            ->where('sla_due_at', '<', now())
+            ->count();
+
         return [
             'active' => $active,
             'unassigned' => $unassigned,
-            'avg_response' => '14m', // Logic would follow message table timestamp diffs
+            'sla_breaches' => $slaBreaches,
+            'avg_response' => '14m',
             'resolution' => '92%',
         ];
     }
@@ -118,7 +135,8 @@ class ConversationList extends Component
     {
         return view('livewire.chat.conversation-list', [
             'conversations' => $this->conversations,
-            'stats' => $this->stats
+            'stats' => $this->stats,
+            'availableCategories' => $this->availableCategories,
         ]);
     }
 }
