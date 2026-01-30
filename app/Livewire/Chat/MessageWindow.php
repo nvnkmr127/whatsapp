@@ -86,29 +86,29 @@ class MessageWindow extends Component
         if ($this->conversation) {
             // Load messages specifically and assign to public property
             $this->chatMessages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
+
+            if (count($this->chatMessages) > 0) {
+                $latestId = $this->chatMessages->last()->id;
+
+                // If we have a lastMessageId tracking and the new one is different -> New Message!
+                if ($this->lastMessageId && $latestId > $this->lastMessageId) {
+                    $this->dispatch('play-sound');
+                    $this->dispatch('chat-scroll-bottom');
+                }
+
+                $this->lastMessageId = $latestId;
+            }
+
+            // Mark as read
+            $this->conversation->messages()
+                ->where('direction', 'inbound')
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+
+            $this->dispatch('chat-messages-read');
         } else {
             $this->chatMessages = [];
         }
-
-        if (count($this->chatMessages) > 0) {
-            $latestId = $this->chatMessages->last()->id;
-
-            // If we have a lastMessageId tracking and the new one is different -> New Message!
-            if ($this->lastMessageId && $latestId > $this->lastMessageId) {
-                $this->dispatch('play-sound');
-                $this->dispatch('chat-scroll-bottom');
-            }
-
-            $this->lastMessageId = $latestId;
-        }
-
-        // Mark as read
-        $this->conversation->messages()
-            ->where('direction', 'inbound')
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
-
-        $this->dispatch('chat-messages-read');
     }
 
     public function updatedNewAttachment()

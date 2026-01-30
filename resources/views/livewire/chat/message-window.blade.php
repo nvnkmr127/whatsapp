@@ -160,231 +160,235 @@
     <!-- Header -->
     <div
         class="px-6 py-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex justify-between items-center z-10 sticky top-0 shadow-sm">
-        <div class="flex items-center">
-            <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
-                alt="{{ $conversation->contact->name ?? 'Unknown' }}"
-                class="h-10 w-10 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-lg shadow-wa-teal/20 mr-4">
-            <div>
-                <h2
-                    class="font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase text-sm mb-0.5 whitespace-nowrap">
-                    {{ $conversation->contact->name ?? $conversation->contact->phone_number }}
-                </h2>
-                <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
-                    <span class="text-wa-teal">{{ $conversation->contact->phone_number }}</span>
+        @if($conversation)
+            <div class="flex items-center">
+                <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
+                    alt="{{ $conversation->contact->name ?? 'Unknown' }}"
+                    class="h-10 w-10 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-lg shadow-wa-teal/20 mr-4">
+                <div>
+                    <h2
+                        class="font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase text-sm mb-0.5 whitespace-nowrap">
+                        {{ $conversation->contact->name ?? $conversation->contact->phone_number }}
+                    </h2>
+                    <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
+                        <span class="text-wa-teal">{{ $conversation->contact->phone_number }}</span>
 
-                    <span x-show="isTyping" x-transition
-                        class="text-wa-teal animate-pulse font-black flex items-center gap-1">
-                        <span x-text="typingUser"></span> IS TYPING...
-                    </span>
-
-                    <span x-show="isCustomerTyping" x-transition
-                        class="text-emerald-500 animate-bounce font-black flex items-center gap-1">
-                        CUSTOMER IS TYPING...
-                    </span>
-
-                    <template x-if="activeAgents.length > 1">
-                        <div
-                            class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
-                            <span class="relative flex h-1.5 w-1.5">
-                                <span
-                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-wa-teal opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-wa-teal"></span>
-                            </span>
-                            <span x-text="activeAgents.length + ' AGENTS ONLINE'"></span>
-                        </div>
-                    </template>
-
-                    @if($conversation->last_message_at)
-                        <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping && !isCustomerTyping">|</span>
-                        <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}"
-                            x-show="!isTyping && !isCustomerTyping">
-                            {{ $conversation->last_message_at->diffForHumans() }}
+                        <span x-show="isTyping" x-transition
+                            class="text-wa-teal animate-pulse font-black flex items-center gap-1">
+                            <span x-text="typingUser"></span> IS TYPING...
                         </span>
-                    @endif
-                </div>
 
-                <!-- Active Tags -->
-                @php $activeTags = $conversation->metadata['tags'] ?? []; @endphp
-                <div class="flex flex-wrap gap-1 mt-1">
-                    @foreach($activeTags as $tagId)
-                        @php $category = collect($availableCategories)->firstWhere('id', $tagId); @endphp
-                        @if($category)
-                            <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shadow-sm"
-                                style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}30">
-                                {{ $category->name }}
+                        <span x-show="isCustomerTyping" x-transition
+                            class="text-emerald-500 animate-bounce font-black flex items-center gap-1">
+                            CUSTOMER IS TYPING...
+                        </span>
+
+                        <template x-if="activeUsers.length > 1">
+                            <div
+                                class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                                <span class="relative flex h-1.5 w-1.5">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-wa-teal opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-wa-teal"></span>
+                                </span>
+                                <span x-text="activeUsers.length + ' AGENTS ONLINE'"></span>
+                            </div>
+                        </template>
+
+                        @if($conversation->last_message_at)
+                            <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping && !isCustomerTyping">|</span>
+                            <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}"
+                                x-show="!isTyping && !isCustomerTyping">
+                                {{ $conversation->last_message_at->diffForHumans() }}
                             </span>
+                        @endif
+                    </div>
+
+                    <!-- Active Tags -->
+                    @php $activeTags = $conversation->metadata['tags'] ?? []; @endphp
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        @foreach($activeTags as $tagId)
+                            @php $category = collect($availableCategories)->firstWhere('id', $tagId); @endphp
+                            @if($category)
+                                <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shadow-sm"
+                                    style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}30">
+                                    {{ $category->name }}
+                                </span>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if($conversation)
+            <!-- Actions -->
+            <div class="flex items-center gap-4">
+                <!-- Agent Presence Stacks -->
+                <div class="hidden lg:flex -space-x-2 overflow-hidden mr-2">
+                    @foreach($activeAgents as $agent)
+                        @if($agent['id'] != Auth::id())
+                            <div class="inline-block h-8 w-8 rounded-full ring-4 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 border-2 border-wa-teal/20"
+                                title="{{ $agent['name'] }} viewing">
+                                <img class="h-full w-full rounded-full"
+                                    src="https://api.dicebear.com/9.x/micah/svg?seed={{ $agent['name'] }}"
+                                    alt="{{ $agent['name'] }}">
+                            </div>
                         @endif
                     @endforeach
                 </div>
-            </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="flex items-center gap-4">
-            <!-- Agent Presence Stacks -->
-            <div class="hidden lg:flex -space-x-2 overflow-hidden mr-2">
-                @foreach($activeAgents as $agent)
-                    @if($agent['id'] != Auth::id())
-                        <div class="inline-block h-8 w-8 rounded-full ring-4 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 border-2 border-wa-teal/20"
-                            title="{{ $agent['name'] }} viewing">
-                            <img class="h-full w-full rounded-full"
-                                src="https://api.dicebear.com/9.x/micah/svg?seed={{ $agent['name'] }}"
-                                alt="{{ $agent['name'] }}">
-                        </div>
-                    @endif
-                @endforeach
-            </div>
-
-            <!-- Tagging Action -->
-            <div x-data="{ showTags: false }" class="relative">
-                <button @click="showTags = !showTags"
-                    class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal/10 rounded-xl transition-all text-slate-500 hover:text-wa-teal border border-slate-100 dark:border-slate-700"
-                    title="Label Conversation">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                </button>
-                <div x-show="showTags" x-cloak @click.away="showTags = false"
-                    class="absolute top-12 right-0 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-56 animate-in fade-in zoom-in duration-200">
-                    <p
-                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
-                        Label Categories</p>
-                    <div class="space-y-1">
-                        @foreach($availableCategories as $category)
-                            <button wire:click="toggleCategory({{ $category->id }})"
-                                class="w-full flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors group">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full" style="background-color: {{ $category->color }}">
-                                    </div>
-                                    <span
-                                        class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $category->name }}</span>
-                                </div>
-                                @if(in_array($category->id, $activeTags))
-                                    <svg class="w-4 h-4 text-wa-teal" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                @endif
-                            </button>
-                        @endforeach
-                        @if($availableCategories->isEmpty())
-                            <p class="text-[10px] text-slate-400 italic p-2 line-height-relaxed">No categories defined.
-                                Configure them in Settings Hub.</p>
-                        @endif
-                    </div>
-                    <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <a href="{{ route('settings.categories') }}" target="_blank"
-                            class="flex items-center gap-2 px-2 py-1.5 text-[10px] font-black text-wa-teal uppercase tracking-widest hover:bg-wa-teal/5 rounded-lg transition-all">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Manage Labels
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <div x-data="{ showTransferModal: false }" class="relative">
-                <button @click="showTransferModal = !showTransferModal"
-                    class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
-                    title="Transfer Conversation">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                </button>
-                <!-- Transfer Modal -->
-                <div x-show="showTransferModal" x-cloak
-                    class="absolute top-12 right-0 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
-                    @click.away="showTransferModal = false">
-                    <p
-                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
-                        Assign to Agent</p>
-                    <div class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
-                        @foreach($this->agents as $agent)
-                            <button wire:click="transferConversation({{ $agent->id }})" @click="showTransferModal = false"
-                                class="w-full flex items-center gap-3 p-2 hover:bg-wa-teal/5 rounded-xl transition-colors text-left group">
-                                <div
-                                    class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:bg-wa-teal/10 group-hover:text-wa-teal">
-                                    {{ substr($agent->name, 0, 1) }}
-                                </div>
-                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $agent->name }}</span>
-                            </button>
-                        @endforeach
-                        @if($this->agents->isEmpty())
-                            <p class="text-[10px] text-slate-400 italic p-2">No other agents online.</p>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <livewire:chat.whatsapp-call-button :contact="$conversation->contact" :key="'call-' . $conversation->id" />
-
-            <div class="flex items-center gap-2" x-data="{ showCloseModal: false }">
-                <button @click="$dispatch('toggle-details')"
-                    class="hidden xl:flex p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
-                    title="Toggle Contact Info">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </button>
-
-                <button wire:click="toggleBot"
-                    class="p-2 rounded-xl transition-all {{ $conversation->contact->is_bot_paused ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500' }} hover:scale-105"
-                    title="{{ $conversation->contact->is_bot_paused ? 'Resume Bot' : 'Pause Bot' }}">
-                    @if($conversation->contact->is_bot_paused)
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    @else
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    @endif
-                </button>
-
-                @if($conversation->status !== 'closed')
-                    <button @click="showCloseModal = !showCloseModal"
-                        class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500"
-                        title="Close Conversation">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
+                <!-- Tagging Action -->
+                <div x-data="{ showTags: false }" class="relative">
+                    <button @click="showTags = !showTags"
+                        class="p-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal/10 rounded-xl transition-all text-slate-500 hover:text-wa-teal border border-slate-100 dark:border-slate-700"
+                        title="Label Conversation">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
                     </button>
-                @endif
+                    <div x-show="showTags" x-cloak @click.away="showTags = false"
+                        class="absolute top-12 right-0 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-56 animate-in fade-in zoom-in duration-200">
+                        <p
+                            class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                            Label Categories</p>
+                        <div class="space-y-1">
+                            @foreach($availableCategories as $category)
+                                <button wire:click="toggleCategory({{ $category->id }})"
+                                    class="w-full flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors group">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2 h-2 rounded-full" style="background-color: {{ $category->color }}">
+                                        </div>
+                                        <span
+                                            class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $category->name }}</span>
+                                    </div>
+                                    @if(isset($activeTags) && in_array($category->id, $activeTags))
+                                        <svg class="w-4 h-4 text-wa-teal" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    @endif
+                                </button>
+                            @endforeach
+                            @if($availableCategories->isEmpty())
+                                <p class="text-[10px] text-slate-400 italic p-2 line-height-relaxed">No categories defined.
+                                    Configure them in Settings Hub.</p>
+                            @endif
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <a href="{{ route('settings.categories') }}" target="_blank"
+                                class="flex items-center gap-2 px-2 py-1.5 text-[10px] font-black text-wa-teal uppercase tracking-widest hover:bg-wa-teal/5 rounded-lg transition-all">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Manage Labels
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div x-data="{ showTransferModal: false }" class="relative">
+                    <button @click="showTransferModal = !showTransferModal"
+                        class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
+                        title="Transfer Conversation">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </button>
+                    <!-- Transfer Modal -->
+                    <div x-show="showTransferModal" x-cloak
+                        class="absolute top-12 right-0 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
+                        @click.away="showTransferModal = false">
+                        <p
+                            class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                            Assign to Agent</p>
+                        <div class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                            @foreach($this->agents as $agent)
+                                <button wire:click="transferConversation({{ $agent->id }})" @click="showTransferModal = false"
+                                    class="w-full flex items-center gap-3 p-2 hover:bg-wa-teal/5 rounded-xl transition-colors text-left group">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:bg-wa-teal/10 group-hover:text-wa-teal">
+                                        {{ substr($agent->name, 0, 1) }}
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $agent->name }}</span>
+                                </button>
+                            @endforeach
+                            @if($this->agents->isEmpty())
+                                <p class="text-[10px] text-slate-400 italic p-2">No other agents online.</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Modal -->
-                <div x-show="showCloseModal" x-cloak
-                    class="absolute top-16 right-6 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
-                    @click.away="showCloseModal = false">
-                    <p
-                        class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
-                        Close Conversation</p>
-                    <div class="grid grid-cols-1 gap-2">
-                        <button wire:click="closeConversation('resolved')" @click="showCloseModal = false"
-                            class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl text-emerald-600 transition-colors">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> Resolved
+                <livewire:chat.whatsapp-call-button :contact="$conversation->contact" :key="'call-' . $conversation->id" />
+
+                <div class="flex items-center gap-2" x-data="{ showCloseModal: false }">
+                    <button @click="$dispatch('toggle-details')"
+                        class="hidden xl:flex p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
+                        title="Toggle Contact Info">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
+
+                    <button wire:click="toggleBot"
+                        class="p-2 rounded-xl transition-all {{ ($conversation->contact->is_bot_paused ?? false) ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500' }} hover:scale-105"
+                        title="{{ ($conversation->contact->is_bot_paused ?? false) ? 'Resume Bot' : 'Pause Bot' }}">
+                        @if($conversation->contact->is_bot_paused ?? false)
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        @else
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        @endif
+                    </button>
+
+                    @if($conversation->status !== 'closed')
+                        <button @click="showCloseModal = !showCloseModal"
+                            class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500"
+                            title="Close Conversation">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
-                        <button wire:click="closeConversation('spam')" @click="showCloseModal = false"
-                            class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl text-rose-600 transition-colors">
-                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span> Spam
-                        </button>
-                        <button wire:click="closeConversation('timeout')" @click="showCloseModal = false"
-                            class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-slate-500 transition-colors">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span> No Response
-                        </button>
+                    @endif
+
+                    <!-- Modal -->
+                    <div x-show="showCloseModal" x-cloak
+                        class="absolute top-16 right-6 bg-white dark:bg-slate-900 shadow-2xl border border-slate-100 dark:border-slate-800 rounded-2xl p-4 z-50 w-64 animate-in fade-in zoom-in duration-200"
+                        @click.away="showCloseModal = false">
+                        <p
+                            class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                            Close Conversation</p>
+                        <div class="grid grid-cols-1 gap-2">
+                            <button wire:click="closeConversation('resolved')" @click="showCloseModal = false"
+                                class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-xl text-emerald-600 transition-colors">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> Resolved
+                            </button>
+                            <button wire:click="closeConversation('spam')" @click="showCloseModal = false"
+                                class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl text-rose-600 transition-colors">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span> Spam
+                            </button>
+                            <button wire:click="closeConversation('timeout')" @click="showCloseModal = false"
+                                class="flex items-center px-4 py-3 text-[10px] font-black uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-slate-500 transition-colors">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span> No Response
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        @endif
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950 relative" id="messages-container" x-data="{
@@ -1106,9 +1110,9 @@
                     @keyup="checkQR(); pChannel.whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()"
                     placeholder="Type a message (or / for templates)..." rows="1" :disabled="$store.chat.isLockedForMe()"
                     :class="[
-                                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                        ]"
+                                                                        $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                        isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                    ]"
                     class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                     style="min-height: 56px;"></textarea>
 

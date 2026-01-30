@@ -27,7 +27,12 @@ class ContactDetails extends Component
             'notes.user',
             'assignee'
         ])->find($this->conversationId);
-        $this->contact = $this->conversation->contact;
+
+        if ($this->conversation) {
+            $this->contact = $this->conversation->contact;
+        } else {
+            $this->contact = null;
+        }
     }
 
     public function assignToSelf()
