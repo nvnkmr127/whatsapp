@@ -74,8 +74,6 @@ class WhatsappConfig extends Component
 
     // Behavior Settings (Merged from WhatsappSettings)
     public $timezone = 'UTC';
-    public $awayMessageEnabled = false;
-    public $awayMessage = 'We are currently closed. We will get back to you soon.';
 
     // Call Settings
     public $callingEnabled = false;
@@ -196,8 +194,6 @@ class WhatsappConfig extends Component
     public function loadBehaviorSettings($team)
     {
         $this->timezone = $team->timezone ?? 'UTC';
-        $this->awayMessageEnabled = $team->away_message_enabled;
-        $this->awayMessage = $team->away_message;
 
         // Load Call Settings
         if (isset($team->whatsapp_settings['calling'])) {
@@ -285,8 +281,6 @@ class WhatsappConfig extends Component
 
             $team->forceFill([
                 'timezone' => $this->timezone,
-                'away_message_enabled' => $this->awayMessageEnabled,
-                'away_message' => $this->awayMessage,
             ])->save();
 
             // Save Call Settings to Meta

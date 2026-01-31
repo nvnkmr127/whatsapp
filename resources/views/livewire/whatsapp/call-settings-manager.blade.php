@@ -30,13 +30,23 @@
             </div>
         @endif
 
-        <button wire:click="generateCallLink"
-            class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.82a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.103-1.103" />
-            </svg>
-            Generate Call Link
-        </button>
+        <div class="flex items-center gap-3">
+            <a href="{{ route('calls.analytics') }}"
+                class="flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/5 hover:scale-[1.02] active:scale-95 transition-all border border-slate-100 dark:border-slate-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                View Analytics
+            </a>
+
+            <button wire:click="generateCallLink"
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.82a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.103-1.103" />
+                </svg>
+                Generate Call Link
+            </button>
+        </div>
     </div>
 
     <!-- Statistics Grid -->
@@ -151,6 +161,42 @@
                             Processing...
                         </span>
                     </button>
+                </div>
+            </div>
+
+            <!-- Automated Responses -->
+            <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50" x-data="{ expanded: @entangle('awayMessageEnabled') }">
+                <div class="flex items-center justify-between mb-8 cursor-pointer" @click="expanded = !expanded">
+                   <div class="flex items-center gap-4">
+                        <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Automated <span class="text-purple-500">Responses</span></h2>
+                   </div>
+                   <div class="relative inline-flex items-center cursor-pointer" @click.stop>
+                        <input type="checkbox" wire:model="awayMessageEnabled" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-500"></div>
+                    </div>
+                </div>
+
+                <div x-show="expanded" x-collapse>
+                    <div class="space-y-4 pt-2">
+                        <div class="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-2xl border border-purple-100 dark:border-purple-800/20">
+                            <p class="text-[10px] font-bold text-purple-600 dark:text-purple-400 mb-2 uppercase tracking-wider">Away Message Behavior</p>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                This message will be sent automatically when customers contact you outside of the <span class="font-bold text-slate-900 dark:text-white">Business Hours</span> defined on the right.
+                            </p>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Message Content</label>
+                            <textarea wire:model="awayMessage" rows="3"
+                                class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white font-medium text-sm focus:ring-2 focus:ring-purple-500/20 resize-none"
+                                placeholder="We are currently closed. We will get back to you soon."></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
 

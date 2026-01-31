@@ -32,6 +32,8 @@ class CallSettingsManager extends Component
     public $timezone = 'UTC';
     public $businessHours = [];
     public $syncWithBusinessHours = false;
+    public $awayMessageEnabled = false;
+    public $awayMessage = '';
 
     // SIP Configuration
     public $sipEnabled = false;
@@ -107,6 +109,10 @@ class CallSettingsManager extends Component
         $this->timezone = $bhConfig['timezone'] ?? 'UTC';
         $this->businessHours = $bhConfig['hours'] ?? [];
         $this->syncWithBusinessHours = $bhConfig['sync_enabled'] ?? false;
+
+        // Load Away Message from Team (as it's a global setting)
+        $this->awayMessageEnabled = $team->away_message_enabled;
+        $this->awayMessage = $team->away_message;
 
         $this->isRestricted = $this->settings->is_restricted;
         $this->restrictionReason = $this->settings->restriction_reason;
@@ -262,7 +268,9 @@ class CallSettingsManager extends Component
 
             $team->forceFill([
                 'timezone' => $this->timezone,
-                'business_hours' => $teamHours
+                'business_hours' => $teamHours,
+                'away_message_enabled' => $this->awayMessageEnabled,
+                'away_message' => $this->awayMessage,
             ])->save();
 
             if (isset($response['success']) && $response['success']) {

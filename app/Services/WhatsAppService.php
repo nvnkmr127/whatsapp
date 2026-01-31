@@ -1091,12 +1091,14 @@ class WhatsAppService
      */
     public function generateCallLink(): string
     {
-        if (!$this->phoneId) {
-            throw new \Exception("Phone ID is not configured.");
+        if (!$this->team->whatsapp_phone_display) {
+            // Fallback: try to see if phoneId looks like a phone number (not 15 digits starting with 1/3)
+            // But usually ID is different. If missing, we can't generate a valid wa.me link.
+            throw new \Exception("Display Phone Number is not configured for this team.");
         }
 
         // Format: https://wa.me/{phone_number}?call=1
-        $phoneNumber = str_replace('+', '', $this->phoneId);
+        $phoneNumber = str_replace(['+', ' ', '-'], '', $this->team->whatsapp_phone_display);
         return "https://wa.me/{$phoneNumber}?call=1";
     }
 
@@ -1189,6 +1191,10 @@ class WhatsAppService
 
             if ($response['success'] ?? false) {
                 $callId = $response['data']['id'] ?? null;
+
+                if (!$callId) {
+                    throw new \Exception("WhatsApp API Response missing Call ID: " . json_encode($response['data']));
+                }
 
                 // Create call record
                 $contact = $this->getOrCreateContact($to);
@@ -1393,6 +1399,10 @@ class WhatsAppService
         $call = \App\Models\WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
             ->firstOrFail();
+
+        if ($call->direction === 'outbound') {
+            throw new \Exception("Cannot reject an outbound call. Use endCall() instead.");
+        }
 
         if (!in_array($call->status, ['ringing', 'initiated'])) {
             throw new \Exception("Call cannot be rejected. Current status: {$call->status}");

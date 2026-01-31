@@ -568,23 +568,6 @@
                              </div>
 
 
-                             <div class="pt-4">
-                                <label class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                                    <input type="checkbox" wire:model="awayMessageEnabled" class="mt-1 rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900">
-                                    <div>
-                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Away Message</span>
-                                        <span class="block text-xs text-slate-500 mt-0.5">Auto-reply when closed.</span>
-                                    </div>
-                                </label>
-
-                                @if($awayMessageEnabled)
-                                    <div class="mt-4 animate-in fade-in slide-in-from-top-2">
-                                        <x-label for="awayMessage" value="Away Message Content" class="text-xs font-bold text-slate-500 uppercase mb-2" />
-                                        <textarea wire:model="awayMessage" rows="3"
-                                            class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all"></textarea>
-                                    </div>
-                                @endif
-                             </div>
                          </div>
 
                          <!-- Call Settings -->
