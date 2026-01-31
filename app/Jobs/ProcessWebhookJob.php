@@ -214,6 +214,11 @@ class ProcessWebhookJob implements ShouldQueue
 
             // 5. Handle Calls
             if (isset($change['calls']) && is_array($change['calls'])) {
+                \Illuminate\Support\Facades\File::append(
+                    base_path('app_debug.log'),
+                    date('Y-m-d H:i:s') . " RECEIVED CALL WEBHOOK. Team Resolved: " . ($teamId ?? 'NULL') . "\n"
+                );
+
                 if ($teamId) {
                     $team = Team::find($teamId);
                     if ($team) {

@@ -23,6 +23,9 @@ class VerifyWhatsAppSignature
 
         $signature = $request->header('X-Hub-Signature-256');
 
+        $logMsg = date('Y-m-d H:i:s') . " MIDDLEWARE RECEIVED SIG: " . ($signature ?? 'MISSING') . "\n";
+        \Illuminate\Support\Facades\File::append(base_path('app_debug.log'), $logMsg);
+
         if (!$signature) {
             Log::warning('WhatsApp Webhook: Missing Signature');
             // For strict security, we should reject.

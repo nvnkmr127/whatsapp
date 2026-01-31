@@ -22,16 +22,22 @@ class CallOverlay extends Component
 
     public function getListeners()
     {
+        $teamId = auth()->check() ? auth()->user()->current_team_id : null;
+
+        if (!$teamId) {
+            return ['initiate-whatsapp-call' => 'handleInitiation'];
+        }
+
         return [
             'initiate-whatsapp-call' => 'handleInitiation',
-            "echo-private:teams.{$this->teamId},.call.offered" => 'handleOffered',
-            "echo-private:teams.{$this->teamId},.call.ringing" => 'handleRinging',
-            "echo-private:teams.{$this->teamId},.call.answered" => 'handleAnswered',
-            "echo-private:teams.{$this->teamId},.call.ended" => 'handleEnded',
-            "echo-private:teams.{$this->teamId},.call.missed" => 'handleEnded',
-            "echo-private:teams.{$this->teamId},.call.rejected" => 'handleEnded',
-            "echo-private:teams.{$this->teamId},.call.failed" => 'handleFailed',
-            "echo-private:teams.{$this->teamId},.call.taken" => 'handleCallTaken',
+            "echo-private:teams.{$teamId},.call.offered" => 'handleOffered',
+            "echo-private:teams.{$teamId},.call.ringing" => 'handleRinging',
+            "echo-private:teams.{$teamId},.call.answered" => 'handleAnswered',
+            "echo-private:teams.{$teamId},.call.ended" => 'handleEnded',
+            "echo-private:teams.{$teamId},.call.missed" => 'handleEnded',
+            "echo-private:teams.{$teamId},.call.rejected" => 'handleEnded',
+            "echo-private:teams.{$teamId},.call.failed" => 'handleFailed',
+            "echo-private:teams.{$teamId},.call.taken" => 'handleCallTaken',
         ];
     }
 
@@ -162,15 +168,22 @@ class CallOverlay extends Component
 
         $this->status = 'active';
 
+        // Robust extraction (handles direct or nested payloads)
+        $callData = $event['call'] ?? $event;
+
         // If the server has an answer SDP (e.g. from mobile), we need to send it to the JS PeerConnection
-        $answeredSdp = $event['call']['metadata']['answered_sdp'] ?? null;
+        $answeredSdp = $callData['metadata']['answered_sdp'] ?? null;
         if ($answeredSdp) {
-            $this->offerSdp = $answeredSdp; // Re-use offerSdp or we could use another var, but JS can check
+            $this->offerSdp = $answeredSdp;
             $this->dispatch('set-remote-answer', ['sdp' => $answeredSdp]);
         }
 
         // Set start time from event or now
-        $this->startTime = $event['call']['answered_at'] ? \Carbon\Carbon::parse($event['call']['answered_at'])->timestamp : now()->timestamp;
+        if (isset($callData['answered_at'])) {
+            $this->startTime = \Carbon\Carbon::parse($callData['answered_at'])->timestamp;
+        } else {
+            $this->startTime = now()->timestamp;
+        }
     }
 
     public function handleEnded($event)

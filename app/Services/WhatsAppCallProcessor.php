@@ -14,6 +14,7 @@ use App\Events\CallFailed;
 use App\Events\CallRejected;
 use App\Events\CallMissed;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
 
 class WhatsAppCallProcessor
@@ -86,15 +87,18 @@ class WhatsAppCallProcessor
         }
 
         // Handle Events
-        if ($event === 'connect' || $event === 'connected') {
+        $eventNormalized = strtolower($event ?? '');
+        $statusNormalized = strtolower($status ?? '');
+
+        if ($eventNormalized === 'connect' || $eventNormalized === 'connected') {
             $this->handleConnect($call, $callData);
-        } elseif ($event === 'answered') {
+        } elseif ($eventNormalized === 'answered') {
             $this->handleAnswered($call, $callData);
-        } elseif ($event === 'terminate') {
+        } elseif ($eventNormalized === 'terminate') {
             $this->handleTerminate($call, $callData);
-        } elseif ($status) {
+        } elseif ($statusNormalized) {
             // Fallback for status-only updates if any
-            if ($status === 'ANSWERED' || $status === 'IN_PROGRESS') {
+            if ($statusNormalized === 'answered' || $statusNormalized === 'in_progress') {
                 $this->handleAnswered($call, $callData);
             } else {
                 $this->handleStatusUpdate($call, $status, $callData);
@@ -104,15 +108,18 @@ class WhatsAppCallProcessor
 
     protected function handleConnect(WhatsAppCall $call, array $callData)
     {
-        Log::debug("WhatsAppCallProcessor: Handling connect/connected event", [
+        $logMsg = date('Y-m-d H:i:s') . " Handling Connect: {$call->call_id}\n";
+        File::append(base_path('app_debug.log'), $logMsg);
+
+        Log::info("WhatsAppCallProcessor: Handling connect/connected event", [
             'call_id' => $call->call_id,
             'has_session' => isset($callData['session']),
             'sdp_type' => $callData['session']['sdp_type'] ?? 'N/A'
         ]);
 
-        // Capture SDP offer for inbound calls
+        // Capture SDP offer/answer
         $sdp = $callData['session']['sdp'] ?? $callData['session_data']['sdp'] ?? null;
-        $sdpType = $callData['session']['sdp_type'] ?? $callData['session_data']['sdp_type'] ?? null;
+        $sdpType = strtolower($callData['session']['sdp_type'] ?? $callData['session_data']['sdp_type'] ?? '');
 
         if ($sdp && $sdpType === 'offer') {
             $sanitizedSdp = \App\Services\SDPValidator::sanitize($sdp);
@@ -142,6 +149,9 @@ class WhatsAppCallProcessor
 
     protected function handleAnswered(WhatsAppCall $call, array $callData)
     {
+        $logMsg = date('Y-m-d H:i:s') . " Handling Call Answered: {$call->call_id}\n";
+        File::append(base_path('app_debug.log'), $logMsg);
+
         Log::info("Handling Call Answered: {$call->call_id}");
 
         if ($call->status !== 'in_progress') {
@@ -161,26 +171,29 @@ class WhatsAppCallProcessor
 
     protected function handleTerminate(WhatsAppCall $call, array $callData)
     {
-        $status = $callData['status'] ?? 'COMPLETED';
+        $status = strtolower($callData['status'] ?? 'completed');
+
+        $logMsg = date('Y-m-d H:i:s') . " Handling Terminate [{$status}]: {$call->call_id}\n";
+        File::append(base_path('app_debug.log'), $logMsg);
 
         Log::info("Handling Call Terminate: {$status}", ['call_id' => $call->call_id]);
 
         switch ($status) {
-            case 'COMPLETED':
+            case 'completed':
                 $call->markAsEnded();
                 event(new CallEnded($call));
                 break;
-            case 'MISSED':
-            case 'NO_ANSWER':
+            case 'missed':
+            case 'no_answer':
                 $call->markAsMissed();
                 event(new CallMissed($call));
                 break;
-            case 'REJECTED':
-            case 'BUSY':
+            case 'rejected':
+            case 'busy':
                 $call->markAsRejected();
                 event(new CallRejected($call));
                 break;
-            case 'FAILED':
+            case 'failed':
             default:
                 $call->markAsFailed($callData['failure_reason'] ?? 'Call terminated');
                 event(new CallFailed($call));

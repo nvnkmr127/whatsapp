@@ -35,6 +35,34 @@
                 this.stopCalling();
             });
 
+            // Echo Listeners for real-time updates (fallback/sync)
+            const teamId = @js($this->teamId);
+            if (window.Echo && teamId) {
+                window.Echo.private(`teams.${teamId}`)
+                    .listen('.call.answered', (e) => {
+                        console.log('CallOverlay: Echo Answered', e);
+                        this.status = 'active';
+                        if (e.call && e.call.answered_at) {
+                            const answeredAt = Math.floor(new Date(e.call.answered_at).getTime() / 1000);
+                            $wire.startTime = answeredAt;
+                        } else {
+                            $wire.startTime = Math.floor(Date.now() / 1000);
+                        }
+                    })
+                    .listen('.call.ended', (e) => {
+                        console.log('CallOverlay: Echo Ended', e);
+                        this.status = 'ended';
+                    })
+                    .listen('.call.failed', (e) => {
+                        console.log('CallOverlay: Echo Failed', e);
+                        this.status = 'ended';
+                    })
+                    .listen('.call.ringing', (e) => {
+                        console.log('CallOverlay: Echo Ringing', e);
+                        if (this.status !== 'active') this.status = 'ringing';
+                    });
+            }
+
             $watch('status', value => {
                 if (value === 'ringing' && this.direction === 'inbound') this.playRinging();
                 if (value === 'active') { this.startTimer(); this.stopRinging(); }
