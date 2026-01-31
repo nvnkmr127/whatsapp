@@ -98,25 +98,35 @@ class WhatsAppCallProcessor
 
     protected function handleConnect(WhatsAppCall $call, array $callData)
     {
-        // If it has an SDP offer, it's ringing for the agent
-        if (isset($callData['session']['sdp_type']) && $callData['session']['sdp_type'] === 'offer') {
-            $sdp = \App\Services\SDPValidator::sanitize($callData['session']['sdp']);
+        Log::debug("WhatsAppCallProcessor: Handling connect event", [
+            'call_id' => $call->call_id,
+            'has_session' => isset($callData['session']),
+            'sdp_type' => $callData['session']['sdp_type'] ?? 'N/A'
+        ]);
+
+        // Capture SDP offer for inbound calls
+        $sdp = $callData['session']['sdp'] ?? $callData['session_data']['sdp'] ?? null;
+        $sdpType = $callData['session']['sdp_type'] ?? $callData['session_data']['sdp_type'] ?? null;
+
+        if ($sdp && $sdpType === 'offer') {
+            $sanitizedSdp = \App\Services\SDPValidator::sanitize($sdp);
 
             $call->update([
                 'status' => 'ringing',
-                'metadata' => array_merge($call->metadata ?? [], ['sdp' => $sdp])
+                'metadata' => array_merge($call->metadata ?? [], ['sdp' => $sanitizedSdp])
             ]);
 
             // Record SDP offer received for quality tracking
             $call->recordSdpOfferReceived();
 
-            Log::info("Dispatching CallOffered for inbound call: {$call->call_id}");
-            event(new CallOffered($call));
+            Log::info("Dispatching CallOffered for inbound call (Offer captured): {$call->call_id}");
+            event(new CallOffered($call->fresh())); // Use fresh to ensure metadata is reloaded
         } else {
             // Generic connect without offer? Maybe call answered elsewhere or outbound connect
-            if ($call->status === 'initiated') {
+            if ($call->status === 'initiated' || $call->status === 'ringing') {
                 $call->update(['status' => 'ringing']);
-                event(new CallRinging($call));
+                Log::info("Dispatching CallRinging for call: {$call->call_id}");
+                event(new CallRinging($call->fresh()));
             }
         }
     }

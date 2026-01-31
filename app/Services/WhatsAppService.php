@@ -1190,7 +1190,7 @@ class WhatsAppService
             $response = $this->sendRequest('calls', $payload);
 
             if ($response['success'] ?? false) {
-                $callId = $response['data']['id'] ?? null;
+                $callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
 
                 if (!$callId) {
                     throw new \Exception("WhatsApp API Response missing Call ID: " . json_encode($response['data']));

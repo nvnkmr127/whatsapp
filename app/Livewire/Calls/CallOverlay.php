@@ -119,10 +119,19 @@ class CallOverlay extends Component
     {
         Log::info("CallOverlay: Received CallOffered event", ['event' => $event]);
 
-        $this->callId = $event['call_id'];
+        $this->callId = $event['call_id'] ?? null;
         $this->status = 'ringing';
         $this->direction = $event['direction'] ?? 'inbound';
+
+        // Resolve contact name
         $this->contactName = $event['from'] ?? 'Unknown Caller';
+        if (isset($event['contact_id'])) {
+            $contact = Contact::find($event['contact_id']);
+            if ($contact) {
+                $this->contactName = $contact->name;
+            }
+        }
+
         $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
         $this->startTime = null;
         $this->offerSdp = $event['sdp'] ?? null;
