@@ -86,19 +86,25 @@ class WhatsAppCallProcessor
         }
 
         // Handle Events
-        if ($event === 'connect') {
+        if ($event === 'connect' || $event === 'connected') {
             $this->handleConnect($call, $callData);
+        } elseif ($event === 'answered') {
+            $this->handleAnswered($call, $callData);
         } elseif ($event === 'terminate') {
             $this->handleTerminate($call, $callData);
         } elseif ($status) {
             // Fallback for status-only updates if any
-            $this->handleStatusUpdate($call, $status, $callData);
+            if ($status === 'ANSWERED' || $status === 'IN_PROGRESS') {
+                $this->handleAnswered($call, $callData);
+            } else {
+                $this->handleStatusUpdate($call, $status, $callData);
+            }
         }
     }
 
     protected function handleConnect(WhatsAppCall $call, array $callData)
     {
-        Log::debug("WhatsAppCallProcessor: Handling connect event", [
+        Log::debug("WhatsAppCallProcessor: Handling connect/connected event", [
             'call_id' => $call->call_id,
             'has_session' => isset($callData['session']),
             'sdp_type' => $callData['session']['sdp_type'] ?? 'N/A'
@@ -121,13 +127,35 @@ class WhatsAppCallProcessor
 
             Log::info("Dispatching CallOffered for inbound call (Offer captured): {$call->call_id}");
             event(new CallOffered($call->fresh())); // Use fresh to ensure metadata is reloaded
+        } elseif ($sdp && $sdpType === 'answer') {
+            // If it's an answer in the connect event (outbound answer)
+            $this->handleAnswered($call, $callData);
         } else {
-            // Generic connect without offer? Maybe call answered elsewhere or outbound connect
+            // Generic connect without offer/answer? Maybe call ringing elsewhere
             if ($call->status === 'initiated' || $call->status === 'ringing') {
                 $call->update(['status' => 'ringing']);
                 Log::info("Dispatching CallRinging for call: {$call->call_id}");
                 event(new CallRinging($call->fresh()));
             }
+        }
+    }
+
+    protected function handleAnswered(WhatsAppCall $call, array $callData)
+    {
+        Log::info("Handling Call Answered: {$call->call_id}");
+
+        if ($call->status !== 'in_progress') {
+            $call->markAsAnswered();
+
+            // Store SDP answer if present (from mobile/other client)
+            $sdp = $callData['session']['sdp'] ?? $callData['session_data']['sdp'] ?? null;
+            if ($sdp) {
+                $call->update([
+                    'metadata' => array_merge($call->metadata ?? [], ['answered_sdp' => $sdp])
+                ]);
+            }
+
+            event(new CallAnswered($call->fresh()));
         }
     }
 

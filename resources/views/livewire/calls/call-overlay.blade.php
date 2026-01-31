@@ -14,6 +14,7 @@
         signalQuality: 100, // 0-100%
         connectionType: 'direct',
         
+        startTime: @entangle('startTime'),
         async init() {
             this.ringingSound = document.getElementById('call-ringing-sound');
             this.bc = new BroadcastChannel('whatsapp_calls_sync');
@@ -45,7 +46,7 @@
                         type: 'SYNC_STATE',
                         payload: {
                             status: value,
-                            startTime: $wire.startTime,
+                            startTime: this.startTime,
                             contactName: $wire.contactName,
                             contactAvatar: $wire.contactAvatar,
                             offerSdp: this.offerSdp
@@ -143,10 +144,24 @@
         
         startTimer() {
             if (this.timer) clearInterval(this.timer);
-            this.duration = 0;
+            
+            // Calculate initial duration based on startTime entanglement
+            if (this.startTime) {
+                const now = Math.floor(Date.now() / 1000);
+                this.duration = Math.max(0, now - this.startTime);
+            } else {
+                this.duration = 0;
+            }
+
             this.timer = setInterval(() => {
                 this.duration++;
             }, 1000);
+
+            // Explicitly play remote audio for mobile browsers which might block autoplay
+            const remoteAudio = document.getElementById('remote-audio');
+            if (remoteAudio && remoteAudio.srcObject) {
+                remoteAudio.play().catch(e => console.log('Remote audio play failed:', e));
+            }
         },
         
         stopTimer() {

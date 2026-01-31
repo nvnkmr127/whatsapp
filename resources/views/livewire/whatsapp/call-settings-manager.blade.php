@@ -285,60 +285,57 @@
                     </div>
                 </div>
 
-                <!-- Days Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 relative">
+                <!-- Days Vertical List -->
+                <div class="flex flex-col gap-3 relative">
                     @foreach($businessHours as $index => $hour)
-                        <div class="flex flex-col gap-3 group/day">
-                            <!-- Day Toggle Card -->
-                            <button wire:click="toggleDay({{ $index }})"
-                                class="relative flex flex-col items-center justify-center p-5 rounded-[2rem] border-2 transition-all duration-300 overflow-hidden
-                                {{ ($hour['enabled'] ?? false) 
-                                    ? 'bg-gradient-to-b from-wa-teal/10 to-transparent border-wa-teal shadow-lg shadow-wa-teal/10' 
-                                    : 'bg-slate-50 dark:bg-slate-800/30 border-transparent text-slate-400 grayscale' }}">
-                                
-                                @if($hour['enabled'] ?? false)
-                                    <div class="absolute -top-2 -right-2 w-8 h-8 bg-wa-teal/10 rounded-full blur-xl animate-pulse"></div>
-                                @endif
-
-                                <span class="text-xs font-black uppercase tracking-widest leading-none mb-2 z-10 
-                                    {{ ($hour['enabled'] ?? false) ? 'text-wa-teal' : 'text-slate-400' }}">
-                                    {{ substr($hour['day'], 0, 3) }}
-                                </span>
-                                
-                                <div class="w-2 h-2 rounded-full transition-all duration-500 z-10
-                                    {{ ($hour['enabled'] ?? false) ? 'bg-wa-teal scale-125 shadow-[0_0_10px_#25D366]' : 'bg-slate-300 dark:bg-slate-700' }}"></div>
-                            </button>
-
-                            <!-- Hours Input Card -->
-                            <div class="transition-all duration-500 {{ ($hour['enabled'] ?? false) ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none' }}">
-                                <div class="flex flex-col gap-2.5 p-3 rounded-[1.8rem] bg-white dark:bg-slate-800 border-2 {{ ($hour['enabled'] ?? false) ? 'border-wa-teal/20 shadow-xl' : 'border-transparent' }} transition-all">
-                                    <div class="space-y-1">
-                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Opens</span>
-                                        <input type="time" wire:model="businessHours.{{ $index }}.open"
-                                            class="w-full border-none bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl text-[11px] font-black text-slate-900 dark:text-white text-center focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                        <div class="glass-card group/day flex flex-col md:flex-row items-center gap-4 p-4 rounded-[1.8rem] transition-all duration-300 {{ ($hour['enabled'] ?? false) ? 'neon-border-teal' : 'opacity-60 grayscale' }}">
+                            
+                            <!-- Day Toggle (Left) -->
+                            <div class="flex flex-row items-center gap-4 min-w-[140px]">
+                                <button wire:click="toggleDay({{ $index }})"
+                                    class="relative w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300
+                                    {{ ($hour['enabled'] ?? false) ? 'bg-wa-teal text-white shadow-lg shadow-wa-teal/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
+                                    <div class="text-[10px] font-black uppercase tracking-widest leading-none">
+                                        {{ substr($hour['day'], 0, 3) }}
                                     </div>
-                                    
-                                    <div class="flex items-center justify-center">
-                                        <div class="h-[1px] flex-1 bg-slate-100 dark:bg-slate-700/50"></div>
-                                        <div class="mx-2 text-[8px] font-black text-slate-300 uppercase tracking-widest">to</div>
-                                        <div class="h-[1px] flex-1 bg-slate-100 dark:bg-slate-700/50"></div>
-                                    </div>
-
-                                    <div class="space-y-1">
-                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Closes</span>
-                                        <input type="time" wire:model="businessHours.{{ $index }}.close"
-                                            class="w-full border-none bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl text-[11px] font-black text-slate-900 dark:text-white text-center focus:ring-2 focus:ring-wa-teal/20 transition-all">
-                                    </div>
-
-                                    <button wire:click="applyToAll({{ $index }})" 
-                                            class="mt-1 py-2 text-slate-300 hover:text-wa-teal transition-all flex items-center justify-center gap-1.5 group/copy"
-                                            title="Apply this schedule to all active days">
-                                        <svg class="w-3.5 h-3.5 transition-transform group-hover/copy:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                        <span class="text-[8px] font-black uppercase tracking-tighter opacity-0 group-hover/copy:opacity-100 transition-opacity">Copy All</span>
-                                    </button>
+                                    @if($hour['enabled'] ?? false)
+                                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-white border-2 border-wa-teal rounded-full animate-pulse"></div>
+                                    @endif
+                                </button>
+                                <div class="hidden md:block">
+                                    <span class="text-xs font-black uppercase tracking-widest leading-none {{ ($hour['enabled'] ?? false) ? 'text-slate-900 dark:text-white' : 'text-slate-400' }}">
+                                        {{ $hour['day'] }}
+                                    </span>
                                 </div>
+                            </div>
+
+                            <!-- Hours Inputs (Center) -->
+                            <div class="flex-1 flex flex-row items-center gap-4 transition-all duration-500 {{ ($hour['enabled'] ?? false) ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none' }}">
+                                <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Opens</span>
+                                    <input type="time" wire:model="businessHours.{{ $index }}.open"
+                                        class="border-none bg-white dark:bg-slate-800 p-2.5 rounded-xl text-[11px] font-black text-slate-900 dark:text-white text-center focus:ring-2 focus:ring-wa-teal/20 transition-all shadow-sm">
+                                </div>
+                                
+                                <div class="text-[9px] font-black text-slate-300 uppercase tracking-widest px-2 group-hover/day:text-wa-teal transition-colors">to</div>
+
+                                <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Closes</span>
+                                    <input type="time" wire:model="businessHours.{{ $index }}.close"
+                                        class="border-none bg-white dark:bg-slate-800 p-2.5 rounded-xl text-[11px] font-black text-slate-900 dark:text-white text-center focus:ring-2 focus:ring-wa-teal/20 transition-all shadow-sm">
+                                </div>
+                            </div>
+
+                            <!-- Actions (Right) -->
+                            <div class="flex items-center gap-2 transition-all duration-500 {{ ($hour['enabled'] ?? false) ? 'opacity-100' : 'opacity-0 pointer-events-none' }}">
+                                <button wire:click="applyToAll({{ $index }})" 
+                                        class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-slate-300 hover:text-wa-teal hover:bg-wa-teal/5 transition-all group/copy flex items-center gap-2"
+                                        title="Apply this schedule to all active days">
+                                    <svg class="w-4 h-4 transition-transform group-hover/copy:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    <span class="text-[9px] font-black uppercase tracking-tighter opacity-0 group-hover/copy:opacity-100 transition-all">Copy to All</span>
+                                </button>
                             </div>
                         </div>
                     @endforeach
