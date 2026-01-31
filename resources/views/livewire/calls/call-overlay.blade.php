@@ -127,6 +127,7 @@
             } finally {
                 this.isProcessing = false;
             }
+        },
         playRinging() {
             if (this.ringingSound) {
                 this.ringingSound.currentTime = 0;
