@@ -1295,8 +1295,8 @@ class WhatsAppService
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
-        if ($call->status !== 'ringing') {
-            throw new \Exception("Call is not in ringing state. Current status: {$call->status}");
+        if (!in_array($call->status, ['initiated', 'ringing', 'in_progress'])) {
+            throw new \Exception("Call is not in a valid state to answer. Current status: {$call->status}");
         }
 
         // Validate SDP if provided

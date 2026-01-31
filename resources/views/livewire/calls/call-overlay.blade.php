@@ -391,10 +391,12 @@
                 };
 
                 this.pc.ontrack = (event) => {
+                    this.logDebug(`Remote track received: ${event.track.kind}`, 'success');
                     this.remoteStream = event.streams[0];
                     const remoteAudio = document.getElementById('remote-audio');
                     if (remoteAudio) {
                         remoteAudio.srcObject = this.remoteStream;
+                        remoteAudio.play().catch(e => this.logDebug(`Early audio play failed: ${e.message}`, 'warn'));
                     }
                 };
 
@@ -435,19 +437,24 @@
 
                 // IMPORTANT: Wait for ICE gathering to complete (or timeout) before sending answer
                 // Meta Cloud API often requires candidates in the initial answer for stable media
+                this.logDebug(`ICE Gathering state: ${this.pc.iceGatheringState}`);
                 await new Promise(resolve => {
                     if (this.pc.iceGatheringState === 'complete') {
                         resolve();
                     } else {
                         const checkState = () => {
                             if (this.pc.iceGatheringState === 'complete') {
+                                this.logDebug('ICE Gathering COMPLETE', 'success');
                                 this.pc.removeEventListener('icegatheringstatechange', checkState);
                                 resolve();
                             }
                         };
                         this.pc.addEventListener('icegatheringstatechange', checkState);
-                        // Max wait for 1 second of gathering to avoid stalling
-                        setTimeout(resolve, 1000);
+                        // Max wait for 2.5 seconds of gathering to avoid stalling
+                        setTimeout(() => {
+                            this.logDebug(`ICE Gathering partial (state: ${this.pc.iceGatheringState})`, 'warn');
+                            resolve();
+                        }, 2500);
                     }
                 });
 
@@ -467,7 +474,9 @@
                     .replace(/\r\n|\r|\n/g, '\n')
                     .split('\n').map(l => l.trim()).join('\r\n') + '\r\n';
 
+                this.logDebug('Sending Answer SDP to Meta via Backend...');
                 await $wire.answerCall(sanitizedAnswer);
+                this.logDebug('Backend answerCall request SENT', 'success');
                 
                 clearTimeout(connectionTimeout);
 

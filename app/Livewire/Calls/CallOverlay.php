@@ -254,11 +254,18 @@ class CallOverlay extends Component
 
             $response = $whatsappService->answerCall($this->callId, $session);
 
+            Log::info("CallOverlay: Meta Answer Response", ['response' => $response]);
+
             if ($response['success']) {
                 $this->status = 'active';
                 $this->startTime = now()->timestamp;
+            } else {
+                $errorMessage = $response['message'] ?? $response['error'] ?? 'Unknown error';
+                $this->dispatch('notify', ['type' => 'error', 'message' => "Meta refused answer: " . $errorMessage]);
+                Log::error("CallOverlay: Meta refused answer", ['message' => $errorMessage]);
             }
         } catch (\Exception $e) {
+            Log::error("CallOverlay: Answer Exception", ['error' => $e->getMessage()]);
             $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
