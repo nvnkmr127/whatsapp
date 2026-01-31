@@ -228,6 +228,12 @@ class CallSettingsManager extends Component
             $waService = new WhatsAppService($team);
             $response = $waService->updateSystemCallSettings($metaSettings);
 
+            // Sync to Business Profile if enabled
+            if ($this->syncWithBusinessHours) {
+                $metaHours = $this->formatBusinessHoursForMeta();
+                $waService->syncBusinessProfileHours($metaHours, $this->timezone);
+            }
+
             // Update local settings
             $businessHoursData = [
                 'timezone' => $this->timezone,

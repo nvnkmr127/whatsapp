@@ -1663,4 +1663,52 @@ class WhatsAppService
             throw new \Exception("Messaging blocked. Connection state: " . ($state ? $state->label() : 'Unknown'));
         }
     }
+    /**
+     * Sync business hours to WhatsApp Business Profile.
+     */
+    public function syncBusinessProfileHours(array $hoursConfig, string $timezone)
+    {
+        $config = [];
+        $daysMap = [
+            'mon' => 'MONDAY',
+            'tue' => 'TUESDAY',
+            'wed' => 'WEDNESDAY',
+            'thu' => 'THURSDAY',
+            'fri' => 'FRIDAY',
+            'sat' => 'SATURDAY',
+            'sun' => 'SUNDAY',
+            'MON' => 'MONDAY',
+            'TUE' => 'TUESDAY',
+            'WED' => 'WEDNESDAY',
+            'THU' => 'THURSDAY',
+            'FRI' => 'FRIDAY',
+            'SAT' => 'SATURDAY',
+            'SUN' => 'SUNDAY'
+        ];
+
+        foreach ($hoursConfig as $h) {
+            // Support both formats: object/array keyed by 'day'
+            $dayKey = $h['day'] ?? null;
+            $open = $h['open'] ?? null;
+            $close = $h['close'] ?? null;
+
+            if ($dayKey && isset($daysMap[$dayKey])) {
+                $config[] = [
+                    'day_of_week' => $daysMap[$dayKey],
+                    'mode' => 'OPEN_FOR_BUSINESS',
+                    'open_time' => $open,
+                    'close_time' => $close,
+                ];
+            }
+        }
+
+        $payload = [
+            'business_hours' => [
+                'timezone_id' => $timezone,
+                'config' => $config
+            ]
+        ];
+
+        return $this->updateBusinessProfile($payload);
+    }
 }
