@@ -55,10 +55,16 @@
                 }
             });
 
-            // Auto-answer for outbound calls once we get the SDP offer from Meta
+            // Auto-answer for outbound calls once we get the SDP offer from Meta (Handling Glare)
             $watch('offerSdp', value => {
-                if (value && this.status === 'ringing' && this.direction === 'outbound' && !this.pc) {
-                    console.log('CallOverlay: Auto-answering outbound call offer...');
+                if (value && this.status === 'ringing' && this.direction === 'outbound') {
+                    console.log('CallOverlay: Detected secondary offer from Meta for outbound call. Switching to receiver mode...');
+                    
+                    // If we have an existing PC (from our initial offer), close it to re-negotiate
+                    if (this.pc) {
+                        this.stopCalling();
+                    }
+                    
                     this.performAction('answerCall');
                 }
             });
@@ -77,14 +83,49 @@
             this.direction = 'outbound';
 
             try {
-                // Request initiation without SDP - we will answer Meta's offer when it arrives via webhook
+                // 1. Get Microphone Access & Generate Initial Offer (Required by Meta API)
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                const iceServers = [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ];
+                
+                this.pc = new RTCPeerConnection({ iceServers });
+                stream.getTracks().forEach(track => this.pc.addTrack(track, stream));
+                
+                const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
+                await this.pc.setLocalDescription(offer);
+                
+                const sanitizedOffer = offer.sdp
+                    .replace(/[^\x20-\x7E\r\n]/g, '')
+                    .replace(/\r\n|\r|\n/g, '\n')
+                    .split('\n').map(l => l.trim()).join('\r\n') + '\r\n';
+
+                // 2. Initiate Call with SDP
                 await $wire.initiateWhatsAppCall(
                     data.phone_number, 
-                    data.contact_id
+                    data.contact_id,
+                    sanitizedOffer
                 );
+                
+                // Handle remote tracks for the initial peer connection
+                this.pc.ontrack = (event) => {
+                     this.remoteStream = event.streams[0];
+                     const remoteAudio = document.getElementById('remote-audio');
+                     if (remoteAudio) remoteAudio.srcObject = this.remoteStream;
+                };
+
             } catch (e) {
-                console.error('Outbound call request failed:', e);
-                $wire.handleFailed({ message: 'Failed to initiate call request: ' + e.message });
+                console.error('Outbound call setup failed:', e);
+                $wire.handleFailed({ message: 'Could not access microphone or setup call: ' + e.message });
+                this.stopCalling();
             } finally {
                 this.isProcessing = false;
             }
