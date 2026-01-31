@@ -38,6 +38,15 @@ document.addEventListener('livewire:init', () => {
             this.messages = [];
             this.hasMore = true;
 
+            // Global listener for Livewire events
+            if (!this._hasListeners) {
+                window.addEventListener('messageSent', () => {
+                    console.log('Store: messageSent detected, refreshing messages...');
+                    this.loadMessages(true);
+                });
+                this._hasListeners = true;
+            }
+
             // Defer initial load to ensure $wire is fully ready
             setTimeout(() => {
                 this.loadMessages(true);
@@ -143,12 +152,12 @@ document.addEventListener('livewire:init', () => {
 
         async loadMessages(isInitial = false) {
             const wire = this._wire || this.wire;
-            if (!wire || this.loading || !this.hasMore) return;
+            if (!wire || this.loading || (!this.hasMore && !isInitial)) return;
             this.loading = true;
 
             try {
-                // Offset is current count
-                const offset = this.messages.length;
+                // Offset is current count, unless initial load then 0
+                const offset = isInitial ? 0 : this.messages.length;
                 const newBatch = await wire.call('loadMessagesJson', offset, 50);
 
                 if (newBatch.length < 50) {

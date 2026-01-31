@@ -216,14 +216,20 @@ class WhatsAppService
             ]);
         }
 
+        $mediaObject = [
+            'link' => $link,
+        ];
+
+        // WhatsApp only supports captions for these types
+        if ($caption && in_array($type, ['image', 'video', 'document'])) {
+            $mediaObject['caption'] = $caption;
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
             'type' => $type,
-            $type => [
-                'link' => $link,
-                'caption' => $caption
-            ]
+            $type => $mediaObject
         ];
 
         try {
@@ -1297,7 +1303,10 @@ class WhatsAppService
                     $call->markAsAnswered();
 
                     // Update metadata with timing info
-                    $metadata = $call->metadata ?? [];
+                    $metadata = $call->metadata;
+                    if (!is_array($metadata)) {
+                        $metadata = [];
+                    }
                     $metadata['answer_sent_at'] = now()->toIso8601String();
                     $metadata['response_time_ms'] = $responseTime;
                     $metadata['retry_attempts'] = $attempt;

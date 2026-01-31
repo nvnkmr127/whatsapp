@@ -327,7 +327,10 @@ class MessageWindow extends Component
             ->first();
 
         if ($message) {
-            $metadata = $message->metadata ?? [];
+            $metadata = $message->metadata;
+            if (!is_array($metadata)) {
+                $metadata = [];
+            }
             $metadata['agent_note'] = $note;
             $metadata['note_saved_at'] = now()->timestamp;
             $message->update(['metadata' => $metadata]);
@@ -404,7 +407,10 @@ class MessageWindow extends Component
         if (!$this->conversation)
             return;
 
-        $metadata = $this->conversation->metadata ?? [];
+        $metadata = $this->conversation->metadata;
+        if (!is_array($metadata)) {
+            $metadata = [];
+        }
         $tags = $metadata['tags'] ?? [];
 
         if (in_array($categoryId, $tags)) {
@@ -424,14 +430,22 @@ class MessageWindow extends Component
         if (!$message)
             return;
 
-        $metadata = $message->metadata ?? [];
+        $metadata = $message->metadata;
+        if (!is_array($metadata)) {
+            $metadata = [];
+        }
+
         $reactions = $metadata['reactions'] ?? [];
+        if (!is_array($reactions)) {
+            $reactions = [];
+        }
 
         // Toggle or Add
-        if (($reactions[Auth::id()] ?? null) === $emoji) {
-            unset($reactions[Auth::id()]);
+        $myId = Auth::id();
+        if (($reactions[$myId] ?? null) === $emoji) {
+            unset($reactions[$myId]);
         } else {
-            $reactions[Auth::id()] = $emoji;
+            $reactions[$myId] = $emoji;
         }
 
         $metadata['reactions'] = $reactions;
