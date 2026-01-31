@@ -28,6 +28,8 @@ class CallOverlay extends Component
             "echo-private:teams.{$this->teamId},.call.ringing" => 'handleRinging',
             "echo-private:teams.{$this->teamId},.call.answered" => 'handleAnswered',
             "echo-private:teams.{$this->teamId},.call.ended" => 'handleEnded',
+            "echo-private:teams.{$this->teamId},.call.missed" => 'handleEnded',
+            "echo-private:teams.{$this->teamId},.call.rejected" => 'handleEnded',
             "echo-private:teams.{$this->teamId},.call.failed" => 'handleFailed',
             "echo-private:teams.{$this->teamId},.call.taken" => 'handleCallTaken',
         ];
