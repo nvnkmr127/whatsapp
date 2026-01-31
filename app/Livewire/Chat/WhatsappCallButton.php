@@ -29,7 +29,10 @@ class WhatsappCallButton extends Component
                 'trigger_source' => 'in_app_action'
             ]);
         } catch (\Exception $e) {
-            Log::error("Call eligibility check failed: " . $e->getMessage());
+            Log::error("Call eligibility check failed: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
             $this->eligibility = [
                 'eligible' => false,
                 'user_message' => 'Unable to verify eligibility.',

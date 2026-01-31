@@ -24,12 +24,14 @@ class CallEligibilityService
     public function checkEligibility(Contact $contact, string $triggerType = 'user_initiated', array $context = []): array
     {
         $checks = [];
+        Log::info("Starting eligibility check for contact {$contact->id}");
 
         // 0. Validate trigger and consent (NEW)
         $consentService = new CallConsentService($this->team);
         $consentCheck = $consentService->validateCallTrigger($contact, $triggerType, $context);
 
         if (!$consentCheck['allowed']) {
+            Log::warning("Eligibility failed: Consent check failed", ['result' => $consentCheck]);
             return $consentCheck; // Return consent block immediately
         }
 
@@ -38,41 +40,51 @@ class CallEligibilityService
         // 1. Phone Number Readiness (Critical)
         $checks['phone_readiness'] = $this->checkPhoneReadiness();
         if (!$checks['phone_readiness']['passed']) {
+            Log::warning("Eligibility failed: Phone readiness failed", ['result' => $checks['phone_readiness']]);
             return $this->buildBlockedResponse('phone_readiness', $checks);
         }
 
         // 2. Quality Rating (Critical)
         $checks['quality_rating'] = $this->checkQualityRating();
         if (!$checks['quality_rating']['passed']) {
+            Log::warning("Eligibility failed: Quality rating failed", ['result' => $checks['quality_rating']]);
             return $this->buildBlockedResponse('quality', $checks);
         }
 
         // 3. Consent & Opt-In (Legal) - Already checked above
         $checks['consent'] = $this->checkConsent($contact);
         if (!$checks['consent']['passed']) {
+            Log::warning("Eligibility failed: Consent (checkConsent) failed", ['result' => $checks['consent']]);
             return $this->buildBlockedResponse('consent', $checks);
         }
 
         // 4. Agent Availability (Operational)
         $checks['agent_availability'] = $this->checkAgentAvailability();
         if (!$checks['agent_availability']['passed']) {
+            Log::warning("Eligibility failed: Agent availability failed", ['result' => $checks['agent_availability']]);
             return $this->buildBlockedResponse('agent', $checks);
         }
 
         // 5. Safeguards (Reliability)
+        Log::info("Checking safeguards...");
         $checks['safeguards'] = $this->checkSafeguards();
         if (!$checks['safeguards']['passed']) {
+            Log::warning("Eligibility failed: Safeguards failed", ['result' => $checks['safeguards']]);
             return $this->buildBlockedResponse('safeguards', $checks);
         }
 
         // 6. Usage Limits (Billing)
+        Log::info("Checking usage limits...");
         $checks['usage_limits'] = $this->checkUsageLimits();
         if (!$checks['usage_limits']['passed']) {
+            Log::warning("Eligibility failed: Usage limits failed", ['result' => $checks['usage_limits']]);
             return $this->buildBlockedResponse('limits', $checks);
         }
 
         // Log consent for audit trail
         $consentService->logConsent($contact, $triggerType, $context, $consentCheck);
+
+        Log::info("Eligibility check passed for contact {$contact->id}");
 
         // All checks passed
         return [
@@ -255,14 +267,14 @@ class CallEligibilityService
      */
     protected function checkAgentAvailability(): array
     {
-        // Get online agents
+        // Get online agents (using call_status and is_call_enabled from pivot)
         $availableAgents = $this->team->users()
-            ->where('is_online', true)
-            ->where('status', 'available')
+            ->wherePivot('is_call_enabled', true)
+            ->wherePivot('call_status', 'available')
             ->count();
 
         $onlineAgents = $this->team->users()
-            ->where('is_online', true)
+            ->wherePivot('is_call_enabled', true)
             ->count();
 
         if ($availableAgents === 0) {
