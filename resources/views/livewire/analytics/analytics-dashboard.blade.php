@@ -131,101 +131,94 @@
         </div>
     </div>
 
-    <!-- Official Meta Insights -->
+    <!-- Official Meta Insights (System Style) -->
     @if(!empty($metaAnalytics))
-        <div
-            class="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden shadow-2xl border border-indigo-500/30">
-            <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -mr-20 -mt-20"></div>
-
-            <div class="relative z-10">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                    <div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <div class="p-2 bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/30">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                </svg>
-                            </div>
-                            <h2 class="text-2xl font-black text-white uppercase tracking-tight">Official <span
-                                    class="text-indigo-400">Meta Data</span></h2>
-                        </div>
-                        <p class="text-indigo-200 text-sm font-medium">Verified billing and usage metrics directly from
-                            WhatsApp Cloud API.</p>
-                    </div>
-                    <div class="px-5 py-2 bg-white/10 rounded-full border border-white/10 backdrop-blur-sm">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-indigo-200">Source: Meta Graph
-                            API</span>
-                    </div>
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden mb-8">
+            <div
+                class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                        Official Meta Data
+                    </h3>
+                    <p class="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+                        Verified billing and usage metrics directly from WhatsApp Cloud API. Source: Meta Graph API.
+                    </p>
                 </div>
+                <div class="flex items-center space-x-3">
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <svg class="-ml-0.5 mr-1.5 h-2 w-2 text-green-400" fill="currentColor" viewBox="0 0 8 8">
+                            <circle cx="4" cy="4" r="3" />
+                        </svg>
+                        Connected
+                    </span>
+                    <a href="https://business.facebook.com/" target="_blank"
+                        class="text-sm text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                        Open Business Manager &rarr;
+                    </a>
+                </div>
+            </div>
 
-                <!-- Meta Stats Grid -->
+            <div class="px-6 py-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     @php
-                        $totalMetaCost = 0;
-                        $marketingCount = 0;
-                        $utilityCount = 0;
-                        // Simple aggregation logic for display
-                        if (isset($metaAnalytics['data_points'])) {
-                            foreach ($metaAnalytics['data_points'] as $point) {
-                                // Example structure - adjust based on actual API response
-                                // This is a placeholder for visualization
-                                $totalMetaCost += ($point['cost'] ?? 0);
-                            }
-                        }
+                        // Display logic
+                        $firstDataPoint = isset($metaAnalytics['data'][0]['data_points']) ? $metaAnalytics['data'][0]['data_points'] : [];
                     @endphp
 
-                    <div class="bg-indigo-950/50 p-6 rounded-3xl border border-indigo-500/20 backdrop-blur-md">
-                        <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Total
-                            Conversation Cost</div>
-                        <div class="text-3xl font-black text-white tracking-tight">
-                            {{ isset($metaAnalytics['data'][0]['data_points']) ? 'View Details' : 'No Data' }}
-                            <!-- Real value summation would go here if we parsed the complex JSON structure in PHP -->
+                    <!-- Stat Card 1 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 overflow-hidden rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Total Conversation
+                                Cost</dt>
+                            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                                {{-- Placeholder as actual summation requires parsing --}}
+                                @if(!empty($firstDataPoint))
+                                    <span class="text-sm text-gray-400">View details in JSON</span>
+                                @else
+                                    <span class="text-gray-400 text-lg">No Data</span>
+                                @endif
+                            </dd>
                         </div>
                     </div>
 
-                    <div class="bg-indigo-950/50 p-6 rounded-3xl border border-indigo-500/20 backdrop-blur-md">
-                        <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Data Granularity
+                    <!-- Stat Card 2 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 overflow-hidden rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Granularity</dt>
+                            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                                Daily
+                            </dd>
                         </div>
-                        <div class="text-xl font-bold text-white tracking-tight">Daily Aggregation</div>
                     </div>
 
-                    <div
-                        class="bg-indigo-950/50 p-6 rounded-3xl border border-indigo-500/20 backdrop-blur-md flex items-center justify-between">
-                        <div>
-                            <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Status</div>
-                            <div class="text-lg font-bold text-green-400 flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                                Connected
-                            </div>
+                    <!-- Stat Card 3 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 overflow-hidden rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Data Points</dt>
+                            <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                                {{ count($metaAnalytics['data'] ?? []) }}
+                            </dd>
                         </div>
-                        <a href="https://business.facebook.com/" target="_blank"
-                            class="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </a>
                     </div>
                 </div>
 
-                <div class="mt-6">
-                    <!-- Raw Data Preview (Debug/Transparency) -->
-                    <div x-data="{ open: false }">
-                        <button @click="open = !open"
-                            class="text-xs font-bold text-indigo-300 hover:text-white flex items-center gap-2 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            View Raw Meta Response
-                        </button>
-                        <div x-show="open"
-                            class="mt-4 p-4 bg-black/50 rounded-xl border border-white/10 text-xs font-mono text-indigo-200 overflow-x-auto">
-                            <pre>{{ json_encode($metaAnalytics, JSON_PRETTY_PRINT) }}</pre>
-                        </div>
+                <!-- JSON Data Toggle -->
+                <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4" x-data="{ open: false }">
+                    <button @click="open = !open" type="button"
+                        class="group inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none">
+                        <svg :class="{'rotate-90': open, 'text-gray-400': !open, 'text-gray-600': open}"
+                            class="mr-2 h-5 w-5 transform transition-colors ease-in-out group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                            viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span>View Raw Analytics Response</span>
+                    </button>
+                    <div x-show="open" class="mt-4 bg-gray-900 rounded-lg p-4 overflow-x-auto" style="display: none;">
+                        <pre
+                            class="text-xs text-green-400 font-mono">{{ json_encode($metaAnalytics, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>
                 </div>
             </div>
