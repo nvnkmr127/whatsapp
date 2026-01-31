@@ -7,10 +7,22 @@
         isDragging: false,
         lightboxOpen: false,
         lightboxImage: '',
-        init() {
+        async init() {
             // Init Store User ID
             $store.chat.setMyUser({{ auth()->id() }});
             
+            // Wait for Echo to be ready
+            let attempts = 0;
+            while (!window.Echo && attempts < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+
+            if (!window.Echo) {
+                console.error('Front: Echo not found after waiting.');
+                return;
+            }
+
             // --- Presence Channel (Multi-Agent) ---
             console.log('Front: Joining presence-conversation.{{ $conversationId }}');
             this.pChannel = window.Echo.join('conversation.{{ $conversationId }}');
@@ -85,17 +97,18 @@
                 $store.chat.setConnectionState('offline');
             });
 
-            window.Echo.connector.pusher.connection.bind('state_change', (states) => {
-                // states = { previous: 'old', current: 'new' }
-                // map pulsar states: connected, connecting, unavailable, failed, disconnected
-                if (states.current === 'connected') {
-                     $store.chat.setConnectionState('connected');
-                } else if (states.current === 'connecting') {
-                     $store.chat.setConnectionState('connecting');
-                } else {
-                     $store.chat.setConnectionState('offline');
-                }
-            });
+            // Safely bind to connection state
+            if (window.Echo.connector && window.Echo.connector.pusher) {
+                window.Echo.connector.pusher.connection.bind('state_change', (states) => {
+                    if (states.current === 'connected') {
+                        $store.chat.setConnectionState('connected');
+                    } else if (states.current === 'connecting') {
+                        $store.chat.setConnectionState('connecting');
+                    } else {
+                        $store.chat.setConnectionState('offline');
+                    }
+                });
+            }
         }
     }"
     @set-message-body.window="window.dispatchEvent(new CustomEvent('update-message-body', { detail: $event.detail }))">
@@ -1110,9 +1123,9 @@
                     @keyup="checkQR(); pChannel.whisper('typing', { conversation_id: {{ $conversationId }}, name: '{{ auth()->user()->name }}', id: {{ auth()->id() }} }); $store.chat.requestLock()"
                     placeholder="Type a message (or / for templates)..." rows="1" :disabled="$store.chat.isLockedForMe()"
                     :class="[
-                                                                        $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                                        isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                                    ]"
+                                                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                        ]"
                     class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                     style="min-height: 56px;"></textarea>
 

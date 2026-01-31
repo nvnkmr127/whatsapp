@@ -18,5 +18,6 @@ window.Echo = new Echo({
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     enabledTransports: ['ws', 'wss'],
 });
-// Log for debugging
+// Log and dispatch for components waiting for Echo
 console.log('Laravel Echo initialized with Reverb broadcaster.');
+window.dispatchEvent(new CustomEvent('echo-ready'));

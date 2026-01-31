@@ -14,9 +14,16 @@
         signalQuality: 100, // 0-100%
         connectionType: 'direct',
         
-        init() {
+        async init() {
             this.ringingSound = document.getElementById('call-ringing-sound');
             this.bc = new BroadcastChannel('whatsapp_calls_sync');
+
+            // Wait for Echo
+            let attempts = 0;
+            while (!window.Echo && attempts < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
             this.bc.onmessage = (event) => {
                 if (event.data.type === 'SYNC_STATE') {
                     $wire.syncCallState(event.data.payload);

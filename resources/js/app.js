@@ -1,6 +1,2 @@
-import './bootstrap'; // This already imports ./echo
-import Alpine from 'alpinejs';
+import './bootstrap';
 import './chat-store';
-
-window.Alpine = Alpine;
-Alpine.start();
