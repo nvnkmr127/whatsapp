@@ -303,7 +303,6 @@
             buffer: 5,
             viewportHeight: 0,
             scrollTop: 0,
-            isDragging: false,
              init() {
                 // Drag and Drop Listeners
                 window.addEventListener('dragover', (e) => { e.preventDefault(); $store.chat.isDragging = true; });
@@ -315,8 +314,7 @@
                         @this.upload('newAttachment', e.dataTransfer.files[0]);
                     }
                 });
-
-                $store.chat.init($wire, {{ $conversationId ?? 0 }});
+                
                 this.viewportHeight = this.$el.clientHeight;
                 
                 // Debug logs
@@ -1016,9 +1014,9 @@
                         @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()" :class="[
-                                                                                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                                                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                                                                        ]"
+                                                                                                                $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                                                                isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                                                            ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 

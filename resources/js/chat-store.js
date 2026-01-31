@@ -13,6 +13,8 @@ document.addEventListener('livewire:init', () => {
         activeUsers: [],
         connectionState: 'connected', // connected, connecting, offline
         lockedBy: null, // { id: 1, name: 'John' }
+        _currentChannelName: null,
+        _teamChannelSubscribed: null,
         isDragging: false,
         lightboxOpen: false,
         lightboxImage: '',
@@ -58,13 +60,17 @@ document.addEventListener('livewire:init', () => {
                 return;
             }
 
-            // Clean up old channel if exists
-            if (this._pChannel) {
-                this._pChannel.leave();
+            // Clean up old presence channel if exists
+            if (this._currentChannelName) {
+                console.log('Store: Leaving ' + this._currentChannelName);
+                window.Echo.leave(this._currentChannelName);
             }
 
-            console.log('Store: Joining presence-conversation.' + this.conversationId);
-            this._pChannel = window.Echo.join('conversation.' + this.conversationId);
+            const channelName = 'conversation.' + this.conversationId;
+            this._currentChannelName = channelName;
+
+            console.log('Store: Joining presence-' + channelName);
+            this._pChannel = window.Echo.join(channelName);
 
             this._pChannel.here((users) => {
                 this.setActiveUsers(users);
@@ -97,11 +103,13 @@ document.addEventListener('livewire:init', () => {
                     this.setTyping(e.id, e.name);
                 });
 
-            // Team Channel Listener
+            // Team Channel Listener (Once per session)
             const teamId = this.teamId;
-            if (teamId) {
+            if (teamId && this._teamChannelSubscribed !== teamId) {
+                console.log('Store: Initializing Team Channel Listener for team ' + teamId);
                 const teamChannel = window.Echo.private('teams.' + teamId);
                 teamChannel.listen('.MessageReceived', (e) => {
+                    // Use this.conversationId to ensure we only process if it matches the CURRENT conversation in store
                     if (e.message && e.message.conversation_id == this.conversationId) {
                         this.receiveMessage(e.message);
                     }
@@ -112,6 +120,7 @@ document.addEventListener('livewire:init', () => {
                         if (msg) msg.status = e.message.status;
                     }
                 });
+                this._teamChannelSubscribed = teamId;
             }
 
             // Presence Binding for Connection State
