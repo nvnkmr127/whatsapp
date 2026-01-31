@@ -1127,7 +1127,7 @@ class WhatsAppService
         }
 
         // Call the existing initiateCall method
-        $response = $this->initiateCall($to, $options);
+        $response = $this->initiateCall($to, null, $options);
 
         return $response;
     }
@@ -1136,14 +1136,22 @@ class WhatsAppService
      * Initiate an outbound WhatsApp call.
      * 
      * @param string $to Phone number to call
-     * @param array $options Additional call options
+     * @param string|null $sdp SDP Offer from the browser (for VOIP)
+     * @param array $options Additional options
      * @return array Response from WhatsApp API
+     * @throws \Exception
      */
-    public function initiateCall(string $to, array $options = [])
+    public function initiateCall(string $to, ?string $sdp = null, array $options = [])
     {
-        // Verify calling is enabled for this team
+        // Check availability
+        if (!$this->team->isWithinBusinessHours()) {
+            throw new \Exception("Cannot initiate call outside of business hours.");
+        }
+
+        // Check if calling is enabled
+        $phoneId = $this->team->whatsapp_phone_number_id;
         $settings = \App\Models\CallSettings::where('team_id', $this->team->id)
-            ->where('phone_number_id', $this->phoneId)
+            ->where('phone_number_id', $phoneId)
             ->first();
 
         if (!$settings || !$settings->calling_enabled) {
@@ -1167,6 +1175,14 @@ class WhatsAppService
             'to' => $to,
             'type' => 'call',
         ];
+
+        // Add Session (SDP) if provided
+        if ($sdp) {
+            $payload['session'] = [
+                'sdp' => $sdp,
+                'sdp_type' => 'offer', // We are making the offer
+            ];
+        }
 
         try {
             $response = $this->sendRequest('calls', $payload);

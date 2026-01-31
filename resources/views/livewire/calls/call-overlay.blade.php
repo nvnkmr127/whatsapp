@@ -61,7 +61,72 @@
                     this.performAction('answerCall');
                 }
             });
+
+            // Trigger outbound call flow once server confirms eligibility
+            window.addEventListener('trigger-sdp-offer', event => {
+                console.log('CallOverlay: generating SDP offer...', event.detail);
+                this.handleOutboundCall(event.detail);
+            });
         },
+        
+        async handleOutboundCall(data) {
+            if (this.isProcessing) return;
+            this.isProcessing = true;
+            this.status = 'ringing'; // Optimistic update
+            this.direction = 'outbound';
+
+            try {
+                // 1. Get Microphone Access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                // 2. Create Peer Connection
+                const iceServers = [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ];
+                
+                this.pc = new RTCPeerConnection({ iceServers });
+                
+                // Add tracks
+                stream.getTracks().forEach(track => this.pc.addTrack(track, stream));
+                
+                // 3. Create Offer
+                const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
+                await this.pc.setLocalDescription(offer);
+                
+                // Sanitize SDP
+                const sanitizedOffer = offer.sdp
+                    .replace(/[^\x20-\x7E\r\n]/g, '')
+                    .replace(/\r\n|\r|\n/g, '\n')
+                    .split('\n').map(l => l.trim()).join('\r\n') + '\r\n';
+
+                // 4. Send to Backend
+                await $wire.initiateCallWithSDP(
+                    data.phone_number, 
+                    sanitizedOffer, 
+                    data.contact_id
+                );
+                
+                // Handle Remote Stream when answer comes... (setup in handleAnswer/Sync)
+                this.pc.ontrack = (event) => {
+                     this.remoteStream = event.streams[0];
+                     const remoteAudio = document.getElementById('remote-audio');
+                     if (remoteAudio) remoteAudio.srcObject = this.remoteStream;
+                };
+
+            } catch (e) {
+                console.error('Outbound call setup failed:', e);
+                $wire.handleFailed({ message: 'Could not access microphone or setup call: ' + e.message });
+                this.stopCalling();
+            } finally {
+                this.isProcessing = false;
+            }
         playRinging() {
             if (this.ringingSound) {
                 this.ringingSound.currentTime = 0;

@@ -58,17 +58,25 @@ class CallOverlay extends Component
 
     public function handleInitiation($data)
     {
-        $contact = Contact::find($data['contact_id']);
+        // Instead of calling API directly (which fails without SDP), we tell the browser to generate SDP
+        $this->dispatch('trigger-sdp-offer', [
+            'phone_number' => $data['phone_number'],
+            'contact_id' => $data['contact_id']
+        ]);
+    }
 
+    public function initiateCallWithSDP($phoneNumber, $sdp, $contactId)
+    {
+        $contact = Contact::find($contactId);
         $this->status = 'ringing';
         $this->direction = 'outbound';
-        $this->contactName = $contact->name ?? $data['phone_number'];
-        $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . ($contact->name ?? $data['phone_number']);
+        $this->contactName = $contact->name ?? $phoneNumber;
+        $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . ($contact->name ?? $phoneNumber);
         $this->startTime = null;
 
         try {
             $whatsappService = new \App\Services\WhatsAppService(auth()->user()->currentTeam);
-            $response = $whatsappService->initiateCall($data['phone_number']);
+            $response = $whatsappService->initiateCall($phoneNumber, $sdp);
 
             if ($response['success']) {
                 $this->callId = $response['data']['id'] ?? null;

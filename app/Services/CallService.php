@@ -55,7 +55,8 @@ class CallService
         }
 
         try {
-            $response = $this->whatsappService->initiateCall($normalizedPhone, $options);
+            // Initiate call via WhatsApp Service
+            $response = $this->whatsappService->initiateCall($normalizedPhone, null, $options);
 
             if ($response['success'] ?? false) {
                 Log::info("Call initiated successfully", [

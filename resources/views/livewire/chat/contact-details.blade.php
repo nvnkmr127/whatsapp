@@ -12,9 +12,6 @@
             <h1 class="text-xs font-black text-slate-900 dark:text-white tracking-tight uppercase">Profile</h1>
         </div>
         <div class="flex items-center gap-2">
-            @if($contact)
-                <livewire:chat.whatsapp-call-button :contact="$contact" :key="'hdr-call-' . $contact->id" />
-            @endif
             <button @click="$dispatch('toggle-details')"
                 class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,10 +44,10 @@
 
                 <div class="mt-3 flex items-center gap-3">
                     <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                                                {{ $contact->opt_in_status === 'opted_in'
+                                                    {{ $contact->opt_in_status === 'opted_in'
             ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
-                                                }}">
+                                                    }}">
                         <!-- Default Text -->
                         <span class="block {{ $contact->opt_in_status === 'opted_in' ? 'group-hover:hidden' : '' }}">
                             {{ $contact->opt_in_status === 'opted_in' ? 'OPTED IN' : 'OPTED OUT' }}
