@@ -14,12 +14,14 @@ use Livewire\Attributes\Title;
 class AnalyticsDashboard extends Component
 {
     public $dateRange = 30; // days
-    public $chartData = [];
-    public $lastRefresh;
+    public $chartData = []; // Restored
+    public $lastRefresh; // Restored
+    public $metaAnalytics = [];
 
     public function render()
     {
-        $teamId = auth()->user()->currentTeam->id;
+        $team = auth()->user()->currentTeam;
+        $teamId = $team->id;
 
         // 1. Wallet
         $wallet = TeamWallet::firstOrCreate(['team_id' => $teamId]);
@@ -35,9 +37,7 @@ class AnalyticsDashboard extends Component
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
 
-        // 3. Agent Performance (Tickets)
-        // Group by User (if tickets assigned to user? Tickets currently generic, strictly assuming assigned via contact owner or logic)
-        // For MVP, just Total Tickets Resolved
+        // 3. Agent Performance
         $ticketsResolved = Ticket::where('team_id', $teamId)
             ->where('status', 'resolved')
             ->count();
@@ -48,6 +48,22 @@ class AnalyticsDashboard extends Component
             ->take(10)
             ->get();
 
+        // 5. Official Meta Analytics
+        $waService = new \App\Services\WhatsAppService($team);
+        try {
+            $metaData = $waService->getAnalytics(
+                now()->subDays(30),
+                now(),
+                'DAILY',
+                ['conversation_analytics', 'cost']
+            );
+            $this->metaAnalytics = $metaData['data'] ?? [];
+        } catch (\Exception $e) {
+            // Fallback or log, keep UI running
+            \Illuminate\Support\Facades\Log::warning("Failed to fetch Meta analytics: " . $e->getMessage());
+            $this->metaAnalytics = [];
+        }
+
         $this->loadChartData($teamId);
 
         return view('livewire.analytics.analytics-dashboard', [
@@ -56,6 +72,7 @@ class AnalyticsDashboard extends Component
             'msgReceived' => $msgReceived,
             'ticketsResolved' => $ticketsResolved,
             'transactions' => $transactions,
+            'metaAnalytics' => $this->metaAnalytics,
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())
                 ->where('report_type', 'monthly_usage')->exists(),
             'lastUpdated' => Message::latest()->value('updated_at') ?? now()

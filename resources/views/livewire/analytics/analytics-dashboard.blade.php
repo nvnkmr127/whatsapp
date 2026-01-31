@@ -131,145 +131,246 @@
         </div>
     </div>
 
-    <!-- Detailed View -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Message Velocity Chart -->
+    <!-- Official Meta Insights -->
+    @if(!empty($metaAnalytics))
         <div
-            class="lg:col-span-3 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 sm:p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+            class="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden shadow-2xl border border-indigo-500/30">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
-            <div class="relative">
-                <div class="flex items-center justify-between mb-10">
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                     <div>
-                        <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Message
-                            <span class="text-wa-teal">Velocity</span>
-                        </h3>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time volume
-                            tracking</p>
-                    </div>
-                    <div
-                        class="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Sent
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/30">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-2xl font-black text-white uppercase tracking-tight">Official <span
+                                    class="text-indigo-400">Meta Data</span></h2>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Received
+                        <p class="text-indigo-200 text-sm font-medium">Verified billing and usage metrics directly from
+                            WhatsApp Cloud API.</p>
+                    </div>
+                    <div class="px-5 py-2 bg-white/10 rounded-full border border-white/10 backdrop-blur-sm">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-indigo-200">Source: Meta Graph
+                            API</span>
+                    </div>
+                </div>
+
+                <!-- Meta Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    @php
+                        $totalMetaCost = 0;
+                        $marketingCount = 0;
+                        $utilityCount = 0;
+                        // Simple aggregation logic for display
+                        if (isset($metaAnalytics['data_points'])) {
+                            foreach ($metaAnalytics['data_points'] as $point) {
+                                // Example structure - adjust based on actual API response
+                                // This is a placeholder for visualization
+                                $totalMetaCost += ($point['cost'] ?? 0);
+                            }
+                        }
+                    @endphp
+
+                    <div class="bg-indigo-950/50 p-6 rounded-3xl border border-indigo-500/20 backdrop-blur-md">
+                        <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Total
+                            Conversation Cost</div>
+                        <div class="text-3xl font-black text-white tracking-tight">
+                            {{ isset($metaAnalytics['data'][0]['data_points']) ? 'View Details' : 'No Data' }}
+                            <!-- Real value summation would go here if we parsed the complex JSON structure in PHP -->
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-950/50 p-6 rounded-3xl border border-indigo-500/20 backdrop-blur-md">
+                        <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Data Granularity
+                        </div>
+                        <div class="text-xl font-bold text-white tracking-tight">Daily Aggregation</div>
+                    </div>
+
+                    <div
+                        class="bg-indigo-950/50 p-6 rounded-3xl border border-indigo-500/20 backdrop-blur-md flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Status</div>
+                            <div class="text-lg font-bold text-green-400 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                                Connected
+                            </div>
+                        </div>
+                        <a href="https://business.facebook.com/" target="_blank"
+                            class="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <!-- Raw Data Preview (Debug/Transparency) -->
+                    <div x-data="{ open: false }">
+                        <button @click="open = !open"
+                            class="text-xs font-bold text-indigo-300 hover:text-white flex items-center gap-2 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View Raw Meta Response
+                        </button>
+                        <div x-show="open"
+                            class="mt-4 p-4 bg-black/50 rounded-xl border border-white/10 text-xs font-mono text-indigo-200 overflow-x-auto">
+                            <pre>{{ json_encode($metaAnalytics, JSON_PRETTY_PRINT) }}</pre>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    @endif
 
-                <div class="relative h-[350px] w-full">
-                    <canvas id="messageChart"></canvas>
+</div>
+
+<!-- Detailed View -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Message Velocity Chart -->
+    <div
+        class="lg:col-span-3 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 sm:p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+
+        <div class="relative">
+            <div class="flex items-center justify-between mb-10">
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Message
+                        <span class="text-wa-teal">Velocity</span>
+                    </h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time volume
+                        tracking</p>
                 </div>
-            </div>
-        </div>
-
-        <div class="lg:col-span-3">
-            <livewire:analytics.module-insights />
-        </div>
-
-        <div class="lg:col-span-3">
-            <livewire:analytics.campaign-funnel />
-        </div>
-
-        <!-- Billing History -->
-        <div
-            class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
-            <div class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Billing <span
-                        class="text-wa-teal">History</span></h3>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="border-b border-slate-50 dark:border-slate-800/50">
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Date
-                            </th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Type
-                            </th>
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Amount
-                            </th>
-                            <th
-                                class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
-                                Invoice</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
-                        @foreach($transactions as $txn)
-                            <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                                <td class="px-8 py-6">
-                                    <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                        {{ $txn->created_at->format('M d, Y') }}
-                                    </div>
-                                    <div class="text-[10px] text-slate-400">{{ $txn->created_at->format('H:i') }}</div>
-                                </td>
-                                <td class="px-8 py-6">
-                                    <span
-                                        class="text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">
-                                        {{ ucfirst(str_replace('_', ' ', $txn->type)) }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-6">
-                                    <span
-                                        class="text-sm font-black {{ $txn->amount < 0 ? 'text-rose-500' : 'text-wa-teal' }}">
-                                        {{ $txn->amount < 0 ? '-' : '+' }}${{ number_format(abs($txn->amount), 2) }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-6 text-right">
-                                    @if($txn->invoice_number)
-                                        <button class="text-blue-500 hover:text-blue-700 transition-colors">
-                                            <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                        </button>
-                                    @else
-                                        <span class="text-slate-300">-</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Performance Insights -->
-        <div class="space-y-8">
-            <div
-                class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
-                <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4">Insights
-                </h3>
-                <div class="space-y-6">
-                    <div
-                        class="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/30">
-                        <div class="text-xs font-black text-wa-teal dark:wa-teal uppercase tracking-widest mb-1">
-                            Coming Soon</div>
-                        <p class="text-sm text-blue-800 dark:text-blue-300 leading-relaxed font-medium">Agent
-                            performance metrics, average resolution time, and satisfaction scores will appear here.</p>
+                <div class="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Sent
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-wa-teal shadow-lg shadow-wa-teal/20"></span> Received
                     </div>
                 </div>
             </div>
 
-            <!-- Support Status -->
-            <div class="bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                <div class="absolute -right-4 -bottom-4 opacity-10">
-                    <svg class="w-32 h-32 text-white dark:text-slate-900" fill="currentColor" viewBox="0 0 24 24">
-                        <path
-                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-                    </svg>
-                </div>
-                <h3 class="text-white dark:text-slate-900 text-lg font-black uppercase tracking-tight mb-2">Need Help?
-                </h3>
-                <p class="text-slate-400 dark:text-slate-500 text-sm font-medium mb-6 leading-relaxed">Contact our
-                    billing team if you see any discrepancies in your wallet balance or invoices.</p>
-                <button
-                    class="w-full py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:scale-[1.02] transition-transform">Contact
-                    Billing</button>
+            <div class="relative h-[350px] w-full">
+                <canvas id="messageChart"></canvas>
             </div>
         </div>
     </div>
+
+    <div class="lg:col-span-3">
+        <livewire:analytics.module-insights />
+    </div>
+
+    <div class="lg:col-span-3">
+        <livewire:analytics.campaign-funnel />
+    </div>
+
+    <!-- Billing History -->
+    <div
+        class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Billing <span
+                    class="text-wa-teal">History</span></h3>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-50 dark:border-slate-800/50">
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Date
+                        </th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Type
+                        </th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Amount
+                        </th>
+                        <th
+                            class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
+                            Invoice</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
+                    @foreach($transactions as $txn)
+                        <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                            <td class="px-8 py-6">
+                                <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                    {{ $txn->created_at->format('M d, Y') }}
+                                </div>
+                                <div class="text-[10px] text-slate-400">{{ $txn->created_at->format('H:i') }}</div>
+                            </td>
+                            <td class="px-8 py-6">
+                                <span
+                                    class="text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">
+                                    {{ ucfirst(str_replace('_', ' ', $txn->type)) }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-6">
+                                <span class="text-sm font-black {{ $txn->amount < 0 ? 'text-rose-500' : 'text-wa-teal' }}">
+                                    {{ $txn->amount < 0 ? '-' : '+' }}${{ number_format(abs($txn->amount), 2) }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-6 text-right">
+                                @if($txn->invoice_number)
+                                    <button class="text-blue-500 hover:text-blue-700 transition-colors">
+                                        <svg class="w-5 h-5 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </button>
+                                @else
+                                    <span class="text-slate-300">-</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Performance Insights -->
+    <div class="space-y-8">
+        <div
+            class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4">Insights
+            </h3>
+            <div class="space-y-6">
+                <div
+                    class="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-800/30">
+                    <div class="text-xs font-black text-wa-teal dark:wa-teal uppercase tracking-widest mb-1">
+                        Coming Soon</div>
+                    <p class="text-sm text-blue-800 dark:text-blue-300 leading-relaxed font-medium">Agent
+                        performance metrics, average resolution time, and satisfaction scores will appear here.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Status -->
+        <div class="bg-slate-900 dark:bg-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-4 -bottom-4 opacity-10">
+                <svg class="w-32 h-32 text-white dark:text-slate-900" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                </svg>
+            </div>
+            <h3 class="text-white dark:text-slate-900 text-lg font-black uppercase tracking-tight mb-2">Need Help?
+            </h3>
+            <p class="text-slate-400 dark:text-slate-500 text-sm font-medium mb-6 leading-relaxed">Contact our
+                billing team if you see any discrepancies in your wallet balance or invoices.</p>
+            <button
+                class="w-full py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:scale-[1.02] transition-transform">Contact
+                Billing</button>
+        </div>
+    </div>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

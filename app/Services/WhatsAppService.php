@@ -1037,8 +1037,8 @@ class WhatsAppService
             return ['success' => true, 'message' => 'No settings to update'];
         }
 
-        // Meta expects 'calling' wrapper for these settings
-        $payload = ['calling' => $callingPayload];
+        // Meta's settings endpoint expects parameters at the top level, not wrapped in 'calling'
+        $payload = $callingPayload;
 
         $url = "{$this->baseUrl}/{$this->phoneId}/settings";
         return $this->sendRequestFullUrl($url, 'post', $payload);
@@ -1145,6 +1145,45 @@ class WhatsAppService
     }
 
     /**
+     * Send a template message with a native "voice_call" button
+     * This creates the "Call Button Deep Link" experience directly in chat
+     * 
+     * @param int $contactId
+     * @param string $templateName Name of template with a PHONE_NUMBER button
+     */
+    public function sendCallButtonMessage(int $contactId, string $templateName = 'call_us_now')
+    {
+        $contact = \App\Models\Contact::findOrFail($contactId);
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $contact->phone,
+            'type' => 'template',
+            'template' => [
+                'name' => $templateName,
+                'language' => ['code' => 'en'],
+                'components' => [
+                    // Note: Button component for PHONE_NUMBER type often doesn't need params 
+                    // unless the number is dynamic. If static in approved template, no component needed.
+                    // If you need to override the number:
+                    /*
+                   [
+                       'type' => 'button',
+                       'sub_type' => 'url', // or quick_reply, but phone_number is different
+                       'index' => 0,
+                       'parameters' => [
+                           ['type' => 'text', 'text' => $this->team->whatsapp_phone_display]
+                       ]
+                   ]
+                   */
+                ]
+            ]
+        ];
+
+        return $this->sendRequest('messages', $payload);
+    }
+
+    /**
      * Initiate an outbound WhatsApp call with permission validation
      * 
      * @param string $to Phone number to call
@@ -1217,7 +1256,7 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
-            'type' => 'call',
+            'action' => 'connect',
         ];
 
         // Add Session (SDP) if provided
@@ -1342,7 +1381,7 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'action' => 'ACCEPT',
+            'action' => 'accept',
         ];
 
         if ($session) {
@@ -1573,6 +1612,44 @@ class WhatsAppService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Fetch WhatsApp Business Account Analytics from Meta.
+     * GET /<WABA_ID>/analytics
+     * 
+     * @param string|int $start Date string (Y-m-d) or unix timestamp
+     * @param string|int $end Date string (Y-m-d) or unix timestamp
+     * @param string $granularity 'DAILY' | 'MONTHLY' | 'HALF_HOUR'
+     * @param array $metrics ['conversation_analytics', 'messaging_analytics', 'cost']
+     * @return array
+     */
+    public function getAnalytics($start, $end, $granularity = 'DAILY', $metrics = ['conversation_analytics', 'messaging_analytics'])
+    {
+        $wabaId = $this->team->whatsapp_business_account_id;
+        if (!$wabaId) {
+            throw new \Exception("WABA ID is not configured.");
+        }
+
+        // Convert dates to unix timestamp if they are strings
+        if (!is_numeric($start))
+            $start = strtotime($start);
+        if (!is_numeric($end))
+            $end = strtotime($end);
+
+        $queryParams = [
+            'start' => $start,
+            'end' => $end,
+            'granularity' => $granularity,
+            'metric_types' => implode(',', $metrics)
+        ];
+
+        // The endpoint is on the WABA ID, not Phone ID
+        // URL: https://graph.facebook.com/<API_VERSION>/<WABA_ID>/analytics
+        $url = "{$this->baseUrl}/{$wabaId}/analytics";
+
+        // We need to use sendRequestFullUrl because sendRequest defaults to PhoneID base
+        return $this->sendRequestFullUrl($url, 'get', $queryParams, 'analytics');
     }
 
     protected function sendRequest($endpoint, $data = [], $method = 'post')

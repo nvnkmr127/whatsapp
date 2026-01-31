@@ -12,11 +12,13 @@
         remoteStream: null,
         ringingSound: null,
         signalQuality: 100,
-        connectionType: 'direct',
+        connectionType: null,
         startTime: @entangle('startTime').live,
         showDebug: false,
         debugLogs: [],
         logIndex: 0,
+
+        isSyncing: false,
 
         logDebug(msg, type = 'info') {
             const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
@@ -44,8 +46,13 @@
 
             this.bc.onmessage = (event) => {
                 if (event.data.type === 'SYNC_STATE') {
+                    // Prevent feedback loop
+                    this.isSyncing = true;
                     this.logDebug('Sync state received via BroadcastChannel');
-                    $wire.syncCallState(event.data.payload);
+                    $wire.syncCallState(event.data.payload)
+                        .then(() => {
+                            setTimeout(() => { this.isSyncing = false; }, 500);
+                        });
                 }
             };
 
@@ -98,8 +105,8 @@
                 if (value === 'active') { this.startTimer(); this.stopRinging(); }
                 if (value === 'ended' || value === 'idle' || value === 'failed') { this.stopTimer(); this.stopRinging(); }
                 
-                // Sync other tabs
-                if (!this.isProcessing) {
+                // Sync other tabs ensure we don't loop
+                if (!this.isProcessing && !this.isSyncing) {
                     this.bc.postMessage({
                         type: 'SYNC_STATE',
                         payload: {

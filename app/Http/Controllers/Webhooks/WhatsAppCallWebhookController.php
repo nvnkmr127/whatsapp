@@ -65,7 +65,7 @@ class WhatsAppCallWebhookController extends Controller
             }
 
             // Process the call event
-            $this->processCallEvent($team, $callData);
+            $this->processCallEvent($team, $callData, $value);
 
             return response()->json(['status' => 'success'], 200);
 
@@ -83,7 +83,7 @@ class WhatsAppCallWebhookController extends Controller
     /**
      * Process call event based on type.
      */
-    protected function processCallEvent(Team $team, array $callData)
+    protected function processCallEvent(Team $team, array $callData, array $value = [])
     {
         $callId = $callData['id'] ?? null;
         $from = $callData['from'] ?? null;
@@ -113,6 +113,20 @@ class WhatsAppCallWebhookController extends Controller
                 'initiated_at' => $timestamp ? \Carbon\Carbon::createFromTimestamp($timestamp) : now(),
             ]
         );
+
+        // Check for SDP Answer in the payload (crucial for business-initiated calls)
+        // It might be in $callData['session'] or $value['session'] depending on API version
+        $session = $callData['session'] ?? $value['session'] ?? null;
+        $sdp = $session['sdp'] ?? null;
+        $sdpType = $session['sdp_type'] ?? null;
+
+        if ($sdp && $sdpType === 'answer' && $direction === 'outbound') {
+            Log::info("Captured SDP Answer from webhook", ['call_id' => $callId]);
+
+            $metadata = $call->metadata ?? [];
+            $metadata['answered_sdp'] = $sdp;
+            $call->update(['metadata' => $metadata]);
+        }
 
         // If newly created, emit CallOffered event
         if ($call->wasRecentlyCreated) {
@@ -148,6 +162,21 @@ class WhatsAppCallWebhookController extends Controller
         // Create or update contact and conversation
         if ($direction === 'inbound') {
             $this->ensureContactAndConversation($team, $call, $from);
+
+            // AUTO-GRANT PERMISSION: If user calls business, we can call back within 72h
+            // This is effectively an implicit permission grant
+            $contact = $call->contact;
+            if ($contact) {
+                $permissionService = new \App\Services\CallPermissionService();
+                $permission = $permissionService->trackPermissionRequest($contact, $team, $team->whatsapp_phone_number_id);
+                $permissionService->grantPermission($permission);
+
+                Log::info("Implicit Call Permission granted due to inbound call", [
+                    'team_id' => $team->id,
+                    'contact_id' => $contact->id,
+                    'call_id' => $callId
+                ]);
+            }
         }
     }
 

@@ -222,6 +222,9 @@ class CallSettingsManager extends Component
             if ($this->syncWithBusinessHours) {
                 $metaSettings['business_hours'] = $this->formatBusinessHoursForMeta();
                 $metaSettings['timezone'] = $this->timezone;
+            } else {
+                // Explicitly disable restricted hours (24/7)
+                $metaSettings['call_hours'] = ['status' => 'DISABLED'];
             }
 
             // Update Meta's system settings
