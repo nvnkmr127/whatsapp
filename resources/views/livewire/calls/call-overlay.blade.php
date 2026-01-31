@@ -33,6 +33,16 @@
         logIndex: 0,
 
         isSyncing: false,
+        ignoreUpdates: false,
+        
+        resetLocal() {
+            this.ignoreUpdates = true;
+            this.status = 'idle';
+            this.isVisible = false;
+            $wire.resetOverlay();
+            // Prevent echo/race-condition updates for 2 seconds
+            setTimeout(() => { this.ignoreUpdates = false; }, 2000);
+        },
 
         logDebug(msg, type = 'info') {
             const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
@@ -114,6 +124,8 @@
             }
 
             $watch('status', value => {
+                if (this.ignoreUpdates) return;
+                
                 this.logDebug(`UI Status changed to: ${value}`);
                 if (value === 'ringing' && this.direction === 'inbound') this.playRinging();
                 if (value === 'active') { this.startTimer(); this.stopRinging(); }
@@ -537,8 +549,9 @@
             if (remoteAudio) {
                 remoteAudio.srcObject = null;
             }
+            }
         }
-    }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" @call-stopped.window="stopCalling()"
+    }" @auto-hide-overlay.window="setTimeout(() => resetLocal(), 3000)" @call-stopped.window="stopCalling()"
     @play-ringing-sound.window="playRinging()"
     class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
     <!-- Overlay Container -->
@@ -714,48 +727,58 @@
                     </template>
                 </div>
             </div>
-        </div>
 
-        <!-- Progress/Status Line at Bottom -->
-        <div class="h-1 w-full bg-black/10 overflow-hidden">
-            <div class="h-full bg-white transition-all duration-1000 ease-linear" :class="{ 
+            <!-- Manual Close Button (Always visible if overlay is showing) -->
+            <button wire:click="resetOverlay"
+                class="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/50 hover:bg-rose-500 text-white/50 hover:text-white transition-all duration-300 pointer-events-auto z-[120]"
+                title="Close Overlay">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Progress/Status Line at Bottom -->
+    <div class="h-1 w-full bg-black/10 overflow-hidden">
+        <div class="h-full bg-white transition-all duration-1000 ease-linear" :class="{ 
                     'animate-progress-infinite': status === 'ringing',
                     'w-full': status === 'ended',
                     'opacity-0': status === 'active'
                 }"></div>
-        </div>
     </div>
+</div>
 
-    <style>
-        @keyframes progress-infinite {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
+<style>
+    @keyframes progress-infinite {
+        0% {
+            transform: translateX(-100%);
         }
 
-        .animate-progress-infinite {
-            animation: progress-infinite 2s infinite;
-            width: 30%;
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    .animate-progress-infinite {
+        animation: progress-infinite 2s infinite;
+        width: 30%;
+    }
+
+    .animate-pulse-slow {
+        animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse-slow {
+
+        0%,
+        100% {
+            opacity: 1;
         }
 
-        .animate-pulse-slow {
-            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        50% {
+            opacity: 0.8;
         }
-
-        @keyframes pulse-slow {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.8;
-            }
-        }
-    </style>
+    }
+</style>
 </div>

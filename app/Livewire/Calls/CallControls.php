@@ -52,7 +52,8 @@ class CallControls extends Component
         $this->eligibility = $eligibilityService->checkEligibility(
             $this->contact,
             $triggerType,
-            $context
+            $context,
+            true
         );
     }
 

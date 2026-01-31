@@ -69,7 +69,7 @@ class CallController extends Controller
             $eligibilityService = new \App\Services\CallEligibilityService($team);
             $eligibility = $eligibilityService->checkEligibility($contact, 'user_initiated', [
                 'trigger_source' => 'in_app_action'
-            ]);
+            ], true);
 
             return response()->json([
                 'success' => true,

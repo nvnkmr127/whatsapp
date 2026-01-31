@@ -27,7 +27,7 @@ class WhatsappCallButton extends Component
             // Defaulting trigger to 'user_initiated' for manual clicks
             $this->eligibility = $service->checkEligibility($this->contact, 'user_initiated', [
                 'trigger_source' => 'in_app_action'
-            ]);
+            ], true);
         } catch (\Exception $e) {
             Log::error("Call eligibility check failed: " . $e->getMessage(), [
                 'exception' => $e,
