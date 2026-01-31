@@ -1342,7 +1342,6 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'call_id' => $callId,
             'action' => 'ACCEPT',
         ];
 
@@ -1359,7 +1358,7 @@ class WhatsAppService
             try {
                 $startTime = microtime(true);
 
-                $response = $this->sendRequest('calls', $payload, 'post');
+                $response = $this->sendRequest("calls/{$callId}", $payload, 'post');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
@@ -1452,12 +1451,11 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'call_id' => $callId,
             'action' => 'REJECT',
         ];
 
         try {
-            $response = $this->sendRequest('calls', $payload, 'post');
+            $response = $this->sendRequest("calls/{$callId}", $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsRejected();
@@ -1500,12 +1498,11 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'call_id' => $callId,
             'action' => 'TERMINATE',
         ];
 
         try {
-            $response = $this->sendRequest('calls', $payload, 'post');
+            $response = $this->sendRequest("calls/{$callId}", $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsEnded();
