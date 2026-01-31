@@ -2,20 +2,19 @@
         status: @entangle('status'),
         isLocked: @entangle('isLocked'),
         occupiedBy: @entangle('occupiedBy'),
-        duration: 0,
-        timer: null,
-        isProcessing: false,
-        bc: null,
-        direction: @entangle('direction'),
-        offerSdp: @entangle('offerSdp'),
-        pc: null,
-        remoteStream: null,
-        ringingSound: null,
-        signalQuality: 100, // 0-100%
-        connectionType: 'direct',
-        
         startTime: @entangle('startTime'),
+        isProcessing: false,
+        showDebug: false,
+        debugLogs: [],
+
+        logDebug(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            this.debugLogs.unshift({ time, msg, type });
+            if (this.debugLogs.length > 50) this.debugLogs.pop();
+            console.log(`[CallDebug] ${msg}`);
+        },
         async init() {
+            this.logDebug('Overlay initializing...');
             this.ringingSound = document.getElementById('call-ringing-sound');
             this.bc = new BroadcastChannel('whatsapp_calls_sync');
 
@@ -25,22 +24,38 @@
                 await new Promise(r => setTimeout(r, 100));
                 attempts++;
             }
+            
+            if (window.Echo) {
+                this.logDebug('Echo detected and ready.');
+            } else {
+                this.logDebug('Echo NOT detected after 5s', 'error');
+            }
+
             this.bc.onmessage = (event) => {
                 if (event.data.type === 'SYNC_STATE') {
+                    this.logDebug('Sync state received via BroadcastChannel');
                     $wire.syncCallState(event.data.payload);
                 }
             };
 
             window.addEventListener('call-stopped', () => {
+                this.logDebug('Call stopped event received');
                 this.stopCalling();
             });
 
             // Echo Listeners for real-time updates (fallback/sync)
             const teamId = @js($this->teamId);
             if (window.Echo && teamId) {
+                this.logDebug(`Subscribing to private channel: teams.${teamId}`);
                 window.Echo.private(`teams.${teamId}`)
+                    .subscribed(() => {
+                        this.logDebug(`Successfully joined channel: teams.${teamId}`, 'success');
+                    })
+                    .error((err) => {
+                        this.logDebug(`Echo Subscription Error: ${JSON.stringify(err)}`, 'error');
+                    })
                     .listen('.call.answered', (e) => {
-                        console.log('CallOverlay: Echo Answered', e);
+                        this.logDebug('SIGNAL: Call Answered received', 'success');
                         this.status = 'active';
                         if (e.call && e.call.answered_at) {
                             const answeredAt = Math.floor(new Date(e.call.answered_at).getTime() / 1000);
@@ -49,21 +64,25 @@
                             $wire.startTime = Math.floor(Date.now() / 1000);
                         }
                     })
+                    .listen('.listen-error', (e) => this.logDebug(`Echo Error: ${JSON.stringify(e)}`, 'error'))
                     .listen('.call.ended', (e) => {
-                        console.log('CallOverlay: Echo Ended', e);
+                        this.logDebug('SIGNAL: Call Ended received', 'warn');
                         this.status = 'ended';
                     })
                     .listen('.call.failed', (e) => {
-                        console.log('CallOverlay: Echo Failed', e);
+                        this.logDebug('SIGNAL: Call Failed received', 'error');
                         this.status = 'ended';
                     })
                     .listen('.call.ringing', (e) => {
-                        console.log('CallOverlay: Echo Ringing', e);
+                        this.logDebug('SIGNAL: Phone Ringing');
                         if (this.status !== 'active') this.status = 'ringing';
                     });
+            } else {
+                this.logDebug('Echo not fully initialized or teamId missing', 'warn');
             }
 
             $watch('status', value => {
+                this.logDebug(`UI Status changed to: ${value}`);
                 if (value === 'ringing' && this.direction === 'inbound') this.playRinging();
                 if (value === 'active') { this.startTimer(); this.stopRinging(); }
                 if (value === 'ended' || value === 'idle' || value === 'failed') { this.stopTimer(); this.stopRinging(); }
@@ -86,10 +105,11 @@
             // Auto-answer for outbound calls once we get the SDP offer from Meta (Handling Glare)
             $watch('offerSdp', value => {
                 if (value && this.status === 'ringing' && this.direction === 'outbound') {
-                    console.log('CallOverlay: Detected secondary offer from Meta for outbound call. Switching to receiver mode...');
+                    this.logDebug('Detected Meta offer for outbound - re-negotiating...');
                     
                     // If we have an existing PC (from our initial offer), close it to re-negotiate
                     if (this.pc) {
+                        this.logDebug('Closing initial negotiation for glare cleanup');
                         this.stopCalling();
                     }
                     
@@ -106,8 +126,9 @@
             // Handle remote answer from server (e.g. for cross-device sync)
             window.addEventListener('set-remote-answer', async event => {
                 const sdp = event.detail.sdp;
+                this.logDebug('Event: set-remote-answer received');
                 if (this.pc && sdp && this.pc.signalingState === 'have-local-offer') {
-                    console.log('CallOverlay: Applying remote answer from server...');
+                    this.logDebug('Applying remote answer from server to peer connection...');
                     try {
                         const sanitizedAnswer = sdp
                             .replace(/[^\x20-\x7E\r\n]/g, '')
@@ -118,16 +139,21 @@
                             type: 'answer',
                             sdp: sanitizedAnswer
                         });
+                        this.logDebug('Remote answer applied SUCCESSFULLY', 'success');
                     } catch (e) {
-                        console.error('Failed to apply remote answer:', e);
+                        this.logDebug(`FAILED to apply remote answer: ${e.message}`, 'error');
                     }
+                } else if (this.pc) {
+                    this.logDebug(`Ignored remote answer. PC state: ${this.pc.signalingState}`, 'warn');
                 }
             });
 
             // Initial state check for recovery (e.g. after refresh)
             if (this.status === 'active') {
+                this.logDebug('Recovery: Call is already ACTIVE');
                 this.startTimer();
             } else if (this.status === 'ringing' && this.direction === 'inbound') {
+                this.logDebug('Recovery: Call is RINGING');
                 this.playRinging();
             }
         },
@@ -153,8 +179,16 @@
                     { urls: 'stun:stun1.l.google.com:19302' }
                 ];
                 
+                this.logDebug('Setting up outbound peer connection...');
                 this.pc = new RTCPeerConnection({ iceServers });
-                stream.getTracks().forEach(track => this.pc.addTrack(track, stream));
+                
+                this.pc.onconnectionstatechange = () => this.logDebug(`PC Connection State: ${this.pc.connectionState}`);
+                this.pc.onsignalingstatechange = () => this.logDebug(`PC Signaling State: ${this.pc.signalingState}`);
+                
+                stream.getTracks().forEach(track => {
+                    this.logDebug(`Adding local track: ${track.kind}`);
+                    this.pc.addTrack(track, stream);
+                });
                 
                 const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
                 await this.pc.setLocalDescription(offer);
@@ -272,12 +306,17 @@
                     { urls: 'stun:stun.voipstunt.com' }
                 ];
 
+                this.logDebug('Setting up answer peer connection...');
                 this.pc = new RTCPeerConnection({
                     iceServers: iceServers,
-                    iceCandidatePoolSize: 20, // Increased for faster connection
+                    iceCandidatePoolSize: 20, 
                     bundlePolicy: 'max-bundle',
                     rtcpMuxPolicy: 'require'
                 });
+
+                this.pc.onconnectionstatechange = () => this.logDebug(`PC Connection State: ${this.pc.connectionState}`);
+                this.pc.onsignalingstatechange = () => this.logDebug(`PC Signaling State: ${this.pc.signalingState}`);
+                this.pc.onicegatheringstatechange = () => this.logDebug(`ICE Gathering State: ${this.pc.iceGatheringState}`);
 
                 // Track ICE candidates
                 let iceCandidatesCount = 0;
@@ -525,111 +564,147 @@
                     <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]">Duration</span>
                 </div>
 
-                <!-- Signal Bars -->
-                <div class="flex flex-col items-center">
-                    <div class="flex items-end gap-0.5 h-4 mb-0.5">
-                        <template x-for="i in 4">
-                            <div class="w-1.5 rounded-full transition-all duration-500" :class="{
+                <!-- Signal Bars & Debug Toggle -->
+                <div class="absolute top-4 right-4 flex flex-col items-end gap-2">
+                    <!-- Status & Quality -->
+                    <div class="flex flex-col items-center">
+                        <div class="flex items-end gap-0.5 h-4 mb-0.5">
+                            <template x-for="i in 4">
+                                <div class="w-1.5 rounded-full transition-all duration-500" :class="{
                                     'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]': signalQuality >= (i * 25),
                                     'bg-white/20': signalQuality < (i * 25)
                                 }" :style="{ height: (i * 25) + '%' }"></div>
+                            </template>
+                        </div>
+                        <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]"
+                            x-text="pc ? pc.connectionState : (connectionType || 'IDLE')"></span>
+                    </div>
+
+                    <!-- Debug Toggle -->
+                    <button @click="showDebug = !showDebug"
+                        class="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                        <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Visual Debug Console -->
+                <div x-show="showDebug" x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 translate-y-4"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    class="absolute bottom-24 left-4 right-4 max-h-40 overflow-y-auto bg-black/80 backdrop-blur-xl rounded-xl p-3 border border-white/10 font-mono text-[10px] text-indigo-300 pointer-events-auto">
+                    <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-1">
+                        <span class="font-bold text-white/70 uppercase tracking-wider">Signals & Events</span>
+                        <button @click="debugLogs = []" class="text-white/40 hover:text-white">Clear</button>
+                    </div>
+                    <div class="space-y-1">
+                        <template x-for="log in debugLogs" :key="log.time">
+                            <div class="flex gap-2">
+                                <span class="text-white/30" x-text="log.time"></span>
+                                <span x-text="log.msg" :class="{
+                                'text-green-400': log.type === 'success',
+                                'text-red-400': log.type === 'error',
+                                'text-amber-400': log.type === 'warn',
+                                'text-indigo-300': log.type === 'info'
+                            }"></span>
+                            </div>
                         </template>
                     </div>
-                    <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]"
-                        x-text="pc ? pc.connectionState : connectionType"></span>
                 </div>
-            </div>
 
-            <!-- Right: Actions -->
-            <div class="flex items-center gap-2">
-                <template x-if="status === 'ringing' && direction === 'inbound'">
-                    <div class="flex items-center gap-2">
-                        <!-- Reject Button -->
-                        <button @click="performAction('rejectCall')"
-                            class="p-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
-                            :disabled="isProcessing">
-                            <svg class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+                <!-- Right: Actions -->
+                <div class="flex items-center gap-2">
+                    <template x-if="status === 'ringing' && direction === 'inbound'">
+                        <div class="flex items-center gap-2">
+                            <!-- Reject Button -->
+                            <button @click="performAction('rejectCall')"
+                                class="p-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
+                                :disabled="isProcessing">
+                                <svg class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
+                                </svg>
+                            </button>
+
+                            <!-- Answer Button -->
+                            <button @click="performAction('answerCall')"
+                                class="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg animate-bounce"
+                                :disabled="isProcessing">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- End Call Button (Show for active calls or outbound ringing) -->
+                    <template
+                        x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
+                        <button @click="performAction('endCall')"
+                            class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
+                            :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
+                            <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor"
+                                viewBox="0 0 24 24">
                                 <path
                                     d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
                             </svg>
-                        </button>
-
-                        <!-- Answer Button -->
-                        <button @click="performAction('answerCall')"
-                            class="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg animate-bounce"
-                            :disabled="isProcessing">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
+                            <svg x-show="isProcessing" class="animate-spin h-5 w-5 text-white"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4">
+                                </circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
                             </svg>
                         </button>
-                    </div>
-                </template>
-
-                <!-- End Call Button (Show for active calls or outbound ringing) -->
-                <template
-                    x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
-                    <button @click="performAction('endCall')"
-                        class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg"
-                        :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
-                        <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor"
-                            viewBox="0 0 24 24">
-                            <path
-                                d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
-                        </svg>
-                        <svg x-show="isProcessing" class="animate-spin h-5 w-5 text-white"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                    </button>
-                </template>
+                    </template>
+                </div>
             </div>
-        </div>
 
-        <!-- Progress/Status Line at Bottom -->
-        <div class="h-1 w-full bg-black/10 overflow-hidden">
-            <div class="h-full bg-white transition-all duration-1000 ease-linear" :class="{ 
+            <!-- Progress/Status Line at Bottom -->
+            <div class="h-1 w-full bg-black/10 overflow-hidden">
+                <div class="h-full bg-white transition-all duration-1000 ease-linear" :class="{ 
                     'animate-progress-infinite': status === 'ringing',
                     'w-full': status === 'ended',
                     'opacity-0': status === 'active'
                 }"></div>
+            </div>
         </div>
+
+        <style>
+            @keyframes progress-infinite {
+                0% {
+                    transform: translateX(-100%);
+                }
+
+                100% {
+                    transform: translateX(100%);
+                }
+            }
+
+            .animate-progress-infinite {
+                animation: progress-infinite 2s infinite;
+                width: 30%;
+            }
+
+            .animate-pulse-slow {
+                animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+
+            @keyframes pulse-slow {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: 0.8;
+                }
+            }
+        </style>
     </div>
-
-    <style>
-        @keyframes progress-infinite {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
-        }
-
-        .animate-progress-infinite {
-            animation: progress-infinite 2s infinite;
-            width: 30%;
-        }
-
-        .animate-pulse-slow {
-            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes pulse-slow {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.8;
-            }
-        }
-    </style>
-</div>

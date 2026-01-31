@@ -92,6 +92,12 @@ class CallOverlay extends Component
 
     public function initiateWhatsAppCall($phoneNumber, $contactId, $sdp = null)
     {
+        Log::info("CallOverlay: initiateWhatsAppCall requested", [
+            'to' => $phoneNumber,
+            'contact_id' => $contactId,
+            'has_sdp' => !empty($sdp)
+        ]);
+
         $contact = Contact::find($contactId);
 
         // Fallback if phoneNumber is missing
