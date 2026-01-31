@@ -202,17 +202,20 @@ class CallEligibilityService
         }
 
         // Check for explicit calling consent (custom field)
-        $callingConsent = $contact->custom_attributes['calling_consent'] ?? null;
+        // If not set, we default to true IF the contact is generally opted in (checked above)
+        $callingConsent = $contact->custom_attributes['calling_consent'] ?? true;
+        $callingDeclined = $contact->custom_attributes['calling_declined'] ?? false;
 
-        if (!$callingConsent) {
+        if (!$callingConsent || $callingDeclined) {
             return [
                 'passed' => false,
-                'block_code' => 'NO_CALLING_CONSENT',
+                'block_code' => $callingDeclined ? 'CALLING_EXPLICITLY_DECLINED' : 'NO_CALLING_CONSENT',
                 'details' => [
                     'has_consent' => false,
                     'opt_in_status' => 'opted_in',
-                    'calling_consent' => false,
-                    'reason' => 'No explicit consent for calling',
+                    'calling_consent' => $callingConsent,
+                    'calling_declined' => $callingDeclined,
+                    'reason' => $callingDeclined ? 'Contact explicitly declined calls' : 'No explicit consent for calling',
                 ],
             ];
         }
