@@ -20,8 +20,8 @@
 
         logDebug(msg, type = 'info') {
             const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
-            this.debugLogs.unshift({ id: ++this.logIndex, time, msg, type });
-            if (this.debugLogs.length > 50) this.debugLogs.pop();
+            const newLog = { id: ++this.logIndex, time: time, msg: msg, type: type };
+            this.debugLogs = [newLog, ...this.debugLogs].slice(0, 50);
             console.log(`[CallDebug] ${msg}`);
         },
         async init() {
@@ -601,31 +601,33 @@
             </div>
 
             <!-- Visual Debug Console -->
-            <div x-show="showDebug" x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 translate-y-10 scale-95"
-                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                x-transition:leave-end="opacity-0 translate-y-10 scale-95"
-                class="absolute bottom-24 left-4 right-4 max-h-40 overflow-y-auto bg-black/80 backdrop-blur-xl rounded-xl p-3 border border-white/10 font-mono text-[10px] text-indigo-300 pointer-events-auto z-[110]">
-                <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-1">
-                    <span class="font-bold text-white/70 uppercase tracking-wider">Signals & Events</span>
-                    <button @click="debugLogs = []" class="text-white/40 hover:text-white">Clear</button>
+            <template x-if="showDebug">
+                <div x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-10 scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave="transition ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-10 scale-95"
+                    class="absolute bottom-24 left-4 right-4 max-h-40 overflow-y-auto bg-black/80 backdrop-blur-xl rounded-xl p-3 border border-white/10 font-mono text-[10px] text-indigo-300 pointer-events-auto z-[110]">
+                    <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-1">
+                        <span class="font-bold text-white/70 uppercase tracking-wider">Signals & Events</span>
+                        <button @click="debugLogs = []" class="text-white/40 hover:text-white">Clear</button>
+                    </div>
+                    <div class="space-y-1">
+                        <template x-for="logEntry in debugLogs" :key="logEntry.id">
+                            <div class="flex gap-2">
+                                <span class="text-white/30" x-text="logEntry.time"></span>
+                                <span x-text="logEntry.msg" :class="{
+                                    'text-green-400': logEntry.type === 'success',
+                                    'text-red-400': logEntry.type === 'error',
+                                    'text-amber-400': logEntry.type === 'warn',
+                                    'text-indigo-300': logEntry.type === 'info'
+                                }"></span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
-                <div class="space-y-1">
-                    <template x-for="callLog in debugLogs" :key="callLog.id">
-                        <div class="flex gap-2">
-                            <span class="text-white/30" x-text="callLog.time"></span>
-                            <span x-text="callLog.msg" :class="{
-                                'text-green-400': callLog.type === 'success',
-                                'text-red-400': callLog.type === 'error',
-                                'text-amber-400': callLog.type === 'warn',
-                                'text-indigo-300': callLog.type === 'info'
-                            }"></span>
-                        </div>
-                    </template>
-                </div>
-            </div>
+            </template>
 
             <!-- Right: Actions -->
             <div class="flex items-center gap-2">
