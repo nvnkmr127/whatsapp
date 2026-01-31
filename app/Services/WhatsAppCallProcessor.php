@@ -125,7 +125,7 @@ class WhatsAppCallProcessor
             // Record SDP offer received for quality tracking
             $call->recordSdpOfferReceived();
 
-            Log::info("Dispatching CallOffered for inbound call (Offer captured): {$call->call_id}");
+            Log::info("Dispatching CallOffered (Offer captured): {$call->call_id}");
             event(new CallOffered($call->fresh())); // Use fresh to ensure metadata is reloaded
         } elseif ($sdp && $sdpType === 'answer') {
             // If it's an answer in the connect event (outbound answer)

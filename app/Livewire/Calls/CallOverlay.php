@@ -80,11 +80,11 @@ class CallOverlay extends Component
         );
     }
 
-    public function initiateCallWithSDP($phoneNumber, $sdp, $contactId)
+    public function initiateWhatsAppCall($phoneNumber, $contactId, $sdp = null)
     {
         $contact = Contact::find($contactId);
 
-        // Fallback if phoneNumber is missing (from null in JS)
+        // Fallback if phoneNumber is missing
         if (!$phoneNumber && $contact) {
             $phoneNumber = $contact->phone_number;
         }
@@ -107,7 +107,7 @@ class CallOverlay extends Component
 
             if ($response['success']) {
                 $this->callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
-                Log::info("CallOverlay: Call initiated successfully", ['call_id' => $this->callId]);
+                Log::info("CallOverlay: Call initiate-request successful", ['call_id' => $this->callId]);
             } else {
                 $this->handleFailed(['message' => $response['message'] ?? 'Failed to initiate call']);
             }
