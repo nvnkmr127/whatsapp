@@ -70,10 +70,12 @@ class CallOverlay extends Component
         }
 
         // Instead of calling API directly (which fails without SDP), we tell the browser to generate SDP
-        $this->dispatch('trigger-sdp-offer', [
-            'phone_number' => $phoneNumber,
-            'contact_id' => $contactId
-        ]);
+        // Using named arguments to ensure event.detail is a flat object in JS
+        $this->dispatch(
+            'trigger-sdp-offer',
+            phone_number: $phoneNumber,
+            contact_id: $contactId
+        );
     }
 
     public function initiateCallWithSDP($phoneNumber, $sdp, $contactId)
