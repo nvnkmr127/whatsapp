@@ -16,10 +16,11 @@
         startTime: @entangle('startTime').live,
         showDebug: false,
         debugLogs: [],
+        logIndex: 0,
 
         logDebug(msg, type = 'info') {
             const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
-            this.debugLogs.unshift({ time, msg, type });
+            this.debugLogs.unshift({ id: ++this.logIndex, time, msg, type });
             if (this.debugLogs.length > 50) this.debugLogs.pop();
             console.log(`[CallDebug] ${msg}`);
         },
@@ -578,7 +579,7 @@
                 <!-- Status & Quality -->
                 <div class="flex flex-col items-center">
                     <div class="flex items-end gap-0.5 h-4 mb-0.5">
-                        <template x-for="i in 4">
+                        <template x-for="i in 4" :key="i">
                             <div class="w-1.5 rounded-full transition-all duration-500" :class="{
                                 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]': signalQuality >= (i * 25),
                                 'bg-white/20': signalQuality < (i * 25)
@@ -600,20 +601,19 @@
             </div>
 
             <!-- Visual Debug Console -->
-            <div x-show="showDebug" 
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-y-10 scale-95"
-                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                 x-transition:leave="transition ease-in duration-200"
-                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                 x-transition:leave-end="opacity-0 translate-y-10 scale-95"
-                 class="absolute bottom-24 left-4 right-4 max-h-40 overflow-y-auto bg-black/80 backdrop-blur-xl rounded-xl p-3 border border-white/10 font-mono text-[10px] text-indigo-300 pointer-events-auto z-[110]">
+            <div x-show="showDebug" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 translate-y-10 scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                x-transition:leave-end="opacity-0 translate-y-10 scale-95"
+                class="absolute bottom-24 left-4 right-4 max-h-40 overflow-y-auto bg-black/80 backdrop-blur-xl rounded-xl p-3 border border-white/10 font-mono text-[10px] text-indigo-300 pointer-events-auto z-[110]">
                 <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-1">
                     <span class="font-bold text-white/70 uppercase tracking-wider">Signals & Events</span>
                     <button @click="debugLogs = []" class="text-white/40 hover:text-white">Clear</button>
                 </div>
                 <div class="space-y-1">
-                    <template x-for="log in debugLogs" :key="log.time">
+                    <template x-for="log in debugLogs" :key="log.id">
                         <div class="flex gap-2">
                             <span class="text-white/30" x-text="log.time"></span>
                             <span x-text="log.msg" :class="{
