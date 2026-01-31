@@ -5,14 +5,13 @@
         // Ensure initial hidden state if null
         isVisible: false,
         init() {
-             this.$watch('status', val => {
-                 // Define which statuses should show the overlay
+             const updateVisibility = (val) => {
                  const showStatuses = ['ringing', 'active', 'ended', 'in_progress', 'initiated'];
                  this.isVisible = showStatuses.includes(val);
-             });
-             // Set initial state
-             const showStatuses = ['ringing', 'active', 'ended', 'in_progress', 'initiated'];
-             this.isVisible = showStatuses.includes(this.status);
+             };
+
+             this.$watch('status', updateVisibility);
+             updateVisibility(this.status);
              
              // Initialize WebSocket handlers
              this.setupCalls();
@@ -541,7 +540,7 @@
         }
     }" @auto-hide-overlay.window="setTimeout(() => $wire.resetOverlay(), 3000)" @call-stopped.window="stopCalling()"
     @play-ringing-sound.window="playRinging()"
-    class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
+    class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
     <!-- Overlay Container -->
     <div x-show="isVisible" x-transition:enter="transition ease-out duration-500"
         x-transition:enter-start="opacity-0 -translate-y-10 scale-90"
@@ -605,31 +604,7 @@
                 <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]">Duration</span>
             </div>
 
-            <!-- Signal Bars & Debug Toggle -->
-            <div class="absolute top-4 right-4 flex flex-col items-end gap-2">
-                <!-- Status & Quality -->
-                <div class="flex flex-col items-center">
-                    <div class="flex items-end gap-0.5 h-4 mb-0.5">
-                        <template x-for="i in 4" :key="i">
-                            <div class="w-1.5 rounded-full transition-all duration-500" :class="{
-                                'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]': signalQuality >= (i * 25),
-                                'bg-white/20': signalQuality < (i * 25)
-                            }" :style="{ height: (i * 25) + '%' }"></div>
-                        </template>
-                    </div>
-                    <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]"
-                        x-text="pc ? pc.connectionState : (connectionType || 'IDLE')"></span>
-                </div>
 
-                <!-- Debug Toggle -->
-                <button @click="showDebug = !showDebug"
-                    class="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors pointer-events-auto">
-                    <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                </button>
-            </div>
 
             <!-- Visual Debug Console -->
             <template x-if="showDebug">
@@ -660,53 +635,84 @@
                 </div>
             </template>
 
-            <!-- Right: Actions -->
-            <div class="flex items-center gap-2">
-                <template x-if="status === 'ringing' && direction === 'inbound'">
-                    <div class="flex items-center gap-2">
-                        <!-- Reject Button -->
-                        <button @click="performAction('rejectCall')"
-                            class="p-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg pointer-events-auto"
-                            :disabled="isProcessing">
-                            <svg class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+            <!-- Right: Actions & Signals -->
+            <div class="flex items-center gap-4">
+                <!-- Integrated Signal Bars & Debug -->
+                <div class="flex items-center gap-3 border-r border-white/10 pr-4"
+                    x-show="status === 'active' || (status === 'ringing' && direction === 'outbound')">
+
+                    <!-- Connection Stat -->
+                    <div class="flex flex-col items-end">
+                        <div class="flex items-end gap-0.5 h-3 mb-0.5">
+                            <template x-for="i in 4" :key="i">
+                                <div class="w-1 rounded-full transition-all duration-500" :class="{
+                                    'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]': signalQuality >= (i * 25),
+                                    'bg-white/20': signalQuality < (i * 25)
+                                }" :style="{ height: (i * 25) + '%' }"></div>
+                            </template>
+                        </div>
+                        <span class="text-[6px] font-bold text-white/50 uppercase tracking-wider"
+                            x-text="pc ? pc.connectionState : (connectionType || 'IDLE')"></span>
+                    </div>
+
+                    <!-- Debug Toggle -->
+                    <button @click="showDebug = !showDebug"
+                        class="p-1.5 rounded-full bg-white/5 hover:bg-white/20 transition-colors pointer-events-auto">
+                        <svg class="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <template x-if="status === 'ringing' && direction === 'inbound'">
+                        <div class="flex items-center gap-2">
+                            <!-- Reject Button -->
+                            <button @click="performAction('rejectCall')"
+                                class="p-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg pointer-events-auto"
+                                :disabled="isProcessing">
+                                <svg class="w-5 h-5 rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
+                                </svg>
+                            </button>
+
+                            <!-- Answer Button -->
+                            <button @click="performAction('answerCall')"
+                                class="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg animate-bounce pointer-events-auto"
+                                :disabled="isProcessing">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- End Call Button (Show for active calls or outbound ringing) -->
+                    <template
+                        x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
+                        <button @click="performAction('endCall')"
+                            class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg pointer-events-auto"
+                            :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
+                            <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor"
+                                viewBox="0 0 24 24">
                                 <path
                                     d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
                             </svg>
-                        </button>
-
-                        <!-- Answer Button -->
-                        <button @click="performAction('answerCall')"
-                            class="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg animate-bounce pointer-events-auto"
-                            :disabled="isProcessing">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1.01A11.332 11.332 0 018.58 4c0-.55-.45-1-1-1H4.11c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z" />
+                            <svg x-show="isProcessing" class="animate-spin h-5 w-5 text-white"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4">
+                                </circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
                             </svg>
                         </button>
-                    </div>
-                </template>
-
-                <!-- End Call Button (Show for active calls or outbound ringing) -->
-                <template
-                    x-if="status === 'active' || (status === 'ringing' && direction === 'outbound') || status === 'ended'">
-                    <button @click="performAction('endCall')"
-                        class="group p-3 rounded-2xl transition-all duration-300 transform hover:scale-110 active:scale-90 shadow-lg pointer-events-auto"
-                        :class="(status === 'ended' || isProcessing || isLocked) ? 'bg-white/10 text-white/20 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white'">
-                        <svg x-show="!isProcessing" class="w-5 h-5 rotate-[135deg]" fill="currentColor"
-                            viewBox="0 0 24 24">
-                            <path
-                                d="M21 15.46l-5.27-.61-2.52 2.52c-2.83-1.44-5.15-3.75-6.59-6.59l2.53-2.53L8.54 3H3.01C2.45 13.18 10.82 21.55 21 20.99v-5.53z" />
-                        </svg>
-                        <svg x-show="isProcessing" class="animate-spin h-5 w-5 text-white"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                    </button>
-                </template>
+                    </template>
+                </div>
             </div>
         </div>
 
