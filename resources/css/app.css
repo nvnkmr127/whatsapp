@@ -4,6 +4,49 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    :root {
+        --wa-teal: #25D366;
+        --wa-teal-dark: #128C7E;
+        --wa-teal-light: #dcf8c6;
+        --wa-blue: #34B7F1;
+        --wa-dark-bg: #0b141a;
+        --wa-chat-bg: #f0f2f5;
+        --premium-indigo: #6366f1;
+        --premium-violet: #8b5cf6;
+    }
+}
+
+@layer utilities {
+    .glass-card {
+        @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-800/50 shadow-2xl;
+    }
+    
+    .neon-border-teal {
+        @apply border-wa-teal shadow-[0_0_15px_rgba(37,211,102,0.2)];
+    }
+
+    .neon-border-indigo {
+        @apply border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)];
+    }
+
+    .gradient-text-premium {
+        @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-200 dark:to-slate-400;
+    }
+
+    .gradient-text-wa {
+        @apply bg-clip-text text-transparent bg-gradient-to-br from-wa-teal to-wa-teal-dark;
+    }
+
+    .soft-glow-teal {
+        @apply shadow-[0_0_20px_rgba(37,211,102,0.15)];
+    }
+
+    .hover-lift {
+        @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl active:scale-[0.98];
+    }
+}
+
 .wa-bg-pattern {
     background-color: #e5ddd5;
     background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");

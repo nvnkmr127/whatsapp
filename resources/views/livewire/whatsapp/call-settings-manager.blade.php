@@ -51,55 +51,55 @@
 
     <!-- Statistics Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50 relative overflow-hidden group">
+        <div class="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group hover-lift neon-border-teal">
             <div class="absolute top-0 right-0 w-32 h-32 bg-wa-teal/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-110"></div>
             <div class="relative">
-                <div class="p-3 bg-wa-teal/10 text-wa-teal rounded-2xl w-fit mb-4">
+                <div class="p-4 bg-wa-teal/10 text-wa-teal rounded-2xl w-fit mb-5 shadow-inner">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                <div class="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{{ $activePermissions }}</div>
-                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Active Permissions</div>
+                <div class="text-4xl font-black gradient-text-premium tabular-nums tracking-tighter">{{ $activePermissions }}</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Active Permissions</div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-110"></div>
+        <div class="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group hover-lift neon-border-indigo">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-110"></div>
             <div class="relative">
-                <div class="p-3 bg-amber-500/10 text-amber-500 rounded-2xl w-fit mb-4">
+                <div class="p-4 bg-indigo-500/10 text-indigo-500 rounded-2xl w-fit mb-5 shadow-inner">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                 </div>
-                <div class="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{{ $totalPermissions }}</div>
-                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Total Audience</div>
+                <div class="text-4xl font-black gradient-text-premium tabular-nums tracking-tighter">{{ $totalPermissions }}</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Total Audience</div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50 relative overflow-hidden group">
+        <div class="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group hover-lift">
             <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-110"></div>
             <div class="relative">
-                <div class="p-3 bg-sky-500/10 text-sky-500 rounded-2xl w-fit mb-4">
+                <div class="p-4 bg-sky-500/10 text-sky-500 rounded-2xl w-fit mb-5 shadow-inner">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2 2-2 2M8 16l-2-2 2-2" />
                     </svg>
                 </div>
-                <div class="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{{ $callsMadeToday }}</div>
-                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Calls Today</div>
+                <div class="text-4xl font-black gradient-text-premium tabular-nums tracking-tighter">{{ $callsMadeToday }}</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Calls Today</div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50 relative overflow-hidden group">
+        <div class="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group hover-lift">
             <div class="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-110"></div>
             <div class="relative">
-                <div class="p-3 bg-slate-500/10 text-slate-500 rounded-2xl w-fit mb-4">
+                <div class="p-4 bg-slate-500/10 text-slate-500 rounded-2xl w-fit mb-5 shadow-inner">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                <div class="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{{ $expiredPermissions }}</div>
-                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Expired Windows</div>
+                <div class="text-4xl font-black gradient-text-premium tabular-nums tracking-tighter">{{ $expiredPermissions }}</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Expired Windows</div>
             </div>
         </div>
     </div>
@@ -107,15 +107,15 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <!-- Settings Column -->
         <div class="lg:col-span-1 space-y-8">
-            <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50">
-                <div class="flex items-center gap-4 mb-8">
-                   <div class="p-3 bg-wa-teal/10 text-wa-teal rounded-2xl">
+            <div class="glass-card p-10 rounded-[2.5rem] hover-lift">
+                <div class="flex items-center gap-4 mb-10">
+                   <div class="p-3 bg-wa-teal/10 text-wa-teal rounded-2xl shadow-inner">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                    </div>
-                   <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">System <span class="text-wa-teal">Rules</span></h2>
+                   <h2 class="text-xl font-black gradient-text-premium uppercase tracking-tighter">System <span class="text-wa-teal font-black">Rules</span></h2>
                 </div>
 
                 <div class="space-y-6">
@@ -165,19 +165,19 @@
             </div>
 
             <!-- Automated Responses -->
-            <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50" x-data="{ expanded: @entangle('awayMessageEnabled') }">
+            <div class="glass-card p-10 rounded-[2.5rem] hover-lift overflow-hidden" x-data="{ expanded: @entangle('awayMessageEnabled') }">
                 <div class="flex items-center justify-between mb-8 cursor-pointer" @click="expanded = !expanded">
                    <div class="flex items-center gap-4">
-                        <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl">
+                        <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl shadow-inner">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                             </svg>
                         </div>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Automated <span class="text-purple-500">Responses</span></h2>
+                        <h2 class="text-xl font-black gradient-text-premium uppercase tracking-tighter tracking-tight">Auto <span class="text-purple-500 font-black">Bot</span></h2>
                    </div>
                    <div class="relative inline-flex items-center cursor-pointer" @click.stop>
                         <input type="checkbox" wire:model="awayMessageEnabled" class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-500"></div>
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-500 shadow-lg shadow-purple-500/20"></div>
                     </div>
                 </div>
 
@@ -201,15 +201,15 @@
             </div>
 
             <!-- SIP Card -->
-            <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50" x-data="{ expanded: @entangle('sipEnabled') }">
+            <div class="glass-card p-10 rounded-[2.5rem] hover-lift overflow-hidden" x-data="{ expanded: @entangle('sipEnabled') }">
                 <div class="flex items-center justify-between mb-8 cursor-pointer" @click="expanded = !expanded">
                    <div class="flex items-center gap-4">
-                        <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl">
+                        <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl shadow-inner">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                             </svg>
                         </div>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">SIP <span class="text-indigo-500">Trunking</span></h2>
+                        <h2 class="text-xl font-black gradient-text-premium uppercase tracking-tighter">SIP <span class="text-indigo-500 font-black">Trunk</span></h2>
                    </div>
                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -247,63 +247,114 @@
 
         <!-- Business Hours Column -->
         <div class="lg:col-span-2">
-            <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50 overflow-hidden relative">
-                <div class="absolute top-0 right-0 p-8">
-                     <label class="flex items-center gap-3 cursor-pointer group" title="If enabled, Meta will automatically block calls outside these hours.">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-wa-teal transition-colors">Enforce Hours</span>
-                        <div class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" wire:model="syncWithBusinessHours" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal"></div>
-                        </div>
-                    </label>
+            <div class="glass-card p-10 rounded-[2.5rem] relative overflow-hidden group/main hover-lift">
+                <!-- Background Decoration -->
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-wa-teal/5 rounded-full blur-3xl transition-all group-hover/main:bg-wa-teal/10"></div>
+                
+                <!-- Header Section -->
+                <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                    <div class="flex items-center gap-5">
+                       <div class="p-4 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl shadow-lg shadow-amber-500/20">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                       </div>
+                       <div>
+                            <h2 class="text-2xl font-black gradient-text-premium uppercase tracking-tighter">Active <span class="text-amber-500">Window</span></h2>
+                            <div class="flex items-center gap-3 mt-1.5">
+                                <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Zone:</span>
+                                    <select wire:model="timezone" class="p-0 border-none bg-transparent text-[10px] font-black text-wa-teal uppercase tracking-widest focus:ring-0 cursor-pointer">
+                                        @foreach($this->timezones as $tz)
+                                            <option value="{{ $tz }}">{{ $tz }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                       </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 p-2 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
+                         <label class="flex items-center gap-3 cursor-pointer group/toggle px-3" title="If enabled, Meta will automatically block calls outside these hours.">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/toggle:text-wa-teal transition-colors">Enforce Hours</span>
+                            <div class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" wire:model="syncWithBusinessHours" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal soft-glow-teal"></div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
-                <div class="flex items-center gap-4 mb-10">
-                   <div class="p-3 bg-amber-500/10 text-amber-500 rounded-2xl">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                   </div>
-                   <div>
-                        <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Active <span class="text-amber-500">Window</span></h2>
-                        <div class="flex items-center gap-2 mt-1">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Timezone:</p>
-                            <select wire:model="timezone" class="p-0 border-none bg-transparent text-[10px] font-black text-wa-teal uppercase tracking-widest focus:ring-0 cursor-pointer">
-                                @foreach($this->timezones as $tz)
-                                    <option value="{{ $tz }}">{{ $tz }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                   </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-7 gap-3">
+                <!-- Days Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 relative">
                     @foreach($businessHours as $index => $hour)
-                        <div class="flex flex-col gap-3 group">
+                        <div class="flex flex-col gap-3 group/day">
+                            <!-- Day Toggle Card -->
                             <button wire:click="toggleDay({{ $index }})"
-                                class="flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all {{ ($hour['enabled'] ?? false) ? 'bg-wa-teal/5 border-wa-teal text-wa-teal' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400' }}">
-                                <span class="text-xs font-black uppercase tracking-widest leading-none mb-1">{{ substr($hour['day'], 0, 3) }}</span>
-                                <div class="w-1.5 h-1.5 rounded-full {{ ($hour['enabled'] ?? false) ? 'bg-wa-teal animate-pulse' : 'bg-slate-300' }}"></div>
+                                class="relative flex flex-col items-center justify-center p-5 rounded-[2rem] border-2 transition-all duration-300 overflow-hidden
+                                {{ ($hour['enabled'] ?? false) 
+                                    ? 'bg-gradient-to-b from-wa-teal/10 to-transparent border-wa-teal shadow-lg shadow-wa-teal/10' 
+                                    : 'bg-slate-50 dark:bg-slate-800/30 border-transparent text-slate-400 grayscale' }}">
+                                
+                                @if($hour['enabled'] ?? false)
+                                    <div class="absolute -top-2 -right-2 w-8 h-8 bg-wa-teal/10 rounded-full blur-xl animate-pulse"></div>
+                                @endif
+
+                                <span class="text-xs font-black uppercase tracking-widest leading-none mb-2 z-10 
+                                    {{ ($hour['enabled'] ?? false) ? 'text-wa-teal' : 'text-slate-400' }}">
+                                    {{ substr($hour['day'], 0, 3) }}
+                                </span>
+                                
+                                <div class="w-2 h-2 rounded-full transition-all duration-500 z-10
+                                    {{ ($hour['enabled'] ?? false) ? 'bg-wa-teal scale-125 shadow-[0_0_10px_#25D366]' : 'bg-slate-300 dark:bg-slate-700' }}"></div>
                             </button>
 
-                            @if($hour['enabled'] ?? false)
-                            <div class="flex flex-col gap-2 p-2 bg-white dark:bg-slate-800 rounded-[1.5rem] border border-slate-50 dark:border-slate-800 shadow-sm animate-in fade-in slide-in-from-top-2">
-                                <input type="time" wire:model="businessHours.{{ $index }}.open"
-                                    class="border-none bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl text-[10px] font-black text-slate-900 dark:text-white text-center focus:ring-1 focus:ring-wa-teal/20">
-                                <div class="text-[8px] font-black text-slate-300 text-center uppercase tracking-widest">To</div>
-                                <input type="time" wire:model="businessHours.{{ $index }}.close"
-                                    class="border-none bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl text-[10px] font-black text-slate-900 dark:text-white text-center focus:ring-1 focus:ring-wa-teal/20">
-                                <button wire:click="applyToAll({{ $index }})" 
-                                        class="mt-1 p-2 text-slate-300 hover:text-wa-teal transition-colors"
-                                        title="Copy to all days">
-                                    <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
+                            <!-- Hours Input Card -->
+                            <div class="transition-all duration-500 {{ ($hour['enabled'] ?? false) ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none' }}">
+                                <div class="flex flex-col gap-2.5 p-3 rounded-[1.8rem] bg-white dark:bg-slate-800 border-2 {{ ($hour['enabled'] ?? false) ? 'border-wa-teal/20 shadow-xl' : 'border-transparent' }} transition-all">
+                                    <div class="space-y-1">
+                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Opens</span>
+                                        <input type="time" wire:model="businessHours.{{ $index }}.open"
+                                            class="w-full border-none bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl text-[11px] font-black text-slate-900 dark:text-white text-center focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                    </div>
+                                    
+                                    <div class="flex items-center justify-center">
+                                        <div class="h-[1px] flex-1 bg-slate-100 dark:bg-slate-700/50"></div>
+                                        <div class="mx-2 text-[8px] font-black text-slate-300 uppercase tracking-widest">to</div>
+                                        <div class="h-[1px] flex-1 bg-slate-100 dark:bg-slate-700/50"></div>
+                                    </div>
+
+                                    <div class="space-y-1">
+                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Closes</span>
+                                        <input type="time" wire:model="businessHours.{{ $index }}.close"
+                                            class="w-full border-none bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl text-[11px] font-black text-slate-900 dark:text-white text-center focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                    </div>
+
+                                    <button wire:click="applyToAll({{ $index }})" 
+                                            class="mt-1 py-2 text-slate-300 hover:text-wa-teal transition-all flex items-center justify-center gap-1.5 group/copy"
+                                            title="Apply this schedule to all active days">
+                                        <svg class="w-3.5 h-3.5 transition-transform group-hover/copy:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        <span class="text-[8px] font-black uppercase tracking-tighter opacity-0 group-hover/copy:opacity-100 transition-opacity">Copy All</span>
+                                    </button>
+                                </div>
                             </div>
-                            @endif
                         </div>
                     @endforeach
+                </div>
+
+                <!-- Bottom Hint -->
+                <div class="mt-10 p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/20 flex gap-4 items-center">
+                    <div class="flex-shrink-0 p-2 bg-amber-500/10 text-amber-500 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <p class="text-[10px] text-amber-700/80 dark:text-amber-400 font-bold leading-relaxed uppercase tracking-tight">
+                        Calls received outside these hours will be blocked automatically if <span class="text-amber-600 dark:text-amber-300 font-black">Enforce Hours</span> is active. 
+                        A callback request message will be sent instead.
+                    </p>
                 </div>
             </div>
         </div>

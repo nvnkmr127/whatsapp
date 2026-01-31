@@ -954,9 +954,23 @@ class WhatsAppService
             $callingPayload['callback_permission_status'] = strtoupper($settings['callback_permission_status']);
         }
 
-        // 4. Call Hours
-        if (isset($settings['business_hours']) && is_array($settings['business_hours'])) {
-            $weeklyHours = [];
+        // 4. Call Hours / Business Hours
+        $weeklyHours = [];
+        $timezone = $settings['timezone'] ?? 'UTC';
+        $inputHours = null;
+
+        if (isset($settings['business_hours'])) {
+            if (isset($settings['business_hours']['hours']) && is_array($settings['business_hours']['hours'])) {
+                // Format from CallSettingsController: ['business_hours' => ['hours' => [...], 'timezone' => '...']]
+                $inputHours = $settings['business_hours']['hours'];
+                $timezone = $settings['business_hours']['timezone'] ?? $timezone;
+            } elseif (is_array($settings['business_hours'])) {
+                // Keyed format: ['mon' => ['09:00', '17:00']] OR List format: [['day' => 'MON', ...]]
+                $inputHours = $settings['business_hours'];
+            }
+        }
+
+        if ($inputHours) {
             $daysMap = [
                 'mon' => 'MONDAY',
                 'tue' => 'TUESDAY',
@@ -964,16 +978,37 @@ class WhatsAppService
                 'thu' => 'THURSDAY',
                 'fri' => 'FRIDAY',
                 'sat' => 'SATURDAY',
-                'sun' => 'SUNDAY'
+                'sun' => 'SUNDAY',
+                'MON' => 'MONDAY',
+                'TUE' => 'TUESDAY',
+                'WED' => 'WEDNESDAY',
+                'THU' => 'THURSDAY',
+                'FRI' => 'FRIDAY',
+                'SAT' => 'SATURDAY',
+                'SUN' => 'SUNDAY'
             ];
 
-            foreach ($settings['business_hours'] as $dayKey => $times) {
-                if (isset($daysMap[$dayKey]) && count($times) === 2) {
-                    $open = str_replace(':', '', $times[0]);
-                    $close = str_replace(':', '', $times[1]);
+            foreach ($inputHours as $key => $val) {
+                $day = null;
+                $open = null;
+                $close = null;
 
+                // Handle keyed format: 'mon' => ['09:00', '17:00']
+                if (isset($daysMap[$key]) && is_array($val) && count($val) === 2) {
+                    $day = $daysMap[$key];
+                    $open = str_replace(':', '', $val[0]);
+                    $close = str_replace(':', '', $val[1]);
+                }
+                // Handle list format: ['day' => 'MON', 'open' => '09:00', 'close' => '17:00']
+                elseif (is_array($val) && isset($val['day']) && isset($val['open']) && isset($val['close'])) {
+                    $day = $daysMap[$val['day']] ?? $val['day'];
+                    $open = str_replace(':', '', $val['open']);
+                    $close = str_replace(':', '', $val['close']);
+                }
+
+                if ($day && $open && $close) {
                     $weeklyHours[] = [
-                        'day_of_week' => $daysMap[$dayKey],
+                        'day_of_week' => $day,
                         'open_time' => $open,
                         'close_time' => $close
                     ];
@@ -983,13 +1018,20 @@ class WhatsAppService
             if (!empty($weeklyHours)) {
                 $callingPayload['call_hours'] = [
                     'status' => 'ENABLED',
-                    'timezone_id' => $settings['timezone'] ?? 'UTC',
+                    'timezone_id' => $timezone,
                     'weekly_operating_hours' => $weeklyHours
                 ];
             }
         } elseif (isset($settings['call_hours'])) {
             $callingPayload['call_hours'] = $settings['call_hours'];
         }
+
+        Log::debug("WhatsAppService: Preparation for Meta settings sync", [
+            'team_id' => $this->team->id,
+            'has_weekly_hours' => count($weeklyHours),
+            'timezone' => $timezone,
+            'payload_keys' => array_keys($callingPayload)
+        ]);
 
         if (empty($callingPayload)) {
             return ['success' => true, 'message' => 'No settings to update'];
