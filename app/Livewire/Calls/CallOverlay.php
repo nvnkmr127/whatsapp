@@ -58,10 +58,19 @@ class CallOverlay extends Component
 
     public function handleInitiation($data)
     {
+        // Robustly get contact ID and phone number
+        $contactId = $data['contact_id'] ?? null;
+        $phoneNumber = $data['phone_number'] ?? null;
+
+        if (!$phoneNumber && $contactId) {
+            $contact = Contact::find($contactId);
+            $phoneNumber = $contact->phone_number ?? null;
+        }
+
         // Instead of calling API directly (which fails without SDP), we tell the browser to generate SDP
         $this->dispatch('trigger-sdp-offer', [
-            'phone_number' => $data['phone_number'],
-            'contact_id' => $data['contact_id']
+            'phone_number' => $phoneNumber,
+            'contact_id' => $contactId
         ]);
     }
 
