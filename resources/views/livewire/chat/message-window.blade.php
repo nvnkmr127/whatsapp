@@ -588,9 +588,68 @@
                                             <video :src="message.media_url" controls class="w-full max-h-80"></video>
                                         </template>
                                         <template x-if="message.media_type && message.media_type.startsWith('audio')">
-                                            <div class="bg-black/5 dark:bg-black/20 rounded-xl p-1">
-                                                <audio :src="message.media_url" controls
-                                                    class="w-full h-8 flex"></audio>
+                                            <div x-data="{ 
+                                                playing: false, 
+                                                duration: 0, 
+                                                current: 0,
+                                                audio: null,
+                                                bars: [],
+                                                init() {
+                                                    this.audio = new Audio(message.media_url);
+                                                    this.audio.onloadedmetadata = () => this.duration = this.audio.duration;
+                                                    this.audio.ontimeupdate = () => this.current = this.audio.currentTime;
+                                                    this.audio.onended = () => { this.playing = false; this.current = 0; };
+                                                    // Deterministic " random" heights based on message ID const
+                                                msgId=parseInt(String(message.id).replace(/\D/g, '' )) || 1;
+                                                this.bars=Array.from({length: 25}, (_, i)=> 30 + ((msgId * (i + 3)) %
+                                                70));
+                                                },
+                                                toggle() {
+                                                if (this.playing) {
+                                                this.audio.pause();
+                                                } else {
+                                                this.audio.play();
+                                                }
+                                                this.playing = !this.playing;
+                                                },
+                                                formatTime(s) {
+                                                if(!s || isNaN(s)) return '0:00';
+                                                const min = Math.floor(s / 60);
+                                                const sec = Math.floor(s % 60);
+                                                return min + ':' + (sec < 10 ? '0' : '' ) + sec; } }"
+                                                    class="flex items-center gap-3 p-3 bg-black/5 dark:bg-black/20 rounded-2xl min-w-[200px]">
+                                                    <!-- Play/Pause Button -->
+                                                    <button @click="toggle"
+                                                        class="w-10 h-10 flex items-center justify-center bg-wa-teal text-white rounded-full shadow-md shrink-0 hover:scale-105 active:scale-95 transition-transform">
+                                                        <template x-if="!playing">
+                                                            <svg class="w-5 h-5 ml-0.5" fill="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path d="M8 5v14l11-7z" />
+                                                            </svg>
+                                                        </template>
+                                                        <template x-if="playing">
+                                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"
+                                                                stroke="currentColor" stroke-width="1">
+                                                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                                            </svg>
+                                                        </template>
+                                                    </button>
+
+                                                    <!-- Waveform Area -->
+                                                    <div class="flex-1 flex flex-col gap-1">
+                                                        <div class="flex items-end gap-[2px] h-6">
+                                                            <template x-for="(h, i) in bars" :key="i">
+                                                                <div class="w-[3px] rounded-full transition-colors duration-200"
+                                                                    :class="(current/duration) * bars.length >= i ? 'bg-wa-teal' : 'bg-slate-300 dark:bg-slate-700'"
+                                                                    :style="{ height: h + '%' }"></div>
+                                                            </template>
+                                                        </div>
+                                                        <div
+                                                            class="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter text-slate-500 dark:text-slate-400">
+                                                            <span x-text="formatTime(current)">0:00</span>
+                                                            <span x-text="formatTime(duration)"></span>
+                                                        </div>
+                                                    </div>
                                             </div>
                                         </template>
                                         <template
@@ -1017,10 +1076,11 @@
                         @focus="$store.chat.requestLock()" @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
                         @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
                         placeholder="Type a message (or / for templates)..." rows="1"
-                        :disabled="$store.chat.isLockedForMe()" :class="[
-                                                                                                                        $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                                                                                        isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                                                                                    ]"
+                        :disabled="$store.chat.isLockedForMe()"
+                        :class="[
+                                                                                                                                $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                                                                                isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                                                                            ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 
