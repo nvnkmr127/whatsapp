@@ -54,7 +54,11 @@ class CallOverlay extends Component
             $this->contactName = $activeCall->contact->name ?? $activeCall->from_number;
             $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
             $this->startTime = $activeCall->answered_at?->timestamp;
-            $this->offerSdp = $activeCall->metadata['sdp'] ?? null;
+
+            // For recovery, we need to know if we have an offer or an answer
+            // Inbound calls always have metadata['sdp'] (the offer)
+            // Outbound calls that were answered have metadata['answered_sdp']
+            $this->offerSdp = $activeCall->metadata['answered_sdp'] ?? $activeCall->metadata['sdp'] ?? null;
         }
     }
 
@@ -136,7 +140,9 @@ class CallOverlay extends Component
 
         $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
         $this->startTime = null;
-        $this->offerSdp = $event['sdp'] ?? null;
+
+        // Capture SDP from the event (could be a call offer or a re-negotiation offer)
+        $this->offerSdp = $event['call']['metadata']['sdp'] ?? $event['sdp'] ?? null;
 
         if ($this->direction === 'inbound') {
             $this->dispatch('play-ringing-sound');
@@ -152,8 +158,19 @@ class CallOverlay extends Component
 
     public function handleAnswered($event)
     {
+        Log::info("CallOverlay: Received CallAnswered event", ['event' => $event]);
+
         $this->status = 'active';
-        $this->startTime = now()->timestamp;
+
+        // If the server has an answer SDP (e.g. from mobile), we need to send it to the JS PeerConnection
+        $answeredSdp = $event['call']['metadata']['answered_sdp'] ?? null;
+        if ($answeredSdp) {
+            $this->offerSdp = $answeredSdp; // Re-use offerSdp or we could use another var, but JS can check
+            $this->dispatch('set-remote-answer', ['sdp' => $answeredSdp]);
+        }
+
+        // Set start time from event or now
+        $this->startTime = $event['call']['answered_at'] ? \Carbon\Carbon::parse($event['call']['answered_at'])->timestamp : now()->timestamp;
     }
 
     public function handleEnded($event)

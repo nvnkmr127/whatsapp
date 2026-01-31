@@ -74,6 +74,34 @@
                 console.log('CallOverlay: generating SDP offer...', event.detail);
                 this.handleOutboundCall(event.detail);
             });
+
+            // Handle remote answer from server (e.g. for cross-device sync)
+            window.addEventListener('set-remote-answer', async event => {
+                const sdp = event.detail.sdp;
+                if (this.pc && sdp && this.pc.signalingState === 'have-local-offer') {
+                    console.log('CallOverlay: Applying remote answer from server...');
+                    try {
+                        const sanitizedAnswer = sdp
+                            .replace(/[^\x20-\x7E\r\n]/g, '')
+                            .replace(/\r\n|\r|\n/g, '\n')
+                            .split('\n').map(l => l.trim()).join('\r\n') + '\r\n';
+
+                        await this.pc.setRemoteDescription({
+                            type: 'answer',
+                            sdp: sanitizedAnswer
+                        });
+                    } catch (e) {
+                        console.error('Failed to apply remote answer:', e);
+                    }
+                }
+            });
+
+            // Initial state check for recovery (e.g. after refresh)
+            if (this.status === 'active') {
+                this.startTimer();
+            } else if (this.status === 'ringing' && this.direction === 'inbound') {
+                this.playRinging();
+            }
         },
         
         async handleOutboundCall(data) {
