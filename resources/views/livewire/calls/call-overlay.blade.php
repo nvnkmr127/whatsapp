@@ -2,6 +2,21 @@
         status: @entangle('status').live,
         isLocked: @entangle('isLocked').live,
         occupiedBy: @entangle('occupiedBy').live,
+        // Ensure initial hidden state if null
+        isVisible: false,
+        init() {
+             this.$watch('status', val => {
+                 // Define which statuses should show the overlay
+                 const showStatuses = ['ringing', 'active', 'ended', 'in_progress', 'initiated'];
+                 this.isVisible = showStatuses.includes(val);
+             });
+             // Set initial state
+             const showStatuses = ['ringing', 'active', 'ended', 'in_progress', 'initiated'];
+             this.isVisible = showStatuses.includes(this.status);
+             
+             // Initialize WebSocket handlers
+             this.setupCalls();
+        },
         duration: 0,
         timer: null,
         isProcessing: false,
@@ -26,7 +41,7 @@
             this.debugLogs = [newLog, ...this.debugLogs].slice(0, 50);
             console.log(`[CallDebug] ${msg}`);
         },
-        async init() {
+        async setupCalls() {
             this.logDebug('Overlay initializing...');
             this.ringingSound = document.getElementById('call-ringing-sound');
             this.bc = new BroadcastChannel('whatsapp_calls_sync');
@@ -528,7 +543,7 @@
     @play-ringing-sound.window="playRinging()"
     class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
     <!-- Overlay Container -->
-    <div x-show="status !== 'idle'" x-transition:enter="transition ease-out duration-500"
+    <div x-show="isVisible" x-transition:enter="transition ease-out duration-500"
         x-transition:enter-start="opacity-0 -translate-y-10 scale-90"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
         x-transition:leave="transition ease-in duration-300"
