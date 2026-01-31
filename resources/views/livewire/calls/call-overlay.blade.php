@@ -327,17 +327,43 @@
                 const answer = await this.pc.createAnswer();
                 await this.pc.setLocalDescription(answer);
 
-                // Implement timeout for answer
-                const answerTimeout = setTimeout(() => {
-                    if (this.pc && this.pc.connectionState !== 'connected') {
-                        throw new Error('Call answer timeout - connection not established within 30 seconds');
+                // IMPORTANT: Wait for ICE gathering to complete (or timeout) before sending answer
+                // Meta Cloud API often requires candidates in the initial answer for stable media
+                await new Promise(resolve => {
+                    if (this.pc.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        const checkState = () => {
+                            if (this.pc.iceGatheringState === 'complete') {
+                                this.pc.removeEventListener('icegatheringstatechange', checkState);
+                                resolve();
+                            }
+                        };
+                        this.pc.addEventListener('icegatheringstatechange', checkState);
+                        // Max wait for 1 second of gathering to avoid stalling
+                        setTimeout(resolve, 1000);
                     }
-                }, 30000);
+                });
 
-                // Send answer to backend
-                await $wire.answerCall(answer.sdp);
+                // Get the final SDP with gathered candidates
+                const finalAnswer = this.pc.localDescription;
+
+                // Implement timeout for connection establishment
+                const connectionTimeout = setTimeout(() => {
+                    if (this.pc && this.pc.connectionState !== 'connected') {
+                        console.warn('Call connection taking longer than expected...');
+                    }
+                }, 15000);
+
+                // Send sanitized final answer to backend
+                const sanitizedAnswer = finalAnswer.sdp
+                    .replace(/[^\x20-\x7E\r\n]/g, '')
+                    .replace(/\r\n|\r|\n/g, '\n')
+                    .split('\n').map(l => l.trim()).join('\r\n') + '\r\n';
+
+                await $wire.answerCall(sanitizedAnswer);
                 
-                clearTimeout(answerTimeout);
+                clearTimeout(connectionTimeout);
 
             } catch (error) {
                 console.error('Failed to answer call:', error);
@@ -454,7 +480,7 @@
                         </template>
                     </div>
                     <span class="text-[8px] font-black text-white/50 uppercase tracking-[0.2em]"
-                        x-text="connectionType"></span>
+                        x-text="pc ? pc.connectionState : connectionType"></span>
                 </div>
             </div>
 
