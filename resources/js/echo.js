@@ -14,11 +14,15 @@ const host = import.meta.env.VITE_REVERB_HOST || window.location.hostname;
 const port = import.meta.env.VITE_REVERB_PORT;
 const scheme = import.meta.env.VITE_REVERB_SCHEME || (window.location.protocol === 'https:' ? 'https' : 'http');
 
+// Determine if we should use TLS
+const forceTLS = scheme === 'https' || scheme === 'wss' || window.location.protocol === 'https:';
+
 console.log('Echo Config:', {
     key,
     host,
     port,
     scheme,
+    forceTLS,
     env: import.meta.env
 });
 
@@ -28,7 +32,7 @@ window.Echo = new Echo({
     wsHost: host,
     wsPort: port || 80,
     wssPort: port || 443,
-    forceTLS: scheme === 'https',
+    forceTLS: forceTLS,
     enabledTransports: ['ws', 'wss'],
 });
 
