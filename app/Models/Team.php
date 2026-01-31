@@ -125,8 +125,8 @@ class Team extends JetstreamTeam
      */
     public function isWithinBusinessHours()
     {
-        if (!$this->business_hours)
-            return true; // Default open if not set
+        if (empty($this->business_hours))
+            return true; // Default open if not configured
 
         $timezone = $this->timezone ?? 'UTC';
         $now = \Carbon\Carbon::now($timezone);
@@ -135,11 +135,7 @@ class Team extends JetstreamTeam
         $config = $this->business_hours[$dayVal] ?? null; // ['09:00', '17:00']
 
         if (!$config || !is_array($config) || count($config) !== 2) {
-            // If config missing for day, assume Closed? Or Open? 
-            // Let's assume Closed if key exists but null, Open if logic undefined.
-            // Actually, usually if not defined, it's open or closed.
-            // Let's assume: If business_hours is set, but key is missing -> Closed.
-            // If business_hours is null -> Open 24/7.
+            // If customized business hours exist, but this day is missing -> CLOSED.
             return false;
         }
 

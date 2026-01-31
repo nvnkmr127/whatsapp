@@ -567,17 +567,6 @@
                                 </select>
                              </div>
 
-                             <div>
-                                <x-label value="Business Hours (Mon-Fri)" class="text-xs font-bold text-slate-500 uppercase mb-2" />
-                                <div class="flex items-center gap-2">
-                                    <input type="time" wire:model="openTime"
-                                        class="rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal">
-                                    <span class="text-slate-400 font-bold text-xs">TO</span>
-                                    <input type="time" wire:model="closeTime"
-                                        class="rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal">
-                                </div>
-                                <p class="mt-2 text-[11px] text-slate-400">Messages received outside these hours may trigger the Away Message.</p>
-                             </div>
 
                              <div class="pt-4">
                                 <label class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -623,15 +612,6 @@
                                     </div>
                                 </label>
 
-                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
-                                    <div class="flex-shrink-0">
-                                        <input type="checkbox" wire:model="syncCallHours" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
-                                    </div>
-                                    <div>
-                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Sync Business Hours</span>
-                                        <span class="block text-xs text-slate-500">Restrict calls to the business hours defined on the left.</span>
-                                    </div>
-                                </label>
 
                                 <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
                                     <div class="flex-shrink-0">

@@ -203,8 +203,8 @@
         <div class="lg:col-span-2">
             <div class="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800/50 overflow-hidden relative">
                 <div class="absolute top-0 right-0 p-8">
-                     <label class="flex items-center gap-3 cursor-pointer group">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-wa-teal transition-colors">Sync Mode</span>
+                     <label class="flex items-center gap-3 cursor-pointer group" title="If enabled, Meta will automatically block calls outside these hours.">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-wa-teal transition-colors">Enforce Hours</span>
                         <div class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model="syncWithBusinessHours" class="sr-only peer">
                             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal"></div>

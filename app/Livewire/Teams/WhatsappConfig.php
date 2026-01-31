@@ -77,14 +77,9 @@ class WhatsappConfig extends Component
     public $awayMessageEnabled = false;
     public $awayMessage = 'We are currently closed. We will get back to you soon.';
 
-    // Default Hours: Mon-Fri 09-17
-    public $openTime = '09:00';
-    public $closeTime = '17:00';
-
     // Call Settings
     public $callingEnabled = false;
     public $callButtonVisible = false;
-    public $syncCallHours = false;
     public $callbackPermissionEnabled = false;
 
     // Advanced Calling Configuration (Phase 5)
@@ -204,19 +199,11 @@ class WhatsappConfig extends Component
         $this->awayMessageEnabled = $team->away_message_enabled;
         $this->awayMessage = $team->away_message;
 
-        // Load first day's hours as default
-        $hours = $team->business_hours;
-        if (isset($hours['mon'])) {
-            $this->openTime = $hours['mon'][0];
-            $this->closeTime = $hours['mon'][1];
-        }
-
         // Load Call Settings
         if (isset($team->whatsapp_settings['calling'])) {
             $this->callingEnabled = $team->whatsapp_settings['calling']['status'] === 'enabled';
             $this->callButtonVisible = $team->whatsapp_settings['calling']['call_icon_visibility'] === 'show';
             $this->callbackPermissionEnabled = ($team->whatsapp_settings['calling']['callback_permission_status'] ?? 'disabled') === 'enabled';
-            $this->syncCallHours = isset($team->whatsapp_settings['calling']['call_hours']);
         }
 
         // Load Advanced Calling Configuration (Phase 5)
@@ -296,17 +283,10 @@ class WhatsappConfig extends Component
         try {
             $team = auth()->user()->currentTeam;
 
-            // Construct Business Hours (Simple Mon-Fri for MVP)
-            $hours = [];
-            foreach (['mon', 'tue', 'wed', 'thu', 'fri'] as $day) {
-                $hours[$day] = [$this->openTime, $this->closeTime];
-            }
-
             $team->forceFill([
                 'timezone' => $this->timezone,
                 'away_message_enabled' => $this->awayMessageEnabled,
                 'away_message' => $this->awayMessage,
-                'business_hours' => $hours,
             ])->save();
 
             // Save Call Settings to Meta
@@ -317,22 +297,12 @@ class WhatsappConfig extends Component
                 'callback_permission_status' => $this->callbackPermissionEnabled ? 'enabled' : 'disabled',
             ];
 
-            if ($this->syncCallHours) {
-                $settings['business_hours'] = $hours;
-                $settings['timezone'] = $this->timezone;
-            }
-
             // Sync with Meta
             $response = $waService->updateSystemCallSettings($settings);
 
             // Update local cache regardless of Meta success
             $currentSettings = $team->whatsapp_settings ?? [];
             $currentSettings['calling'] = $settings;
-            if ($this->syncCallHours) {
-                $currentSettings['calling']['call_hours'] = true;
-            } else {
-                unset($currentSettings['calling']['call_hours']);
-            }
 
             $team->forceFill(['whatsapp_settings' => $currentSettings])->save();
 

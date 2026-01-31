@@ -79,25 +79,35 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        $this->settings = CallSettings::firstOrCreate(
+        $this->settings = CallSettings::firstOrNew(
             [
                 'team_id' => $team->id,
                 'phone_number_id' => $this->phoneNumberId,
-            ],
-            [
+            ]
+        );
+
+        if (!$this->settings->exists) {
+            // Migration: Try to inherit legacy Team business hours
+            $inherited = $this->inheritHoursFromTeam($team);
+
+            $this->settings->fill([
                 'calling_enabled' => false,
                 'call_icon_visibility' => 'show',
                 'callback_permission_enabled' => false,
-                'business_hours' => $this->getDefaultBusinessHours(),
+                'business_hours' => $inherited ?: $this->getDefaultBusinessHours(),
                 'sip_config' => [],
-            ]
-        );
+            ])->save();
+        }
 
         $this->callingEnabled = $this->settings->calling_enabled;
         $this->callIconVisibility = $this->settings->call_icon_visibility;
         $this->callbackPermissionEnabled = $this->settings->callback_permission_enabled;
-        $this->timezone = $this->settings->business_hours['timezone'] ?? 'UTC';
-        $this->businessHours = $this->settings->business_hours['hours'] ?? [];
+
+        $bhConfig = $this->settings->business_hours ?? [];
+        $this->timezone = $bhConfig['timezone'] ?? 'UTC';
+        $this->businessHours = $bhConfig['hours'] ?? [];
+        $this->syncWithBusinessHours = $bhConfig['sync_enabled'] ?? false;
+
         $this->isRestricted = $this->settings->is_restricted;
         $this->restrictionReason = $this->settings->restriction_reason;
 
@@ -108,6 +118,38 @@ class CallSettingsManager extends Component
         $this->sipUsername = $sipConfig['username'] ?? '';
         $this->sipRealm = $sipConfig['realm'] ?? '';
         // Don't load password for security
+    }
+
+    protected function inheritHoursFromTeam($team)
+    {
+        if (empty($team->business_hours))
+            return null;
+
+        $hours = [];
+        $days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+        // Check if legacy "Sync Call Hours" was enabled
+        $legacySync = isset($team->whatsapp_settings['calling']['call_hours']);
+
+        foreach ($days as $day) {
+            $key = strtolower($day);
+            if (isset($team->business_hours[$key]) && is_array($team->business_hours[$key])) {
+                $hours[] = [
+                    'day' => $day,
+                    'open' => $team->business_hours[$key][0],
+                    'close' => $team->business_hours[$key][1],
+                    'enabled' => true
+                ];
+            } else {
+                $hours[] = ['day' => $day, 'open' => '09:00', 'close' => '17:00', 'enabled' => false];
+            }
+        }
+
+        return [
+            'timezone' => $team->timezone ?? 'UTC',
+            'hours' => $hours,
+            'sync_enabled' => $legacySync
+        ];
     }
 
     public function loadStatistics()
@@ -184,6 +226,7 @@ class CallSettingsManager extends Component
             $businessHoursData = [
                 'timezone' => $this->timezone,
                 'hours' => $this->businessHours,
+                'sync_enabled' => $this->syncWithBusinessHours,
             ];
 
             $sipConfig = [];
@@ -207,6 +250,20 @@ class CallSettingsManager extends Component
                 'business_hours' => $businessHoursData,
                 'sip_config' => $sipConfig,
             ]);
+
+            // Sync business hours to Team model for system-wide availability (e.g. Away Messages)
+            $teamHours = [];
+            foreach ($this->businessHours as $hour) {
+                if ($hour['enabled'] ?? false) {
+                    $dayKey = strtolower($hour['day']); // MON -> mon
+                    $teamHours[$dayKey] = [$hour['open'], $hour['close']];
+                }
+            }
+
+            $team->forceFill([
+                'timezone' => $this->timezone,
+                'business_hours' => $teamHours
+            ])->save();
 
             if (isset($response['success']) && $response['success']) {
                 $this->dispatch('notify', title: 'Success', message: 'Call settings updated successfully', type: 'success');
