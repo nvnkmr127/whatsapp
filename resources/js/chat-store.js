@@ -6,10 +6,23 @@ document.addEventListener('livewire:init', () => {
         hasMore: true,
         wire: null, // Reference to Livewire component
 
+        // Multi-Agent State (Hydrated from Component)
+        isTyping: false,
+        typingUser: '',
+        isCustomerTyping: false,
+        activeUsers: [],
+        connectionState: 'connected', // connected, connecting, offline
+        lockedBy: null, // { id: 1, name: 'John' }
+        isDragging: false,
+        lightboxOpen: false,
+        lightboxImage: '',
+        myUserId: null,
+        lockInterval: null,
+
         // Virtual Scroll State (Data only, view logic in component)
         totalItems() { return this.messages.length },
 
-        init(wire, conversationId) {
+        init(wire, conversationId, teamId) {
             // Store wire as non-reactive to avoid Vue/Alpine markers
             Object.defineProperty(this, '_wire', {
                 value: wire,
@@ -19,11 +32,104 @@ document.addEventListener('livewire:init', () => {
             });
             this.wire = wire;
             this.conversationId = conversationId;
+            this.teamId = teamId;
             this.messages = [];
             this.hasMore = true;
 
             // Defer initial load to ensure $wire is fully ready
-            setTimeout(() => this.loadMessages(true), 100);
+            setTimeout(() => {
+                this.loadMessages(true);
+                this.initEcho();
+            }, 100);
+        },
+
+        async initEcho() {
+            if (!this.conversationId) return;
+
+            // Wait for Echo to be ready
+            let attempts = 0;
+            while (!window.Echo && attempts < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+
+            if (!window.Echo) {
+                console.error('Store: Echo not found after waiting.');
+                return;
+            }
+
+            // Clean up old channel if exists
+            if (this._pChannel) {
+                this._pChannel.leave();
+            }
+
+            console.log('Store: Joining presence-conversation.' + this.conversationId);
+            this._pChannel = window.Echo.join('conversation.' + this.conversationId);
+
+            this._pChannel.here((users) => {
+                this.setActiveUsers(users);
+            })
+                .joining((user) => {
+                    this.addUser(user);
+                    console.log(user.name + ' joined.');
+                })
+                .leaving((user) => {
+                    this.removeUser(user);
+                })
+                .listen('.MessageReceived', (e) => {
+                    console.log('Store (pChannel): MessageReceived', e);
+                    if (e.message && e.message.conversation_id == this.conversationId) {
+                        this.receiveMessage(e.message);
+                    }
+                })
+                .listen('.MessageStatusUpdated', (e) => {
+                    console.log('Store (pChannel): MessageStatusUpdated', e);
+                    if (e.message) {
+                        let msg = this.messages.find(m => m.id === e.message.id);
+                        if (msg) {
+                            msg.status = e.message.status;
+                        } else {
+                            this.syncLatest();
+                        }
+                    }
+                })
+                .listenForWhisper('typing', (e) => {
+                    this.setTyping(e.id, e.name);
+                });
+
+            // Team Channel Listener
+            const teamId = this.teamId;
+            if (teamId) {
+                const teamChannel = window.Echo.private('teams.' + teamId);
+                teamChannel.listen('.MessageReceived', (e) => {
+                    if (e.message && e.message.conversation_id == this.conversationId) {
+                        this.receiveMessage(e.message);
+                    }
+                });
+                teamChannel.listen('.MessageStatusUpdated', (e) => {
+                    if (e.message) {
+                        let msg = this.messages.find(m => m.id === e.message.id);
+                        if (msg) msg.status = e.message.status;
+                    }
+                });
+            }
+
+            // Presence Binding for Connection State
+            if (window.Echo.connector && window.Echo.connector.pusher) {
+                window.Echo.connector.pusher.connection.bind('state_change', (states) => {
+                    this.setConnectionState(states.current === 'connected' ? 'connected' : (states.current === 'connecting' ? 'connecting' : 'offline'));
+                });
+            }
+        },
+
+        whisperTyping(name) {
+            if (this._pChannel) {
+                this._pChannel.whisper('typing', {
+                    conversation_id: this.conversationId,
+                    name: name,
+                    id: this.myUserId
+                });
+            }
         },
 
         async loadMessages(isInitial = false) {
@@ -161,10 +267,6 @@ document.addEventListener('livewire:init', () => {
         },
 
         // --- Multi-Agent Locking ---
-        lockedBy: null, // { id: 1, name: 'John' }
-        myUserId: null,
-        lockInterval: null,
-
         setMyUser(id) {
             this.myUserId = id;
         },
@@ -248,8 +350,34 @@ document.addEventListener('livewire:init', () => {
             }
         },
 
-        // --- Connection & Resiliency ---
-        connectionState: 'connected', // connected, connecting, offline
+        // --- Presence / Typing Handlers ---
+        setTyping(id, name) {
+            if (id === 'customer') {
+                this.isCustomerTyping = true;
+                if (this.customerTimer) clearTimeout(this.customerTimer);
+                this.customerTimer = setTimeout(() => this.isCustomerTyping = false, 3000);
+            } else if (id !== this.myUserId) {
+                this.isTyping = true;
+                this.typingUser = name;
+                if (this.typingTimer) clearTimeout(this.typingTimer);
+                this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
+                this.setLockState(id);
+            }
+        },
+
+        setActiveUsers(users) {
+            this.activeUsers = users;
+        },
+
+        addUser(user) {
+            if (!this.activeUsers.find(u => u.id === user.id)) {
+                this.activeUsers.push(user);
+            }
+        },
+
+        removeUser(user) {
+            this.activeUsers = this.activeUsers.filter(u => u.id !== user.id);
+        },
 
         setConnectionState(state) {
             this.connectionState = state;

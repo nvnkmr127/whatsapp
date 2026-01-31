@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\Contact;
+use App\Models\CallSettings;
 use App\Services\CallConsentService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -92,12 +93,16 @@ class CallEligibilityService
      */
     protected function checkPhoneReadiness(): array
     {
-        // Cache for 1 hour (rarely changes)
-        return Cache::remember("phone_readiness_{$this->team->id}", 3600, function () {
-            $phoneNumberId = $this->team->phone_number_id;
+        // Cache for 5 minutes (allow for settings updates)
+        return Cache::remember("phone_readiness_{$this->team->id}", 300, function () {
+            $phoneNumberId = $this->team->whatsapp_phone_number_id;
 
             // Check if calling is enabled for team
-            if (!$this->team->calling_enabled) {
+            $settings = \App\Models\CallSettings::where('team_id', $this->team->id)
+                ->where('phone_number_id', $phoneNumberId)
+                ->first();
+
+            if (!$settings || !$settings->calling_enabled) {
                 return [
                     'passed' => false,
                     'block_code' => 'CALLING_NOT_ENABLED_FOR_NUMBER',

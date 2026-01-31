@@ -1,114 +1,7 @@
 <div class="flex flex-col flex-1 min-h-0 h-full relative bg-dots-pattern" x-data="{ 
-        isTyping: false,
-        typingUser: '',
-        isCustomerTyping: false,
-        activeUsers: [],
-        pChannel: null,
-        isDragging: false,
-        lightboxOpen: false,
-        lightboxImage: '',
-        async init() {
-            // Init Store User ID
+        init() {
             $store.chat.setMyUser({{ auth()->id() }});
-            
-            // Wait for Echo to be ready
-            let attempts = 0;
-            while (!window.Echo && attempts < 50) {
-                await new Promise(r => setTimeout(r, 100));
-                attempts++;
-            }
-
-            if (!window.Echo) {
-                console.error('Front: Echo not found after waiting.');
-                return;
-            }
-
-            // --- Presence Channel (Multi-Agent) ---
-            console.log('Front: Joining presence-conversation.{{ $conversationId ?? 0 }}');
-            this.pChannel = window.Echo.join('conversation.{{ $conversationId ?? 0 }}');
-            
-            this.pChannel.here((users) => {
-                this.activeUsers = users;
-            })
-            .joining((user) => {
-                this.activeUsers.push(user);
-                console.log(user.name + ' joined.');
-            })
-            .leaving((user) => {
-                this.activeUsers = this.activeUsers.filter(u => u.id !== user.id);
-            })
-            .listen('.MessageReceived', (e) => {
-                console.log('Front (pChannel): MessageReceived', e);
-                if (e.message && e.message.conversation_id == {{ $conversationId ?? 0 }}) {
-                    $store.chat.receiveMessage(e.message);
-                }
-            })
-            .listen('.MessageStatusUpdated', (e) => {
-                 console.log('Front (pChannel): MessageStatusUpdated', e);
-                 if(e.message) {
-                     let msg = $store.chat.messages.find(m => m.id === e.message.id);
-                     if(msg) {
-                         msg.status = e.message.status;
-                     } else {
-                         // If we missed the message arrival but got status, sync once
-                         $store.chat.syncLatest();
-                     }
-                 }
-            })
-            .listenForWhisper('typing', (e) => {
-                if (e.id === 'customer') {
-                    this.isCustomerTyping = true;
-                    if (this.customerTypingTimer) clearTimeout(this.customerTypingTimer);
-                    this.customerTypingTimer = setTimeout(() => this.isCustomerTyping = false, 3000);
-                } else if (e.id !== {{ auth()->id() }}) {
-                    this.isTyping = true;
-                    this.typingUser = e.name;
-                    if (this.typingTimer) clearTimeout(this.typingTimer);
-                    this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
-                    $store.chat.setLockState(e.id);
-                }
-            });
-
-            // --- Team Events (Backup) ---
-            const channel = window.Echo.private('teams.{{ auth()->user()->currentTeam->id }}');
-            
-            channel.listen('.MessageReceived', (e) => { 
-                console.log('Front (Team): MessageReceived', e);
-                if (e.message && e.message.conversation_id == {{ $conversationId ?? 0 }}) {
-                    $store.chat.receiveMessage(e.message);
-                }
-            });
-
-            channel.listen('.MessageStatusUpdated', (e) => {
-                 console.log('Front (Team): MessageStatusUpdated', e);
-                 if (e.message) {
-                     let msg = $store.chat.messages.find(m => m.id === e.message.id);
-                     if (msg) {
-                         msg.status = e.message.status;
-                     }
-                 }
-            });
-
-            // Sync on Reconnect
-            window.addEventListener('online', () => {
-                $store.chat.setConnectionState('connected');
-            });
-            window.addEventListener('offline', () => {
-                $store.chat.setConnectionState('offline');
-            });
-
-            // Safely bind to connection state
-            if (window.Echo.connector && window.Echo.connector.pusher) {
-                window.Echo.connector.pusher.connection.bind('state_change', (states) => {
-                    if (states.current === 'connected') {
-                        $store.chat.setConnectionState('connected');
-                    } else if (states.current === 'connecting') {
-                        $store.chat.setConnectionState('connecting');
-                    } else {
-                        $store.chat.setConnectionState('offline');
-                    }
-                });
-            }
+            $store.chat.init($wire, {{ $conversationId ?? 0 }}, {{ auth()->user()->currentTeam->id ?? 0 }});
         }
     }"
     @set-message-body.window="window.dispatchEvent(new CustomEvent('update-message-body', { detail: $event.detail }))">
@@ -186,17 +79,17 @@
                     <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
                         <span class="text-wa-teal">{{ $conversation->contact->phone_number }}</span>
 
-                        <span x-show="isTyping" x-transition
+                        <span x-show="$store.chat.isTyping" x-transition
                             class="text-wa-teal animate-pulse font-black flex items-center gap-1">
-                            <span x-text="typingUser"></span> IS TYPING...
+                            <span x-text="$store.chat.typingUser"></span> IS TYPING...
                         </span>
 
-                        <span x-show="isCustomerTyping" x-transition
+                        <span x-show="$store.chat.isCustomerTyping" x-transition
                             class="text-emerald-500 animate-bounce font-black flex items-center gap-1">
                             CUSTOMER IS TYPING...
                         </span>
 
-                        <template x-if="activeUsers.length > 1">
+                        <template x-if="$store.chat.activeUsers.length > 1">
                             <div
                                 class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
                                 <span class="relative flex h-1.5 w-1.5">
@@ -204,14 +97,15 @@
                                         class="animate-ping absolute inline-flex h-full w-full rounded-full bg-wa-teal opacity-75"></span>
                                     <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-wa-teal"></span>
                                 </span>
-                                <span x-text="activeUsers.length + ' AGENTS ONLINE'"></span>
+                                <span x-text="$store.chat.activeUsers.length + ' AGENTS ONLINE'"></span>
                             </div>
                         </template>
 
                         @if($conversation->last_message_at)
-                            <span class="text-slate-300 dark:text-slate-700" x-show="!isTyping && !isCustomerTyping">|</span>
+                            <span class="text-slate-300 dark:text-slate-700"
+                                x-show="!$store.chat.isTyping && !$store.chat.isCustomerTyping">|</span>
                             <span class="{{ $conversation->last_message_at->diffInHours() > 24 ? 'text-rose-500' : '' }}"
-                                x-show="!isTyping && !isCustomerTyping">
+                                x-show="!$store.chat.isTyping && !$store.chat.isCustomerTyping">
                                 {{ $conversation->last_message_at->diffForHumans() }}
                             </span>
                         @endif
@@ -412,11 +306,11 @@
             isDragging: false,
              init() {
                 // Drag and Drop Listeners
-                window.addEventListener('dragover', (e) => { e.preventDefault(); this.isDragging = true; });
-                window.addEventListener('dragleave', (e) => { e.preventDefault(); if (e.relatedTarget === null) this.isDragging = false; });
+                window.addEventListener('dragover', (e) => { e.preventDefault(); $store.chat.isDragging = true; });
+                window.addEventListener('dragleave', (e) => { e.preventDefault(); if (e.relatedTarget === null) $store.chat.isDragging = false; });
                 window.addEventListener('drop', (e) => {
                     e.preventDefault();
-                    this.isDragging = false;
+                    $store.chat.isDragging = false;
                     if (e.dataTransfer.files.length > 0) {
                         @this.upload('newAttachment', e.dataTransfer.files[0]);
                     }
@@ -504,7 +398,7 @@
         </div>
 
         <!-- Drag and Drop Overlay -->
-        <div x-show="isDragging" x-cloak x-transition
+        <div x-show="$store.chat.isDragging" x-cloak x-transition
             class="absolute inset-0 z-50 bg-wa-teal/10 backdrop-blur-[2px] border-4 border-dashed border-wa-teal m-4 rounded-[2rem] flex flex-col items-center justify-center pointer-events-none">
             <div class="p-6 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
                 <div
@@ -690,7 +584,7 @@
                                         <template x-if="message.media_type && message.media_type.startsWith('image')">
                                             <img :src="message.media_url"
                                                 class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm"
-                                                @click="lightboxImage = message.media_url; lightboxOpen = true">
+                                                @click="$store.chat.lightboxImage = message.media_url; $store.chat.lightboxOpen = true">
                                         </template>
                                         <template x-if="message.media_type && message.media_type.startsWith('video')">
                                             <video :src="message.media_url" controls class="w-full max-h-80"></video>
@@ -796,10 +690,8 @@
                     </div>
             </div>
         </template>
+        <div :style="{ height: renderConfig.bottom + 'px' }"></div>
     </div>
-    </template>
-
-    <div :style="{ height: renderConfig.bottom + 'px' }"></div>
 
     <!-- Input Area -->
     <div class="p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 z-10 shrink-0"
@@ -1121,12 +1013,12 @@
                     </template>
                     <textarea x-model="msgBody" @keydown.enter.prevent="handleSubmit" x-ref="messageInput"
                         @focus="$store.chat.requestLock()" @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
-                        @keyup="checkQR(); pChannel.whisper('typing', { conversation_id: {{ $conversationId ?? 0 }}, name: '{{ addslashes(auth()->user()->name ?? 'Agent') }}', id: {{ auth()->id() ?? 0 }} }); $store.chat.requestLock()"
+                        @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()" :class="[
-                                                                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                                                        ]"
+                                                                                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                                                        ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 
@@ -1641,19 +1533,20 @@
 
     <!-- Lightbox Modal -->
     <template x-teleport="body">
-        <div x-show="lightboxOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
-            @keydown.escape.window="lightboxOpen = false" x-cloak>
+        <div x-show="$store.chat.lightboxOpen"
+            class="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10"
+            @keydown.escape.window="$store.chat.lightboxOpen = false" x-cloak>
 
             <!-- Backdrop -->
-            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl" @click="lightboxOpen = false"
-                x-show="lightboxOpen" x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"></div>
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl"
+                @click="$store.chat.lightboxOpen = false" x-show="$store.chat.lightboxOpen"
+                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
 
             <!-- Modal Content -->
             <div class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden"
-                x-show="lightboxOpen" x-transition:enter="transition ease-out duration-300"
+                x-show="$store.chat.lightboxOpen" x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
                 x-transition:leave="transition ease-in duration-200"
@@ -1665,7 +1558,7 @@
                     class="px-6 py-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 z-10">
                     <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Image Preview</h3>
                     <div class="flex items-center gap-2">
-                        <a :href="lightboxImage" download
+                        <a :href="$store.chat.lightboxImage" download
                             class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-wa-teal"
                             title="Download">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1673,7 +1566,7 @@
                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                         </a>
-                        <button @click="lightboxOpen = false"
+                        <button @click="$store.chat.lightboxOpen = false"
                             class="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/10 rounded-xl transition-colors text-slate-400 hover:text-rose-500">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1686,7 +1579,7 @@
                 <!-- Image Container -->
                 <div
                     class="p-6 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-center min-h-[300px] max-h-[70vh] overflow-hidden">
-                    <img :src="lightboxImage"
+                    <img :src="$store.chat.lightboxImage"
                         class="max-w-full max-h-full object-contain rounded-xl shadow-lg animate-in zoom-in duration-300">
                 </div>
             </div>

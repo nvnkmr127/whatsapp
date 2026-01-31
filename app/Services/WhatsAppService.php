@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Team;
+use App\Models\CallSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -1135,7 +1136,11 @@ class WhatsAppService
     public function initiateCall(string $to, array $options = [])
     {
         // Verify calling is enabled for this team
-        if (!$this->team->calling_enabled) {
+        $settings = \App\Models\CallSettings::where('team_id', $this->team->id)
+            ->where('phone_number_id', $this->phoneId)
+            ->first();
+
+        if (!$settings || !$settings->calling_enabled) {
             throw new \Exception("Calling is not enabled for this team.");
         }
 
