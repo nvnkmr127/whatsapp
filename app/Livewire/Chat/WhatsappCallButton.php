@@ -58,6 +58,13 @@ class WhatsappCallButton extends Component
 
         // Logic to actually initiate the call
         // This would typically emit an event to a global caller component or call an API
+
+        Log::info("WhatsappCallButton: Initiating call dispatch", [
+            'contact_id' => $this->contact->id,
+            'phone_number' => $this->contact->phone_number,
+            'contact_attributes' => $this->contact->getAttributes()
+        ]);
+
         $this->dispatch('initiate-whatsapp-call', [
             'contact_id' => $this->contact->id,
             'phone_number' => $this->contact->phone_number

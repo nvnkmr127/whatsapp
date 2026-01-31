@@ -58,6 +58,8 @@ class CallOverlay extends Component
 
     public function handleInitiation($data)
     {
+        Log::info("CallOverlay: Received initiate-whatsapp-call event", ['data' => $data]);
+
         // Robustly get contact ID and phone number
         $contactId = $data['contact_id'] ?? null;
         $phoneNumber = $data['phone_number'] ?? null;
