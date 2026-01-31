@@ -68,6 +68,12 @@ class CallOverlay extends Component
     public function initiateCallWithSDP($phoneNumber, $sdp, $contactId)
     {
         $contact = Contact::find($contactId);
+
+        // Fallback if phoneNumber is missing (from null in JS)
+        if (!$phoneNumber && $contact) {
+            $phoneNumber = $contact->phone_number;
+        }
+
         $this->status = 'ringing';
         $this->direction = 'outbound';
         $this->contactName = $contact->name ?? $phoneNumber;
