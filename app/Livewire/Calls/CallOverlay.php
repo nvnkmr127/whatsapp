@@ -74,6 +74,12 @@ class CallOverlay extends Component
             $phoneNumber = $contact->phone_number;
         }
 
+        if (!$phoneNumber) {
+            Log::error("CallOverlay: Phone number is missing", ['contact_id' => $contactId]);
+            $this->handleFailed(['message' => 'Phone number is missing.']);
+            return;
+        }
+
         $this->status = 'ringing';
         $this->direction = 'outbound';
         $this->contactName = $contact->name ?? $phoneNumber;
@@ -82,7 +88,7 @@ class CallOverlay extends Component
 
         try {
             $whatsappService = new \App\Services\WhatsAppService(auth()->user()->currentTeam);
-            $response = $whatsappService->initiateCall($phoneNumber, $sdp);
+            $response = $whatsappService->initiateCall((string) $phoneNumber, $sdp);
 
             if ($response['success']) {
                 $this->callId = $response['data']['id'] ?? null;
