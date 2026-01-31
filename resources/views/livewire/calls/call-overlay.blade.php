@@ -613,14 +613,14 @@
                     <button @click="debugLogs = []" class="text-white/40 hover:text-white">Clear</button>
                 </div>
                 <div class="space-y-1">
-                    <template x-for="log in debugLogs" :key="log.id">
+                    <template x-for="callLog in debugLogs" :key="callLog.id">
                         <div class="flex gap-2">
-                            <span class="text-white/30" x-text="log.time"></span>
-                            <span x-text="log.msg" :class="{
-                                'text-green-400': log.type === 'success',
-                                'text-red-400': log.type === 'error',
-                                'text-amber-400': log.type === 'warn',
-                                'text-indigo-300': log.type === 'info'
+                            <span class="text-white/30" x-text="callLog.time"></span>
+                            <span x-text="callLog.msg" :class="{
+                                'text-green-400': callLog.type === 'success',
+                                'text-red-400': callLog.type === 'error',
+                                'text-amber-400': callLog.type === 'warn',
+                                'text-indigo-300': callLog.type === 'info'
                             }"></span>
                         </div>
                     </template>
