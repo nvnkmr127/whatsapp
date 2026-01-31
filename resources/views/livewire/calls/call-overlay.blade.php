@@ -602,7 +602,7 @@
 
             <!-- Visual Debug Console -->
             <template x-if="showDebug">
-                <div x-transition:enter="transition ease-out duration-300"
+                <div wire:ignore x-transition:enter="transition ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-y-10 scale-95"
                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
                     x-transition:leave="transition ease-in duration-200"
@@ -616,12 +616,12 @@
                     <div class="space-y-1">
                         <template x-for="logEntry in debugLogs" :key="logEntry.id">
                             <div class="flex gap-2">
-                                <span class="text-white/30" x-text="logEntry.time"></span>
-                                <span x-text="logEntry.msg" :class="{
-                                    'text-green-400': logEntry.type === 'success',
-                                    'text-red-400': logEntry.type === 'error',
-                                    'text-amber-400': logEntry.type === 'warn',
-                                    'text-indigo-300': logEntry.type === 'info'
+                                <span class="text-white/30" x-text="logEntry?.time || ''"></span>
+                                <span x-text="logEntry?.msg || ''" :class="{
+                                    'text-green-400': logEntry?.type === 'success',
+                                    'text-red-400': logEntry?.type === 'error',
+                                    'text-amber-400': logEntry?.type === 'warn',
+                                    'text-indigo-300': logEntry?.type === 'info'
                                 }"></span>
                             </div>
                         </template>
