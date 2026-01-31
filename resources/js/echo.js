@@ -9,15 +9,29 @@ window.Pusher = Pusher;
  * allow your team to quickly build robust real-time web applications.
  */
 
+const key = import.meta.env.VITE_REVERB_APP_KEY;
+const host = import.meta.env.VITE_REVERB_HOST || window.location.hostname;
+const port = import.meta.env.VITE_REVERB_PORT;
+const scheme = import.meta.env.VITE_REVERB_SCHEME || (window.location.protocol === 'https:' ? 'https' : 'http');
+
+console.log('Echo Config:', {
+    key,
+    host,
+    port,
+    scheme,
+    env: import.meta.env
+});
+
 window.Echo = new Echo({
     broadcaster: 'reverb',
-    key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+    key: key,
+    wsHost: host,
+    wsPort: port || 80,
+    wssPort: port || 443,
+    forceTLS: scheme === 'https',
     enabledTransports: ['ws', 'wss'],
 });
+
 // Log and dispatch for components waiting for Echo
 console.log('Laravel Echo initialized with Reverb broadcaster.');
 window.dispatchEvent(new CustomEvent('echo-ready'));
