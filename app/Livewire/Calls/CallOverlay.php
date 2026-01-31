@@ -104,7 +104,7 @@ class CallOverlay extends Component
             $response = $whatsappService->initiateCall((string) $phoneNumber, $sdp);
 
             if ($response['success']) {
-                $this->callId = $response['data']['id'] ?? null;
+                $this->callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
                 Log::info("CallOverlay: Call initiated successfully", ['call_id' => $this->callId]);
             } else {
                 $this->handleFailed(['message' => $response['message'] ?? 'Failed to initiate call']);

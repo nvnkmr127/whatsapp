@@ -1211,7 +1211,7 @@ class WhatsAppService
                     'from_number' => $this->phoneId,
                     'to_number' => $to,
                     'initiated_at' => now(),
-                    'metadata' => $options,
+                    'metadata' => array_merge($options, ['sdp' => $sdp]),
                 ]);
 
                 // Emit CallOffered event
