@@ -49,7 +49,7 @@
                                 </h3>
                                 <div class="flex items-baseline gap-1 mt-2">
                                     <span
-                                        class="text-4xl font-black text-indigo-500">${{ number_format($plan->monthly_price, 2) }}</span>
+                                        class="text-4xl font-black text-indigo-500">{{ get_setting('currency_symbol', '$') }}{{ number_format($plan->monthly_price, 2) }}</span>
                                     <span class="text-xs font-bold text-slate-400 uppercase">/month</span>
                                 </div>
                             </div>
@@ -197,7 +197,7 @@
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-xs font-black uppercase tracking-widest text-slate-500">Monthly Price
-                                        ($)</label>
+                                        ({{ get_setting('currency_symbol', '$') }})</label>
                                     <input type="number" step="0.01" wire:model="monthly_price" placeholder="0.00"
                                         class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20">
                                     @error('monthly_price') <span

@@ -1,233 +1,172 @@
-<div class="h-full flex flex-col bg-slate-50 dark:bg-slate-900">
-    {{-- Header --}}
-    <div class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-6">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Call Analytics & Billing
+<div class="space-y-10">
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="p-3 bg-wa-blue shadow-[0_0_15px_rgba(52,183,241,0.4)] text-white rounded-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                    Financial <span class="text-wa-teal">Intelligence</span>
                 </h1>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Monitor call usage, costs, and performance
-                </p>
             </div>
-
-            {{-- Period Selector --}}
-            <select wire:model.live="period"
-                class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-wa-teal">
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-            </select>
+            <p class="text-slate-500 font-medium text-lg">Real-time voice traffic cost analysis and usage patterns.</p>
         </div>
 
-        {{-- Usage Limit Alert --}}
-        @if($usageLimits['has_limit'])
-            <div
-                class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="bg-amber-500 text-white rounded-full p-2">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                    clip-rule="evenodd" />
+        <div class="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+            @foreach(['today' => '24H', 'week' => '7D', 'month' => '30D', 'year' => '1Y'] as $value => $label)
+                <button wire:click="$set('period', '{{ $value }}')"
+                    class="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all {{ $period === $value ? 'bg-wa-teal text-slate-900 shadow-lg shadow-wa-teal/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200' }}">
+                    {{ $label }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Limit Engine --}}
+    @if($usageLimits['has_limit'])
+        <div class="group relative bg-slate-900 rounded-[2.5rem] p-10 border border-slate-800 shadow-2xl overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-orange-500/5"></div>
+            
+            <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-10">
+                <div class="flex-1">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-4 bg-amber-500 text-slate-900 rounded-2xl shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                         </div>
                         <div>
-                            <div class="font-bold text-amber-900 dark:text-amber-100">Monthly Call Limit</div>
-                            <div class="text-sm text-amber-700 dark:text-amber-300">
-                                {{ number_format($usageLimits['minutes_used'], 0) }} /
-                                {{ number_format($usageLimits['minutes_limit'], 0) }} minutes used
-                                ({{ number_format($usageLimits['percent_used'], 1) }}%)
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60">Limit Orchestrator</h3>
+                            <div class="text-3xl font-black text-white tabular-nums tracking-tighter">
+                                {{ number_format($usageLimits['minutes_used'], 0) }} 
+                                <span class="text-slate-500 text-xl font-bold">/ {{ number_format($usageLimits['minutes_limit'], 0) }} used</span>
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-2xl font-black text-amber-900 dark:text-amber-100">
-                            {{ number_format($usageLimits['minutes_remaining'], 0) }}
+                    
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                        <div class="bg-amber-500 h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                            style="width: {{ min($usageLimits['percent_used'], 100) }}%">
                         </div>
-                        <div class="text-xs text-amber-600 dark:text-amber-400">minutes left</div>
                     </div>
                 </div>
-                <div class="mt-3 bg-amber-200 dark:bg-amber-800 rounded-full h-2 overflow-hidden">
-                    <div class="bg-amber-500 h-full transition-all"
-                        style="width: {{ min($usageLimits['percent_used'], 100) }}%"></div>
+
+                <div class="bg-white/5 border border-white/10 rounded-3xl p-6 md:min-w-[240px] text-center">
+                    <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Total Availability</div>
+                    <div class="text-5xl font-black text-white tabular-nums">{{ number_format($usageLimits['minutes_remaining'], 0) }}</div>
+                    <div class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mt-2">Minutes Left</div>
                 </div>
             </div>
-        @endif
+        </div>
+    @endif
+
+    <!-- Economic Matrix -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        @foreach([
+            ['label' => 'Total Packets', 'val' => $billingStats['total_calls'], 'desc' => $billingStats['completed_calls'] . ' successful', 'color' => 'blue'],
+            ['label' => 'Temporal Mix', 'val' => number_format($billingStats['total_minutes'], 0) . 'm', 'desc' => number_format($billingStats['average_duration'] / 60, 1) . 'm average', 'color' => 'purple'],
+            ['label' => 'Success Index', 'val' => $statistics['success_rate'] . '%', 'desc' => $billingStats['failed_calls'] . ' failures detected', 'color' => 'teal'],
+            ['label' => 'Economic Value', 'val' => get_setting('currency_symbol', '$') . number_format($billingStats['total_cost'], 2), 'desc' => get_setting('currency_symbol', '$') . number_format($billingStats['total_minutes'] > 0 ? $billingStats['total_cost'] / $billingStats['total_minutes'] : 0, 4) . '/min avg', 'color' => 'amber']
+        ] as $stat)
+            @php
+                $colors = ['blue' => 'from-wa-blue to-indigo-600', 'purple' => 'from-purple-500 to-fuchsia-600', 'teal' => 'from-wa-teal to-emerald-600', 'amber' => 'from-amber-400 to-orange-600'];
+                $color = $colors[$stat['color']];
+            @endphp
+            <div class="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden transition-all hover:scale-[1.02]">
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br {{ $color }} opacity-5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+                
+                <div class="relative">
+                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">{{ $stat['label'] }}</h4>
+                    <div class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">{{ $stat['val'] }}</div>
+                    <p class="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $stat['desc'] }}</p>
+                </div>
+            </div>
+        @endforeach
     </div>
 
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-        {{-- Billing Summary Cards --}}
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-6 shadow-lg">
-                <div class="text-xs font-bold uppercase tracking-wider opacity-90">Total Calls</div>
-                <div class="text-4xl font-black mt-2">{{ $billingStats['total_calls'] }}</div>
-                <div class="text-sm mt-2 opacity-75">
-                    {{ $billingStats['completed_calls'] }} completed
+    <!-- Analytics Cockpit -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Revenue Velocity Chart -->
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden">
+             <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+             
+             <div class="relative">
+                <div class="flex items-center justify-between mb-10">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Economic <span class="text-wa-teal">Velocity</span></h3>
+                        <p class="text-slate-500 font-medium">Daily billing trends and cost accumulation.</p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl p-6 shadow-lg">
-                <div class="text-xs font-bold uppercase tracking-wider opacity-90">Total Minutes</div>
-                <div class="text-4xl font-black mt-2">{{ number_format($billingStats['total_minutes'], 0) }}</div>
-                <div class="text-sm mt-2 opacity-75">
-                    Avg: {{ number_format($billingStats['average_duration'] / 60, 1) }}m per call
+                <div class="relative h-[320px] w-full -ml-4">
+                    <canvas id="costVelocityChart"></canvas>
                 </div>
-            </div>
+             </div>
+        </div>
 
-            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl p-6 shadow-lg">
-                <div class="text-xs font-bold uppercase tracking-wider opacity-90">Success Rate</div>
-                <div class="text-4xl font-black mt-2">{{ $statistics['success_rate'] }}%</div>
-                <div class="text-sm mt-2 opacity-75">
-                    {{ $billingStats['failed_calls'] }} failed
-                </div>
-            </div>
-
-            <div class="bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-2xl p-6 shadow-lg">
-                <div class="text-xs font-bold uppercase tracking-wider opacity-90">Total Cost</div>
-                <div class="text-4xl font-black mt-2">${{ number_format($billingStats['total_cost'], 2) }}</div>
-                <div class="text-sm mt-2 opacity-75">
-                    ${{ number_format($billingStats['total_minutes'] > 0 ? $billingStats['total_cost'] / $billingStats['total_minutes'] : 0, 4) }}/min
+        <!-- Outcome Mix -->
+        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden flex flex-col">
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Outcome <span class="text-wa-teal">Index</span></h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-10">Historical success distribution</p>
+            
+            <div class="flex-1 relative min-h-[250px] w-full flex items-center justify-center">
+                <canvas id="outcomeIndexChart"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span class="text-2xl font-black text-slate-900 dark:text-white">{{ $statistics['success_rate'] }}%</span>
+                    <span class="text-[8px] font-black uppercase text-wa-teal tracking-widest">Efficiency</span>
                 </div>
             </div>
         </div>
 
-        {{-- Cost Breakdown Chart --}}
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <h2 class="text-lg font-black text-slate-900 dark:text-white mb-4">Daily Cost Breakdown (Last 30 Days)</h2>
-            <div class="h-64 flex items-end space-x-1">
-                @foreach($costBreakdown as $day)
-                    @php
-                        $maxCost = collect($costBreakdown)->max('cost');
-                        $height = $maxCost > 0 ? ($day['cost'] / $maxCost) * 100 : 0;
-                    @endphp
-                    <div class="flex-1 flex flex-col items-center group relative">
-                        <div class="w-full bg-gradient-to-t from-wa-teal to-emerald-500 rounded-t transition-all hover:opacity-80 cursor-pointer"
-                            style="height: {{ $height }}%"
-                            title="{{ $day['date'] }}: ${{ number_format($day['cost'], 2) }}">
-                        </div>
-                        <div
-                            class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full mt-2 bg-slate-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            {{ \Carbon\Carbon::parse($day['date'])->format('M d') }}<br>
-                            {{ $day['calls'] }} calls<br>
-                            {{ number_format($day['minutes'], 1) }}m<br>
-                            ${{ number_format($day['cost'], 2) }}
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-            <div class="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center">
-                Hover over bars for details
-            </div>
-        </div>
-
-        {{-- Direction & Type Breakdown --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
-                class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                <h2 class="text-lg font-black text-slate-900 dark:text-white mb-4">Call Direction</h2>
-                <div class="space-y-4">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Inbound</span>
-                            <span
-                                class="text-sm font-bold text-slate-900 dark:text-white">{{ $billingStats['inbound_calls'] }}</span>
-                        </div>
-                        <div class="bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-                            <div class="bg-blue-500 h-full"
-                                style="width: {{ $billingStats['total_calls'] > 0 ? ($billingStats['inbound_calls'] / $billingStats['total_calls']) * 100 : 0 }}%">
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Outbound</span>
-                            <span
-                                class="text-sm font-bold text-slate-900 dark:text-white">{{ $billingStats['outbound_calls'] }}</span>
-                        </div>
-                        <div class="bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-                            <div class="bg-purple-500 h-full"
-                                style="width: {{ $billingStats['total_calls'] > 0 ? ($billingStats['outbound_calls'] / $billingStats['total_calls']) * 100 : 0 }}%">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Stakeholder Analysis -->
+        <div class="lg:col-span-3 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden relative">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+            
+            <div class="px-8 py-8 border-b border-slate-50 dark:border-slate-800/50">
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Top <span class="text-wa-teal">Collaborators</span></h3>
+                <p class="text-slate-500 font-medium text-sm">Economic analysis by interaction point.</p>
             </div>
 
-            <div
-                class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                <h2 class="text-lg font-black text-slate-900 dark:text-white mb-4">Call Outcomes</h2>
-                <div class="space-y-4">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Completed</span>
-                            <span
-                                class="text-sm font-bold text-green-600 dark:text-green-400">{{ $billingStats['completed_calls'] }}</span>
-                        </div>
-                        <div class="bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-                            <div class="bg-green-500 h-full"
-                                style="width: {{ $billingStats['total_calls'] > 0 ? ($billingStats['completed_calls'] / $billingStats['total_calls']) * 100 : 0 }}%">
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Failed/Missed</span>
-                            <span
-                                class="text-sm font-bold text-red-600 dark:text-red-400">{{ $billingStats['failed_calls'] }}</span>
-                        </div>
-                        <div class="bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
-                            <div class="bg-red-500 h-full"
-                                style="width: {{ $billingStats['total_calls'] > 0 ? ($billingStats['failed_calls'] / $billingStats['total_calls']) * 100 : 0 }}%">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Top Contacts by Call Volume --}}
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <h2 class="text-lg font-black text-slate-900 dark:text-white mb-4">Top Contacts by Call Volume</h2>
             <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="border-b border-slate-200 dark:border-slate-700">
-                        <tr>
-                            <th
-                                class="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-                                Contact</th>
-                            <th
-                                class="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-                                Calls</th>
-                            <th
-                                class="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-                                Duration</th>
-                            <th
-                                class="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">
-                                Cost</th>
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-slate-50 dark:border-slate-800/50">
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Collaborator</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Interaction Volume</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Duration</th>
+                            <th class="px-8 py-6 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Economic Value</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
                         @forelse($topContacts as $item)
-                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                                <td class="px-4 py-3">
-                                    <div class="font-semibold text-slate-900 dark:text-white">
-                                        {{ $item['contact']->name ?? 'Unknown' }}</div>
-                                    <div class="text-xs text-slate-500 dark:text-slate-400">
-                                        {{ $item['contact']->phone_number ?? 'No number' }}</div>
+                            <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-300">
+                                <td class="px-8 py-6">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 rounded-[1.25rem] bg-slate-100 dark:bg-slate-800 text-wa-teal flex items-center justify-center font-black text-lg shadow-inner">
+                                            {{ substr($item['contact']->name ?? 'U', 0, 1) }}
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ $item['contact']->name ?? 'Unknown Actor' }}</div>
+                                            <div class="text-[10px] text-slate-500 font-bold tabular-nums uppercase tracking-widest mt-1">{{ $item['contact']->phone_number ?? 'No Identifier' }}</div>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                                    {{ $item['total_calls'] }}</td>
-                                <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                                    {{ number_format($item['total_duration'] / 60, 1) }}m</td>
-                                <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                                    ${{ number_format($item['total_cost'], 2) }}</td>
+                                <td class="px-8 py-6">
+                                    <div class="text-sm font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">{{ $item['total_calls'] }} Interactions</div>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <div class="text-sm font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">{{ number_format($item['total_duration'] / 60, 1) }} mins</div>
+                                </td>
+                                <td class="px-8 py-6 text-right">
+                                    <div class="text-xl font-black text-wa-blue tracking-tighter">{{ get_setting('currency_symbol', '$') }}{{ number_format($item['total_cost'], 2) }}</div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
-                                    No call data available for this period
-                                </td>
+                                <td colspan="4" class="px-8 py-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px]">Broadcast Silence: No Economic Data Captured</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -235,4 +174,119 @@
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            const costCtx = document.getElementById('costVelocityChart').getContext('2d');
+            const outcomeCtx = document.getElementById('outcomeIndexChart').getContext('2d');
+            let costChart, outcomeChart;
+
+            const currencySymbol = "{{ get_setting('currency_symbol', '$') }}";
+            function initCharts() {
+                const isDark = document.documentElement.classList.contains('dark');
+                const costData = @json($costBreakdown);
+                
+                // Cost Velocity Chart
+                const gradient = costCtx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(52, 183, 241, 0.2)');
+                gradient.addColorStop(1, 'rgba(52, 183, 241, 0)');
+
+                if (costChart) costChart.destroy();
+                costChart = new Chart(costCtx, {
+                    type: 'line',
+                    data: {
+                        labels: costData.map(d => d.date),
+                        datasets: [{
+                            label: 'Cost',
+                            data: costData.map(d => d.cost),
+                            borderColor: '#34B7F1',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#34B7F1',
+                            pointBorderColor: isDark ? '#0f172a' : '#fff',
+                            pointBorderWidth: 3,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', drawBorder: false },
+                                ticks: { font: { family: 'Inter', size: 10, weight: '700' }, color: '#94a3b8', padding: 10, callback: (v) => currencySymbol + v }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { family: 'Inter', size: 10, weight: '700' }, color: '#94a3b8', padding: 10 }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: isDark ? '#1e293b' : '#fff',
+                                titleColor: isDark ? '#f8fafc' : '#1e293b',
+                                bodyColor: isDark ? '#94a3b8' : '#64748b',
+                                titleFont: { size: 12, weight: '900' },
+                                bodyFont: { size: 11, weight: '700' },
+                                padding: 16,
+                                cornerRadius: 16,
+                                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                                borderWidth: 1,
+                                displayColors: false,
+                                callbacks: {
+                                    label: (ctx) => `${currencySymbol}${ctx.raw.toFixed(2)}`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Outcome Index Chart
+                if (outcomeChart) outcomeChart.destroy();
+                outcomeChart = new Chart(outcomeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'Failed', 'Other'],
+                        datasets: [{
+                            data: [
+                                {{ $billingStats['completed_calls'] }},
+                                {{ $billingStats['failed_calls'] }},
+                                {{ max(0, $billingStats['total_calls'] - ($billingStats['completed_calls'] + $billingStats['failed_calls'])) }}
+                            ],
+                            backgroundColor: ['#25D366', '#EF4444', '#94A3B8'],
+                            borderWidth: 0,
+                            hoverOffset: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '80%',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 25,
+                                    font: { family: 'Inter', size: 9, weight: '900' },
+                                    color: '#94a3b8',
+                                }
+                            },
+                        }
+                    }
+                });
+            }
+
+            initCharts();
+            Livewire.on('refreshCharts', () => initCharts());
+        });
+    </script>
 </div>

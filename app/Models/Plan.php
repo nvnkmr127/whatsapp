@@ -78,6 +78,7 @@ class Plan extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return '$' . number_format((float) $this->monthly_price, 2);
+        $symbol = function_exists('get_setting') ? get_setting('currency_symbol', '$') : '$';
+        return $symbol . number_format((float) $this->monthly_price, 2);
     }
 }

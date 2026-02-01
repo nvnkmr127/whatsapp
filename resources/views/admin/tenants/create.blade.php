@@ -56,10 +56,12 @@
                                                         Recommended</div>
                                                 @endif
                                                 <div class="font-black text-slate-900 dark:text-white">
-                                                    {{ $plan->display_name }}</div>
+                                                    {{ $plan->display_name }}
+                                                </div>
                                                 <div
                                                     class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                                    ${{ number_format($plan->monthly_price, 0) }}/mo</div>
+                                                    {{ get_setting('currency_symbol', '$') }}{{ number_format($plan->monthly_price, 0) }}/mo
+                                                </div>
                                             </div>
                                         </label>
                                     @endforeach

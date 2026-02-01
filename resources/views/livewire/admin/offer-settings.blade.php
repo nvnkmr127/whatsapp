@@ -122,10 +122,11 @@
 
                         <div class="space-y-2 pt-2">
                             <label class="text-xs font-black uppercase tracking-widest text-emerald-500">Launch Gift
-                                Credit ($)</label>
+                                Credit ({{ get_setting('currency_symbol', '$') }})</label>
                             <div class="relative">
                                 <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5">
-                                    <span class="text-slate-400 font-bold text-lg">$</span>
+                                    <span
+                                        class="text-slate-400 font-bold text-lg">{{ get_setting('currency_symbol', '$') }}</span>
                                 </div>
                                 <input type="number" step="0.01" wire:model="initialCredit"
                                     class="w-full pl-10 pr-5 py-4 bg-emerald-50/50 dark:bg-emerald-900/10 border-2 border-emerald-100 dark:border-emerald-500/20 rounded-2xl text-emerald-700 dark:text-emerald-400 font-black focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-lg transition-all">

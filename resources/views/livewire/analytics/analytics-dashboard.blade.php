@@ -67,7 +67,7 @@
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Wallet Balance</h3>
                 <div class="flex items-baseline gap-1">
                     <span
-                        class="text-3xl font-black text-slate-900 dark:text-white">${{ number_format($wallet->balance, 2) }}</span>
+                        class="text-3xl font-black text-slate-900 dark:text-white">{{ get_setting('currency_symbol', '$') }}{{ number_format($wallet->balance, 2) }}</span>
                 </div>
                 <button
                     class="mt-4 text-xs font-bold text-wa-teal dark:wa-teal hover:underline flex items-center gap-1">
@@ -307,7 +307,7 @@
                             </td>
                             <td class="px-8 py-6">
                                 <span class="text-sm font-black {{ $txn->amount < 0 ? 'text-rose-500' : 'text-wa-teal' }}">
-                                    {{ $txn->amount < 0 ? '-' : '+' }}${{ number_format(abs($txn->amount), 2) }}
+                                    {{ $txn->amount < 0 ? '-' : '+' }}{{ get_setting('currency_symbol', '$') }}{{ number_format(abs($txn->amount), 2) }}
                                 </span>
                             </td>
                             <td class="px-8 py-6 text-right">

@@ -97,7 +97,8 @@
 
                     @if($stats['total_revenue'] > 0)
                         <div>
-                            <div class="text-4xl font-black tracking-tight">${{ number_format($stats['total_revenue'], 2) }}
+                            <div class="text-4xl font-black tracking-tight">
+                                {{ get_setting('currency_symbol', '$') }}{{ number_format($stats['total_revenue'], 2) }}
                             </div>
                             <div
                                 class="flex items-center gap-2 text-xs font-bold pt-2 {{ $trends['revenue'] >= 0 ? 'text-wa-teal' : 'text-red-400' }}">
@@ -451,7 +452,8 @@
                             <div class="grid grid-cols-2 gap-4 mt-4 mb-4">
                                 <div>
                                     <div class="text-2xl font-black text-wa-teal">
-                                        {{ number_format($operational['ai']['replies']) }}</div>
+                                        {{ number_format($operational['ai']['replies']) }}
+                                    </div>
                                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Replies Sent
                                     </div>
                                 </div>

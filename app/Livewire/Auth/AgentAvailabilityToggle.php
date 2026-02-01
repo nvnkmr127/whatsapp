@@ -25,7 +25,7 @@ class AgentAvailabilityToggle extends Component
 
         $this->isAvailable = $row ? (bool) $row->is_call_enabled : false;
 
-        Log::info("AgentAvailabilityToggle mount: User {$user->id}, Team {$user->currentTeam->id}, isAvailable: " . ($this->isAvailable ? 'true' : 'false'));
+
     }
 
     public function toggleAvailability()
@@ -67,11 +67,11 @@ class AgentAvailabilityToggle extends Component
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
-                    Log::info("AgentAvailabilityToggle: Created missing team_user pivot row for User {$user->id} (Team {$team->id})");
+
                 }
             }
 
-            Log::info("AgentAvailabilityToggle: User {$user->id}, Team {$team->id} status synced. New State: " . ($this->isAvailable ? 'true' : 'false'));
+
 
             $this->dispatch('notify', [
                 'type' => 'success',

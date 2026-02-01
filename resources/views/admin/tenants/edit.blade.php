@@ -78,7 +78,7 @@
                                             @foreach($plans as $plan)
                                                 <option value="{{ $plan->name }}" {{ old('plan', $team->subscription_plan) === $plan->name ? 'selected' : '' }}>
                                                     {{ $plan->display_name }}
-                                                    (${{ number_format($plan->monthly_price, 0) }}/mo)
+                                                    ({{ get_setting('currency_symbol', '$') }}{{ number_format($plan->monthly_price, 0) }}/mo)
                                                 </option>
                                             @endforeach
                                         </select>

@@ -48,7 +48,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-5xl font-black text-indigo-400 tracking-tight">
-                                ${{ number_format($plan->monthly_price ?? 0, 0) }}</p>
+                                {{ get_setting('currency_symbol', '$') }}{{ number_format($plan->monthly_price ?? 0, 0) }}</p>
                             <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">per month</p>
                         </div>
                     </div>
@@ -98,7 +98,7 @@
                                     class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
                                     Wallet Balance</p>
                                 <h3 class="text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                                    ${{ number_format($wallet->balance ?? 0, 2) }}</h3>
+                                    {{ get_setting('currency_symbol', '$') }}{{ number_format($wallet->balance ?? 0, 2) }}</h3>
                             </div>
                             <div
                                 class="w-16 h-16 bg-white dark:bg-white/10 rounded-[1.5rem] flex items-center justify-center shadow-lg">
@@ -172,7 +172,7 @@
                             {{ $p->display_name }}
                         </h4>
                         <div class="flex items-baseline gap-1 mb-6">
-                            <span class="text-3xl font-black">${{ number_format($p->monthly_price, 0) }}</span>
+                             <span class="text-3xl font-black">{{ get_setting('currency_symbol', '$') }}{{ number_format($p->monthly_price, 0) }}</span>
                             <span class="text-xs font-bold text-slate-400 capitalize">/ mo</span>
                         </div>
                         
@@ -240,7 +240,7 @@
                                     <td class="px-8 py-5 text-xs font-medium text-slate-500">
                                         {{ $invoice->period_start->format('M d') }} - {{ $invoice->period_end->format('M d, Y') }}
                                     </td>
-                                    <td class="px-8 py-5 text-right font-black">${{ number_format($invoice->total_amount, 2) }}</td>
+                                     <td class="px-8 py-5 text-right font-black">{{ get_setting('currency_symbol', '$') }}{{ number_format($invoice->total_amount, 2) }}</td>
                                     <td class="px-8 py-5 text-center">
                                         <button class="text-[10px] font-black uppercase text-wa-teal hover:underline tracking-widest">Download PDF</button>
                                     </td>
@@ -294,7 +294,7 @@
                                     <td class="px-8 py-5 text-right">
                                         <span
                                             class="text-sm font-black {{ $transaction->amount >= 0 ? 'text-wa-teal' : 'text-slate-900 dark:text-white' }}">
-                                            {{ $transaction->amount >= 0 ? '+' : '' }}${{ number_format(abs($transaction->amount), 2) }}
+                                             {{ $transaction->amount >= 0 ? '+' : '' }}{{ get_setting('currency_symbol', '$') }}{{ number_format(abs($transaction->amount), 2) }}
                                         </span>
                                     </td>
                                 </tr>
@@ -335,8 +335,8 @@
                     <form wire:submit.prevent="topUp">
                         <div class="p-8 space-y-6">
                             <div>
-                                <label class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Amount
-                                    ($)</label>
+                                 <label class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Amount
+                                    ({{ get_setting('currency_symbol', '$') }})</label>
                                 <input type="number" wire:model="topUpAmount" step="10" min="10" max="10000"
                                     class="w-full text-3xl font-black text-slate-900 dark:text-white bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-200 mb-4"
                                     placeholder="0">
@@ -352,7 +352,7 @@
                                 @foreach([10, 50, 100, 500] as $amount)
                                     <button type="button" wire:click="$set('topUpAmount', {{ $amount }})"
                                         class="py-2 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal hover:text-white text-slate-500 dark:text-slate-400 font-bold rounded-xl transition-all text-xs">
-                                        ${{ $amount }}
+                                         {{ get_setting('currency_symbol', '$') }}{{ $amount }}
                                     </button>
                                 @endforeach
                             </div>

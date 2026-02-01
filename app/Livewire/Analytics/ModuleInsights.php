@@ -174,7 +174,7 @@ class ModuleInsights extends Component
                 ['label' => 'Total Flow Runs', 'value' => number_format($totalRuns), 'trend' => 'up', 'status' => 'neutral'],
                 ['label' => 'Completion Rate', 'value' => round($completionRate, 1) . '%', 'trend' => 'up', 'status' => $completionRate > 80 ? 'success' : 'problem'],
                 ['label' => 'Critical Failures', 'value' => number_format($failedRuns), 'trend' => 'down', 'status' => $failedRuns > 10 ? 'problem' : 'success'],
-                ['label' => 'Bot ROI', 'value' => '$1.2k', 'trend' => 'up', 'status' => 'success'],
+                ['label' => 'Bot ROI', 'value' => get_setting('currency_symbol', '$') . '1.2k', 'trend' => 'up', 'status' => 'success'],
             ],
             'insights' => $insights
         ];
@@ -218,7 +218,7 @@ class ModuleInsights extends Component
         if ($unpaid > 10) {
             $insights[] = [
                 'type' => 'money',
-                'message' => $unpaid . ' orders are pending payment. Potential revenue: $' . number_format($unpaid * $AOV),
+                'message' => $unpaid . ' orders are pending payment. Potential revenue: ' . get_setting('currency_symbol', '$') . number_format($unpaid * $AOV),
                 'action_label' => 'Send Reminders',
                 'action_url' => '#orders',
             ];
@@ -226,8 +226,8 @@ class ModuleInsights extends Component
 
         return [
             'stats' => [
-                ['label' => 'Total Revenue', 'value' => '$' . number_format($revenue, 0), 'trend' => 'up', 'status' => 'success'],
-                ['label' => 'Avg Order Value', 'value' => '$' . number_format($AOV, 2), 'trend' => 'neutral', 'status' => 'neutral'],
+                ['label' => 'Total Revenue', 'value' => get_setting('currency_symbol', '$') . number_format($revenue, 0), 'trend' => 'up', 'status' => 'success'],
+                ['label' => 'Avg Order Value', 'value' => get_setting('currency_symbol', '$') . number_format($AOV, 2), 'trend' => 'neutral', 'status' => 'neutral'],
                 ['label' => 'Payment Pendancy', 'value' => number_format($unpaid), 'trend' => 'up', 'status' => $unpaid > 20 ? 'problem' : 'neutral'],
                 ['label' => 'Abandoned Carts', 'value' => '12', 'trend' => 'down', 'status' => 'success'],
             ],

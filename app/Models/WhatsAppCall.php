@@ -170,7 +170,8 @@ class WhatsAppCall extends Model
      */
     public function getCostFormattedAttribute(): string
     {
-        return '$' . number_format((float) $this->cost_amount, 2);
+        $symbol = function_exists('get_setting') ? get_setting('currency_symbol', '$') : '$';
+        return $symbol . number_format((float) $this->cost_amount, 2);
     }
 
     /**

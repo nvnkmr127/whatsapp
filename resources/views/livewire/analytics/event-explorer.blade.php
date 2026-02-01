@@ -1,214 +1,408 @@
-<div class="p-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                Event Explorer
-                @if($filterTraceId)
-                    <span class="px-2 py-1 text-xs rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
-                        Trace: {{ Str::limit($filterTraceId, 8) }}
-                        <button wire:click="$set('filterTraceId', '')" class="ml-1 hover:text-indigo-900">&times;</button>
-                    </span>
-                @endif
+<div class="space-y-10">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start gap-10">
+        <!-- Left: Title & Subtitle -->
+        <div class="max-w-xl">
+            <h1 class="text-5xl font-black tracking-tight uppercase leading-none mb-4">
+                <span class="text-slate-900 dark:text-white">Event</span> 
+                <span class="text-wa-teal">Explorer</span>
             </h1>
-            <p class="text-sm text-gray-500">System nervous system observability.</p>
-        </div>
-        
-        <!-- Filters -->
-        <div class="flex flex-wrap gap-2 items-center">
-             <label class="inline-flex items-center cursor-pointer mr-2">
-                <input type="checkbox" wire:model.live="showNoise" class="sr-only peer">
-                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                <span class="ms-2 text-xs font-medium text-gray-900 dark:text-gray-300">Show Noise</span>
-            </label>
-
-            <select wire:model.live="filterModule" class="border-gray-300 dark:bg-gray-800 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
-                <option value="">All Sources</option>
-                @foreach($modules as $m)
-                    <option value="{{ $m }}">{{ ucfirst($m) }}</option>
-                @endforeach
-            </select>
-
-            <select wire:model.live="filterCategory" class="border-gray-300 dark:bg-gray-800 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
-                <option value="">All Categories</option>
-                <option value="business">Business Signals</option>
-                <option value="operational">Operational</option>
-                <option value="debug">Debug</option>
-            </select>
-            
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search..." class="border-gray-300 dark:bg-gray-800 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm" />
-            
-            @if($search || $filterModule || $filterCategory || $filterTraceId || $showNoise)
-                <button wire:click="clearFilters" class="text-xs text-gray-500 underline hover:text-gray-700">Clear</button>
+            <p class="text-slate-500 font-medium text-lg leading-relaxed">
+                System nervous system observability & real-time trace tracking.
+            </p>
+            @if($filterTraceId)
+                <div class="mt-4 flex items-center gap-2 bg-indigo-500/10 text-indigo-500 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20 w-fit">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    Trace: {{ Str::limit($filterTraceId, 12) }}
+                    <button wire:click="$set('filterTraceId', '')" class="hover:text-indigo-700 transition ml-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
             @endif
+        </div>
+
+        <!-- Right: Controls Section -->
+        <div class="flex flex-col items-end gap-6 shrink-0">
+            <!-- Row 1: State & Filters -->
+            <div class="flex items-center gap-8">
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mb-0.5">Observability State</span>
+                    <span class="text-sm font-bold text-wa-teal flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></span>
+                        Real-time Tracking Active
+                    </span>
+                </div>
+
+                <div class="flex items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-[1.25rem] shadow-sm border border-slate-100 dark:border-slate-800 gap-6">
+                    <div class="flex items-center gap-3">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" wire:model.live="showNoise" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-wa-teal"></div>
+                        </label>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Noise</span>
+                    </div>
+
+                    <div class="w-px h-6 bg-slate-100 dark:bg-slate-800"></div>
+
+                    <select wire:model.live="filterModule" 
+                        class="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:ring-0 cursor-pointer p-0 pr-8">
+                        <option value="">All Sources</option>
+                        @foreach($modules as $m)
+                            <option value="{{ $m }}">{{ $m }}</option>
+                        @endforeach
+                    </select>
+
+                    <div class="w-px h-6 bg-slate-100 dark:bg-slate-800"></div>
+
+                    <select wire:model.live="filterCategory"
+                        class="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:ring-0 cursor-pointer p-0 pr-8">
+                        <option value="">All Categories</option>
+                        <option value="business">Business</option>
+                        <option value="operational">Operational</option>
+                        <option value="debug">Debug</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 2: Search Bar -->
+            <div class="flex items-center gap-4">
+                <div class="relative group w-[340px]">
+                    <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-wa-teal transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    <input type="text" wire:model.live.debounce.300ms="search" placeholder="SEARCH EVENTS..." 
+                        class="pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.1em] text-slate-600 dark:text-slate-300 focus:ring-wa-teal focus:border-wa-teal shadow-sm transition-all w-full" />
+                </div>
+
+                @if($search || $filterModule || $filterCategory || $filterTraceId || $showNoise)
+                    <button wire:click="clearFilters" 
+                        class="p-4 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-slate-900 rounded-[1.25rem] transition-all shadow-sm group">
+                        <svg class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                @endif
+            </div>
         </div>
     </div>
 
-    <!-- Events List -->
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">Time</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">Severity</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-40">Event Name</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Summary</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">Source</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-20">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                @forelse($events as $event)
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition duration-150 group">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ $event->occurred_at->diffForHumans() }}
-                            <div class="hidden group-hover:block absolute bg-black text-white text-xs p-1 rounded mt-1 z-10">{{ $event->occurred_at->toIso8601String() }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ \App\Services\EventPresenter::badgeClass($event) }}">
-                                {{ ucfirst($event->category) }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
-                            <span title="{{ $event->event_type }}">{{ Str::limit(class_basename($event->event_type), 25) }}</span>
-                        </td>
-                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                           {{ \App\Services\EventPresenter::summary($event) }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                           <span class="uppercase text-xs font-bold tracking-wider">{{ $event->source }}</span>
-                        </td>
-                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button wire:click="showDetails({{ $event->id }})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-2">View</button>
-                            @if($event->trace_id)
-                                <button wire:click="viewTrace('{{ $event->trace_id }}')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Filter Trace"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg></button>
-                            @endif
-                        </td>
+    <!-- Events Content -->
+    <div
+        class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden relative">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+
+        <div class="relative overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-50 dark:border-slate-800/50">
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Timestamp
+                        </th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            Classification</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Event
+                            Signature</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Activity
+                            Summary</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Source
+                        </th>
+                        <th
+                            class="px-8 py-6 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            Control</th>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                            No events found matching your criteria.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                </thead>
+                <tbody class="divide-y divide-slate-50 dark:divide-slate-800/50">
+                    @forelse($events as $event)
+                        @php
+                            $categoryColors = [
+                                'business' => 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+                                'operational' => 'text-wa-blue bg-wa-blue/10 border-wa-blue/20',
+                                'debug' => 'text-slate-400 bg-slate-400/10 border-slate-400/20',
+                            ];
+                            $catStyle = $categoryColors[$event->category] ?? $categoryColors['debug'];
+                        @endphp
+                        <tr
+                            class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-300 cursor-default">
+                            <td class="px-8 py-5">
+                                <div class="flex flex-col">
+                                    <span
+                                        class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ $event->occurred_at->diffForHumans() }}</span>
+                                    <span
+                                        class="text-[10px] font-black uppercase tracking-widest text-slate-400">{{ $event->occurred_at->format('H:i:s.u') }}</span>
+                                </div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <span
+                                    class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border {{ $catStyle }}">
+                                    {{ $event->category }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-5">
+                                <span class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight"
+                                    title="{{ $event->event_type }}">
+                                    {{ Str::limit(class_basename($event->event_type), 25) }}
+                                </span>
+                            </td>
+                            <td class="px-8 py-5">
+                                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-xs truncate">
+                                    {{ \App\Services\EventPresenter::summary($event) }}
+                                </p>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-wa-teal shadow-[0_0_8px_rgba(37,211,102,0.5)]">
+                                    </div>
+                                    <span
+                                        class="text-[10px] font-black uppercase tracking-widest text-slate-500">{{ $event->source }}</span>
+                                </div>
+                            </td>
+                            <td class="px-8 py-5">
+                                <div class="flex items-center justify-end gap-3">
+                                    @if($event->trace_id)
+                                        <button wire:click="viewTrace('{{ $event->trace_id }}')"
+                                            class="p-2 text-slate-400 hover:text-wa-blue hover:bg-wa-blue/10 rounded-xl transition-all"
+                                            title="View Full Trace">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </button>
+                                    @endif
+                                    <button wire:click="showDetails({{ $event->id }})"
+                                        class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-wa-teal hover:text-slate-900 transition-all shadow-sm">
+                                        Inspect
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-8 py-20 text-center">
+                                <div class="flex flex-col items-center">
+                                    <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-[2rem] mb-4">
+                                        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.283a2 2 0 01-1.186.13l-2.014-.403a2 2 0 01-1.186-.13l-.628-.283a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547l-.547 2.387a2 2 0 00.547 2.014l1.628 1.628a2 2 0 002.014.547l2.387-.547a6 6 0 003.86-.517l.628-.283a2 2 0 011.186-.13l2.014.403a2 2 0 011.186.13l.628.283a6 6 0 003.86.517l2.387-.547a2 2 0 002.014-.547l1.628-1.628a2 2 0 00.547-2.014l-.547-2.387z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                        System Silent</h3>
+                                    <p class="text-slate-500 font-medium">No events found matching current criteria.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-8 py-6 border-t border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/20">
             {{ $events->links() }}
         </div>
     </div>
 
-    <!-- Detail Modal (Trace Visualizer) -->
+    <!-- Event Detail Slide-over / Modal (Redesigned) -->
     @if($showTraceModal && $selectedEvent)
-        <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" wire:click="closeDetails"></div>
-                
-                <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full h-[80vh] flex flex-col">
-                    <!-- Header -->
-                    <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex justify-between items-center shrink-0">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="modal-title">
-                            Event Details <span class="text-sm font-normal text-gray-500 ml-2">{{ $selectedEvent->event_type }}</span>
-                        </h3>
-                        <div class="text-sm text-gray-500">
-                            Trace: <span class="font-mono bg-gray-200 dark:bg-gray-600 px-1 rounded">{{ $selectedEvent->trace_id ?? 'N/A' }}</span>
-                        </div>
-                    </div>
+        <div class="fixed inset-0 z-[100] overflow-hidden" x-data="{ show: false }"
+            x-init="setTimeout(() => show = true, 50)">
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-500" x-show="show"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" wire:click="closeDetails"></div>
 
-                    <!-- Content -->
-                    <div class="flex-1 flex overflow-hidden">
-                        <!-- Left: Journey Tree -->
-                        <div class="w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-900">
-                            <div class="p-3 border-b border-gray-200 dark:border-gray-700 font-semibold text-xs uppercase text-gray-500">Trace Timeline</div>
-                            <div class="overflow-y-auto flex-1 p-2">
-                                <ul class="space-y-0 relative">
-                                    <!-- Vertical Line -->
-                                    <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+            <div class="fixed inset-y-0 right-0 max-w-full flex pl-10 sm:pl-16">
+                <div class="w-screen max-w-4xl transform transition-all duration-500 ease-in-out" x-show="show"
+                    x-transition:enter="transform transition ease-in-out duration-500"
+                    x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
 
-                                    @foreach($traceEvents as $te)
-                                        <li class="relative pl-8 py-2 cursor-pointer group {{ $te->id === $selectedEvent->id ? 'bg-indigo-50 dark:bg-indigo-900/50 rounded' : '' }}" wire:click="showDetails({{ $te->id }})">
-                                            <!-- Dot -->
-                                            <div class="absolute left-[13px] top-4 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 {{ $te->category === 'business' ? 'bg-green-500' : 'bg-blue-400' }} z-10"></div>
-                                            
-                                            <div class="text-sm font-medium dark:text-gray-200 truncate pr-2 {{ $te->id === $selectedEvent->id ? 'text-indigo-700 dark:text-indigo-300' : '' }}">
-                                                {{ class_basename($te->event_type) }}
-                                            </div>
-                                            <div class="text-xs text-gray-500 flex justify-between pr-2">
-                                                <span>{{ $te->occurred_at->format('H:i:s.u') }}</span>
-                                                @if($te->span_id === $te->event_id)<span class="text-[10px] bg-gray-200 px-1 rounded">ROOT</span>@endif
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Right: Inspector -->
-                        <div class="w-2/3 flex flex-col bg-white dark:bg-gray-800 overflow-y-auto">
-                            <div class="p-6">
-                                <!-- Cards -->
-                                <div class="grid grid-cols-2 gap-4 mb-6">
-                                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                                        <label class="block text-xs font-bold text-gray-500 uppercase">Actor</label>
-                                        <div class="text-sm dark:text-gray-200">{{ $selectedEvent->actor_id ?? 'System' }}</div>
+                    <div
+                        class="h-full flex flex-col bg-white dark:bg-slate-900 shadow-2xl rounded-l-[3rem] border-l border-slate-100 dark:border-slate-800 overflow-hidden relative">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-wa-teal to-wa-blue"></div>
+
+                        <!-- Modal Header -->
+                        <div class="px-8 py-10 shrink-0">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h2
+                                            class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                            Event <span class="text-wa-teal">Intelligence</span>
+                                        </h2>
+                                        <span
+                                            class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                            #{{ $selectedEvent->id }}
+                                        </span>
                                     </div>
-                                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                                        <label class="block text-xs font-bold text-gray-500 uppercase">Span ID</label>
-                                        <div class="text-sm font-mono dark:text-gray-200">{{ $selectedEvent->span_id ?? '-' }}</div>
-                                    </div>
+                                    <p class="text-slate-500 font-medium">{{ $selectedEvent->event_type }}</p>
                                 </div>
+                                <button wire:click="closeDetails"
+                                    class="p-4 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-[1.5rem] transition-all group">
+                                    <svg class="w-6 h-6 group-hover:rotate-90 transition-transform" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
 
-                                <div x-data="{ tab: 'summary' }">
-                                    <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
-                                        <nav class="-mb-px flex space-x-8">
-                                            <button @click="tab = 'summary'" :class="{'border-indigo-500 text-indigo-600': tab === 'summary', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'summary'}" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                                                Summary
-                                            </button>
-                                            <button @click="tab = 'raw'" :class="{'border-indigo-500 text-indigo-600': tab === 'raw', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'raw'}" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                                                Raw Payload
-                                            </button>
-                                             <button @click="tab = 'meta'" :class="{'border-indigo-500 text-indigo-600': tab === 'meta', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'meta'}" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                                                Metadata
-                                            </button>
-                                        </nav>
-                                    </div>
-
-                                    <div x-show="tab === 'summary'">
-                                        <div class="bg-gray-50 dark:bg-gray-900 rounded p-4">
-                                            <table class="min-w-full">
-                                                @foreach($selectedEvent->payload as $key => $val)
-                                                    @if(!is_array($val))
-                                                    <tr>
-                                                        <td class="px-2 py-1 text-xs font-bold text-gray-500 uppercase w-32">{{ $key }}</td>
-                                                        <td class="px-2 py-1 text-sm dark:text-gray-300">{{ $val }}</td>
-                                                    </tr>
-                                                    @endif
-                                                @endforeach
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    <div x-show="tab === 'raw'">
-                                        <div class="bg-gray-900 text-green-400 p-4 rounded-md font-mono text-xs overflow-x-auto">
-                                            <pre>{{ json_encode($selectedEvent->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                                        </div>
-                                    </div>
-                                    
-                                     <div x-show="tab === 'meta'">
-                                        <div class="bg-gray-900 text-blue-300 p-4 rounded-md font-mono text-xs overflow-x-auto">
-                                            <pre>{{ json_encode($selectedEvent->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                                        </div>
+                            <div class="mt-8 flex items-center gap-6">
+                                <div
+                                    class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl flex-1 border border-slate-100 dark:border-slate-800">
+                                    <span
+                                        class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Trace
+                                        ID</span>
+                                    <span
+                                        class="text-xs font-mono font-bold text-wa-blue">{{ $selectedEvent->trace_id ?? 'SYSTEM_SPAN' }}</span>
+                                </div>
+                                <div
+                                    class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl flex-1 border border-slate-100 dark:border-slate-800">
+                                    <span
+                                        class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Status</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-wa-teal animate-pulse"></span>
+                                        <span
+                                            class="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Processing
+                                            Success</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Footer -->
-                    <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex justify-end shrink-0">
-                         <button type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" wire:click="closeDetails">
-                            Close
-                        </button>
+
+                        <!-- Modal Body -->
+                        <div class="flex-1 overflow-hidden flex">
+                            <!-- Left: Trace Navigation -->
+                            <div class="w-80 border-r border-slate-50 dark:border-slate-800/50 flex flex-col">
+                                <div class="px-8 py-4 border-b border-slate-50 dark:border-slate-800/50">
+                                    <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Trace
+                                        Timeline</h4>
+                                </div>
+                                <div class="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+                                    <div class="space-y-1 relative">
+                                        <div
+                                            class="absolute left-[27px] top-4 bottom-4 w-px bg-slate-100 dark:bg-slate-800">
+                                        </div>
+
+                                        @foreach($traceEvents as $te)
+                                            <button wire:click="showDetails({{ $te->id }})"
+                                                class="w-full text-left relative pl-12 py-3 rounded-2xl transition-all {{ $te->id === $selectedEvent->id ? 'bg-wa-teal/10 border-wa-teal/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50' }}">
+                                                <!-- Node Indicator -->
+                                                <div class="absolute left-6 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                                                    <div
+                                                        class="w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 transition-all {{ $te->id === $selectedEvent->id ? 'bg-wa-teal scale-125 shadow-[0_0_10px_rgba(37,211,102,0.5)]' : 'bg-slate-200 dark:bg-slate-700' }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex flex-col">
+                                                    <span
+                                                        class="text-xs font-black uppercase tracking-tight {{ $te->id === $selectedEvent->id ? 'text-wa-teal' : 'text-slate-700 dark:text-slate-300' }}">
+                                                        {{ class_basename($te->event_type) }}
+                                                    </span>
+                                                    <span class="text-[9px] font-bold text-slate-400 mt-0.5">
+                                                        {{ $te->occurred_at->format('H:i:s.u') }}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Inspector -->
+                            <div class="flex-1 overflow-y-auto p-8 scrollbar-hide bg-slate-50/30 dark:bg-slate-900/30">
+                                <div x-data="{ tab: 'payload' }">
+                                    <div
+                                        class="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 rounded-[1.25rem] shadow-sm border border-slate-100 dark:border-slate-800 mb-8 w-fit">
+                                        @foreach(['payload' => 'Payload', 'meta' => 'Meta', 'actor' => 'Context'] as $key => $label)
+                                            <button @click="tab = '{{ $key }}'"
+                                                class="px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300"
+                                                :class="tab === '{{ $key }}' ? 'bg-wa-teal text-slate-900 shadow-lg shadow-wa-teal/20' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'">
+                                                {{ $label }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="space-y-6">
+                                        <div x-show="tab === 'payload'" x-transition>
+                                            <div class="bg-slate-900 rounded-3xl p-8 relative overflow-hidden group">
+                                                <div
+                                                    class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span
+                                                        class="text-[10px] font-black text-wa-teal uppercase tracking-widest">JSON
+                                                        OBJECT</span>
+                                                </div>
+                                                <pre
+                                                    class="text-sm font-mono text-emerald-400/90 leading-relaxed overflow-x-auto"><code>{{ json_encode($selectedEvent->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="tab === 'meta'" x-transition>
+                                            <div class="bg-slate-900 rounded-3xl p-8 relative">
+                                                <pre
+                                                    class="text-sm font-mono text-wa-blue/90 leading-relaxed overflow-x-auto"><code>{{ json_encode($selectedEvent->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="tab === 'actor'" x-transition>
+                                            <div class="grid grid-cols-1 gap-4">
+                                                <div
+                                                    class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-50 dark:border-slate-700/50 shadow-sm">
+                                                    <span
+                                                        class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Authenticated
+                                                        Actor</span>
+                                                    <div class="flex items-center gap-3">
+                                                        <div
+                                                            class="w-10 h-10 rounded-full bg-wa-teal/10 flex items-center justify-center text-wa-teal">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2.5"
+                                                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                            </svg>
+                                                        </div>
+                                                        <span
+                                                            class="text-sm font-bold text-slate-900 dark:text-white">{{ $selectedEvent->actor_id ?? 'SYSTEM_ROOT' }}</span>
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-50 dark:border-slate-700/50 shadow-sm">
+                                                    <span
+                                                        class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Execution
+                                                        Span</span>
+                                                    <div class="flex items-center gap-3">
+                                                        <div
+                                                            class="w-10 h-10 rounded-full bg-wa-blue/10 flex items-center justify-center text-wa-blue">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                            </svg>
+                                                        </div>
+                                                        <span
+                                                            class="text-xs font-mono font-bold text-slate-900 dark:text-white">{{ $selectedEvent->span_id ?? '-' }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div
+                            class="p-8 border-t border-slate-50 dark:border-slate-800/50 bg-white dark:bg-slate-900 shrink-0">
+                            <div class="flex items-center justify-between">
+                                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
+                                    Secure Observability Node v1.0.4
+                                </div>
+                                <button wire:click="closeDetails"
+                                    class="px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-wa-teal hover:text-slate-900 hover:scale-105 transition-all shadow-xl">
+                                    Acknowledge & Close
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
