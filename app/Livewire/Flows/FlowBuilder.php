@@ -330,6 +330,7 @@ class FlowBuilder extends Component
         if ($this->flowId) {
             $versions = \App\Models\WhatsAppFlowVersion::where('whatsapp_flow_id', $this->flowId)
                 ->orderBy('version_number', 'desc')
+                ->limit(20)
                 ->get();
         }
 

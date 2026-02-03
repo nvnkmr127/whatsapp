@@ -28,4 +28,22 @@ class AuditLog extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getEventColorAttribute(): string
+    {
+        $eventType = $this->event_type ?? '';
+
+        return match (true) {
+            str_contains($eventType, 'Success') => '#22c55e',
+            str_contains($eventType, 'Failure') => '#ef4444',
+            str_contains($eventType, 'Abuse') => '#f43f5e',
+            str_contains($eventType, 'Request') => '#6366f1',
+            default => '#64748b',
+        };
+    }
+
+    public function getEventLabelAttribute(): string
+    {
+        return str_replace('.', ' ', $this->event_type ?? '');
+    }
 }

@@ -88,18 +88,9 @@
                                         <div class="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{{ $log->created_at->diffForHumans() }}</div>
                                     </td>
                                     <td class="px-8 py-6">
-                                        @php
-                                            $color = match(true) {
-                                                str_contains($log->event_type, 'Success') => '#22c55e',
-                                                str_contains($log->event_type, 'Failure') => '#ef4444',
-                                                str_contains($log->event_type, 'Abuse') => '#f43f5e',
-                                                str_contains($log->event_type, 'Request') => '#6366f1',
-                                                default => '#64748b'
-                                            };
-                                        @endphp
                                         <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
-                                              style="background-color: {{ $color }}10; color: {{ $color }}; border-color: {{ $color }}30">
-                                            {{ str_replace('.', ' ', $log->event_type) }}
+                                              style="background-color: {{ $log->event_color }}10; color: {{ $log->event_color }}; border-color: {{ $log->event_color }}30">
+                                            {{ $log->event_label }}
                                         </span>
                                     </td>
                                     <td class="px-8 py-6">
@@ -222,7 +213,7 @@
                         </div>
                         <div class="text-xs font-bold text-slate-500">
                             Logs are currently retained for <span class="text-slate-900 dark:text-white font-black">90 days</span> for compliance adherence. 
-                            <a href="#" class="text-rose-500 hover:underline">Configure Rotation Settings →</a>
+                            <a href="{{ route('settings.system') }}" class="text-rose-500 hover:underline">Configure Rotation Settings →</a>
                         </div>
                     </div>
                 </div>

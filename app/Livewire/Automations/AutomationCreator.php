@@ -28,6 +28,8 @@ class AutomationCreator extends Component
     public $footer_params = [];
 
     public $selectedTemplate;
+    public $headerParamCount = 0;
+    public $bodyParamCount = 0;
 
     protected $rules = [
         'bot_name' => 'required|string|max:255',
@@ -42,10 +44,14 @@ class AutomationCreator extends Component
 
     public function updatedTemplateId($value)
     {
-        $this->selectedTemplate = WhatsappTemplate::where('template_id', $value)->first();
+        $this->selectedTemplate = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+            ->where('whatsapp_template_id', $value)
+            ->first();
         $this->header_params = [];
         $this->body_params = [];
         $this->footer_params = [];
+        $this->headerParamCount = $this->getTemplateVariableCount($this->selectedTemplate, 'HEADER');
+        $this->bodyParamCount = $this->getTemplateVariableCount($this->selectedTemplate, 'BODY');
     }
 
     // Helper to add keyword
@@ -65,6 +71,7 @@ class AutomationCreator extends Component
     public function save()
     {
         $this->validate();
+        $teamId = auth()->user()->currentTeam->id;
 
         if ($this->type === 'keyword') {
             $this->validate([
@@ -72,6 +79,7 @@ class AutomationCreator extends Component
             ]);
 
             MessageBot::create([
+                'team_id' => $teamId,
                 'name' => $this->bot_name,
                 'reply_text' => $this->reply_text,
                 'trigger' => $this->trigger_keywords, // Cast handling handles array
@@ -84,9 +92,13 @@ class AutomationCreator extends Component
                 'template_id' => 'required',
             ]);
 
+            $templateIdentifier = $this->selectedTemplate?->whatsapp_template_id ?: $this->template_id;
+
             TemplateBot::create([
+                'team_id' => $teamId,
                 'name' => $this->bot_name,
-                'template_id' => $this->template_id,
+                'template_id' => $templateIdentifier,
+                'whatsapp_template_id' => $templateIdentifier,
                 'trigger' => $this->trigger_keywords,
                 'is_bot_active' => $this->is_active,
                 'header_params' => $this->header_params,
@@ -100,9 +112,36 @@ class AutomationCreator extends Component
 
     public function render()
     {
-        $templates = WhatsappTemplate::where('status', 'APPROVED')->get();
+        $templates = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+            ->where('status', 'APPROVED')
+            ->whereNotNull('whatsapp_template_id')
+            ->orderBy('name')
+            ->get();
         return view('livewire.automations.automation-creator', [
             'templates' => $templates
         ]);
+    }
+
+    protected function getTemplateVariableCount(?WhatsappTemplate $template, string $componentType): int
+    {
+        if (!$template) {
+            return 0;
+        }
+
+        $components = $template->components ?? [];
+        $variables = [];
+
+        foreach ($components as $component) {
+            if (($component['type'] ?? null) !== $componentType) {
+                continue;
+            }
+            $text = $component['text'] ?? '';
+            if ($text && preg_match_all('/\{\{(\d+)\}\}/', $text, $matches)) {
+                $variables = array_merge($variables, $matches[1]);
+            }
+        }
+
+        $variables = array_unique($variables);
+        return count($variables);
     }
 }

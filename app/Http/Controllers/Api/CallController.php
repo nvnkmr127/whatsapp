@@ -29,6 +29,12 @@ class CallController extends Controller
         }
 
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
         $callService = new CallService($team);
 
         try {
@@ -63,6 +69,12 @@ class CallController extends Controller
         }
 
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
         $contact = $team->contacts()->findOrFail($request->contact_id);
 
         try {
@@ -89,6 +101,12 @@ class CallController extends Controller
     public function answer(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         try {
             $whatsappService = new WhatsAppService($team);
@@ -109,6 +127,12 @@ class CallController extends Controller
     public function reject(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         try {
             $whatsappService = new WhatsAppService($team);
@@ -129,6 +153,12 @@ class CallController extends Controller
     public function end(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         try {
             $whatsappService = new WhatsAppService($team);
@@ -149,6 +179,40 @@ class CallController extends Controller
     public function index(Request $request)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'direction' => 'sometimes|in:inbound,outbound',
+            'status' => 'sometimes|string',
+            'contact_id' => 'sometimes|integer|exists:contacts,id',
+            'from_date' => 'sometimes|date',
+            'to_date' => 'sometimes|date|after_or_equal:from_date',
+            'sort_by' => 'sometimes|in:created_at,initiated_at,answered_at,ended_at,duration_seconds,cost_amount,status,direction',
+            'sort_order' => 'sometimes|in:asc,desc',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        if ($request->filled('contact_id')) {
+            $contactExists = $team->contacts()->whereKey($request->contact_id)->exists();
+            if (!$contactExists) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Contact not found',
+                ], 404);
+            }
+        }
 
         $query = WhatsAppCall::where('team_id', $team->id)
             ->with('contact:id,name,phone_number');
@@ -180,7 +244,7 @@ class CallController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         // Pagination
-        $perPage = min($request->get('per_page', 15), 100);
+        $perPage = min((int) $request->get('per_page', 15), 100);
         $calls = $query->paginate($perPage);
 
         return response()->json([
@@ -201,6 +265,12 @@ class CallController extends Controller
     public function show(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         try {
             $call = WhatsAppCall::where('team_id', $team->id)
@@ -247,7 +317,23 @@ class CallController extends Controller
     public function statistics(Request $request)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
         $callService = new CallService($team);
+
+        $validator = Validator::make($request->all(), [
+            'period' => 'sometimes|in:today,week,month,year',
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
         $period = $request->get('period', 'month');
         $stats = $callService->getCallStatistics($period);
@@ -269,6 +355,12 @@ class CallController extends Controller
     public function active(Request $request)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
         $callService = new CallService($team);
 
         $activeCalls = $callService->getActiveCalls();
@@ -285,6 +377,12 @@ class CallController extends Controller
     public function contactHistory(Request $request, int $contactId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         $contact = $team->contacts()->findOrFail($contactId);
         $callService = new CallService($team);

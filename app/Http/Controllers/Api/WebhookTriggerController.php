@@ -9,7 +9,15 @@ class WebhookTriggerController extends Controller
 {
     public function trigger(Request $request, $id)
     {
-        $workflow = \App\Models\WebhookWorkflow::where('id', $id)->where('status', true)->first();
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No team context'], 400);
+        }
+
+        $workflow = \App\Models\WebhookWorkflow::where('id', $id)
+            ->where('status', true)
+            ->where('team_id', $team->id)
+            ->first();
 
         if (!$workflow) {
             return response()->json(['error' => 'Workflow not found or inactive'], 404);

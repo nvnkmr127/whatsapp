@@ -75,7 +75,7 @@
                             required>
                             <option value="">Select a template...</option>
                             @foreach($templates as $template)
-                                <option value="{{ $template->template_id }}">{{ $template->template_name }}
+                                <option value="{{ $template->whatsapp_template_id }}">{{ $template->name }}
                                     ({{ $template->language }})</option>
                             @endforeach
                         </select>
@@ -84,10 +84,10 @@
 
                     @if($selectedTemplate)
                         <!-- Template Params (Simplified for MVP) -->
-                        @if($selectedTemplate->header_params_count > 0)
+                        @if($headerParamCount > 0)
                             <div>
                                 <h4 class="text-sm font-bold mb-2">Header Variables</h4>
-                                @for($i = 1; $i <= $selectedTemplate->header_params_count; $i++)
+                                @for($i = 1; $i <= $headerParamCount; $i++)
                                     <div class="mb-2">
                                         <label class="text-xs">Variable {{ $i }}</label>
                                         <input type="text" wire:model="header_params.{{ $i }}" class="form-input w-full text-sm"
@@ -97,10 +97,10 @@
                             </div>
                         @endif
 
-                        @if($selectedTemplate->body_params_count > 0)
+                        @if($bodyParamCount > 0)
                             <div>
                                 <h4 class="text-sm font-bold mb-2">Body Variables</h4>
-                                @for($i = 1; $i <= $selectedTemplate->body_params_count; $i++)
+                                @for($i = 1; $i <= $bodyParamCount; $i++)
                                     <div class="mb-2">
                                         <label class="text-xs">Variable {{ $i }}</label>
                                         <input type="text" wire:model="body_params.{{ $i }}" class="form-input w-full text-sm"

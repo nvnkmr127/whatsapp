@@ -405,9 +405,13 @@
                                     <div class="flex items-center gap-4">
                                         <a href="{{ route('backups.download', $backup->id) }}"
                                             class="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline">Download</a>
-                                        <button
-                                            class="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline"
-                                            onclick="confirm('Restore full system?')">Restore</button>
+                                        <form action="{{ route('backups.restore', $backup->id) }}" method="POST" onsubmit="return confirm('Restore full system?')">
+                                            @csrf
+                                            <button type="submit"
+                                                class="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline">
+                                                Restore
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             @empty
@@ -425,7 +429,5 @@
                 </div>
             </div>
         </div>
-
-    </div>
     </div>
 </x-app-layout>

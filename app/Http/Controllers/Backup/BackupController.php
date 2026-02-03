@@ -24,6 +24,8 @@ class BackupController extends Controller
     public function index(Request $request)
     {
         $team = auth()->user()->currentTeam;
+        $hasAccess = $team ? $team->hasFeature('backups') : false;
+        $hasCloudAccess = $team ? $team->hasFeature('cloud_backups') : false;
 
         $backups = TenantBackup::where('team_id', $team->id)
             ->latest()
@@ -36,6 +38,8 @@ class BackupController extends Controller
         return view('backups.index', [
             'backups' => $backups,
             'googleDrive' => $googleDrive,
+            'hasAccess' => $hasAccess,
+            'hasCloudAccess' => $hasCloudAccess,
         ]);
     }
 
@@ -48,9 +52,15 @@ class BackupController extends Controller
 
         try {
             $this->backupService->backupTenant($team);
-            return redirect()->back()->with('success', 'Backup started successfully.');
+            return redirect()
+                ->back()
+                ->with('flash.banner', 'Backup started successfully.')
+                ->with('flash.bannerStyle', 'success');
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'Failed to start backup: ' . $e->getMessage());
+            return redirect()
+                ->back()
+                ->with('flash.banner', 'Failed to start backup: ' . $e->getMessage())
+                ->with('flash.bannerStyle', 'danger');
         }
     }
 
@@ -69,7 +79,10 @@ class BackupController extends Controller
         $path = "backups/{$backup->path}{$backup->filename}";
 
         if (!\Storage::disk('local')->exists($path)) {
-            return redirect()->back()->with('error', 'Backup file not found locally.');
+            return redirect()
+                ->back()
+                ->with('flash.banner', 'Backup file not found locally.')
+                ->with('flash.bannerStyle', 'danger');
         }
 
         return response()->download(\Storage::disk('local')->path($path));

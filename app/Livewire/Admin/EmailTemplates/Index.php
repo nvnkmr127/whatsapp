@@ -12,6 +12,7 @@ class Index extends Component
         return view('livewire.admin.email-templates.index', [
             'templates' => EmailTemplate::orderBy('is_locked', 'desc')
                 ->orderBy('name')
+                ->limit(200)
                 ->get()
         ])->layout('layouts.app');
     }

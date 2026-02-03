@@ -118,6 +118,10 @@ class EcommerceIntegrations extends Component
 
     public function sync(Integration $integration)
     {
+        if ($integration->team_id !== auth()->user()->currentTeam->id) {
+            abort(403, 'Integration does not belong to this team.');
+        }
+
         try {
             $count = 0;
             if ($integration->type === 'shopify') {
@@ -144,12 +148,16 @@ class EcommerceIntegrations extends Component
 
     public function delete(Integration $integration)
     {
+        if ($integration->team_id !== auth()->user()->currentTeam->id) {
+            abort(403, 'Integration does not belong to this team.');
+        }
         $integration->delete();
     }
 
     public function openDiagnostics($id)
     {
-        $this->activeIntegration = Integration::findOrFail($id);
+        $this->activeIntegration = Integration::where('team_id', auth()->user()->currentTeam->id)
+            ->findOrFail($id);
         $this->syncSessions = []; // Reset while loading
 
         $this->syncSessions = \App\Models\SyncSession::where('integration_id', $id)
@@ -165,7 +173,8 @@ class EcommerceIntegrations extends Component
 
     public function openSettings($id)
     {
-        $this->activeIntegration = Integration::findOrFail($id);
+        $this->activeIntegration = Integration::where('team_id', auth()->user()->currentTeam->id)
+            ->findOrFail($id);
         $this->sync_scope = array_merge($this->sync_scope, $this->activeIntegration->settings['sync_scope'] ?? []);
         $this->webhook_secret = $this->activeIntegration->webhook_secret;
         $this->showSettingsModal = true;

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\CallPermission;
 use App\Models\Contact;
 use App\Services\WhatsAppService;
-use App\Services\CallPermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -19,6 +18,12 @@ class CallPermissionController extends Controller
     public function requestPermission(Request $request)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         $validator = Validator::make($request->all(), [
             'contact_id' => 'required|exists:contacts,id',
@@ -32,6 +37,17 @@ class CallPermissionController extends Controller
         }
 
         try {
+            $contact = Contact::where('team_id', $team->id)
+                ->where('id', $request->contact_id)
+                ->first();
+
+            if (!$contact) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Contact not found',
+                ], 404);
+            }
+
             $whatsappService = new WhatsAppService($team);
             $response = $whatsappService->requestCallPermission($request->contact_id);
 
@@ -62,6 +78,12 @@ class CallPermissionController extends Controller
     public function checkPermission(Request $request, int $contactId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         try {
             $permission = CallPermission::where('contact_id', $contactId)
@@ -80,7 +102,6 @@ class CallPermissionController extends Controller
                 ]);
             }
 
-            $permissionService = new CallPermissionService();
             $canRequest = $permission->canRequestPermission();
             $isWithinWindow = $permission->isWithinCallingWindow();
 
@@ -118,6 +139,12 @@ class CallPermissionController extends Controller
     public function initiateCall(Request $request)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         $validator = Validator::make($request->all(), [
             'contact_id' => 'required|exists:contacts,id',
@@ -132,7 +159,30 @@ class CallPermissionController extends Controller
         }
 
         try {
-            $contact = Contact::findOrFail($request->contact_id);
+            $contact = Contact::where('team_id', $team->id)
+                ->where('id', $request->contact_id)
+                ->first();
+
+            if (!$contact) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Contact not found',
+                ], 404);
+            }
+
+            if ($request->filled('permission_id')) {
+                $permission = CallPermission::where('team_id', $team->id)
+                    ->where('id', $request->permission_id)
+                    ->first();
+
+                if (!$permission) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Permission not found',
+                    ], 404);
+                }
+            }
+
             $whatsappService = new WhatsAppService($team);
 
             $response = $whatsappService->initiateCallWithPermission(

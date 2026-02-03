@@ -9,6 +9,7 @@ class MessageBot extends Model
     protected $table = 'message_bots';
 
     protected $fillable = [
+        'team_id',
         'name',
         'rel_type',
         'reply_text',
@@ -34,4 +35,9 @@ class MessageBot extends Model
         'trigger' => 'array',
         'is_bot_active' => 'boolean',
     ];
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
+    }
 }

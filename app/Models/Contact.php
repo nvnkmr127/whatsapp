@@ -9,6 +9,13 @@ class Contact extends Model
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use \App\Traits\HasTeam;
 
+    protected static function booted()
+    {
+        static::updating(function ($contact) {
+            $contact->version = ($contact->version ?? 0) + 1;
+        });
+    }
+
     protected $guarded = [];
 
     protected $casts = [

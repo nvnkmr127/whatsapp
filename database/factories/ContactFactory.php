@@ -16,7 +16,6 @@ class ContactFactory extends Factory
             'team_id' => 1,
             'name' => $this->faker->name,
             'phone_number' => $this->faker->phoneNumber,
-            'wa_id' => $this->faker->numerify('###########'),
             'opt_in_status' => 'opted_in',
         ];
     }

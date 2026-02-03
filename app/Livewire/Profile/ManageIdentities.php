@@ -67,7 +67,7 @@ class ManageIdentities extends Component
     public function render()
     {
         return view('livewire.profile.manage-identities', [
-            'identities' => Auth::user()->identities()->latest()->get()
+            'identities' => Auth::user()->identities()->latest()->limit(50)->get()
         ]);
     }
 }

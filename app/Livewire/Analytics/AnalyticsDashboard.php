@@ -17,6 +17,7 @@ class AnalyticsDashboard extends Component
     public $chartData = []; // Restored
     public $lastRefresh; // Restored
     public $metaAnalytics = [];
+    public $walletId;
 
     public function render()
     {
@@ -24,8 +25,8 @@ class AnalyticsDashboard extends Component
         $teamId = $team->id;
         $cachePrefix = "analytics:team:{$teamId}";
 
-        // 1. Wallet (lightweight, ok to fetch)
-        $wallet = TeamWallet::firstOrCreate(['team_id' => $teamId]);
+        // 1. Wallet (avoid writes during render)
+        $wallet = $this->walletId ? TeamWallet::find($this->walletId) : TeamWallet::where('team_id', $teamId)->first();
 
         // 2. Usage Stats (cached briefly to reduce repeated queries per re-render)
         $stats = cache()->remember("{$cachePrefix}:stats:{$this->dateRange}", 60, function () use ($teamId) {
@@ -88,6 +89,8 @@ class AnalyticsDashboard extends Component
     public function mount()
     {
         $this->lastRefresh = now()->format('H:i:s');
+        $teamId = auth()->user()->currentTeam->id;
+        $this->walletId = TeamWallet::firstOrCreate(['team_id' => $teamId])->id;
     }
 
     public function refreshData()

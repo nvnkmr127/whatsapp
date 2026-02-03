@@ -16,6 +16,9 @@ class ExternalConversationController extends Controller
     public function index(Request $request, $phone)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No team context'], 400);
+        }
 
         $contact = Contact::where('team_id', $team->id)->where('phone_number', $phone)->first();
 
@@ -45,7 +48,7 @@ class ExternalConversationController extends Controller
     public function send(Request $request)
     {
         $request->validate([
-            'phone_number' => 'required|string',
+            'phone_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/'],
             'type' => 'required|in:text,template',
             'message' => 'required_if:type,text|string',
             'template_name' => 'required_if:type,template|string',

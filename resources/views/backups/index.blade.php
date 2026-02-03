@@ -4,11 +4,6 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
             <div class="relative">
-                @php
-                    $hasAccess = auth()->user()->currentTeam->hasFeature('backups');
-                    $hasCloudAccess = auth()->user()->currentTeam->hasFeature('cloud_backups');
-                @endphp
-
                 <!-- Paywall Overlay -->
                 @if(!$hasAccess)
                     <div

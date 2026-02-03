@@ -17,9 +17,14 @@ class ConversationController extends Controller
 
     public function lock(Request $request, Conversation $conversation)
     {
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No team context'], 400);
+        }
+
         // Policy check or Team check recommended here
-        if ($conversation->team_id !== $request->user()->currentTeam->id) {
-            abort(403);
+        if ($conversation->team_id !== $team->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $result = $this->service->acquireLock($conversation->id, $request->user()->id);
@@ -29,8 +34,13 @@ class ConversationController extends Controller
 
     public function unlock(Request $request, Conversation $conversation)
     {
-        if ($conversation->team_id !== $request->user()->currentTeam->id) {
-            abort(403);
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No team context'], 400);
+        }
+
+        if ($conversation->team_id !== $team->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $this->service->releaseLock($conversation->id, $request->user()->id);
@@ -40,8 +50,13 @@ class ConversationController extends Controller
 
     public function heartbeat(Request $request, Conversation $conversation)
     {
-        if ($conversation->team_id !== $request->user()->currentTeam->id) {
-            abort(403);
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No team context'], 400);
+        }
+
+        if ($conversation->team_id !== $team->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         // Heartbeat is essentially a re-acquire
@@ -52,8 +67,13 @@ class ConversationController extends Controller
 
     public function forceTakeOver(Request $request, Conversation $conversation)
     {
-        if ($conversation->team_id !== $request->user()->currentTeam->id) {
-            abort(403);
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No team context'], 400);
+        }
+
+        if ($conversation->team_id !== $team->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $this->service->forceTakeOver($conversation->id, $request->user()->id);

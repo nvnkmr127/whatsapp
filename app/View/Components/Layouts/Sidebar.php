@@ -131,6 +131,7 @@ class Sidebar extends Component
                 'children' => [
                     ['route' => 'analytics', 'label' => 'Dashboard'],
                     ['route' => 'analytics.events', 'label' => 'Customer Events'],
+                    ['route' => 'analytics.explorer', 'label' => 'Event Explorer'],
                     ['route' => 'calls.analytics', 'label' => 'Voice Analytics'],
                 ]
             ],

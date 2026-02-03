@@ -18,7 +18,8 @@ class WebhookPipelineTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Config::set('services.whatsapp.client_secret', 'test-secret');
+        Config::set('whatsapp.app_secret', 'test-secret');
+        Config::set('services.whatsapp.client_secret', 'test-secret'); // Keep for compatibility if used elsewhere
     }
 
     public function test_signature_verification_succeeds_with_valid_signature()
@@ -31,6 +32,18 @@ class WebhookPipelineTest extends TestCase
         ])->postJson('/api/webhook/whatsapp', ['test' => 'data']);
 
         $response->assertStatus(200);
+    }
+
+    public function test_signature_verification_fails_with_invalid_signature()
+    {
+        $payload = json_encode(['test' => 'data']);
+        $signature = 'sha256=' . hash_hmac('sha256', $payload, 'wrong-secret');
+
+        $response = $this->withHeaders([
+            'X-Hub-Signature-256' => $signature,
+        ])->postJson('/api/webhook/whatsapp', ['test' => 'data']);
+
+        $response->assertStatus(403);
     }
 
     /*
@@ -100,7 +113,7 @@ class WebhookPipelineTest extends TestCase
         ]);
 
         $job = new ProcessWebhookJob($payloadRecord->id);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
         $this->assertDatabaseHas('messages', [
             'whatsapp_message_id' => 'wamid.test',
@@ -134,6 +147,7 @@ class WebhookPipelineTest extends TestCase
                                     [
                                         'from' => '9876543210',
                                         'id' => 'wamid.duplicate',
+                                        'timestamp' => time(),
                                         'type' => 'text',
                                         'text' => ['body' => 'Hello Again']
                                     ]
@@ -151,7 +165,7 @@ class WebhookPipelineTest extends TestCase
         ]);
 
         $job = new ProcessWebhookJob($payloadRecord->id);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
         $this->assertEquals('processed', $payloadRecord->fresh()->status);
         $this->assertCount(1, Message::where('whatsapp_message_id', 'wamid.duplicate')->get());
@@ -177,7 +191,7 @@ class WebhookPipelineTest extends TestCase
                             [
                                 'value' => [
                                     'metadata' => ['phone_number_id' => '123456789'],
-                                    'messages' => [$data + ['from' => '12345']],
+                                    'messages' => [$data + ['from' => '+15551234567']],
                                     'contacts' => [['profile' => ['name' => 'Tester']]]
                                 ]
                             ]
@@ -192,7 +206,7 @@ class WebhookPipelineTest extends TestCase
             ]);
 
             $job = new ProcessWebhookJob($payloadRecord->id);
-            $job->handle();
+            app()->call([$job, 'handle']);
 
             $this->assertDatabaseHas('messages', [
                 'whatsapp_message_id' => $data['id'],
@@ -214,7 +228,7 @@ class WebhookPipelineTest extends TestCase
                                 'metadata' => ['phone_number_id' => '123456789'],
                                 'messages' => [
                                     [
-                                        'from' => '1112223333',
+                                        'from' => '+15551112222',
                                         'id' => 'wamid.stop',
                                         'type' => 'text',
                                         'text' => ['body' => 'STOP']
@@ -234,9 +248,9 @@ class WebhookPipelineTest extends TestCase
         ]);
 
         $job = new ProcessWebhookJob($payloadRecord->id);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
-        $contact = \App\Models\Contact::where('phone_number', '1112223333')->first();
+        $contact = \App\Models\Contact::where('phone_number', '+15551112222')->first();
         $this->assertEquals('opted_out', $contact->opt_in_status);
         $this->assertDatabaseHas('consent_logs', [
             'contact_id' => $contact->id,

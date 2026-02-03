@@ -15,11 +15,28 @@ use Illuminate\Http\Request;
 
 class EcommerceIntegrationController extends Controller
 {
+    protected function assertIntegrationAccess(Integration $integration): void
+    {
+        $team = auth()->user()?->currentTeam;
+        if (!$team || $integration->team_id !== $team->id) {
+            abort(403, 'Unauthorized');
+        }
+    }
+
+    protected function assertProductAccess(Product $product): void
+    {
+        $team = auth()->user()?->currentTeam;
+        if (!$team || $product->team_id !== $team->id) {
+            abort(403, 'Unauthorized');
+        }
+    }
+
     /**
      * Get integration health and status.
      */
     public function health(Integration $integration, IntegrationHealthService $healthService)
     {
+        $this->assertIntegrationAccess($integration);
         $health = $healthService->checkHealth($integration);
 
         return response()->json([
@@ -33,6 +50,7 @@ class EcommerceIntegrationController extends Controller
      */
     public function sync(Integration $integration)
     {
+        $this->assertIntegrationAccess($integration);
         if ($integration->status === 'broken' && !request('force')) {
             return response()->json(['error' => 'Integration is marked as broken. Fix credentials first.'], 422);
         }
@@ -67,6 +85,7 @@ class EcommerceIntegrationController extends Controller
      */
     public function sessions(Integration $integration)
     {
+        $this->assertIntegrationAccess($integration);
         $sessions = SyncSession::where('integration_id', $integration->id)
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -80,6 +99,7 @@ class EcommerceIntegrationController extends Controller
      */
     public function lockField(Product $product, Request $request)
     {
+        $this->assertProductAccess($product);
         $request->validate([
             'field' => 'required|string',
             'lock' => 'required|boolean'
@@ -108,6 +128,7 @@ class EcommerceIntegrationController extends Controller
      */
     public function updateSettings(Integration $integration, Request $request)
     {
+        $this->assertIntegrationAccess($integration);
         $validated = $request->validate([
             'settings' => 'required|array',
             'webhook_secret' => 'nullable|string'

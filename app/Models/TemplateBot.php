@@ -10,9 +10,11 @@ class TemplateBot extends Model
     use HasFactory;
 
     protected $fillable = [
+        'team_id',
         'name',
         'rel_type',
         'template_id',
+        'whatsapp_template_id',
         'header_params',
         'body_params',
         'footer_params',
@@ -34,6 +36,11 @@ class TemplateBot extends Model
 
     public function template()
     {
-        return $this->belongsTo(WhatsappTemplate::class, 'template_id', 'template_id');
+        return $this->belongsTo(WhatsappTemplate::class, 'whatsapp_template_id', 'whatsapp_template_id');
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
     }
 }

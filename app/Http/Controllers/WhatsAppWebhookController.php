@@ -21,7 +21,12 @@ class WhatsAppWebhookController extends Controller
 
         // Fallback to config if not set in database
         if (empty($verifyToken)) {
-            $verifyToken = config('services.whatsapp.verify_token', 'my-secret-token');
+            $verifyToken = config('services.whatsapp.verify_token');
+        }
+
+        if (empty($verifyToken)) {
+            Log::error('WhatsApp webhook verify token not configured');
+            return response('Webhook verify token not configured', 500);
         }
 
         $mode = $request->query('hub_mode');
@@ -40,8 +45,10 @@ class WhatsAppWebhookController extends Controller
      */
     public function handle(Request $request)
     {
-        $logMsg = date('Y-m-d H:i:s') . " RAW WEBHOOK RECEIVED: " . json_encode($request->all()) . "\n";
-        \Illuminate\Support\Facades\File::append(base_path('app_debug.log'), $logMsg);
+        if (config('app.debug')) {
+            $logMsg = date('Y-m-d H:i:s') . " RAW WEBHOOK RECEIVED: " . json_encode($request->all()) . "\n";
+            \Illuminate\Support\Facades\File::append(base_path('app_debug.log'), $logMsg);
+        }
 
         Log::info("WhatsAppWebhookController: Webhook Received Raw", ['payload' => json_encode($request->all())]);
 

@@ -257,8 +257,16 @@ class InboundWebhookController extends Controller
      */
     public function getSourceUrl(Request $request, string $sourceSlug)
     {
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
+
         $source = WebhookSource::where('slug', $sourceSlug)
-            ->where('team_id', $request->user()->currentTeam->id)
+            ->where('team_id', $team->id)
             ->firstOrFail();
 
         return response()->json([

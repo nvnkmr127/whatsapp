@@ -47,7 +47,7 @@ class ApiTokenManager extends Component
     public function render()
     {
         return view('livewire.developer.api-token-manager', [
-            'tokens' => auth()->user()->tokens()->latest()->get(),
+            'tokens' => auth()->user()->tokens()->latest()->limit(50)->get(),
             'availablePermissions' => Jetstream::$permissions,
             'defaultPermissions' => Jetstream::$defaultPermissions,
         ]);

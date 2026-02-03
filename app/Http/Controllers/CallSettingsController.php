@@ -17,6 +17,12 @@ class CallSettingsController extends Controller
     public function update(Request $request, string $phoneNumberId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         // Validate request
         $validator = Validator::make($request->all(), [
@@ -25,9 +31,9 @@ class CallSettingsController extends Controller
             'business_hours' => 'sometimes|array',
             'business_hours.timezone' => 'required_with:business_hours|string',
             'business_hours.hours' => 'required_with:business_hours|array',
-            'business_hours.hours.*.day' => 'required|in:MON,TUE,WED,THU,FRI,SAT,SUN',
-            'business_hours.hours.*.open' => 'required|date_format:H:i',
-            'business_hours.hours.*.close' => 'required|date_format:H:i',
+            'business_hours.hours.*.day' => 'required_with:business_hours.hours|in:MON,TUE,WED,THU,FRI,SAT,SUN',
+            'business_hours.hours.*.open' => 'required_with:business_hours.hours|date_format:H:i',
+            'business_hours.hours.*.close' => 'required_with:business_hours.hours|date_format:H:i',
             'callback_permission_status' => 'sometimes|in:enabled,disabled',
             'sip' => 'sometimes|array',
         ]);
@@ -100,6 +106,12 @@ class CallSettingsController extends Controller
     public function show(Request $request, string $phoneNumberId)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
         $includeSip = $request->boolean('include_sip_credentials', false);
 
         try {
@@ -159,6 +171,12 @@ class CallSettingsController extends Controller
     public function generateLink(Request $request)
     {
         $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No team context',
+            ], 400);
+        }
 
         try {
             $whatsappService = new WhatsAppService($team);

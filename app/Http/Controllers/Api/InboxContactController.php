@@ -26,9 +26,16 @@ class InboxContactController extends Controller
             'phone' => 'required|string',
         ]);
 
+        $teamId = auth()->user()?->current_team_id;
+        if (!$teamId) {
+            return response()->json([
+                'message' => 'No team context',
+            ], 400);
+        }
+
         $contact = $this->resolver->resolve(
             $request->input('phone'),
-            auth()->user()->current_team_id
+            $teamId
         );
 
         if (!$contact) {
@@ -52,9 +59,16 @@ class InboxContactController extends Controller
             'phones.*' => 'required|string',
         ]);
 
+        $teamId = auth()->user()?->current_team_id;
+        if (!$teamId) {
+            return response()->json([
+                'message' => 'No team context',
+            ], 400);
+        }
+
         $contacts = $this->resolver->resolveBatch(
             $request->input('phones'),
-            auth()->user()->current_team_id
+            $teamId
         );
 
         return response()->json([
@@ -74,6 +88,12 @@ class InboxContactController extends Controller
             'assigned_to' => 'sometimes|integer|nullable',
             'custom_attributes' => 'sometimes|array',
         ]);
+
+        if ($contact->team_id !== auth()->user()?->current_team_id) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 403);
+        }
 
         // Check for conflicts (optimistic locking)
         $clientVersion = $request->input('version');
@@ -109,6 +129,12 @@ class InboxContactController extends Controller
         $request->validate([
             'agent_id' => 'required|integer|exists:users,id',
         ]);
+
+        if ($contact->team_id !== auth()->user()?->current_team_id) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 403);
+        }
 
         $contact->update([
             'assigned_to' => $request->input('agent_id'),
