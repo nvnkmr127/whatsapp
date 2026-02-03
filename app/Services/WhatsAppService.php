@@ -1397,7 +1397,8 @@ class WhatsAppService
             try {
                 $startTime = microtime(true);
 
-                $response = $this->sendRequest("calls/{$callId}", $payload, 'post');
+                $payload['call_id'] = $callId;
+                $response = $this->sendRequest("calls", $payload, 'post');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
@@ -1490,11 +1491,12 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'action' => 'REJECT',
+            'action' => 'reject',
+            'call_id' => $callId,
         ];
 
         try {
-            $response = $this->sendRequest("calls/{$callId}", $payload, 'post');
+            $response = $this->sendRequest("calls", $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsRejected();
@@ -1537,11 +1539,12 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'action' => 'TERMINATE',
+            'action' => 'terminate',
+            'call_id' => $callId,
         ];
 
         try {
-            $response = $this->sendRequest("calls/{$callId}", $payload, 'post');
+            $response = $this->sendRequest("calls", $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsEnded();
@@ -1581,6 +1584,9 @@ class WhatsAppService
             ->firstOrFail();
 
         try {
+            // Note: WhatsApp Cloud API v21.0 does not currently support direct polling for call status via /calls/{id}.
+            // Real-time status updates are delivered via webhooks.
+            /*
             $response = $this->sendRequest("calls/{$callId}", [], 'get');
 
             if ($response['success'] ?? false) {
@@ -1590,6 +1596,7 @@ class WhatsAppService
                     $call->update(['status' => $remoteStatus]);
                 }
             }
+            */
 
             return [
                 'success' => true,
