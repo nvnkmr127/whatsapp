@@ -21,12 +21,12 @@ class CallConsentService
     /**
      * Validate if a call can be initiated based on trigger and consent rules.
      */
-    public function validateCallTrigger(Contact $contact, string $triggerType, array $context = []): array
+    public function validateCallTrigger(Contact $contact, string $triggerType, array $context = [], bool $dryRun = false): array
     {
         $checks = [];
 
         // 1. Check trigger type validity
-        $checks['trigger_valid'] = $this->validateTriggerType($triggerType, $context);
+        $checks['trigger_valid'] = $this->validateTriggerType($triggerType, $context, $dryRun);
         if (!$checks['trigger_valid']['passed']) {
             return $this->buildBlockedResponse('trigger', $checks);
         }
@@ -70,9 +70,11 @@ class CallConsentService
     /**
      * Validate trigger type.
      */
-    protected function validateTriggerType(string $triggerType, array $context): array
+    protected function validateTriggerType(string $triggerType, array $context, bool $dryRun = false): array
     {
-        Log::info('CallConsentService: Validating Trigger', ['type' => $triggerType, 'context' => $context]);
+        if (!$dryRun) {
+            Log::info('CallConsentService: Validating Trigger', ['type' => $triggerType, 'context' => $context]);
+        }
 
         $validTriggers = ['user_initiated', 'agent_offered'];
 

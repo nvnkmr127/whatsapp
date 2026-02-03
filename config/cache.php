@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => 'database',
+    'default' => env('CACHE_STORE', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -72,7 +72,11 @@ return [
             ],
         ],
 
-
+        'redis' => [
+            'driver' => 'redis',
+            'connection' => env('CACHE_REDIS_CONNECTION', 'cache'),
+            'lock_connection' => env('CACHE_REDIS_LOCK_CONNECTION', 'default'),
+        ],
 
         'dynamodb' => [
             'driver' => 'dynamodb',

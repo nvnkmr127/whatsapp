@@ -32,7 +32,7 @@ class CallEligibilityService
 
         // 0. Validate trigger and consent (NEW)
         $consentService = new CallConsentService($this->team);
-        $consentCheck = $consentService->validateCallTrigger($contact, $triggerType, $context);
+        $consentCheck = $consentService->validateCallTrigger($contact, $triggerType, $context, $dryRun);
 
         if (!$consentCheck['allowed']) {
             if (!$dryRun) {
