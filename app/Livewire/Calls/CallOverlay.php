@@ -163,6 +163,11 @@ class CallOverlay extends Component
 
     public function handleRinging($event)
     {
+        $callId = $event['call_id'] ?? $event['call']['call_id'] ?? null;
+        if ($this->callId && $callId && $callId !== $this->callId) {
+            return;
+        }
+
         if ($this->status === 'idle') {
             $this->handleOffered($event);
         }
@@ -172,10 +177,19 @@ class CallOverlay extends Component
     {
         Log::info("CallOverlay: Received CallAnswered event", ['event' => $event]);
 
-        $this->status = 'active';
-
-        // Robust extraction (handles direct or nested payloads)
         $callData = $event['call'] ?? $event;
+        $callId = $callData['call_id'] ?? null;
+
+        if ($this->callId && $callId && $callId !== $this->callId) {
+            return;
+        }
+
+        // If we are idle, this call isn't for us (another agent answered their own outbound call)
+        if ($this->status === 'idle') {
+            return;
+        }
+
+        $this->status = 'active';
 
         // If the server has an answer SDP (e.g. from mobile), we need to send it to the JS PeerConnection
         $answeredSdp = $callData['metadata']['answered_sdp'] ?? null;
@@ -194,6 +208,18 @@ class CallOverlay extends Component
 
     public function handleEnded($event)
     {
+        $callData = $event['call'] ?? $event;
+        $callId = $callData['call_id'] ?? null;
+
+        if ($this->callId && $callId && $callId !== $this->callId) {
+            return;
+        }
+
+        // Only show ended state if we were actually in a call
+        if ($this->status === 'idle') {
+            return;
+        }
+
         $this->status = 'ended';
         $this->dispatch('call-stopped'); // For local JS cleanup
 
@@ -203,6 +229,17 @@ class CallOverlay extends Component
 
     public function handleFailed($event)
     {
+        $callData = $event['call'] ?? $event;
+        $callId = $callData['call_id'] ?? null;
+
+        if ($this->callId && $callId && $callId !== $this->callId) {
+            return;
+        }
+
+        if ($this->status === 'idle') {
+            return;
+        }
+
         $this->status = 'ended';
         $this->dispatch('notify', [
             'type' => 'error',
@@ -213,8 +250,20 @@ class CallOverlay extends Component
 
     public function handleCallTaken($event)
     {
+        $callId = $event['call_id'] ?? null;
+        if ($this->callId && $callId && $callId !== $this->callId) {
+            return;
+        }
+
         // Another agent answered
-        $this->occupiedBy = $event['agent_name'] ?? 'Another Agent';
+        $agentName = $event['agent_name'] ?? 'Another Agent';
+
+        // Don't lock if WE are the ones who took it
+        if (auth()->check() && auth()->user()->name === $agentName) {
+            return;
+        }
+
+        $this->occupiedBy = $agentName;
         $this->isLocked = true;
 
         // Auto-close after notification
