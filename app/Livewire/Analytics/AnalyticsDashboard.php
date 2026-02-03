@@ -22,60 +22,66 @@ class AnalyticsDashboard extends Component
     {
         $team = auth()->user()->currentTeam;
         $teamId = $team->id;
+        $cachePrefix = "analytics:team:{$teamId}";
 
-        // 1. Wallet
+        // 1. Wallet (lightweight, ok to fetch)
         $wallet = TeamWallet::firstOrCreate(['team_id' => $teamId]);
 
-        // 2. Usage Stats
-        $msgSent = Message::where('team_id', $teamId)
-            ->where('direction', 'outbound')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->count();
+        // 2. Usage Stats (cached briefly to reduce repeated queries per re-render)
+        $stats = cache()->remember("{$cachePrefix}:stats:{$this->dateRange}", 60, function () use ($teamId) {
+            $start = now()->subDays(30);
 
-        $msgReceived = Message::where('team_id', $teamId)
-            ->where('direction', 'inbound')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->count();
+            return [
+                'msgSent' => Message::where('team_id', $teamId)
+                    ->where('direction', 'outbound')
+                    ->where('created_at', '>=', $start)
+                    ->count(),
+                'msgReceived' => Message::where('team_id', $teamId)
+                    ->where('direction', 'inbound')
+                    ->where('created_at', '>=', $start)
+                    ->count(),
+                'ticketsResolved' => Ticket::where('team_id', $teamId)
+                    ->where('status', 'resolved')
+                    ->count(),
+                'transactions' => TeamTransaction::where('team_id', $teamId)
+                    ->latest()
+                    ->take(10)
+                    ->get(),
+                'lastUpdated' => Message::where('team_id', $teamId)->latest()->value('updated_at') ?? now(),
+            ];
+        });
 
-        // 3. Agent Performance
-        $ticketsResolved = Ticket::where('team_id', $teamId)
-            ->where('status', 'resolved')
-            ->count();
+        // 3. Official Meta Analytics (cached longer to avoid frequent API calls)
+        $this->metaAnalytics = cache()->remember("{$cachePrefix}:meta:{$this->dateRange}", 300, function () use ($team) {
+            $waService = new \App\Services\WhatsAppService($team);
+            try {
+                $metaData = $waService->getAnalytics(
+                    now()->subDays(30),
+                    now(),
+                    'DAILY',
+                    ['conversation_analytics', 'cost']
+                );
+                return $metaData['data'] ?? [];
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning("Failed to fetch Meta analytics: " . $e->getMessage());
+                return [];
+            }
+        });
 
-        // 4. Billing History
-        $transactions = TeamTransaction::where('team_id', $teamId)
-            ->latest()
-            ->take(10)
-            ->get();
-
-        // 5. Official Meta Analytics
-        $waService = new \App\Services\WhatsAppService($team);
-        try {
-            $metaData = $waService->getAnalytics(
-                now()->subDays(30),
-                now(),
-                'DAILY',
-                ['conversation_analytics', 'cost']
-            );
-            $this->metaAnalytics = $metaData['data'] ?? [];
-        } catch (\Exception $e) {
-            // Fallback or log, keep UI running
-            \Illuminate\Support\Facades\Log::warning("Failed to fetch Meta analytics: " . $e->getMessage());
-            $this->metaAnalytics = [];
-        }
-
-        $this->loadChartData($teamId);
+        $this->chartData = cache()->remember("{$cachePrefix}:chart:{$this->dateRange}", 120, function () use ($teamId) {
+            return $this->buildChartData($teamId);
+        });
 
         return view('livewire.analytics.analytics-dashboard', [
             'wallet' => $wallet,
-            'msgSent' => $msgSent,
-            'msgReceived' => $msgReceived,
-            'ticketsResolved' => $ticketsResolved,
-            'transactions' => $transactions,
+            'msgSent' => $stats['msgSent'],
+            'msgReceived' => $stats['msgReceived'],
+            'ticketsResolved' => $stats['ticketsResolved'],
+            'transactions' => $stats['transactions'],
             'metaAnalytics' => $this->metaAnalytics,
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())
                 ->where('report_type', 'monthly_usage')->exists(),
-            'lastUpdated' => Message::latest()->value('updated_at') ?? now()
+            'lastUpdated' => $stats['lastUpdated'],
         ]);
     }
 
@@ -91,6 +97,11 @@ class AnalyticsDashboard extends Component
     }
 
     protected function loadChartData($teamId)
+    {
+        $this->chartData = $this->buildChartData($teamId);
+    }
+
+    protected function buildChartData($teamId)
     {
         $startDate = now()->subDays($this->dateRange);
 
@@ -114,7 +125,7 @@ class AnalyticsDashboard extends Component
             }
         }
 
-        $this->chartData = [
+        return [
             'labels' => array_keys($dates),
             'datasets' => [
                 [

@@ -97,7 +97,19 @@ class WhatsAppCallWebhookController extends Controller
         }
 
         // Determine if this is an inbound or outbound call
-        $direction = ($from === $team->whatsapp_phone_number_id) ? 'outbound' : 'inbound';
+        $direction = $callData['direction'] ?? null;
+        if ($direction) {
+            $direction = in_array($direction, ['business_initiated', 'outbound'], true) ? 'outbound' : 'inbound';
+        } else {
+            $phoneNumberId = $team->whatsapp_phone_number_id;
+            if ($from === $phoneNumberId) {
+                $direction = 'outbound';
+            } elseif ($to === $phoneNumberId) {
+                $direction = 'inbound';
+            } else {
+                $direction = 'inbound';
+            }
+        }
 
         // Find or create call record
         $call = WhatsAppCall::firstOrCreate(

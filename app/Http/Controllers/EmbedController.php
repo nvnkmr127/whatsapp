@@ -78,7 +78,8 @@ class EmbedController extends Controller
 
         return view('chat.embedded', [
             'contactId' => $contactId,
-            'permissions' => $payload['permissions'] ?? ['read', 'write']
+            'permissions' => $payload['permissions'] ?? ['read', 'write'],
+            'token' => $token,
         ]);
     }
 }

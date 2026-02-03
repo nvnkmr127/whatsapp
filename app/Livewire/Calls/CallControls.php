@@ -30,6 +30,9 @@ class CallControls extends Component
 
     public function mount(Contact $contact)
     {
+        if ($contact->team_id !== auth()->user()->currentTeam->id) {
+            abort(403, 'Contact does not belong to this team.');
+        }
         $this->contact = $contact;
         $this->teamId = auth()->user()->currentTeam->id;
         $this->checkActiveCall();

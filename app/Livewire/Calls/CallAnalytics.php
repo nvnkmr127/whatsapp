@@ -4,6 +4,7 @@ namespace App\Livewire\Calls;
 
 use App\Services\BillingService;
 use App\Services\CallService;
+use App\Models\Contact;
 use Livewire\Component;
 
 class CallAnalytics extends Component
@@ -57,23 +58,28 @@ class CallAnalytics extends Component
         // Get cost breakdown (last 30 days)
         $costBreakdown = $billingService->getCallCostBreakdown($team, 30);
 
-        // Get top contacts by call volume
-        $topContacts = \App\Models\WhatsAppCall::where('team_id', $team->id)
+        // Get top contacts by call volume (aggregate in SQL for performance)
+        $topContactsRaw = \App\Models\WhatsAppCall::selectRaw(
+            'contact_id, COUNT(*) as total_calls, SUM(duration_seconds) as total_duration, SUM(cost_amount) as total_cost'
+        )
+            ->where('team_id', $team->id)
             ->whereBetween('created_at', $this->dateRange)
-            ->with('contact:id,name,phone_number')
-            ->get()
             ->groupBy('contact_id')
-            ->map(function ($calls) {
-                return [
-                    'contact' => $calls->first()->contact,
-                    'total_calls' => $calls->count(),
-                    'total_duration' => $calls->sum('duration_seconds'),
-                    'total_cost' => $calls->sum('cost_amount'),
-                ];
-            })
-            ->sortByDesc('total_calls')
-            ->take(10)
-            ->values();
+            ->orderByDesc('total_calls')
+            ->limit(10)
+            ->get();
+
+        $contactIds = $topContactsRaw->pluck('contact_id')->filter()->values();
+        $contacts = Contact::whereIn('id', $contactIds)->get()->keyBy('id');
+
+        $topContacts = $topContactsRaw->map(function ($row) use ($contacts) {
+            return [
+                'contact' => $row->contact_id ? $contacts->get($row->contact_id) : null,
+                'total_calls' => (int) $row->total_calls,
+                'total_duration' => (int) $row->total_duration,
+                'total_cost' => (float) $row->total_cost,
+            ];
+        });
 
         return view('livewire.calls.call-analytics', [
             'statistics' => $statistics,

@@ -216,7 +216,7 @@ class MessageWindow extends Component
         if (!$this->conversation)
             return;
 
-        $agent = \App\Models\User::find($agentId);
+        $agent = Auth::user()->currentTeam->users()->find($agentId);
         if (!$agent)
             return;
 
@@ -275,10 +275,11 @@ class MessageWindow extends Component
     public function sendVoiceNote($audioFile)
     {
         // This is called after Livewire finishes uploading the blob
-        if (!$this->conversation || !$this->newAttachment)
+        $file = $audioFile ?: $this->newAttachment;
+        if (!$this->conversation || !$file)
             return;
 
-        $path = $this->newAttachment->store('voice-notes', 'public');
+        $path = $file->store('voice-notes', 'public');
 
         $message = \App\Models\Message::create([
             'team_id' => Auth::user()->currentTeam->id,
@@ -301,7 +302,9 @@ class MessageWindow extends Component
             $message->id
         );
 
-        $this->reset('newAttachment');
+        if ($this->newAttachment) {
+            $this->reset('newAttachment');
+        }
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
@@ -426,7 +429,12 @@ class MessageWindow extends Component
 
     public function addReaction($messageId, $emoji)
     {
-        $message = \App\Models\Message::find($messageId);
+        if (!Auth::check() || !Auth::user()->currentTeam) {
+            return;
+        }
+
+        $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+            ->find($messageId);
         if (!$message)
             return;
 

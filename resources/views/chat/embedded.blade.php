@@ -21,7 +21,11 @@
 
 <body class="font-sans antialiased text-gray-900 bg-white h-screen overflow-hidden">
     <div class="h-full flex flex-col">
-        <livewire:chat.embedded-chat :contact-id="$contactId" :permissions="$permissions ?? ['read', 'write']" />
+        <livewire:chat.embedded-chat
+            :contact-id="$contactId"
+            :permissions="$permissions ?? ['read', 'write']"
+            :token="$token"
+        />
     </div>
 
     @livewireScripts

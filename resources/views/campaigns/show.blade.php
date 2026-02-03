@@ -6,6 +6,6 @@
     </x-slot>
 
     <div class="bg-gray-100 min-h-screen">
-        @livewire('campaigns.campaign-details', ['campaignId' => $campaignId])
+        @livewire('campaigns.show', ['campaignId' => $campaignId])
     </div>
 </x-app-layout>

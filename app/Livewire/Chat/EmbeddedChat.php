@@ -15,6 +15,7 @@ class EmbeddedChat extends Component
 
     public $contactId;
     public $permissions = [];
+    public $token;
     public $conversation;
     public $messageBody = '';
     public $attachments = []; // Future usage
@@ -23,11 +24,35 @@ class EmbeddedChat extends Component
         'echo:conversation.{conversation.id},MessageReceived' => 'handleIncomingMessage',
     ];
 
-    public function mount($contactId, $permissions = ['read', 'write'])
+    public function mount($contactId, $permissions = ['read', 'write'], $token = null)
     {
-        $this->contactId = $contactId;
-        $this->permissions = $permissions;
+        $this->token = $token;
+        $this->validateEmbedTokenOrAbort($permissions, $contactId);
         $this->loadConversation();
+    }
+
+    public function hydrate()
+    {
+        $this->validateEmbedTokenOrAbort($this->permissions, $this->contactId);
+    }
+
+    protected function validateEmbedTokenOrAbort($fallbackPermissions, $fallbackContactId)
+    {
+        if (!$this->token) {
+            abort(403, 'Missing Token');
+        }
+
+        $payload = app(\App\Services\EmbedTokenService::class)->validateToken($this->token);
+        if (!$payload) {
+            abort(403, 'Invalid or Expired Token');
+        }
+
+        $this->contactId = $payload['contact_id'] ?? $fallbackContactId;
+        if (!$this->contactId) {
+            abort(403, 'Invalid Token Contact');
+        }
+
+        $this->permissions = $payload['permissions'] ?? $fallbackPermissions ?? ['read', 'write'];
     }
 
     public function loadConversation()

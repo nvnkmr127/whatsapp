@@ -98,7 +98,10 @@ class CallOverlay extends Component
             'has_sdp' => !empty($sdp)
         ]);
 
-        $contact = Contact::find($contactId);
+        $teamId = auth()->user()?->currentTeam?->id;
+        $contact = $teamId && $contactId
+            ? Contact::where('team_id', $teamId)->find($contactId)
+            : null;
 
         // Fallback if phoneNumber is missing
         if (!$phoneNumber && $contact) {
