@@ -3,12 +3,12 @@
 namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
-use App\Services\WhatsAppService;
+// use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Log;
 
 class MessageWindow extends Component
 {
@@ -673,58 +673,6 @@ class MessageWindow extends Component
             $this->selectedTemplateId = null; // Reset after sending
         }
     }
-
-    // The original sendTemplate method is now modified to redirect to the modal flow.
-    // The logic for sending templates with variables is now in sendTemplateWithVariables().
-    // The original sendTemplate method's body is replaced by the instruction.
-    // public function sendTemplate($templateId)
-    // {
-    //     \Log::info('sendTemplate called with ID: ' . $templateId);
-
-    //     $template = \App\Models\WhatsappTemplate::find($templateId);
-
-    //     if (!$template) {
-    //         \Log::error('Template not found: ' . $templateId);
-    //         session()->flash('error', 'Template not found');
-    //         return;
-    //     }
-
-    //     if (!$this->conversation) {
-    //         \Log::error('No conversation found');
-    //         session()->flash('error', 'No conversation found');
-    //         return;
-    //     }
-
-    //     \Log::info('Sending template: ' . $template->name . ' to ' . $this->conversation->contact->phone_number);
-
-    //     $waService = new WhatsAppService();
-    //     $waService->setTeam(Auth::user()->currentTeam);
-
-    //     try {
-    //         // For now, sending with no parameters. Future: Support variables.
-    //         $response = $waService->sendTemplate(
-    //             $this->conversation->contact->phone_number,
-    //             $template->name,
-    //             $template->language ?? 'en_US'
-    //         );
-
-    //         \Log::info('Template response: ', $response);
-
-    //         if ($response['success'] ?? false) {
-    //             // Reset and maybe refresh conversation
-    //             $this->dispatch('messageSent'); // Optional
-    //             $this->loadConversation();
-    //             session()->flash('success', 'Template sent successfully!');
-    //         } else {
-    //             $errorMsg = $response['error']['message'] ?? 'Unknown error';
-    //             \Log::error('Template failed: ' . $errorMsg);
-    //             session()->flash('error', 'Template failed: ' . $errorMsg);
-    //         }
-    //     } catch (\Exception $e) {
-    //         \Log::error('Template exception: ' . $e->getMessage());
-    //         session()->flash('error', $e->getMessage());
-    //     }
-    // }
 
     public function openInteractiveButtonsModal()
     {

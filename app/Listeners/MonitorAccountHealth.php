@@ -8,7 +8,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use App\Models\Team;
 use Illuminate\Support\Facades\Mail;
-// use App\Mail\AccountRiskAlert; // Assuming we might want a mail class later
 
 class MonitorAccountHealth implements ShouldQueue
 {

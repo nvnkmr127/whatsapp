@@ -208,7 +208,7 @@ class WhatsAppSetupStateMachine
     {
         WhatsAppSetupAudit::create([
             'team_id' => $team->id,
-            'user_id' => auth()->id(),
+            'user_id' => $metadata['user_id'] ?? auth()->id(),
             'action' => 'state_transition',
             'status' => 'success',
             'metadata' => [
@@ -247,7 +247,14 @@ class WhatsAppSetupStateMachine
             'campaigns_paused' => $pausedCount,
         ]);
 
-        // TODO: Send critical notification to team owner
+        if ($team->owner) {
+            $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                $team,
+                'quality_red',
+                "CRITICAL: Your WhatsApp Account has been SUSPENDED. All campaigns are paused.",
+                ['status' => 'suspended']
+            ));
+        }
     }
 
     /**
@@ -257,7 +264,14 @@ class WhatsAppSetupStateMachine
     {
         Log::warning("WhatsApp account degraded for team {$team->id}");
 
-        // TODO: Send warning notification to team owner
+        if ($team->owner) {
+            $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                $team,
+                'quality_yellow',
+                "WARNING: Your WhatsApp Account status is DEGRADED. Please check your dashboard.",
+                ['status' => 'degraded']
+            ));
+        }
     }
 
     /**
@@ -267,7 +281,14 @@ class WhatsAppSetupStateMachine
     {
         Log::info("WhatsApp account activated for team {$team->id}");
 
-        // TODO: Send success notification to team owner
+        if ($team->owner) {
+            $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                $team,
+                'setup_success',
+                "Your WhatsApp Business Account is now ACTIVE and ready to send messages.",
+                ['status' => 'active']
+            ));
+        }
     }
 
     /**
@@ -277,6 +298,13 @@ class WhatsAppSetupStateMachine
     {
         Log::warning("WhatsApp token expired for team {$team->id}");
 
-        // TODO: Attempt auto-refresh or notify owner
+        if ($team->owner) {
+            $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                $team,
+                'token_expiry',
+                "ACTION REQUIRED: Your WhatsApp Access Token has expired. Please reconnect.",
+                ['status' => 'token_expired']
+            ));
+        }
     }
 }

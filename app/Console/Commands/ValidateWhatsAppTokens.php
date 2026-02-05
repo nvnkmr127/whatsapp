@@ -51,7 +51,7 @@ class ValidateWhatsAppTokens extends Command
                         $daysRemaining = $team->whatsapp_token_expires_at->diffInDays();
                         $this->warn("Team {$team->id}: Token expires in {$daysRemaining} days");
                         $tokensExpiringSoon++;
-                        // TODO: Send notification
+                        \App\Events\WhatsAppTokenExpiringSoon::dispatch($team);
                     }
 
                     // Validate token with API call
@@ -101,8 +101,9 @@ class ValidateWhatsAppTokens extends Command
     {
         Log::warning("WhatsApp token expired for team {$team->id}");
 
-        // TODO: Send notification to team owner
-        // $team->owner->notify(new WhatsAppTokenExpired($team));
+        if ($team->owner) {
+            $team->owner->notify(new \App\Notifications\WhatsAppTokenExpired($team));
+        }
     }
 
     /**

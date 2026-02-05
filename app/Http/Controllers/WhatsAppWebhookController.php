@@ -49,7 +49,8 @@ class WhatsAppWebhookController extends Controller
             try {
                 \Illuminate\Support\Facades\Log::channel('whatsapp')->info("RAW WEBHOOK RECEIVED", $request->all());
             } catch (\Exception $e) {
-                // Silently fail if logging fails
+                // Fallback to default logger if dedicated channel fails
+                Log::warning("Failed to write to whatsapp log channel: " . $e->getMessage());
             }
         }
 

@@ -79,7 +79,15 @@ class DetectStuckSetups extends Command
                 $this->info("  → Rolled back to NOT_CONFIGURED");
                 $fixedCount++;
 
-                // TODO: Notify team owner about stuck setup
+                // Notify team owner about stuck setup
+                if ($team->owner) {
+                    $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
+                        $team,
+                        'setup_stuck',
+                        "Your WhatsApp setup was detected as stuck and has been reset. Please restart the setup process.",
+                        ['reset_at' => now()]
+                    ));
+                }
 
             } catch (\Exception $e) {
                 $this->error("  → Failed to fix: {$e->getMessage()}");

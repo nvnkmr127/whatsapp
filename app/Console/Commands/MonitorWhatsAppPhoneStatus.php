@@ -255,8 +255,12 @@ class MonitorWhatsAppPhoneStatus extends Command
                 'whatsapp_phone_status_checked_at' => now(),
             ]);
 
-            // TODO: Notify about token issue
+            // Notify about token issue
             $this->error("Team {$team->id}: Token error - {$error}");
+
+            if ($team->owner) {
+                $team->owner->notify(new \App\Notifications\WhatsAppTokenExpired($team));
+            }
         }
     }
 }

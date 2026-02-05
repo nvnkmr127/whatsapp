@@ -7,6 +7,7 @@ use App\Models\TenantBackup;
 use App\Models\Integration;
 use App\Services\Integrations\GoogleDriveService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -292,6 +293,7 @@ class BackupService
                         Storage::disk('google_drive')->delete($remotePath);
                     }
                 } catch (Exception $e) {
+                    Log::warning("Failed to delete old backup from Google Drive: " . $e->getMessage());
                 }
             }
 
@@ -455,6 +457,7 @@ class BackupService
 
     protected function downloadFromGoogleDrive(TenantBackup $backup, $destPath)
     {
+        // 1. Attempt Tenant Integration
         if ($backup->type === 'tenant') {
             $gdIntegration = Integration::where('team_id', $backup->team_id)
                 ->where('type', 'google_drive')
@@ -462,12 +465,35 @@ class BackupService
                 ->first();
 
             if ($gdIntegration) {
-                // Logic to download from Google Drive would go here using GoogleDriveService
-                throw new Exception("Cloud restore not fully implemented yet.");
+                try {
+                    $gdService = new GoogleDriveService($gdIntegration);
+                    $file = $gdService->findFileByName($backup->filename);
+
+                    if ($file) {
+                        $gdService->downloadFile($file['id'], $destPath);
+                        return;
+                    }
+                } catch (Exception $e) {
+                    Log::error("Failed to download from Google Drive Integration for Team {$backup->team_id}: " . $e->getMessage());
+                }
             }
         }
 
-        throw new Exception("Backup file not found locally or in cloud.");
+        // 2. Fallback to Global Google Drive Disk (if configured)
+        if (config('filesystems.disks.google_drive')) {
+            $remotePath = "{$backup->path}{$backup->filename}";
+            try {
+                if (Storage::disk('google_drive')->exists($remotePath)) {
+                    $content = Storage::disk('google_drive')->get($remotePath);
+                    file_put_contents($destPath, $content);
+                    return;
+                }
+            } catch (Exception $e) {
+                Log::error("Failed to download from Global Google Drive: " . $e->getMessage());
+            }
+        }
+
+        throw new Exception("Backup file '{$backup->filename}' not found locally or in cloud.");
     }
 
     protected function clearTenantData($teamId)
@@ -497,6 +523,13 @@ class BackupService
 
     protected function executeSql($sql)
     {
-        DB::unprepared($sql);
+        // WARNING: Executing raw SQL from backup files is dangerous if the file source is untrusted.
+        // Ensure backups are stored securely and checksums are verified before restoration.
+        try {
+            DB::unprepared($sql);
+        } catch (Exception $e) {
+            Log::error("SQL Restore failed: " . $e->getMessage());
+            throw $e;
+        }
     }
 }

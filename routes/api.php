@@ -38,6 +38,10 @@ Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'
     Route::post('/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
 
     // Conversation Locks (Multi-Agent)
+    Route::post('/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
+    Route::post('/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
+    Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
+    Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
 
 
     // Inbox Contact Integration

@@ -130,4 +130,45 @@ class GoogleDriveService
             ]);
         }
     }
+
+    /**
+     * Find a file by name in the backup folder.
+     */
+    public function findFileByName($filename)
+    {
+        $this->refreshTokenIfNeeded();
+        $folderId = $this->getOrCreateBackupFolder();
+
+        $query = "name = '{$filename}' and '{$folderId}' in parents and trashed = false";
+        $response = Http::withToken($this->integration->credentials['access_token'])
+            ->get("https://www.googleapis.com/drive/v3/files", [
+                'q' => $query,
+                'fields' => 'files(id, name, mimeType)'
+            ]);
+
+        if ($response->successful() && !empty($response->json('files'))) {
+            return $response->json('files.0');
+        }
+
+        return null;
+    }
+
+    /**
+     * Download a file from Google Drive.
+     */
+    public function downloadFile($fileId, $destinationPath)
+    {
+        $this->refreshTokenIfNeeded();
+
+        $response = Http::withToken($this->integration->credentials['access_token'])
+            ->get("https://www.googleapis.com/drive/v3/files/{$fileId}", [
+                'alt' => 'media'
+            ]);
+
+        if (!$response->successful()) {
+            throw new Exception("Google Drive download failed: " . $response->body());
+        }
+
+        file_put_contents($destinationPath, $response->body());
+    }
 }

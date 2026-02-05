@@ -210,8 +210,20 @@ class ProcessMappedWebhookJob implements ShouldQueue
             $automationVariables[$varName] = $this->payload->mapped_data[$field] ?? '';
         }
 
-        // TODO: Implement automation triggering
-        // This would integrate with your automation system
+        $automation = \App\Models\Automation::find($automationId);
+        if (!$automation) {
+            throw new \Exception("Automation ID {$automationId} not found");
+        }
+
+        $teamId = $this->payload->source->team_id;
+        $contact = Contact::firstOrCreate(
+            ['team_id' => $teamId, 'phone_number' => $phoneNumber],
+            ['name' => 'Webhook Contact']
+        );
+
+        $automationService = app(\App\Services\AutomationService::class);
+        $automationService->start($automation, $contact, $automationVariables);
+
         Log::info('Webhook triggered automation', [
             'automation_id' => $automationId,
             'phone' => $phoneNumber,

@@ -46,6 +46,17 @@ class CheckSlaBreaches extends Command
                 'type' => 'system'
             ]);
 
+            // Dispatch notification to assigned agent or team owner
+            $userToNotify = $contact->assignedAgent ?? $contact->team->owner;
+            if ($userToNotify) {
+                $userToNotify->notify(new \App\Notifications\WhatsAppHealthNotification(
+                    $contact->team,
+                    'sla_breach',
+                    "SLA Breach detected for Contact: {$contact->name} ({$contact->phone_number}). Waiting > {$hours}h.",
+                    ['contact_id' => $contact->id]
+                ));
+            }
+
             $this->info("Flagged Contact ID: {$contact->id}");
         }
 

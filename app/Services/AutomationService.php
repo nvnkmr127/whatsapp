@@ -164,7 +164,7 @@ class AutomationService
     /**
      * Start a new automation flow using the deterministic engine.
      */
-    public function start(Automation $automation, Contact $contact)
+    public function start(Automation $automation, Contact $contact, array $initialVariables = [])
     {
         $lock = Cache::lock("automation_start_{$contact->id}", 10);
 
@@ -217,7 +217,7 @@ class AutomationService
                 'status' => 'active',
                 'version' => 1,
                 'step_count' => 0,
-                'state_data' => ['current_node_id' => $startNodeId, 'variables' => []],
+                'state_data' => ['current_node_id' => $startNodeId, 'variables' => $initialVariables],
                 'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']]
             ]);
 

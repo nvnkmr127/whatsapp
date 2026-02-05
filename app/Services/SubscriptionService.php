@@ -60,28 +60,23 @@ class SubscriptionService
         $currentPlanName = $team->subscription_plan ?? 'basic';
         $impact = $this->analyzeImpact($team, $newPlanName);
 
-        DB::transaction(function () use ($team, $newPlanName, $impact) {
+        DB::transaction(function () use ($team, $newPlanName, $impact, $currentPlanName) {
             $team->subscription_plan = $newPlanName;
             $team->subscription_status = 'active';
 
             // Set grace period if downgrade or resource overage
             if ($impact['type'] === 'downgrade' || !$impact['is_safe']) {
-                // column subscription_grace_ends_at (pending migration)
-                // We will attempt to save it, but if migration failed, this might throw.
-                // For now, let's just log it if we can't save.
-                try {
-                    $team->subscription_grace_ends_at = now()->addDays(7);
-                } catch (\Exception $e) {
-                    Log::warning("Could not set subscription_grace_ends_at. Is the migration pending?");
-                }
+                $team->subscription_grace_ends_at = now()->addDays(7);
             } else {
-                try {
-                    $team->subscription_grace_ends_at = null;
-                } catch (\Exception $e) {
-                }
+                $team->subscription_grace_ends_at = null;
             }
 
-            $team->save();
+            try {
+                $team->save();
+            } catch (\Exception $e) {
+                Log::error("Failed to save subscription update for Team {$team->id}: " . $e->getMessage());
+                throw $e; // Re-throw to trigger transaction rollback
+            }
 
             // Log activity
             Log::info("Team {$team->id} changed plan from {$currentPlanName} to {$newPlanName}.");

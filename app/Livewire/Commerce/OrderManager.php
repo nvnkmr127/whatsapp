@@ -51,7 +51,11 @@ class OrderManager extends Component
             'status' => $this->newStatus
         ]);
 
-        // TODO: Trigger WhatsApp Notification based on status change (Future)
+        // Trigger WhatsApp Notification if enabled
+        if ($this->viewingOrder->team->hasFeature('commerce_notifications')) {
+             // Dispatch job to handle notification asynchronously
+             \App\Jobs\SendOrderLifecycleNotification::dispatch($this->viewingOrder);
+        }
 
         $this->viewingOrder = $this->viewingOrder->fresh();
         session()->flash('flash.banner', 'Order status updated to ' . ucfirst($this->newStatus));
