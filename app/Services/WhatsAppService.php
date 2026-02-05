@@ -1274,8 +1274,7 @@ class WhatsAppService
         }
 
         try {
-            $url = "{$this->baseUrl}/calls";
-            $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
+            $response = $this->sendRequest('calls', $payload);
 
             if ($response['success'] ?? false) {
                 $callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
@@ -1422,10 +1421,7 @@ class WhatsAppService
                 $startTime = microtime(true);
 
                 $payload['call_id'] = $callId;
-                // Use root /calls endpoint (v21.0/calls) instead of /{phone_id}/calls
-                // This appears to be the correct endpoint for call management actions
-                $url = "{$this->baseUrl}/calls";
-                $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
+                $response = $this->sendRequest('calls', $payload, 'post');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
@@ -1548,8 +1544,7 @@ class WhatsAppService
             throw new \Exception("Phone ID is not configured.");
         }
 
-        $url = "{$this->baseUrl}/calls";
-        return $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
+        return $this->sendRequest('calls', $payload, 'post');
     }
 
     /**
@@ -1585,8 +1580,7 @@ class WhatsAppService
         }
 
         try {
-            $url = "{$this->baseUrl}/calls";
-            $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
+            $response = $this->sendRequest('calls', $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsRejected();
@@ -1640,8 +1634,7 @@ class WhatsAppService
         }
 
         try {
-            $url = "{$this->baseUrl}/calls";
-            $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
+            $response = $this->sendRequest('calls', $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsEnded();
