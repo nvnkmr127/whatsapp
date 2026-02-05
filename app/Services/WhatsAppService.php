@@ -1326,10 +1326,11 @@ class WhatsAppService
      * 
      * @param string $callId WhatsApp call identifier
      * @param array|null $session Session data (SDP) for VOIP answering
+     * @param string|null $phoneNumberId Optional Phone Number ID override
      * @return array Response from WhatsApp API
      * @throws \Exception
      */
-    public function answerCall(string $callId, ?array $session = null)
+    public function answerCall(string $callId, ?array $session = null, ?string $phoneNumberId = null)
     {
         $call = \App\Models\WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
@@ -1389,6 +1390,11 @@ class WhatsAppService
             $payload['session'] = $session;
         }
 
+        $phoneIdToUse = $phoneNumberId ?: $this->phoneId;
+        if (!$phoneIdToUse) {
+            throw new \Exception("Phone ID is not configured.");
+        }
+
         // Retry logic with exponential backoff
         $maxRetries = 2;
         $retryDelay = 500; // milliseconds
@@ -1399,7 +1405,8 @@ class WhatsAppService
                 $startTime = microtime(true);
 
                 $payload['call_id'] = $callId;
-                $response = $this->sendRequest("calls", $payload, 'post');
+                $url = "{$this->baseUrl}/{$phoneIdToUse}/calls";
+                $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
