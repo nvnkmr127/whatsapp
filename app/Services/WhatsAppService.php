@@ -1419,8 +1419,8 @@ class WhatsAppService
             try {
                 $startTime = microtime(true);
 
-                $payload['call_id'] = $callId;
-                $url = "{$this->baseUrl}/{$phoneIdToUse}/calls";
+                // Use call_id endpoint directly
+                $url = "{$this->baseUrl}/" . urlencode($callId);
                 $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
@@ -1544,7 +1544,7 @@ class WhatsAppService
             throw new \Exception("Phone ID is not configured.");
         }
 
-        $url = "{$this->baseUrl}/{$phoneIdToUse}/calls";
+        $url = "{$this->baseUrl}/" . urlencode($callId);
         return $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
     }
 
@@ -1571,7 +1571,6 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'action' => 'reject',
-            'call_id' => $callId,
         ];
         if ($call->to_number) {
             $payload['to'] = $call->to_number;
@@ -1581,7 +1580,8 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest("calls", $payload, 'post');
+            $url = "{$this->baseUrl}/" . urlencode($callId);
+            $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
             if ($response['success'] ?? false) {
                 $call->markAsRejected();
@@ -1625,7 +1625,6 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'action' => 'terminate',
-            'call_id' => $callId,
         ];
         if ($call->to_number) {
             $payload['to'] = $call->to_number;
@@ -1635,7 +1634,8 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest("calls", $payload, 'post');
+            $url = "{$this->baseUrl}/" . urlencode($callId);
+            $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
             if ($response['success'] ?? false) {
                 $call->markAsEnded();
