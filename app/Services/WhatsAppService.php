@@ -1254,7 +1254,6 @@ class WhatsAppService
         }
 
         $payload = [
-            'messaging_product' => 'whatsapp',
             'to' => $to,
             'action' => 'connect',
         ];
@@ -1380,7 +1379,6 @@ class WhatsAppService
         }
 
         $payload = [
-            'messaging_product' => 'whatsapp',
             'action' => 'accept',
         ];
 
@@ -1490,7 +1488,6 @@ class WhatsAppService
         }
 
         $payload = [
-            'messaging_product' => 'whatsapp',
             'action' => 'reject',
             'call_id' => $callId,
         ];
@@ -1538,7 +1535,6 @@ class WhatsAppService
         }
 
         $payload = [
-            'messaging_product' => 'whatsapp',
             'action' => 'terminate',
             'call_id' => $callId,
         ];

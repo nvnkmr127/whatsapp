@@ -210,13 +210,53 @@ class SDPValidator
         // Split into lines to clean up each line
         $lines = explode("\n", $sdp);
         $cleanedLines = [];
+        $unsupportedPayloadTypes = [];
+
+        // Identify payload types to remove based on supported codecs
+        foreach ($lines as $line) {
+            if (preg_match('/^a=rtpmap:(\d+) ([^\/]+)/', $line, $matches)) {
+                $payloadType = $matches[1];
+                $codec = $matches[2];
+
+                if (!in_array($codec, self::SUPPORTED_CODECS)) {
+                    $unsupportedPayloadTypes[] = $payloadType;
+                }
+            }
+        }
 
         foreach ($lines as $line) {
             $line = trim($line);
             if (empty($line))
                 continue;
 
-            // Fix common ssrc line spacing issues: a=ssrc:123  cname:abc -> a=ssrc:123 cname:abc
+            // 1. Capitalize Fingerprint Algorithm (Meta requirement)
+            if (strpos($line, 'a=fingerprint:') === 0) {
+                $line = str_replace('sha-256', 'SHA-256', $line);
+                $line = str_replace('sha-512', 'SHA-512', $line);
+            }
+
+            // 2. Filter out unsupported codecs/payload types
+            if (preg_match('/^a=(rtpmap|fmtp|rtcp-fb):(\d+)/', $line, $matches)) {
+                if (in_array($matches[2], $unsupportedPayloadTypes)) {
+                    continue;
+                }
+            }
+
+            // 3. Fix m=audio line to remove unsupported payload types
+            if (strpos($line, 'm=audio') === 0) {
+                $parts = explode(' ', $line);
+                $newParts = array_slice($parts, 0, 3);
+                $payloads = array_slice($parts, 3);
+
+                foreach ($payloads as $p) {
+                    if (!in_array($p, $unsupportedPayloadTypes)) {
+                        $newParts[] = $p;
+                    }
+                }
+                $line = implode(' ', $newParts);
+            }
+
+            // 4. Fix common ssrc line spacing issues
             if (strpos($line, 'a=ssrc:') === 0) {
                 $line = preg_replace('/\s+/', ' ', $line);
             }
