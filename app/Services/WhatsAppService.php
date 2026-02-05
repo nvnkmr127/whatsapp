@@ -926,6 +926,46 @@ class WhatsAppService
     }
 
     /**
+     * Disable SIP calling to enable Graph API (WebRTC) calling.
+     * When SIP is enabled, Graph API calls for calling features return error 131055/2593026.
+     * 
+     * @return array API response
+     */
+    public function disableSipCalling()
+    {
+        if (!$this->phoneId) {
+            throw new \Exception("Phone ID is not configured.");
+        }
+
+        Log::info("Disabling SIP calling for phone", [
+            'team_id' => $this->team->id,
+            'phone_id' => $this->phoneId,
+        ]);
+
+        $url = "{$this->baseUrl}/{$this->phoneId}/settings";
+        $payload = [
+            'sip_status' => 'DISABLED',
+        ];
+
+        $response = $this->sendRequestFullUrl($url, 'post', $payload);
+
+        if ($response['success'] ?? false) {
+            Log::info("SIP calling disabled successfully", [
+                'team_id' => $this->team->id,
+                'phone_id' => $this->phoneId,
+            ]);
+        } else {
+            Log::error("Failed to disable SIP calling", [
+                'team_id' => $this->team->id,
+                'phone_id' => $this->phoneId,
+                'error' => $response['error'] ?? 'Unknown error',
+            ]);
+        }
+
+        return $response;
+    }
+
+    /**
      * Update System Call Settings.
      * POST /<PHONE_ID>/settings
      */
