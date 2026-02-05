@@ -46,8 +46,11 @@ class WhatsAppWebhookController extends Controller
     public function handle(Request $request)
     {
         if (config('app.debug')) {
-            $logMsg = date('Y-m-d H:i:s') . " RAW WEBHOOK RECEIVED: " . json_encode($request->all()) . "\n";
-            \Illuminate\Support\Facades\File::append(storage_path('logs/whatsapp_debug.log'), $logMsg);
+            try {
+                \Illuminate\Support\Facades\Log::channel('whatsapp')->info("RAW WEBHOOK RECEIVED", $request->all());
+            } catch (\Exception $e) {
+                // Silently fail if logging fails
+            }
         }
 
         Log::info("WhatsAppWebhookController: Webhook Received Raw", ['payload' => json_encode($request->all())]);

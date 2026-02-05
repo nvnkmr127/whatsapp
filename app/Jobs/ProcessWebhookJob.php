@@ -214,10 +214,11 @@ class ProcessWebhookJob implements ShouldQueue
 
             // 5. Handle Calls
             if (isset($change['calls']) && is_array($change['calls'])) {
-                \Illuminate\Support\Facades\File::append(
-                    storage_path('logs/whatsapp_debug.log'),
-                    date('Y-m-d H:i:s') . " RECEIVED CALL WEBHOOK. Team Resolved: " . ($teamId ?? 'NULL') . "\n"
-                );
+                try {
+                    \Illuminate\Support\Facades\Log::channel('whatsapp')->info("RECEIVED CALL WEBHOOK. Team Resolved: " . ($teamId ?? 'NULL'));
+                } catch (\Exception $e) {
+                    // Silently fail
+                }
 
                 if ($teamId) {
                     $team = Team::find($teamId);

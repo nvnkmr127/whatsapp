@@ -108,8 +108,11 @@ class WhatsAppCallProcessor
 
     protected function handleConnect(WhatsAppCall $call, array $callData)
     {
-        $logMsg = date('Y-m-d H:i:s') . " Handling Connect: {$call->call_id}\n";
-        File::append(storage_path('logs/whatsapp_debug.log'), $logMsg);
+        try {
+            \Illuminate\Support\Facades\Log::channel('whatsapp')->info("Handling Connect: {$call->call_id}");
+        } catch (\Exception $e) {
+            // Silently fail
+        }
 
         Log::info("WhatsAppCallProcessor: Handling connect/connected event", [
             'call_id' => $call->call_id,
@@ -149,8 +152,11 @@ class WhatsAppCallProcessor
 
     protected function handleAnswered(WhatsAppCall $call, array $callData)
     {
-        $logMsg = date('Y-m-d H:i:s') . " Handling Call Answered: {$call->call_id}\n";
-        File::append(storage_path('logs/whatsapp_debug.log'), $logMsg);
+        try {
+            \Illuminate\Support\Facades\Log::channel('whatsapp')->info("Handling Call Answered: {$call->call_id}");
+        } catch (\Exception $e) {
+            // Silently fail
+        }
 
         Log::info("Handling Call Answered: {$call->call_id}");
 
@@ -173,8 +179,11 @@ class WhatsAppCallProcessor
     {
         $status = strtolower($callData['status'] ?? 'completed');
 
-        $logMsg = date('Y-m-d H:i:s') . " Handling Terminate [{$status}]: {$call->call_id}\n";
-        File::append(storage_path('logs/whatsapp_debug.log'), $logMsg);
+        try {
+            \Illuminate\Support\Facades\Log::channel('whatsapp')->info("Handling Terminate [{$status}]: {$call->call_id}");
+        } catch (\Exception $e) {
+            // Silently fail
+        }
 
         Log::info("Handling Call Terminate: {$status}", ['call_id' => $call->call_id]);
 
