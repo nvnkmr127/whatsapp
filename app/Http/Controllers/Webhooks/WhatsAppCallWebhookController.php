@@ -113,7 +113,7 @@ class WhatsAppCallWebhookController extends Controller
         // Determine if this is an inbound or outbound call
         $direction = $callData['direction'] ?? null;
         if ($direction) {
-            $direction = in_array($direction, ['business_initiated', 'outbound'], true) ? 'outbound' : 'inbound';
+            $direction = in_array(strtoupper($direction), ['BUSINESS_INITIATED', 'OUTBOUND'], true) ? 'outbound' : 'inbound';
         } else {
             $phoneNumberId = $team->whatsapp_phone_number_id;
             if ($from === $phoneNumberId) {
@@ -167,7 +167,12 @@ class WhatsAppCallWebhookController extends Controller
 
             $metadata = $call->metadata ?? [];
             $metadata['answered_sdp'] = $sdp;
-            $call->update(['metadata' => $metadata]);
+            $call->update([
+                'metadata' => $metadata,
+                'status' => 'in_progress', // Update status to in_progress upon answer
+            ]);
+            
+            event(new \App\Events\CallAnswered($call));
         }
 
         // If newly created, emit CallOffered event
@@ -207,7 +212,10 @@ class WhatsAppCallWebhookController extends Controller
 
         // Create or update contact and conversation
         if ($direction === 'inbound') {
-            $this->ensureContactAndConversation($team, $call, $from);
+            $phoneNumber = $from ?? $call->from_number;
+            if ($phoneNumber) {
+                $this->ensureContactAndConversation($team, $call, $phoneNumber);
+            }
 
             // AUTO-GRANT PERMISSION: If user calls business, we can call back within 72h
             // This is effectively an implicit permission grant
