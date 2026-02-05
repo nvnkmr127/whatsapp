@@ -297,7 +297,7 @@ document.addEventListener('livewire:init', () => {
             return this.lockedBy && this.lockedBy.id === this.myUserId;
         },
 
-        setLockState(ownerId) {
+        setLockState(ownerId, ownerName = null) {
             if (!ownerId) {
                 this.lockedBy = null;
                 this.stopHeartbeat();
@@ -308,7 +308,9 @@ document.addEventListener('livewire:init', () => {
             // We can assume the presence system (in component) updates this.lockedBy with full object
             // But for now let's store ID and rely on component to map Name if needed or just use ID
             if (!this.lockedBy || this.lockedBy.id !== ownerId) {
-                this.lockedBy = { id: ownerId, name: 'Agent ' + ownerId };
+                this.lockedBy = { id: ownerId, name: ownerName || ('Agent ' + ownerId) };
+            } else if (ownerName && this.lockedBy.name !== ownerName) {
+                this.lockedBy.name = ownerName;
             }
         },
 
@@ -379,7 +381,11 @@ document.addEventListener('livewire:init', () => {
                 this.typingUser = name;
                 if (this.typingTimer) clearTimeout(this.typingTimer);
                 this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
-                this.setLockState(id);
+                
+                // Only accept lock from others if I don't own it myself
+                if (!this.amIOwner()) {
+                    this.setLockState(id, name);
+                }
             }
         },
 

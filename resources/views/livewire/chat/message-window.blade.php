@@ -79,15 +79,29 @@
                     <div class="text-[10px] font-bold text-slate-500 flex items-center gap-2 uppercase tracking-wide">
                         <span class="text-wa-teal">{{ $conversation->contact->phone_number }}</span>
 
-                        <span x-show="$store.chat.isTyping" x-transition
-                            class="text-wa-teal animate-pulse font-black flex items-center gap-1">
-                            <span x-text="$store.chat.typingUser"></span> IS TYPING...
-                        </span>
+                        <div x-show="$store.chat.isTyping" x-transition
+                            class="flex items-center gap-2 px-3 py-1 bg-wa-teal/10 dark:bg-wa-teal/20 rounded-full border border-wa-teal/20">
+                            <div class="flex space-x-0.5">
+                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            </div>
+                            <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">
+                                <span x-text="$store.chat.typingUser"></span>
+                            </span>
+                        </div>
 
-                        <span x-show="$store.chat.isCustomerTyping" x-transition
-                            class="text-emerald-500 animate-bounce font-black flex items-center gap-1">
-                            CUSTOMER IS TYPING...
-                        </span>
+                        <div x-show="$store.chat.isCustomerTyping" x-transition
+                            class="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full border border-emerald-500/20">
+                            <div class="flex space-x-0.5">
+                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            </div>
+                            <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                                Customer
+                            </span>
+                        </div>
 
                         <template x-if="$store.chat.activeUsers.length > 1">
                             <div
@@ -940,19 +954,19 @@
 
                 <!-- Lock Banner -->
                 <div x-show="$store.chat.isLockedForMe()" x-transition x-cloak
-                    class="absolute bottom-full left-0 w-full mb-4 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs z-20">
+                    class="absolute bottom-full left-0 w-full mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 flex items-center justify-between text-xs z-20 shadow-sm">
                     <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                        <span class="font-bold text-slate-500">
-                            Reply Locked: <span class="text-slate-800 dark:text-slate-200"
+                        <span class="font-bold text-rose-600 dark:text-rose-400">
+                            Reply Locked: <span class="text-rose-800 dark:text-rose-200"
                                 x-text="$store.chat.lockedBy ? $store.chat.lockedBy.name : 'Another Agent'"></span>
                             is writing...
                         </span>
                     </div>
-                    <button type="button" @click="$store.chat.takeOver()" class="text-wa-teal font-bold hover:underline">
+                    <button type="button" @click="$store.chat.takeOver()" class="text-rose-600 dark:text-rose-400 font-black uppercase tracking-wider text-[10px] hover:underline">
                         Take Over
                     </button>
                 </div>
