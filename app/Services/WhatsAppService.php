@@ -1254,12 +1254,14 @@ class WhatsAppService
         }
 
         $payload = [
+            'messaging_product' => 'whatsapp',
             'to' => $to,
             'action' => 'connect',
         ];
 
         // Add Session (SDP) if provided
         if ($sdp) {
+            $sdp = \App\Services\SDPValidator::sanitize($sdp);
             $payload['session'] = [
                 'sdp' => $sdp,
                 'sdp_type' => 'offer', // We are making the offer
@@ -1379,6 +1381,7 @@ class WhatsAppService
         }
 
         $payload = [
+            'messaging_product' => 'whatsapp',
             'action' => 'accept',
         ];
 
@@ -1488,6 +1491,7 @@ class WhatsAppService
         }
 
         $payload = [
+            'messaging_product' => 'whatsapp',
             'action' => 'reject',
             'call_id' => $callId,
         ];
@@ -1535,6 +1539,7 @@ class WhatsAppService
         }
 
         $payload = [
+            'messaging_product' => 'whatsapp',
             'action' => 'terminate',
             'call_id' => $callId,
         ];
