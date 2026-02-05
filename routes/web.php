@@ -105,10 +105,10 @@ Route::middleware([
     Route::get('/chat', \App\Livewire\Chat\ChatDashboard::class)->name('chat')->middleware('can:chat-access');
 
     // Conversation Locks (Session Auth for Web)
-    Route::post('/api/v1/conversations/{conversation}/lock', [\App\Http\Controllers\ConversationController::class, 'lock']);
-    Route::post('/api/v1/conversations/{conversation}/unlock', [\App\Http\Controllers\ConversationController::class, 'unlock']);
-    Route::post('/api/v1/conversations/{conversation}/heartbeat', [\App\Http\Controllers\ConversationController::class, 'heartbeat']);
-    Route::post('/api/v1/conversations/{conversation}/takeover', [\App\Http\Controllers\ConversationController::class, 'forceTakeOver']);
+    Route::post('/api/v1/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
+    Route::post('/api/v1/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
+    Route::post('/api/v1/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
+    Route::post('/api/v1/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
 
     // CRM (Managers, Admins)
     Route::get('/contacts', function () {
