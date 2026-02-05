@@ -1257,6 +1257,7 @@ class WhatsAppService
             'messaging_product' => 'whatsapp',
             'to' => $to,
             'action' => 'connect',
+            'from' => $phoneId, // Required when using root /calls endpoint
         ];
 
         if (!empty($options['biz_opaque_callback_data'])) {
@@ -1273,7 +1274,8 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest('calls', $payload);
+            $url = "{$this->baseUrl}/calls";
+            $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
             if ($response['success'] ?? false) {
                 $callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
@@ -1419,8 +1421,10 @@ class WhatsAppService
             try {
                 $startTime = microtime(true);
 
-                // Use call_id endpoint directly
-                $url = "{$this->baseUrl}/" . urlencode($callId);
+                $payload['call_id'] = $callId;
+                // Use root /calls endpoint (v21.0/calls) instead of /{phone_id}/calls
+                // This appears to be the correct endpoint for call management actions
+                $url = "{$this->baseUrl}/calls";
                 $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
@@ -1544,7 +1548,7 @@ class WhatsAppService
             throw new \Exception("Phone ID is not configured.");
         }
 
-        $url = "{$this->baseUrl}/" . urlencode($callId);
+        $url = "{$this->baseUrl}/calls";
         return $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
     }
 
@@ -1571,6 +1575,7 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'action' => 'reject',
+            'call_id' => $callId,
         ];
         if ($call->to_number) {
             $payload['to'] = $call->to_number;
@@ -1580,7 +1585,7 @@ class WhatsAppService
         }
 
         try {
-            $url = "{$this->baseUrl}/" . urlencode($callId);
+            $url = "{$this->baseUrl}/calls";
             $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
             if ($response['success'] ?? false) {
@@ -1625,6 +1630,7 @@ class WhatsAppService
         $payload = [
             'messaging_product' => 'whatsapp',
             'action' => 'terminate',
+            'call_id' => $callId,
         ];
         if ($call->to_number) {
             $payload['to'] = $call->to_number;
@@ -1634,7 +1640,7 @@ class WhatsAppService
         }
 
         try {
-            $url = "{$this->baseUrl}/" . urlencode($callId);
+            $url = "{$this->baseUrl}/calls";
             $response = $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
 
             if ($response['success'] ?? false) {
