@@ -110,7 +110,12 @@ class CallController extends Controller
 
         try {
             $whatsappService = new WhatsAppService($team);
-            $response = $whatsappService->answerCall($callId);
+            $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+                ->where('team_id', $team->id)
+                ->first();
+            $phoneNumberId = $call ? ($call->metadata['phone_number_id'] ?? null) : null;
+
+            $response = $whatsappService->answerCall($callId, null, $phoneNumberId);
 
             return response()->json($response, $response['success'] ? 200 : 400);
         } catch (\Exception $e) {

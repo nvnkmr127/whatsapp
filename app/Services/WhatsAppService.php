@@ -1293,7 +1293,7 @@ class WhatsAppService
                     'from_number' => $this->phoneId,
                     'to_number' => $to,
                     'initiated_at' => now(),
-                    'metadata' => array_merge($options, ['sdp' => $sdp]),
+                    'metadata' => array_merge($options, ['sdp' => $sdp, 'phone_number_id' => $this->phoneId]),
                 ]);
 
                 // Emit CallOffered event

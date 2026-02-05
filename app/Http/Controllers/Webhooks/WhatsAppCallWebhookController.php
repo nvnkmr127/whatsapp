@@ -90,6 +90,7 @@ class WhatsAppCallWebhookController extends Controller
         $to = $callData['to'] ?? null;
         $status = $callData['status'] ?? null;
         $timestamp = $callData['timestamp'] ?? null;
+        $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
 
         if (!$callId) {
             Log::warning("Call webhook missing call ID");
@@ -123,8 +124,17 @@ class WhatsAppCallWebhookController extends Controller
                 'from_number' => $from,
                 'to_number' => $to,
                 'initiated_at' => $timestamp ? \Carbon\Carbon::createFromTimestamp($timestamp) : now(),
+                'metadata' => $phoneNumberId ? ['phone_number_id' => $phoneNumberId] : [],
             ]
         );
+
+        if ($phoneNumberId) {
+            $metadata = $call->metadata ?? [];
+            if (!isset($metadata['phone_number_id'])) {
+                $metadata['phone_number_id'] = $phoneNumberId;
+                $call->update(['metadata' => $metadata]);
+            }
+        }
 
         // Check for SDP Answer in the payload (crucial for business-initiated calls)
         // It might be in $callData['session'] or $value['session'] depending on API version

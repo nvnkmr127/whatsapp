@@ -304,7 +304,12 @@ class CallOverlay extends Component
                 ];
             }
 
-            $response = $whatsappService->answerCall($this->callId, $session);
+            $call = \App\Models\WhatsAppCall::where('call_id', $this->callId)
+                ->where('team_id', $team->id)
+                ->first();
+            $phoneNumberId = $call ? ($call->metadata['phone_number_id'] ?? null) : null;
+
+            $response = $whatsappService->answerCall($this->callId, $session, $phoneNumberId);
 
             Log::info("CallOverlay: Meta Answer Response", ['response' => $response]);
 

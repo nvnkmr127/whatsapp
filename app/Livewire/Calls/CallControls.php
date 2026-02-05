@@ -112,7 +112,8 @@ class CallControls extends Component
             $team = auth()->user()->currentTeam;
             $whatsappService = new WhatsAppService($team);
 
-            $response = $whatsappService->answerCall($this->activeCall->call_id);
+            $phoneNumberId = $this->activeCall->metadata['phone_number_id'] ?? null;
+            $response = $whatsappService->answerCall($this->activeCall->call_id, null, $phoneNumberId);
 
             if ($response['success']) {
                 $this->checkActiveCall();
