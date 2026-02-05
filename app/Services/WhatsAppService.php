@@ -1393,7 +1393,10 @@ class WhatsAppService
             'messaging_product' => 'whatsapp',
             'action' => 'accept',
         ];
-        if ($call->to_number) {
+
+        // Only include 'to' for outbound calls (business calling user)
+        // For inbound calls (user calling business), 'to' should NOT be included
+        if ($call->direction === 'outbound' && $call->to_number) {
             $payload['to'] = $call->to_number;
         }
 
@@ -1527,7 +1530,8 @@ class WhatsAppService
             'action' => 'pre_accept',
             'call_id' => $callId,
         ];
-        if ($call->to_number) {
+        // Only include 'to' for outbound calls
+        if ($call->direction === 'outbound' && $call->to_number) {
             $payload['to'] = $call->to_number;
         }
         if ($session) {
@@ -1572,7 +1576,8 @@ class WhatsAppService
             'action' => 'reject',
             'call_id' => $callId,
         ];
-        if ($call->to_number) {
+        // Only include 'to' for outbound calls
+        if ($call->direction === 'outbound' && $call->to_number) {
             $payload['to'] = $call->to_number;
         }
         if (!empty($call->metadata['biz_opaque_callback_data'])) {
@@ -1626,7 +1631,8 @@ class WhatsAppService
             'action' => 'terminate',
             'call_id' => $callId,
         ];
-        if ($call->to_number) {
+        // Only include 'to' for outbound calls
+        if ($call->direction === 'outbound' && $call->to_number) {
             $payload['to'] = $call->to_number;
         }
         if (!empty($call->metadata['biz_opaque_callback_data'])) {
