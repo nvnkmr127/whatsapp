@@ -70,6 +70,32 @@ class WhatsAppService
     }
 
     /**
+     * Normalize phone numbers for WhatsApp calling payloads (digits only).
+     */
+    protected function normalizeCallNumber(?string $number): ?string
+    {
+        if (!$number) {
+            return null;
+        }
+        $normalized = preg_replace('/\D+/', '', $number);
+        return $normalized ?: null;
+    }
+
+    /**
+     * Resolve the peer number (customer) for a call.
+     */
+    protected function getCallPeerNumber(\App\Models\WhatsAppCall $call): ?string
+    {
+        if ($call->direction === 'inbound') {
+            return $call->from_number ?: $call->to_number;
+        }
+        if ($call->direction === 'outbound') {
+            return $call->to_number ?: $call->from_number;
+        }
+        return $call->to_number ?: $call->from_number;
+    }
+
+    /**
      * Get or create contact with race condition protection.
      * 
      * @param string $phone Phone number in any format
@@ -1295,7 +1321,7 @@ class WhatsAppService
 
         $payload = [
             'messaging_product' => 'whatsapp',
-            'to' => $to,
+            'to' => $this->normalizeCallNumber($to) ?: $to,
             'action' => 'connect',
             'from' => $phoneId, // Required when using root /calls endpoint
         ];
@@ -1435,9 +1461,10 @@ class WhatsAppService
         ];
 
         // Only include 'to' for outbound calls (business calling user)
-        // For inbound calls (user calling business), 'to' should NOT be included
-        if ($call->direction === 'outbound' && $call->to_number) {
-            $payload['to'] = $call->to_number;
+        // Use peer number (customer) for "to"
+        $peerNumber = $this->getCallPeerNumber($call);
+        if ($peerNumber) {
+            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
         }
 
         if ($session) {
@@ -1570,9 +1597,10 @@ class WhatsAppService
             'action' => 'pre_accept',
             'call_id' => $callId,
         ];
-        // Only include 'to' for outbound calls
-        if ($call->direction === 'outbound' && $call->to_number) {
-            $payload['to'] = $call->to_number;
+        // Use peer number (customer) for "to"
+        $peerNumber = $this->getCallPeerNumber($call);
+        if ($peerNumber) {
+            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
         }
         if ($session) {
             $payload['session'] = $session;
@@ -1616,9 +1644,10 @@ class WhatsAppService
             'action' => 'reject',
             'call_id' => $callId,
         ];
-        // Only include 'to' for outbound calls
-        if ($call->direction === 'outbound' && $call->to_number) {
-            $payload['to'] = $call->to_number;
+        // Use peer number (customer) for "to"
+        $peerNumber = $this->getCallPeerNumber($call);
+        if ($peerNumber) {
+            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
         }
         if (!empty($call->metadata['biz_opaque_callback_data'])) {
             $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
@@ -1671,9 +1700,10 @@ class WhatsAppService
             'action' => 'terminate',
             'call_id' => $callId,
         ];
-        // Only include 'to' for outbound calls
-        if ($call->direction === 'outbound' && $call->to_number) {
-            $payload['to'] = $call->to_number;
+        // Use peer number (customer) for "to"
+        $peerNumber = $this->getCallPeerNumber($call);
+        if ($peerNumber) {
+            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
         }
         if (!empty($call->metadata['biz_opaque_callback_data'])) {
             $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
