@@ -44,12 +44,6 @@ class WhatsAppCallWebhookController extends Controller
                 return response()->json(['status' => 'no value'], 200);
             }
 
-            // Extract call information
-            $callData = $value['call'] ?? null;
-            if (!$callData) {
-                return response()->json(['status' => 'no call data'], 200);
-            }
-
             // Get phone number ID to identify the team
             $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
             if (!$phoneNumberId) {
@@ -64,8 +58,25 @@ class WhatsAppCallWebhookController extends Controller
                 return response()->json(['error' => 'Team not found'], 404);
             }
 
-            // Process the call event
-            $this->processCallEvent($team, $callData, $value);
+            // Process call events (calls array) and status updates (statuses array)
+            $calls = $value['calls'] ?? null;
+            if (is_array($calls)) {
+                foreach ($calls as $callData) {
+                    $this->processCallEvent($team, $callData, $value);
+                }
+            } else {
+                $callData = $value['call'] ?? null;
+                if ($callData) {
+                    $this->processCallEvent($team, $callData, $value);
+                }
+            }
+
+            $statuses = $value['statuses'] ?? null;
+            if (is_array($statuses)) {
+                foreach ($statuses as $statusData) {
+                    $this->processCallStatus($team, $statusData, $value);
+                }
+            }
 
             return response()->json(['status' => 'success'], 200);
 
@@ -91,6 +102,8 @@ class WhatsAppCallWebhookController extends Controller
         $status = $callData['status'] ?? null;
         $timestamp = $callData['timestamp'] ?? null;
         $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
+        $event = $callData['event'] ?? null;
+        $bizOpaque = $callData['biz_opaque_callback_data'] ?? null;
 
         if (!$callId) {
             Log::warning("Call webhook missing call ID");
@@ -132,6 +145,13 @@ class WhatsAppCallWebhookController extends Controller
             $metadata = $call->metadata ?? [];
             if (!isset($metadata['phone_number_id'])) {
                 $metadata['phone_number_id'] = $phoneNumberId;
+                $call->update(['metadata' => $metadata]);
+            }
+        }
+        if ($bizOpaque) {
+            $metadata = $call->metadata ?? [];
+            if (!isset($metadata['biz_opaque_callback_data'])) {
+                $metadata['biz_opaque_callback_data'] = $bizOpaque;
                 $call->update(['metadata' => $metadata]);
             }
         }
@@ -178,7 +198,11 @@ class WhatsAppCallWebhookController extends Controller
                 $this->handleMissed($call);
                 break;
             default:
-                Log::info("Unknown call status: {$status}", ['call_id' => $callId]);
+                if ($event) {
+                    Log::info("Call event received", ['call_id' => $callId, 'event' => $event]);
+                } else {
+                    Log::info("Unknown call status: {$status}", ['call_id' => $callId]);
+                }
         }
 
         // Create or update contact and conversation
@@ -199,6 +223,72 @@ class WhatsAppCallWebhookController extends Controller
                     'call_id' => $callId
                 ]);
             }
+        }
+    }
+
+    /**
+     * Process call status updates from statuses[] (calls field).
+     */
+    protected function processCallStatus(Team $team, array $statusData, array $value = [])
+    {
+        $callId = $statusData['id'] ?? null;
+        $status = $statusData['status'] ?? null;
+        $timestamp = $statusData['timestamp'] ?? null;
+        $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
+        $bizOpaque = $statusData['biz_opaque_callback_data'] ?? null;
+
+        if (!$callId) {
+            return;
+        }
+
+        $call = WhatsAppCall::where('call_id', $callId)
+            ->where('team_id', $team->id)
+            ->first();
+
+        if (!$call) {
+            $call = WhatsAppCall::create([
+                'team_id' => $team->id,
+                'call_id' => $callId,
+                'direction' => 'inbound',
+                'status' => 'initiated',
+                'initiated_at' => $timestamp ? \Carbon\Carbon::createFromTimestamp($timestamp) : now(),
+                'metadata' => $phoneNumberId ? ['phone_number_id' => $phoneNumberId] : [],
+            ]);
+        }
+
+        if ($phoneNumberId) {
+            $metadata = $call->metadata ?? [];
+            if (!isset($metadata['phone_number_id'])) {
+                $metadata['phone_number_id'] = $phoneNumberId;
+                $call->update(['metadata' => $metadata]);
+            }
+        }
+        if ($bizOpaque) {
+            $metadata = $call->metadata ?? [];
+            if (!isset($metadata['biz_opaque_callback_data'])) {
+                $metadata['biz_opaque_callback_data'] = $bizOpaque;
+                $call->update(['metadata' => $metadata]);
+            }
+        }
+
+        switch ($status) {
+            case 'RINGING':
+            case 'ringing':
+                $this->handleRinging($call);
+                break;
+            case 'ACCEPTED':
+            case 'accepted':
+                $this->handleAnswered($call);
+                break;
+            case 'REJECTED':
+            case 'rejected':
+                $this->handleRejected($call);
+                break;
+            default:
+                Log::info("Call status update received", [
+                    'call_id' => $callId,
+                    'status' => $status,
+                ]);
         }
     }
 

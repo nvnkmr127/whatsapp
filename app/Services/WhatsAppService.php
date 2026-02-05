@@ -1259,6 +1259,10 @@ class WhatsAppService
             'action' => 'connect',
         ];
 
+        if (!empty($options['biz_opaque_callback_data'])) {
+            $payload['biz_opaque_callback_data'] = (string) $options['biz_opaque_callback_data'];
+        }
+
         // Add Session (SDP) if provided
         if ($sdp) {
             $sdp = \App\Services\SDPValidator::sanitize($sdp);
@@ -1293,7 +1297,10 @@ class WhatsAppService
                     'from_number' => $this->phoneId,
                     'to_number' => $to,
                     'initiated_at' => now(),
-                    'metadata' => array_merge($options, ['sdp' => $sdp, 'phone_number_id' => $this->phoneId]),
+                    'metadata' => array_merge($options, [
+                        'sdp' => $sdp,
+                        'phone_number_id' => $this->phoneId
+                    ]),
                 ]);
 
                 // Emit CallOffered event
@@ -1330,7 +1337,7 @@ class WhatsAppService
      * @return array Response from WhatsApp API
      * @throws \Exception
      */
-    public function answerCall(string $callId, ?array $session = null, ?string $phoneNumberId = null)
+    public function answerCall(string $callId, ?array $session = null, ?string $phoneNumberId = null, ?string $bizOpaqueCallbackData = null)
     {
         $call = \App\Models\WhatsAppCall::where('call_id', $callId)
             ->where('team_id', $this->team->id)
@@ -1385,9 +1392,17 @@ class WhatsAppService
             'messaging_product' => 'whatsapp',
             'action' => 'accept',
         ];
+        if ($call->to_number) {
+            $payload['to'] = $call->to_number;
+        }
 
         if ($session) {
             $payload['session'] = $session;
+        }
+        if ($bizOpaqueCallbackData) {
+            $payload['biz_opaque_callback_data'] = $bizOpaqueCallbackData;
+        } elseif (!empty($call->metadata['biz_opaque_callback_data'])) {
+            $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
         }
 
         $phoneIdToUse = $phoneNumberId ?: $this->phoneId;
@@ -1478,6 +1493,62 @@ class WhatsAppService
     }
 
     /**
+     * Pre-accept an incoming WhatsApp call (optional step).
+     *
+     * @param string $callId WhatsApp call identifier
+     * @param array|null $session Session data (SDP) for VOIP pre-accept
+     * @param string|null $phoneNumberId Optional Phone Number ID override
+     * @param string|null $bizOpaqueCallbackData Optional opaque callback data
+     * @return array
+     * @throws \Exception
+     */
+    public function preAcceptCall(string $callId, ?array $session = null, ?string $phoneNumberId = null, ?string $bizOpaqueCallbackData = null)
+    {
+        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
+            ->where('team_id', $this->team->id)
+            ->firstOrFail();
+
+        if (!in_array($call->status, ['initiated', 'ringing', 'in_progress'])) {
+            throw new \Exception("Call is not in a valid state to pre-accept. Current status: {$call->status}");
+        }
+
+        if ($session && isset($session['sdp'])) {
+            $validation = \App\Services\SDPValidator::validate($session['sdp']);
+            if (!$validation['valid']) {
+                $errorMsg = \App\Services\SDPValidator::getValidationSummary($validation);
+                throw new \Exception("Invalid SDP: {$errorMsg}");
+            }
+            $session['sdp'] = \App\Services\SDPValidator::sanitize($session['sdp']);
+            $session['sdp_type'] = 'answer';
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'action' => 'pre_accept',
+            'call_id' => $callId,
+        ];
+        if ($call->to_number) {
+            $payload['to'] = $call->to_number;
+        }
+        if ($session) {
+            $payload['session'] = $session;
+        }
+        if ($bizOpaqueCallbackData) {
+            $payload['biz_opaque_callback_data'] = $bizOpaqueCallbackData;
+        } elseif (!empty($call->metadata['biz_opaque_callback_data'])) {
+            $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
+        }
+
+        $phoneIdToUse = $phoneNumberId ?: $this->phoneId;
+        if (!$phoneIdToUse) {
+            throw new \Exception("Phone ID is not configured.");
+        }
+
+        $url = "{$this->baseUrl}/{$phoneIdToUse}/calls";
+        return $this->sendRequestFullUrl($url, 'post', $payload, 'calls');
+    }
+
+    /**
      * Reject an incoming WhatsApp call.
      * 
      * @param string $callId WhatsApp call identifier
@@ -1502,6 +1573,12 @@ class WhatsAppService
             'action' => 'reject',
             'call_id' => $callId,
         ];
+        if ($call->to_number) {
+            $payload['to'] = $call->to_number;
+        }
+        if (!empty($call->metadata['biz_opaque_callback_data'])) {
+            $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
+        }
 
         try {
             $response = $this->sendRequest("calls", $payload, 'post');
@@ -1550,6 +1627,12 @@ class WhatsAppService
             'action' => 'terminate',
             'call_id' => $callId,
         ];
+        if ($call->to_number) {
+            $payload['to'] = $call->to_number;
+        }
+        if (!empty($call->metadata['biz_opaque_callback_data'])) {
+            $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
+        }
 
         try {
             $response = $this->sendRequest("calls", $payload, 'post');

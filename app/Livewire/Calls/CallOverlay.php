@@ -309,6 +309,11 @@ class CallOverlay extends Component
                 ->first();
             $phoneNumberId = $call ? ($call->metadata['phone_number_id'] ?? null) : null;
 
+            if ($session) {
+                $preAccept = $whatsappService->preAcceptCall($this->callId, $session, $phoneNumberId);
+                Log::info("CallOverlay: Meta Pre-Accept Response", ['response' => $preAccept]);
+            }
+
             $response = $whatsappService->answerCall($this->callId, $session, $phoneNumberId);
 
             Log::info("CallOverlay: Meta Answer Response", ['response' => $response]);
