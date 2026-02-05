@@ -170,13 +170,14 @@ class PersistMessageJob implements ShouldQueue
         // B. Workflows
         HandleIncomingWorkflowJob::dispatch($message->id, $team->id);
 
-        // Note: Real-time broadcast was ALREADY done by the Consumer Command immediately!
-        // But if we want to update the "Temp" message or strictly ensure mapped ID is available, we might broadcast again here?
-        // Actually, the Consumer Command broadcasts the *Event*. Ideally Frontend uses the Event.
-        // But legacy Frontend uses Message model.
-        // So we probably SHOULD broadcast MessageReceived here just in case Frontend expects full Model structure.
-
-        \App\Events\MessageReceived::dispatch($message);
+        // Broadcast Real-time Event
+        try {
+            \App\Events\MessageReceived::dispatch($message);
+            Log::info("PersistMessageJob: MessageReceived event dispatched for Message ID: {$message->id}");
+        } catch (\Exception $e) {
+            Log::error("PersistMessageJob: Failed to dispatch MessageReceived event: " . $e->getMessage());
+            // Do not fail the job, as persistence was successful
+        }
     }
 
     // --- Helpers Copied from ProcessWebhookJob ---

@@ -150,6 +150,28 @@ class SendCampaignMessageJob implements ShouldQueue
                     'error_message' => substr($e->getMessage(), 0, 255),
                     'metadata' => array_merge($msg->metadata ?? [], ['last_error' => $e->getMessage()])
                 ]);
+            } else {
+                // If message record doesn't exist (e.g. failed before creation), create it as failed
+                // so it appears in stats
+                try {
+                    $conversationService = new ConversationService();
+                    $conversation = $conversationService->ensureActiveConversation($contact);
+
+                    Message::create([
+                        'team_id' => $campaign->team_id,
+                        'contact_id' => $contact->id,
+                        'conversation_id' => $conversation->id,
+                        'campaign_id' => $this->campaignId,
+                        'type' => 'template',
+                        'direction' => 'outbound',
+                        'status' => 'failed',
+                        'content' => "Template: {$campaign->template_name}",
+                        'error_message' => substr($e->getMessage(), 0, 255),
+                        'metadata' => ['last_error' => $e->getMessage()]
+                    ]);
+                } catch (\Exception $createEx) {
+                    Log::error("Failed to create error message record: " . $createEx->getMessage());
+                }
             }
 
             // Decide if we should retry
