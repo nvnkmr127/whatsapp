@@ -24,6 +24,14 @@ class ActivityLogViewer extends Component
 
     public function render()
     {
+        if (!Auth::user()->currentTeam) {
+            return view('livewire.activity.activity-log-viewer', [
+                'logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20),
+                'users' => collect(),
+                'actions' => collect()
+            ]);
+        }
+
         $query = ActivityLog::where('team_id', Auth::user()->currentTeam->id);
 
         if ($this->search) {

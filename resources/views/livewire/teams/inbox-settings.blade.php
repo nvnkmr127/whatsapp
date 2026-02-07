@@ -200,7 +200,7 @@
                                     </div>
                                 </label>
 
-                                @if($workingHours[$day]['enabled'])
+                                @if(isset($workingHours[$day]) && $workingHours[$day]['enabled'])
                                     <div class="flex items-center gap-2">
                                         <input type="time" wire:model="workingHours.{{ $day }}.open"
                                             class="bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-slate-900 dark:text-white font-bold text-xs p-2 focus:ring-2 focus:ring-wa-teal/20">

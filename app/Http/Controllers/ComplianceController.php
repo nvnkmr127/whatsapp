@@ -16,7 +16,13 @@ class ComplianceController extends Controller
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
-        $logs = ConsentLog::where('team_id', Auth::user()->currentTeam->id)
+        $team = Auth::user()->currentTeam;
+
+        if (!$team) {
+            return view('compliance.logs', ['logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20)]);
+        }
+
+        $logs = ConsentLog::where('team_id', $team->id)
             ->with(['contact'])
             ->latest()
             ->paginate(20);
@@ -35,7 +41,13 @@ class ComplianceController extends Controller
             'status' => 'nullable|string|in:opt_in,opt_out,none',
         ]);
 
-        $query = Contact::where('team_id', Auth::user()->currentTeam->id);
+        $team = Auth::user()->currentTeam;
+
+        if (!$team) {
+            return view('compliance.registry', ['contacts' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20)]);
+        }
+
+        $query = Contact::where('team_id', $team->id);
 
         $status = $request->get('status');
         if ($status) {

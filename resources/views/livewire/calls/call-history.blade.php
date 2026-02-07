@@ -67,10 +67,10 @@
     <!-- Efficiency Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         @foreach([
-            ['label' => 'Total Calls', 'val' => $statistics['total_calls'], 'desc' => 'This ' . ucfirst($period), 'color' => 'blue'],
-            ['label' => 'Success Rate', 'val' => $statistics['success_rate'] . '%', 'desc' => $statistics['completed_calls'] . ' completed', 'color' => 'teal'],
-            ['label' => 'Total Duration', 'val' => number_format($statistics['total_duration_minutes'], 0), 'desc' => 'Minutes consumed', 'color' => 'purple'],
-            ['label' => 'Consolidated Cost', 'val' => get_setting('currency_symbol', '$') . number_format($statistics['total_cost'], 2), 'desc' => 'Billing estimation', 'color' => 'amber']
+            ['label' => 'Total Calls', 'val' => $statistics['total_calls'] ?? 0, 'desc' => 'This ' . ucfirst($period), 'color' => 'blue'],
+            ['label' => 'Success Rate', 'val' => ($statistics['success_rate'] ?? 0) . '%', 'desc' => ($statistics['completed_calls'] ?? 0) . ' completed', 'color' => 'teal'],
+            ['label' => 'Total Duration', 'val' => number_format($statistics['total_duration_minutes'] ?? 0, 0), 'desc' => 'Minutes consumed', 'color' => 'purple'],
+            ['label' => 'Consolidated Cost', 'val' => get_setting('currency_symbol', '$') . number_format($statistics['total_cost'] ?? 0, 2), 'desc' => 'Billing estimation', 'color' => 'amber']
         ] as $stat)
             @php
                 $colors = ['blue' => 'from-wa-blue to-indigo-600', 'purple' => 'from-purple-500 to-fuchsia-600', 'teal' => 'from-wa-teal to-emerald-600', 'amber' => 'from-amber-400 to-orange-600'];

@@ -23,6 +23,9 @@ class WebhookLogs extends Component
 
     public function viewDetails($id)
     {
+        if (!auth()->user()->currentTeam) {
+            return;
+        }
         $this->selectedPayload = WebhookPayload::where('waba_id', auth()->user()->currentTeam->whatsapp_business_account_id)->find($id);
         $this->showDetailsModal = true;
     }
@@ -36,6 +39,12 @@ class WebhookLogs extends Component
     #[Layout('components.layouts.app')]
     public function render()
     {
+        if (!auth()->user()->currentTeam) {
+            return view('livewire.webhooks.webhook-logs', [
+                'logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15)
+            ]);
+        }
+
         $query = WebhookPayload::where('waba_id', auth()->user()->currentTeam->whatsapp_business_account_id)
             ->latest();
 
