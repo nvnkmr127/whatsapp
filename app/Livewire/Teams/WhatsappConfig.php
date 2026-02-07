@@ -42,6 +42,7 @@ class WhatsappConfig extends Component
     // Info Fields
     public $wm_default_phone_number;
     public $wm_default_phone_number_id;
+    public $available_phone_numbers = [];
 
     public $wm_messaging_limit;
     public $wm_quality_rating;
@@ -104,6 +105,7 @@ class WhatsappConfig extends Component
         if ($this->is_whatsmark_connected) {
             $this->loadBusinessProfile();
             $this->refreshHealth();
+            $this->loadAvailablePhoneNumbers();
 
             // Auto-sync once if basic info is missing but we are connected
             if (!$this->wm_verified_name || $this->wm_quality_rating === 'UNKNOWN') {
@@ -464,6 +466,7 @@ class WhatsappConfig extends Component
                 Log::debug("WhatsApp Setup: Templates synced successfully", ['count' => $response['count'] ?? 0]);
                 // Handle Phone Numbers with auto-discovery if missing
                 if (!empty($response['phone_numbers'])) {
+                    $this->available_phone_numbers = $response['phone_numbers'];
                     $apiPhones = $response['phone_numbers'];
                     $firstPhone = $apiPhones[0];
 
@@ -480,6 +483,7 @@ class WhatsappConfig extends Component
                             $team->update(['whatsapp_phone_number_id' => $this->wm_default_phone_number_id]);
                         } else {
                             Log::warning("WhatsApp Setup: Auto-discovery skipped: Phone {$potentialId} is taken by another team.");
+                            $this->dispatch('notify', title: 'Phone Number In Use', message: 'The default phone number is linked to another team. Please select manually.', type: 'warning');
                         }
                     }
                 }
@@ -797,6 +801,74 @@ class WhatsappConfig extends Component
         $this->is_editing_profile = true;
     }
 
+    public function loadAvailablePhoneNumbers()
+    {
+        if (!$this->wm_business_account_id)
+            return;
+
+        try {
+            // Re-use loadTemplates as it fetches phones. 
+            // Ideally we'd have a separate method, but for now this works and refreshes templates too.
+            // Or just fetch phone numbers directly if templates are heavy.
+            // Let's implement a direct fetch for speed if needed, but loadTemplates is already there.
+            // To avoid template parsing overhead, we could do a direct API call here.
+
+            // Optimization: Just use template sync as it's cached/updated rarely? 
+            // Let's use getPhoneNumberDetails but that needs an ID.
+            // We need LIST of phones.
+            // Let's use the trait's logic but customized?
+            // Actually, calling loadTemplates every mount is heavy.
+            // Let's only do it if wm_default_phone_number_id is empty OR requested.
+
+            // For now, let's just make a simple call if we don't have numbers yet.
+            if (empty($this->available_phone_numbers) && $this->is_whatsmark_connected) {
+                $token = $this->wm_access_token ?: auth()->user()->currentTeam->whatsapp_access_token;
+                if (!$token)
+                    return;
+
+                $wabaId = $this->wm_business_account_id;
+                $url = "https://graph.facebook.com/" . $this->getApiVersion() . "/{$wabaId}/phone_numbers";
+                $response = \Illuminate\Support\Facades\Http::withToken($token)->get($url);
+
+                if ($response->successful()) {
+                    $this->available_phone_numbers = $response->json('data') ?? [];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to load available phone numbers: " . $e->getMessage());
+        }
+    }
+
+    public function selectPhoneNumber($phoneId, $displayPhone)
+    {
+        $team = auth()->user()->currentTeam;
+
+        // Uniqueness check
+        $existing = \App\Models\Team::where('whatsapp_phone_number_id', $phoneId)
+            ->where('id', '!=', $team->id)
+            ->first();
+
+        if ($existing) {
+            // Warn or Ask? For now, we'll force claim since user is explicitly selecting it.
+            // But we should probably detach it from the other team to avoid webhook conflicts?
+            // Yes, detach from other team.
+            $existing->update([
+                'whatsapp_phone_number_id' => null,
+                'whatsapp_setup_state' => \App\Enums\IntegrationState::DISCONNECTED // Partial disconnect
+            ]);
+            Log::warning("Phone ID $phoneId reclaimed from Team {$existing->id} by Team {$team->id}");
+        }
+
+        $this->wm_default_phone_number_id = $phoneId;
+        $this->wm_phone_display = $displayPhone;
+
+        $team->update([
+            'whatsapp_phone_number_id' => $phoneId
+        ]);
+
+        $this->dispatch('notify', 'Phone Number selected successfully.');
+        $this->syncInfo(); // Get details immediately
+    }
     public function cancelEdit()
     {
         $this->is_editing_profile = false;

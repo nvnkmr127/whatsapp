@@ -645,16 +645,39 @@
                             <div x-data="{ copied: false }" class="space-y-1">
                                 <label class="text-xs font-bold text-slate-500 uppercase flex justify-between">
                                     Phone Number ID
-                                    <button
-                                        @click="navigator.clipboard.writeText('{{ $wm_default_phone_number_id }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                                        class="text-green-600 hover:text-green-700">
-                                        <span x-show="!copied">COPY</span>
-                                        <span x-show="copied" class="text-slate-400">COPIED!</span>
-                                    </button>
+                                    <div class="flex gap-2">
+                                        <button wire:click="loadAvailablePhoneNumbers" class="text-xs text-blue-600 hover:text-blue-700 font-bold" title="Refresh List">
+                                            REFRESH
+                                        </button>
+                                        <button
+                                            @click="navigator.clipboard.writeText('{{ $wm_default_phone_number_id }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                            class="text-green-600 hover:text-green-700">
+                                            <span x-show="!copied">COPY</span>
+                                            <span x-show="copied" class="text-slate-400">COPIED!</span>
+                                        </button>
+                                    </div>
                                 </label>
                                 <div
                                     class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 font-mono text-sm text-slate-700 dark:text-slate-300">
-                                    {{ $wm_default_phone_number_id ?? '-' }}
+                                    @if(empty($wm_default_phone_number_id) && !empty($available_phone_numbers))
+                                        <div class="space-y-3">
+                                            <p class="text-xs text-amber-600 font-bold">Select a Phone Number so connect:</p>
+                                            @foreach($available_phone_numbers as $phone)
+                                                <div class="flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                                                    <div class="flex flex-col">
+                                                        <span class="font-bold text-slate-900 dark:text-white">{{ $phone['display_phone_number'] ?? $phone['verified_name'] ?? 'Unknown' }}</span>
+                                                        <span class="text-xs text-slate-500">ID: {{ $phone['id'] }}</span>
+                                                    </div>
+                                                    <button wire:click="selectPhoneNumber('{{ $phone['id'] }}', '{{ $phone['display_phone_number'] ?? '' }}')" 
+                                                        class="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700">
+                                                        SELECT
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        {{ $wm_default_phone_number_id ?? '-' }}
+                                    @endif
                                 </div>
                             </div>
 
