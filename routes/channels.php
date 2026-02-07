@@ -8,6 +8,9 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 // Team-level channel for broad updates (new messages across all contacts)
 Broadcast::channel('teams.{teamId}', function ($user, $teamId) {
+    if (!$user->currentTeam) {
+        return false;
+    }
     return (int) $user->currentTeam->id === (int) $teamId;
 });
 

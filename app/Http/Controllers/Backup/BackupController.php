@@ -27,6 +27,10 @@ class BackupController extends Controller
         $hasAccess = $team ? $team->hasFeature('backups') : false;
         $hasCloudAccess = $team ? $team->hasFeature('cloud_backups') : false;
 
+        if (!$team) {
+            return redirect()->route('teams.create')->with('flash.banner', 'Please create a team to access backups.');
+        }
+
         $backups = TenantBackup::where('team_id', $team->id)
             ->latest()
             ->paginate(10);
