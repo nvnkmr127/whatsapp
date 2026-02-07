@@ -377,7 +377,7 @@ class WhatsappConfig extends Component
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->dispatch('notify', 'Connection failed: ' . $e->getMessage());
+            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
 
             // Re-load settings to clear partial state
             $this->loadSettings();
@@ -512,7 +512,7 @@ class WhatsappConfig extends Component
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->dispatch('notify', 'Connection failed: ' . $e->getMessage());
+            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
 
             if (!$startedTransaction) {
                 throw $e; // Re-throw if handled by parent transaction (Embedded Flow)

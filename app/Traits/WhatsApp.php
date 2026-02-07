@@ -72,13 +72,22 @@ trait WhatsApp
             $response = Http::get($url, $params);
 
             if ($response->failed()) {
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
                 Log::error("WhatsApp Trait: API Call Failed", [
                     'status' => $response->status(),
-                    'error' => $response->json(),
+                    'error' => $errorData,
                     'waba_id' => $accountId,
-                    'app_id_sent' => $appId // Added to verify what we actually sent
+                    'app_id_sent' => $appId
                 ]);
-                throw new \Exception($response->json('error.message') ?? 'API Error ' . $response->status());
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    throw new \Exception("Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID.");
+                }
+
+                throw new \Exception($errorMessage ?? 'API Error ' . $response->status());
             }
 
             $messageTemplates = $response->json('message_templates.data');
@@ -169,7 +178,15 @@ trait WhatsApp
             $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
 
             if ($response->failed()) {
-                return ['status' => false, 'message' => $response->json('error.message') ?? 'API Error'];
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token."];
+                }
+
+                return ['status' => false, 'message' => $errorMessage ?? 'API Error'];
             }
 
             $data = $response->json();
@@ -222,7 +239,15 @@ trait WhatsApp
             $response = Http::withToken($token)->post($url, $params);
 
             if ($response->failed()) {
-                return ['status' => false, 'message' => $response->json('error.message') ?? 'Registration Failed'];
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token."];
+                }
+
+                return ['status' => false, 'message' => $errorMessage ?? 'Registration Failed'];
             }
 
             return ['status' => true, 'message' => 'Phone number registered successfully'];
@@ -260,11 +285,20 @@ trait WhatsApp
             ]);
 
             if ($response->failed()) {
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
                 Log::error("WhatsApp Trait: Token Exchange Failed", [
                     'status' => $response->status(),
-                    'error' => $response->json()
+                    'error' => $errorData
                 ]);
-                return ['status' => false, 'message' => $response->json('error.message') ?? 'Token exchange failed'];
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
+                }
+
+                return ['status' => false, 'message' => $errorMessage ?? 'Token exchange failed'];
             }
 
             return [
@@ -301,8 +335,17 @@ trait WhatsApp
             $response = Http::withToken($token)->post($url, $params);
 
             if ($response->failed()) {
-                Log::error("WhatsApp Trait: Webhook Subscription Failed", ['status' => $response->status(), 'error' => $response->json()]);
-                return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook subscription failed'];
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
+                Log::error("WhatsApp Trait: Webhook Subscription Failed", ['status' => $response->status(), 'error' => $errorData]);
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
+                }
+
+                return ['status' => false, 'message' => $errorMessage ?? 'Webhook subscription failed'];
             }
 
             return ['status' => true, 'message' => 'Successfully subscribed to webhooks'];
@@ -330,11 +373,20 @@ trait WhatsApp
             ]);
 
             if ($response->failed()) {
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
                 Log::error("WhatsApp Trait: Token Debug Failed", [
                     'status' => $response->status(),
-                    'error' => $response->json(),
+                    'error' => $errorData,
                 ]);
-                return ['status' => false, 'message' => $response->json('error.message') ?? 'Token debug failed'];
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
+                }
+
+                return ['status' => false, 'message' => $errorMessage ?? 'Token debug failed'];
             }
 
             return [
@@ -368,8 +420,17 @@ trait WhatsApp
             $response = Http::withToken($token)->get($url, $params);
 
             if ($response->failed()) {
-                Log::error("WhatsApp Trait: Webhook Check Failed", ['error' => $response->json()]);
-                return ['status' => false, 'message' => $response->json('error.message') ?? 'Webhook check failed'];
+                $errorData = $response->json();
+                $errorCode = $errorData['error']['code'] ?? null;
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
+                Log::error("WhatsApp Trait: Webhook Check Failed", ['error' => $errorData]);
+
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
+                }
+
+                return ['status' => false, 'message' => $errorMessage ?? 'Webhook check failed'];
             }
 
             $subscriptions = $response->json('data');
