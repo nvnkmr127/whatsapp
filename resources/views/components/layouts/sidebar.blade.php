@@ -32,7 +32,7 @@
             <div class="relative">
                 <div class="absolute -inset-2 bg-gradient-to-tr from-wa-primary/40 to-wa-teal/40 rounded-2xl blur-lg opacity-20 group-hover:opacity-60 transition duration-500"></div>
                 <div class="relative flex items-center justify-center w-14 h-14 bg-slate-950 border border-slate-800/60 rounded-2xl shadow-2xl ring-1 ring-white/5 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
-                    @if(Auth::user()->currentTeam->logo_path)
+                    @if(Auth::user()->currentTeam && Auth::user()->currentTeam->logo_path)
                         <img src="{{ \Illuminate\Support\Facades\Storage::url(Auth::user()->currentTeam->logo_path) }}" class="w-full h-full object-cover">
                     @else
                         <div class="w-8 h-8 flex items-center justify-center bg-wa-primary/10 rounded-lg">
@@ -47,7 +47,7 @@
                 <span class="text-[10px] font-black uppercase tracking-[0.3em] text-wa-primary leading-none mb-1.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                     Workspace
                 </span>
-                <span class="text-lg font-black tracking-tight text-white uppercase group-hover:text-wa-primary transition-colors duration-300 truncate max-w-[120px]">{{ Auth::user()->currentTeam->name }}</span>
+                <span class="text-lg font-black tracking-tight text-white uppercase group-hover:text-wa-primary transition-colors duration-300 truncate max-w-[120px]">{{ Auth::user()->currentTeam->name ?? __('No Team') }}</span>
             </div>
         </div>
     </div>
@@ -174,14 +174,14 @@
                         <div class="text-xs font-black text-white truncate tracking-tight uppercase">{{ Auth::user()->name }}</div>
                         @if(Auth::user()->isSuperAdmin())
                             <span class="px-1.5 py-0.5 bg-rose-500/10 text-rose-500 text-[7px] font-black uppercase tracking-widest border border-rose-500/20 rounded-md">Nexus Root</span>
-                        @elseif(Auth::user()->ownsTeam(Auth::user()->currentTeam))
+                        @elseif(Auth::user()->currentTeam && Auth::user()->ownsTeam(Auth::user()->currentTeam))
                             <span class="px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-[7px] font-black uppercase tracking-widest border border-wa-teal/20 rounded-md">Workspace Admin</span>
                         @else
                             <span class="px-1.5 py-0.5 bg-slate-500/10 text-slate-500 text-[7px] font-black uppercase tracking-widest border border-slate-500/20 rounded-md">Collaborator</span>
                         @endif
                     </div>
                     <div class="text-[9px] font-bold text-slate-500 truncate uppercase tracking-wider group-hover:text-wa-teal transition-colors">
-                        {{ Auth::user()->currentTeam->name }}
+                        {{ Auth::user()->currentTeam->name ?? __('No Team') }}
                     </div>
                 </div>
 

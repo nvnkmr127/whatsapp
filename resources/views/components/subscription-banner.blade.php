@@ -1,7 +1,8 @@
 @php
     $team = auth()->user()->currentTeam;
-    $inGrace = $team->isInGracePeriod();
+    $inGrace = $team && $team->isInGracePeriod();
 @endphp
+
 
 @if($inGrace)
     <div class="bg-amber-600 text-white py-2 px-4 text-center text-xs font-black uppercase tracking-widest animate-pulse">

@@ -85,7 +85,7 @@
                                 </svg>
                             </div>
                             <span
-                                class="font-bold text-sm {{ auth()->user()->currentTeam->whatsapp_access_token ? 'text-green-300' : 'text-white' }}">
+                                class="font-bold text-sm {{ auth()->user()->currentTeam?->whatsapp_access_token ? 'text-green-300' : 'text-white' }}">
                                 {{ auth()->user()->currentTeam?->whatsapp_access_token ? 'Connected' : 'Connect WhatsApp' }}
                             </span>
                         </div>
