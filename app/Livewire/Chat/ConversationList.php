@@ -30,10 +30,12 @@ class ConversationList extends Component
 
     public function mount()
     {
-        $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
-            ->whereIn('target_module', ['chat', 'all'])
-            ->where('is_active', true)
-            ->get();
+        if (Auth::check() && Auth::user()->currentTeam) {
+            $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
+                ->whereIn('target_module', ['chat', 'all'])
+                ->where('is_active', true)
+                ->get();
+        }
     }
 
     public function resetFilters()
@@ -52,6 +54,10 @@ class ConversationList extends Component
 
     public function getConversationsProperty()
     {
+        if (!Auth::check() || !Auth::user()->currentTeam) {
+            return collect();
+        }
+
         return Conversation::query()
             ->with(['contact', 'lastMessage', 'assignee'])
             ->withCount([
@@ -82,16 +88,6 @@ class ConversationList extends Component
                 }
             })
             ->when($this->filterOptIn !== 'all', function ($query) {
-                $status = $this->filterOptIn === 'yes' ? 'opted_in' : 'opted_out';
-                // If filtering for NO, we might also want to include 'none' if that's considered not opted-in, 
-                // but usually strictly 'opted_out'. Let's stick to the enum values for now or follow specific logic.
-                // If 'no' implies simply NOT opted_in, it could be 'none' or 'opted_out'. 
-                // Given the requirement "Opted In: Yes/No", usually "No" means explicitly not opted in.
-                // Let's assume binary for now based on 'opted_in' vs others if simpler, but let's try strict first.
-                // Actually, let's map 'yes' -> 'opted_in', 'no' -> ['none', 'opted_out']?
-                // Let's stick to strict 'opted_in' vs 'opted_out' for now unless 'none' is common.
-                // Re-reading migration: default 'none'.
-                // So 'no' probably acts as "Not Opted In" which is 'none' OR 'opted_out'.
                 if ($this->filterOptIn === 'yes') {
                     $query->whereHas('contact', fn($q) => $q->where('opt_in_status', 'opted_in'));
                 } else {
@@ -112,6 +108,16 @@ class ConversationList extends Component
 
     public function getStatsProperty()
     {
+        if (!Auth::check() || !Auth::user()->currentTeam) {
+            return [
+                'active' => 0,
+                'unassigned' => 0,
+                'sla_breaches' => 0,
+                'avg_response' => '0m',
+                'resolution' => '0%',
+            ];
+        }
+
         $teamId = Auth::user()->currentTeam->id;
         $active = Conversation::where('team_id', $teamId)->where('status', 'open')->count();
         $unassigned = Conversation::where('team_id', $teamId)->where('status', 'open')->whereNull('assigned_to')->count();
