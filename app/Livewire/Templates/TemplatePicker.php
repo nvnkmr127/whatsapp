@@ -43,7 +43,10 @@ class TemplatePicker extends Component
             return;
         }
 
-        $tpl = WhatsappTemplate::find($id);
+        $tpl = WhatsappTemplate::where('id', $id)
+            ->where('team_id', Auth::user()->currentTeam->id)
+            ->first();
+
         if (!$tpl)
             return;
 

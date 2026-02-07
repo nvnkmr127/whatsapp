@@ -130,7 +130,11 @@ class EventDashboard extends Component
     public function viewEventDetails($eventId)
     {
         // Redirect to Explorer for drill-down
-        $event = \App\Models\SystemEvent::find($eventId);
+        $teamId = Auth::user()->currentTeam->id;
+        $event = \App\Models\SystemEvent::where('id', $eventId)
+            ->where('team_id', $teamId)
+            ->first();
+
         if ($event) {
             return redirect()->route('analytics.explorer', ['filterTraceId' => $event->trace_id]);
         }

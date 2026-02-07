@@ -77,6 +77,17 @@ class CannedMessageManager extends Component
             return;
         }
 
+        if ($this->cannedMessageId) {
+            $exists = CannedMessage::where('id', $this->cannedMessageId)
+                ->where('team_id', auth()->user()->currentTeam->id)
+                ->exists();
+
+            if (!$exists) {
+                $this->dispatch('notify', message: 'Unauthorized or Message not found.', type: 'error');
+                return;
+            }
+        }
+
         // Check for duplicate shortcut if provided
         if ($this->shortcut) {
             $exists = CannedMessage::where('team_id', auth()->user()->currentTeam->id)

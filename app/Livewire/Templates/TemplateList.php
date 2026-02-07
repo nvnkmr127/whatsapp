@@ -272,9 +272,14 @@ class TemplateList extends Component
 
     public function viewTemplate($id)
     {
-        $template = WhatsappTemplate::find($id);
-        if (!$template)
+        $template = WhatsappTemplate::where('id', $id)
+            ->where('team_id', auth()->user()->current_team_id)
+            ->first();
+
+        if (!$template) {
+            $this->dispatch('notify', message: 'Template not found or unauthorized.', type: 'error');
             return;
+        }
 
         $this->name = $template->name;
         $this->category = $template->category;
@@ -522,9 +527,14 @@ class TemplateList extends Component
 
     public function deleteTemplate($id, \App\Services\WhatsAppService $whatsapp)
     {
-        $template = WhatsappTemplate::find($id);
-        if (!$template)
+        $template = WhatsappTemplate::where('id', $id)
+            ->where('team_id', auth()->user()->current_team_id)
+            ->first();
+
+        if (!$template) {
+            $this->dispatch('notify', message: 'Template not found or unauthorized.', type: 'error');
             return;
+        }
 
         try {
             // Delete from Meta
@@ -584,11 +594,14 @@ class TemplateList extends Component
 
     public function render()
     {
-        $query = WhatsappTemplate::query();
+        $teamId = auth()->user()->current_team_id;
+        $query = WhatsappTemplate::where('team_id', $teamId);
 
         if ($this->search) {
-            $query->where('name', 'like', '%' . $this->search . '%')
-                ->orWhere('category', 'like', '%' . $this->search . '%');
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhere('category', 'like', '%' . $this->search . '%');
+            });
         }
 
         $templates = $query->latest()->paginate(10);

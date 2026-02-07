@@ -38,7 +38,8 @@ class EventExplorer extends Component
 
     public function render()
     {
-        $query = SystemEvent::query()
+        $teamId = \Illuminate\Support\Facades\Auth::user()->currentTeam->id;
+        $query = SystemEvent::where('team_id', $teamId)
             ->latest('occurred_at');
 
         // Noise Filter (Default: Show only Signals)
@@ -75,7 +76,7 @@ class EventExplorer extends Component
 
         return view('livewire.analytics.event-explorer', [
             'events' => $query->paginate(20),
-            'modules' => SystemEvent::distinct()->pluck('source')->filter()->values(),
+            'modules' => SystemEvent::where('team_id', $teamId)->distinct()->pluck('source')->filter()->values(),
         ]);
     }
 
@@ -89,11 +90,17 @@ class EventExplorer extends Component
 
     public function showDetails($eventId)
     {
-        $this->selectedEvent = SystemEvent::findOrFail($eventId);
+        $teamId = \Illuminate\Support\Facades\Auth::user()->currentTeam->id;
+
+        $this->selectedEvent = SystemEvent::where('id', $eventId)
+            ->where('team_id', $teamId)
+            ->firstOrFail();
+
         $this->showTraceModal = true;
 
         if ($this->selectedEvent->trace_id) {
-            $this->traceEvents = SystemEvent::where('trace_id', $this->selectedEvent->trace_id)
+            $this->traceEvents = SystemEvent::where('team_id', $teamId)
+                ->where('trace_id', $this->selectedEvent->trace_id)
                 ->orderBy('occurred_at')
                 ->get();
         } else {
