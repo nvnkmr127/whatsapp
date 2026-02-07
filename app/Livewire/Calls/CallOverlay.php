@@ -44,6 +44,11 @@ class CallOverlay extends Component
     public function mount()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            return;
+        }
+
         $this->teamId = $team->id;
 
         // Recovery: Check if there's an active call for this team that involves the current user (if routing is implemented)
@@ -121,6 +126,9 @@ class CallOverlay extends Component
         $this->startTime = null;
 
         try {
+            if (!auth()->user()->currentTeam) {
+                throw new \Exception('No team selected.');
+            }
             $whatsappService = new \App\Services\WhatsAppService(auth()->user()->currentTeam);
             $response = $whatsappService->initiateCall((string) $phoneNumber, $sdp);
 
@@ -294,6 +302,9 @@ class CallOverlay extends Component
 
         try {
             $team = auth()->user()->currentTeam;
+            if (!$team) {
+                throw new \Exception('No team selected.');
+            }
             $whatsappService = new \App\Services\WhatsAppService($team);
 
             $session = null;
@@ -338,8 +349,12 @@ class CallOverlay extends Component
             return;
 
         try {
+            $team = auth()->user()->currentTeam;
+            if (!$team)
+                return;
+
             $call = \App\Models\WhatsAppCall::where('call_id', $this->callId)
-                ->where('team_id', auth()->user()->currentTeam->id)
+                ->where('team_id', $team->id)
                 ->first();
 
             if ($call && $call->qualityMetric) {
@@ -371,6 +386,8 @@ class CallOverlay extends Component
 
         try {
             $team = auth()->user()->currentTeam;
+            if (!$team)
+                return;
             $whatsappService = new \App\Services\WhatsAppService($team);
             $response = $whatsappService->rejectCall($this->callId);
 
@@ -392,6 +409,8 @@ class CallOverlay extends Component
 
         try {
             $team = auth()->user()->currentTeam;
+            if (!$team)
+                return;
             $whatsappService = new \App\Services\WhatsAppService($team);
             $whatsappService->endCall($this->callId);
             $this->handleEnded([]);
