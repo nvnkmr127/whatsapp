@@ -45,6 +45,11 @@ class ChatRouting extends Component
      */
     public function mount()
     {
+        if (!Auth::user()->currentTeam) {
+            $this->team = null;
+            return;
+        }
+
         $this->team = Auth::user()->currentTeam;
 
         // Ensure user has permission to manage settings
@@ -325,6 +330,13 @@ class ChatRouting extends Component
      */
     public function render()
     {
+        if (!$this->team) {
+            return view('livewire.settings.chat-routing', [
+                'users' => collect(),
+                'teamMembers' => collect()
+            ]);
+        }
+
         $users = $this->team->users()
             ->when($this->memberSearch, function ($query) {
                 $query->where('name', 'like', '%' . $this->memberSearch . '%')

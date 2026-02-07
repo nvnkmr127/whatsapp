@@ -36,6 +36,12 @@ class CategoryManager extends Component
 
     public function render()
     {
+        if (!Auth::check() || !Auth::user()->currentTeam) {
+            return view('livewire.settings.category-manager', [
+                'categories' => collect(),
+            ]);
+        }
+
         $categories = Category::where('team_id', Auth::user()->currentTeam->id)
             ->when($this->searchTerm, function ($query) {
                 $query->where('name', 'like', '%' . $this->searchTerm . '%')
@@ -64,6 +70,10 @@ class CategoryManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->resetForm();
+        if (!Auth::user()->currentTeam) {
+            return;
+        }
+
         $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
 
         $this->editingCategoryId = $id;
@@ -81,6 +91,10 @@ class CategoryManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate();
+
+        if (!Auth::user()->currentTeam) {
+            return;
+        }
 
         $data = [
             'team_id' => Auth::user()->currentTeam->id,
@@ -108,6 +122,9 @@ class CategoryManager extends Component
     public function deleteCategory($id)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+        if (!Auth::user()->currentTeam) {
+            return;
+        }
         $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
 
         // Check if category is in use
@@ -123,6 +140,9 @@ class CategoryManager extends Component
     public function toggleStatus($id)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+        if (!Auth::user()->currentTeam) {
+            return;
+        }
         $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $category->update(['is_active' => !$category->is_active]);
     }

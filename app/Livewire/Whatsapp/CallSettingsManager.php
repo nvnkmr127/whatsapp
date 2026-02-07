@@ -65,6 +65,12 @@ class CallSettingsManager extends Component
     public function mount()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            $this->dispatch('notify', title: 'Error', message: 'No active team found', type: 'error');
+            return;
+        }
+
         $this->phoneNumberId = $team->whatsapp_phone_number_id;
 
         if (!$this->phoneNumberId) {
@@ -80,6 +86,10 @@ class CallSettingsManager extends Component
     public function loadSettings()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            return;
+        }
 
         $this->settings = CallSettings::firstOrNew(
             [
@@ -162,6 +172,10 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
+        if (!$team) {
+            return;
+        }
+
         $this->totalPermissions = CallPermission::where('team_id', $team->id)
             ->where('phone_number_id', $this->phoneNumberId)
             ->count();
@@ -210,6 +224,11 @@ class CallSettingsManager extends Component
         $this->validate();
 
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            $this->dispatch('notify', title: 'Error', message: 'No active team found', type: 'error');
+            return;
+        }
 
         try {
             // Prepare settings for Meta API
@@ -344,6 +363,10 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
+        if (!$team) {
+            return;
+        }
+
         try {
             $waService = new WhatsAppService($team);
             $link = $waService->generateCallLink();
@@ -390,6 +413,12 @@ class CallSettingsManager extends Component
     public function render()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            return view('livewire.whatsapp.call-settings-manager', [
+                'permissions' => collect()
+            ]);
+        }
 
         $permissions = CallPermission::where('team_id', $team->id)
             ->where('phone_number_id', $this->phoneNumberId)

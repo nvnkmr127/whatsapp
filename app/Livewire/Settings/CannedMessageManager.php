@@ -27,6 +27,12 @@ class CannedMessageManager extends Component
 
     public function render()
     {
+        if (!auth()->check() || !auth()->user()->currentTeam) {
+            return view('livewire.settings.canned-message-manager', [
+                'messages' => collect(),
+            ]);
+        }
+
         $query = CannedMessage::where('team_id', auth()->user()->currentTeam->id);
 
         if ($this->search) {
@@ -51,6 +57,10 @@ class CannedMessageManager extends Component
     public function edit($id)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+        if (!auth()->user()->currentTeam) {
+            return;
+        }
+
         $message = CannedMessage::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
         $this->cannedMessageId = $message->id;
         $this->shortcut = $message->shortcut;
@@ -62,6 +72,10 @@ class CannedMessageManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate();
+
+        if (!auth()->user()->currentTeam) {
+            return;
+        }
 
         // Check for duplicate shortcut if provided
         if ($this->shortcut) {
@@ -99,6 +113,10 @@ class CannedMessageManager extends Component
     public function delete()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+        if (!auth()->user()->currentTeam) {
+            return;
+        }
+
         $message = CannedMessage::where('team_id', auth()->user()->currentTeam->id)->findOrFail($this->messageIdBeingDeleted);
         $message->delete();
 

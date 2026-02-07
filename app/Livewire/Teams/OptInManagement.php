@@ -21,6 +21,10 @@ class OptInManagement extends Component
     public function mount()
     {
         $team = Auth::user()->currentTeam;
+
+        if (!$team) {
+            return;
+        }
         $this->optInKeywords = $team->opt_in_keywords ?? [];
         $this->optOutKeywords = $team->opt_out_keywords ?? [];
         $this->optInMessage = $team->opt_in_message;

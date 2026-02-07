@@ -21,6 +21,13 @@ class ComplianceManager extends Component
 
     public function render()
     {
+        if (!Auth::check() || !Auth::user()->currentTeam) {
+            return view('livewire.compliance.compliance-manager', [
+                'consentLogs' => collect(),
+                'stats' => ['total' => 0, 'granted' => 0, 'revoked' => 0, 'rate' => 0],
+            ]);
+        }
+
         $teamId = Auth::user()->currentTeam->id;
 
         $consentLogs = ConsentLog::where('team_id', $teamId)

@@ -117,6 +117,12 @@ class WhatsappConfig extends Component
     {
         $team = auth()->user()->currentTeam;
 
+        if (!$team) {
+            $this->is_whatsmark_connected = false;
+            $this->integrationState = 'disconnected';
+            return;
+        }
+
         // Load from Team Model first, fallback to settings if empty (migration path)
         // Actually, App ID might be global for the SaaS unless white-labeled. 
         // Let's stick to global for App ID if it's not in Team. 

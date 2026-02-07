@@ -25,6 +25,10 @@ class CallHistory extends Component
 
     public function getListeners()
     {
+        if (!auth()->check() || !auth()->user()->currentTeam) {
+            return [];
+        }
+
         $teamId = auth()->user()->currentTeam->id;
         return [
             "echo-private:teams.{$teamId},.call.offered" => '$refresh',
@@ -73,6 +77,15 @@ class CallHistory extends Component
     public function render()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            return view('livewire.calls.call-history', [
+                'calls' => collect(), // Or empty paginator
+                'statistics' => [],
+                'usageLimits' => [],
+                'period' => 'month',
+            ]);
+        }
 
         $query = WhatsAppCall::where('team_id', $team->id)
             ->with(['contact:id,name,phone_number']);

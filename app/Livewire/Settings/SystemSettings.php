@@ -97,8 +97,10 @@ class SystemSettings extends Component
 
             // Auto-save timezone and related settings immediately
             $team = Auth::user()->currentTeam;
-            $team->timezone = $this->timezone;
-            $team->save();
+            if ($team) {
+                $team->timezone = $this->timezone;
+                $team->save();
+            }
 
             // Update global settings
             set_setting('selected_country', $value, 'system');
@@ -117,9 +119,18 @@ class SystemSettings extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
         $team = Auth::user()->currentTeam;
-        $this->teamName = $team->name;
-        $this->timezone = $team->timezone ?? 'UTC';
-        $this->currentLogoPath = $team->logo_path;
+
+        if (!$team) {
+            // Handle case where team is null (e.g., redirect or set defaults)
+            // For now, we'll initialize empty values to prevent crashes
+            $this->teamName = '';
+            $this->timezone = 'UTC';
+            $this->currentLogoPath = null;
+        } else {
+            $this->teamName = $team->name;
+            $this->timezone = $team->timezone ?? 'UTC';
+            $this->currentLogoPath = $team->logo_path;
+        }
 
         // Load Global Settings
         $settings = \App\Models\Setting::all()->pluck('value', 'key');
@@ -146,19 +157,23 @@ class SystemSettings extends Component
 
         $team = Auth::user()->currentTeam;
 
-        // Handle logo upload
-        if ($this->logo) {
-            if ($team->logo_path) {
-                Storage::disk('public')->delete($team->logo_path);
+        if ($team) {
+            // Handle logo upload
+            if ($this->logo) {
+                if ($team->logo_path) {
+                    Storage::disk('public')->delete($team->logo_path);
+                }
+                $path = $this->logo->store('team-logos', 'public');
+                $team->logo_path = $path;
             }
-            $path = $this->logo->store('team-logos', 'public');
-            $team->logo_path = $path;
-        }
 
-        // Update team settings
-        $team->name = $this->teamName;
-        $team->timezone = $this->timezone;
-        $team->save();
+            // Update team settings
+            $team->name = $this->teamName;
+            $team->timezone = $this->timezone;
+            $team->save();
+
+            $this->currentLogoPath = $team->logo_path;
+        }
 
         // Save Global Settings
         $settings = [
@@ -176,7 +191,9 @@ class SystemSettings extends Component
             set_setting($key, $value, 'system');
         }
 
-        $this->currentLogoPath = $team->logo_path;
+        if ($team) {
+            $this->currentLogoPath = $team->logo_path;
+        }
 
         session()->flash('message', 'System settings updated successfully.');
         audit('settings.updated', "System settings updated by " . Auth::user()->name);
@@ -192,7 +209,7 @@ class SystemSettings extends Component
 
         $team = Auth::user()->currentTeam;
 
-        if ($team->logo_path) {
+        if ($team && $team->logo_path) {
             Storage::disk('public')->delete($team->logo_path);
             $team->logo_path = null;
             $team->save();

@@ -43,6 +43,17 @@ class CallAnalytics extends Component
     public function render()
     {
         $team = auth()->user()->currentTeam;
+
+        if (!$team) {
+            return view('livewire.calls.call-analytics', [
+                'statistics' => [],
+                'billingStats' => null,
+                'usageLimits' => null,
+                'costBreakdown' => [],
+                'topContacts' => collect(),
+            ]);
+        }
+
         $callService = new CallService($team);
         $billingService = new BillingService();
 
