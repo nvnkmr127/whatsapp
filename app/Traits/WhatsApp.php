@@ -71,6 +71,20 @@ trait WhatsApp
 
             $response = Http::get($url, $params);
 
+            // Retry without appsecret_proof if it fails with specific error
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed, retrying without proof.");
+                    unset($params['appsecret_proof']);
+                    $response = Http::get($url, $params);
+                }
+            }
+
             if ($response->failed()) {
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
@@ -333,6 +347,20 @@ trait WhatsApp
             Log::debug("WhatsApp Trait: Subscribing to webhooks", ['waba_id' => $wabaId, 'is_system_token' => $isSystemToken]);
 
             $response = Http::withToken($token)->post($url, $params);
+
+            // Retry without appsecret_proof if it fails with specific error
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Webhook Subscribe, retrying without proof.");
+                    unset($params['appsecret_proof']);
+                    $response = Http::withToken($token)->post($url, $params);
+                }
+            }
 
             if ($response->failed()) {
                 $errorData = $response->json();
