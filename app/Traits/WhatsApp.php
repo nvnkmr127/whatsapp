@@ -104,10 +104,10 @@ trait WhatsApp
                 throw new \Exception($errorMessage ?? 'API Error ' . $response->status());
             }
 
-            $messageTemplates = $response->json('message_templates.data');
-            if (!$messageTemplates) {
-                return ['status' => false, 'message' => 'No templates found.'];
-            }
+            $messageTemplates = $response->json('message_templates.data') ?? [];
+            // if (!$messageTemplates) {
+            //    return ['status' => false, 'message' => 'No templates found.'];
+            // }
 
             $existingTemplateIds = WhatsappTemplate::pluck('whatsapp_template_id')->toArray();
             $apiTemplateIds = [];
