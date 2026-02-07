@@ -27,7 +27,7 @@
     </div>
 
     <!-- Usage Snapshot -->
-    @if($usageLimits['minutes_limit'])
+    @if(isset($usageLimits['minutes_limit']) && $usageLimits['minutes_limit'])
         <div class="group relative bg-slate-900 rounded-[2.5rem] p-10 border border-slate-800 shadow-2xl overflow-hidden transition-all hover:scale-[1.01]">
             <div class="absolute -top-24 -right-24 w-64 h-64 bg-wa-teal opacity-5 rounded-full group-hover:scale-110 transition-transform duration-700"></div>
             
@@ -50,7 +50,7 @@
                     
                     <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
                         <div class="bg-wa-teal h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(37,211,102,0.5)]"
-                            style="width: {{ min(($usageLimits['minutes_used'] / $usageLimits['minutes_limit']) * 100, 100) }}%">
+                            style="width: {{ min((($usageLimits['minutes_used'] ?? 0) / ($usageLimits['minutes_limit'] ?? 1)) * 100, 100) }}%">
                         </div>
                     </div>
                 </div>

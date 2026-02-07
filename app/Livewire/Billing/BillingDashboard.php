@@ -29,7 +29,9 @@ class BillingDashboard extends Component
     public function mount()
     {
         $this->team = auth()->user()->currentTeam;
-        $this->loadData();
+        if ($this->team) {
+            $this->loadData();
+        }
     }
 
     public function loadData()
@@ -106,6 +108,12 @@ class BillingDashboard extends Component
 
     public function render()
     {
+        if (!$this->team) {
+            return view('livewire.billing.billing-dashboard', [
+                'transactions' => collect()
+            ]);
+        }
+
         $transactions = TeamTransaction::where('team_id', $this->team->id)
             ->orderBy('created_at', 'desc')
             ->paginate(10);

@@ -24,6 +24,19 @@ class EventDashboard extends Component
 
     public function render()
     {
+        if (!Auth::user()->currentTeam) {
+            return view('livewire.analytics.event-dashboard', [
+                'events' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
+                'totalEvents' => 0,
+                'growth' => 0,
+                'eventStats' => collect(),
+                'chartData' => ['labels' => [], 'datasets' => []],
+                'distData' => ['labels' => [], 'data' => []],
+                'categories' => collect(),
+                'lastUpdated' => now()
+            ]);
+        }
+
         $teamId = Auth::user()->currentTeam->id;
         $days = (int) ($this->filterDateRange ?: 30);
 
@@ -125,6 +138,10 @@ class EventDashboard extends Component
 
     public function exportEvents()
     {
+        if (!Auth::user()->currentTeam) {
+            return;
+        }
+
         $teamId = Auth::user()->currentTeam->id;
         $events = \App\Models\SystemEvent::where('team_id', $teamId)
             ->when($this->filterEventType !== 'all', fn($q) => $q->where('event_type', $this->filterEventType))

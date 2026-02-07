@@ -37,15 +37,19 @@ class InboxSettings extends Component
     {
         $team = Auth::user()->currentTeam;
 
-        $this->readReceiptsEnabled = $team->read_receipts_enabled;
-        $this->welcomeMessageEnabled = $team->welcome_message_enabled;
-        $this->welcomeMessage = $team->welcome_message;
+        if (!$team) {
+            return;
+        }
+
+        $this->readReceiptsEnabled = $team->read_receipts_enabled ?? true;
+        $this->welcomeMessageEnabled = $team->welcome_message_enabled ?? false;
+        $this->welcomeMessage = $team->welcome_message ?? '';
 
         // Mapped to existing 'away_message'
-        $this->offHoursMessageEnabled = $team->away_message_enabled;
-        $this->offHoursMessage = $team->away_message;
+        $this->offHoursMessageEnabled = $team->away_message_enabled ?? false;
+        $this->offHoursMessage = $team->away_message ?? '';
 
-        $this->aiAutoReplyEnabled = $team->ai_auto_reply_enabled;
+        $this->aiAutoReplyEnabled = $team->ai_auto_reply_enabled ?? false;
 
         // Initialize working hours
         $dbHours = $team->business_hours ?? [];
@@ -70,6 +74,10 @@ class InboxSettings extends Component
     {
         $this->editingType = $type;
         $team = Auth::user()->currentTeam;
+
+        if (!$team) {
+            return;
+        }
 
         // Load existing config
         $config = $type === 'welcome'
@@ -130,6 +138,10 @@ class InboxSettings extends Component
     {
         $team = Auth::user()->currentTeam;
 
+        if (!$team) {
+            return;
+        }
+
         $newConfig = [
             'type' => $this->configMsgType
         ];
@@ -174,6 +186,10 @@ class InboxSettings extends Component
     {
         $team = Auth::user()->currentTeam;
 
+        if (!$team) {
+            return;
+        }
+
         $businessHours = [];
         foreach ($this->days as $day) {
             if ($this->workingHours[$day]['enabled']) {
@@ -200,6 +216,9 @@ class InboxSettings extends Component
 
     public function render()
     {
+        if (!Auth::user()->currentTeam) {
+            return view('livewire.teams.inbox-settings')->layout('layouts.app');
+        }
         return view('livewire.teams.inbox-settings');
     }
 }

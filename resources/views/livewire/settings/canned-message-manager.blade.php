@@ -110,7 +110,7 @@
             </table>
         </div>
 
-        @if($messages->hasPages())
+        @if($messages instanceof \Illuminate\Pagination\LengthAwarePaginator && $messages->hasPages())
             <div class="p-8 border-t border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/10">
                 {{ $messages->links() }}
             </div>

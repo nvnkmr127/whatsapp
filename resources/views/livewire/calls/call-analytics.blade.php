@@ -26,7 +26,7 @@
     </div>
 
     {{-- Limit Engine --}}
-    @if($usageLimits['has_limit'])
+    @if(isset($usageLimits['has_limit']) && $usageLimits['has_limit'])
         <div class="group relative bg-slate-900 rounded-[2.5rem] p-10 border border-slate-800 shadow-2xl overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-orange-500/5"></div>
             
@@ -41,22 +41,22 @@
                         <div>
                             <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60">Limit Orchestrator</h3>
                             <div class="text-3xl font-black text-white tabular-nums tracking-tighter">
-                                {{ number_format($usageLimits['minutes_used'], 0) }} 
-                                <span class="text-slate-500 text-xl font-bold">/ {{ number_format($usageLimits['minutes_limit'], 0) }} used</span>
+                                {{ number_format($usageLimits['minutes_used'] ?? 0, 0) }} 
+                                <span class="text-slate-500 text-xl font-bold">/ {{ number_format($usageLimits['minutes_limit'] ?? 0, 0) }} used</span>
                             </div>
                         </div>
                     </div>
                     
                     <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
                         <div class="bg-amber-500 h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(245,158,11,0.5)]"
-                            style="width: {{ min($usageLimits['percent_used'], 100) }}%">
+                            style="width: {{ min($usageLimits['percent_used'] ?? 0, 100) }}%">
                         </div>
                     </div>
                 </div>
 
                 <div class="bg-white/5 border border-white/10 rounded-3xl p-6 md:min-w-[240px] text-center">
                     <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Total Availability</div>
-                    <div class="text-5xl font-black text-white tabular-nums">{{ number_format($usageLimits['minutes_remaining'], 0) }}</div>
+                    <div class="text-5xl font-black text-white tabular-nums">{{ number_format($usageLimits['minutes_remaining'] ?? 0, 0) }}</div>
                     <div class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 mt-2">Minutes Left</div>
                 </div>
             </div>
@@ -66,10 +66,10 @@
     <!-- Economic Matrix -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         @foreach([
-            ['label' => 'Total Packets', 'val' => $billingStats['total_calls'], 'desc' => $billingStats['completed_calls'] . ' successful', 'color' => 'blue'],
-            ['label' => 'Temporal Mix', 'val' => number_format($billingStats['total_minutes'], 0) . 'm', 'desc' => number_format($billingStats['average_duration'] / 60, 1) . 'm average', 'color' => 'purple'],
-            ['label' => 'Success Index', 'val' => $statistics['success_rate'] . '%', 'desc' => $billingStats['failed_calls'] . ' failures detected', 'color' => 'teal'],
-            ['label' => 'Economic Value', 'val' => get_setting('currency_symbol', '$') . number_format($billingStats['total_cost'], 2), 'desc' => get_setting('currency_symbol', '$') . number_format($billingStats['total_minutes'] > 0 ? $billingStats['total_cost'] / $billingStats['total_minutes'] : 0, 4) . '/min avg', 'color' => 'amber']
+            ['label' => 'Total Calls', 'val' => $statistics['total_calls'] ?? 0, 'desc' => 'This ' . ucfirst($period), 'color' => 'blue'],
+            ['label' => 'Success Rate', 'val' => ($statistics['success_rate'] ?? 0) . '%', 'desc' => ($statistics['completed_calls'] ?? 0) . ' completed', 'color' => 'teal'],
+            ['label' => 'Total Duration', 'val' => number_format($statistics['total_duration_minutes'] ?? 0, 0), 'desc' => 'Minutes consumed', 'color' => 'purple'],
+            ['label' => 'Consolidated Cost', 'val' => get_setting('currency_symbol', '$') . number_format($statistics['total_cost'] ?? 0, 2), 'desc' => 'Billing estimation', 'color' => 'amber']
         ] as $stat)
             @php
                 $colors = ['blue' => 'from-wa-blue to-indigo-600', 'purple' => 'from-purple-500 to-fuchsia-600', 'teal' => 'from-wa-teal to-emerald-600', 'amber' => 'from-amber-400 to-orange-600'];
@@ -115,7 +115,7 @@
             <div class="flex-1 relative min-h-[250px] w-full flex items-center justify-center">
                 <canvas id="outcomeIndexChart"></canvas>
                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span class="text-2xl font-black text-slate-900 dark:text-white">{{ $statistics['success_rate'] }}%</span>
+                    <span class="text-2xl font-black text-slate-900 dark:text-white">{{ $statistics['success_rate'] ?? 0 }}%</span>
                     <span class="text-[8px] font-black uppercase text-wa-teal tracking-widest">Efficiency</span>
                 </div>
             </div>
@@ -256,9 +256,9 @@
                         labels: ['Completed', 'Failed', 'Other'],
                         datasets: [{
                             data: [
-                                {{ $billingStats['completed_calls'] }},
-                                {{ $billingStats['failed_calls'] }},
-                                {{ max(0, $billingStats['total_calls'] - ($billingStats['completed_calls'] + $billingStats['failed_calls'])) }}
+                                {{ $billingStats['completed_calls'] ?? 0 }},
+                                {{ $billingStats['failed_calls'] ?? 0 }},
+                                {{ max(0, ($billingStats['total_calls'] ?? 0) - (($billingStats['completed_calls'] ?? 0) + ($billingStats['failed_calls'] ?? 0))) }}
                             ],
                             backgroundColor: ['#25D366', '#EF4444', '#94A3B8'],
                             borderWidth: 0,
