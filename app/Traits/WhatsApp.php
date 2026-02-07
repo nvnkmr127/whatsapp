@@ -191,6 +191,20 @@ trait WhatsApp
 
             $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
 
+            // Retry without appsecret_proof if it fails with specific error
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Phone Details, retrying without proof.");
+                    unset($params['appsecret_proof']);
+                    $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
+                }
+            }
+
             if ($response->failed()) {
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
@@ -251,6 +265,20 @@ trait WhatsApp
             ]);
 
             $response = Http::withToken($token)->post($url, $params);
+
+            // Retry without appsecret_proof if it fails with specific error
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Registration, retrying without proof.");
+                    unset($params['appsecret_proof']);
+                    $response = Http::withToken($token)->post($url, $params);
+                }
+            }
 
             if ($response->failed()) {
                 $errorData = $response->json();
@@ -405,6 +433,14 @@ trait WhatsApp
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
 
+                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
+                    Log::warning("WhatsApp Trait: Token Debug Mismatch", [
+                        'message' => 'Configured App ID does not match Token App ID',
+                        'config_app_id' => $appId
+                    ]);
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
+                }
+
                 Log::error("WhatsApp Trait: Token Debug Failed", [
                     'status' => $response->status(),
                     'error' => $errorData,
@@ -446,6 +482,20 @@ trait WhatsApp
             }
 
             $response = Http::withToken($token)->get($url, $params);
+
+            // Retry without appsecret_proof if it fails with specific error
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed on Check, retrying without proof.");
+                    unset($params['appsecret_proof']);
+                    $response = Http::withToken($token)->get($url, $params);
+                }
+            }
 
             if ($response->failed()) {
                 $errorData = $response->json();
