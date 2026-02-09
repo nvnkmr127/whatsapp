@@ -20,6 +20,7 @@ class EmailTemplateSeeder extends Seeder
                 'content_text' => "Hello {{ name }},\nYour login code is {{ code }}.\nThis expires in {{ expiry }}.",
                 'variable_schema' => ['name', 'code', 'expiry'],
                 'is_locked' => true,
+                'is_active' => true,
                 'description' => 'Sent when a user requests a login OTP.',
             ],
             [
@@ -31,6 +32,7 @@ class EmailTemplateSeeder extends Seeder
                 'content_text' => "System Alert\nService: {{ service_name }}\nStatus: {{ status }}\nTime: {{ time }}\n\n{{ details }}",
                 'variable_schema' => ['service_name', 'status', 'time', 'details'],
                 'is_locked' => true,
+                'is_active' => true,
                 'description' => 'Critical alerts for system administrators.',
             ],
             [
@@ -42,6 +44,7 @@ class EmailTemplateSeeder extends Seeder
                 'content_text' => "Welcome {{ name }}!\nWe are glad to have you on board.",
                 'variable_schema' => ['name'],
                 'is_locked' => false,
+                'is_active' => true,
                 'description' => 'Welcome email for new signups.',
             ],
             [
@@ -53,6 +56,7 @@ class EmailTemplateSeeder extends Seeder
                 'content_text' => "WhatsApp Alert\nTeam: {{ team_name }}\nMessage: {{ message }}\nSeverity: {{ severity }}\nDashboard: {{ dashboard_url }}",
                 'variable_schema' => ['team_name', 'message', 'severity', 'dashboard_url'],
                 'is_locked' => true,
+                'is_active' => true,
                 'description' => 'Sent when a team\'s WhatsApp health degrades.',
             ]
         ];
