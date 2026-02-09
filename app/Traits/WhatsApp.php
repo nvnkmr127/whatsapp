@@ -379,13 +379,20 @@ trait WhatsApp
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
                 $errorData = $response->json();
-                if (
-                    ($errorData['error']['code'] ?? 0) == 100 &&
-                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
-                ) {
+                $code = $errorData['error']['code'] ?? 0;
+                $msg = $errorData['error']['message'] ?? '';
 
-                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Webhook Subscribe, retrying without proof.");
+                if ($code == 100 && str_contains($msg, 'Invalid appsecret_proof')) {
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed, retrying without proof.");
                     unset($params['appsecret_proof']);
+                    $response = Http::withToken($token)->post($url, $params);
+                }
+                // Retry without app_id if Permission Error (#200) - sometimes passing app_id causes strict BM checks
+                elseif ($code == 200 && str_contains($msg, 'Permissions error')) {
+                    Log::warning("WhatsApp Trait: Webhook Subscription Permission Error, retrying without explicit app_id.");
+                    unset($params['app_id']);
+                    // We must keep appsecret_proof if it was there, but it depends on app_id? 
+                    // Usually appsecret_proof is hash(token, secret). Independent of app_id param.
                     $response = Http::withToken($token)->post($url, $params);
                 }
             }
