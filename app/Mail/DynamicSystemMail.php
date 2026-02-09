@@ -30,7 +30,6 @@ class DynamicSystemMail extends Mailable
     {
         return new Content(
             htmlString: $this->htmlContent,
-            textString: $this->textContent,
         );
     }
 
