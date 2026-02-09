@@ -106,6 +106,18 @@
         <x-slot name="title">
             <div class="flex items-center justify-between">
                 <div>
+                    {{-- Breadcrumb Navigation --}}
+                    <div class="flex items-center gap-2 mb-2">
+                        <a href="{{ route('webhook-sources.index') }}" class="text-slate-400 hover:text-slate-500 text-[10px] font-bold uppercase tracking-widest transition-colors">
+                            Developer/Webhook Sources
+                        </a>
+                        <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span class="text-[10px] font-bold text-wa-teal uppercase tracking-widest">
+                            {{ $editingId ? 'Edit' : 'New' }}
+                        </span>
+                    </div>
                     <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                         {{ $editingId ? 'Update Webhook Source' : 'New Webhook Source' }}
                     </h3>
@@ -855,15 +867,29 @@
     <x-dialog-modal wire:model.live="showLogsModal" maxWidth="4xl">
         <x-slot name="title">
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-orange-100 dark:bg-orange-500/10 text-orange-600 rounded-lg">
-                        <svg class="w-5 h-5 font-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <div class="flex-1">
+                    {{-- Breadcrumb Navigation --}}
+                    <div class="flex items-center gap-2 mb-2">
+                        <a href="{{ route('webhook-sources.index') }}" class="text-slate-400 hover:text-slate-500 text-[10px] font-bold uppercase tracking-widest transition-colors">
+                            Developer/Webhook Sources
+                        </a>
+                        <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
+                        <span class="text-[10px] font-bold text-wa-teal uppercase tracking-widest">
+                            Analytics
+                        </span>
                     </div>
-                    <div>
-                        <span class="text-lg font-black uppercase tracking-tight block leading-none">{{ $logsSourceStats['name'] ?? 'Live Event Monitor' }}</span>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Real-time performance analytics</span>
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-orange-100 dark:bg-orange-500/10 text-orange-600 rounded-lg">
+                            <svg class="w-5 h-5 font-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-lg font-black uppercase tracking-tight block leading-none">{{ $logsSourceStats['name'] ?? 'Live Event Monitor' }}</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Real-time performance analytics</span>
+                        </div>
                     </div>
                 </div>
                 <button wire:click="refreshLogs" class="p-2 text-slate-400 hover:text-wa-teal hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all group" title="Refresh Now">
