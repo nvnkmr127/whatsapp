@@ -58,6 +58,7 @@ class WhatsappConfig extends Component
     public $healthScore = 0;
     public $healthStatus = 'unknown';
     public $tokenHealthScore = 0;
+    public $token_valid = false;
     public $qualityHealthScore = 0;
     public $messagingUsagePercent = 0;
     public $currentUsage = 0;
@@ -659,6 +660,7 @@ class WhatsappConfig extends Component
         $this->healthScore = $health['overall_score'] ?? 0;
         $this->healthStatus = $health['status'] ?? 'unknown';
         $this->tokenHealthScore = $health['token']['score'] ?? 0;
+        $this->token_valid = $health['token']['valid'] ?? true;
         $this->qualityHealthScore = $health['quality']['score'] ?? 0;
         $this->messagingUsagePercent = $health['messaging']['usage_percent'] ?? 0;
         // [FIX] Handle permanent tokens (null expiry) by defaulting to 999 instead of 0
