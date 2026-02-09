@@ -25,7 +25,7 @@ class NotifyAdminsOfTokenExpiry implements ShouldQueue
             'team_id' => $team->id,
             'team_name' => $team->name,
             'expires_at' => $team->whatsapp_token_expires_at,
-            'days_remaining' => $team->whatsapp_token_expires_at ? $team->whatsapp_token_expires_at->diffInDays() : 'Unknown'
+            'days_remaining' => $team->whatsapp_token_expires_at ? (int) $team->whatsapp_token_expires_at->diffInDays() : 'Unknown'
         ]);
 
         // Future: Notification::send($team->admins, new WhatsAppTokenExpiryNotification($team));

@@ -66,9 +66,27 @@
                                 <p class="text-sm font-bold text-rose-700 dark:text-rose-400 opacity-80 uppercase tracking-widest">
                                     @if($wm_quality_rating === 'RED')
                                         Account Quality is RED. Campaign launching is blocked to prevent banning.
-                                    @elseif($tokenDaysUntilExpiry < 7)
-                                        WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }} days. Re-connect soon.
-                                    @else
+                                    @elseif($token_valid && $tokenDaysUntilExpiry < 7)
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                        </svg>
+                                        <span>
+                                            @if($tokenDaysUntilExpiry <= 0)
+                                                WhatsApp Access Token has expired. Re-connect immediately to restore service.
+                                            @else
+                                                WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }} {{ Str::plural('day', $tokenDaysUntilExpiry) }}. Re-connect soon.
+                                            @endif
+                                        </span>
+                                    </div>
+                                @elseif(!$token_valid)
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                        </svg>
+                                        <span>WhatsApp Access Token is invalid or expired. Please re-authenticate.</span>
+                                    </div>
+                                @else
                                         {{ $integrationState === 'suspended' ? 'Your Meta session has expired. Messaging is blocked.' : 'Your account is restricted by Meta.' }}
                                     @endif
                                 </p>
@@ -159,13 +177,17 @@
                                         </svg>
                                         <div class="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-[10px] text-white rounded-lg w-48 shadow-xl">
                                             Meta limits the number of business-initiated conversations you can start in 24h. 
-                                            Tier 1K (1,000), 10K, 100K, or Unlimited.
+                                            Tier 250, 1K (1,000), 10K, 100K, or Unlimited.
                                         </div>
                                     </div>
                                 </span>
                             </div>
-                            <div class="text-4xl font-bold text-slate-900 dark:text-white">{{ $wm_messaging_limit ?? '1K' }}
+                            <div class="text-4xl font-bold text-slate-900 dark:text-white">
+                                {{ str_replace('TIER_', '', $wm_messaging_limit ?? '1K') }}
                             </div>
+                            @if($dailyLimit > 0 && $dailyLimit < 1000000)
+                                <div class="text-sm font-bold text-slate-400 mt-1">({{ number_format($dailyLimit) }} / day)</div>
+                            @endif
                             <div class="mt-4 flex items-center justify-between">
                                 <span class="text-sm text-slate-500 font-medium">Messages per 24h</span>
                                 <div class="flex flex-col items-end gap-2">

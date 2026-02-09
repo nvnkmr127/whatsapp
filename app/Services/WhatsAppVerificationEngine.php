@@ -114,7 +114,17 @@ class WhatsAppVerificationEngine
         // Potential check if phone belongs to WABA? 
         // Usually if getPhoneNumberDetails works with the WABA's token, it belongs.
 
-        return ['status' => true, 'data' => $details['data']];
+        $data = $details['data'];
+
+        // Persist these details to the team immediately as they are source-of-truth
+        $this->team->update([
+            'whatsapp_messaging_limit' => $data['messaging_limit_tier'] ?? $this->team->whatsapp_messaging_limit,
+            'whatsapp_quality_rating' => $data['quality_rating'] ?? $this->team->whatsapp_quality_rating,
+            'whatsapp_phone_display' => $data['display_phone_number'] ?? $this->team->whatsapp_phone_display,
+            'whatsapp_verified_name' => $data['verified_name'] ?? $this->team->whatsapp_verified_name,
+        ]);
+
+        return ['status' => true, 'data' => $data];
     }
 
     protected function verifyTier3Readiness(): array

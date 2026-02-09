@@ -17,6 +17,16 @@ class WhatsAppHealthMonitor
      */
     public function checkHealth(Team $team): array
     {
+        // 1. Sync Integration State (Lifecycle Management) first to get fresh limits/quality from Meta
+        try {
+            $engine = app(\App\Services\WhatsAppVerificationEngine::class)->setTeam($team);
+            $engine->verify(); // This updates $team->whatsapp_setup_state, quality, and limits
+            $team->refresh(); // Refresh in-memory model to use new limits in health checks
+        } catch (\Exception $e) {
+            Log::error("Error syncing integration state in HealthMonitor: " . $e->getMessage());
+        }
+
+        // 2. Run detailed dimension checks with fresh data
         $tokenHealth = $this->checkTokenHealth($team);
         $phoneHealth = $this->checkPhoneHealth($team);
         $qualityHealth = $this->checkQualityHealth($team);
@@ -41,14 +51,6 @@ class WhatsAppHealthMonitor
             'alerts' => $this->getActiveAlerts($team),
             'checked_at' => now(),
         ];
-
-        // Sync Integration State (Lifecycle Management)
-        try {
-            $engine = app(\App\Services\WhatsAppVerificationEngine::class)->setTeam($team);
-            $engine->verify(); // This updates $team->whatsapp_setup_state
-        } catch (\Exception $e) {
-            Log::error("Error syncing integration state in HealthMonitor: " . $e->getMessage());
-        }
 
         return $results;
     }
@@ -80,7 +82,7 @@ class WhatsAppHealthMonitor
                 $valid = false;
                 $issues[] = 'Token expired';
             } else {
-                $daysUntilExpiry = $team->whatsapp_token_expires_at->diffInDays();
+                $daysUntilExpiry = (int) $team->whatsapp_token_expires_at->diffInDays();
 
                 if ($daysUntilExpiry < 3) {
                     $score -= 60;
@@ -116,7 +118,7 @@ class WhatsAppHealthMonitor
             'valid' => $valid,
             'is_permanent' => is_null($team->whatsapp_token_expires_at),
             'expires_at' => $team->whatsapp_token_expires_at,
-            'days_remaining' => $team->whatsapp_token_expires_at?->diffInDays(),
+            'days_remaining' => $team->whatsapp_token_expires_at ? (int) $team->whatsapp_token_expires_at->diffInDays() : null,
             'last_validated' => $team->whatsapp_token_last_validated,
             'issues' => $issues,
         ];
@@ -125,12 +127,22 @@ class WhatsAppHealthMonitor
         // Skip alert if it's a permanent token (no expiry) unless there's another non-expiry issue
         if ($score < 50 && $team && $team->owner && !is_null($team->whatsapp_token_expires_at)) {
             $msg = !empty($issues) ? $issues[0] : "Token health is critical ({$score}%)";
-            $this->createAlert($team, AlertSeverity::CRITICAL, 'token', 'token_expiry', $msg);
 
-            try {
-                $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification($team, 'token_expiry', $msg));
-            } catch (\Exception $e) {
-                Log::error("Failed to notify token alert: " . $e->getMessage());
+            // Check for existing unacknowledged alert of same type to avoid duplicates
+            $existingAlert = WhatsAppHealthAlert::where('team_id', $team->id)
+                ->where('alert_type', 'token_expiry')
+                ->where('acknowledged', false)
+                ->whereNull('resolved_at')
+                ->first();
+
+            if (!$existingAlert) {
+                $this->createAlert($team, AlertSeverity::CRITICAL, 'token', 'token_expiry', $msg);
+
+                try {
+                    $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification($team, 'token_expiry', $msg));
+                } catch (\Exception $e) {
+                    Log::error("Failed to notify token alert: " . $e->getMessage());
+                }
             }
         }
 
@@ -234,7 +246,16 @@ class WhatsAppHealthMonitor
 
         // [AUTO-ALERT] Quality Rating
         if ($rating === 'RED' && $team && $team->owner) {
-            $this->createAlert($team, AlertSeverity::CRITICAL, 'quality', 'quality_red', "Your WhatsApp Quality has dropped to RED. Sending is disabled.");
+            // Check for existing unacknowledged alert of same type to avoid duplicates
+            $existingAlert = WhatsAppHealthAlert::where('team_id', $team->id)
+                ->where('alert_type', 'quality_red')
+                ->where('acknowledged', false)
+                ->whereNull('resolved_at')
+                ->first();
+
+            if (!$existingAlert) {
+                $this->createAlert($team, AlertSeverity::CRITICAL, 'quality', 'quality_red', "Your WhatsApp Quality has dropped to RED. Sending is disabled.");
+            }
         }
 
         return [
@@ -352,6 +373,8 @@ class WhatsAppHealthMonitor
     protected function getTierLimit(string $tier): int
     {
         return match ($tier) {
+            'TIER_50' => 50,
+            'TIER_250' => 250,
             'TIER_1K' => 1000,
             'TIER_10K' => 10000,
             'TIER_100K' => 100000,

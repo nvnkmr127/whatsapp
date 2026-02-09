@@ -39,6 +39,7 @@ class MonitorWhatsAppPhoneStatus extends Command
         Team::whereNotNull('whatsapp_phone_number_id')
             ->whereNotNull('whatsapp_access_token')
             ->chunk(50, function ($teams) use (&$teamsChecked, &$teamsWithIssues) {
+                /** @var Team $team */
                 foreach ($teams as $team) {
                     try {
                         $hasIssues = $this->checkPhoneStatus($team);
@@ -83,7 +84,7 @@ class MonitorWhatsAppPhoneStatus extends Command
 
             $data = $result['data'];
             $previousStatus = $team->whatsapp_phone_status;
-            $previousRating = $team->wm_quality_rating;
+            $previousRating = $team->whatsapp_quality_rating;
 
             // Determine status from quality rating
             $newStatus = $this->determinePhoneStatus($data);
@@ -93,8 +94,8 @@ class MonitorWhatsAppPhoneStatus extends Command
             $team->update([
                 'whatsapp_phone_status' => $newStatus,
                 'whatsapp_phone_status_checked_at' => now(),
-                'wm_quality_rating' => $newRating,
-                'wm_messaging_limit' => $data['messaging_limit_tier'] ?? null,
+                'whatsapp_quality_rating' => $newRating,
+                'whatsapp_messaging_limit' => $data['messaging_limit_tier'] ?? null,
                 'whatsapp_token_last_validated' => now(),
             ]);
 

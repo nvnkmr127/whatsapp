@@ -93,7 +93,7 @@ class ProcessWebhookJob implements ShouldQueue
                 });
             }
 
-            // Fallback: Resolve via WABA ID (entry[0].id)
+            // Fallback 1: Resolve via WABA ID at entry level (entry[0].id)
             if (!$teamId) {
                 $wabaId = $body['entry'][0]['id'] ?? null;
                 if ($wabaId) {
@@ -103,14 +103,30 @@ class ProcessWebhookJob implements ShouldQueue
                 }
             }
 
+            // Fallback 2: Resolve via WABA ID inside changes value (e.g., account_update events)
+            $discoveredWabaId = null;
+            if (!$teamId) {
+                $discoveredWabaId = $change['waba_id'] ?? $change['waba_info']['waba_id'] ?? null;
+                if ($discoveredWabaId) {
+                    $teamId = \Illuminate\Support\Facades\Cache::remember("team_id_by_waba_id:{$discoveredWabaId}", 3600, function () use ($discoveredWabaId) {
+                        return Team::where('whatsapp_business_account_id', $discoveredWabaId)->value('id');
+                    });
+                }
+            }
+
             Log::debug("WhatsApp Webhook: Resolution Check", [
                 'extracted_phone_id' => $phoneId,
                 'extracted_waba_id' => $body['entry'][0]['id'] ?? 'N/A',
+                'discovered_waba_id' => $discoveredWabaId ?? 'N/A',
                 'resolved_team_id' => $teamId
             ]);
 
             if (!$teamId) {
-                Log::warning("WhatsApp Webhook: Could not resolve Team ID targeting Phone: {$phoneId} or WABA: " . ($body['entry'][0]['id'] ?? 'N/A'));
+                Log::warning("WhatsApp Webhook: Could not resolve Team ID", [
+                    'phone_id' => $phoneId,
+                    'entry_id' => $body['entry'][0]['id'] ?? 'N/A',
+                    'discovered_waba_id' => $discoveredWabaId ?? 'N/A'
+                ]);
             }
 
             // 1. Handle Messages (Inbound)

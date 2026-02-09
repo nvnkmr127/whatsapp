@@ -650,6 +650,12 @@ class WhatsappConfig extends Component
         $monitor = app(\App\Services\WhatsAppHealthMonitor::class);
         $health = $monitor->checkHealth($team);
 
+        // After checkHealth, the team model has been refreshed with data from Meta
+        $this->wm_messaging_limit = $team->whatsapp_messaging_limit ?: 'TIER_1K';
+        $this->wm_quality_rating = $team->whatsapp_quality_rating ?: 'UNKNOWN';
+        $this->wm_phone_display = $team->whatsapp_phone_display ?: '';
+        $this->wm_verified_name = $team->whatsapp_verified_name ?: '';
+
         $this->healthScore = $health['overall_score'] ?? 0;
         $this->healthStatus = $health['status'] ?? 'unknown';
         $this->tokenHealthScore = $health['token']['score'] ?? 0;
@@ -661,6 +667,10 @@ class WhatsappConfig extends Component
         $this->dailyLimit = $health['messaging']['daily_limit'] ?? 0;
 
         $this->setupProgress = $this->getSetupProgress();
+
+        $this->integrationState = $team->whatsapp_setup_state?->value ?? 'disconnected';
+        $this->integrationStateLabel = $team->whatsapp_setup_state?->label() ?? 'Disconnected';
+        $this->integrationStateColor = $team->whatsapp_setup_state?->color() ?? 'slate';
     }
 
     public function getSetupProgress()

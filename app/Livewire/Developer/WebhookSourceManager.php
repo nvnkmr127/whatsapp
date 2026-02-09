@@ -358,15 +358,31 @@ class WebhookSourceManager extends Component
             $this->capturedPayload = $latest->payload;
         }
 
-        // Set selected event type
+        // Set selected event type and pull mappings to top level for UI
         if (!empty($this->field_mappings)) {
             $this->selectedEventType = array_key_first($this->field_mappings);
+            $currentMappings = $this->field_mappings[$this->selectedEventType] ?? [];
+
+            // Populate templateParameters if empty in action_config but present in field_mappings
+            if (empty($this->templateParameters)) {
+                foreach ($currentMappings as $key => $path) {
+                    if (str_starts_with($key, 'param_')) {
+                        $pos = substr($key, 6);
+                        $this->templateParameters[$pos] = $path;
+                    }
+                }
+            }
+
+            // Pull phone number to top level so wire:model="field_mappings.phone_number" works
+            if (isset($currentMappings['phone_number'])) {
+                $this->field_mappings['phone_number'] = $currentMappings['phone_number'];
+            }
         }
 
         // Extract action type and template parameters
         $this->actionType = $this->action_config['type'] ?? 'send_template';
         $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
-        $this->templateParameters = $this->action_config['parameter_mapping'] ?? [];
+        $this->templateParameters = $this->action_config['parameter_mapping'] ?? $this->templateParameters; // Use existing templateParameters if populated from field_mappings
         $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
         $this->otpLength = $this->action_config['otp_length'] ?? 6;
 
@@ -389,22 +405,26 @@ class WebhookSourceManager extends Component
 
         $actionConfig = $this->buildActionConfig();
 
-        // Build field mappings
+        // Build field mappings (nested by event type as required by the processing engine)
         $fieldMappings = [];
         $eventType = $this->selectedEventType ?: 'custom';
+        $currentEventMappings = [];
 
-        if (!empty($this->templateParameters)) {
-            $fieldMappings[$eventType] = [];
-
-            foreach ($this->templateParameters as $position => $fieldPath) {
-                if ($fieldPath) {
-                    $fieldMappings[$eventType]["param_{$position}"] = $fieldPath;
-                }
+        // 1. Add variable mappings
+        foreach ($this->templateParameters as $position => $fieldPath) {
+            if ($fieldPath) {
+                $currentEventMappings["param_{$position}"] = $fieldPath;
             }
+        }
 
-            if (isset($this->field_mappings['phone_number'])) {
-                $fieldMappings[$eventType]['phone_number'] = $this->field_mappings['phone_number'];
-            }
+        // 2. Add phone number mapping (from flattened UI state)
+        if (isset($this->field_mappings['phone_number']) && $this->field_mappings['phone_number']) {
+            $currentEventMappings['phone_number'] = $this->field_mappings['phone_number'];
+        }
+
+        // 3. Nest under event type if we have any mappings
+        if (!empty($currentEventMappings)) {
+            $fieldMappings[$eventType] = $currentEventMappings;
         }
 
         $source->update([
@@ -514,30 +534,23 @@ class WebhookSourceManager extends Component
     {
         $config = ['type' => $this->actionType];
 
-        if ($this->actionType === 'send_template') {
+        if ($this->actionType === 'send_template' || $this->actionType === 'send_otp') {
             $config['template_id'] = $this->selectedTemplateId;
+            $config['phone_field'] = 'phone_number';
 
             $paramMapping = [];
             foreach ($this->templateParameters as $position => $field) {
                 if ($field) {
-                    $paramMapping[$position] = "param_{$position}";
+                    // FIX: Save the actual field/path instead of the string "param_N"
+                    $paramMapping[$position] = $field;
                 }
             }
             $config['parameter_mapping'] = $paramMapping;
-            $config['phone_field'] = 'phone_number';
-        } elseif ($this->actionType === 'send_otp') {
-            $config['template_id'] = $this->selectedTemplateId;
-            $config['otp_param_index'] = $this->otpParamIndex;
-            $config['otp_length'] = $this->otpLength;
 
-            $paramMapping = [];
-            foreach ($this->templateParameters as $position => $field) {
-                if ($field) {
-                    $paramMapping[$position] = "param_{$position}";
-                }
+            if ($this->actionType === 'send_otp') {
+                $config['otp_param_index'] = $this->otpParamIndex;
+                $config['otp_length'] = $this->otpLength;
             }
-            $config['parameter_mapping'] = $paramMapping;
-            $config['phone_field'] = 'phone_number';
         }
 
         return $config;
