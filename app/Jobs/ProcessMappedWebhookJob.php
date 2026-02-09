@@ -106,19 +106,42 @@ class ProcessMappedWebhookJob implements ShouldQueue
                     $mappedKey = is_string($mappedKey[0] ?? null) ? $mappedKey[0] : json_encode($mappedKey);
                 }
 
-                $rawVal = $this->payload->mapped_data[$mappedKey] ?? '';
+                $rawVal = null;
+
+                // Try to get value from mapped_data first (e.g., "param_1")
+                if (isset($this->payload->mapped_data[$mappedKey])) {
+                    $rawVal = $this->payload->mapped_data[$mappedKey];
+                }
+                // If not found and mappedKey contains dots, try extracting from raw payload using dot notation
+                elseif (str_contains($mappedKey, '.')) {
+                    $rawVal = data_get($this->payload->payload, $mappedKey);
+
+                    if ($rawVal === null) {
+                        Log::warning("Value not found in raw payload for path: {$mappedKey}", [
+                            'payload_id' => $this->payload->id,
+                            'path' => $mappedKey,
+                            'available_mapped_keys' => array_keys($this->payload->mapped_data ?? []),
+                        ]);
+                    }
+                }
 
                 // Handle array values (e.g. from JSON fields)
                 if (is_array($rawVal)) {
                     $val = json_encode($rawVal);
                 } else {
-                    $val = (string) $rawVal;
+                    $val = (string) ($rawVal ?? '');
                 }
 
                 if ($val === '') {
-                    Log::warning("Empty value for mapped key: {$mappedKey}", [
+                    $mappedDataKeys = is_array($this->payload->mapped_data)
+                        ? array_keys($this->payload->mapped_data)
+                        : ['mapped_data is not an array'];
+
+                    Log::warning("Empty value for parameter mapping", [
                         'payload_id' => $this->payload->id,
-                        'mapped_data_keys' => array_keys($this->payload->mapped_data ?? []),
+                        'position' => $position,
+                        'mappedKey' => $mappedKey,
+                        'mapped_data_keys' => $mappedDataKeys,
                         'parameter_mapping' => $parameterMapping
                     ]);
                 }
