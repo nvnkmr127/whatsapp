@@ -20,6 +20,13 @@ class OTPService
      */
     public function send(string $identifier, string $type = 'email', ?int $teamId = null): bool
     {
+        // Auto-detect if type matches content (safety for mixed inputs)
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $type = 'email';
+        } elseif (preg_match('/^\+?[0-9]{10,15}$/', preg_replace('/[^0-9+]/', '', $identifier))) {
+            $type = 'phone';
+        }
+
         // Abuse Prevention: Dead drop check
         if ($this->isBlacklisted($identifier)) {
             Log::warning("OTP Request blocked for blacklisted identifier: {$identifier}");
@@ -40,6 +47,7 @@ class OTPService
         // Increment total requests in 24h for this identifier
         $this->incrementRequestCount($identifier);
 
+        $sent = false;
         if ($type === 'email') {
             $sent = $this->sendEmail($identifier, $code);
         } elseif ($type === 'phone') {
