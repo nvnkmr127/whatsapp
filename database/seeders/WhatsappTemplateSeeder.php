@@ -25,22 +25,27 @@ class WhatsappTemplateSeeder extends Seeder
             'is_paused' => false,
         ];
 
-        // 1. Add for System (Fallback)
-        WhatsappTemplate::updateOrCreate(
-            ['team_id' => null, 'name' => 'verification_code', 'language' => 'en_US'],
-            $templateData
-        );
+        // Seed for both en_US and en to cover common cases
+        $languages = ['en_US', 'en'];
 
-        // 2. Add for all teams that have WhatsApp configured
-        $teams = Team::whereNotNull('whatsapp_access_token')
-            ->whereNotNull('whatsapp_phone_number_id')
-            ->get();
-
-        foreach ($teams as $team) {
+        foreach ($languages as $lang) {
+            // 1. Add for System (Fallback)
             WhatsappTemplate::updateOrCreate(
-                ['team_id' => $team->id, 'name' => 'verification_code', 'language' => 'en_US'],
-                array_merge($templateData, ['team_id' => $team->id])
+                ['team_id' => null, 'name' => 'verification_code', 'language' => $lang],
+                array_merge($templateData, ['language' => $lang])
             );
+
+            // 2. Add for all teams that have WhatsApp configured
+            $teams = Team::whereNotNull('whatsapp_access_token')
+                ->where('whatsapp_access_token', '!=', '')
+                ->get();
+
+            foreach ($teams as $team) {
+                WhatsappTemplate::updateOrCreate(
+                    ['team_id' => $team->id, 'name' => 'verification_code', 'language' => $lang],
+                    array_merge($templateData, ['team_id' => $team->id, 'language' => $lang])
+                );
+            }
         }
     }
 }

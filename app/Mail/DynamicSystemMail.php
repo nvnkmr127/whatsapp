@@ -28,10 +28,16 @@ class DynamicSystemMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(
+        $content = new Content(
             htmlString: $this->htmlContent,
-            text: $this->textContent,
         );
+
+        if ($this->textContent) {
+            $content->text = 'emails.raw_text';
+            $content->with['text'] = $this->textContent;
+        }
+
+        return $content;
     }
 
     public function attachments(): array

@@ -190,33 +190,70 @@ class OTPService
     public function sendWhatsApp(string $phone, string $code): bool
     {
         try {
-            // 1. Try system-level credentials from .env first
-            $systemToken = env('WHATSAPP_SYSTEM_ACCESS_TOKEN');
-            $systemPhoneId = env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
-
-            if ($systemToken && $systemPhoneId) {
-                $systemTeam = new Team([
-                    'whatsapp_access_token' => $systemToken,
-                    'whatsapp_phone_number_id' => $systemPhoneId,
-                ]);
-                return $this->sendCustomWhatsAppOtp($phone, $code, 'verification_code', 'en_US', [$code], $systemTeam);
-            }
-
-            // 2. Fallback to any team that has WhatsApp connected (Discovery Mode)
-            $team = Team::whereNotNull('whatsapp_access_token')
-                ->whereNotNull('whatsapp_phone_number_id')
-                ->first();
-
+            $team = $this->findSendingTeam();
             if (!$team) {
                 Log::error("No team or system credentials found for sending WhatsApp OTP.");
                 return false;
             }
 
-            return $this->sendCustomWhatsAppOtp($phone, $code, 'verification_code', 'en_US', [$code], $team);
+            // Find an available template (priority to AUTHENTICATION category)
+            $tpl = $this->findOtpTemplate($team);
+
+            if (!$tpl) {
+                Log::error("No valid WhatsApp OTP template found for team {$team->id}. Please ensure a template named 'verification_code' or an AUTHENTICATION category template exists and is synced.");
+                return false;
+            }
+
+            Log::info("Using WhatsApp template '{$tpl->name}' ({$tpl->language}) for OTP to {$phone}");
+
+            return $this->sendCustomWhatsAppOtp($phone, $code, $tpl->name, $tpl->language, [$code], $team);
         } catch (\Exception $e) {
             Log::error("Failed to send WhatsApp OTP to {$phone}: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Finds a team or system-level configuration to send WhatsApp messages.
+     */
+    protected function findSendingTeam(): ?Team
+    {
+        $systemToken = env('WHATSAPP_SYSTEM_ACCESS_TOKEN');
+        $systemPhoneId = env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
+
+        if ($systemToken && $systemPhoneId) {
+            return new Team([
+                'whatsapp_access_token' => $systemToken,
+                'whatsapp_phone_number_id' => $systemPhoneId,
+                'whatsapp_business_account_id' => env('WHATSAPP_SYSTEM_WABA_ID'),
+            ]);
+        }
+
+        return Team::whereNotNull('whatsapp_access_token')
+            ->where('whatsapp_access_token', '!=', '')
+            ->whereNotNull('whatsapp_phone_number_id')
+            ->first();
+    }
+
+    /**
+     * Finds the best available OTP template for a team.
+     */
+    protected function findOtpTemplate(Team $team)
+    {
+        // 1. Look for explicit AUTHENTICATION templates
+        $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
+            ->where('category', 'AUTHENTICATION')
+            ->where('status', 'APPROVED')
+            ->first();
+
+        if ($tpl)
+            return $tpl;
+
+        // 2. Fallback to common names
+        return \App\Models\WhatsappTemplate::where('team_id', $team->id)
+            ->whereIn('name', ['verification_code', 'otp', 'verification'])
+            ->orderByRaw("FIELD(name, 'verification_code', 'otp', 'verification')")
+            ->first();
     }
 
     /**
