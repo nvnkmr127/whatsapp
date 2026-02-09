@@ -523,4 +523,44 @@ trait WhatsApp
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }
+    /**
+     * Fetch WABA IDs accessible by the user token.
+     */
+    public function getAccessibleWabaIds(string $token): array
+    {
+        try {
+            // First try client_whatsapp_business_accounts on 'me' (works for System Users and some integrations)
+            $response = Http::withToken($token)->get(self::getBaseUrl() . 'me/client_whatsapp_business_accounts');
+
+            if ($response->successful()) {
+                $data = $response->json('data');
+                if (!empty($data)) {
+                    return array_column($data, 'id');
+                }
+            }
+
+            // Fallback: Check businesses -> client_whatsapp_business_accounts
+            $response = Http::withToken($token)->get(self::getBaseUrl() . 'me/businesses', [
+                'fields' => 'client_whatsapp_business_accounts'
+            ]);
+
+            if ($response->successful()) {
+                $businesses = $response->json('data');
+                $wabaIds = [];
+                foreach ($businesses as $business) {
+                    if (!empty($business['client_whatsapp_business_accounts']['data'])) {
+                        foreach ($business['client_whatsapp_business_accounts']['data'] as $waba) {
+                            $wabaIds[] = $waba['id'];
+                        }
+                    }
+                }
+                return array_unique($wabaIds);
+            }
+
+            return [];
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Trait: Failed to fetch accessible WABA IDs: " . $e->getMessage());
+            return [];
+        }
+    }
 }

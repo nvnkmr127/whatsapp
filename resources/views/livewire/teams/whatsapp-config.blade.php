@@ -1042,7 +1042,7 @@
                         // Use window.axios to be safe
                         (window.axios || axios).post('{{ route("whatsapp.onboard.exchange") }}', { 
                             access_token: code,
-                            waba_id: response.authResponse.userID //userID might not be wabaId, but the scope includes it
+                            waba_id: null // Let backend discover WABA ID from token scopes/account
                         })
                         .then(function (res) {
                             if (res.data.status) {

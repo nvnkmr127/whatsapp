@@ -75,15 +75,35 @@ class WhatsAppOnboardingController extends Controller
                 // [NEW] Attempt to find WABA ID automatically if not provided or to verify
                 $wabaId = $request->input('waba_id');
 
-                // If the JS provided a User ID (usually shorter or different) instead of WABA ID, 
-                // or if we just want to be sure, we can fetch it from Meta.
+                // 1. Try Granular Scopes (System Users / Explicit Grants)
                 $debug = $this->debugToken($longLivedToken);
+                $foundInScopes = false;
                 if ($debug['status'] && !empty($debug['data']['granular_scopes'])) {
                     foreach ($debug['data']['granular_scopes'] as $scope) {
                         if ($scope['scope'] === 'whatsapp_business_management' && !empty($scope['target_ids'])) {
                             $wabaId = $scope['target_ids'][0]; // Take the first WABA ID found
+                            $foundInScopes = true;
                             Log::info("WhatsApp Onboarding: Auto-discovered WABA ID {$wabaId} from token scopes.");
                             break;
+                        }
+                    }
+                }
+
+                // 2. Fallback: Fetch Accessible WABA IDs (Standard Users)
+                // If the frontend sent a User ID (which is common mistake), or we didn't find one in scopes
+                if (!$foundInScopes) {
+                    $accessibleWabas = $this->getAccessibleWabaIds($longLivedToken);
+                    if (!empty($accessibleWabas)) {
+                        // If we have exactly one, use it.
+                        // If we have multiple, and the input looks like a user ID (short), pick the first one.
+                        // If the input matches one of them, use that.
+
+                        if (in_array($wabaId, $accessibleWabas)) {
+                            // The input was actually valid
+                        } else {
+                            // Input was likely a User ID or null. Pick first.
+                            $wabaId = $accessibleWabas[0];
+                            Log::info("WhatsApp Onboarding: Discovered WABA ID {$wabaId} from accessible accounts list.");
                         }
                     }
                 }
