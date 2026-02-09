@@ -588,6 +588,23 @@
                                                         @endif
                                                     </div>
 
+                                                    {{-- Template Context Snippet --}}
+                                                    @php
+                                                        $fullContent = $selectedTemplate->content;
+                                                        $snippet = '';
+                                                        // Look for the variable in the content and grab surrounding text
+                                                        if (preg_match('/(?:^|(.{0,40}))\{\{' . $paramNum . '\}\}(.{0,40}|$)/s', $fullContent, $matches)) {
+                                                            $before = $matches[1] ?? '';
+                                                            $after = $matches[2] ?? '';
+                                                            $snippet = ($before ? '...' : '') . e($before) . '<span class="text-wa-teal font-black underline">[' . $paramNum . ']</span>' . e($after) . ($after ? '...' : '');
+                                                        }
+                                                    @endphp
+                                                    @if($snippet)
+                                                        <div class="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 text-[11px] font-medium text-slate-600 dark:text-slate-400 italic leading-relaxed">
+                                                            {!! $snippet !!}
+                                                        </div>
+                                                    @endif
+
                                                     <div class="space-y-4">
                                                         @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
                                                             <input type="text" 
@@ -839,14 +856,53 @@
         <x-slot name="title">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-3 h-3 rounded-full bg-orange-500 animate-pulse shadow-lg shadow-orange-500/50"></div>
-                    <span class="text-lg font-black uppercase tracking-tight">Live Event Monitor</span>
+                    <div class="p-2 bg-orange-100 dark:bg-orange-500/10 text-orange-600 rounded-lg">
+                        <svg class="w-5 h-5 font-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-lg font-black uppercase tracking-tight block leading-none">{{ $logsSourceStats['name'] ?? 'Live Event Monitor' }}</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Real-time performance analytics</span>
+                    </div>
                 </div>
+                <button wire:click="refreshLogs" class="p-2 text-slate-400 hover:text-wa-teal hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all group" title="Refresh Now">
+                    <svg class="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
             </div>
         </x-slot>
 
         <x-slot name="content">
-            <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            {{-- Stats Dashboard --}}
+            @if($logsSourceStats)
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-slate-800/50">
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Received</div>
+                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($logsSourceStats['received']) }}</div>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-slate-800/50">
+                        <div class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Processed</div>
+                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($logsSourceStats['processed']) }}</div>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-slate-800/50">
+                        <div class="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Failed</div>
+                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($logsSourceStats['failed']) }}</div>
+                    </div>
+                    <div class="bg-wa-teal p-5 rounded-3xl shadow-lg shadow-wa-teal/20">
+                        <div class="text-[9px] font-black text-white/70 uppercase tracking-widest mb-1">Success Rate</div>
+                        <div class="text-xl font-black text-white">{{ $logsSourceStats['rate'] }}%</div>
+                    </div>
+                </div>
+            @endif
+
+            <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-wa-teal animate-pulse"></div>
+                Recent Inbound Payloads
+            </h5>
+            
+            <div class="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                 @forelse($recentLogs as $log)
                     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm group">
                         <div class="flex items-center justify-between mb-4">
@@ -858,8 +914,11 @@
                         <pre class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto border border-slate-100 dark:border-slate-800">{{ json_encode($log['payload'], JSON_PRETTY_PRINT) }}</pre>
                     </div>
                 @empty
-                    <div class="text-center py-20 bg-slate-50 dark:bg-slate-800/20 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waiting for incoming requests...</p>
+                    <div class="text-center py-16 bg-slate-50 dark:bg-slate-800/20 rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                        <div class="w-12 h-12 bg-white dark:bg-slate-900 rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest px-8">No events captured yet. Send a request to your webhook URL to see it here.</p>
                     </div>
                 @endforelse
             </div>
