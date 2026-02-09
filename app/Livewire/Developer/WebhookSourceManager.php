@@ -298,6 +298,9 @@ class WebhookSourceManager extends Component
                     'id' => $payload->id,
                     'event_type' => $payload->event_type,
                     'payload' => $payload->payload,
+                    'status' => $payload->status,
+                    'error_message' => $payload->error_message,
+                    'mapped_data' => $payload->mapped_data,
                     'created_at' => $payload->created_at->diffForHumans(),
                 ];
             })->values()->toArray();

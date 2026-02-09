@@ -906,12 +906,43 @@
                 @forelse($recentLogs as $log)
                     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm group">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 text-wa-teal text-[10px] font-black uppercase rounded-lg border border-purple-100 dark:border-purple-500/20">
-                                {{ $log['event_type'] ?: 'GENERIC_EVENT' }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1 bg-purple-50 dark:bg-purple-900/30 text-wa-teal text-[10px] font-black uppercase rounded-lg border border-purple-100 dark:border-purple-500/20">
+                                    {{ $log['event_type'] ?: 'GENERIC_EVENT' }}
+                                </span>
+                                @php
+                                    $statusColors = [
+                                        'processed' => 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                                        'failed' => 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+                                        'pending' => 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+                                        'skipped' => 'bg-slate-500/10 text-slate-500 border-slate-500/20',
+                                    ];
+                                    $statusColor = $statusColors[$log['status']] ?? 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+                                @endphp
+                                <span class="px-3 py-1 {{ $statusColor }} text-[10px] font-black uppercase rounded-lg border">
+                                    {{ $log['status'] }}
+                                </span>
+                            </div>
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $log['created_at'] }}</span>
                         </div>
-                        <pre class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto border border-slate-100 dark:border-slate-800">{{ json_encode($log['payload'], JSON_PRETTY_PRINT) }}</pre>
+
+                        @if($log['error_message'])
+                            <div class="mb-4 p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/20 rounded-xl">
+                                <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Error Details</p>
+                                <p class="text-xs font-mono text-rose-600 dark:text-rose-400 break-words">{{ $log['error_message'] }}</p>
+                            </div>
+                        @endif
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Raw Payload</p>
+                                <pre class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-[9px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto border border-slate-100 dark:border-slate-800 max-h-40 custom-scrollbar">{{ json_encode($log['payload'], JSON_PRETTY_PRINT) }}</pre>
+                            </div>
+                            <div>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Mapped Data</p>
+                                <pre class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-[9px] font-mono text-wa-teal overflow-x-auto border border-slate-100 dark:border-slate-800 max-h-40 custom-scrollbar">{{ json_encode($log['mapped_data'], JSON_PRETTY_PRINT) }}</pre>
+                            </div>
+                        </div>
                     </div>
                 @empty
                     <div class="text-center py-16 bg-slate-50 dark:bg-slate-800/20 rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-slate-800">

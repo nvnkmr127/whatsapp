@@ -30,7 +30,8 @@ class InboundWebhookController extends Controller
 
         if (!$source) {
             Log::warning('Webhook source not found', ['slug' => $sourceSlug]);
-            return response()->json(['error' => 'Webhook source not found'], 404);
+            // Return slug in error to help user debug typos
+            return response()->json(['error' => "Webhook source not found for slug: {$sourceSlug}"], 404);
         }
 
         if (!$source->is_active) {
@@ -162,21 +163,38 @@ class InboundWebhookController extends Controller
             ]);
 
             // Execute action if configured
+            // Execute action if configured
             $actionConfig = $source->getActionConfig();
-            if (!empty($actionConfig) && !empty($mappedData)) {
-                // Validate mapped data has required fields
-                if ($this->mappingService->validateMappedData($mappedData)) {
-                    $delay = $source->process_delay > 0 ? now()->addMinutes($source->process_delay) : null;
-                    ProcessMappedWebhookJob::dispatch($webhookPayload, $actionConfig)->delay($delay);
-                } else {
-                    Log::warning('Webhook mapped data validation failed', [
+
+            if (!empty($actionConfig)) {
+                if (empty($mappedData)) {
+                    // Action configured but no data mapped - Likely a mapping error
+                    Log::warning('Webhook processed but no data mapped for action', [
                         'source' => $source->name,
-                        'mapped_data' => $mappedData,
+                        'payload_id' => $webhookPayload->id
                     ]);
+
                     $webhookPayload->update([
                         'status' => 'failed',
-                        'error_message' => 'Mapped data validation failed',
+                        'error_message' => 'Action configured but no fields were mapped. Check your field mapping configuration.'
                     ]);
+                    $source->incrementFailed();
+                } else {
+                    // Validate mapped data has required fields
+                    if ($this->mappingService->validateMappedData($mappedData)) {
+                        $delay = $source->process_delay > 0 ? now()->addMinutes($source->process_delay) : null;
+                        ProcessMappedWebhookJob::dispatch($webhookPayload, $actionConfig)->delay($delay);
+                    } else {
+                        Log::warning('Webhook mapped data validation failed', [
+                            'source' => $source->name,
+                            'mapped_data' => $mappedData,
+                        ]);
+                        $webhookPayload->update([
+                            'status' => 'failed',
+                            'error_message' => 'Mapped data validation failed (Missing required fields like phone_number)',
+                        ]);
+                        $source->incrementFailed();
+                    }
                 }
             } else {
                 // No action configured, just mark as processed
