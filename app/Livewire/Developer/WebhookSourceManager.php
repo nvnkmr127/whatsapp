@@ -385,7 +385,20 @@ class WebhookSourceManager extends Component
         // Extract action type and template parameters
         $this->actionType = $this->action_config['type'] ?? 'send_template';
         $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
-        $this->templateParameters = $this->action_config['parameter_mapping'] ?? $this->templateParameters; // Use existing templateParameters if populated from field_mappings
+
+        // Sanitize parameter_mapping to handle malformed data (arrays instead of strings)
+        $paramMapping = $this->action_config['parameter_mapping'] ?? [];
+        $sanitized = [];
+        foreach ($paramMapping as $key => $value) {
+            if (is_array($value)) {
+                // Extract first element if it's an array (malformed data from earlier version)
+                $sanitized[$key] = is_string($value[0] ?? null) ? $value[0] : '';
+            } else {
+                $sanitized[$key] = (string) $value;
+            }
+        }
+
+        $this->templateParameters = !empty($sanitized) ? $sanitized : $this->templateParameters;
         $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
         $this->otpLength = $this->action_config['otp_length'] ?? 6;
 
@@ -544,8 +557,12 @@ class WebhookSourceManager extends Component
             $paramMapping = [];
             foreach ($this->templateParameters as $position => $field) {
                 if ($field) {
+                    // Defensive: Ensure we're saving a string, not an array
+                    if (is_array($field)) {
+                        $field = is_string($field[0] ?? null) ? $field[0] : '';
+                    }
                     // FIX: Save the actual field/path instead of the string "param_N"
-                    $paramMapping[$position] = $field;
+                    $paramMapping[$position] = (string) $field;
                 }
             }
             $config['parameter_mapping'] = $paramMapping;

@@ -59,7 +59,7 @@ class WebhookSource extends Model
 
     public function getFieldMapping($eventType)
     {
-        return $this->field_mappings[$eventType] ?? [];
+        return $this->field_mappings[$eventType] ?? $this->field_mappings['custom'] ?? [];
     }
 
     public function getTransformationRules()
@@ -147,6 +147,14 @@ class WebhookSource extends Model
     }
 
     public function getActionConfig()
+    {
+        return $this->action_config ?? [];
+    }
+
+    /**
+     * Accessor for actions (alias for action_config)
+     */
+    public function getActionsAttribute()
     {
         return $this->action_config ?? [];
     }

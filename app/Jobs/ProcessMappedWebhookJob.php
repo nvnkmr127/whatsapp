@@ -61,6 +61,10 @@ class ProcessMappedWebhookJob implements ShouldQueue
     protected function sendTemplate(): void
     {
         $templateId = $this->actionConfig['template_id'] ?? null;
+        if (is_array($templateId)) {
+            $templateId = reset($templateId); // Handle case where ID came as array
+        }
+
         $parameterMapping = $this->actionConfig['parameter_mapping'] ?? [];
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
 
@@ -69,8 +73,16 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $template = WhatsappTemplate::find($templateId);
-        if (!$template) {
-            throw new \Exception("Template not found: {$templateId}");
+        if (!$template || $template instanceof \Illuminate\Database\Eloquent\Collection) {
+            // Ensure we have a single model
+            if ($template instanceof \Illuminate\Database\Eloquent\Collection) {
+                $template = $template->first();
+            }
+
+            if (!$template) {
+                // Use json_encode for templateId in case it's still weird, to avoid Array to String conversion
+                throw new \Exception("Template not found: " . (is_string($templateId) || is_numeric($templateId) ? $templateId : json_encode($templateId)));
+            }
         }
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
@@ -80,8 +92,39 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         // Build template parameters
         $parameters = [];
-        foreach ($parameterMapping as $position => $mappedKey) {
-            $parameters[$position] = $this->payload->mapped_data[$mappedKey] ?? '';
+        // Map configured parameters from action config to mapped keys in payload
+        if (!empty($parameterMapping)) {
+            foreach ($parameterMapping as $position => $mappedKey) {
+                // Handle case where mappedKey might be an array (malformed config)
+                if (is_array($mappedKey)) {
+                    Log::warning("Parameter mapping contains array value", [
+                        'payload_id' => $this->payload->id,
+                        'position' => $position,
+                        'mappedKey' => $mappedKey
+                    ]);
+                    // Try to extract the actual key if it's a nested structure
+                    $mappedKey = is_string($mappedKey[0] ?? null) ? $mappedKey[0] : json_encode($mappedKey);
+                }
+
+                $rawVal = $this->payload->mapped_data[$mappedKey] ?? '';
+
+                // Handle array values (e.g. from JSON fields)
+                if (is_array($rawVal)) {
+                    $val = json_encode($rawVal);
+                } else {
+                    $val = (string) $rawVal;
+                }
+
+                if ($val === '') {
+                    Log::warning("Empty value for mapped key: {$mappedKey}", [
+                        'payload_id' => $this->payload->id,
+                        'mapped_data_keys' => array_keys($this->payload->mapped_data ?? []),
+                        'parameter_mapping' => $parameterMapping
+                    ]);
+                }
+
+                $parameters[] = $val;
+            }
         }
 
         // Send WhatsApp template
@@ -107,6 +150,10 @@ class ProcessMappedWebhookJob implements ShouldQueue
     protected function sendOtp(): void
     {
         $templateId = $this->actionConfig['template_id'] ?? null;
+        if (is_array($templateId)) {
+            $templateId = reset($templateId);
+        }
+
         $parameterMapping = $this->actionConfig['parameter_mapping'] ?? [];
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
         $otpParamIndex = $this->actionConfig['otp_param_index'] ?? 1;
@@ -117,8 +164,15 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $template = WhatsappTemplate::find($templateId);
-        if (!$template) {
-            throw new \Exception("Template not found for OTP: {$templateId}");
+        if (!$template || $template instanceof \Illuminate\Database\Eloquent\Collection) {
+            if ($template instanceof \Illuminate\Database\Eloquent\Collection) {
+                $template = $template->first();
+            }
+
+            if (!$template) {
+                // Use json_encode for templateId in case it's still weird
+                throw new \Exception("Template not found for OTP: " . (is_string($templateId) || is_numeric($templateId) ? $templateId : json_encode($templateId)));
+            }
         }
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
@@ -132,7 +186,13 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Build template parameters
         $parameters = [];
         foreach ($parameterMapping as $position => $mappedKey) {
-            $parameters[$position] = $this->payload->mapped_data[$mappedKey] ?? '';
+            $rawVal = $this->payload->mapped_data[$mappedKey] ?? '';
+            if (is_array($rawVal)) {
+                $val = json_encode($rawVal);
+            } else {
+                $val = (string) $rawVal;
+            }
+            $parameters[$position] = $val;
         }
 
         // Use OTPService for secure storage and sending
@@ -196,6 +256,10 @@ class ProcessMappedWebhookJob implements ShouldQueue
     protected function startAutomation(): void
     {
         $automationId = $this->actionConfig['automation_id'] ?? null;
+        if (is_array($automationId)) {
+            $automationId = reset($automationId);
+        }
+
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
         $variables = $this->actionConfig['variables'] ?? [];
 
@@ -211,12 +275,23 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Build automation variables
         $automationVariables = [];
         foreach ($variables as $varName => $field) {
-            $automationVariables[$varName] = $this->payload->mapped_data[$field] ?? '';
+            $rawVal = $this->payload->mapped_data[$field] ?? '';
+            if (is_array($rawVal)) {
+                $val = json_encode($rawVal);
+            } else {
+                $val = (string) $rawVal;
+            }
+            $automationVariables[$varName] = $val;
         }
 
         $automation = \App\Models\Automation::find($automationId);
-        if (!$automation) {
-            throw new \Exception("Automation ID {$automationId} not found");
+        if (!$automation || $automation instanceof \Illuminate\Database\Eloquent\Collection) {
+            if ($automation instanceof \Illuminate\Database\Eloquent\Collection) {
+                $automation = $automation->first();
+            }
+            if (!$automation) {
+                throw new \Exception("Automation ID " . (is_string($automationId) || is_numeric($automationId) ? $automationId : json_encode($automationId)) . " not found");
+            }
         }
 
         $teamId = $this->payload->source->team_id;
