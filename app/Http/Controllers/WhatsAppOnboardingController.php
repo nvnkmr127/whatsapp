@@ -23,45 +23,43 @@ class WhatsAppOnboardingController extends Controller
         $team = $request->user()->currentTeam; // Define $team early for logging
 
         try {
-            $whatsappService = app(\App\Services\WhatsAppService::class);
-            $result = $whatsappService->exchangeToken($shortLivedToken);
+            // Use Trait method directly instead of non-existent Service method
+            $result = $this->exchangeForLongLivedToken($shortLivedToken);
 
-            if (!$result['success']) {
-                $errorDetails = $result['error'];
+            if (!$result['status']) {
+                $errorMsg = $result['message'] ?? 'Unknown error';
                 $referenceId = \App\Models\WhatsAppSetupAudit::generateReferenceId();
 
                 // Log interaction for failed token exchange
                 if ($team) {
-                    $endpoint = 'token_exchange'; // Assuming this is the endpoint for logging
+                    $endpoint = 'token_exchange';
                     $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8) . '...'];
-                    \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => $errorDetails]);
+                    \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => $errorMsg]);
                 }
 
                 Log::error('WhatsApp Token Exchange Failed', [
-                    'error' => $errorDetails,
+                    'error' => $errorMsg,
                     'reference_id' => $referenceId
                 ]);
 
-                $humanMessage = $this->getHumanReadableError($errorDetails);
-
                 return response()->json([
                     'status' => false,
-                    'message' => $humanMessage,
+                    'message' => 'Token Exchange Failed: ' . $errorMsg,
                     'retry_allowed' => true,
                     'reference_id' => $referenceId
-                ], $result['status_code'] ?? 400);
+                ], 400);
             }
 
-            $data = $result['data'];
-            $longLivedToken = $data['access_token'] ?? null;
-            $expiresIn = $data['expires_in'] ?? 5184000; // 60 days default
+            // Trait returns flat array: ['status' => true, 'access_token' => ..., 'expires_in' => ...]
+            $longLivedToken = $result['access_token'] ?? null;
+            $expiresIn = $result['expires_in'] ?? 5184000; // 60 days default
 
             if (!$longLivedToken) {
                 // Log interaction for missing token in successful response
                 if ($team) {
                     $endpoint = 'token_exchange';
                     $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8) . '...'];
-                    \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => 'No access token received from Facebook.']);
+                    \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => 'No access token received.']);
                 }
                 return response()->json(['status' => false, 'message' => 'No access token received from Facebook.'], 400);
             }
