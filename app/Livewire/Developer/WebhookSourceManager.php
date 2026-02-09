@@ -300,7 +300,7 @@ class WebhookSourceManager extends Component
                     'payload' => $payload->payload,
                     'created_at' => $payload->created_at->diffForHumans(),
                 ];
-            });
+            })->values()->toArray();
     }
 
     /**
@@ -606,9 +606,15 @@ class WebhookSourceManager extends Component
 
     public function viewLogs($id)
     {
-        $this->logsSourceId = $id;
-        $this->showLogsModal = true;
-        $this->refreshLogs();
+        try {
+            \Illuminate\Support\Facades\Log::info("Opening logs for source ID: {$id}");
+            $this->logsSourceId = $id;
+            $this->showLogsModal = true;
+            $this->refreshLogs();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error opening logs: " . $e->getMessage());
+            $this->dispatch('notify', 'Error loading logs: ' . $e->getMessage());
+        }
     }
 
     public function refreshLogs()

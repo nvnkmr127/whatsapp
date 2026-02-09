@@ -323,7 +323,7 @@
                             <!-- Header Toggle -->
                             <div>
                                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Header Type</label>
-                                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                <div class="grid grid-cols-3 md:grid-cols-6 gap-2 {{ $category === 'AUTHENTICATION' ? 'opacity-50 pointer-events-none' : '' }}">
                                     @foreach(['NONE', 'TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION'] as $type)
                                         <button wire:click="$set('headerType', '{{ $type }}')"
                                             class="px-2 py-3 rounded-xl border-2 text-[9px] font-black uppercase tracking-widest transition-all {{ $headerType === $type ? 'border-wa-teal bg-wa-teal/5 text-wa-teal shadow-lg shadow-wa-teal/5' : 'border-slate-100 dark:border-slate-900 text-slate-400 hover:border-slate-200' }}">
@@ -331,6 +331,9 @@
                                         </button>
                                     @endforeach
                                 </div>
+                                @if($category === 'AUTHENTICATION')
+                                    <p class="text-[9px] font-bold text-amber-500 mt-2 uppercase tracking-wide">Headers are restricted for Authentication templates</p>
+                                @endif
                             </div>
 
                             @if($headerType === 'TEXT')
@@ -368,9 +371,12 @@
 
                             <div>
                                 <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Message Body (Required)</label>
-                                <textarea wire:model.live="body" rows="5"
-                                    class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border-none rounded-3xl text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-mono"
+                                <textarea wire:model.live="body" rows="5" {{ $category === 'AUTHENTICATION' ? 'readonly' : '' }}
+                                    class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border-none rounded-3xl text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 transition-all font-mono {{ $category === 'AUTHENTICATION' ? 'opacity-60 cursor-not-allowed' : '' }}"
                                     placeholder="Enter message body... Use {{1}}, {{2}} for variables."></textarea>
+                                @if($category === 'AUTHENTICATION')
+                                    <p class="text-[9px] font-bold text-indigo-500 mt-2 uppercase tracking-wide italic">Authentication templates use a fixed body format required by Meta.</p>
+                                @endif
                                 @error('body') <span class="text-[10px] font-bold text-rose-500 mt-2 block uppercase tracking-wide">{{ $message }}</span> @enderror
                             </div>
 
@@ -379,8 +385,8 @@
                                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Footer Text (Optional)</label>
                                     <span class="text-[9px] font-bold text-slate-400" x-text="count + '/60'"></span>
                                 </div>
-                                <input type="text" wire:model.live="footer" maxlength="60" x-on:input="count = $el.value.length"
-                                    class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20"
+                                <input type="text" wire:model.live="footer" maxlength="60" x-on:input="count = $el.value.length" {{ $category === 'AUTHENTICATION' ? 'readonly' : '' }}
+                                    class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 {{ $category === 'AUTHENTICATION' ? 'opacity-60 cursor-not-allowed' : '' }}"
                                     placeholder="Reply STOP to unsubscribe">
                             </div>
                         </section>
@@ -389,7 +395,7 @@
                         <section class="space-y-6">
                             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-900 pb-2">
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">3. Quick Actions</h4>
-                                @if(count($buttons) < 10)
+                                @if(count($buttons) < 10 && $category !== 'AUTHENTICATION')
                                     <button type="button" wire:click="addButton" class="text-[10px] font-black text-wa-teal uppercase hover:underline">+ Add Action</button>
                                 @endif
                             </div>

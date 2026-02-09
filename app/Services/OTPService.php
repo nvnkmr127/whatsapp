@@ -78,7 +78,7 @@ class OTPService
     /**
      * Verify the OTP code with retry protection and logging.
      */
-    public function verify(string $identifier, string $code): bool
+    public function verify(string $identifier, string $code, bool $consume = true): bool
     {
         $data = Cache::get($this->getCacheKey($identifier));
 
@@ -109,8 +109,10 @@ class OTPService
         }
 
         if (Hash::check($code, $data['hash'])) {
-            Cache::forget($this->getCacheKey($identifier));
-            Cache::forget($this->getDailyCountKey($identifier));
+            if ($consume) {
+                Cache::forget($this->getCacheKey($identifier));
+                Cache::forget($this->getDailyCountKey($identifier));
+            }
 
             app(\App\Services\WebhookService::class)->dispatch($teamId, 'otp.verified', [
                 'identifier' => $identifier,
@@ -180,12 +182,25 @@ class OTPService
     public function sendWhatsApp(string $phone, string $code): bool
     {
         try {
+            // 1. Try system-level credentials from .env first
+            $systemToken = env('WHATSAPP_SYSTEM_ACCESS_TOKEN');
+            $systemPhoneId = env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
+
+            if ($systemToken && $systemPhoneId) {
+                $systemTeam = new Team([
+                    'whatsapp_access_token' => $systemToken,
+                    'whatsapp_phone_number_id' => $systemPhoneId,
+                ]);
+                return $this->sendCustomWhatsAppOtp($phone, $code, 'verification_code', 'en_US', [$code], $systemTeam);
+            }
+
+            // 2. Fallback to any team that has WhatsApp connected (Discovery Mode)
             $team = Team::whereNotNull('whatsapp_access_token')
                 ->whereNotNull('whatsapp_phone_number_id')
                 ->first();
 
             if (!$team) {
-                Log::error("No team found with WhatsApp credentials for sending OTP.");
+                Log::error("No team or system credentials found for sending WhatsApp OTP.");
                 return false;
             }
 

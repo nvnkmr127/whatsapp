@@ -86,12 +86,16 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         // Send WhatsApp template
         $whatsappService = new WhatsAppService($template->team);
-        $whatsappService->sendTemplate(
+        $result = $whatsappService->sendTemplate(
             $phoneNumber,
             $template->name,
             $template->language ?? 'en_US',
             $parameters
         );
+
+        if (isset($result['success']) && !$result['success']) {
+            throw new \Exception("Failed to send template: " . ($result['error'] ?? 'Unknown error'));
+        }
 
         Log::info('Webhook triggered template send', [
             'phone' => $phoneNumber,

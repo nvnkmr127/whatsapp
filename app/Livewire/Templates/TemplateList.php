@@ -142,6 +142,25 @@ class TemplateList extends Component
         $this->resetPage();
     }
 
+    public function updatedCategory($value)
+    {
+        if ($value === 'AUTHENTICATION') {
+            $this->headerType = 'NONE';
+            $this->headerText = '';
+            $this->body = '{{1}} is your verification code.';
+            $this->footer = '';
+
+            // Ensure we have a COPY_CODE button as it's required for Authentication
+            $hasCopyCode = collect($this->buttons)->contains('type', 'COPY_CODE');
+            if (!$hasCopyCode) {
+                $this->buttons = [
+                    ['type' => 'COPY_CODE', 'text' => 'Copy Code', 'url' => '', 'phoneNumber' => '', 'copyCode' => '']
+                ];
+            }
+        }
+        $this->detectVariables();
+    }
+
     public function syncTemplates(\App\Services\WhatsAppService $whatsapp)
     {
         $this->syncing = true;
@@ -203,10 +222,13 @@ class TemplateList extends Component
             return;
 
         $type = 'QUICK_REPLY';
-        if ($ctaCount > 0)
+        if ($this->category === 'AUTHENTICATION') {
+            $type = 'COPY_CODE';
+        } elseif ($ctaCount > 0) {
             $type = 'URL'; // Stick to CTA if started
+        }
 
-        $this->buttons[] = ['type' => $type, 'text' => '', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''];
+        $this->buttons[] = ['type' => $type, 'text' => $this->category === 'AUTHENTICATION' ? 'Copy Code' : '', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''];
         $this->detectVariables();
     }
 
@@ -390,20 +412,25 @@ class TemplateList extends Component
 
         // Body
         $bodyComponent = [
-            'type' => 'BODY',
-            'text' => $this->body
+            'type' => 'BODY'
         ];
 
-        // BODY VARIABLES
-        $service = new \App\Services\TemplateService(); // Reuse or new
-        $vars = $service->extractVariables($this->body);
-        if (!empty($vars)) {
-            $examples = [];
-            foreach ($vars as $var) {
-                $examples[] = $this->variableConfig[$var]['sample'] ?? 'sample';
+        if ($this->category === 'AUTHENTICATION') {
+            $bodyComponent['add_hash'] = true;
+        } else {
+            $bodyComponent['text'] = $this->body;
+
+            // BODY VARIABLES
+            $service = new \App\Services\TemplateService(); // Reuse or new
+            $vars = $service->extractVariables($this->body);
+            if (!empty($vars)) {
+                $examples = [];
+                foreach ($vars as $var) {
+                    $examples[] = $this->variableConfig[$var]['sample'] ?? 'sample';
+                }
+                // Body expects array of arrays
+                $bodyComponent['example'] = ['body_text' => [$examples]];
             }
-            // Body expects array of arrays
-            $bodyComponent['example'] = ['body_text' => [$examples]];
         }
 
         $components[] = $bodyComponent;
@@ -438,10 +465,18 @@ class TemplateList extends Component
                         'phone_number' => $btn['phoneNumber']
                     ];
                 } elseif ($btn['type'] === 'COPY_CODE') {
-                    $buttonComponents[] = [
-                        'type' => 'COPY_CODE',
-                        'example' => $btn['copyCode']
-                    ];
+                    if ($this->category === 'AUTHENTICATION') {
+                        $buttonComponents[] = [
+                            'type' => 'OTP',
+                            'otp_type' => 'COPY_CODE',
+                            'text' => $btn['text'] ?: 'Copy Code'
+                        ];
+                    } else {
+                        $buttonComponents[] = [
+                            'type' => 'COPY_CODE',
+                            'example' => $btn['copyCode']
+                        ];
+                    }
                 } elseif ($btn['type'] === 'CATALOG') {
                     $buttonComponents[] = [
                         'type' => 'CATALOG',

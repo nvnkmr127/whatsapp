@@ -41,7 +41,7 @@ class Dashboard extends Component
             'total_message' => Message::where('team_id', $teamId)->count(),
             'total_contact' => Contact::where('team_id', $teamId)->count(),
             'total_campaign' => Campaign::where('team_id', $teamId)->count(),
-            'total_template' => WhatsappTemplate::count(), // Templates might be global or team-based, checking Team scope later if needed
+            'total_template' => WhatsappTemplate::where('team_id', $teamId)->count(),
             'todays_message' => Message::where('team_id', $teamId)->whereDate('created_at', Carbon::today())->count(),
             // Assuming 'status' or similar field for active contacts if 'is_enabled' doesn't exist. 
             // Checking Contact model... usually 'active' isn't standard, so using total for now or checking a specific status column if I saw one.
@@ -50,7 +50,7 @@ class Dashboard extends Component
             'contact_active' => Contact::where('team_id', $teamId)->count(),
             // Campaigns status 'active' or 'processing'
             'active_campaign' => Campaign::where('team_id', $teamId)->whereIn('status', ['active', 'processing'])->count(),
-            'active_template' => WhatsappTemplate::where('status', 'APPROVED')->count(),
+            'active_template' => WhatsappTemplate::where('team_id', $teamId)->where('status', 'APPROVED')->count(),
         ];
 
         $this->dashboardData = $totalCounts;

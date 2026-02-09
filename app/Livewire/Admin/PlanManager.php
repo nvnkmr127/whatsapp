@@ -17,12 +17,14 @@ class PlanManager extends Component
     public $message_limit;
     public $agent_limit;
     public $features = [];
+    public $call_minutes_limit;
 
     protected $rules = [
         'name' => 'required|string|max:255',
         'monthly_price' => 'required|numeric|min:0',
         'message_limit' => 'required|integer|min:0',
         'agent_limit' => 'required|integer|min:1',
+        'call_minutes_limit' => 'nullable|integer|min:0',
     ];
 
     public function mount()
@@ -50,6 +52,7 @@ class PlanManager extends Component
         $this->message_limit = $plan->message_limit;
         $this->agent_limit = $plan->agent_limit;
         $this->features = $plan->features ?? [];
+        $this->call_minutes_limit = $this->features['call_minutes_limit'] ?? 0;
         $this->showModal = true;
     }
 
@@ -62,7 +65,7 @@ class PlanManager extends Component
             'monthly_price' => $this->monthly_price,
             'message_limit' => $this->message_limit,
             'agent_limit' => $this->agent_limit,
-            'features' => $this->features,
+            'features' => array_merge($this->features, ['call_minutes_limit' => $this->call_minutes_limit]),
         ];
 
         if ($this->editingPlan) {
@@ -108,7 +111,9 @@ class PlanManager extends Component
             'ai' => false,
             'api_access' => false,
             'webhooks' => false,
+            'calling' => false,
         ];
+        $this->call_minutes_limit = '';
     }
 
     public function render()

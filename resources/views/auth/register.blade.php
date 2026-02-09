@@ -196,6 +196,27 @@
                                 </div>
                             </div>
 
+                            <!-- Password -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label for="password"
+                                        class="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">Password</label>
+                                    <input id="password" type="password" name="password" required
+                                        autocomplete="new-password"
+                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all"
+                                        placeholder="••••••••" />
+                                </div>
+                                <div>
+                                    <label for="password_confirmation"
+                                        class="text-xs font-black uppercase tracking-widest text-slate-400 block mb-2">Confirm
+                                        Password</label>
+                                    <input id="password_confirmation" type="password" name="password_confirmation"
+                                        required autocomplete="new-password"
+                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all"
+                                        placeholder="••••••••" />
+                                </div>
+                            </div>
+
                             <!-- Terms & Privacy -->
                             @if (Laravel\Jetstream\Jetstream::hasTermsAndPrivacyPolicyFeature())
                                 <div class="mb-6">
@@ -206,7 +227,8 @@
                                         <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
                                             I agree to the
                                             <a href="{{ route('terms.show') }}" target="_blank"
-                                                class="text-wa-teal hover:text-wa-dark underline">Terms of Service</a>
+                                                class="text-wa-teal hover:text-wa-dark underline">Terms of
+                                                Service</a>
                                             and
                                             <a href="{{ route('policy.show') }}" target="_blank"
                                                 class="text-wa-teal hover:text-wa-dark underline">Privacy Policy</a>

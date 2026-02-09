@@ -18,6 +18,13 @@ class PasswordlessLogin extends Component
     public $error = '';
     public $resendCountdown = 0;
 
+    public function updatedCode($value)
+    {
+        if (strlen($value) === 6) {
+            $this->verifyOtp(app(OTPService::class));
+        }
+    }
+
     protected $rules = [
         'identifier' => 'required',
         'type' => 'required|in:email,phone',
@@ -25,6 +32,16 @@ class PasswordlessLogin extends Component
 
     public function requestOtp(OTPService $otpService)
     {
+        if ($this->type === 'email') {
+            $this->identifier = strtolower(trim($this->identifier));
+        } else {
+            // Remove non-numeric characters and ensure leading + for phone
+            $this->identifier = preg_replace('/[^0-9+]/', '', $this->identifier);
+            if (!str_starts_with($this->identifier, '+')) {
+                $this->identifier = '+' . $this->identifier;
+            }
+        }
+
         $this->validate();
         $this->error = '';
         $this->message = '';
@@ -67,7 +84,7 @@ class PasswordlessLogin extends Component
         $this->validate(['code' => 'required|string|size:6']);
         $this->error = '';
 
-        if (!$otpService->verify($this->identifier, $this->code)) {
+        if (!$otpService->verify($this->identifier, $this->code, false)) {
             $this->error = 'Invalid or expired code.';
             return;
         }

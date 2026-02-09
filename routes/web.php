@@ -26,6 +26,10 @@ Route::prefix('auth')->name('auth.')->group(function () {
     // Google OAuth Routes
     Route::get('/google/redirect', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->name('google.redirect');
     Route::get('/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->name('google.callback');
+
+    // Facebook OAuth Routes
+    Route::get('/facebook/redirect', [\App\Http\Controllers\Auth\FacebookAuthController::class, 'redirect'])->name('facebook.redirect');
+    Route::get('/facebook/callback', [\App\Http\Controllers\Auth\FacebookAuthController::class, 'callback'])->name('facebook.callback');
 });
 
 Route::middleware([

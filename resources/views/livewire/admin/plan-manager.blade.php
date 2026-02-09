@@ -93,6 +93,24 @@
                                             class="text-xs font-medium text-slate-500">members</span></div>
                                 </div>
                             </div>
+
+                            @if(($plan->features['calling'] ?? false) && ($plan->features['call_minutes_limit'] ?? 0) > 0)
+                                <div class="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
+                                    <div class="p-2 bg-white dark:bg-slate-800 rounded-xl text-amber-500 shadow-sm">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-black text-slate-400 uppercase tracking-widest">Call Minutes
+                                        </div>
+                                        <div class="font-bold text-slate-900 dark:text-white">
+                                            {{ number_format($plan->features['call_minutes_limit'] ?? 0) }} <span
+                                                class="text-xs font-medium text-slate-500">min/mo</span></div>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         <!-- Features -->
@@ -234,6 +252,18 @@
                                             class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span>
                                         @enderror
                                     </div>
+
+                                    <div class="space-y-2" x-show="$wire.features.calling" x-transition>
+                                        <div class="flex justify-between">
+                                            <span class="text-xs font-bold text-slate-600 dark:text-slate-400">Call Minutes
+                                                / Month</span>
+                                        </div>
+                                        <input type="number" wire:model="call_minutes_limit" placeholder="e.g. 1000"
+                                            class="w-full px-4 py-2 bg-white dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20">
+                                        @error('call_minutes_limit') <span
+                                            class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span>
+                                        @enderror
+                                    </div>
                                 </div>
                             </div>
 
@@ -248,7 +278,7 @@
                                         All</button>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2">
-                                    @foreach(['chat', 'contacts', 'templates', 'campaigns', 'automations', 'analytics', 'commerce', 'ai', 'api_access', 'webhooks'] as $feature)
+                                    @foreach(['chat', 'contacts', 'templates', 'campaigns', 'automations', 'analytics', 'commerce', 'ai', 'api_access', 'webhooks', 'calling'] as $feature)
                                         <label
                                             class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                             <div class="relative flex items-center">

@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Log;
 
 trait WhatsApp
 {
+    protected bool $skipAppSecretProof = false;
+
+    public function setSkipAppSecretProof(bool $skip): self
+    {
+        $this->skipAppSecretProof = $skip;
+        return $this;
+    }
+
     protected static string $facebookAPI = 'https://graph.facebook.com/';
 
     protected static function getApiVersion(): string
@@ -59,7 +67,7 @@ trait WhatsApp
 
             // Only add appsecret_proof if we have a secret and it's NOT a system token
             // This is safer than app_id which often causes the #200 error
-            if (!$isSystemToken && $appSecret) {
+            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -80,6 +88,7 @@ trait WhatsApp
                 ) {
 
                     Log::warning("WhatsApp Trait: AppSecret Proof failed, retrying without proof.");
+                    $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::get($url, $params);
                 }
@@ -185,7 +194,7 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if (!$isSystemToken && $appSecret) {
+            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -200,6 +209,7 @@ trait WhatsApp
                 ) {
 
                     Log::warning("WhatsApp Trait: AppSecret Proof failed for Phone Details, retrying without proof.");
+                    $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
                 }
@@ -255,7 +265,7 @@ trait WhatsApp
                 'pin' => $pin
             ];
 
-            if (!$isSystemToken && $appSecret) {
+            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -275,6 +285,7 @@ trait WhatsApp
                 ) {
 
                     Log::warning("WhatsApp Trait: AppSecret Proof failed for Registration, retrying without proof.");
+                    $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::withToken($token)->post($url, $params);
                 }
@@ -368,7 +379,7 @@ trait WhatsApp
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
             $params = ['app_id' => $appId];
-            if (!$isSystemToken) {
+            if (!$isSystemToken && !$this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -384,6 +395,7 @@ trait WhatsApp
 
                 if ($code == 100 && str_contains($msg, 'Invalid appsecret_proof')) {
                     Log::warning("WhatsApp Trait: AppSecret Proof failed, retrying without proof.");
+                    $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::withToken($token)->post($url, $params);
                 }
@@ -484,7 +496,7 @@ trait WhatsApp
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
             $params = ['app_id' => $appId];
-            if (!$isSystemToken) {
+            if (!$isSystemToken && !$this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -499,6 +511,7 @@ trait WhatsApp
                 ) {
 
                     Log::warning("WhatsApp Trait: AppSecret Proof failed on Check, retrying without proof.");
+                    $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::withToken($token)->get($url, $params);
                 }

@@ -57,6 +57,12 @@ class WhatsAppVerificationEngine
         if (!$debug['status']) {
             // Fallback for Manual Tokens: Try a direct API call to verify functionality
             Log::info("debugToken failed for team {$this->team->id}, attempting direct API fallback.");
+
+            // If debug failed due to mismatch, disable proof for the fallback call
+            if (str_contains($debug['message'] ?? '', 'Configuration Error')) {
+                $this->setSkipAppSecretProof(true);
+            }
+
             $fallback = $this->loadTemplatesFromWhatsApp(); // Reuse loadTemplates as a functional test
 
             if ($fallback['status']) {
