@@ -136,6 +136,11 @@ class TemplateList extends Component
         ];
     }
 
+    public function updatedName($value)
+    {
+        $this->name = str_replace(' ', '_', strtolower($value));
+    }
+
     // Reset pagination when searching
     public function updatedSearch()
     {
@@ -269,7 +274,7 @@ class TemplateList extends Component
                 $newConfig[$var] = $this->variableConfig[$var];
             } else {
                 $newConfig[$var] = [
-                    'name' => '',
+                    'name' => $var,
                     'type' => 'TEXT',
                     'fallback' => '',
                     'sample' => ''

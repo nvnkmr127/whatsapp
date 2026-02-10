@@ -275,11 +275,12 @@ class WebhookSourceManager extends Component
      */
     public function getRecentPayloads($sourceId)
     {
-        $team = auth()->user()->currentTeam;
+        $user = auth()->user();
+        $team = $user->currentTeam;
 
         $query = WebhookSource::query();
 
-        if ($team) {
+        if ($team && !$user->is_super_admin) {
             $query->where('team_id', $team->id);
         }
 
@@ -332,6 +333,7 @@ class WebhookSourceManager extends Component
     {
         $this->cancelEdit();
         $this->showWizardModal = true;
+        $this->showLogsModal = false;
     }
 
     public function create()
@@ -405,6 +407,8 @@ class WebhookSourceManager extends Component
         $this->currentStep = 1; // Start at step 1 when editing
         $this->loadMappingContext();
         $this->showWizardModal = true;
+        $this->showLogsModal = false;
+        $this->showTestModal = false;
     }
 
     public function update()
@@ -474,6 +478,26 @@ class WebhookSourceManager extends Component
 
         $source->delete();
         $this->dispatch('notify', 'Webhook source deleted successfully.');
+    }
+
+    public function duplicate($id)
+    {
+        $source = WebhookSource::findOrFail($id);
+        $this->authorize('update', $source);
+
+        $newSource = $source->replicate();
+        $newSource->name = $source->name . ' (Copy)';
+        $newSource->is_active = false; // Duplicated source should be inactive until user activates it
+        $newSource->slug = null; // Clear slug to trigger new one generation
+
+        // Reset stats for the new source
+        $newSource->total_received = 0;
+        $newSource->total_processed = 0;
+        $newSource->total_failed = 0;
+
+        $newSource->save();
+
+        $this->dispatch('notify', 'Webhook source duplicated successfully (inactive by default).');
     }
 
     public function toggleStatus($id)
@@ -630,6 +654,8 @@ class WebhookSourceManager extends Component
             \Illuminate\Support\Facades\Log::info("Opening logs for source ID: {$id}");
             $this->logsSourceId = $id;
             $this->showLogsModal = true;
+            $this->showWizardModal = false;
+            $this->showTestModal = false;
             $this->refreshLogs();
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error opening logs: " . $e->getMessage());

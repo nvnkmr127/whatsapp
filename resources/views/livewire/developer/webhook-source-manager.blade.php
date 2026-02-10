@@ -15,8 +15,16 @@
             <p class="text-slate-500 font-medium">Configure webhooks from external platforms - Get unique URL, send
                 data, map fields visually</p>
         </div>
-        <div>
-            <button wire:click="openNewSource" class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
+        <divclass="flex items-center gap-4">
+            <a href="{{ route('webhooks.logs') }}" 
+                class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Webhook History
+            </a>
+            <button wire:click="openNewSource"
+                class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
                 + New Source
             </button>
         </div>
@@ -62,24 +70,59 @@
                                     class="text-[10px] font-mono text-wa-teal dark:text-wa-teal">{{ Str::limit($source->getWebhookUrl(), 30) }}</code>
                             </td>
                             <td class="px-8 py-4">
-                                <button wire:click="toggleStatus({{ $source->id }})" class="group/toggle flex items-center gap-2 focus:outline-none">
-                                    <span class="w-2 h-2 rounded-full transition-all duration-300 {{ $source->is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-slate-300' }}"></span>
-                                    <span class="text-[10px] font-black uppercase tracking-widest {{ $source->is_active ? 'text-emerald-500' : 'text-slate-400' }}">
+                                <button wire:click="toggleStatus({{ $source->id }})"
+                                    class="group/toggle flex items-center gap-2 focus:outline-none">
+                                    <span
+                                        class="w-2 h-2 rounded-full transition-all duration-300 {{ $source->is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-slate-300' }}"></span>
+                                    <span
+                                        class="text-[10px] font-black uppercase tracking-widest {{ $source->is_active ? 'text-emerald-500' : 'text-slate-400' }}">
                                         {{ $source->is_active ? 'Active' : 'Paused' }}
                                     </span>
                                 </button>
                             </td>
                             <td class="px-8 py-4 text-end">
-                                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div
+                                    class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button wire:click="viewLogs({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-xl transition-all" title="Live Monitor">
+                                        class="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-xl transition-all"
+                                        title="Live Monitor">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                         </svg>
                                     </button>
+                                    <button wire:click="duplicate({{ $source->id }})"
+                                        class="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-xl transition-all"
+                                        title="Duplicate Source">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                        </svg>
+                                    </button>
+                                    @if($source->is_active)
+                                        <button wire:click="toggleStatus({{ $source->id }})"
+                                            class="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-xl transition-all"
+                                            title="Deactivate Source">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </button>
+                                    @else
+                                        <button wire:click="toggleStatus({{ $source->id }})"
+                                            class="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-xl transition-all"
+                                            title="Activate Source">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </button>
+                                    @endif
                                     <button wire:click="edit({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-wa-teal hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-xl transition-all" title="Edit Configuration">
+                                        class="p-2 text-slate-400 hover:text-wa-teal hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-xl transition-all"
+                                        title="Edit Configuration">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -87,7 +130,8 @@
                                     </button>
                                     <button wire:click="delete({{ $source->id }})"
                                         wire:confirm="Permanent deletion: Are you sure?"
-                                        class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all" title="Delete Source">
+                                        class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all"
+                                        title="Delete Source">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -172,155 +216,155 @@
                 <div class="max-w-4xl mx-auto">
                     {{-- Step 1: Identify & Secure --}}
                     @if($currentStep === 1)
-                        <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div class="flex items-center gap-4 mb-8">
-                            <div
-                                class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-wa-teal flex items-center justify-center">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                            <div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div class="flex items-center gap-4 mb-8">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-wa-teal flex items-center justify-center">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                        Identify Your Connection</h4>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Basic details and
+                                        security setup</p>
+                                </div>
                             </div>
-                            <div>
-                                <h4 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                                    Identify Your Connection</h4>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Basic details and
-                                    security setup</p>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="space-y-2 group">
-                                <x-label value="Connection Name"
-                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
-                                <x-input wire:model="name" type="text"
-                                    class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner"
-                                    placeholder="e.g. Shopify Store" />
-                                <x-input-error for="name" />
-                            </div>
-
-                            <div class="space-y-2 group">
-                                <x-label value="Platform"
-                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
-                                <select wire:model.live="platform" wire:change="selectPlatform($event.target.value)"
-                                    class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner appearance-none cursor-pointer">
-                                    @foreach($platforms as $key => $preset)
-                                        <option value="{{ $key }}">{{ $preset['name'] }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div
-                            class="space-y-6 bg-slate-50/50 dark:bg-slate-800/20 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800">
-                            <h5
-                                class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                                Security Settings
-                            </h5>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div class="space-y-4">
-                                    <div class="space-y-2 relative">
-                                        <x-label value="Authentication"
-                                            class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
-                                        <select wire:model.live="auth_method"
-                                            class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-sm cursor-pointer">
-                                            <option value="api_key">API Key</option>
-                                            <option value="hmac">HMAC Signature</option>
-                                            <option value="basic">Basic Auth</option>
-                                            <option value="none">Open (No Auth)</option>
-                                        </select>
-                                    </div>
-                                    @if($auth_method !== 'none')
-                                        <div
-                                            class="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl border border-purple-100/50 dark:border-purple-500/10 text-[10px] font-bold text-wa-teal/70 uppercase tracking-widest">
-                                            @if($auth_method === 'api_key') Recommend including in X-API-Key header @else
-                                            Security verification enabled @endif
-                                        </div>
-                                    @endif
+                                <div class="space-y-2 group">
+                                    <x-label value="Connection Name"
+                                        class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
+                                    <x-input wire:model="name" type="text"
+                                        class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner"
+                                        placeholder="e.g. Shopify Store" />
+                                    <x-input-error for="name" />
                                 </div>
 
-                                <div class="space-y-4">
-                                    @if($auth_method === 'api_key')
-                                        <div class="space-y-2 animate-in fade-in zoom-in duration-300">
-                                            <div class="flex items-center justify-between">
-                                                <x-label value="API Key"
-                                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
-                                                <button wire:click="generateApiKey" type="button"
-                                                    class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest">Regenerate</button>
-                                            </div>
-                                            <div class="relative group">
-                                                <x-input wire:model="auth_config.key" type="text"
-                                                    class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-mono text-xs text-slate-900 dark:text-white"
-                                                    readonly />
-                                                <button
-                                                    onclick="navigator.clipboard.writeText('{{ $auth_config['key'] ?? '' }}')"
-                                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-wa-teal transition-colors bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    @elseif($auth_method === 'hmac')
-                                        <div class="space-y-2 animate-in fade-in zoom-in duration-300">
-                                            <div class="flex items-center justify-between">
-                                                <x-label value="Shared Secret"
-                                                    class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
-                                                <button wire:click="generateSecret" type="button"
-                                                    class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest">Regenerate</button>
-                                            </div>
-                                            <x-input wire:model="auth_config.secret" type="text"
-                                                class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-mono text-xs text-slate-900 dark:text-white" />
-                                        </div>
-                                    @else
-                                        <div
-                                            class="h-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6">
-                                            <p
-                                                class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                                                No specialized config required</p>
-                                        </div>
-                                    @endif
+                                <div class="space-y-2 group">
+                                    <x-label value="Platform"
+                                        class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
+                                    <select wire:model.live="platform" wire:change="selectPlatform($event.target.value)"
+                                        class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner appearance-none cursor-pointer">
+                                        @foreach($platforms as $key => $preset)
+                                            <option value="{{ $key }}">{{ $preset['name'] }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </div>
-                        </div>
 
-                        @if($editingId)
                             <div
-                                class="bg-wa-teal text-white rounded-[2rem] p-8 shadow-2xl shadow-wa-teal/30 animate-in slide-in-from-left duration-700">
-                                <div class="flex flex-col md:flex-row items-center gap-6">
-                                    <div
-                                        class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-md">
-                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                        </svg>
-                                    </div>
-                                    <div class="flex-1 text-center md:text-left">
-                                        <h5 class="text-xs font-black uppercase tracking-widest opacity-80 mb-1">Your Unique
-                                            Webhook URL</h5>
-                                        <div class="flex flex-col md:flex-row items-center gap-3">
-                                            <code
-                                                class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
-                                            <button
-                                                onclick="navigator.clipboard.writeText('{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}')"
-                                                class="bg-white text-wa-teal px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg shadow-black/10">Copy
-                                                URL</button>
+                                class="space-y-6 bg-slate-50/50 dark:bg-slate-800/20 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800">
+                                <h5
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    Security Settings
+                                </h5>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div class="space-y-4">
+                                        <div class="space-y-2 relative">
+                                            <x-label value="Authentication"
+                                                class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
+                                            <select wire:model.live="auth_method"
+                                                class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-sm cursor-pointer">
+                                                <option value="api_key">API Key</option>
+                                                <option value="hmac">HMAC Signature</option>
+                                                <option value="basic">Basic Auth</option>
+                                                <option value="none">Open (No Auth)</option>
+                                            </select>
                                         </div>
-                                        <p class="text-[10px] font-bold opacity-70 mt-3 uppercase tracking-widest">Paste this
-                                            URL into your external software and send a test event.</p>
+                                        @if($auth_method !== 'none')
+                                            <div
+                                                class="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl border border-purple-100/50 dark:border-purple-500/10 text-[10px] font-bold text-wa-teal/70 uppercase tracking-widest">
+                                                @if($auth_method === 'api_key') Recommend including in X-API-Key header @else
+                                                Security verification enabled @endif
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        @if($auth_method === 'api_key')
+                                            <div class="space-y-2 animate-in fade-in zoom-in duration-300">
+                                                <div class="flex items-center justify-between">
+                                                    <x-label value="API Key"
+                                                        class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
+                                                    <button wire:click="generateApiKey" type="button"
+                                                        class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest">Regenerate</button>
+                                                </div>
+                                                <div class="relative group">
+                                                    <x-input wire:model="auth_config.key" type="text"
+                                                        class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-mono text-xs text-slate-900 dark:text-white"
+                                                        readonly />
+                                                    <button
+                                                        onclick="navigator.clipboard.writeText('{{ $auth_config['key'] ?? '' }}')"
+                                                        class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-wa-teal transition-colors bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        @elseif($auth_method === 'hmac')
+                                            <div class="space-y-2 animate-in fade-in zoom-in duration-300">
+                                                <div class="flex items-center justify-between">
+                                                    <x-label value="Shared Secret"
+                                                        class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
+                                                    <button wire:click="generateSecret" type="button"
+                                                        class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest">Regenerate</button>
+                                                </div>
+                                                <x-input wire:model="auth_config.secret" type="text"
+                                                    class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-5 font-mono text-xs text-slate-900 dark:text-white" />
+                                            </div>
+                                        @else
+                                            <div
+                                                class="h-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+                                                <p
+                                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                                    No specialized config required</p>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
-                        @endif
-                    </div>
-                @endif
+
+                            @if($editingId)
+                                <div
+                                    class="bg-wa-teal text-white rounded-[2rem] p-8 shadow-2xl shadow-wa-teal/30 animate-in slide-in-from-left duration-700">
+                                    <div class="flex flex-col md:flex-row items-center gap-6">
+                                        <div
+                                            class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-md">
+                                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 text-center md:text-left">
+                                            <h5 class="text-xs font-black uppercase tracking-widest opacity-80 mb-1">Your Unique
+                                                Webhook URL</h5>
+                                            <div class="flex flex-col md:flex-row items-center gap-3">
+                                                <code
+                                                    class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
+                                                <button
+                                                    onclick="navigator.clipboard.writeText('{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}')"
+                                                    class="bg-white text-wa-teal px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg shadow-black/10">Copy
+                                                    URL</button>
+                                            </div>
+                                            <p class="text-[10px] font-bold opacity-70 mt-3 uppercase tracking-widest">Paste this
+                                                URL into your external software and send a test event.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
 
                 {{-- Step 2: Live Capture --}}
                 @if($currentStep === 2)
@@ -403,14 +447,14 @@
                                         @php
                                             $authHeader = $auth_config['header'] ?? null;
                                             if (!$authHeader) {
-                                                $authHeader = match($auth_method) {
+                                                $authHeader = match ($auth_method) {
                                                     'api_key' => 'X-API-Key',
                                                     'hmac' => 'X-Webhook-Signature',
                                                     'basic' => 'Authorization',
                                                     default => null
                                                 };
                                             }
-                                            $authValue = match($auth_method) {
+                                            $authValue = match ($auth_method) {
                                                 'api_key' => $auth_config['key'] ?? 'MISSING_KEY',
                                                 'hmac' => 'HMAC-SHA256(payload, secret)',
                                                 'basic' => 'Basic base64(user:pass)',
@@ -542,7 +586,7 @@
                                         <div class="relative z-10">
                                             @php
                                                 $previewContent = $selectedTemplate->content;
-                                                foreach($templateParameters as $num => $path) {
+                                                foreach ($templateParameters as $num => $path) {
                                                     if ($path) {
                                                         $val = $mappingContext[$path] ?? null;
                                                         if (str_starts_with($path, 'STATIC:')) {
@@ -565,19 +609,37 @@
                                     <div class="bg-gradient-to-br from-wa-teal to-wa-teal rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden h-full flex flex-col justify-center">
                                         <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
                                         <div class="relative z-10 space-y-4">
-                                            <div>
-                                                <h5 class="text-white font-black uppercase tracking-tight flex items-center gap-2">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                                                    Dest. Phone Number
-                                                </h5>
-                                                <p class="text-purple-100/70 text-[10px] font-bold uppercase tracking-widest mt-1">Select field from payload</p>
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="text-white font-black uppercase tracking-tight flex items-center gap-2">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                                        Dest. Phone Number
+                                                    </h5>
+                                                    <p class="text-purple-100/70 text-[10px] font-bold uppercase tracking-widest mt-1">
+                                                        {{ str_starts_with($field_mappings['phone_number'] ?? '', 'STATIC:') ? 'Using fixed phone number' : 'Select field from payload' }}
+                                                    </p>
+                                                </div>
+                                                @if(str_starts_with($field_mappings['phone_number'] ?? '', 'STATIC:'))
+                                                    <button wire:click="$set('field_mappings.phone_number', '')" type="button" class="text-[10px] font-black text-white hover:underline uppercase tracking-widest bg-white/10 px-3 py-1 rounded-lg">Switch to Dynamic</button>
+                                                @else
+                                                    <button wire:click="$set('field_mappings.phone_number', 'STATIC:')" type="button" class="text-[10px] font-black text-purple-100 hover:text-white hover:underline uppercase tracking-widest bg-black/10 px-3 py-1 rounded-lg">Set Static Value</button>
+                                                @endif
                                             </div>
-                                            <select wire:model.live="field_mappings.phone_number" class="w-full bg-white/10 border-2 border-white/20 rounded-2xl py-3 px-5 font-mono text-xs text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/40 focus:ring-0 transition-all cursor-pointer">
-                                                <option value="" class="text-slate-900">-- Select Phone Field --</option>
-                                                @foreach($mappingContext as $key => $value)
-                                                    <option value="{{ $key }}" class="text-slate-900">{{ $key }} ({{ Str::limit(is_string($value) ? $value : json_encode($value), 30) }})</option>
-                                                @endforeach
-                                            </select>
+
+                                            @if(str_starts_with($field_mappings['phone_number'] ?? '', 'STATIC:'))
+                                                <input type="text" 
+                                                       value="{{ substr($field_mappings['phone_number'] ?? '', 7) }}"
+                                                       @change="$wire.set('field_mappings.phone_number', 'STATIC:' + $event.target.value)"
+                                                       class="w-full bg-white/10 border-2 border-white/20 rounded-2xl py-3 px-5 font-bold text-sm text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/40 focus:ring-0 transition-all"
+                                                       placeholder="Enter phone number (e.g. +1234567890)" />
+                                            @else
+                                                <select wire:model.live="field_mappings.phone_number" class="w-full bg-white/10 border-2 border-white/20 rounded-2xl py-3 px-5 font-mono text-xs text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/40 focus:ring-0 transition-all cursor-pointer">
+                                                    <option value="" class="text-slate-900">-- Select Phone Field --</option>
+                                                    @foreach($mappingContext as $key => $value)
+                                                        <option value="{{ $key }}" class="text-slate-900">{{ $key }} ({{ Str::limit(is_string($value) ? $value : json_encode($value), 30) }})</option>
+                                                    @endforeach
+                                                </select>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
