@@ -28,11 +28,22 @@ class AutomationService
         $this->policyService = $policyService;
     }
 
+    public function setWhatsAppService(WhatsAppService $whatsapp)
+    {
+        $this->whatsapp = $whatsapp;
+        $this->whatsapp->isBot = true;
+    }
+
     /**
      * Check if an automation should be triggered.
      */
     public function checkTriggers(Contact $contact, $messageContent)
     {
+        Log::debug("Automation CheckTriggers: Starting for contact {$contact->id}", [
+            'content' => $messageContent,
+            'should_process' => $this->handoff->shouldProcess($contact)
+        ]);
+
         if (!$this->handoff->shouldProcess($contact))
             return false;
 
@@ -42,10 +53,15 @@ class AutomationService
             ->where('trigger_type', 'keyword')
             ->get();
 
+        Log::debug("Automation CheckTriggers: Found " . $automations->count() . " active keyword automations for team {$contact->team_id}");
+
         foreach ($automations as $automation) {
+            /** @var Automation $automation */
             $keywords = $automation->trigger_config['keywords'] ?? [];
             foreach ($keywords as $keyword) {
-                if (str_contains($messageContent, strtolower($keyword))) {
+                $trimmedKeyword = trim($keyword);
+                if ($trimmedKeyword !== "" && str_contains($messageContent, strtolower($trimmedKeyword))) {
+                    Log::debug("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword '$trimmedKeyword'");
                     $this->start($automation, $contact);
                     return true;
                 }
@@ -65,6 +81,7 @@ class AutomationService
             ->get();
 
         foreach ($automations as $automation) {
+            /** @var Automation $automation */
             // Enforcement Hook: Logic for commerce-related automations
             if ($type === 'order_received') {
                 $readinessService = app(\App\Services\CommerceReadinessService::class);
@@ -122,6 +139,7 @@ class AutomationService
             ->get();
 
         foreach ($automations as $automation) {
+            /** @var Automation $automation */
             // Match against flow_token (assuming flow_token is set to flow_id or unique string)
             $targetToken = $automation->trigger_config['flow_token'] ?? $automation->trigger_config['flow_id'] ?? null;
 
@@ -170,6 +188,7 @@ class AutomationService
 
         try {
             if (!$lock->get()) {
+                Log::debug("Automation Start: Failed to acquire lock for contact {$contact->id}");
                 return;
             }
 
@@ -187,7 +206,7 @@ class AutomationService
             // Health Check Enforcement
             $health = $this->healthMonitor->checkHealth($automation->team);
             if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= 35) {
-                Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).");
+                Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).", ['health' => $health]);
                 return;
             }
 
@@ -210,6 +229,11 @@ class AutomationService
                 Log::error("Automation {$automation->id} has no start node.");
                 return;
             }
+
+            Log::debug("Automation #{$automation->id} starting for contact {$contact->id}", [
+                'start_node' => $startNodeId,
+                'run_id' => $run->id ?? 'pending'
+            ]);
 
             $run = AutomationRun::create([
                 'automation_id' => $automation->id,
@@ -235,7 +259,12 @@ class AutomationService
 
             // Dispatch first node
             ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
+            Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
+        } catch (\Exception $e) {
+            Log::error("Automation #{$automation->id} start FAILED for contact {$contact->id}: " . $e->getMessage(), [
+                'exception' => $e
+            ]);
         } finally {
             $lock->release();
         }
@@ -667,16 +696,25 @@ STRICT GROUNDING RULES:
 
     protected function findStartNode($flowData)
     {
+        if (!isset($flowData['nodes']) || !is_array($flowData['nodes'])) {
+            return null;
+        }
+
         foreach ($flowData['nodes'] as $n) {
-            if ($n['type'] === 'trigger')
+            if (($n['type'] ?? '') === 'trigger')
                 return $n['id'];
         }
         return null;
     }
+
     protected function getNodeById($flowData, $id)
     {
+        if (!isset($flowData['nodes']) || !is_array($flowData['nodes'])) {
+            return null;
+        }
+
         foreach ($flowData['nodes'] as $n) {
-            if ($n['id'] === $id)
+            if (($n['id'] ?? '') === $id)
                 return $n;
         }
         return null;

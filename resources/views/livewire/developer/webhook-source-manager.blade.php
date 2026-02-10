@@ -585,15 +585,18 @@
                                         </div>
                                         <div class="relative z-10">
                                             @php
-                                                $previewContent = $selectedTemplate->content;
-                                                foreach ($templateParameters as $num => $path) {
-                                                    if ($path) {
-                                                        $val = $mappingContext[$path] ?? null;
-                                                        if (str_starts_with($path, 'STATIC:')) {
-                                                            $val = substr($path, 7);
-                                                        }
-                                                        if ($val) {
-                                                            $previewContent = str_replace("{{{$num}}}", "<span class='text-wa-teal font-black'>$val</span>", $previewContent);
+                                                $previewContent = ($selectedTemplateId && $selectedTemplate) ? $selectedTemplate->content : 'No template selected or found';
+                                                
+                                                if ($selectedTemplateId && $selectedTemplate) {
+                                                    foreach ($templateParameters as $num => $path) {
+                                                        if ($path) {
+                                                            $val = $mappingContext[$path] ?? null;
+                                                            if (str_starts_with($path, 'STATIC:')) {
+                                                                $val = substr($path, 7);
+                                                            }
+                                                            if ($val) {
+                                                                $previewContent = str_replace("{{{$num}}}", "<span class='text-wa-teal font-black'>$val</span>", $previewContent);
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -949,7 +952,7 @@
                             </svg>
                         </div>
                         <div>
-                            <span class="text-lg font-black uppercase tracking-tight block leading-none">{{ $logsSourceStats['name'] ?? 'Live Event Monitor' }}</span>
+                            <span class="text-lg font-black uppercase tracking-tight block leading-none">{{ data_get($logsSourceStats, 'name', 'Live Event Monitor') }}</span>
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Real-time performance analytics</span>
                         </div>
                     </div>

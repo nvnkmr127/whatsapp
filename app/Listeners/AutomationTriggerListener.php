@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Log;
 
 class AutomationTriggerListener implements ShouldQueue
 {
+    use InteractsWithQueue;
+
+    public $queue = 'messages';
     /**
      * Handle the event.
      */
@@ -43,11 +46,16 @@ class AutomationTriggerListener implements ShouldQueue
 
             // 2. Check active flow
             if ($automationService->handleReply($contact, $content)) {
+                Log::info("AutomationTriggerListener: Handled as reply for contact {$contact->id}");
                 return;
             }
 
             // 2. Check triggers
-            $automationService->checkTriggers($contact, $content);
+            if ($automationService->checkTriggers($contact, $content)) {
+                Log::info("AutomationTriggerListener: Trigger matched for contact {$contact->id}");
+            } else {
+                Log::debug("AutomationTriggerListener: No trigger match for contact {$contact->id}");
+            }
 
         } catch (\Exception $e) {
             Log::error("Automation Failure for Message {$message->id}: " . $e->getMessage());
