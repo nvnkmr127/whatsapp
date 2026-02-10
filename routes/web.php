@@ -43,7 +43,7 @@ Route::middleware([
     })->name('dashboard');
 
     // Webhooks - See developer section for webhook management routes
-    Route::get('/webhooks/logs', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware('can:manage-settings');
+    Route::get('/webhooks/logs', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
     Route::get('/webhook-workflows/{workflowId}/report', \App\Livewire\Webhooks\WebhookReport::class)->name('webhooks.report');
 
     // WhatsApp Config (Admins Only)
@@ -106,7 +106,7 @@ Route::middleware([
     Route::get('/admin/impersonate/exit', [\App\Http\Controllers\Admin\ImpersonationController::class, 'exit'])->name('admin.impersonate.exit');
 
     // Agent Console (Agents, Managers, Admins)
-    Route::get('/chat', \App\Livewire\Chat\ChatDashboard::class)->name('chat')->middleware('can:chat-access');
+    Route::get('/chat', \App\Livewire\Chat\ChatDashboard::class)->name('chat')->middleware(['can:chat-access', 'plan_feature:chat']);
 
     // Conversation Locks (Session Auth for Web)
     Route::post('/api/v1/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
@@ -117,7 +117,7 @@ Route::middleware([
     // CRM (Managers, Admins)
     Route::get('/contacts', function () {
         return view('contacts.index');
-    })->name('contacts.index')->middleware('can:manage-contacts');
+    })->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 
     // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
     Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
@@ -130,7 +130,7 @@ Route::middleware([
 
     Route::get('/templates', function () {
         return view('templates.index');
-    })->name('templates.index')->middleware('can:manage-templates');
+    })->name('templates.index')->middleware(['can:manage-templates', 'plan_feature:templates']);
 
     // Compliance Modules
     Route::get('/compliance', \App\Livewire\Compliance\ComplianceManager::class)->name('compliance.index')->middleware('can:manage-settings');
@@ -146,8 +146,8 @@ Route::middleware([
     Route::get('/flows/builder/{flowId?}', \App\Livewire\Flows\FlowBuilder::class)->name('flows.builder')->middleware(['can:manage-campaigns', 'plan_feature:flows']);
 
     Route::get('/analytics', \App\Livewire\Analytics\AnalyticsDashboard::class)->name('analytics')->middleware(['can:manage-settings', 'plan_feature:analytics']);
-    Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware('can:manage-settings');
-    Route::get('/analytics/explorer', \App\Livewire\Analytics\EventExplorer::class)->name('analytics.explorer')->middleware('can:manage-settings');
+    Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware(['can:manage-settings', 'plan_feature:analytics']);
+    Route::get('/analytics/explorer', \App\Livewire\Analytics\EventExplorer::class)->name('analytics.explorer')->middleware(['can:manage-settings', 'plan_feature:analytics']);
 
     // WhatsApp Calling
     Route::get('/calls', \App\Livewire\Calls\CallHistory::class)->name('calls.history')->middleware('can:chat-access');

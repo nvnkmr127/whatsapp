@@ -162,7 +162,22 @@
                                 <button wire:click="viewTemplate({{ $template->id }})" class="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" title="View Details">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                 </button>
-                                <a href="https://business.facebook.com/wa/manage/templates/?waba_id={{ auth()->user()->currentTeam->whatsapp_business_account_id }}" target="_blank" 
+                                @php
+                                    $wabaId = auth()->user()->currentTeam->whatsapp_business_account_id;
+                                    $fbBusinessId = auth()->user()->currentTeam->facebook_business_id;
+                                    
+                                    // If we have the Facebook Business ID and template ID, construct direct link
+                                    if ($fbBusinessId && $template->whatsapp_template_id) {
+                                        $editUrl = "https://business.facebook.com/latest/whatsapp_manager/message_templates";
+                                        $editUrl .= "?business_id={$fbBusinessId}";
+                                        $editUrl .= "&waba_id={$wabaId}";
+                                        $editUrl .= "&template_id={$template->whatsapp_template_id}";
+                                    } else {
+                                        // Fallback to general templates page
+                                        $editUrl = "https://business.facebook.com/wa/manage/message-templates/?waba_id={$wabaId}";
+                                    }
+                                @endphp
+                                <a href="{{ $editUrl }}" target="_blank" 
                                    class="text-slate-400 hover:text-wa-teal p-2 rounded-lg hover:bg-wa-teal/5 transition-colors" title="Edit in Meta">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                 </a>

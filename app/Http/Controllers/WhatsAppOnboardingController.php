@@ -110,12 +110,22 @@ class WhatsAppOnboardingController extends Controller
 
                 if ($wabaId) {
                     $team->update(['whatsapp_business_account_id' => $wabaId]);
+
+                    // [NEW] Automatically fetch and store Facebook Business ID
+                    $fbBusinessId = $this->getFacebookBusinessId($wabaId, $longLivedToken);
+                    if ($fbBusinessId) {
+                        $team->update(['facebook_business_id' => $fbBusinessId]);
+                        Log::info("WhatsApp Onboarding: Stored Facebook Business ID {$fbBusinessId} for Team {$team->id}");
+                    } else {
+                        Log::warning("WhatsApp Onboarding: Could not fetch Facebook Business ID for WABA {$wabaId}");
+                    }
                 }
 
                 \App\Services\WhatsAppEventBridge::auditConfig($team, 'token_exchange', 'completed', [
                     'expires_at' => now()->addSeconds($expiresIn)->toDateTimeString(),
                     'token_preview' => substr($longLivedToken, 0, 8) . '...',
-                    'waba_id' => $wabaId
+                    'waba_id' => $wabaId,
+                    'facebook_business_id' => $fbBusinessId ?? null
                 ]);
 
                 Log::info("WhatsApp Token & WABA ID Persisted for Team {$team->id}");

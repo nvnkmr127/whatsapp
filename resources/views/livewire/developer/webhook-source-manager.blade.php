@@ -1,4 +1,6 @@
 <div class="space-y-8" x-data="{ showRaw: @entangle('showRawData') }">
+
+
     {{-- Page Header --}}
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -15,7 +17,7 @@
             <p class="text-slate-500 font-medium">Configure webhooks from external platforms - Get unique URL, send
                 data, map fields visually</p>
         </div>
-        <divclass="flex items-center gap-4">
+        <div class="flex items-center gap-4">
             <a href="{{ route('webhooks.logs') }}" 
                 class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -586,7 +588,7 @@
                                         <div class="relative z-10">
                                             @php
                                                 $previewContent = ($selectedTemplateId && $selectedTemplate) ? $selectedTemplate->content : 'No template selected or found';
-                                                
+
                                                 if ($selectedTemplateId && $selectedTemplate) {
                                                     foreach ($templateParameters as $num => $path) {
                                                         if ($path) {
@@ -632,7 +634,7 @@
                                             @if(str_starts_with($field_mappings['phone_number'] ?? '', 'STATIC:'))
                                                 <input type="text" 
                                                        value="{{ substr($field_mappings['phone_number'] ?? '', 7) }}"
-                                                       @change="$wire.set('field_mappings.phone_number', 'STATIC:' + $event.target.value)"
+                                                       x-on:change="$wire.set('field_mappings.phone_number', 'STATIC:' + $event.target.value)"
                                                        class="w-full bg-white/10 border-2 border-white/20 rounded-2xl py-3 px-5 font-bold text-sm text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white/40 focus:ring-0 transition-all"
                                                        placeholder="Enter phone number (e.g. +1234567890)" />
                                             @else
@@ -966,25 +968,31 @@
         </x-slot>
 
         <x-slot name="content">
+            {{-- Debug: {{ var_export($logsSourceStats, true) }} --}}
             {{-- Stats Dashboard --}}
-            @if($logsSourceStats)
+            @if(isset($logsSourceStats['name']))
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div class="bg-slate-50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-slate-800/50">
                         <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Received</div>
-                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($logsSourceStats['received']) }}</div>
+                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format(data_get($logsSourceStats, 'received', 0)) }}</div>
                     </div>
                     <div class="bg-slate-50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-slate-800/50">
                         <div class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Processed</div>
-                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($logsSourceStats['processed']) }}</div>
+                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format(data_get($logsSourceStats, 'processed', 0)) }}</div>
                     </div>
                     <div class="bg-slate-50 dark:bg-slate-800/30 p-5 rounded-3xl border border-slate-100 dark:border-slate-800/50">
                         <div class="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Failed</div>
-                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($logsSourceStats['failed']) }}</div>
+                        <div class="text-xl font-black text-slate-900 dark:text-white">{{ number_format(data_get($logsSourceStats, 'failed', 0)) }}</div>
                     </div>
                     <div class="bg-wa-teal p-5 rounded-3xl shadow-lg shadow-wa-teal/20">
                         <div class="text-[9px] font-black text-white/70 uppercase tracking-widest mb-1">Success Rate</div>
-                        <div class="text-xl font-black text-white">{{ $logsSourceStats['rate'] }}%</div>
+                        <div class="text-xl font-black text-white">{{ data_get($logsSourceStats, 'rate', 0) }}%</div>
                     </div>
+                </div>
+            @else
+                <div class="mb-8 p-6 bg-slate-50 dark:bg-slate-800/20 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center gap-3">
+                    <svg class="w-5 h-5 text-slate-300 animate-spin" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v4m0 8v4m8-12h-4m-8 0H4m15.364 1.636l-2.828 2.828m-9.072 9.072l-2.828 2.828m0-14.728l2.828 2.828m9.072 9.072l2.828 2.828"/></svg>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Analytics Data...</span>
                 </div>
             @endif
 

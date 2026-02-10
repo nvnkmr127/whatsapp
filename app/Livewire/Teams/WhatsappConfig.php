@@ -112,6 +112,21 @@ class WhatsappConfig extends Component
             if (!$this->wm_verified_name || $this->wm_quality_rating === 'UNKNOWN') {
                 $this->syncInfo();
             }
+
+            // [NEW] Self-Heal: Fetch Facebook Business ID if missing
+            $team = auth()->user()->currentTeam;
+            if ($team && $team->whatsapp_connected && !$team->facebook_business_id && $team->whatsapp_business_account_id) {
+                // Determine token to use
+                $token = $this->wm_access_token ?: $team->whatsapp_access_token;
+
+                if ($token) {
+                    $fbId = $this->getFacebookBusinessId($team->whatsapp_business_account_id, $token);
+                    if ($fbId) {
+                        $team->update(['facebook_business_id' => $fbId]);
+                        Log::info("WhatsApp Config: Self-healed Facebook Business ID for Team {$team->id}");
+                    }
+                }
+            }
         }
     }
 
@@ -451,6 +466,18 @@ class WhatsappConfig extends Component
                 'whatsapp_connected' => true,
                 'whatsapp_setup_state' => \App\Enums\IntegrationState::AUTHENTICATED,
             ]);
+
+            // [NEW] Automatically fetch and store Facebook Business ID
+            $token = $this->wm_access_token ?: $team->whatsapp_access_token;
+            if ($token) {
+                $fbBusinessId = $this->getFacebookBusinessId($this->wm_business_account_id, $token);
+                if ($fbBusinessId) {
+                    $team->update(['facebook_business_id' => $fbBusinessId]);
+                    Log::info("WhatsApp Config: Stored Facebook Business ID {$fbBusinessId} for Team {$team->id}");
+                } else {
+                    Log::warning("WhatsApp Config: Could not fetch Facebook Business ID for WABA {$this->wm_business_account_id}");
+                }
+            }
 
             // 1. Automate Webhook Subscription (Links App to WABA)
             Log::debug("WhatsApp Setup: Subscribing to webhooks");

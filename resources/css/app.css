@@ -73,9 +73,17 @@
 }
 
 
+
 [x-cloak] {
-    display: none;
+    display: none !important;
 }
+
+/* Ensure Alpine x-show works properly - override x-cloak when show=true */
+[x-cloak][style*="display: block"],
+[x-cloak][style*="display: flex"] {
+    display: block !important;
+}
+
 
 .custom-scrollbar::-webkit-scrollbar {
     width: 10px;

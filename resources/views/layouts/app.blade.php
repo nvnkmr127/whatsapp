@@ -100,38 +100,66 @@
     <script src="https://cdn.jsdelivr.net/gh/mcstudios/glightbox/dist/js/glightbox.min.js"></script>
 
     <script>
+        // Global Error Handler for remote debugging
+        window.addEventListener('error', function (e) {
+            console.error('[Global JS Error]', e.message, 'at', e.filename, 'line', e.lineno);
+        });
+
         window.initTomSelect = function (selector, options = {}) {
+            if (typeof TomSelect === 'undefined') {
+                console.warn('TomSelect is not loaded yet.');
+                return;
+            }
             document.querySelectorAll(selector).forEach((el) => {
-                if (el.tomselect) el.tomselect.destroy();
-                new TomSelect(el, Object.assign({
-                    plugins: ['remove_button'],
-                    persist: false,
-                    create: false,
-                    maxItems: null
-                }, options));
+                if (!(el instanceof HTMLSelectElement)) return;
+                try {
+                    if (el.tomselect) el.tomselect.destroy();
+                    new TomSelect(el, Object.assign({
+                        plugins: ['remove_button'],
+                        persist: false,
+                        create: false,
+                        maxItems: null
+                    }, options));
+                } catch (e) {
+                    console.error('Failed to init TomSelect for', selector, e);
+                }
             });
         }
 
         window.flatePickrWithTime = function () {
+            if (typeof flatpickr === 'undefined') return;
             flatpickr("#scheduled_send_time", {
                 enableTime: true,
                 dateFormat: "Y-m-d H:i",
                 minDate: "today",
                 onChange: function (selectedDates, dateStr, instance) {
-                    // Livewire binding often needs manual trigger
                     let input = document.getElementById('scheduled_send_time');
                     if (input) {
-                        input.dispatchEvent(new Event('input'));
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 }
             });
         }
 
         window.initGLightbox = function () {
+            if (typeof GLightbox === 'undefined') return;
             const lightbox = GLightbox({
                 selector: '.glightbox'
             });
         }
+
+        // Diagnostics
+        document.addEventListener('livewire:init', () => {
+            console.log('✅ Livewire 3 Initialized');
+            console.log('✅ Alpine.js available:', typeof Alpine !== 'undefined');
+            if (typeof Alpine !== 'undefined') {
+                console.log('✅ Alpine Store [chat] exists:', !!Alpine.store('chat'));
+            }
+        });
+
+        window.addEventListener('alpine:init', () => {
+            console.log('✅ Alpine.js Initializing...');
+        });
     </script>
 </body>
 

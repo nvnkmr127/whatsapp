@@ -331,6 +331,7 @@ class WebhookSourceManager extends Component
 
     public function openNewSource()
     {
+        \Illuminate\Support\Facades\Log::info("Opening new source wizard");
         $this->cancelEdit();
         $this->showWizardModal = true;
         $this->showLogsModal = false;
@@ -343,72 +344,80 @@ class WebhookSourceManager extends Component
 
     public function edit($id)
     {
-        $source = WebhookSource::findOrFail($id);
-        $this->authorize('update', $source);
+        try {
+            \Illuminate\Support\Facades\Log::info("Triggering edit for source ID: {$id}");
+            $source = WebhookSource::findOrFail($id);
+            $this->authorize('update', $source);
 
-        $this->editingId = $id;
-        $this->name = $source->name;
-        $this->platform = $source->platform;
-        $this->auth_method = $source->auth_method;
-        $this->auth_config = $source->getAuthConfig();
-        $this->field_mappings = $source->field_mappings ?? [];
-        $this->transformation_rules = $source->transformation_rules ?? [];
-        $this->action_config = $source->action_config ?? [];
-        $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
-        $this->is_active = $source->is_active;
+            $this->editingId = $id;
+            $this->name = $source->name;
+            $this->platform = $source->platform;
+            $this->auth_method = $source->auth_method;
+            $this->auth_config = $source->getAuthConfig();
+            $this->field_mappings = $source->field_mappings ?? [];
+            $this->transformation_rules = $source->transformation_rules ?? [];
+            $this->action_config = $source->action_config ?? [];
+            $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
+            $this->is_active = $source->is_active;
 
-        // Load latest payload if available for context
-        $latest = \App\Models\WebhookPayload::where('webhook_source_id', $id)->latest()->first();
-        if ($latest) {
-            $this->capturedPayload = $latest->payload;
-        }
+            // Load latest payload if available for context
+            $latest = \App\Models\WebhookPayload::where('webhook_source_id', $id)->latest()->first();
+            if ($latest) {
+                $this->capturedPayload = $latest->payload;
+            }
 
-        // Set selected event type and pull mappings to top level for UI
-        if (!empty($this->field_mappings)) {
-            $this->selectedEventType = array_key_first($this->field_mappings);
-            $currentMappings = $this->field_mappings[$this->selectedEventType] ?? [];
+            // Set selected event type and pull mappings to top level for UI
+            if (!empty($this->field_mappings)) {
+                $this->selectedEventType = array_key_first($this->field_mappings);
+                $currentMappings = $this->field_mappings[$this->selectedEventType] ?? [];
 
-            // Populate templateParameters if empty in action_config but present in field_mappings
-            if (empty($this->templateParameters)) {
-                foreach ($currentMappings as $key => $path) {
-                    if (str_starts_with($key, 'param_')) {
-                        $pos = substr($key, 6);
-                        $this->templateParameters[$pos] = $path;
+                // Populate templateParameters if empty in action_config but present in field_mappings
+                if (empty($this->templateParameters)) {
+                    foreach ($currentMappings as $key => $path) {
+                        if (str_starts_with($key, 'param_')) {
+                            $pos = substr($key, 6);
+                            $this->templateParameters[$pos] = $path;
+                        }
                     }
+                }
+
+                // Pull phone number to top level so wire:model="field_mappings.phone_number" works
+                if (isset($currentMappings['phone_number'])) {
+                    $this->field_mappings['phone_number'] = $currentMappings['phone_number'];
                 }
             }
 
-            // Pull phone number to top level so wire:model="field_mappings.phone_number" works
-            if (isset($currentMappings['phone_number'])) {
-                $this->field_mappings['phone_number'] = $currentMappings['phone_number'];
+            // Extract action type and template parameters
+            $this->actionType = $this->action_config['type'] ?? 'send_template';
+            $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
+
+            // Sanitize parameter_mapping to handle malformed data (arrays instead of strings)
+            $paramMapping = $this->action_config['parameter_mapping'] ?? [];
+            $sanitized = [];
+            foreach ($paramMapping as $key => $value) {
+                if (is_array($value)) {
+                    // Extract first element if it's an array (malformed data from earlier version)
+                    $sanitized[$key] = is_string($value[0] ?? null) ? $value[0] : '';
+                } else {
+                    $sanitized[$key] = (string) $value;
+                }
             }
+
+            $this->templateParameters = !empty($sanitized) ? $sanitized : $this->templateParameters;
+            $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
+            $this->otpLength = $this->action_config['otp_length'] ?? 6;
+
+            $this->currentStep = 1; // Start at step 1 when editing
+            $this->loadMappingContext();
+            $this->showWizardModal = true;
+            $this->showLogsModal = false;
+            $this->showTestModal = false;
+            \Illuminate\Support\Facades\Log::info("Wizard modal shown for ID: {$id}. State: active.");
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error in WebhookSourceManager@edit: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
+            $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
         }
-
-        // Extract action type and template parameters
-        $this->actionType = $this->action_config['type'] ?? 'send_template';
-        $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
-
-        // Sanitize parameter_mapping to handle malformed data (arrays instead of strings)
-        $paramMapping = $this->action_config['parameter_mapping'] ?? [];
-        $sanitized = [];
-        foreach ($paramMapping as $key => $value) {
-            if (is_array($value)) {
-                // Extract first element if it's an array (malformed data from earlier version)
-                $sanitized[$key] = is_string($value[0] ?? null) ? $value[0] : '';
-            } else {
-                $sanitized[$key] = (string) $value;
-            }
-        }
-
-        $this->templateParameters = !empty($sanitized) ? $sanitized : $this->templateParameters;
-        $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
-        $this->otpLength = $this->action_config['otp_length'] ?? 6;
-
-        $this->currentStep = 1; // Start at step 1 when editing
-        $this->loadMappingContext();
-        $this->showWizardModal = true;
-        $this->showLogsModal = false;
-        $this->showTestModal = false;
     }
 
     public function update()
@@ -666,20 +675,30 @@ class WebhookSourceManager extends Component
     public function refreshLogs()
     {
         if ($this->logsSourceId) {
+            \Illuminate\Support\Facades\Log::info("Refreshing logs for source ID: {$this->logsSourceId}");
             $this->recentLogs = $this->getRecentPayloads($this->logsSourceId);
+            \Illuminate\Support\Facades\Log::info("Found " . count($this->recentLogs) . " recent logs.");
 
             $source = WebhookSource::find($this->logsSourceId);
             if ($source) {
                 $this->logsSourceStats = [
-                    'received' => $source->total_received,
-                    'processed' => $source->total_processed,
-                    'failed' => $source->total_failed,
+                    'received' => (int) $source->total_received,
+                    'processed' => (int) $source->total_processed,
+                    'failed' => (int) $source->total_failed,
                     'rate' => $source->getSuccessRate(),
                     'name' => $source->name
                 ];
+                \Illuminate\Support\Facades\Log::info("Stats updated: ", $this->logsSourceStats);
+
+                // Force Livewire to update the view
+                $this->dispatch('stats-loaded');
+            } else {
+                \Illuminate\Support\Facades\Log::warning("Source not found during refreshLogs for ID: {$this->logsSourceId}");
             }
 
             $this->dispatch('notify', 'Logs and analytics refreshed.');
+        } else {
+            \Illuminate\Support\Facades\Log::warning("refreshLogs called without logsSourceId");
         }
     }
 
@@ -747,6 +766,7 @@ class WebhookSourceManager extends Component
 
     public function render()
     {
+        \Illuminate\Support\Facades\Log::info("Rendering WebhookSourceManager. Wizards: " . ($this->showWizardModal ? 'YES' : 'NO') . " | Logs: " . ($this->showLogsModal ? 'YES' : 'NO'));
         $user = auth()->user();
         $team = $user->currentTeam;
 

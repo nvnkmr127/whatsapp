@@ -583,4 +583,70 @@ trait WhatsApp
             return [];
         }
     }
+
+    /**
+     * Fetch the Facebook Business Manager ID from a WhatsApp Business Account.
+     */
+    public function getFacebookBusinessId(string $wabaId, string $token): ?string
+    {
+        try {
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $isSystemToken = str_starts_with($token, 'EAAB');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
+            $params = [
+                'fields' => 'owner_business_info',
+                'access_token' => $token,
+            ];
+
+            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            Log::debug("WhatsApp Trait: Fetching Facebook Business ID", [
+                'waba_id' => $wabaId,
+                'is_system_token' => $isSystemToken
+            ]);
+
+            $response = Http::get(self::getBaseUrl() . "{$wabaId}", $params);
+
+            // Retry without appsecret_proof if it fails
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Business ID fetch, retrying without proof.");
+                    $this->skipAppSecretProof = true;
+                    unset($params['appsecret_proof']);
+                    $response = Http::get(self::getBaseUrl() . "{$wabaId}", $params);
+                }
+            }
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+                Log::error("WhatsApp Trait: Failed to fetch Facebook Business ID", [
+                    'status' => $response->status(),
+                    'error' => $errorData
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            $businessId = $data['owner_business_info']['id'] ?? null;
+
+            if ($businessId) {
+                Log::info("WhatsApp Trait: Successfully fetched Facebook Business ID", [
+                    'waba_id' => $wabaId,
+                    'business_id' => $businessId
+                ]);
+            }
+
+            return $businessId;
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp Trait: Error fetching Facebook Business ID: " . $e->getMessage());
+            return null;
+        }
+    }
 }

@@ -16,32 +16,42 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    @can('chat-access')
-                        <x-nav-link href="{{ route('chat') }}" :active="request()->routeIs('chat')">
-                            {{ __('Agent Console') }}
-                        </x-nav-link>
-                    @endcan
-
-                    @can('manage-contacts')
-                        <x-nav-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')">
-                            {{ __('Contacts') }}
-                        </x-nav-link>
-                    @endcan
-
-                    @can('manage-campaigns')
-                        <x-nav-link href="{{ route('campaigns.index') }}" :active="request()->routeIs('campaigns.*')">
-                            {{ __('Campaigns') }}
-                        </x-nav-link>
-
-                        @can('manage-templates')
-                            <x-nav-link href="{{ route('templates.index') }}" :active="request()->routeIs('templates.*')">
-                                {{ __('Templates') }}
+                    @if(auth()->user()->hasPlanFeature('chat'))
+                        @can('chat-access')
+                            <x-nav-link href="{{ route('chat') }}" :active="request()->routeIs('chat')">
+                                {{ __('Agent Console') }}
                             </x-nav-link>
                         @endcan
+                    @endif
 
-                        <x-nav-link href="{{ route('automations.index') }}" :active="request()->routeIs('automations.*')">
-                            {{ __('Automations') }}
-                        </x-nav-link>
+                    @if(auth()->user()->hasPlanFeature('contacts'))
+                        @can('manage-contacts')
+                            <x-nav-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')">
+                                {{ __('Contacts') }}
+                            </x-nav-link>
+                        @endcan
+                    @endif
+
+                    @can('manage-campaigns')
+                        @if(auth()->user()->hasPlanFeature('campaigns'))
+                            <x-nav-link href="{{ route('campaigns.index') }}" :active="request()->routeIs('campaigns.*')">
+                                {{ __('Campaigns') }}
+                            </x-nav-link>
+                        @endif
+
+                        @if(auth()->user()->hasPlanFeature('templates'))
+                            @can('manage-templates')
+                                <x-nav-link href="{{ route('templates.index') }}" :active="request()->routeIs('templates.*')">
+                                    {{ __('Templates') }}
+                                </x-nav-link>
+                            @endcan
+                        @endif
+
+                        @if(auth()->user()->hasPlanFeature('automations'))
+                            <x-nav-link href="{{ route('automations.index') }}" :active="request()->routeIs('automations.*')">
+                                {{ __('Automations') }}
+                            </x-nav-link>
+                        @endif
 
                         @if(auth()->user()->hasPlanFeature('flows'))
                             <x-nav-link href="{{ route('flows.index') }}" :active="request()->routeIs('flows.*')">
@@ -66,9 +76,11 @@
                             </x-nav-link>
                         @endif
 
-                        <x-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
-                            {{ __('Analytics') }}
-                        </x-nav-link>
+                        @if(auth()->user()->hasPlanFeature('analytics'))
+                            <x-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
+                                {{ __('Analytics') }}
+                            </x-nav-link>
+                        @endif
 
                         <x-nav-link href="{{ route('settings.hub') }}" :active="request()->routeIs('settings.*')">
                             {{ __('Settings') }}
@@ -258,33 +270,43 @@
             <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            @can('chat-access')
-                <x-responsive-nav-link href="{{ route('chat') }}" :active="request()->routeIs('chat')">
-                    {{ __('Agent Console') }}
-                </x-responsive-nav-link>
-            @endcan
-
-            @can('manage-contacts')
-                <x-responsive-nav-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')">
-                    {{ __('Contacts') }}
-                </x-responsive-nav-link>
-            @endcan
-
-            @can('manage-campaigns')
-                <x-responsive-nav-link href="{{ route('campaigns.index') }}" :active="request()->routeIs('campaigns.*')">
-                    {{ __('Campaigns') }}
-                </x-responsive-nav-link>
-
-                @can('manage-templates')
-                    <x-responsive-nav-link href="{{ route('templates.index') }}" :active="request()->routeIs('templates.*')">
-                        {{ __('Templates') }}
+            @if(auth()->user()->hasPlanFeature('chat'))
+                @can('chat-access')
+                    <x-responsive-nav-link href="{{ route('chat') }}" :active="request()->routeIs('chat')">
+                        {{ __('Agent Console') }}
                     </x-responsive-nav-link>
                 @endcan
+            @endif
 
-                <x-responsive-nav-link href="{{ route('automations.index') }}"
-                    :active="request()->routeIs('automations.*')">
-                    {{ __('Automations') }}
-                </x-responsive-nav-link>
+            @if(auth()->user()->hasPlanFeature('contacts'))
+                @can('manage-contacts')
+                    <x-responsive-nav-link href="{{ route('contacts.index') }}" :active="request()->routeIs('contacts.*')">
+                        {{ __('Contacts') }}
+                    </x-responsive-nav-link>
+                @endcan
+            @endif
+
+            @can('manage-campaigns')
+                @if(auth()->user()->hasPlanFeature('campaigns'))
+                    <x-responsive-nav-link href="{{ route('campaigns.index') }}" :active="request()->routeIs('campaigns.*')">
+                        {{ __('Campaigns') }}
+                    </x-responsive-nav-link>
+                @endif
+
+                @if(auth()->user()->hasPlanFeature('templates'))
+                    @can('manage-templates')
+                        <x-responsive-nav-link href="{{ route('templates.index') }}" :active="request()->routeIs('templates.*')">
+                            {{ __('Templates') }}
+                        </x-responsive-nav-link>
+                    @endcan
+                @endif
+
+                @if(auth()->user()->hasPlanFeature('automations'))
+                    <x-responsive-nav-link href="{{ route('automations.index') }}"
+                        :active="request()->routeIs('automations.*')">
+                        {{ __('Automations') }}
+                    </x-responsive-nav-link>
+                @endif
             @endcan
 
             @can('manage-settings')
@@ -295,9 +317,11 @@
                     </x-responsive-nav-link>
                 @endif
 
-                <x-responsive-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
-                    {{ __('Analytics') }}
-                </x-responsive-nav-link>
+                @if(auth()->user()->hasPlanFeature('analytics'))
+                    <x-responsive-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
+                        {{ __('Analytics') }}
+                    </x-responsive-nav-link>
+                @endif
 
                 <x-responsive-nav-link href="{{ route('settings.hub') }}" :active="request()->routeIs('settings.*')">
                     {{ __('Settings') }}
