@@ -66,6 +66,11 @@ class Team extends JetstreamTeam
         'calling_suspended_until',
         'whatsapp_connected',
         'whatsapp_settings',
+        'ai_auto_reply_enabled',
+        'welcome_message_enabled',
+        'away_message_enabled',
+        'trial_ends_at',
+        'subscription_ends_at',
     ];
 
     /**

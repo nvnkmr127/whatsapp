@@ -29,69 +29,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         \Illuminate\Support\Facades\Event::listen(
-            \Illuminate\Auth\Events\Login::class,
-            \App\Listeners\LogSuccessfulLogin::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \Illuminate\Auth\Events\Logout::class,
-            \App\Listeners\LogSuccessfulLogout::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\MessageReceived::class,
-            \App\Listeners\AutomationTriggerListener::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\MessageReceived::class,
-            \App\Listeners\UpdateContactStateOnMessageReceived::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\MessageReceived::class,
-            \App\Listeners\SendOutboundWebhook::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrderStatusUpdated::class,
-            \App\Listeners\SendOrderLifecycleNotification::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\ContactLifecycleChanged::class,
+            [
+                \App\Events\ContactLifecycleChanged::class,
+                \App\Events\ContactOptedOut::class,
+            ],
             \App\Listeners\LogContactEvents::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\ContactOptedOut::class,
-            \App\Listeners\LogContactEvents::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\WhatsAppTokenExpiringSoon::class,
-            \App\Listeners\NotifyAdminsOfTokenExpiry::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\UsageThresholdReached::class,
-            \App\Listeners\NotifyTeamOfBillingAlert::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\MessageSent::class,
-            \App\Listeners\SendMessageSentWebhook::class
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\MessageStatusUpdated::class,
-            \App\Listeners\SendMessageStatusWebhook::class
-        );
-
-        // Call Billing - Process charges when calls end
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\CallEnded::class,
-            \App\Listeners\ProcessCallBilling::class
         );
 
         \Illuminate\Support\Facades\Event::listen(
@@ -104,12 +46,6 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SyncCallToInboxListener::class
         );
 
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\WhatsAppAccountRisk::class,
-            \App\Listeners\MonitorAccountHealth::class
-        );
-
-        // Catch-all for Domain Events (Signal Sourcing)
         \Illuminate\Support\Facades\Event::listen(
             'App\Events\*',
             \App\Listeners\PersistDomainEvents::class

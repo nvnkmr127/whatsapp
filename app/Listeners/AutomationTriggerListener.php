@@ -8,6 +8,7 @@ use App\Services\WhatsAppService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class AutomationTriggerListener implements ShouldQueue
 {
@@ -19,7 +20,16 @@ class AutomationTriggerListener implements ShouldQueue
      */
     public function handle(MessageReceived $event): void
     {
+        Log::info("AutomationTriggerListener: Handle started for message {$event->message->id}");
         $message = $event->message;
+
+        // Idempotency check: Ensure we don't process the same message twice
+        $idempotencyKey = "automation_triggered_msg_{$message->id}";
+        if (Cache::has($idempotencyKey)) {
+            Log::info("AutomationTriggerListener: Message {$message->id} already processed. Skipping.");
+            return;
+        }
+        Cache::put($idempotencyKey, true, 60);
 
         // Skip outbound messages
         if ($message->direction !== 'inbound') {

@@ -72,43 +72,6 @@ class HandleIncomingWorkflowJob implements ShouldQueue
                 }
             }
 
-            // 2. Automation Service Check
-            if ($team->ai_auto_reply_enabled) {
-                $botService = app(AutomationService::class);
-                $botService->setWhatsAppService($waService);
-                $input = $message->content;
-
-                // a. Check for "User Starts Conversation"
-                if (!$isAssigned && $contact->messages()->where('direction', 'inbound')->count() === 1) {
-                    if ($botService->checkSpecialTriggers($contact, 'user_starts_conversation')) {
-                        Log::info("Automation: [user_starts_conversation] triggered for message {$this->messageId}");
-                        return;
-                    }
-                }
-
-                // b. Try processing active session (handleReply has internal assigned check)
-                if ($botService->handleReply($contact, $input)) {
-                    Log::info("Automation: [handleReply] processed message {$this->messageId}");
-                    return;
-                }
-
-                // c. Strictly check Trigger Keywords (has internal assigned check)
-                if (!$isAssigned && $botService->checkTriggers($contact, trim($input))) {
-                    Log::info("Automation: [checkTriggers] matched keyword for message {$this->messageId}");
-                    return;
-                }
-
-                // d. Template Response (has internal assigned check)
-                if (!$isAssigned && in_array($message->type, ['button', 'interactive'])) {
-                    if ($botService->checkTemplateTriggers($contact, $input)) {
-                        return;
-                    }
-                    if ($message->type === 'interactive' && $botService->checkFlowTriggers($contact, $message)) {
-                        return;
-                    }
-                }
-            }
-
             // 3. Welcome / Away Messages (Business Hours)
             if (!$isAssigned) {
                 $this->handleAutoReplies($waService, $team, $contact, $message);
