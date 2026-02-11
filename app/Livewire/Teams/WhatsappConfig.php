@@ -631,12 +631,33 @@ class WhatsappConfig extends Component
         $this->dispatch('notify', 'Outbound webhook URL updated successfully.');
     }
 
+    public function setupWebhook()
+    {
+        $team = auth()->user()->currentTeam;
+        if (!$team->whatsapp_access_token || !$this->wm_business_account_id) {
+            $this->dispatch('notify', 'Missing configuration. Please connect first.');
+            return;
+        }
+
+        $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
+
+        if ($result['status']) {
+            $this->dispatch('notify', 'Webhook subscribed successfully!');
+            $this->refreshHealth();
+        } else {
+            $this->dispatch('notify', 'Webhook subscription failed: ' . $result['message']);
+        }
+    }
+
     public function syncInfo()
     {
         if (!$this->wm_default_phone_number_id) {
             $this->dispatch('notify', 'No Phone Number ID configured. Please connect first.');
             return;
         }
+
+        // Ensure webhook is subscribed during sync
+        $this->subscribeToWebhooks($this->wm_business_account_id, auth()->user()->currentTeam->whatsapp_access_token);
 
         $result = $this->getPhoneNumberDetails($this->wm_default_phone_number_id);
 
@@ -770,6 +791,8 @@ class WhatsappConfig extends Component
         ];
     }
 
+    public $registrationPin = '';
+
     public function registerNumber()
     {
         if (!$this->wm_default_phone_number_id) {
@@ -777,13 +800,14 @@ class WhatsappConfig extends Component
             return;
         }
 
-        // Default PIN as per request
-        $pin = '123456';
+        $this->validate([
+            'registrationPin' => 'required|digits:6'
+        ]);
 
-        $result = $this->registerPhone($this->wm_default_phone_number_id, $pin);
+        $result = $this->registerPhone($this->wm_default_phone_number_id, $this->registrationPin);
 
         if ($result['status']) {
-            $this->dispatch('notify', 'Phone number registered successfully (PIN: 123456).');
+            $this->dispatch('notify', 'Phone number registered successfully.');
             // Re-sync info after registration just in case
             $this->syncInfo();
         } else {

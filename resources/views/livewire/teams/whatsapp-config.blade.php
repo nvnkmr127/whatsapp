@@ -274,7 +274,13 @@
                                     </div>
                                     <div class="flex-grow">
                                         <h4 class="text-sm font-bold {{ $step['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }} uppercase tracking-wider">{{ $step['title'] }}</h4>
-                                        <p class="text-[11px] font-medium text-slate-500 mt-0.5">{{ $step['description'] }}</p>
+                                        <p class="text-[11px] font-medium text-slate-500 mt-0.5">{{ $step['description'] }}
+                                            @if($step['id'] === 'webhook_setup' && $step['status'] !== 'completed')
+                                                <button wire:click="setupWebhook" wire:loading.attr="disabled" class="ml-2 text-[10px] font-bold text-wa-teal uppercase hover:underline">
+                                                    Fix
+                                                </button>
+                                            @endif
+                                        </p>
                                     </div>
                                 </div>
                             @endforeach
@@ -848,11 +854,16 @@
                             </svg>
                             META BUSINESS MANAGER
                         </a>
-                        <button wire:click="registerNumber" wire:loading.attr="disabled"
-                            wire:confirm="Default PIN is 123456. Are you sure you want to re-register?"
-                            class="px-6 py-3 bg-wa-teal hover:bg-green-600 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50">
-                            REGISTER PHONE
-                        </button>
+                        <div class="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <input type="text" wire:model="registrationPin" placeholder="6-digit PIN" maxlength="6"
+                                class="w-32 border-none bg-transparent text-xs font-bold text-center tracking-widest focus:ring-0 text-slate-900 dark:text-white" />
+                            
+                            <button wire:click="registerNumber" wire:loading.attr="disabled"
+                                wire:confirm="Are you sure you want to register this number with the provided PIN?"
+                                class="px-4 py-2 bg-wa-teal hover:bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50 whitespace-nowrap">
+                                REGISTER PHONE
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

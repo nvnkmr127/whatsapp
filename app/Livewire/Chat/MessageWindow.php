@@ -245,32 +245,7 @@ class MessageWindow extends Component
         ]);
     }
 
-    public function draftAIResponse()
-    {
-        if (!$this->conversation)
-            return;
 
-        // In a real app, this would call OpenAI/Claude
-        // We will simulate a contextual response
-        $lastCustomerMsg = $this->conversation->messages()
-            ->where('direction', 'inbound')
-            ->latest()
-            ->first();
-
-        $prompt = $lastCustomerMsg ? $lastCustomerMsg->content : 'No previous message';
-
-        $responses = [
-            "Hi! Thank you for reaching out. How can I assist you with that today?",
-            "I understand your request regarding '{$prompt}'. Let me check that for you.",
-            "That's a great question. We typically handle this by...",
-            "Could you please provide more details so I can help you better?"
-        ];
-
-        $draft = $responses[array_rand($responses)];
-
-        $this->dispatch('set-message-body', ['body' => $draft]);
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'AI Draft generated ✨']);
-    }
 
     public function sendVoiceNote($audioFile)
     {
@@ -725,10 +700,8 @@ class MessageWindow extends Component
                 'metadata' => ['buttons' => $buttons],
             ]);
 
-            // 2. Dispatch (Currently SendMessageJob doesn't support 'interactive' natively, let's fix that or use service)
-            // Fix: Add 'interactive' support to SendMessageJob or call sync for now (buttons are rare)
-            // For audit compliance, EVERYTHING outbound should be async.
-            // I'll update SendMessageJob to support 'interactive' as well.
+            // 2. Dispatch
+
 
             \App\Jobs\SendMessageJob::dispatch(
                 Auth::user()->currentTeam->id,

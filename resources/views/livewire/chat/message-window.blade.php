@@ -1063,33 +1063,7 @@
                 <!-- Input Field -->
                 <div class="flex-1 relative group">
                     <!-- AI Draft Button -->
-                    <button type="button" wire:click="draftAIResponse" wire:loading.attr="disabled"
-                        class="absolute -top-14 right-0 p-3 bg-gradient-to-tr from-wa-teal to-sky-400 text-white rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group/ai overflow-hidden">
-                        <!-- AI Particle Effect -->
-                        <div
-                            class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/ai:translate-x-[100%] transition-transform duration-700 skew-x-12">
-                        </div>
 
-                        <div wire:loading.remove wire:target="draftAIResponse" class="flex items-center gap-2">
-                            <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 11-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM11 2a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0V6h-1a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                            <span>Draft with AI</span>
-                        </div>
-
-                        <div wire:loading wire:target="draftAIResponse" class="flex items-center gap-2">
-                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                                </circle>
-                                <path class="opacity-75" fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                </path>
-                            </svg>
-                            <span>Thinking...</span>
-                        </div>
-                    </button>
 
                     <template x-if="isNoteMode">
                         <div
@@ -1103,9 +1077,9 @@
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()"
                         :class="[
-                                                                                                                                                $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                                                                                                                isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                                                                                                            ]"
+                                                                                                                                                    $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                                                                                                    isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                                                                                                ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 

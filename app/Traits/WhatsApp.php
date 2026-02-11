@@ -495,7 +495,10 @@ trait WhatsApp
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
-            $params = ['app_id' => $appId];
+            $params = [];
+            if ($appId) {
+                $params['app_id'] = $appId;
+            }
             if (!$isSystemToken && !$this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
@@ -532,6 +535,12 @@ trait WhatsApp
             }
 
             $subscriptions = $response->json('data');
+
+            Log::debug("WhatsApp Trait: Checking Webhook Subscription", [
+                'configured_app_id' => $appId,
+                'found_subscriptions' => $subscriptions
+            ]);
+
             $isSubscribed = collect($subscriptions)->contains('id', $appId);
 
             return [

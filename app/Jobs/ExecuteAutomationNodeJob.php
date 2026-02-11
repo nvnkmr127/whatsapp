@@ -25,6 +25,13 @@ class ExecuteAutomationNodeJob implements ShouldQueue
     public $tries = 3;
     public $backoff = [10, 60, 300];
 
+    /**
+     * The name of the queue the job should be sent to.
+     *
+     * @var string|null
+     */
+    public $queue = 'messages';
+
     public function __construct(int $runId, string $nodeId, int $attempt = 1)
     {
         $this->runId = $runId;
