@@ -210,10 +210,7 @@ class AutomationService
                 return;
             }
 
-            // Interrupt existing runs
-            AutomationRun::where('contact_id', $contact->id)
-                ->whereIn('status', ['active', 'waiting_input', 'paused'])
-                ->update(['status' => 'interrupted']);
+            // Preflight Check (moved up before interruption)
 
             // Preflight Check
             $validation = $automation->validate();
@@ -229,6 +226,11 @@ class AutomationService
                 Log::error("Automation {$automation->id} has no start node.");
                 return;
             }
+
+            // Interrupt existing runs NOW, just before we commit to the new one
+            AutomationRun::where('contact_id', $contact->id)
+                ->whereIn('status', ['active', 'waiting_input', 'paused'])
+                ->update(['status' => 'interrupted']);
 
             Log::debug("Automation #{$automation->id} starting for contact {$contact->id}", [
                 'start_node' => $startNodeId,

@@ -77,17 +77,16 @@ class PersistMessageJob implements ShouldQueue
         ]);
 
         // 2. Update interaction timestamps atomically
-        $messageTimestamp = isset($data['timestamp']) ? \Carbon\Carbon::createFromTimestamp($data['timestamp']) : now();
+        // Use server time to ensure consistency with PolicyService checks
+        $messageTimestamp = now();
 
-        \App\Models\Contact::where('id', $contact->id)
-            ->where(function ($query) use ($messageTimestamp) {
-                $query->whereNull('last_interaction_at')
-                    ->orWhere('last_interaction_at', '<', $messageTimestamp);
-            })
-            ->update([
-                'last_interaction_at' => $messageTimestamp,
-                'last_customer_message_at' => $messageTimestamp,
-            ]);
+        // Log the update attempt for debugging
+        Log::info("PersistMessageJob: Updating contact {$contact->id} timestamp to {$messageTimestamp}");
+
+        \App\Models\Contact::where('id', $contact->id)->update([
+            'last_interaction_at' => $messageTimestamp,
+            'last_customer_message_at' => $messageTimestamp,
+        ]);
 
         // 2. Keyword Management
         $content = $this->extractContent($data['content']);
