@@ -47,6 +47,11 @@ class AppServiceProvider extends ServiceProvider
         );
 
         \Illuminate\Support\Facades\Event::listen(
+            \App\Events\MessageReceived::class,
+            \App\Listeners\AutomationTriggerListener::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
             'App\Events\*',
             \App\Listeners\PersistDomainEvents::class
         );
