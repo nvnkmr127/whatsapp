@@ -373,6 +373,10 @@ class AutomationService
             case 'file':
                 $url = $node['data']['url'] ?? null;
                 if ($url) {
+                    // Ensure URL is absolute
+                    if (str_starts_with($url, '/')) {
+                        $url = url($url);
+                    }
                     $this->whatsapp->sendMedia($run->contact->phone_number, $node['type'], $url, $node['data']['caption'] ?? '');
                 }
                 return 'continue';
