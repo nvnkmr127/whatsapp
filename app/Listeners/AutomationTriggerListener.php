@@ -20,6 +20,12 @@ class AutomationTriggerListener implements ShouldQueue
      */
     public function handle(MessageReceived $event): void
     {
+        // Ideally we shouldn't consistently forget all instances, but for certain shared services
+        // that might hold state from previous jobs in the same daemon process (like WhatsAppService with teamId),
+        // we might want a fresh start or ensure we set the team correctly.
+        // The AutomationService does setTeam(), but let's be safe.
+        // app()->forgetInstances(); // This is too aggressive for queue workers generally.
+
         Log::info("AutomationTriggerListener: Handle started for message {$event->message->id}");
         $message = $event->message;
 

@@ -30,13 +30,15 @@ class ExecuteAutomationNodeJob implements ShouldQueue
      *
      * @var string|null
      */
-    public $queue = 'messages';
-
+    /**
+     * Create a new job instance.
+     */
     public function __construct(int $runId, string $nodeId, int $attempt = 1)
     {
         $this->runId = $runId;
         $this->nodeId = $nodeId;
         $this->attempt = $attempt;
+        $this->onQueue('messages');
     }
 
     public function handle(WhatsAppService $whatsapp): void
