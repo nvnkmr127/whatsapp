@@ -82,9 +82,12 @@
                         <div x-show="$store.chat.isTyping" x-transition
                             class="flex items-center gap-2 px-3 py-1 bg-wa-teal/10 dark:bg-wa-teal/20 rounded-full border border-wa-teal/20">
                             <div class="flex space-x-0.5">
-                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0s"></div>
-                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0s">
+                                </div>
+                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0.1s">
+                                </div>
+                                <div class="w-1 h-1 bg-wa-teal rounded-full animate-bounce" style="animation-delay: 0.2s">
+                                </div>
                             </div>
                             <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">
                                 <span x-text="$store.chat.typingUser"></span>
@@ -94,9 +97,12 @@
                         <div x-show="$store.chat.isCustomerTyping" x-transition
                             class="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full border border-emerald-500/20">
                             <div class="flex space-x-0.5">
-                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style="animation-delay: 0s">
+                                </div>
+                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce"
+                                    style="animation-delay: 0.1s"></div>
+                                <div class="w-1 h-1 bg-emerald-500 rounded-full animate-bounce"
+                                    style="animation-delay: 0.2s"></div>
                             </div>
                             <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
                                 Customer
@@ -377,6 +383,10 @@
             get renderConfig() {
                 // Return start index and end index
                 // Note: Simple virtualization. For complex bubbles, use a library or just raw render if < 200 items.
+                if (!$store.chat || !$store.chat.messages) {
+                    return { start: 0, end: 0, top: 0, bottom: 0 };
+                }
+                
                 const count = $store.chat.messages.length;
                 console.log('MessageWindow: RenderConfig Calc', { count, scrollTop: this.scrollTop });
                 
@@ -392,12 +402,15 @@
                 return { start, end, top: topH, bottom: bottomH };
             },
             get visibleMessages() {
+                if (!$store.chat || !$store.chat.messages) {
+                    return [];
+                }
                 const conf = this.renderConfig;
                 return $store.chat.messages.slice(conf.start, conf.end);
             }
          }" @scroll.passive="handleScroll" x-init="init()">
 
-        <div class="flex justify-center mb-8" :style="{ marginTop: renderConfig.top + 'px' }">
+        <div class="flex justify-center mb-8" :style="{ marginTop: (renderConfig?.top || 0) + 'px' }">
             <span
                 class="px-4 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-[9px] font-bold text-amber-700 dark:text-amber-400 tracking-wide border border-amber-200 dark:border-amber-800 flex items-center gap-2 shadow-sm">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -762,7 +775,7 @@
                 </template>
             </div>
         </template>
-        <div :style="{ height: renderConfig.bottom + 'px' }"></div>
+        <div :style="{ height: (renderConfig?.bottom || 0) + 'px' }"></div>
     </div>
 
     <!-- Input Area -->
@@ -966,7 +979,8 @@
                             is writing...
                         </span>
                     </div>
-                    <button type="button" @click="$store.chat.takeOver()" class="text-rose-600 dark:text-rose-400 font-black uppercase tracking-wider text-[10px] hover:underline">
+                    <button type="button" @click="$store.chat.takeOver()"
+                        class="text-rose-600 dark:text-rose-400 font-black uppercase tracking-wider text-[10px] hover:underline">
                         Take Over
                     </button>
                 </div>
@@ -1089,9 +1103,9 @@
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()"
                         :class="[
-                                                                                                                                    $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                                                                                                    isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                                                                                                                ]"
+                                                                                                                                                $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                                                                                                                                isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                                                                                                            ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 

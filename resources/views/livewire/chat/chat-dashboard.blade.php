@@ -58,12 +58,13 @@
 
     <!-- Right Sidebar: Intelligence Profile -->
     @if($activeConversationId)
-        <template x-if="showDetails">
-            <div
-                class="hidden xl:flex w-72 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
-                <livewire:chat.contact-details :conversation-id="$activeConversationId" :key="'details-' . $activeConversationId" />
-            </div>
-        </template>
+        <div x-show="showDetails" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-x-full" x-transition:enter-end="opacity-100 translate-x-0"
+            x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-x-0"
+            x-transition:leave-end="opacity-0 translate-x-full"
+            class="hidden xl:flex w-72 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col overflow-y-auto z-10">
+            <livewire:chat.contact-details :conversation-id="$activeConversationId" :key="'details-' . $activeConversationId" />
+        </div>
     @endif
 
     <script>

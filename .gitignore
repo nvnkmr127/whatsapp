@@ -89,3 +89,6 @@ composer.lock
 
 # Large test directory (if not needed in repo)
 /test-exts-fil/
+
+# New Technology Stack (Parallel Migration)
+v2/
