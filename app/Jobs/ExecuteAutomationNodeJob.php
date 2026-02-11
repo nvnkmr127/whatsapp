@@ -34,6 +34,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
 
     public function handle(WhatsAppService $whatsapp): void
     {
+        Log::debug("ExecuteAutomationNodeJob started: Run #{$this->runId}, Node #{$this->nodeId}, Attempt #{$this->attempt}");
         // 1. Atomic Claim & Heartbeat
         // This prevents multiple jobs from processing the same run simultaneously
         // and provides a timestamp for crash recovery detection.

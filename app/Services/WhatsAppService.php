@@ -34,7 +34,9 @@ class WhatsAppService
 
         if (!$this->token || !$this->phoneId) {
             // Log warning instead of throwing if we're just initializing
-            Log::warning("WhatsApp credentials not configured for team: {$team->name}");
+            Log::warning("WhatsApp credentials not configured for team: {$team->name}. Token: " . ($this->token ? 'SET' : 'MISSING') . ", PhoneId: " . ($this->phoneId ? 'SET' : 'MISSING'));
+        } else {
+            Log::debug("WhatsAppService: Credentials set for team {$team->id}. Phone ID: {$this->phoneId}");
         }
 
         return $this;
@@ -1910,8 +1912,10 @@ class WhatsAppService
         }
 
         if (!in_array($state, $allowed)) {
+            Log::warning("Messaging blocked for team {$this->team->id}. Current state: " . ($state ? $state->label() : 'Unknown'));
             throw new \Exception("Messaging blocked. Connection state: " . ($state ? $state->label() : 'Unknown'));
         }
+        Log::debug("WhatsAppService: Team {$this->team->id} is ready to send messages.");
     }
     /**
      * Sync business hours to WhatsApp Business Profile.

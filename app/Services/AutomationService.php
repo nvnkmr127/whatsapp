@@ -245,6 +245,8 @@ class AutomationService
                 'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']]
             ]);
 
+            Log::debug("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
+
             // Track Funnel Event
             \App\Models\CustomerEvent::create([
                 'team_id' => $automation->team_id,
@@ -280,9 +282,12 @@ class AutomationService
         $node = $this->getNodeById($flowData, $nodeId);
 
         if (!$node) {
+            Log::warning("AutomationRun #{$run->id}: Node {$nodeId} not found in flow data. Completing run.");
             $run->update(['status' => 'completed']);
             return;
         }
+
+        Log::debug("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
 
         // Logic Entry
         try {
@@ -347,6 +352,7 @@ class AutomationService
         }
 
         // 2. Main Node Logic
+        Log::debug("AutomationRun #{$run->id}: Performing node work for {$node['id']} (type: {$node['type']})");
         switch ($node['type']) {
             case 'text':
             case 'message':
