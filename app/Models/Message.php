@@ -18,6 +18,13 @@ class Message extends Model
         'read_at' => 'datetime',
     ];
 
+    protected $appends = ['pretty_time'];
+
+    public function getPrettyTimeAttribute()
+    {
+        return $this->created_at->format('H:i');
+    }
+
     public function contact()
     {
         return $this->belongsTo(Contact::class);

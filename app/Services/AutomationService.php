@@ -264,7 +264,7 @@ class AutomationService
             ]);
 
             // Dispatch first node
-            ExecuteAutomationNodeJob::dispatchSync($run->id, $startNodeId);
+            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId)->onQueue('messages');
             Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
         } catch (\Exception $e) {
@@ -350,7 +350,9 @@ class AutomationService
             ]);
 
             if ($nodeDelaySeconds <= 900) { // 15 min precision cutoff
-                ExecuteAutomationNodeJob::dispatch($run->id, $node['id'])->delay($resumeAt);
+                ExecuteAutomationNodeJob::dispatch($run->id, $node['id'])
+                    ->onQueue('messages')
+                    ->delay($resumeAt);
             }
             return 'pause';
         }
@@ -415,7 +417,9 @@ class AutomationService
                     $run->update(['status' => 'paused', 'resume_at' => $resumeAt]);
 
                     if ($seconds <= 900) {
-                        ExecuteAutomationNodeJob::dispatch($run->id, $run->state_data['current_node_id'])->delay($resumeAt);
+                        ExecuteAutomationNodeJob::dispatch($run->id, $run->state_data['current_node_id'])
+                            ->onQueue('messages')
+                            ->delay($resumeAt);
                     }
                     return 'pause';
                 }
@@ -489,7 +493,7 @@ class AutomationService
             $run->update(['state_data' => $state]);
 
             // DISPATCH JOB INSTEAD OF RECURSION
-            ExecuteAutomationNodeJob::dispatch($run->id, $nextNodeId);
+            ExecuteAutomationNodeJob::dispatch($run->id, $nextNodeId)->onQueue('messages');
         } else {
             $run->update(['status' => 'completed']);
         }

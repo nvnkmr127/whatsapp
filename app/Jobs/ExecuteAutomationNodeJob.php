@@ -38,7 +38,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
         $this->runId = $runId;
         $this->nodeId = $nodeId;
         $this->attempt = $attempt;
-        // $this->onQueue('messages'); // Removed to use default queue and prevent clogging priority lane
+        $this->onQueue('messages'); // Prioritize automation execution
     }
 
     public function handle(WhatsAppService $whatsapp): void
