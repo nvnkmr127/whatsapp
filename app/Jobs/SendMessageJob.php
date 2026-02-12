@@ -47,6 +47,8 @@ class SendMessageJob implements ShouldQueue
      */
     public function handle(WhatsAppService $waService): void
     {
+        Log::info("SendMessageJob STARTED: team={$this->teamId}, phone={$this->phone}, type={$this->type}, msgId={$this->messageId}");
+
         $team = Team::find($this->teamId);
         if (!$team) {
             Log::error("SendMessageJob: Team not found {$this->teamId}");
@@ -132,9 +134,12 @@ class SendMessageJob implements ShouldQueue
                 return;
             }
 
+
             // Throw to trigger retry for transient issues
             throw $e;
         }
+
+        Log::info("SendMessageJob COMPLETED for msgId={$this->messageId}");
     }
     /**
      * Handle a job failure.
