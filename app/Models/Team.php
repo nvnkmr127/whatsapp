@@ -39,9 +39,9 @@ class Team extends JetstreamTeam
         'logo_path',
         'timezone',
         'whatsapp_phone_number_id',
-        'whatsapp_business_account_id',
+        // 'whatsapp_business_account_id', // Removed for security
         'facebook_business_id',
-        'whatsapp_access_token',
+        // 'whatsapp_access_token', // Removed for security
         'outbound_webhook_url',
         'opt_in_keywords',
         'opt_out_keywords',
@@ -53,7 +53,7 @@ class Team extends JetstreamTeam
         'chat_status_rules',
         'commerce_config',
         'subscription_plan',
-        'subscription_status',
+        // 'subscription_status', // Removed for security
         'whatsapp_messaging_limit',
         'whatsapp_quality_rating',
         'whatsapp_phone_display',

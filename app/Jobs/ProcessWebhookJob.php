@@ -434,7 +434,14 @@ class ProcessWebhookJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error("ProcessWebhookJob (Producer) FAILED: " . $exception->getMessage());
-    }
+        Log::error("ProcessWebhookJob (Producer) FAILED for Payload ID {$this->payloadId}: " . $exception->getMessage(), [
+            'trace_id' => $this->traceId,
+            'exception' => $exception
+        ]);
 
+        WebhookPayload::where('id', $this->payloadId)->update([
+            'status' => 'failed',
+            'error_message' => $exception->getMessage()
+        ]);
+    }
 }

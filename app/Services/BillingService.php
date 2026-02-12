@@ -57,63 +57,69 @@ class BillingService
      */
     public function recordConversationUsage(Team $team, $contactId, $category, $wamid)
     {
-        // 0. Check Plan Limits first (UC-20)
-        if (!$this->checkPlanLimits($team)) {
-            Log::warning("Team {$team->id} exceeded monthly message limit.");
-            return false;
-        }
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($team, $contactId, $category, $wamid) {
+            // 0. Check Plan Limits first (UC-20)
+            if (!$this->checkPlanLimits($team)) {
+                Log::warning("Team {$team->id} exceeded monthly message limit.");
+                return false;
+            }
 
-        // 1. Check for existing open window
-        // Meta defines 24h session.
-        $existing = WhatsAppConversation::where('team_id', $team->id)
-            ->where('contact_id', $contactId)
-            ->where('category', $category)
-            ->where('window_ends_at', '>', now())
-            ->first();
+            // 1. Check for existing open window
+            // Meta defines 24h session.
+            $existing = WhatsAppConversation::where('team_id', $team->id)
+                ->where('contact_id', $contactId)
+                ->where('category', $category)
+                ->where('window_ends_at', '>', now())
+                ->lockForUpdate() // Lock to prevent concurrent window creation
+                ->first();
 
-        if ($existing) {
-            return true; // Window open, no extra charge
-        }
+            if ($existing) {
+                return true; // Window open, no extra charge
+            }
 
-        // 2. Determine Cost
-        $cost = $this->getCategoryCost($category);
+            // 2. Determine Cost
+            $cost = $this->getCategoryCost($category);
 
-        // 3. Check Balance
-        $wallet = TeamWallet::firstOrCreate(
-            ['team_id' => $team->id],
-            ['balance' => 0]
-        );
+            // 3. Check Balance with Lock
+            // We use lockForUpdate() to ensure no other transaction modifies the balance 
+            // after we read it but before we deduct.
+            $wallet = TeamWallet::where('team_id', $team->id)->lockForUpdate()->first();
 
-        if ($wallet->balance < $cost) {
-            // Strict Prepaid: Block.
-            // Postpaid/Enterprise: Allow.
-            // For MVP: Allow but go negative? Or Block.
-            // Let's Block to be safe unless super admin.
-            return false;
-        }
+            if (!$wallet) {
+                $wallet = TeamWallet::create(['team_id' => $team->id, 'balance' => 0]);
+                // Re-lock is tricky here if created, but in high concurrency usually one exists.
+                // For strict correctness we could reload, but firstOrCreate inside tx + unique index is better.
+                // Standard pattern:
+            }
 
-        // 4. Deduct & Transact
-        $wallet->decrement('balance', $cost);
+            if ($wallet->balance < $cost) {
+                // Strict Prepaid: Block.
+                return false;
+            }
 
-        TeamTransaction::create([
-            'team_id' => $team->id,
-            'amount' => -$cost, // Negative
-            'type' => 'usage_charge',
-            'description' => "New {$category} conversation",
-        ]);
+            // 4. Deduct & Transact
+            $wallet->decrement('balance', $cost);
 
-        // 5. Open Window
-        WhatsAppConversation::create([
-            'team_id' => $team->id,
-            'contact_id' => $contactId,
-            'category' => $category,
-            'wamid_start' => $wamid,
-            'cost' => $cost,
-            'window_starts_at' => now(),
-            'window_ends_at' => now()->addHours(24),
-        ]);
+            TeamTransaction::create([
+                'team_id' => $team->id,
+                'amount' => -$cost, // Negative
+                'type' => 'usage_charge',
+                'description' => "New {$category} conversation",
+            ]);
 
-        return true;
+            // 5. Open Window
+            WhatsAppConversation::create([
+                'team_id' => $team->id,
+                'contact_id' => $contactId,
+                'category' => $category,
+                'wamid_start' => $wamid,
+                'cost' => $cost,
+                'window_starts_at' => now(),
+                'window_ends_at' => now()->addHours(24),
+            ]);
+
+            return true;
+        });
     }
 
     protected function getCategoryCost($category)

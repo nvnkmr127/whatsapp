@@ -167,7 +167,8 @@ class PersistMessageJob implements ShouldQueue
         }
 
         // B. Workflows
-        HandleIncomingWorkflowJob::dispatch($message->id, $team->id);
+        // REMOVED: HandleIncomingWorkflowJob::dispatchSync($message->id, $team->id);
+        // Reason: Redundant. MessageReceived event triggers AutomationTriggerListener.
 
         // Broadcast Real-time Event
         try {
@@ -229,5 +230,15 @@ class PersistMessageJob implements ShouldQueue
             'nfm_reply' => "[Flow] " . ($interactive['nfm_reply']['body'] ?? 'Flow Submitted'),
             default => "[Interactive: $type]",
         };
+    }
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error("PersistMessageJob FAILED for Message ID: " . ($this->eventPayload['provider_id'] ?? 'unknown'), [
+            'error' => $exception->getMessage(),
+            'payload' => $this->eventPayload
+        ]);
     }
 }

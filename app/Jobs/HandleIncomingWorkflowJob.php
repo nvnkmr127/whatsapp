@@ -54,21 +54,48 @@ class HandleIncomingWorkflowJob implements ShouldQueue
             // Agent Assignment Check: Bots should stay silent if a human is assigned
             $isAssigned = $contact->assigned_to !== null;
 
-            // 1. AI Assistant Check
+            // 1. Automations (Keywords, Flows, Template Buttons)
+            if (!$isAssigned) {
+                try {
+                    $automationService = app(AutomationService::class);
+                    $automationService->setWhatsAppService($waService);
+
+                    // A. Template Button Triggers
+                    if ($message->type === 'button') {
+                        if ($automationService->checkTemplateTriggers($contact, $message->content)) {
+                            Log::info("Automation Triggered: Template Button for message {$this->messageId}");
+                            return;
+                        }
+                    }
+
+                    // B. Flow Completion Triggers
+                    if ($message->type === 'interactive') {
+                        if ($automationService->checkFlowTriggers($contact, $message)) {
+                            Log::info("Automation Triggered: Flow Completion for message {$this->messageId}");
+                            return;
+                        }
+                    }
+
+                    // C. Keyword Triggers
+                    if (in_array($message->type, ['text', 'interactive', 'button'])) {
+                        if ($automationService->checkTriggers($contact, $message->content)) {
+                            Log::info("Automation Triggered: Keyword for message {$this->messageId}");
+                            return;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Automation Logic Failed in Job: " . $e->getMessage());
+                }
+            }
+
+            // 2. AI Assistant Check
             if (!$isAssigned) {
                 $commerceConfig = $team->commerce_config ?? [];
                 if (($commerceConfig['ai_assistant_enabled'] ?? false) && $message->type === 'text') {
-                    try {
-                        $aiService = new AiCommerceService($waService);
-                        $handled = $aiService->handle($contact, $message->content);
-
-                        if ($handled) {
-                            Log::info("AI Assistant handled message {$this->messageId}");
-                            return;
-                        }
-                    } catch (\Exception $e) {
-                        Log::error("AI Assistant Logic Failed in Job: " . $e->getMessage());
-                    }
+                    // Optimized: Async Dispatch to avoid blocking main queue
+                    Log::info("Dispatching AI Job for message {$this->messageId}");
+                    ProcessAiAssistantJob::dispatch($this->messageId);
+                    return; // Assume AI or Automation handles it.
                 }
             }
 

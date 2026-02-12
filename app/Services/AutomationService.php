@@ -108,6 +108,7 @@ class AutomationService
             ->get();
 
         foreach ($automations as $automation) {
+            /** @var Automation $automation */
             $config = $automation->trigger_config ?? [];
             $matchText = strtolower(trim($config['button_text'] ?? ''));
 
@@ -165,6 +166,7 @@ class AutomationService
             ->get();
 
         foreach ($automations as $automation) {
+            /** @var Automation $automation */
             $config = $automation->trigger_config ?? [];
             if (($config['template_name'] ?? null) === $templateName) {
                 $this->start($automation, $contact);
@@ -262,7 +264,7 @@ class AutomationService
             ]);
 
             // Dispatch first node
-            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
+            ExecuteAutomationNodeJob::dispatchSync($run->id, $startNodeId);
             Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
         } catch (\Exception $e) {
@@ -528,7 +530,7 @@ class AutomationService
         // Dispatch the jobs for the claimed runs
         $runs = AutomationRun::whereIn('id', $runIds)->get();
         foreach ($runs as $run) {
-            ExecuteAutomationNodeJob::dispatch($run->id, $run->state_data['current_node_id']);
+            ExecuteAutomationNodeJob::dispatchSync($run->id, $run->state_data['current_node_id']);
         }
     }
 
