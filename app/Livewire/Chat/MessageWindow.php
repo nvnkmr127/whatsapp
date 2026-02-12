@@ -789,16 +789,9 @@ class MessageWindow extends Component
             return ['status' => 'error', 'message' => 'Invalid session'];
         }
 
-        // Multi-Agent Safety: Double Commit Guard
-        // 1. Check if another agent replied in the very last second (Race Condition)
-        if ($this->conversation->last_message_at && $this->conversation->last_message_at->diffInSeconds(now()) < 2) {
-            // Assuming last message was outbound agent 
-            // We can query the actual last message to be sure it wasn't the customer
-            $lastMsg = $this->conversation->messages()->latest()->first();
-            if ($lastMsg && $lastMsg->direction === 'outbound' && $lastMsg->created_at->diffInSeconds(now()) < 2) {
-                return ['status' => 'error', 'message' => 'Collision Detected: Another agent just sent a message.'];
-            }
-        }
+        // Removed strict collision check to allow rapid messaging by same agent.
+        // Was causing false positives when sending multiple messages quickly.
+
 
         // 2. Check Lock Ownership (Optional strictness)
         $lockKey = "conversation_lock:{$this->conversation->id}";
