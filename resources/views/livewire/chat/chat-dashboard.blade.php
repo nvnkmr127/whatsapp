@@ -1,4 +1,5 @@
 <div x-data="{ mobilePane: 'list', showDetails: true }" @toggle-details.window="showDetails = !showDetails"
+    @toggle-mobile-pane.window="mobilePane = $event.detail"
     class="h-[calc(100vh-theme(spacing.32))] flex overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 relative z-0">
 
     <!-- Left Sidebar: Active Channels -->
@@ -11,14 +12,6 @@
     <div :class="{ 'hidden': mobilePane !== 'messages', 'flex': mobilePane === 'messages' }"
         class="flex-1 lg:flex flex-col bg-white dark:bg-slate-950 relative z-0">
         @if($activeConversationId)
-            <div class="lg:hidden absolute top-4 left-4 z-20">
-                <button @click="mobilePane = 'list'"
-                    class="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-lg text-slate-500 hover:text-wa-teal transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-            </div>
             <!-- Instant Loading Placeholder -->
             <div wire:loading wire:target="activeConversationId"
                 class="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-950 z-10">
@@ -71,7 +64,14 @@
         document.addEventListener('livewire:initialized', () => {
             @this.on('conversationSelected', () => {
                 if (window.innerWidth < 1024) {
-                    Alpine.store('mobileChat', { pane: 'messages' }); // Wait, use x-data
+                    // Use Alpine to switch pane on mobile
+                    const el = document.querySelector('[x-data]');
+                    if (el && el.__x) {
+                        el.__x.$data.mobilePane = 'messages';
+                    } else {
+                        // Fallback dispatch
+                        window.dispatchEvent(new CustomEvent('toggle-mobile-pane', { detail: 'messages' }));
+                    }
                 }
             });
         });

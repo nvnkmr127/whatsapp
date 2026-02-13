@@ -1,5 +1,4 @@
-<div class="flex-1 flex flex-col h-full relative bg-slate-200 dark:bg-[#0b141a] overflow-hidden"
-    x-data="(() => {
+<div class="flex-1 flex flex-col h-full relative bg-slate-200 dark:bg-[#0b141a] overflow-hidden" x-data="(() => {
         let data = chatWindow(
             $wire, 
             '{{ $conversation?->id }}', 
@@ -11,6 +10,98 @@
         data.showInteractiveButtonsModal = @entangle('showInteractiveButtonsModal');
         return data;
     })()">
+
+    <!-- Chat Header -->
+    <div
+        class="px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-20 shrink-0">
+        <div class="flex items-center gap-4">
+            <!-- Mobile Back Button -->
+            <button @click="$dispatch('toggle-mobile-pane', 'list')"
+                class="lg:hidden p-2 -ml-2 text-slate-500 hover:text-wa-teal transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+
+            <!-- Avatar Section -->
+            <div class="relative group">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-tr from-wa-teal to-emerald-400 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity blur-sm">
+                </div>
+                <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation?->contact?->name ?? 'Unknown' }}"
+                    class="relative h-11 w-11 rounded-2xl bg-slate-100 dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 object-cover transition-transform duration-300 group-hover:scale-105">
+                <div
+                    class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm">
+                </div>
+            </div>
+
+            <div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                        {{ $conversation?->contact?->name ?? $conversation?->contact?->phone_number ?? 'Unknown Recipient' }}
+                    </h2>
+                    @if($isSessionOpen)
+                        <span class="flex h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"
+                            title="Active Window"></span>
+                    @endif
+                </div>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <div class="flex items-center gap-1">
+                        <svg class="w-3 h-3 text-wa-teal" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                        </svg>
+                        <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                            {{ $conversation?->contact?->phone_number }}
+                        </span>
+                    </div>
+                    <span class="text-slate-300 dark:text-slate-700 font-bold">•</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        {{ $isSessionOpen ? 'Signal Open' : 'Signal Closed' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1 sm:gap-3">
+            <!-- Bot Status Indicator/Toggle -->
+            <button wire:click="toggleBot"
+                class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
+                       {{ $conversation?->contact?->is_bot_paused
+    ? 'bg-amber-100/50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800'
+    : 'bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700' }} hover:scale-105 active:scale-95">
+                <div class="relative">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    @if(!$conversation?->contact?->is_bot_paused)
+                        <span class="absolute -top-1 -right-1 flex h-1.5 w-1.5">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-wa-teal opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-wa-teal"></span>
+                        </span>
+                    @endif
+                </div>
+                <span>{{ $conversation?->contact?->is_bot_paused ? 'Bot Paused' : 'Bot Active' }}</span>
+            </button>
+
+            <!-- Call Button Component -->
+            <div class="h-10 w-px bg-slate-100 dark:bg-slate-800 mx-1 hidden sm:block"></div>
+
+            <livewire:chat.whatsapp-call-button :conversation-id="$conversationId" :key="'call-' . $conversationId" />
+
+            <button @click="$dispatch('toggle-details')"
+                class="p-2.5 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all group"
+                title="Intelligence Profile">
+                <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+        </div>
+    </div>
 
     <!-- Floating Date Header -->
     <div class="absolute top-20 left-1/2 -translate-x-1/2 z-10 pointer-events-none transition-opacity duration-300"
@@ -40,11 +131,11 @@
             <!-- Typing Indicators -->
             <template x-for="user in $store.chat.typingUsers" :key="user.id">
                 <div class="flex items-end gap-2 mb-4 animate-in fade-in slide-in-from-bottom-2">
-                <div class="relative shrink-0">
-                    <img :src="'https://api.dicebear.com/9.x/initials/svg?seed=' + user.name"
-                        class="rounded-full bg-slate-100 dark:bg-slate-700 object-cover border border-slate-100 dark:border-slate-700"
-                        style="width: 2rem; height: 2rem;" :alt="user.name">
-                </div>
+                    <div class="relative shrink-0">
+                        <img :src="'https://api.dicebear.com/9.x/initials/svg?seed=' + user.name"
+                            class="rounded-full bg-slate-100 dark:bg-slate-700 object-cover border border-slate-100 dark:border-slate-700"
+                            style="width: 2rem; height: 2rem;" :alt="user.name">
+                    </div>
                     <div
                         class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-700 shadow-sm flex gap-1">
                         <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
@@ -204,9 +295,9 @@
                         @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()" :class="[
-                                $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                            ]"
+                                    $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                    isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 
@@ -303,9 +394,11 @@
                             <div>
                                 <h3
                                     class="text-sm font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors">
-                                    {{ $template->name }}</h3>
+                                    {{ $template->name }}
+                                </h3>
                                 <p class="text-[10px] font-bold text-slate-500 mt-1">{{ $template->category }} •
-                                    {{ $template->language }}</p>
+                                    {{ $template->language }}
+                                </p>
                             </div>
                             <span
                                 class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal rounded text-[9px] font-black uppercase">{{ $template->status }}</span>
@@ -405,8 +498,12 @@
             <div class="space-y-4">
                 @if(!empty($templateVariables))
                     <div class="space-y-4">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <label
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
                             Content Variables
                         </label>
                         @foreach($templateVariables as $key => $value)
@@ -421,20 +518,29 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                        <svg class="w-10 h-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div
+                        class="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                        <svg class="w-10 h-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         <p class="text-xs font-bold text-slate-500">No variables required for this template.</p>
                     </div>
                 @endif
             </div>
 
-            <div class="bg-slate-50 dark:bg-slate-950 p-6 rounded-[2.5rem] flex items-center justify-center border border-slate-100 dark:border-slate-800">
-                <div class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 relative">
-                     <!-- Preview Tag -->
-                     <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-[8px] font-black uppercase tracking-widest rounded-md">Preview</div>
-                    
-                     <div class="p-4 pt-8">
-                        <p class="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
+            <div
+                class="bg-slate-50 dark:bg-slate-950 p-6 rounded-[2.5rem] flex items-center justify-center border border-slate-100 dark:border-slate-800">
+                <div
+                    class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 relative">
+                    <!-- Preview Tag -->
+                    <div
+                        class="absolute top-2 right-2 px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-[8px] font-black uppercase tracking-widest rounded-md">
+                        Preview</div>
+
+                    <div class="p-4 pt-8">
+                        <p
+                            class="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
                             {!! $this->livePreviewText !!}
                         </p>
                     </div>
@@ -442,13 +548,17 @@
             </div>
         </div>
 
-        <div class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-3xl">
+        <div
+            class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-3xl">
             <button wire:click="closeTemplateModals"
                 class="px-6 py-3 text-slate-500 font-bold uppercase text-xs hover:text-slate-700 transition-colors">Back</button>
             <button wire:click="sendTemplateWithVariables"
                 class="px-8 py-3 bg-wa-teal text-white font-black uppercase text-xs rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
                 <span>Send Template</span>
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
             </button>
         </div>
     </x-modal>
