@@ -64,6 +64,110 @@
         </div>
 
         <div class="flex items-center gap-1 sm:gap-3">
+            <!-- Tags/Categories Dropdown -->
+            <div class="relative" x-data="{ showTags: false }">
+                <button @click="showTags = !showTags"
+                    class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 hover:text-wa-teal hover:border-wa-teal/20 hover:scale-105 active:scale-95"
+                    title="Manage Tags">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <span>Tags</span>
+                    @php
+                        $activeTags = $conversation?->metadata['tags'] ?? [];
+                        $tagCount = count($activeTags);
+                    @endphp
+                    @if($tagCount > 0)
+                        <span
+                            class="px-1.5 py-0.5 bg-wa-teal text-white rounded-full text-[8px] font-black">{{ $tagCount }}</span>
+                    @endif
+                </button>
+
+                <!-- Tags Dropdown Menu -->
+                <div x-show="showTags" @click.away="showTags = false" x-cloak x-transition
+                    class="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 p-3 z-50 max-h-80 overflow-y-auto">
+                    <div class="mb-3 pb-2 border-b border-slate-100 dark:border-slate-700">
+                        <h3 class="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                            Conversation Tags</h3>
+                    </div>
+                    <div class="space-y-2">
+                        @forelse($availableCategories as $category)
+                            @php
+                                $isActive = in_array($category->id, $activeTags);
+                            @endphp
+                            <button wire:click="toggleCategory({{ $category->id }})"
+                                class="w-full flex items-center justify-between p-2 rounded-xl transition-all hover:bg-slate-50 dark:hover:bg-slate-700 group">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full" style="background-color: {{ $category->color }}">
+                                    </div>
+                                    <span
+                                        class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $category->name }}</span>
+                                </div>
+                                @if($isActive)
+                                    <svg class="w-4 h-4 text-wa-teal" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                @endif
+                            </button>
+                        @empty
+                            <div class="py-4 text-center">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">No tags available</span>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transfer Conversation Dropdown -->
+            <div class="relative" x-data="{ showTransfer: false }">
+                <button @click="showTransfer = !showTransfer"
+                    class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 hover:text-indigo-500 hover:border-indigo-200 hover:scale-105 active:scale-95"
+                    title="Transfer Chat">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    <span>Transfer</span>
+                </button>
+
+                <!-- Transfer Dropdown Menu -->
+                <div x-show="showTransfer" @click.away="showTransfer = false" x-cloak x-transition
+                    class="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 p-3 z-50 max-h-80 overflow-y-auto">
+                    <div class="mb-3 pb-2 border-b border-slate-100 dark:border-slate-700">
+                        <h3 class="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                            Transfer To Agent</h3>
+                    </div>
+                    <div class="space-y-1">
+                        @forelse($agents as $agent)
+                            <button wire:click="transferConversation({{ $agent->id }}); showTransfer = false"
+                                class="w-full flex items-center gap-3 p-2 rounded-xl transition-all hover:bg-indigo-50 dark:hover:bg-indigo-900/20 group">
+                                <div
+                                    class="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-black uppercase shadow-sm">
+                                    {{ substr($agent->name, 0, 1) }}
+                                </div>
+                                <div class="flex-1 text-left">
+                                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $agent->name }}
+                                    </div>
+                                    <div class="text-[10px] font-medium text-slate-500">{{ $agent->email }}</div>
+                                </div>
+                                <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        @empty
+                            <div class="py-4 text-center">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">No agents available</span>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
             <!-- Bot Status Indicator/Toggle -->
             <button wire:click="toggleBot"
                 class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
@@ -90,6 +194,103 @@
             <div class="h-10 w-px bg-slate-100 dark:bg-slate-800 mx-1 hidden sm:block"></div>
 
             <livewire:chat.whatsapp-call-button :conversation-id="$conversationId" :key="'call-' . $conversationId" />
+
+            <!-- More Actions Dropdown -->
+            <div class="relative" x-data="{ showMore: false }">
+                <button @click="showMore = !showMore"
+                    class="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all"
+                    title="More Actions">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                    </svg>
+                </button>
+
+                <!-- More Actions Menu -->
+                <div x-show="showMore" @click.away="showMore = false" x-cloak x-transition
+                    class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 py-2 z-50">
+
+                    <!-- Conversation Status -->
+                    @if($conversation?->status === 'closed')
+                        <button wire:click="reopenConversation(); showMore = false"
+                            class="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group">
+                            <div class="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Reopen Conversation</div>
+                                <div class="text-[10px] text-slate-500">Mark as active</div>
+                            </div>
+                        </button>
+                    @else
+                        <button wire:click="closeConversation('resolved'); showMore = false"
+                            class="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors group">
+                            <div class="p-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Close Conversation</div>
+                                <div class="text-[10px] text-slate-500">Mark as resolved</div>
+                            </div>
+                        </button>
+                    @endif
+
+                    <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+
+                    <!-- Mark as Spam -->
+                    <button wire:click="markAsSpam(); showMore = false"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors group">
+                        <div class="p-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Mark as Spam</div>
+                            <div class="text-[10px] text-slate-500">Flag conversation</div>
+                        </div>
+                    </button>
+
+                    <!-- Block Contact -->
+                    <button wire:click="blockContact(); showMore = false"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors group">
+                        <div class="p-1.5 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-xs font-bold text-rose-600">Block Contact</div>
+                            <div class="text-[10px] text-rose-500">Prevent future messages</div>
+                        </div>
+                    </button>
+
+                    <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+
+                    <!-- Export Conversation -->
+                    <button wire:click="exportConversation(); showMore = false"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors group">
+                        <div class="p-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Export Chat</div>
+                            <div class="text-[10px] text-slate-500">Download as PDF</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
 
             <button @click="$dispatch('toggle-details')"
                 class="p-2.5 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all group"
@@ -295,9 +496,9 @@
                         @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
                         placeholder="Type a message (or / for templates)..." rows="1"
                         :disabled="$store.chat.isLockedForMe()" :class="[
-                                    $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                    isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
-                                ]"
+                                            $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
+                                            isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                        ]"
                         class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
                         style="min-height: 56px;"></textarea>
 

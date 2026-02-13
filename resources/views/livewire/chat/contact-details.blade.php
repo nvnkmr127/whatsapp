@@ -44,10 +44,10 @@
 
                 <div class="mt-3 flex items-center gap-3">
                     <button wire:click="toggleOptIn" wire:loading.attr="disabled" class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                                                    {{ $contact->opt_in_status === 'opted_in'
+                                                        {{ $contact->opt_in_status === 'opted_in'
             ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
-                                                    }}">
+                                                        }}">
                         <!-- Default Text -->
                         <span class="block {{ $contact->opt_in_status === 'opted_in' ? 'group-hover:hidden' : '' }}">
                             {{ $contact->opt_in_status === 'opted_in' ? 'OPTED IN' : 'OPTED OUT' }}
@@ -111,20 +111,63 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
-                        Labels
+                        Conversation Tags
                     </h5>
-                    <div class="flex flex-wrap gap-2">
-                        @forelse($contact->tags as $tag)
-                            <span
-                                class="px-3 py-1 bg-slate-50 dark:bg-slate-900 border-none text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide rounded-lg">
-                                {{ $tag->name }}
-                            </span>
-                        @empty
-                            <div
-                                class="w-full py-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
-                                <span class="text-[10px] font-black text-slate-400 uppercase">Undefined</span>
+                    @php
+                        $conversationTags = $conversation?->metadata['tags'] ?? [];
+                    @endphp
+                    <div class="space-y-3">
+                        <!-- Active Tags Display -->
+                        <div class="flex flex-wrap gap-2">
+                            @forelse($conversation?->metadata['tags'] ?? [] as $tagId)
+                                @php
+                                    $category = \App\Models\Category::find($tagId);
+                                @endphp
+                                @if($category)
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider group"
+                                        style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}40;">
+                                        <span>{{ $category->name }}</span>
+                                        <button wire:click="toggleConversationTag({{ $category->id }})"
+                                            class="opacity-60 hover:opacity-100 transition-opacity">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                @endif
+                            @empty
+                                <div
+                                    class="w-full py-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">No tags assigned</span>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <!-- Available Tags to Add -->
+                        @php
+                            $availableTags = \App\Models\Category::where('team_id', auth()->user()->currentTeam->id)
+                                ->whereIn('target_module', ['chat', 'all'])
+                                ->where('is_active', true)
+                                ->whereNotIn('id', $conversationTags)
+                                ->get();
+                        @endphp
+                        @if($availableTags->count() > 0)
+                            <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Add Tag</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    @foreach($availableTags as $category)
+                                        <button wire:click="toggleConversationTag({{ $category->id }})"
+                                            class="px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95"
+                                            style="background-color: {{ $category->color }}10; color: {{ $category->color }}; border: 1px solid {{ $category->color }}20;">
+                                            + {{ $category->name }}
+                                        </button>
+                                    @endforeach
+                                </div>
                             </div>
-                        @endforelse
+                        @endif
                     </div>
                 </section>
 

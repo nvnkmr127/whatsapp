@@ -298,6 +298,120 @@ class MessageWindow extends Component
         }
     }
 
+    public function reopenConversation()
+    {
+        if ($this->conversation) {
+            $this->conversation->update([
+                'status' => 'open',
+                'closed_at' => null,
+                'close_reason' => null
+            ]);
+
+            // Create internal note
+            \App\Models\Message::create([
+                'team_id' => Auth::user()->currentTeam->id,
+                'contact_id' => $this->conversation->contact_id,
+                'conversation_id' => $this->conversation->id,
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'type' => 'internal_note',
+                'content' => "Conversation reopened by " . Auth::user()->name,
+                'metadata' => ['type' => 'reopen', 'reopened_by' => Auth::user()->name],
+            ]);
+
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Conversation reopened successfully'
+            ]);
+            $this->loadConversation();
+        }
+    }
+
+    public function markAsSpam()
+    {
+        if ($this->conversation && $this->conversation->contact) {
+            $metadata = $this->conversation->metadata ?? [];
+            $metadata['marked_as_spam'] = true;
+            $metadata['spam_marked_at'] = now()->toISOString();
+            $metadata['spam_marked_by'] = Auth::user()->name;
+
+            $this->conversation->update([
+                'metadata' => $metadata,
+                'status' => 'closed',
+                'close_reason' => 'spam'
+            ]);
+
+            // Create internal note
+            \App\Models\Message::create([
+                'team_id' => Auth::user()->currentTeam->id,
+                'contact_id' => $this->conversation->contact_id,
+                'conversation_id' => $this->conversation->id,
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'type' => 'internal_note',
+                'content' => "Conversation marked as spam by " . Auth::user()->name,
+                'metadata' => ['type' => 'spam', 'marked_by' => Auth::user()->name],
+            ]);
+
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'Conversation marked as spam'
+            ]);
+            $this->loadConversation();
+        }
+    }
+
+    public function blockContact()
+    {
+        if ($this->conversation && $this->conversation->contact) {
+            $this->conversation->contact->update([
+                'is_blocked' => true,
+                'blocked_at' => now(),
+                'blocked_by' => Auth::id()
+            ]);
+
+            $this->conversation->update([
+                'status' => 'closed',
+                'close_reason' => 'contact_blocked'
+            ]);
+
+            // Create internal note
+            \App\Models\Message::create([
+                'team_id' => Auth::user()->currentTeam->id,
+                'contact_id' => $this->conversation->contact_id,
+                'conversation_id' => $this->conversation->id,
+                'direction' => 'outbound',
+                'status' => 'sent',
+                'type' => 'internal_note',
+                'content' => "Contact blocked by " . Auth::user()->name,
+                'metadata' => ['type' => 'block', 'blocked_by' => Auth::user()->name],
+            ]);
+
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Contact has been blocked'
+            ]);
+            $this->loadConversation();
+        }
+    }
+
+    public function exportConversation()
+    {
+        if ($this->conversation) {
+            // Trigger download - this could be enhanced with a job for large conversations
+            $this->dispatch('notify', [
+                'type' => 'info',
+                'message' => 'Preparing conversation export...'
+            ]);
+
+            // You can implement PDF generation here or trigger a job
+            // For now, we'll just notify the user
+            $this->dispatch('export-conversation', [
+                'conversationId' => $this->conversation->id
+            ]);
+        }
+    }
+
     public function saveCallNote($messageId, $note)
     {
         $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)

@@ -80,6 +80,28 @@ class ContactDetails extends Component
         $this->loadData();
     }
 
+    public function toggleConversationTag($categoryId)
+    {
+        if (!$this->conversation)
+            return;
+
+        $metadata = $this->conversation->metadata;
+        if (!is_array($metadata)) {
+            $metadata = [];
+        }
+        $tags = $metadata['tags'] ?? [];
+
+        if (in_array($categoryId, $tags)) {
+            $tags = array_values(array_filter($tags, fn($id) => $id != $categoryId));
+        } else {
+            $tags[] = $categoryId;
+        }
+
+        $metadata['tags'] = $tags;
+        $this->conversation->update(['metadata' => $metadata]);
+        $this->loadData();
+    }
+
     public function render()
     {
         return view('livewire.chat.contact-details');
