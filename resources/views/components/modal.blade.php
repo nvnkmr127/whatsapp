@@ -1,4 +1,4 @@
-@props(['show', 'maxWidth' => '2xl', 'closeable' => true])
+@props(['show' => 'false', 'maxWidth' => '2xl', 'closeable' => true])
 
 @php
     $maxWidth = [

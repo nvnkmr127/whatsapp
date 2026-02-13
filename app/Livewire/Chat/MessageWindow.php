@@ -554,13 +554,42 @@ class MessageWindow extends Component
         $body = $this->getTemplateComponent('BODY');
         $text = $body['text'] ?? '';
 
+        // 1. Escape HTML
+        $text = e($text);
+
+        // 2. Wrap variables in spans BEFORE markdown (to avoid markdown inside variables)
+        $text = preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', $text);
+
+        // 3. Replace variables with actual values (preserving spans)
         if (!empty($this->templateVariables)) {
             foreach ($this->templateVariables as $key => $value) {
-                // Replace {{1}} with value or keep {{1}} if empty
-                $replace = $value !== '' ? $value : "{{{$key}}}";
-                $text = str_replace("{{{$key}}}", $replace, $text);
+                if ($value !== '') {
+                    $search = '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{' . $key . '}}</span>';
+                    $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">' . e($value) . '</span>';
+                    $text = str_replace($search, $replacement, $text);
+                }
             }
         }
+
+        // 4. WhatsApp Markdown
+        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
+        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
+
+        return $text;
+    }
+
+    public function getPreviewButtonBodyProperty()
+    {
+        $text = $this->buttonBody ?: 'Message text...';
+
+        // 1. Escape HTML
+        $text = e($text);
+
+        // 2. WhatsApp Markdown
+        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
+        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
 
         return $text;
     }

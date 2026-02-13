@@ -362,7 +362,7 @@
             <div class="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl flex items-center justify-center">
                 <div class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl overflow-hidden">
                     <div class="p-3 border-b border-slate-50 dark:border-slate-800/50">
-                        <p class="text-xs text-slate-700 dark:text-slate-200">{{ $buttonBody ?: 'Message text...' }}</p>
+                        <p class="text-xs text-slate-700 dark:text-slate-200">{!! $this->previewButtonBody !!}</p>
                     </div>
                     <div class="flex flex-col">
                         @foreach($interactiveButtons as $btn)
@@ -385,6 +385,73 @@
                 Buttons</button>
         </div>
     </x-modal>
+    <!-- Template Preview Modal -->
+    <x-modal show="showTemplatePreviewModal" maxWidth="2xl">
+        <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-black text-wa-teal uppercase tracking-[0.2em] mb-1">Personalize</span>
+                <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Template <span
+                        class="text-wa-teal">Preview</span></h2>
+            </div>
+            <button wire:click="closeTemplateModals" class="text-slate-400 hover:text-rose-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+                @if(!empty($templateVariables))
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            Content Variables
+                        </label>
+                        @foreach($templateVariables as $key => $value)
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-bold text-slate-500 flex justify-between">
+                                    <span>PLACEHOLDER {{ $key }}</span>
+                                </label>
+                                <input type="text" wire:model.live="templateVariables.{{ $key }}"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm px-4 py-3 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
+                                    placeholder="Enter value for {{ $key }}...">
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="h-full flex flex-col items-center justify-center text-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                        <svg class="w-10 h-10 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-xs font-bold text-slate-500">No variables required for this template.</p>
+                    </div>
+                @endif
+            </div>
+
+            <div class="bg-slate-50 dark:bg-slate-950 p-6 rounded-[2.5rem] flex items-center justify-center border border-slate-100 dark:border-slate-800">
+                <div class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 relative">
+                     <!-- Preview Tag -->
+                     <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-[8px] font-black uppercase tracking-widest rounded-md">Preview</div>
+                    
+                     <div class="p-4 pt-8">
+                        <p class="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
+                            {!! $this->livePreviewText !!}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-3xl">
+            <button wire:click="closeTemplateModals"
+                class="px-6 py-3 text-slate-500 font-bold uppercase text-xs hover:text-slate-700 transition-colors">Back</button>
+            <button wire:click="sendTemplateWithVariables"
+                class="px-8 py-3 bg-wa-teal text-white font-black uppercase text-xs rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                <span>Send Template</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            </button>
+        </div>
+    </x-modal>
+
 
     <!-- Lightbox Modal -->
     <x-modal show="$store.chat.lightboxOpen" maxWidth="5xl" :closeable="true">
