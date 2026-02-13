@@ -476,6 +476,7 @@ class MessageWindow extends Component
 
     public function openTemplateList()
     {
+        $this->showInteractiveButtonsModal = false;
         $this->showTemplateListModal = true;
     }
 
@@ -651,6 +652,7 @@ class MessageWindow extends Component
 
     public function openInteractiveButtonsModal()
     {
+        $this->closeTemplateModals();
         $this->buttonBody = '';
         $this->interactiveButtons = ['']; // Start with one empty button
         $this->showInteractiveButtonsModal = true;

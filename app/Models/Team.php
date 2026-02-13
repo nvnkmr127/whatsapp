@@ -39,9 +39,9 @@ class Team extends JetstreamTeam
         'logo_path',
         'timezone',
         'whatsapp_phone_number_id',
-        // 'whatsapp_business_account_id', // Removed for security
+        'whatsapp_business_account_id', // Removed for security - restoring for functionality
         'facebook_business_id',
-        // 'whatsapp_access_token', // Removed for security
+        'whatsapp_access_token', // Removed for security - restoring for functionality
         'outbound_webhook_url',
         'opt_in_keywords',
         'opt_out_keywords',

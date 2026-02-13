@@ -133,7 +133,7 @@ class WhatsappConfig extends Component
 
     public function loadSettings()
     {
-        $team = auth()->user()->currentTeam;
+        $team = auth()->user()->currentTeam->fresh();
 
         if (!$team) {
             $this->is_whatsmark_connected = false;
@@ -175,7 +175,7 @@ class WhatsappConfig extends Component
         }
 
 
-        $this->is_whatsmark_connected = !empty($team->whatsapp_access_token) && !empty($this->wm_business_account_id);
+
         $this->is_webhook_connected = !empty($this->outbound_webhook_url);
 
         $this->webhook_verify_token = get_setting('whatsapp_webhook_verify_token');
@@ -395,14 +395,18 @@ class WhatsappConfig extends Component
             DB::commit();
             $this->dispatch('notify', 'WhatsApp Account Connected Successfully!');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error("WhatsApp Setup: Embedded Signup Completion Failed", [
-                'message' => $e->getMessage(),
+            Log::error("WhatsApp Embedded Setup Failed", [
+                'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
-
+            $this->dispatch(
+                'notify',
+                title: 'Link Failed',
+                message: 'Could not link WhatsApp account: ' . $e->getMessage(),
+                type: 'error'
+            );
             // Re-load settings to clear partial state
             $this->loadSettings();
         }
@@ -414,9 +418,17 @@ class WhatsappConfig extends Component
             'waba_id' => $this->wm_business_account_id
         ]);
 
-        $this->validate([
+        $rules = [
             'wm_business_account_id' => 'required',
-        ]);
+        ];
+
+        // If specific team/user doesn't have a token yet, require it.
+        // Or if we are switching accounts, we likely need a new token.
+        if (empty(auth()->user()->currentTeam->whatsapp_access_token)) {
+            $rules['wm_access_token'] = 'required';
+        }
+
+        $this->validate($rules);
 
         $team = auth()->user()->currentTeam;
 
@@ -481,14 +493,15 @@ class WhatsappConfig extends Component
 
             // 1. Automate Webhook Subscription (Links App to WABA)
             Log::debug("WhatsApp Setup: Subscribing to webhooks");
-            $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
+            $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $token);
             if (!$subResult['status']) {
-                Log::warning("WhatsApp Setup: Webhook Auto-subscription failed: " . $subResult['message']);
+                // Critical failure - if we can't subscribe, we shouldn't connect
+                throw new \Exception("Webhook Subscription Failed: " . $subResult['message']);
             }
 
             // 2. Try to sync Templates (Functional check)
             Log::debug("WhatsApp Setup: Attempting initial template sync");
-            $response = $this->loadTemplatesFromWhatsApp();
+            $response = $this->loadTemplatesFromWhatsApp($this->wm_business_account_id, $token);
 
             if ($response['status']) {
                 Log::debug("WhatsApp Setup: Templates synced successfully", ['count' => $response['count'] ?? 0]);
@@ -517,6 +530,7 @@ class WhatsappConfig extends Component
                 }
             } else {
                 Log::error("WhatsApp Setup: Initial template sync failed", ['error' => $response['message']]);
+                throw new \Exception("Initial Template Sync Failed: " . $response['message']);
             }
 
             $this->completeAudit($auditId, 'completed');
@@ -529,11 +543,14 @@ class WhatsappConfig extends Component
             Log::debug("WhatsApp Setup: Running verification engine");
             $this->validateConnection();
 
+            // [FIX] Populate full account details (Quality, Limit, Display Name)
+            $this->syncInfo(); // This will also call loadBusinessProfile() internally
+
             $this->loadSettings();
-            $this->loadBusinessProfile();
+            // $this->loadBusinessProfile(); // Redundant if inside syncInfo()
             $this->refreshHealth();
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($startedTransaction) {
                 DB::rollBack();
             }
@@ -548,12 +565,18 @@ class WhatsappConfig extends Component
 
             Log::error("WhatsApp Setup: Connection Flow Failed", [
                 'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
             $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
 
             if (!$startedTransaction) {
-                throw $e; // Re-throw if handled by parent transaction (Embedded Flow)
+                // If we are in embedded flow (parent transaction), we generally want to bubble up, 
+                // BUT for this specific 500 debugging, we want to catch it to see the error.
+                // Re-throwing Throwable might just cause the 500 again if not caught upstream.
+                // Let's log it and NOT re-throw for now to ensure UI feedback.
+                // throw $e; 
             }
         }
     }
@@ -656,8 +679,15 @@ class WhatsappConfig extends Component
             return;
         }
 
+        $team = auth()->user()->currentTeam->fresh();
+
+        if (!$team->whatsapp_business_account_id || !$team->whatsapp_access_token) {
+            $this->dispatch('notify', 'WhatsApp configuration missing. Please reconnect.');
+            return;
+        }
+
         // Ensure webhook is subscribed during sync
-        $this->subscribeToWebhooks($this->wm_business_account_id, auth()->user()->currentTeam->whatsapp_access_token);
+        $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
 
         $result = $this->getPhoneNumberDetails($this->wm_default_phone_number_id);
 
@@ -695,7 +725,7 @@ class WhatsappConfig extends Component
             return;
         }
 
-        $team = auth()->user()->currentTeam;
+        $team = auth()->user()->currentTeam->fresh();
         $monitor = app(\App\Services\WhatsAppHealthMonitor::class);
         $health = $monitor->checkHealth($team);
 
@@ -725,7 +755,7 @@ class WhatsappConfig extends Component
 
     public function getSetupProgress()
     {
-        $team = auth()->user()->currentTeam;
+        $team = auth()->user()->currentTeam->fresh();
         $state = $team->whatsapp_setup_state;
 
         $steps = [

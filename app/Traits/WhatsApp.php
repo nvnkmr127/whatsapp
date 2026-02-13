@@ -38,12 +38,12 @@ trait WhatsApp
         return $this->team->whatsapp_business_account_id ?? auth()->user()->currentTeam->whatsapp_business_account_id ?? '';
     }
 
-    public function loadTemplatesFromWhatsApp(): array
+    public function loadTemplatesFromWhatsApp(?string $wabaId = null, ?string $token = null): array
     {
         try {
             // Mocking or fetching settings
-            $accountId = $this->getAccountID();
-            $token = $this->getToken();
+            $accountId = $wabaId ?? $this->getAccountID();
+            $token = $token ?? $this->getToken();
 
             if (empty($accountId) || empty($token)) {
                 // Return empty or throw generic if not configured
