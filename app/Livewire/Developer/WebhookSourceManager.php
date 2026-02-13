@@ -22,6 +22,9 @@ class WebhookSourceManager extends Component
     public $action_config = [];
     public $is_active = true;
     public $editingId = null;
+    public $search = '';
+
+    protected $queryString = ['search'];
 
     // Wizard State
     public $currentStep = 1;
@@ -784,7 +787,17 @@ class WebhookSourceManager extends Component
             $query->where('team_id', $team->id);
         }
 
-        $sources = $query->with('payloads')
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhere('platform', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('team', function ($q) {
+                        $q->where('name', 'like', '%' . $this->search . '%');
+                    });
+            });
+        }
+
+        $sources = $query->with(['payloads', 'team'])
             ->latest()
             ->paginate(10);
 
