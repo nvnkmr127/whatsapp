@@ -191,7 +191,7 @@ class InboundWebhookController extends Controller
                         ]);
                         $webhookPayload->update([
                             'status' => 'failed',
-                            'error_message' => 'Mapped data validation failed (Missing required fields like phone_number)',
+                            'error_message' => 'Mapped data validation failed. Ensure phone_number is present and in a valid format (+country_code number).',
                         ]);
                         $source->incrementFailed();
                     }

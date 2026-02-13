@@ -87,7 +87,14 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
         if (!$phoneNumber) {
-            throw new \Exception("Phone number not found in mapped data");
+            throw new \Exception("Phone number not found in mapped data (Field: {$phoneField})");
+        }
+
+        // Normalize phone number before sending
+        try {
+            $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+        } catch (\Exception $e) {
+            throw new \Exception("Invalid phone number format for WhatsApp: {$phoneNumber}. Error: " . $e->getMessage());
         }
 
         // Build template parameters
@@ -200,7 +207,14 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
         if (!$phoneNumber) {
-            throw new \Exception("Phone number not found in mapped data for OTP");
+            throw new \Exception("Phone number not found in mapped data for OTP (Field: {$phoneField})");
+        }
+
+        // Normalize phone number before sending
+        try {
+            $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+        } catch (\Exception $e) {
+            throw new \Exception("Invalid phone number format for OTP: {$phoneNumber}. Error: " . $e->getMessage());
         }
 
         // Generate OTP
@@ -249,7 +263,14 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
         if (!$phoneNumber) {
-            throw new \Exception("Phone number not found in mapped data");
+            throw new \Exception("Phone number not found in mapped data for contact upsert (Field: {$phoneField})");
+        }
+
+        // Normalize phone number
+        try {
+            $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+        } catch (\Exception $e) {
+            throw new \Exception("Invalid phone number format for contact: {$phoneNumber}. Error: " . $e->getMessage());
         }
 
         $contactData = [
@@ -292,7 +313,14 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
         if (!$phoneNumber) {
-            throw new \Exception("Phone number not found in mapped data");
+            throw new \Exception("Phone number not found in mapped data for automation (Field: {$phoneField})");
+        }
+
+        // Normalize phone number
+        try {
+            $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+        } catch (\Exception $e) {
+            throw new \Exception("Invalid phone number format for automation: {$phoneNumber}. Error: " . $e->getMessage());
         }
 
         // Build automation variables

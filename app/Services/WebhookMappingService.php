@@ -87,20 +87,15 @@ class WebhookMappingService
         }
 
         try {
-            $phoneUtil = PhoneNumberUtil::getInstance();
-
-            // Try to parse with default region (you can make this configurable)
-            $phoneNumber = $phoneUtil->parse($phone, 'US');
-
-            if ($phoneUtil->isValidNumber($phoneNumber)) {
-                return $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164);
-            }
+            return \App\Helpers\PhoneNumberHelper::normalize($phone);
         } catch (\Exception $e) {
-            // If parsing fails, return original
+            // If normalization fails, return original or log
+            \Illuminate\Support\Facades\Log::warning("Webhook mapping phone normalization failed", [
+                'phone' => $phone,
+                'error' => $e->getMessage()
+            ]);
             return $phone;
         }
-
-        return $phone;
     }
 
     /**
@@ -188,6 +183,13 @@ class WebhookMappingService
     {
         // Basic validation - ensure phone number exists
         if (empty($data['phone_number'])) {
+            return false;
+        }
+
+        // Validate phone number format
+        try {
+            \App\Helpers\PhoneNumberHelper::normalize($data['phone_number']);
+        } catch (\Exception $e) {
             return false;
         }
 
