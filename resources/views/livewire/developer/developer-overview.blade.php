@@ -125,6 +125,23 @@
             <p class="text-sm text-slate-500 font-medium">Configure event notifications to your systems</p>
         </a>
 
+        <a href="{{ route('webhooks.logs') }}"
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
+            <div class="flex items-center gap-4 mb-4">
+                <div
+                    class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600 group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Webhook Logs
+                </h3>
+            </div>
+            <p class="text-sm text-slate-500 font-medium">Debug inbound webhook payloads</p>
+        </a>
+
         <a href="{{ route('developer.docs') }}"
             class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center gap-4 mb-4">
@@ -141,5 +158,22 @@
             </div>
             <p class="text-sm text-slate-500 font-medium">Complete API reference and examples</p>
         </a>
+
+        @if(auth()->user()->isSuperAdmin())
+            <a href="{{ route('developer.teams') }}"
+                class="group bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-800 hover:border-indigo-500 transition-all">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="p-3 bg-indigo-600 rounded-2xl text-white group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m14-10a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-tight">Team Explorer
+                    </h3>
+                </div>
+                <p class="text-sm text-slate-400 font-medium">View and manage all workspace details</p>
+            </a>
+        @endif
     </div>
 </div>

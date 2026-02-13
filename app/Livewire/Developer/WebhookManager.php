@@ -170,12 +170,16 @@ class WebhookManager extends Component
 
     public function render()
     {
-        $team = auth()->user()->currentTeam;
+        $user = auth()->user();
+        $team = $user->currentTeam;
 
-        $subscriptions = WebhookSubscription::where('team_id', $team->id)
-            ->with('deliveries')
-            ->latest()
-            ->paginate(10);
+        $query = WebhookSubscription::query()->with('deliveries');
+
+        if ($team && !$user->isSuperAdmin()) {
+            $query->where('team_id', $team->id);
+        }
+
+        $subscriptions = $query->latest()->paginate(10);
 
         return view('livewire.developer.webhook-manager', compact('subscriptions'));
     }

@@ -166,6 +166,7 @@ Route::middleware([
     Route::get('/developer/webhooks', \App\Livewire\Developer\WebhookManager::class)->name('developer.webhooks')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
     Route::get('/developer/webhook-sources', \App\Livewire\Developer\WebhookSourceManager::class)->name('webhook-sources.index')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
     Route::get('/developer/api-tokens', \App\Livewire\Developer\ApiTokenManager::class)->name('developer.api-tokens')->middleware(['can:manage-settings', 'plan_feature:api_access']);
+    Route::get('/developer/teams', \App\Livewire\Developer\TeamExplorer::class)->name('developer.teams')->middleware([\App\Http\Middleware\EnsureUserIsSuperAdmin::class]);
     Route::get('/developer/docs', [\App\Http\Controllers\Developer\ApiDocumentationController::class, 'index'])->name('developer.docs')->middleware('plan_feature:api_access');
     // Commerce
     // Commerce - Requires 'commerce' feature

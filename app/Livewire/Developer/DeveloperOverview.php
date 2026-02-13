@@ -20,6 +20,10 @@ class DeveloperOverview extends Component
             })->where('created_at', '>=', now()->subDays(7))->count(),
         ];
 
+        if ($user->isSuperAdmin()) {
+            $stats['total_teams'] = \App\Models\Team::count();
+        }
+
         return view('livewire.developer.developer-overview', compact('stats'));
     }
 }

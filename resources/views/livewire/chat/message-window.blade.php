@@ -7,6 +7,7 @@
             '{{ auth()->id() }}'
         );
         data.showTemplateListModal = @entangle('showTemplateListModal');
+        data.showTemplatePreviewModal = @entangle('showTemplatePreviewModal');
         data.showInteractiveButtonsModal = @entangle('showInteractiveButtonsModal');
         return data;
     })()">

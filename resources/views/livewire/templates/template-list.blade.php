@@ -356,7 +356,7 @@
                             </div>
 
                             @if($headerType === 'TEXT')
-                                <div class="animate-in slide-in-from-top-2" x-data="{ count: $wire.entangle('headerText').live.length ?? 0 }">
+                                <div class="animate-in slide-in-from-top-2" x-data="{ count: $wire.headerText ? $wire.headerText.length : 0 }">
                                     <div class="flex justify-between items-center mb-2">
                                         <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Header Text (Max 60)</label>
                                         <span class="text-[9px] font-bold text-slate-400" x-text="count + '/60'"></span>
@@ -452,7 +452,7 @@
                                 @error('body') <span class="text-[10px] font-bold text-rose-500 mt-2 block uppercase tracking-wide">{{ $message }}</span> @enderror
                             </div>
 
-                            <div x-data="{ count: $wire.entangle('footer').live.length ?? 0 }">
+                            <div x-data="{ count: $wire.footer ? $wire.footer.length : 0 }">
                                 <div class="flex justify-between items-center mb-2">
                                     <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Footer Text (Optional)</label>
                                     <span class="text-[9px] font-bold text-slate-400" x-text="count + '/60'"></span>

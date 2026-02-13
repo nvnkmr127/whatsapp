@@ -23,10 +23,20 @@ class WebhookLogs extends Component
 
     public function viewDetails($id)
     {
-        if (!auth()->user()->currentTeam) {
+        $user = auth()->user();
+        $team = $user->currentTeam;
+
+        if (!$team && !$user->isSuperAdmin()) {
             return;
         }
-        $this->selectedPayload = WebhookPayload::where('waba_id', auth()->user()->currentTeam->whatsapp_business_account_id)->find($id);
+
+        $query = WebhookPayload::query();
+
+        if ($team && !$user->isSuperAdmin()) {
+            $query->where('waba_id', $team->whatsapp_business_account_id);
+        }
+
+        $this->selectedPayload = $query->find($id);
         $this->showDetailsModal = true;
     }
 
@@ -39,18 +49,26 @@ class WebhookLogs extends Component
     #[Layout('components.layouts.app')]
     public function render()
     {
-        if (!auth()->user()->currentTeam) {
+        $user = auth()->user();
+        $team = $user->currentTeam;
+
+        if (!$team && !$user->isSuperAdmin()) {
             return view('livewire.webhooks.webhook-logs', [
                 'logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15)
             ]);
         }
 
-        $query = WebhookPayload::where('waba_id', auth()->user()->currentTeam->whatsapp_business_account_id)
-            ->latest();
+        $query = WebhookPayload::query()->latest();
+
+        if ($team && !$user->isSuperAdmin()) {
+            $query->where('waba_id', $team->whatsapp_business_account_id);
+        }
 
         if ($this->search) {
-            $query->where('payload', 'like', '%' . $this->search . '%')
-                ->orWhere('id', 'like', '%' . $this->search . '%');
+            $query->where(function ($q) {
+                $q->where('payload', 'like', '%' . $this->search . '%')
+                    ->orWhere('id', 'like', '%' . $this->search . '%');
+            });
         }
 
         if ($this->filterStatus) {
