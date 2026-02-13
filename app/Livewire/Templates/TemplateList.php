@@ -287,13 +287,53 @@ class TemplateList extends Component
     public function getPreviewBodyProperty()
     {
         $text = $this->body;
+        if (empty($text)) {
+            $text = 'Hello, this is your message body...';
+        }
+
+        // 1. Escape HTML
+        $text = e($text);
+
+        // 2. Replace Variables with highlighting and samples
+        foreach ($this->variableConfig as $var => $config) {
+            $sample = $config['sample'] ?: ($config['fallback'] ?: $var);
+            $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">' . e($sample) . '</span>';
+            $text = str_replace(e($var), $replacement, $text);
+        }
+
+        // 3. Highlight remaining placeholders
+        $text = preg_replace('/\{\{(\d+)\}\}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', $text);
+
+        // 4. WhatsApp Markdown
+        // Bold: *text* -> <strong>text</strong>
+        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+        // Italic: _text_ -> <em>text</em>
+        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
+        // Strikethrough: ~text~ -> <del>$1</del>
+        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
+
+        return $text;
+    }
+
+    public function getPreviewHeaderProperty()
+    {
+        $text = $this->headerText;
         if (empty($text))
             return '';
 
+        $text = e($text);
+
+        // Replace Variables
         foreach ($this->variableConfig as $var => $config) {
-            $replacement = $config['sample'] ?: ($config['fallback'] ?: $var);
-            $text = str_replace($var, $replacement, $text);
+            $sample = $config['sample'] ?: ($config['fallback'] ?: $var);
+            $text = str_replace(e($var), '<strong>' . e($sample) . '</strong>', $text);
         }
+
+        // WhatsApp Markdown
+        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
+        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
+
         return $text;
     }
 
@@ -356,7 +396,7 @@ class TemplateList extends Component
         // Add dynamic rules for variables
         $rules = $this->rules(); // Check method now
         foreach ($this->variableConfig as $var => $config) {
-            $rules['variableConfig.' . $var . '.name'] = 'required|regex:/^[a-z0-9_]+$/|max:50';
+            $rules['variableConfig.' . $var . '.name'] = 'required|regex:/^[a-z0-9_{}]+$/|max:50';
             $rules['variableConfig.' . $var . '.sample'] = 'required|max:100';
         }
 

@@ -651,7 +651,7 @@
                                 @if($headerType !== 'NONE')
                                     <div class="mb-2">
                                         @if($headerType === 'TEXT')
-                                            <h4 class="text-xs font-black text-slate-900 dark:text-white uppercase">{{ $headerText ?: 'Your Headline' }}</h4>
+                                            <h4 class="text-xs font-black text-slate-900 dark:text-white uppercase">{!! $this->previewHeader ?: 'Your Headline' !!}</h4>
                                         @else
                                             <div class="w-full aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg flex flex-col items-center justify-center border border-slate-200 dark:border-slate-700">
                                                 @if($headerType === 'IMAGE') <svg class="w-6 h-6 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -666,7 +666,7 @@
                                 @endif
 
                                 <!-- Body -->
-                                <p class="text-[13px] text-slate-800 dark:text-slate-200 leading-snug whitespace-pre-wrap font-sans">{!! preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', e($body ?: 'Hello, this is your message body...')) !!}</p>
+                                <p class="text-[13px] text-slate-800 dark:text-slate-200 leading-snug whitespace-pre-wrap font-sans">{!! $this->previewBody !!}</p>
 
                                 <!-- Footer -->
                                 @if($footer)
@@ -817,11 +817,11 @@
                                         @endif
 
                                         @if($headerType === 'TEXT' && $headerText)
-                                            <div class="text-[13px] font-bold text-slate-900 dark:text-white mb-1 pb-1">{{ $headerText }}</div>
+                                            <div class="text-[13px] font-bold text-slate-900 dark:text-white mb-1 pb-1">{!! $this->previewHeader !!}</div>
                                         @endif
                                         
                                         <div class="text-[13px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-tight font-sans">
-                                            {!! preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', e($body)) ?: '<span class="text-slate-400 italic">Message body...</span>' !!}
+                                            {!! $this->previewBody !!}
                                         </div>
 
                                         @if($footer)
