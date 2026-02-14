@@ -767,6 +767,85 @@ class WebhookSourceManager extends Component
         }
     }
 
+    public function sendTestMessage()
+    {
+        try {
+            if (!$this->selectedTemplateId) {
+                $this->dispatch('notify', 'Please select a template first.', 'error');
+                return;
+            }
+
+            $phoneNumberMapping = $this->field_mappings['phone_number'] ?? null;
+            if (!$phoneNumberMapping) {
+                $this->dispatch('notify', 'Please map or set a phone number.', 'error');
+                return;
+            }
+
+            // Get payload
+            $payload = null;
+            if ($this->capturedPayload) {
+                $payload = is_string($this->capturedPayload) ? json_decode($this->capturedPayload, true) : $this->capturedPayload;
+            }
+            if (!$payload) {
+                $sampleJson = $this->getSamplePayload($this->platform ?: 'custom');
+                $payload = json_decode($sampleJson, true);
+            }
+
+            // Resolve Phone Number
+            $phoneNumber = null;
+            if (str_starts_with($phoneNumberMapping, 'STATIC:')) {
+                $phoneNumber = substr($phoneNumberMapping, 7);
+            } else {
+                $phoneNumber = data_get($payload, $phoneNumberMapping);
+            }
+
+            if (!$phoneNumber) {
+                $this->dispatch('notify', 'Could not determine phone number from payload or static value.', 'error');
+                return;
+            }
+
+            $template = WhatsappTemplate::find($this->selectedTemplateId);
+
+            // Resolve Parameters
+            $parameters = [];
+            if (!empty($this->templateParameters)) {
+                $maxParam = max(array_keys($this->templateParameters));
+                for ($i = 1; $i <= $maxParam; $i++) {
+                    $path = $this->templateParameters[$i] ?? null;
+                    if ($path) {
+                        if (str_starts_with($path, 'STATIC:')) {
+                            $parameters[] = substr($path, 7);
+                        } else {
+                            // Handle nested arrays in payload gracefully
+                            $val = data_get($payload, $path);
+                            $parameters[] = is_array($val) ? json_encode($val) : (string) $val;
+                        }
+                    } else {
+                        $parameters[] = '';
+                    }
+                }
+            }
+
+            $whatsappService = new \App\Services\WhatsAppService($template->team);
+            $response = $whatsappService->sendTemplate(
+                $phoneNumber,
+                $template->name,
+                $template->language ?? 'en_US',
+                $parameters
+            );
+
+            if ($response['success']) {
+                $this->dispatch('notify', 'Test message sent successfully to ' . $phoneNumber);
+            } else {
+                $this->dispatch('notify', 'Failed: ' . ($response['error'] ?? 'Unknown error'), 'error');
+            }
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Test send error: " . $e->getMessage());
+            $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
+        }
+    }
+
     public function render()
     {
         \Illuminate\Support\Facades\Log::info("Rendering WebhookSourceManager. Wizards: " . ($this->showWizardModal ? 'YES' : 'NO') . " | Logs: " . ($this->showLogsModal ? 'YES' : 'NO'));
