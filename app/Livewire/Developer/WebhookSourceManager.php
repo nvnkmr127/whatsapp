@@ -55,6 +55,7 @@ class WebhookSourceManager extends Component
     public $testResult = null;
     public $showTestModal = false;
     public $testingSourceId = null;
+    public $testMessageResult = null;
 
     protected $rules = [
         'name' => 'required|string|max:255',
@@ -769,14 +770,18 @@ class WebhookSourceManager extends Component
 
     public function sendTestMessage()
     {
+        $this->testMessageResult = null;
+
         try {
             if (!$this->selectedTemplateId) {
+                $this->testMessageResult = ['type' => 'error', 'message' => 'Please select a template first.'];
                 $this->dispatch('notify', 'Please select a template first.', 'error');
                 return;
             }
 
             $phoneNumberMapping = $this->field_mappings['phone_number'] ?? null;
             if (!$phoneNumberMapping) {
+                $this->testMessageResult = ['type' => 'error', 'message' => 'Please map or set a phone number.'];
                 $this->dispatch('notify', 'Please map or set a phone number.', 'error');
                 return;
             }
@@ -800,51 +805,57 @@ class WebhookSourceManager extends Component
             }
 
             if (!$phoneNumber) {
+                $this->testMessageResult = ['type' => 'error', 'message' => 'Could not determine phone number from payload or static value.'];
                 $this->dispatch('notify', 'Could not determine phone number from payload or static value.', 'error');
                 return;
             }
 
             $template = WhatsappTemplate::find($this->selectedTemplateId);
-
+            
             // Resolve Parameters
             $parameters = [];
             if (!empty($this->templateParameters)) {
-                $maxParam = max(array_keys($this->templateParameters));
-                for ($i = 1; $i <= $maxParam; $i++) {
-                    $path = $this->templateParameters[$i] ?? null;
-                    if ($path) {
-                        if (str_starts_with($path, 'STATIC:')) {
-                            $parameters[] = substr($path, 7);
-                        } else {
-                            // Handle nested arrays in payload gracefully
-                            $val = data_get($payload, $path);
-                            $parameters[] = is_array($val) ? json_encode($val) : (string) $val;
-                        }
-                    } else {
-                        $parameters[] = '';
-                    }
-                }
+                 $maxParam = max(array_keys($this->templateParameters));
+                 for ($i = 1; $i <= $maxParam; $i++) {
+                     $path = $this->templateParameters[$i] ?? null;
+                     if ($path) {
+                         if (str_starts_with($path, 'STATIC:')) {
+                             $parameters[] = substr($path, 7);
+                         } else {
+                             // Handle nested arrays in payload gracefully
+                             $val = data_get($payload, $path);
+                             $parameters[] = is_array($val) ? json_encode($val) : (string) $val;
+                         }
+                     } else {
+                         $parameters[] = '';
+                     }
+                 }
             }
 
-            $whatsappService = new \App\Services\WhatsAppService($template->team);
-            $response = $whatsappService->sendTemplate(
+             $whatsappService = new \App\Services\WhatsAppService($template->team);
+             $response = $whatsappService->sendTemplate(
                 $phoneNumber,
                 $template->name,
                 $template->language ?? 'en_US',
                 $parameters
-            );
+             );
 
-            if ($response['success']) {
-                $this->dispatch('notify', 'Test message sent successfully to ' . $phoneNumber);
-            } else {
-                $this->dispatch('notify', 'Failed: ' . ($response['error'] ?? 'Unknown error'), 'error');
-            }
+             if ($response['success']) {
+                 $this->testMessageResult = ['type' => 'success', 'message' => 'Message sent to ' . $phoneNumber];
+                 $this->dispatch('notify', 'Test message sent successfully to ' . $phoneNumber);
+             } else {
+                 $this->testMessageResult = ['type' => 'error', 'message' => 'Failed: ' . ($response['error'] ?? 'Unknown error')];
+                 $this->dispatch('notify', 'Failed: ' . ($response['error'] ?? 'Unknown error'), 'error');
+             }
 
         } catch (\Exception $e) {
+            $this->testMessageResult = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
             \Illuminate\Support\Facades\Log::error("Test send error: " . $e->getMessage());
             $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
         }
     }
+
+
 
     public function render()
     {
