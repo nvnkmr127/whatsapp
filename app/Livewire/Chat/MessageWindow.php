@@ -990,7 +990,8 @@ class MessageWindow extends Component
         return view('livewire.chat.message-window', [
             'isSessionOpen' => $this->isSessionOpen,
             'templates' => $this->isSessionOpen ? [] : $this->templates,
-            'quickReplies' => $this->quickReplies
+            'quickReplies' => $this->quickReplies,
+            'agents' => $this->agents
         ]);
     }
 }

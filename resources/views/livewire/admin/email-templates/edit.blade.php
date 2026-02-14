@@ -140,9 +140,9 @@
                                 @forelse($template->variable_schema ?? [] as $var)
                                     <code
                                         class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200 font-mono cursor-help"
-                                        title="Use as {{ '{{ ' . $var . ' }}' }}">
-                                            {{ $var }}
-                                        </code>
+                                        title="Use as {{ '{' . '{ ' . $var . ' }' . '}' }}">
+                                                {{ $var }}
+                                            </code>
                                 @empty
                                     <span class="text-xs text-slate-400 italic">No variables defined</span>
                                 @endforelse

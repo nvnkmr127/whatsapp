@@ -212,6 +212,53 @@
     </div>
 
     @livewireScripts
+
+    {{-- Session Expiration Handler --}}
+    <script>
+        // Detect page visibility and refresh if session might be expired
+        let pageLoadTime = Date.now();
+        const sessionLifetime = {{ config('session.lifetime', 120) }} * 60 * 1000; // Convert minutes to milliseconds
+        const warningTime = sessionLifetime - (5 * 60 * 1000); // Warn 5 minutes before expiration
+
+        // Check if page has been open too long when it becomes visible
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                const timeElapsed = Date.now() - pageLoadTime;
+
+                // If page has been open longer than session lifetime, refresh it
+                if (timeElapsed > sessionLifetime) {
+                    console.log('Session expired, refreshing page...');
+                    window.location.reload();
+                }
+            }
+        });
+
+        // Also check periodically (every minute)
+        setInterval(function () {
+            const timeElapsed = Date.now() - pageLoadTime;
+
+            if (timeElapsed > sessionLifetime) {
+                console.log('Session expired, refreshing page...');
+                window.location.reload();
+            }
+        }, 60000); // Check every minute
+
+        // Intercept 419 errors and auto-refresh
+        window.addEventListener('livewire:response', function (event) {
+            if (event.detail && event.detail.status === 419) {
+                console.log('CSRF token expired, refreshing page...');
+                window.location.reload();
+            }
+        });
+
+        // Handle Livewire errors globally
+        document.addEventListener('livewire:error', function (event) {
+            if (event.detail && event.detail.status === 419) {
+                console.log('CSRF token expired, refreshing page...');
+                window.location.reload();
+            }
+        });
+    </script>
 </body>
 
 </html>

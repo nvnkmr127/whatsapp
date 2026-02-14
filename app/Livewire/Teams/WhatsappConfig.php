@@ -686,8 +686,10 @@ class WhatsappConfig extends Component
             return;
         }
 
-        // Ensure webhook is subscribed during sync
-        $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
+        // Ensure webhook is subscribed during sync (only if WABA ID is available)
+        if ($team->whatsapp_business_account_id && $team->whatsapp_access_token) {
+            $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
+        }
 
         $result = $this->getPhoneNumberDetails($this->wm_default_phone_number_id);
 

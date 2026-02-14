@@ -102,6 +102,12 @@
     <script>
         // Global Error Handler for remote debugging
         window.addEventListener('error', function (e) {
+            // Suppress known non-critical modal dialog errors
+            if (e.message && e.message.includes('showModal') && e.message.includes('HTMLDialogElement')) {
+                console.warn('[Suppressed] Modal dialog race condition:', e.message);
+                e.preventDefault();
+                return false;
+            }
             console.error('[Global JS Error]', e.message, 'at', e.filename, 'line', e.lineno);
         });
 
@@ -160,6 +166,28 @@
         window.addEventListener('alpine:init', () => {
             console.log('✅ Alpine.js Initializing...');
         });
+
+        // Global CSRF Token Expiration Handler
+        document.addEventListener('livewire:init', () => {
+            // Intercept all Livewire responses for 419 errors
+            Livewire.hook('request', ({ fail }) => {
+                fail(({ status, content, preventDefault }) => {
+                    if (status === 419) {
+                        console.log('CSRF token expired (419), refreshing page...');
+                        preventDefault();
+                        window.location.reload();
+                    }
+                });
+            });
+        });
+
+        // Also handle fetch/axios 419 errors globally
+        window.addEventListener('error', function (event) {
+            if (event.message && event.message.includes('419')) {
+                console.log('CSRF error detected, refreshing page...');
+                window.location.reload();
+            }
+        }, true);
     </script>
 </body>
 
