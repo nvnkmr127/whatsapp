@@ -52,6 +52,12 @@
                                         class="text-4xl font-black text-indigo-500">{{ get_setting('currency_symbol', '$') }}{{ number_format($plan->monthly_price, 2) }}</span>
                                     <span class="text-xs font-bold text-slate-400 uppercase">/month</span>
                                 </div>
+                                @if($plan->initial_wallet_balance > 0)
+                                    <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                                        +{{ get_setting('currency_symbol', '$') }}{{ number_format($plan->initial_wallet_balance, 2) }}
+                                        Initial Credits
+                                    </div>
+                                @endif
                             </div>
                             <div class="p-3 bg-indigo-50 dark:bg-slate-800 rounded-2xl text-indigo-500">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,7 +113,8 @@
                                         </div>
                                         <div class="font-bold text-slate-900 dark:text-white">
                                             {{ number_format($plan->features['call_minutes_limit'] ?? 0) }} <span
-                                                class="text-xs font-medium text-slate-500">min/mo</span></div>
+                                                class="text-xs font-medium text-slate-500">min/mo</span>
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -203,22 +210,32 @@
                     <form wire:submit.prevent="savePlan">
                         <div class="space-y-6">
                             <!-- Basic Info -->
+                            <div class="space-y-2">
+                                <label class="text-xs font-black uppercase tracking-widest text-slate-500">Plan Name</label>
+                                <input type="text" wire:model="name" placeholder="e.g. Professional"
+                                    class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20">
+                                @error('name') <span
+                                class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-2">
-                                    <label class="text-xs font-black uppercase tracking-widest text-slate-500">Plan
-                                        Name</label>
-                                    <input type="text" wire:model="name" placeholder="e.g. Professional"
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20">
-                                    @error('name') <span
-                                        class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span>
-                                    @enderror
-                                </div>
                                 <div class="space-y-2">
                                     <label class="text-xs font-black uppercase tracking-widest text-slate-500">Monthly Price
                                         ({{ get_setting('currency_symbol', '$') }})</label>
                                     <input type="number" step="0.01" wire:model="monthly_price" placeholder="0.00"
                                         class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20">
                                     @error('monthly_price') <span
+                                        class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black uppercase tracking-widest text-slate-500">Initial
+                                        Wallet Credits
+                                        ({{ get_setting('currency_symbol', '$') }})</label>
+                                    <input type="number" step="0.01" wire:model="initial_wallet_balance" placeholder="0.00"
+                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20">
+                                    @error('initial_wallet_balance') <span
                                         class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span>
                                     @enderror
                                 </div>

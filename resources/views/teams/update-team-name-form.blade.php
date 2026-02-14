@@ -34,6 +34,22 @@
 
             <x-input-error for="name" class="mt-2" />
         </div>
+
+        <!-- Timezone -->
+        <div class="col-span-6 sm:col-span-4">
+            <x-label for="timezone" value="{{ __('Timezone') }}" />
+
+            <select id="timezone" wire:model="state.timezone"
+                class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                :disabled="! Gate::check('update', $team)">
+                <option value="">{{ __('Default (Asia/Kolkata)') }}</option>
+                @foreach (\DateTimeZone::listIdentifiers() as $timezone)
+                    <option value="{{ $timezone }}">{{ $timezone }}</option>
+                @endforeach
+            </select>
+
+            <x-input-error for="timezone" class="mt-2" />
+        </div>
     </x-slot>
 
     @if (Gate::check('update', $team))

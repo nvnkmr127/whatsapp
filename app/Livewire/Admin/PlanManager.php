@@ -14,6 +14,7 @@ class PlanManager extends Component
     // Form fields
     public $name;
     public $monthly_price;
+    public $initial_wallet_balance;
     public $message_limit;
     public $agent_limit;
     public $features = [];
@@ -22,6 +23,7 @@ class PlanManager extends Component
     protected $rules = [
         'name' => 'required|string|max:255',
         'monthly_price' => 'required|numeric|min:0',
+        'initial_wallet_balance' => 'required|numeric|min:0',
         'message_limit' => 'required|integer|min:0',
         'agent_limit' => 'required|integer|min:1',
         'call_minutes_limit' => 'nullable|integer|min:0',
@@ -49,6 +51,7 @@ class PlanManager extends Component
         $this->editingPlan = $plan->id;
         $this->name = $plan->name;
         $this->monthly_price = $plan->monthly_price;
+        $this->initial_wallet_balance = $plan->initial_wallet_balance;
         $this->message_limit = $plan->message_limit;
         $this->agent_limit = $plan->agent_limit;
         $this->features = $plan->features ?? [];
@@ -63,6 +66,7 @@ class PlanManager extends Component
         $data = [
             'name' => $this->name,
             'monthly_price' => $this->monthly_price,
+            'initial_wallet_balance' => $this->initial_wallet_balance,
             'message_limit' => $this->message_limit,
             'agent_limit' => $this->agent_limit,
             'features' => array_merge($this->features, ['call_minutes_limit' => $this->call_minutes_limit]),
@@ -98,6 +102,7 @@ class PlanManager extends Component
         $this->editingPlan = null;
         $this->name = '';
         $this->monthly_price = '';
+        $this->initial_wallet_balance = 0.00;
         $this->message_limit = '';
         $this->agent_limit = '';
         $this->features = [

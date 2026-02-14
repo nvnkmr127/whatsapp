@@ -30,7 +30,27 @@ class CreateTeam implements CreatesTeams
         $user->switchTeam($team = $user->ownedTeams()->create([
             'name' => $input['name'],
             'personal_team' => false,
+            'subscription_plan' => 'basic', // Default plan
         ]));
+
+        // Initialize Wallet and Add Credits if applicable
+        $defaultPlan = \App\Models\Plan::where('name', 'basic')->first();
+        $initialBalance = $defaultPlan ? $defaultPlan->initial_wallet_balance : 0;
+
+        \App\Models\TeamWallet::create([
+            'team_id' => $team->id,
+            'balance' => $initialBalance,
+            'currency' => function_exists('get_setting') ? get_setting('currency', 'USD') : 'USD',
+        ]);
+
+        if ($initialBalance > 0) {
+            \App\Models\TeamTransaction::create([
+                'team_id' => $team->id,
+                'amount' => $initialBalance,
+                'type' => 'bonus',
+                'description' => 'Initial Plan Credits',
+            ]);
+        }
 
         return $team;
     }

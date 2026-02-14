@@ -65,6 +65,17 @@ class InboundWebhookController extends Controller
         $externalId = $this->mappingService->extractExternalId($payload, $request->headers->all(), $source->platform);
         $dedupeHash = $this->mappingService->generateDeduplicationHash($payload);
 
+        // Extract Event Type
+        $eventType = $this->mappingService->extractEventType(
+            $payload,
+            config("webhook-platforms.{$source->platform}.event_type_path")
+        );
+
+        $signature = $request->header('X-Webhook-Signature')
+            ?? $request->header('X-Shopify-Hmac-SHA256')
+            ?? $request->header('Stripe-Signature')
+            ?? $request->header('X-WC-Webhook-Signature');
+
         // Deduplication Check: Look for existing payload from same source with same ID or Hash in last 24h
         $duplicate = WebhookPayload::where('webhook_source_id', $source->id)
             ->where(function ($query) use ($externalId, $dedupeHash) {
@@ -79,24 +90,30 @@ class InboundWebhookController extends Controller
             ->first();
 
         if ($duplicate) {
-            Log::info('Duplicate inbound webhook ignored', [
+            // Store duplicate for visibility in analytics
+            WebhookPayload::create([
+                'webhook_source_id' => $source->id,
+                'payload' => $payload,
+                'event_type' => $eventType,
+                'external_id' => $externalId,
+                'deduplication_hash' => $dedupeHash,
+                'signature' => $signature,
+                'status' => 'duplicate',
+                'waba_id' => $source->team->whatsapp_business_account_id ?? null,
+            ]);
+
+            Log::info('Duplicate inbound webhook stored', [
                 'source' => $source->name,
                 'external_id' => $externalId,
-                'status' => $duplicate->status
+                'status' => 'duplicate'
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Duplicate webhook ignored (already processed)',
+                'message' => 'Duplicate webhook recorded (already processed)',
                 'duplicate_id' => $duplicate->id
             ], 200);
         }
-
-        // Extract event type
-        $eventType = $this->mappingService->extractEventType(
-            $payload,
-            config("webhook-platforms.{$source->platform}.event_type_path")
-        );
 
         Log::info('Inbound webhook received', [
             'source' => $source->name,

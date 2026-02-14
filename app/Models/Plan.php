@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Plan extends Model
 {
     protected $fillable = [
+
         'name',
         'monthly_price',
+        'initial_wallet_balance',
         'message_limit',
         'agent_limit',
         'automation_run_limit',
@@ -19,6 +21,7 @@ class Plan extends Model
 
     protected $casts = [
         'monthly_price' => 'decimal:2',
+        'initial_wallet_balance' => 'decimal:2',
         'message_limit' => 'integer',
         'agent_limit' => 'integer',
         'automation_run_limit' => 'integer',

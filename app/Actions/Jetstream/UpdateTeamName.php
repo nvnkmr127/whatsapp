@@ -21,10 +21,12 @@ class UpdateTeamName implements UpdatesTeamNames
 
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
+            'timezone' => ['nullable', 'string', 'timezone'],
         ])->validateWithBag('updateTeamName');
 
         $team->forceFill([
             'name' => $input['name'],
+            'timezone' => $input['timezone'],
         ])->save();
     }
 }
