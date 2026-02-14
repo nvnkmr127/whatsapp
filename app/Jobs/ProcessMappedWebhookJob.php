@@ -170,10 +170,14 @@ class ProcessMappedWebhookJob implements ShouldQueue
             throw new \Exception("Failed to send template: " . ($result['error'] ?? 'Unknown error'));
         }
 
+        $messageId = $result['data']['messages'][0]['id'] ?? 'unknown';
+
         Log::info('Webhook triggered template send', [
             'phone' => $phoneNumber,
             'template' => $template->name,
             'parameters' => $parameters,
+            'message_id' => $messageId,
+            'status' => 'success'
         ]);
     }
 

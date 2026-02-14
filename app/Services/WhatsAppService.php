@@ -1812,18 +1812,21 @@ class WhatsAppService
         if (!is_numeric($end))
             $end = strtotime($end);
 
+        // For v16.0+, /analytics end point is deprecated.
+        // We must query 'conversation_analytics' field on the WABA node.
+
+        $fields = [];
+        // We construct the complex field query for conversation_analytics
+        // Syntax: conversation_analytics.start(timestamp).end(timestamp).granularity(DAILY)
+        $fields[] = "conversation_analytics.start({$start}).end({$end}).granularity({$granularity})";
+
         $queryParams = [
-            'start' => $start,
-            'end' => $end,
-            'granularity' => $granularity,
-            'metric_types' => implode(',', $metrics)
+            'fields' => implode(',', $fields)
         ];
 
-        // The endpoint is on the WABA ID, not Phone ID
-        // URL: https://graph.facebook.com/<API_VERSION>/<WABA_ID>/analytics
-        $url = "{$this->baseUrl}/{$wabaId}/analytics";
+        // URL: https://graph.facebook.com/<API_VERSION>/<WABA_ID>
+        $url = "{$this->baseUrl}/{$wabaId}";
 
-        // We need to use sendRequestFullUrl because sendRequest defaults to PhoneID base
         return $this->sendRequestFullUrl($url, 'get', $queryParams, 'analytics');
     }
 
