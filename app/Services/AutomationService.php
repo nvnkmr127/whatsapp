@@ -264,7 +264,7 @@ class AutomationService
             ]);
 
             // Dispatch first node
-            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId)->onQueue('messages');
+            ExecuteAutomationNodeJob::dispatchSync($run->id, $startNodeId);
             Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
         } catch (\Exception $e) {
@@ -493,7 +493,7 @@ class AutomationService
             $run->update(['state_data' => $state]);
 
             // DISPATCH JOB INSTEAD OF RECURSION
-            ExecuteAutomationNodeJob::dispatch($run->id, $nextNodeId)->onQueue('messages');
+            ExecuteAutomationNodeJob::dispatchSync($run->id, $nextNodeId);
         } else {
             $run->update(['status' => 'completed']);
         }
