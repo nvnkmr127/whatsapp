@@ -464,6 +464,8 @@ class AutomationService
         $currentNodeId = $run->state_data['current_node_id'];
         $edges = array_filter($flowData['edges'], fn($e) => $e['source'] === $currentNodeId);
 
+        Log::info("AutomationRun #{$run->id}: Moving from node {$currentNodeId}. Found " . count($edges) . " edges.");
+
         if (empty($edges)) {
             $run->update(['status' => 'completed']);
             return;
