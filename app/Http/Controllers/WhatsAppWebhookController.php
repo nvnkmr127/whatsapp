@@ -73,7 +73,7 @@ class WhatsAppWebhookController extends Controller
 
             // Dispatch Job with Trace Context
             $traceId = \App\Services\TraceContext::getTraceId();
-            \App\Jobs\ProcessWebhookJob::dispatch($payloadRecord->id, $traceId);
+            \App\Jobs\ProcessWebhookJob::dispatchSync($payloadRecord->id, $traceId);
 
             Log::debug("WhatsApp Webhook: ProcessWebhookJob dispatched", ['payload_id' => $payloadRecord->id, 'trace_id' => $traceId]);
 

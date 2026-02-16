@@ -150,7 +150,7 @@ class ProcessWebhookJob implements ShouldQueue
                     ]);
 
                     // ⚡ SPEED OPTIMIZATION: Dispatch immediately instead of waiting for the Polling Consumer
-                    \App\Jobs\PersistMessageJob::dispatch($event['payload'])->onQueue('messages');
+                    \App\Jobs\PersistMessageJob::dispatchSync($event['payload']);
 
                     // Still publish to EventBus for audit/fan-out
                     $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $teamId);
@@ -181,7 +181,7 @@ class ProcessWebhookJob implements ShouldQueue
                     ]);
 
                     // ⚡ SPEED OPTIMIZATION: Dispatch immediately
-                    \App\Jobs\UpdateMessageStatusJob::dispatch($payload)->onQueue('messages');
+                    \App\Jobs\UpdateMessageStatusJob::dispatchSync($payload);
 
                     // Still publish to EventBus
                     $eventBus->publish('whatsapp_events', 'message.status', $payload, $teamId);
