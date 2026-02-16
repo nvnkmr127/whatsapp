@@ -291,7 +291,7 @@ class AutomationService
             return;
         }
 
-        Log::debug("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
+        Log::info("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
 
         // Logic Entry
         try {
