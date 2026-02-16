@@ -55,12 +55,14 @@ class ExecuteAutomationNodeJob implements ShouldQueue
             ]);
 
         if (!$updated) {
+            Log::warning("Atomic claim failed for Run #{$this->runId}. Job aborting.");
             return;
         }
 
         $run = AutomationRun::with('automation', 'contact')->find($this->runId);
 
         if (!$run) {
+            Log::warning("AutomationRun #{$this->runId} not found in database.");
             return;
         }
 
