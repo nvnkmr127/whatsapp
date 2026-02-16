@@ -498,8 +498,10 @@ class AutomationService
             $run->update(['state_data' => $state]);
 
             // DISPATCH JOB INSTEAD OF RECURSION
+            Log::info("AutomationRun #{$run->id}: Dispatching SYNC job for next node: {$nextNodeId}");
             ExecuteAutomationNodeJob::dispatchSync($run->id, $nextNodeId);
         } else {
+            Log::info("AutomationRun #{$run->id}: Completed. No next node found.");
             $run->update(['status' => 'completed']);
         }
     }
