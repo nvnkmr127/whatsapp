@@ -445,6 +445,9 @@ class AutomationService
                 $this->handleUtilityNode($run, $node);
                 return 'continue';
 
+            case 'trigger':
+                return 'continue'; // Triggers are just entry points
+
             default:
                 return 'continue';
         }
