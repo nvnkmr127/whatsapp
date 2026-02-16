@@ -19,6 +19,20 @@ class UpdateMessageStatusJob implements ShouldQueue
     protected $data;
 
     /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 5;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     *
+     * @var int
+     */
+    public $backoff = 2;
+
+    /**
      * Create a new job instance.
      *
      * @param array $data ['provider_message_id', 'status', 'timestamp', 'details']
@@ -43,7 +57,14 @@ class UpdateMessageStatusJob implements ShouldQueue
         $message = Message::where('whatsapp_message_id', $providerMessageId)->first();
 
         if (!$message) {
-            Log::warning("UpdateMessageStatusJob: Message not found for provider ID: {$providerMessageId}");
+            // Race condition check: If webhook arrives before SendMessageJob saves the ID
+            if ($this->attempts() < $this->tries) {
+                Log::warning("UpdateMessageStatusJob: Message not found for provider ID: {$providerMessageId}. Retrying in 2s...");
+                $this->release(2);
+                return;
+            }
+
+            Log::warning("UpdateMessageStatusJob: Message not found for provider ID: {$providerMessageId} after {$this->tries} attempts. Giving up.");
             return;
         }
 
