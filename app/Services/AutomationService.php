@@ -718,6 +718,7 @@ STRICT GROUNDING RULES:
 
     protected function failRun(AutomationRun $run, $error)
     {
+        Log::error("AutomationRun #{$run->id} FAILED: {$error}");
         $run->update(['status' => 'failed', 'error_message' => $error]);
     }
 
