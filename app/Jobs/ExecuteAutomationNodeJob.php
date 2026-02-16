@@ -64,15 +64,14 @@ class ExecuteAutomationNodeJob implements ShouldQueue
             return;
         }
 
-        // 2. Idempotency Check via Ledger
-        $executionKey = "{$this->runId}_{$this->nodeId}";
-        $ledgerEntry = AutomationStepLedger::where('execution_key', $executionKey)->first();
-
-        if ($ledgerEntry && $ledgerEntry->status === 'success') {
-            Log::info("Node {$this->nodeId} already succeeded for run {$this->runId}. Skipping.");
-            $this->dispatchNext($run);
-            return;
-        }
+        // 2. Idempotency Check via Ledger - DISABLED FOR DEBUGGING
+        // $executionKey = "{$this->runId}_{$this->nodeId}";
+        // $ledgerEntry = AutomationStepLedger::where('execution_key', $executionKey)->first();
+        // if ($ledgerEntry && $ledgerEntry->status === 'success') {
+        //     Log::info("Node {$this->nodeId} already succeeded for run {$this->runId}. Skipping.");
+        //     $this->dispatchNext($run);
+        //     return;
+        // }
 
         // 2. Deterministic State Check
         if ($run->state_data['current_node_id'] !== $this->nodeId) {
@@ -103,6 +102,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
             Log::error("Automation Step Error #{$this->runId} Node {$this->nodeId}: " . $e->getMessage());
 
             // Record failure in ledger
+            $executionKey = "{$this->runId}_{$this->nodeId}";
             AutomationStepLedger::updateOrCreate(
                 ['execution_key' => $executionKey],
                 [
