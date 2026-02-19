@@ -66,22 +66,22 @@ class TemplateValidator
             // Category-specific structural rules (UC-06)
             if ($category === 'AUTHENTICATION') {
                 if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                    $score -= 100; // Fatal misuse
+                    $score -= 20; // Warn only
                     $errors[] = [
                         'code' => 'CAT_AUTH_MEDIA_DISALLOWED',
-                        'description' => "Authentication templates cannot contain media headers",
-                        'severity' => 'error'
+                        'description' => "Authentication templates should not contain media headers",
+                        'severity' => 'warning'
                     ];
                 }
 
                 if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
                     foreach ($component['buttons'] as $btn) {
                         if (!in_array($btn['type'] ?? '', ['OTP', 'COPY_CODE'])) {
-                            $score -= 100;
+                            $score -= 20;
                             $errors[] = [
                                 'code' => 'CAT_AUTH_BUTTON_INVALID',
-                                'description' => "Authentication templates only allow OTP or COPY_CODE buttons",
-                                'severity' => 'error'
+                                'description' => "Authentication templates should uses OTP or COPY_CODE buttons. Found: {$btn['type']}",
+                                'severity' => 'warning'
                             ];
                         }
                     }
@@ -222,8 +222,8 @@ class TemplateValidator
                     if (stripos($text, $keyword) !== false) {
                         $warnings[] = [
                             'code' => 'CAT_UTILITY_MARKETING_DETECTED',
-                            'description' => "Utility template contains verification keyword '{$keyword}'. High risk of rejection or re-categorization.",
-                            'severity' => 'error' // Treat as error for strict compliance
+                            'description' => "Utility template contains marketing keyword '{$keyword}'. High risk of rejection or re-categorization.",
+                            'severity' => 'warning'
                         ];
                         // Break after first match to avoid noise
                         break;
