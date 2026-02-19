@@ -92,6 +92,9 @@ Route::middleware([
         // Launch Offer Settings
         Route::get('/admin/offer-settings', \App\Livewire\Admin\OfferSettings::class)->name('admin.offer-settings');
 
+        // CRM (System-wide User Management)
+        Route::get('/admin/crm', \App\Livewire\Admin\Crm::class)->name('admin.crm');
+
         // Email Templates (System)
         Route::get('/admin/email-templates', \App\Livewire\Admin\EmailTemplates\Index::class)->name('admin.email-templates.index');
         Route::get('/admin/email-templates/create', \App\Livewire\Admin\EmailTemplates\Create::class)->name('admin.email-templates.create');

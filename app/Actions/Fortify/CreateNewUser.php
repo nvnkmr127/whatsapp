@@ -33,6 +33,11 @@ class CreateNewUser implements CreatesNewUsers
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => Hash::make($input['password']),
+                'utm_source' => $input['utm_source'] ?? null,
+                'utm_medium' => $input['utm_medium'] ?? null,
+                'utm_campaign' => $input['utm_campaign'] ?? null,
+                'utm_content' => $input['utm_content'] ?? null,
+                'utm_term' => $input['utm_term'] ?? null,
             ]), function (User $user) {
                 $this->createTeam($user);
             });

@@ -152,6 +152,11 @@
                         <!-- Registration Form -->
                         <form method="POST" action="{{ route('register') }}">
                             @csrf
+                            <input type="hidden" name="utm_source" value="{{ request('utm_source') }}">
+                            <input type="hidden" name="utm_medium" value="{{ request('utm_medium') }}">
+                            <input type="hidden" name="utm_campaign" value="{{ request('utm_campaign') }}">
+                            <input type="hidden" name="utm_content" value="{{ request('utm_content') }}">
+                            <input type="hidden" name="utm_term" value="{{ request('utm_term') }}">
 
                             <!-- Full Name -->
                             <div class="mb-6">

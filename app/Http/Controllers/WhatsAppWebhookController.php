@@ -71,6 +71,13 @@ class WhatsAppWebhookController extends Controller
 
             Log::debug("WhatsApp Webhook: Payload stored", ['payload_id' => $payloadRecord->id]);
 
+            // Update Health Pulse for the team
+            $wabaId = $data['entry'][0]['id'] ?? null;
+            if ($wabaId) {
+                Team::where('whatsapp_business_account_id', $wabaId)
+                    ->update(['last_webhook_received_at' => now()]);
+            }
+
             // Dispatch Job with Trace Context
             $traceId = \App\Services\TraceContext::getTraceId();
             \App\Jobs\ProcessWebhookJob::dispatchSync($payloadRecord->id, $traceId);

@@ -31,6 +31,41 @@
             </div>
         @endif
 
+        {{-- 6-Month Offer Banner --}}
+        @if($isTrial)
+            <div class="mb-8 bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-700 rounded-[2.5rem] p-1 shadow-2xl overflow-hidden relative group transition-all">
+                <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="bg-slate-900/40 backdrop-blur-xl rounded-[2.3rem] p-8 relative z-10">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div class="flex items-center gap-6">
+                            <div class="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-4xl shadow-inner border border-white/10">
+                                🎁
+                            </div>
+                            <div>
+                                <div class="inline-flex items-center gap-2 bg-indigo-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300 mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+                                    Launch Offer Active
+                                </div>
+                                <h3 class="text-3xl font-black text-white tracking-tight leading-none mb-2">6 Months Free <span class="text-indigo-400">Unlocked</span></h3>
+                                <p class="text-slate-300 font-medium max-w-lg">Congratulations! Your account is part of our early adopter program. You have full access to all premium features for 6 months at zero cost.</p>
+                            </div>
+                        </div>
+                        <div class="text-center md:text-right px-8 py-4 bg-white/5 rounded-3xl border border-white/5">
+                            <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Offer Expires In</p>
+                            <div class="text-3xl font-black text-white leading-none mb-1">
+                                {{ now()->diffInDays($trialEndsAt) }} Days
+                            </div>
+                            <p class="text-[10px] font-bold text-slate-400">Valid until {{ $trialEndsAt->format('F d, Y') }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {{-- Decorative Elements --}}
+                <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-400/20 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-purple-400/20 rounded-full -ml-32 -mb-32 blur-3xl"></div>
+            </div>
+        @endif
+
         {{-- Top Row: Plan & Wallet --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {{-- Current Plan Card --}}

@@ -20,6 +20,8 @@ class BillingDashboard extends Component
     public $usagePercentage;
     public $detailedStats;
     public $plans;
+    public $isTrial = false;
+    public $trialEndsAt = null;
     public $showTopUpModal = false;
     public $showChangePlanModal = false;
     public $selectedPlan = null;
@@ -50,6 +52,10 @@ class BillingDashboard extends Component
         // Get detailed usage stats
         $billingService = app(BillingService::class);
         $this->detailedStats = $billingService->getDetailedUsageStats($this->team);
+
+        // Check trial status
+        $this->isTrial = $this->team->subscription_status === 'trial';
+        $this->trialEndsAt = $this->team->trial_ends_at;
 
         // Backward compatibility for existing view variable
         $this->usage = $this->detailedStats['messages']['usage'];

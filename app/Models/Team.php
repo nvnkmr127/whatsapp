@@ -71,6 +71,9 @@ class Team extends JetstreamTeam
         'away_message_enabled',
         'trial_ends_at',
         'subscription_ends_at',
+        'admin_notes',
+        'lead_score',
+        'total_revenue',
     ];
 
     /**
@@ -436,5 +439,24 @@ class Team extends JetstreamTeam
             'ring_timeout_seconds' => 30,
             'fallback_action' => 'auto_reply',
         ], $this->call_routing_config ?? []);
+    }
+
+    /**
+     * Calculate a lead score (0-100) based on integration progress.
+     */
+    public function calculateLeadScore(): int
+    {
+        $score = 0;
+
+        if ($this->whatsapp_access_token)
+            $score += 20; // Connected FB
+        if ($this->whatsapp_business_account_id)
+            $score += 20; // WABA Found
+        if ($this->whatsapp_phone_number_id)
+            $score += 30; // Phone Registered
+        if ($this->last_webhook_received_at)
+            $score += 30; // Pulse Received (Active)
+
+        return min(100, $score);
     }
 }

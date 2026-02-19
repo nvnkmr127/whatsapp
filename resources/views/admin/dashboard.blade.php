@@ -21,6 +21,10 @@
                 </div>
 
                 <div class="flex items-center gap-3">
+                    <a href="{{ route('admin.crm') }}"
+                        class="px-6 py-3 bg-indigo-50 text-indigo-600 font-black uppercase tracking-widest text-xs rounded-2xl border border-indigo-100 hover:bg-indigo-100 transition-all shadow-sm">
+                        Enterprise CRM
+                    </a>
                     <a href="{{ route('admin.audit-logs') }}"
                         class="px-6 py-3 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 font-black uppercase tracking-widest text-xs rounded-2xl border border-rose-100 dark:border-rose-900/50 hover:bg-rose-50 transition-all shadow-sm">
                         Audit Logs
@@ -133,10 +137,13 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Global Search Results (Users) -->
                 @if($matchingUsers->isNotEmpty())
-                    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-rose-100 dark:border-rose-900/50 overflow-hidden mb-8">
+                    <div
+                        class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-rose-100 dark:border-rose-900/50 overflow-hidden mb-8">
                         <div class="p-8 border-b border-rose-50 dark:border-rose-900/20">
-                            <h2 class="text-xl font-black text-rose-600 dark:text-rose-500 uppercase tracking-tight">Identity Discovery</h2>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Cross-Tenant User Matches</p>
+                            <h2 class="text-xl font-black text-rose-600 dark:text-rose-500 uppercase tracking-tight">
+                                Identity Discovery</h2>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Cross-Tenant
+                                User Matches</p>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -145,29 +152,37 @@
                                         <tr class="group hover:bg-rose-50/50 dark:hover:bg-rose-900/10 transition-colors">
                                             <td class="px-8 py-6">
                                                 <div class="flex items-center gap-4">
-                                                    <img src="{{ $mUser->profile_photo_url }}" class="w-10 h-10 rounded-full" loading="lazy">
+                                                    <img src="{{ $mUser->profile_photo_url }}" class="w-10 h-10 rounded-full"
+                                                        loading="lazy">
                                                     <div>
-                                                        <div class="text-sm font-black text-slate-900 dark:text-white uppercase">{{ $mUser->name }}</div>
-                                                        <div class="text-xs text-slate-500 font-bold tracking-tight">{{ $mUser->email ?: $mUser->phone }}</div>
+                                                        <div
+                                                            class="text-sm font-black text-slate-900 dark:text-white uppercase">
+                                                            {{ $mUser->name }}</div>
+                                                        <div class="text-xs text-slate-500 font-bold tracking-tight">
+                                                            {{ $mUser->email ?: $mUser->phone }}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="px-8 py-6">
                                                 <div class="flex flex-col gap-1">
-                                                    <span class="text-[9px] font-black uppercase text-slate-400">Ownership</span>
+                                                    <span
+                                                        class="text-[9px] font-black uppercase text-slate-400">Ownership</span>
                                                     <div class="flex gap-2">
                                                         @forelse($mUser->ownedTeams as $oTeam)
-                                                            <span class="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 text-[9px] font-black uppercase rounded border border-indigo-100 dark:border-indigo-900/50">{{ $oTeam->name }}</span>
+                                                            <span
+                                                                class="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 text-[9px] font-black uppercase rounded border border-indigo-100 dark:border-indigo-900/50">{{ $oTeam->name }}</span>
                                                         @empty
-                                                            <span class="text-[10px] font-bold text-slate-300 italic">No owned workspaces</span>
+                                                            <span class="text-[10px] font-bold text-slate-300 italic">No owned
+                                                                workspaces</span>
                                                         @endforelse
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="px-8 py-6 text-right">
-                                                <div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <a href="{{ route('admin.impersonate.enter', $mUser->id) }}" 
-                                                       class="px-4 py-2 bg-slate-900 dark:bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rose-600/20">
+                                                <div
+                                                    class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <a href="{{ route('admin.impersonate.enter', $mUser->id) }}"
+                                                        class="px-4 py-2 bg-slate-900 dark:bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rose-600/20">
                                                         Impersonate
                                                     </a>
                                                 </div>
@@ -250,9 +265,11 @@
                                                     </div>
                                                     <div>
                                                         <div class="text-sm font-black text-slate-900 dark:text-white">
-                                                            {{ $team->name }}</div>
+                                                            {{ $team->name }}
+                                                        </div>
                                                         <div class="text-[10px] font-bold text-slate-400">Created
-                                                            {{ $team->created_at->format('M d, Y') }}</div>
+                                                            {{ $team->created_at->format('M d, Y') }}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -262,7 +279,8 @@
                                                         alt="{{ $team->owner->name }}" class="w-6 h-6 rounded-full">
                                                     <div>
                                                         <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                                            {{ $team->owner->name }}</div>
+                                                            {{ $team->owner->name }}
+                                                        </div>
                                                         <div class="text-xs text-slate-500">{{ $team->owner->email }}</div>
                                                     </div>
                                                 </div>
@@ -289,8 +307,10 @@
                                                     <a href="{{ route('admin.impersonate.enter', $team->owner->id) }}"
                                                         class="p-2 text-slate-400 hover:text-rose-500 transition-colors"
                                                         title="Impersonate Owner">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
                                                                 d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m14-10a4 4 0 11-8 0 4 4 0 018 0z" />
                                                         </svg>
                                                     </a>
@@ -405,7 +425,8 @@
                                     <div class="flex items-center gap-4">
                                         <a href="{{ route('backups.download', $backup->id) }}"
                                             class="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline">Download</a>
-                                        <form action="{{ route('backups.restore', $backup->id) }}" method="POST" onsubmit="return confirm('Restore full system?')">
+                                        <form action="{{ route('backups.restore', $backup->id) }}" method="POST"
+                                            onsubmit="return confirm('Restore full system?')">
                                             @csrf
                                             <button type="submit"
                                                 class="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline">
