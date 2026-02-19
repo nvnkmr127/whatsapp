@@ -72,12 +72,7 @@ class PasswordlessLogin extends Component
         $this->resendCountdown = 60;
     }
 
-    public function decrementTimer()
-    {
-        if ($this->resendCountdown > 0) {
-            $this->resendCountdown--;
-        }
-    }
+
 
     public function verifyOtp(OTPService $otpService)
     {

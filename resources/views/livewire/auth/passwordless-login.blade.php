@@ -1,7 +1,7 @@
 <div>
     @if ($step === 'request')
         <!-- Request OTP Step -->
-        <div>
+        <div x-data="{ timer: 0 }">
             <!-- Tab Switcher with animations -->
             <div class="flex gap-2 mb-6">
                 <button type="button"
@@ -110,33 +110,25 @@
                                                                     code: @entangle('code'),
                                                                     length: 6,
                                                                     handleInput(e, index) {
-                                                                    const input = e.target;
-                                                                    // Allow digits only
-                                                                    input.value = input.value.replace(/[^0-9]/g, '');
-                                                                    const val = input.value;
+                                                                        const input = e.target;
+                                                                        // Allow digits only
+                                                                        input.value = input.value.replace(/[^0-9]/g, '');
+                                                                        const val = input.value;
 
-                                                                    if (val.length > 1) {
-                                                                        input.value = val.slice(-1);
-                                                                    }
+                                                                        if (val.length > 1) {
+                                                                            input.value = val.slice(-1);
+                                                                        }
+                                                                        
+                                                                        // Sync with Livewire immediately
+                                                                        this.updateCode();
 
-                                                                    const inputs = this.$el.querySelectorAll('.otp-input');
-                                                                    // Use nextTick to ensure value is committed before moving focus
-                                                                    this.$nextTick(() => {
+                                                                        const inputs = this.$el.querySelectorAll('.otp-input');
                                                                         if (input.value && index < this.length - 1) {
                                                                             if (inputs[index + 1]) {
                                                                                 inputs[index + 1].focus();
                                                                                 inputs[index + 1].select();
                                                                             }
                                                                         }
-                                                                    });
-                                                                    this.updateCode();
-                                                                },
-                                                                handleKeydown(e, index) {
-                                                                    const inputs = this.$el.querySelectorAll('.otp-input');
-                                                                    // Handle Backspace
-                                                                    if (e.key === 'Backspace') {
-                                                                        if (!e.target.value && index > 0) {
-                                                                            if (inputs[index - 1]) {
                                                                                 inputs[index - 1].focus();
                                                                                 inputs[index - 1].select();
                                                                             }
@@ -205,14 +197,14 @@
             </button>
 
             <!-- Resend / Change -->
-            <div class="text-center mt-6">
+            <div class="text-center mt-6" x-data="{ timer: @entangle('resendCountdown') }" x-init="setInterval(() => { if(timer > 0) timer-- }, 1000)">
                 @if ($resendCountdown > 0)
-                    <p class="text-sm font-bold text-slate-400 flex items-center justify-center gap-2">
+                    <p class="text-sm font-bold text-slate-400 flex items-center justify-center gap-2" x-show="timer > 0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
-                        Resend code in {{ $resendCountdown }}s
+                        <span x-text="timer"></span>s
                     </p>
                 @else
                     <button type="button" wire:click="requestOtp"
@@ -289,12 +281,5 @@
         </a>
     </div>
 
-    <!-- Auto-decrement timer -->
-    <script>
-        document.addEventListener('livewire:initialized', () => {
-            setInterval(() => {
-                @this.call('decrementTimer');
-            }, 1000);
-        });
-    </script>
+
 </div>
