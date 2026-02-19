@@ -811,42 +811,43 @@ class WebhookSourceManager extends Component
             }
 
             $template = WhatsappTemplate::find($this->selectedTemplateId);
-            
+
             // Resolve Parameters
             $parameters = [];
             if (!empty($this->templateParameters)) {
-                 $maxParam = max(array_keys($this->templateParameters));
-                 for ($i = 1; $i <= $maxParam; $i++) {
-                     $path = $this->templateParameters[$i] ?? null;
-                     if ($path) {
-                         if (str_starts_with($path, 'STATIC:')) {
-                             $parameters[] = substr($path, 7);
-                         } else {
-                             // Handle nested arrays in payload gracefully
-                             $val = data_get($payload, $path);
-                             $parameters[] = is_array($val) ? json_encode($val) : (string) $val;
-                         }
-                     } else {
-                         $parameters[] = '';
-                     }
-                 }
+                $maxParam = max(array_keys($this->templateParameters));
+                for ($i = 1; $i <= $maxParam; $i++) {
+                    $path = $this->templateParameters[$i] ?? null;
+                    if ($path) {
+                        if (str_starts_with($path, 'STATIC:')) {
+                            $parameters[] = substr($path, 7);
+                        } else {
+                            // Handle nested arrays in payload gracefully
+                            $val = data_get($payload, $path);
+                            $parameters[] = is_array($val) ? json_encode($val) : (string) $val;
+                        }
+                    } else {
+                        $parameters[] = '';
+                    }
+                }
             }
 
-             $whatsappService = new \App\Services\WhatsAppService($template->team);
-             $response = $whatsappService->sendTemplate(
+            $whatsappService = new \App\Services\WhatsAppService($template->team);
+            $response = $whatsappService->sendTemplate(
                 $phoneNumber,
                 $template->name,
                 $template->language ?? 'en_US',
                 $parameters
-             );
+            );
 
-             if ($response['success']) {
-                 $this->testMessageResult = ['type' => 'success', 'message' => 'Message sent to ' . $phoneNumber];
-                 $this->dispatch('notify', 'Test message sent successfully to ' . $phoneNumber);
-             } else {
-                 $this->testMessageResult = ['type' => 'error', 'message' => 'Failed: ' . ($response['error'] ?? 'Unknown error')];
-                 $this->dispatch('notify', 'Failed: ' . ($response['error'] ?? 'Unknown error'), 'error');
-             }
+            if ($response['success']) {
+                $this->testMessageResult = ['type' => 'success', 'message' => 'Message sent to ' . $phoneNumber];
+                $this->dispatch('notify', 'Test message sent successfully to ' . $phoneNumber);
+            } else {
+                $errorDesc = $response['message'] ?? (is_array($response['error']) ? json_encode($response['error']) : ($response['error'] ?? 'Unknown error'));
+                $this->testMessageResult = ['type' => 'error', 'message' => 'Failed: ' . $errorDesc];
+                $this->dispatch('notify', 'Failed: ' . $errorDesc, 'error');
+            }
 
         } catch (\Exception $e) {
             $this->testMessageResult = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];

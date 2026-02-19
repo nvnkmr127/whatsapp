@@ -167,7 +167,8 @@ class ProcessMappedWebhookJob implements ShouldQueue
         );
 
         if (isset($result['success']) && !$result['success']) {
-            throw new \Exception("Failed to send template: " . ($result['error'] ?? 'Unknown error'));
+            $errorDesc = $result['message'] ?? (is_array($result['error']) ? json_encode($result['error']) : ($result['error'] ?? 'Unknown error'));
+            throw new \Exception("Failed to send template: " . $errorDesc);
         }
 
         $messageId = $result['data']['messages'][0]['id'] ?? 'unknown';
