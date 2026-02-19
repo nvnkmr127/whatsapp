@@ -599,6 +599,31 @@ class WhatsAppService
             ];
         }
 
+        // Handle Authentication Template Buttons (COPY_CODE)
+        // Automatically inject the OTP code into the button component if it's a COPY_CODE button
+        if ($tpl && $tpl->category === 'AUTHENTICATION' && !empty($bodyParams)) {
+            $tplComponents = $tpl->components ?? [];
+            foreach ($tplComponents as $component) {
+                if (($component['type'] === 'BUTTONS') && !empty($component['buttons'])) {
+                    foreach ($component['buttons'] as $idx => $btn) {
+                        if (($btn['type'] ?? '') === 'COPY_CODE') {
+                            $components[] = [
+                                'type' => 'button',
+                                'sub_type' => 'url', // COPY_CODE uses 'url' subtype for parameter injection
+                                'index' => (string) $idx,
+                                'parameters' => [
+                                    [
+                                        'type' => 'text',
+                                        'text' => (string) ($bodyParams[0] ?? '') // The code
+                                    ]
+                                ]
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
