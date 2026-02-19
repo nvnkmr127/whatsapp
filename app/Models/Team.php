@@ -126,6 +126,7 @@ class Team extends JetstreamTeam
             'calling_safeguards' => 'array',
             'calling_suspended_until' => 'datetime',
             'whatsapp_settings' => 'array',
+            'last_webhook_received_at' => 'datetime',
         ];
     }
 

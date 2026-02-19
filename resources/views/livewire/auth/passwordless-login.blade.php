@@ -37,6 +37,18 @@
                         class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal focus:bg-white dark:focus:bg-slate-900 transition-all duration-300 hover:border-slate-200 dark:hover:border-slate-700" />
                 @else
                     <input id="identifier" type="tel" wire:model="identifier" placeholder="+1 (555) 000-0000" required autofocus
+                        x-init="
+                                    if (!$wire.identifier) {
+                                        fetch('https://ipapi.co/json/')
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.country_calling_code) {
+                                                    $wire.set('identifier', data.country_calling_code);
+                                                }
+                                            })
+                                            .catch(error => console.warn('GeoIP Error:', error));
+                                    }
+                                "
                         class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal focus:bg-white dark:focus:bg-slate-900 transition-all duration-300 hover:border-slate-200 dark:hover:border-slate-700" />
                 @endif
                 @error('identifier')
@@ -95,44 +107,68 @@
 
             <!-- OTP Input -->
             <div class="mb-10" x-data="{ 
-                                                            code: @entangle('code'),
-                                                            length: 6,
-                                                            handleInput(e, index) {
-                                                                const input = e.target;
-                                                                const val = input.value;
-                                                                if (val.length > 1) {
-                                                                    input.value = val.slice(-1);
-                                                                }
-                                                                if (val && index < this.length - 1) {
-                                                                    this.$el.querySelectorAll('input')[index + 1].focus();
-                                                                }
-                                                                this.updateCode();
-                                                            },
-                                                            handleKeydown(e, index) {
-                                                                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                                                                    this.$el.querySelectorAll('input')[index - 1].focus();
-                                                                }
-                                                            },
-                                                            handlePaste(e) {
-                                                                const paste = (e.clipboardData || window.clipboardData).getData('text');
-                                                                if (paste.length === this.length) {
-                                                                    const inputs = this.$el.querySelectorAll('input');
-                                                                    for (let i = 0; i < this.length; i++) {
-                                                                        inputs[i].value = paste[i];
+                                                                    code: @entangle('code'),
+                                                                    length: 6,
+                                                                    handleInput(e, index) {
+                                                                    const input = e.target;
+                                                                    // Allow digits only
+                                                                    input.value = input.value.replace(/[^0-9]/g, '');
+                                                                    const val = input.value;
+
+                                                                    if (val.length > 1) {
+                                                                        input.value = val.slice(-1);
                                                                     }
+
+                                                                    const inputs = this.$el.querySelectorAll('.otp-input');
+                                                                    // Use nextTick to ensure value is committed before moving focus
+                                                                    this.$nextTick(() => {
+                                                                        if (input.value && index < this.length - 1) {
+                                                                            if (inputs[index + 1]) {
+                                                                                inputs[index + 1].focus();
+                                                                                inputs[index + 1].select();
+                                                                            }
+                                                                        }
+                                                                    });
                                                                     this.updateCode();
-                                                                    inputs[this.length - 1].focus();
-                                                                }
-                                                            },
-                                                            updateCode() {
-                                                                let fullCode = '';
-                                                                const inputs = this.$el.querySelectorAll('input');
-                                                                for (let i = 0; i < this.length; i++) {
-                                                                    fullCode += inputs[i].value;
-                                                                }
-                                                                this.code = fullCode;
-                                                            }
-                                                        }">
+                                                                },
+                                                                handleKeydown(e, index) {
+                                                                    const inputs = this.$el.querySelectorAll('.otp-input');
+                                                                    // Handle Backspace
+                                                                    if (e.key === 'Backspace') {
+                                                                        if (!e.target.value && index > 0) {
+                                                                            if (inputs[index - 1]) {
+                                                                                inputs[index - 1].focus();
+                                                                                inputs[index - 1].select();
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                },
+                                                                    handlePaste(e) {
+                                                                        const paste = (e.clipboardData || window.clipboardData).getData('text');
+                                                                        if (paste.length === this.length) {
+                                                                            const inputs = this.$el.querySelectorAll('.otp-input');
+                                                                            for (let i = 0; i < this.length; i++) {
+                                                                                if (inputs[i]) {
+                                                                                    inputs[i].value = paste[i];
+                                                                                }
+                                                                            }
+                                                                            this.updateCode();
+                                                                            if (inputs[this.length - 1]) {
+                                                                                inputs[this.length - 1].focus();
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    updateCode() {
+                                                                        let fullCode = '';
+                                                                        const inputs = this.$el.querySelectorAll('.otp-input');
+                                                                        for (let i = 0; i < this.length; i++) {
+                                                                            if (inputs[i]) {
+                                                                                fullCode += inputs[i].value;
+                                                                            }
+                                                                        }
+                                                                        this.code = fullCode;
+                                                                    }
+                                                                }">
                 <label class="text-xs font-black uppercase tracking-widest text-slate-400 block text-center mb-6">
                     Enter 6-Digit Verification Code
                 </label>
@@ -140,7 +176,7 @@
                 <div class="flex justify-between gap-2 sm:gap-4 mb-8">
                     <template x-for="(i, index) in length" :key="index">
                         <input type="text" maxlength="1" inputmode="numeric"
-                            class="w-12 h-16 sm:w-14 sm:h-20 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-black text-2xl sm:text-3xl text-center focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal transition-all outline-none"
+                            class="otp-input w-12 h-16 sm:w-14 sm:h-20 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-black text-2xl sm:text-3xl text-center focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal transition-all outline-none"
                             @input="handleInput($event, index)" @keydown="handleKeydown($event, index)"
                             @paste="handlePaste($event)">
                     </template>
