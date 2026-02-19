@@ -57,6 +57,11 @@ class WhatsAppService
         // If associative array (key=>val), we just take values as sequence
         // If indexed array, we use as is.
         foreach ($variables as $value) {
+            // Handle array values to prevent conversion errors
+            if (is_array($value)) {
+                $value = json_encode($value);
+            }
+
             $parameters[] = [
                 'type' => 'text',
                 'text' => (string) $value,

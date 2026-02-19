@@ -297,13 +297,24 @@ class TemplateService
                 return '';
             }
 
-            // 2. Ensure String
+            // 2. Handle Arrays (Prevent "Array to string conversion")
+            if (is_array($var)) {
+                // If it's an array, we try to take the first element if it's a string,
+                // or just json_encode it if we must preserve it. 
+                // Usually, this happens when a user maps a JSON field to a variable.
+                if (isset($var[0]) && count($var) === 1 && is_string($var[0])) {
+                    $var = $var[0];
+                } else {
+                    $var = json_encode($var);
+                }
+            }
+
+            // 3. Ensure String
             $val = (string) $var;
 
-            // 3. Truncate (Meta limit is loose, but 1024 is safe)
+            // 4. Truncate (Meta limit is loose, but 1024 is safe)
             if (strlen($val) > 1024) {
                 $val = substr($val, 0, 1024);
-                // Optional: Log warning if truncation happens?
             }
 
             return $val;
