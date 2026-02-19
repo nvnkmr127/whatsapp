@@ -624,6 +624,26 @@ class WhatsAppService
             }
         }
 
+
+
+        // FALLBACK: If we still haven't added a button component, but the template name strongly suggests it's an OTP template
+        // (and we have body params which usually implies the code), we blindly add the button param.
+        // This fixes cases where local DB sync is partial and doesn't explicitly show the button component.
+        $hasButtonParam = collect($components)->contains('type', 'button');
+        if (!$hasButtonParam && !empty($bodyParams) && in_array($templateName, ['verification', 'verification_code'])) {
+            $components[] = [
+                'type' => 'button',
+                'sub_type' => 'url',
+                'index' => '0',
+                'parameters' => [
+                    [
+                        'type' => 'text',
+                        'text' => (string) $bodyParams[0]
+                    ]
+                ]
+            ];
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
