@@ -612,33 +612,18 @@ class WhatsAppService
         $policy = app(PolicyService::class);
         $category = strtoupper($tpl->category ?? 'MARKETING');
 
-        if ($category === 'MARKETING' && !$contact->hasValidConsent()) {
-            return [
-                'success' => false,
-                'error' => "CAT_MARKETING_NO_OPT_IN: Marketing message blocked. Contact has not opted-in."
-            ];
-        }
-
-        if ($category === 'UTILITY' && $contact->opt_in_status === 'opted_out') {
-            return [
-                'success' => false,
-                'error' => "CAT_UTILITY_BLOCKED: Transactional message blocked by user opt-out."
-            ];
-        }
-
-        if ($category === 'AUTHENTICATION') {
-            // AUTH templates should ideally use the dedicated Authentication API, not general messages.
-            // But if used here, strict consent is required.
-            if (!$contact->hasValidConsent()) {
-                return [
-                    'success' => false,
-                    'error' => "CAT_AUTH_BLOCKED: Authentication message requires explicit consent."
-                ];
-            }
-        }
-
         if (!$policy->canSendTemplate($contact, strtolower($category))) {
-            return ['success' => false, 'error' => 'Blocked by General Messaging Policy.'];
+            $reason = "Policy Blocked";
+            if ($category === 'MARKETING' && $contact->opt_in_status !== 'opted_in') {
+                $reason = "CAT_MARKETING_NO_OPT_IN: Marketing message blocked. Contact has not opted-in.";
+            } elseif ($contact->opt_in_status === 'opted_out') {
+                $reason = "CAT_{$category}_BLOCKED: User has explicitly opted out.";
+            }
+
+            return [
+                'success' => false,
+                'error' => $reason
+            ];
         }
 
         // 5. Check Wallet & Plan Limits
