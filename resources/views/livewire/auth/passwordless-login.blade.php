@@ -38,17 +38,23 @@
                 @else
                     <input id="identifier" type="tel" wire:model="identifier" placeholder="+1 (555) 000-0000" required autofocus
                         x-init="
-                                            if (!$wire.identifier) {
-                                                fetch('https://ipapi.co/json/')
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        if (data.country_calling_code) {
-                                                            $wire.set('identifier', data.country_calling_code);
-                                                        }
-                                                    })
-                                                    .catch(error => console.warn('GeoIP Error:', error));
-                                            }
-                                        "
+                                                    if (!$wire.identifier) {
+                                                        const fetchGeoIp = async () => {
+                                                            try {
+                                                                const response = await fetch('https://ipapi.co/json/');
+                                                                if (!response.ok) return; // Silently fail on non-200 responses
+                                                                const data = await response.json();
+                                                                if (data.country_calling_code) {
+                                                                    $wire.set('identifier', data.country_calling_code);
+                                                                }
+                                                            } catch (error) {
+                                                                // Silently handle errors to avoid console noise
+                                                                console.debug('GeoIP lookup failed:', error);
+                                                            }
+                                                        };
+                                                        fetchGeoIp();
+                                                    }
+                                                "
                         class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal focus:bg-white dark:focus:bg-slate-900 transition-all duration-300 hover:border-slate-200 dark:hover:border-slate-700" />
                 @endif
                 @error('identifier')
@@ -107,74 +113,71 @@
 
             <!-- OTP Input -->
             <div class="mb-10" x-data="{ 
-                                        code: @entangle('code'),
                                         length: 6,
+                                        otp: Array(6).fill(''),
+                                        code: @entangle('code'),
+                                        init() {
+                                            this.$watch('otp', value => {
+                                                this.code = value.join('');
+                                            });
+                                        },
                                         handleInput(e, index) {
                                             const input = e.target;
-                                            // Allow digits only
-                                            input.value = input.value.replace(/[^0-9]/g, '');
-                                            const val = input.value;
+                                            const val = input.value.replace(/[^0-9]/g, '');
 
-                                            if (val.length > 1) {
-                                                input.value = val.slice(-1);
-                                            }
+                                            this.otp[index] = val;
+                                            input.value = val;
 
-                                            // Sync with Livewire immediately
-                                            this.updateCode();
-
-                                            const inputs = this.$el.querySelectorAll('.otp-input');
-                                            if (input.value && index < this.length - 1) {
-                                                if (inputs[index + 1]) {
-                                                    inputs[index + 1].focus();
-                                                    inputs[index + 1].select();
-                                                }
+                                            if (val && index < this.length - 1) {
+                                                this.$nextTick(() => {
+                                                    const next = document.getElementById('otp-' + (index + 1));
+                                                    if (next) {
+                                                        next.focus();
+                                                        next.select();
+                                                    }
+                                                });
                                             }
                                         },
                                         handleKeydown(e, index) {
-                                            const inputs = this.$el.querySelectorAll('.otp-input');
-                                            // Handle Backspace
                                             if (e.key === 'Backspace') {
-                                                if (!e.target.value && index > 0) {
-                                                    if (inputs[index - 1]) {
-                                                        inputs[index - 1].focus();
-                                                        inputs[index - 1].select();
+                                                if (!this.otp[index] && index > 0) {
+                                                    const prev = document.getElementById('otp-' + (index - 1));
+                                                    if (prev) {
+                                                        prev.focus();
+                                                        prev.select();
                                                     }
+                                                }
+                                                // Clear current index binding on backspace if exists
+                                                if (this.otp[index]) {
+                                                    this.otp[index] = '';
                                                 }
                                             }
                                         },
                                         handlePaste(e) {
+                                            e.preventDefault();
                                             const paste = (e.clipboardData || window.clipboardData).getData('text');
-                                            if (paste.length === this.length) {
-                                                const inputs = this.$el.querySelectorAll('.otp-input');
-                                                for (let i = 0; i < this.length; i++) {
-                                                    if (inputs[i]) {
-                                                        inputs[i].value = paste[i];
-                                                    }
-                                                }
-                                                this.updateCode();
-                                                if (inputs[this.length - 1]) {
-                                                    inputs[this.length - 1].focus();
-                                                }
+                                            const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
+
+                                            if (cleanPaste) {
+                                                cleanPaste.split('').forEach((char, i) => {
+                                                    if (i < this.length) this.otp[i] = char;
+                                                });
+
+                                                this.$nextTick(() => {
+                                                    const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
+                                                    const dest = document.getElementById('otp-' + destIndex);
+                                                    if (dest) dest.focus();
+                                                });
                                             }
-                                        },
-                                        updateCode() {
-                                            let fullCode = '';
-                                            const inputs = this.$el.querySelectorAll('.otp-input');
-                                            for (let i = 0; i < this.length; i++) {
-                                                if (inputs[i]) {
-                                                    fullCode += inputs[i].value;
-                                                }
-                                            }
-                                            this.code = fullCode;
                                         }
-                                    }">
+                                    }" x-init="init()">
                 <label class="text-xs font-black uppercase tracking-widest text-slate-400 block text-center mb-6">
                     Enter 6-Digit Verification Code
                 </label>
 
                 <div class="flex justify-between gap-2 sm:gap-4 mb-8">
                     <template x-for="(i, index) in length" :key="index">
-                        <input type="text" maxlength="1" inputmode="numeric"
+                        <input type="text" maxlength="1" inputmode="numeric" :id="'otp-' + index" x-model="otp[index]"
                             class="otp-input w-12 h-16 sm:w-14 sm:h-20 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-black text-2xl sm:text-3xl text-center focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal transition-all outline-none"
                             @input="handleInput($event, index)" @keydown="handleKeydown($event, index)"
                             @paste="handlePaste($event)">
