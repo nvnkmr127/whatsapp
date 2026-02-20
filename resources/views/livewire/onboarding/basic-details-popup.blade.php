@@ -1,7 +1,7 @@
 <div>
     @if($isOpen)
         <div class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900 bg-opacity-70 backdrop-blur-sm"
-            x-data @keydown.escape.prevent="" @click.prevent="">
+            x-data @keydown.escape.prevent="">
 
             <div class="relative w-full max-w-md p-4 animate-in fade-in zoom-in duration-300">
                 <div

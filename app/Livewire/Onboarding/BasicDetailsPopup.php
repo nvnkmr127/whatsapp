@@ -35,6 +35,8 @@ class BasicDetailsPopup extends Component
 
     public function save()
     {
+        \Illuminate\Support\Facades\Log::info('BasicDetailsPopup::save started', ['phone' => $this->phone, 'company' => $this->company_name]);
+
         $this->validate([
             'phone' => 'required|string|max:20',
             'company_name' => 'required|string|max:255',
@@ -43,12 +45,17 @@ class BasicDetailsPopup extends Component
         $user = Auth::user();
         $user->forceFill(['phone' => $this->phone])->save();
 
+        \Illuminate\Support\Facades\Log::info('User phone saved', ['new_phone' => $user->fresh()->phone]);
+
         $team = $user->currentTeam;
         if ($team) {
             $team->forceFill(['name' => $this->company_name])->save();
+            \Illuminate\Support\Facades\Log::info('Team name saved', ['team' => $team->fresh()->name]);
         }
 
         $this->isOpen = false;
+
+        \Illuminate\Support\Facades\Log::info('Redirecting to teams.whatsapp_config');
 
         return redirect()->route('teams.whatsapp_config');
     }
