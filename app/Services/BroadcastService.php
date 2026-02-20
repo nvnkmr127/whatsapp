@@ -55,15 +55,8 @@ class BroadcastService
         // 0.1 WhatsApp Health Check (CRITICAL)
         $this->verifyHealth($campaign->team);
 
-        // Commerce Readiness Check
-        $template = $campaign->template;
-        if ($template && in_array($template->category, ['UTILITY', 'TRANSACTIONAL'])) {
-            $readinessService = app(\App\Services\CommerceReadinessService::class);
-            if (!$readinessService->canPerformAction($campaign->team, 'broadcast')) {
-                $campaign->update(['status' => 'failed', 'error_message' => 'Store not ready for commerce broadcasts.']);
-                throw new \Exception("Campaign launch aborted: Commerce readiness failure for team {$campaign->team->id}");
-            }
-        }
+        // Removed globally restrictive Commerce Readiness Check for UTILITY/TRANSACTIONAL templates
+        // as these are frequently used for non-commerce alerts (student fees, appointments, etc.)
 
         // 1. Create Snapshot (Immutable state for this run)
         $snapshot = $this->snapshotService->createSnapshot($campaign);

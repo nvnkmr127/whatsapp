@@ -23,7 +23,7 @@
                                 launch you into the wizard.</p>
                         </div>
 
-                        <form wire:submit.prevent="save" class="space-y-5 text-left">
+                        <form wire:submit.prevent="save" class="space-y-4 text-left">
                             <div>
                                 <x-label for="company_name" value="Business Name" class="font-medium" />
                                 <x-input id="company_name" type="text" class="mt-1 block w-full shadow-sm rounded-lg"
@@ -33,10 +33,25 @@
                             </div>
 
                             <div>
-                                <x-label for="phone" value="Your Phone Number" class="font-medium" />
+                                <x-label for="email" value="Business Email" class="font-medium" />
+                                <x-input id="email" type="email" class="mt-1 block w-full shadow-sm rounded-lg"
+                                    wire:model="email" placeholder="hello@acme.com" required autocomplete="email" />
+                                <x-input-error for="email" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <x-label for="phone" value="Phone Number (Optional)" class="font-medium" />
                                 <x-input id="phone" type="tel" class="mt-1 block w-full shadow-sm rounded-lg"
-                                    wire:model="phone" placeholder="+1234567890" required autocomplete="tel" />
+                                    wire:model="phone" placeholder="+1234567890" autocomplete="tel" />
                                 <x-input-error for="phone" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <x-label for="address" value="Business Address" class="font-medium" />
+                                <textarea id="address" rows="2"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-wa-primary focus:ring-wa-primary rounded-lg shadow-sm"
+                                    wire:model="address" placeholder="123 Main St, City, Country"></textarea>
+                                <x-input-error for="address" class="mt-2" />
                             </div>
 
                             <div class="pt-4">

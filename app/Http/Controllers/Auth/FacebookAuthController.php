@@ -42,7 +42,36 @@ class FacebookAuthController extends Controller
         }
 
         return DB::transaction(function () use ($facebookUser, $request) {
-            // 1. Find existing identity
+            // 1. Check if user is already logged in (Linking while authenticated)
+            if (Auth::check()) {
+                $user = Auth::user();
+
+                // Check if this Facebook identity is already linked to ANOTHER user
+                $existingIdentity = UserIdentity::where('provider', 'facebook')
+                    ->where('provider_id', $facebookUser->getId())
+                    ->where('user_id', '!=', $user->id)
+                    ->first();
+
+                if ($existingIdentity) {
+                    return redirect()->route('profile.show')->with('error', 'This Facebook account is already linked to another user.');
+                }
+
+                // Update user email if it's empty
+                $email = $facebookUser->getEmail();
+                if (empty($user->email) && $email) {
+                    $user->forceFill(['email' => $email])->save();
+                }
+
+                // Link identity if not already linked
+                UserIdentity::updateOrCreate(
+                    ['provider' => 'facebook', 'provider_id' => $facebookUser->getId()],
+                    ['user_id' => $user->id, 'last_login_at' => now()]
+                );
+
+                return redirect()->route('dashboard')->with('message', 'Facebook account linked successfully.');
+            }
+
+            // 2. Find existing identity by Facebook ID (Normal Login)
             $identity = UserIdentity::where('provider', 'facebook')
                 ->where('provider_id', $facebookUser->getId())
                 ->first();
@@ -50,8 +79,14 @@ class FacebookAuthController extends Controller
             if ($identity) {
                 $user = $identity->user;
                 $identity->update(['last_login_at' => now()]);
+
+                // Update email if it's missing on the user record
+                $email = $facebookUser->getEmail();
+                if (empty($user->email) && $email) {
+                    $user->forceFill(['email' => $email])->save();
+                }
             } else {
-                // 2. No identity, check if User exists by email (Account Linking)
+                // 3. No identity, check if User exists by email (Account Linking)
                 // Note: Facebook email might be null if not authorized or not verified
                 $email = $facebookUser->getEmail();
                 $user = $email ? User::where('email', $email)->first() : null;
@@ -67,7 +102,7 @@ class FacebookAuthController extends Controller
                         return redirect()->route('login')->withErrors(['oauth' => $identityResult->denial_reason]);
                     }
 
-                    // 3. Create new user
+                    // 4. Create new user
                     $user = User::create([
                         'name' => $facebookUser->getName() ?: 'Facebook User',
                         'email' => $email,
@@ -108,7 +143,7 @@ class FacebookAuthController extends Controller
                     AuditService::log('Auth.Signup', $user->id, $user->email ?? $facebookUser->getId(), 'facebook', ['team_id' => $team->id]);
                 }
 
-                // 4. Link Facebook Identity
+                // 5. Link Facebook Identity
                 UserIdentity::create([
                     'user_id' => $user->id,
                     'provider' => 'facebook',

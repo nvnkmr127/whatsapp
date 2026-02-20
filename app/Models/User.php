@@ -30,6 +30,8 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'company_name',
+        'address',
         'password',
         'marketing_opt_in',
         'unsubscribed_at',

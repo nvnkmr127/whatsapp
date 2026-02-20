@@ -68,19 +68,76 @@ class PasswordlessAuthController extends Controller
             $user = null;
             $provider = ($type === 'email') ? 'email_otp' : 'phone_otp';
 
-            // Find user by identity first
+            // 1. Check if user is already logged in (Linking while authenticated)
+            if (Auth::check()) {
+                $user = Auth::user();
+
+                // Check if this identity is already linked to ANOTHER user
+                $existingIdentity = UserIdentity::where('provider', $provider)
+                    ->where('provider_id', $identifier)
+                    ->where('user_id', '!=', $user->id)
+                    ->first();
+
+                if ($existingIdentity) {
+                    throw ValidationException::withMessages([
+                        'identifier' => "This " . ($type === 'email' ? 'email' : 'phone number') . " is already linked to another account."
+                    ]);
+                }
+
+                // Link identity
+                UserIdentity::updateOrCreate(
+                    ['provider' => $provider, 'provider_id' => $identifier],
+                    ['user_id' => $user->id, 'last_login_at' => now()]
+                );
+
+                // Update primary field if missing
+                if ($type === 'email' && empty($user->email)) {
+                    $user->forceFill(['email' => $identifier])->save();
+                } elseif ($type === 'phone' && empty($user->phone)) {
+                    $user->forceFill(['phone' => $identifier])->save();
+                }
+
+                return $user; // Return user for login/audit below
+            }
+
+            // 2. Find user by identity first (Normal Login)
             $identity = UserIdentity::where('provider', $provider)
                 ->where('provider_id', $identifier)
                 ->first();
 
             if ($identity) {
                 $user = $identity->user;
+                $identity->update(['last_login_at' => now()]);
+
+                // Update primary field if missing
+                if ($type === 'email' && empty($user->email)) {
+                    $user->forceFill(['email' => $identifier])->save();
+                } elseif ($type === 'phone' && empty($user->phone)) {
+                    $user->forceFill(['phone' => $identifier])->save();
+                }
             } else {
-                // Find or create user by direct field
+                // 3. No identity, check if User exists by direct field (Account Linking)
                 if ($type === 'email') {
                     $user = User::where('email', $identifier)->first();
                 } else {
+                    // Try exact match first for phone
                     $user = User::where('phone', $identifier)->first();
+
+                    // If not found, try normalizing and searching again
+                    if (!$user) {
+                        try {
+                            $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($identifier);
+                            $user = User::where('phone', $normalizedPhone)->first();
+                        } catch (\Exception $e) {
+                            // Invalid phone number format, continue
+                        }
+                    }
+
+                    // If still not found, try a suffix match (last 10 digits)
+                    if (!$user && strlen($identifier) >= 10) {
+                        $suffix = substr($identifier, -10);
+                        $user = User::where('phone', 'like', "%{$suffix}")->first();
+                    }
                 }
 
                 if (!$user) {
@@ -99,7 +156,7 @@ class PasswordlessAuthController extends Controller
 
                     // ── Create user ─────────────────────────────────────────────
                     $user = User::create([
-                        'name' => explode('@', $identifier)[0] ?: $identifier,
+                        'name' => ($type === 'email') ? explode('@', $identifier)[0] : $identifier,
                         'email' => ($type === 'email') ? $identifier : null,
                         'phone' => ($type === 'phone') ? $identifier : null,
                         'password' => null,
@@ -108,7 +165,7 @@ class PasswordlessAuthController extends Controller
                     // ── Create team ─────────────────────────────────────────────
                     $team = \App\Models\Team::forceCreate([
                         'user_id' => $user->id,
-                        'name' => (explode('@', $identifier)[0] ?: $identifier) . "'s Team",
+                        'name' => (($type === 'email') ? explode('@', $identifier)[0] : $identifier) . "'s Team",
                         'personal_team' => true,
                         'subscription_plan' => 'trial',
                         'subscription_status' => 'trial',
@@ -120,32 +177,26 @@ class PasswordlessAuthController extends Controller
                     $user->ownedTeams()->save($team);
                     $user->forceFill(['current_team_id' => $team->id])->save();
 
-                    // ── Welcome credit (gated through full 6-rule eligibility) ──
+                    // ── Welcome credit ──
                     if (app(OfferEligibilityService::class)->isEligible($team)) {
                         $credit = (float) get_setting('offer_initial_credit', 5.00);
                         if ($credit > 0) {
-                            app(\App\Services\BillingService::class)->deposit(
-                                $team,
-                                $credit,
-                                'Welcome Gift (Launch Offer)'
-                            );
+                            app(\App\Services\BillingService::class)->deposit($team, $credit, 'Welcome Gift (Launch Offer)');
                         }
                         app(OfferEligibilityService::class)->markClaimed($team);
                     }
 
-                    // ── Record fingerprints + hit IP rate limiter ────────────────
+                    // ── Record fingerprints ──
                     $this->identity->record(team: $team, user: $user, ip: $ip);
 
                     AuditService::log('Auth.Signup', $user->id, $identifier, $provider, ['team_id' => $team->id]);
                 }
 
-                // Link identity
-                UserIdentity::create([
-                    'user_id' => $user->id,
-                    'provider' => $provider,
-                    'provider_id' => $identifier,
-                    'last_login_at' => now(),
-                ]);
+                // 4. Link identity for future login
+                UserIdentity::updateOrCreate(
+                    ['provider' => $provider, 'provider_id' => $identifier],
+                    ['user_id' => $user->id, 'last_login_at' => now()]
+                );
             }
 
             // Update last login

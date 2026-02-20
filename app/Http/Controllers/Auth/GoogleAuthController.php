@@ -42,7 +42,35 @@ class GoogleAuthController extends Controller
         }
 
         return DB::transaction(function () use ($googleUser, $request) {
-            // 1. Find existing identity
+            // 1. Check if user is already logged in (Linking while authenticated)
+            if (Auth::check()) {
+                $user = Auth::user();
+
+                // Check if this Google identity is already linked to ANOTHER user
+                $existingIdentity = UserIdentity::where('provider', 'google')
+                    ->where('provider_id', $googleUser->getId())
+                    ->where('user_id', '!=', $user->id)
+                    ->first();
+
+                if ($existingIdentity) {
+                    return redirect()->route('profile.show')->with('error', 'This Google account is already linked to another user.');
+                }
+
+                // Update user email if it's empty
+                if (empty($user->email)) {
+                    $user->forceFill(['email' => $googleUser->getEmail()])->save();
+                }
+
+                // Link identity if not already linked
+                UserIdentity::updateOrCreate(
+                    ['provider' => 'google', 'provider_id' => $googleUser->getId()],
+                    ['user_id' => $user->id, 'last_login_at' => now()]
+                );
+
+                return redirect()->route('dashboard')->with('message', 'Google account linked successfully.');
+            }
+
+            // 2. Find existing identity by Google ID (Normal Login)
             $identity = UserIdentity::where('provider', 'google')
                 ->where('provider_id', $googleUser->getId())
                 ->first();
@@ -50,8 +78,13 @@ class GoogleAuthController extends Controller
             if ($identity) {
                 $user = $identity->user;
                 $identity->update(['last_login_at' => now()]);
+
+                // Update email if it's missing on the user record
+                if (empty($user->email)) {
+                    $user->forceFill(['email' => $googleUser->getEmail()])->save();
+                }
             } else {
-                // 2. No identity, check if User exists by email (Account Linking)
+                // 3. No identity, check if User exists by email (Account Linking)
                 $user = User::where('email', $googleUser->getEmail())->first();
 
                 if (!$user) {
@@ -65,7 +98,7 @@ class GoogleAuthController extends Controller
                         return redirect()->route('login')->withErrors(['oauth' => $identityResult->denial_reason]);
                     }
 
-                    // 3. Create new user
+                    // 4. Create new user
                     $user = User::create([
                         'name' => $googleUser->getName(),
                         'email' => $googleUser->getEmail(),
@@ -106,7 +139,7 @@ class GoogleAuthController extends Controller
                     AuditService::log('Auth.Signup', $user->id, $googleUser->getEmail(), 'google', ['team_id' => $team->id]);
                 }
 
-                // 4. Link Google Identity
+                // 5. Link Google Identity
                 UserIdentity::create([
                     'user_id' => $user->id,
                     'provider' => 'google',
