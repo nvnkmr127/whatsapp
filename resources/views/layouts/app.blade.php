@@ -62,6 +62,7 @@
 <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
     <livewire:calls.call-overlay />
     <livewire:chat.chat-beacon />
+    @livewire('onboarding.basic-details-popup')
 
     @include('components.impersonation-banner')
     <x-banner />

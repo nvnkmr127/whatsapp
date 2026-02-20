@@ -61,6 +61,9 @@ class Team extends JetstreamTeam
         'whatsapp_setup_state',
         'whatsapp_token_expires_at',
         'whatsapp_token_last_validated',
+        'calling_enabled',
+        'max_call_minutes_per_month',
+        'call_recording_enabled',
         'call_routing_config',
         'calling_safeguards',
         'calling_suspended_until',
@@ -74,6 +77,10 @@ class Team extends JetstreamTeam
         'admin_notes',
         'lead_score',
         'total_revenue',
+        // Offer Eligibility Engine columns
+        'offer_claimed_at',
+        'offer_excluded',
+        'offer_converted_churned',
     ];
 
     /**
@@ -115,6 +122,10 @@ class Team extends JetstreamTeam
             'trial_ends_at' => 'datetime',
             'subscription_ends_at' => 'datetime',
             'subscription_grace_ends_at' => 'datetime',
+            // Offer Eligibility Engine
+            'offer_claimed_at' => 'datetime',
+            'offer_excluded' => 'boolean',
+            'offer_converted_churned' => 'boolean',
             'whatsapp_setup_progress' => 'array',
             'whatsapp_setup_started_at' => 'datetime',
             'whatsapp_setup_completed_at' => 'datetime',
@@ -122,6 +133,9 @@ class Team extends JetstreamTeam
             'whatsapp_setup_state' => \App\Enums\IntegrationState::class,
             'whatsapp_token_expires_at' => 'datetime',
             'whatsapp_token_last_validated' => 'datetime',
+            'calling_enabled' => 'boolean',
+            'max_call_minutes_per_month' => 'integer',
+            'call_recording_enabled' => 'boolean',
             'call_routing_config' => 'array',
             'calling_safeguards' => 'array',
             'calling_suspended_until' => 'datetime',
@@ -209,137 +223,52 @@ class Team extends JetstreamTeam
     }
 
     /**
-     * Unified Access Check for all Billing & Feature constraints.
+     * Unified capability check.
+     * Delegates entirely to EntitlementService — the single source of truth.
+     * No subscription/trial/limit logic lives here.
      */
     public function canAccess(string $capability, array $context = []): bool
     {
-        // 1. Global Subscription Check
-        if ($this->subscription_status === 'expired') {
-            return false;
-        }
-
-        if ($this->subscription_ends_at && $this->subscription_ends_at->isPast()) {
-            if (!$this->isInGracePeriod()) {
-                return false;
-            }
-        }
-
-        // 2. Feature-Flag Enforcement
-        if (in_array($capability, ['chat', 'contacts', 'templates', 'campaigns', 'automations', 'analytics', 'commerce', 'ai', 'api_access', 'webhooks', 'flows'])) {
-            return $this->hasFeature($capability);
-        }
-
-        // 3. Resource Limit Enforcement
-        return match ($capability) {
-            'add_agent' => ($this->users()->count() + $this->teamInvitations()->count()) < $this->getPlanLimit('agent_limit'),
-            'send_message' => $this->checkMessageLimits(),
-            default => false
-        };
-    }
-
-    /**
-     * Internal check for message limits to avoid circular service dependencies.
-     */
-    protected function checkMessageLimits(): bool
-    {
-        $limit = $this->getPlanLimit('message_limit', 1000);
-
-        if ($limit === 0)
-            return true; // Unlimited
-
-        $usage = Message::where('team_id', $this->id)
-            ->where('direction', 'outbound')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
-
-        return $usage < $limit;
+        return app(\App\Services\EntitlementService::class)->for($this)->can($capability);
     }
 
     /**
      * Get a specific limit from the current plan.
+     * Delegates to EntitlementService; preserved for backward compatibility.
      */
     public function getPlanLimit(string $key, $default = 0)
     {
-        // 1. Check for active overrides first (UC-30)
-        $override = $this->billingOverrides()
-            ->where('type', 'limit_increase')
-            ->where('key', $key)
-            ->active()
-            ->latest()
-            ->first();
-
-        if ($override) {
-            return (int) $override->value;
-        }
-
-        // 2. Check for "Launch Offer" (Dynamic Trial)
-        // If in trial AND offer is enabled, use settings
-        // 2. Check for "Launch Offer" (Dynamic Trial)
-        // If in trial AND offer is enabled, use settings
-        if ($this->subscription_status === 'trial' && get_setting('offer_enabled', true)) {
-            $settingMap = [
-                'message_limit' => 'offer_message_limit',
-                'agent_limit' => 'offer_agent_limit',
-                'whatsapp_limit' => 'offer_whatsapp_limit',
-            ];
-
-            if (isset($settingMap[$key])) {
-                return (int) get_setting($settingMap[$key], ($key === 'message_limit' ? 5000 : 5));
-            }
-        }
-
-        // 3. Fallback to Plan
-        $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
-        if (!$plan) {
-            return $default;
-        }
-
-        return $plan->{$key} ?? $default;
+        return app(\App\Services\EntitlementService::class)->for($this)->limit($key) ?: $default;
     }
 
     /**
      * Centralized feature check logic.
-     * Checks subscription plan and active add-ons.
+     * Delegates to EntitlementService; preserved for backward compatibility.
      */
     public function hasFeature(string $feature): bool
     {
-        // 1. Check Subscription Status
-        if ($this->subscription_status === 'expired' || ($this->subscription_ends_at && $this->subscription_ends_at->isPast())) {
-            return false;
-        }
+        return app(\App\Services\EntitlementService::class)->for($this)->hasFeature($feature);
+    }
 
-        // 2. Check Overrides (Manually enabled features)
-        $override = $this->billingOverrides()
-            ->where('type', 'feature_enable')
-            ->where('key', $feature)
-            ->active()
-            ->exists();
-
-        if ($override) {
-            return true;
-        }
-
-        // 3. Check Launch Offer (Dynamic Trial)
-        if ($this->subscription_status === 'trial' && get_setting('offer_enabled', true)) {
-            $included = json_decode(get_setting('offer_included_features', '[]'), true);
-            // If features logic is not array (e.g. invalid json), default to empty
-            if (is_array($included) && in_array($feature, $included)) {
-                return true;
-            }
-        }
-
-        // 4. Check Plan Features
-        $plan = Plan::where('name', $this->subscription_plan ?? 'basic')->first();
-        if ($plan && $plan->hasFeature($feature)) {
-            return true;
-        }
-
-        // 3. Check Add-ons
-        return $this->addOns()
-            ->where('type', $feature)
-            ->get()
-            ->contains(fn($addon) => $addon->isActive());
+    /**
+     * Resolve the full Entitlement snapshot for this team.
+     *
+     * Use this in Blade, Livewire, controllers, and jobs instead of
+     * inspecting subscription_status, trial_ends_at, etc. directly.
+     *
+     * Usage:
+     *   $e = $team->entitlement();
+     *   $e->active()            // bool
+     *   $e->onTrial()           // bool
+     *   $e->hasFeature('ai')    // bool
+     *   $e->limit('agent_limit')// int
+     *   $e->can('send_message') // bool
+     *   $e->statusLabel()       // 'Trial (4d left)'
+     *   $e->toArray()           // full snapshot
+     */
+    public function entitlement(): \App\Services\Entitlement
+    {
+        return app(\App\Services\EntitlementService::class)->for($this);
     }
 
     /**

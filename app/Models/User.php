@@ -34,6 +34,9 @@ class User extends Authenticatable
         'marketing_opt_in',
         'unsubscribed_at',
         'unsubscribe_token',
+        // Offer claim tracking – set once, never cleared
+        'has_claimed_offer',
+        'offer_claimed_at',
     ];
 
     /**
@@ -71,6 +74,9 @@ class User extends Authenticatable
             'security_metadata' => 'json',
             'marketing_opt_in' => 'boolean',
             'unsubscribed_at' => 'datetime',
+            // Offer
+            'has_claimed_offer' => 'boolean',
+            'offer_claimed_at' => 'datetime',
         ];
     }
     /**
@@ -197,7 +203,8 @@ class User extends Authenticatable
      */
     public function isAvailableForCalls(Team $team): bool
     {
-        $membership = $team->users()->where('users.id', $this->id)->first()?->membership;
+        // Use existing membership if already loaded (e.g. from Team::users() relation)
+        $membership = $this->membership ?? $team->users()->where('users.id', $this->id)->first()?->membership;
 
         if (!$membership || !$membership->is_call_enabled) {
             return false;
@@ -207,7 +214,7 @@ class User extends Authenticatable
             return false;
         }
 
-        // Check cooldown
+        // Check cooldown (using last_call_ended_at from pivot)
         if ($membership->last_call_ended_at) {
             $cooldown = $team->getCallRoutingConfig()['cooldown_seconds'] ?? 60;
             if ($membership->last_call_ended_at->addSeconds($cooldown)->isFuture()) {

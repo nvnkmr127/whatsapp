@@ -24,15 +24,32 @@ class BroadcastService
     {
         Log::info("Launching Event-Driven Campaign {$campaign->id}");
 
-        // 0. Billing & Plan Enforcement
-        if (!$campaign->team->canAccess('campaigns')) {
-            $campaign->update(['status' => 'failed', 'error_message' => 'Campaigns feature not available on your plan.']);
-            throw new \Exception("Campaign launch aborted: Entitlement failure for team {$campaign->team->id}");
-        }
+        // 0. Complete Billing & Plan Preflight Validation (BEFORE QUEUE DISPATCH)
+        // Ensure we check if the entire bulk batch payload will fit within remaining limits
+        $expectedCount = $campaign->total_contacts ?? 0;
+        $messagesUsed = \App\Models\Message::where('team_id', $campaign->team_id)
+            ->where('direction', 'outbound')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
 
-        if (!$campaign->team->canAccess('send_message')) {
-            $campaign->update(['status' => 'failed', 'error_message' => 'Monthly message limit reached.']);
-            throw new \Exception("Campaign launch aborted: Message limit reached for team {$campaign->team->id}");
+        // Calculate maximum potential cost (estimated for wallet check)
+        $costPerMessage = 0.05; // Typical Meta marketing fallback if unknown
+        if ($campaign->template && $campaign->template->category === 'MARKETING')
+            $costPerMessage = 0.10;
+        $estimatedCost = $expectedCount * $costPerMessage;
+
+        $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
+            team: $campaign->team,
+            feature: 'campaigns',
+            limitKey: 'message_limit', // Check if current usage + campaign size blows past limit
+            currentUsage: $messagesUsed + $expectedCount,
+            cost: $estimatedCost
+        );
+
+        if (!$preflight['allowed']) {
+            $campaign->update(['status' => 'failed', 'error_message' => $preflight['reason']]);
+            throw new \Exception("Campaign launch aborted (PRE-QUEUE): {$preflight['reason']} [Code: {$preflight['code']}]");
         }
 
         // 0.1 WhatsApp Health Check (CRITICAL)

@@ -173,29 +173,36 @@ class CallEligibilityService
     {
         // Cache for 15 minutes (updated periodically)
         return Cache::remember("quality_rating_{$this->team->id}", 900, function () {
-            // Get quality metrics (would integrate with Meta API)
+            // Priority 1: Check team attribute (populated by health sync)
+            $rating = $this->team->whatsapp_quality_rating ?? 'GREEN';
+
+            // Priority 2: Get quality metrics (could integrate with Meta API Health endpoint)
             $qualityData = $this->getQualityMetrics();
 
-            $rating = $qualityData['rating'] ?? 'GREEN';
+            // If API says something different, it might be more recent
+            if (isset($qualityData['rating']) && $qualityData['rating'] !== $rating) {
+                $rating = $qualityData['rating'];
+            }
+
             $blockRate = $qualityData['block_rate'] ?? 0;
             $reportRate = $qualityData['report_rate'] ?? 0;
 
             // Block if rating is RED or FLAGGED
-            if (in_array($rating, ['RED', 'FLAGGED'])) {
+            if (in_array(strtoupper($rating), ['RED', 'FLAGGED'])) {
                 return [
                     'passed' => false,
-                    'block_code' => $rating === 'FLAGGED' ? 'ACCOUNT_FLAGGED_BY_META' : 'QUALITY_RATING_TOO_LOW',
+                    'block_code' => strtoupper($rating) === 'FLAGGED' ? 'ACCOUNT_FLAGGED_BY_META' : 'QUALITY_RATING_TOO_LOW',
                     'details' => [
                         'rating' => $rating,
                         'block_rate' => $blockRate,
                         'report_rate' => $reportRate,
-                        'reason' => 'Quality rating below acceptable threshold',
+                        'reason' => 'Quality rating below acceptable threshold (RED/FLAGGED)',
                     ],
                 ];
             }
 
             // Warn if YELLOW
-            $warning = $rating === 'YELLOW' ? 'Quality rating is medium. Monitor closely.' : null;
+            $warning = strtoupper($rating) === 'YELLOW' ? 'Quality rating is medium. Monitor closely.' : null;
 
             return [
                 'passed' => true,
@@ -215,7 +222,7 @@ class CallEligibilityService
      */
     protected function checkConsent(Contact $contact): array
     {
-        // Check opt-in status
+        // 1. Basic Opt-In Check
         if ($contact->opt_in_status !== 'opted_in') {
             return [
                 'passed' => false,
@@ -228,8 +235,20 @@ class CallEligibilityService
             ];
         }
 
-        // Check for explicit calling consent (custom field)
-        // If not set, we default to true IF the contact is generally opted in (checked above)
+        // 2. Consent Expiry Check (GDPR/Compliance)
+        if ($contact->opt_in_expires_at && $contact->opt_in_expires_at->isPast()) {
+            return [
+                'passed' => false,
+                'block_code' => 'CONSENT_EXPIRED',
+                'details' => [
+                    'has_consent' => true,
+                    'opt_in_expires_at' => $contact->opt_in_expires_at,
+                    'reason' => 'Communication consent has expired based on retention policy.',
+                ],
+            ];
+        }
+
+        // 3. Explicit Calling Preference Check
         $callingConsent = $contact->custom_attributes['calling_consent'] ?? true;
         $callingDeclined = $contact->custom_attributes['calling_declined'] ?? false;
 
@@ -247,19 +266,19 @@ class CallEligibilityService
             ];
         }
 
-        // Check consent expiration (if applicable)
+        // 4. Stale Consent Check (12 months limit for calling specifically)
         $consentDate = $contact->custom_attributes['calling_consent_date'] ?? null;
         if ($consentDate) {
             $consentAge = now()->diffInMonths($consentDate);
             if ($consentAge > 12) {
                 return [
                     'passed' => false,
-                    'block_code' => 'CONSENT_EXPIRED',
+                    'block_code' => 'CONSENT_STALE',
                     'details' => [
                         'has_consent' => true,
                         'consent_date' => $consentDate,
                         'consent_age_months' => $consentAge,
-                        'reason' => 'Consent expired (>12 months old)',
+                        'reason' => 'Calling consent is stale (>12 months old)',
                     ],
                 ];
             }
@@ -334,7 +353,8 @@ class CallEligibilityService
 
         $currentMonth = now()->format('Y-m');
         $minutesUsed = \App\Models\WhatsAppCall::where('team_id', $this->team->id)
-            ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
             ->sum('duration_seconds') / 60;
 
         $limit = $this->team->max_call_minutes_per_month;
@@ -454,6 +474,10 @@ class CallEligibilityService
                 'admin' => 'Obtain explicit calling consent before attempting to call.',
             ],
             'CONSENT_EXPIRED' => [
+                'user' => 'Communication consent has expired for this contact.',
+                'admin' => 'Retention policy has expired consent (opt_in_expires_at is hit).',
+            ],
+            'CONSENT_STALE' => [
                 'user' => 'Calling consent has expired for this contact.',
                 'admin' => 'Renew calling consent (consent is >12 months old).',
             ],
@@ -507,12 +531,13 @@ class CallEligibilityService
      */
     protected function getQualityMetrics(): array
     {
-        // Mock implementation - replace with actual Meta API call
+        // Replace with actual Meta API call to /<WABA_ID>?fields=quality_rating
+        // For now, we return the team's stored rating to stay consistent
         return [
-            'rating' => 'GREEN',
-            'block_rate' => 1.2,
-            'report_rate' => 0.3,
-            'delivery_rate' => 98.5,
+            'rating' => $this->team->whatsapp_quality_rating ?? 'GREEN',
+            'block_rate' => 0, // Would be fetched from insights
+            'report_rate' => 0,
+            'delivery_rate' => 100,
         ];
     }
 }

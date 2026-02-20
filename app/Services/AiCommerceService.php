@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Contact;
 use App\Models\Product;
 use App\Models\Team;
+use App\Services\EntitlementService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -33,19 +34,21 @@ class AiCommerceService
             return false;
         }
 
-        // 0.5 Billing Enforcement
-        if (!$team->canAccess('ai')) {
-            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} - Feature [ai] not in plan.");
+        // 0.5 Entitlement checks (single resolution, three capability checks)
+        $e = app(EntitlementService::class)->for($team);
+
+        if (!$e->hasFeature('ai')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - feature 'ai' not included.");
             return false;
         }
 
-        if (!$team->canAccess('commerce')) {
-            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} - Feature [commerce] not in plan.");
+        if (!$e->hasFeature('commerce')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - feature 'commerce' not included.");
             return false;
         }
 
-        if (!$team->canAccess('send_message')) {
-            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} - Message limit reached.");
+        if (!$e->can('send_message')) {
+            Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - message limit reached.");
             return false;
         }
 

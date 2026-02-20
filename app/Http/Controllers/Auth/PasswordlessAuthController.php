@@ -7,30 +7,27 @@ use App\Models\User;
 use App\Models\UserIdentity;
 use App\Services\OTPService;
 use App\Services\AuditService;
+use App\Services\UniqueIdentityService;
+use App\Services\OfferEligibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class PasswordlessAuthController extends Controller
 {
-    protected $otpService;
-
-    public function __construct(OTPService $otpService)
-    {
-        $this->otpService = $otpService;
+    public function __construct(
+        private readonly OTPService $otpService,
+        private readonly UniqueIdentityService $identity,
+    ) {
     }
 
     /**
      * Request an OTP code.
      */
-    public function requestOtp(Request $request)
+    public function requestOtp(\App\Http\Requests\Auth\OTPRequest $request)
     {
-        $request->validate([
-            'identifier' => 'required', // Email or Phone
-            'type' => 'required|in:email,phone',
-        ]);
-
         $identifier = $request->identifier;
         $type = $request->type;
 
@@ -41,31 +38,16 @@ class PasswordlessAuthController extends Controller
             return response()->json(['message' => 'OTP sent successfully.']);
         }
 
-        return response()->json(['message' => 'Failed to send OTP.'], 500);
+        return response()->json(['message' => 'Failed to send OTP or limit reached.'], 429);
     }
 
     /**
      * Verify OTP and login/signup.
      */
-    public function verifyOtp(Request $request)
+    public function verifyOtp(\App\Http\Requests\Auth\OTPVerifyRequest $request)
     {
         // Check for auto-login in local environment
         $autoLogin = $request->has('auto_login') && $request->auto_login === 'true' && app()->environment('local');
-
-        if ($autoLogin) {
-            // Auto-login: skip OTP verification in local environment
-            $request->validate([
-                'identifier' => 'required',
-                'type' => 'required|in:email,phone',
-            ]);
-        } else {
-            // Normal flow: validate OTP code
-            $request->validate([
-                'identifier' => 'required',
-                'type' => 'required|in:email,phone',
-                'code' => 'required|string|size:6',
-            ]);
-        }
 
         $identifier = $request->identifier;
         $type = $request->type;
@@ -102,29 +84,57 @@ class PasswordlessAuthController extends Controller
                 }
 
                 if (!$user) {
-                    // Create new user if not found
+                    // ── Identity uniqueness check (mirrors CreateNewUser) ──────
+                    $ip = $request->ip() ?? '0.0.0.0';
+                    $identityResult = $this->identity->check(
+                        email: ($type === 'email') ? $identifier : 'unknown@unknown.local',
+                        ip: $ip,
+                    );
+
+                    if (!$identityResult->passed) {
+                        throw ValidationException::withMessages([
+                            'identifier' => $identityResult->denial_reason,
+                        ]);
+                    }
+
+                    // ── Create user ─────────────────────────────────────────────
                     $user = User::create([
-                        'name' => explode('@', $identifier)[0] ?: $identifier, // Better default name
+                        'name' => explode('@', $identifier)[0] ?: $identifier,
                         'email' => ($type === 'email') ? $identifier : null,
                         'phone' => ($type === 'phone') ? $identifier : null,
-                        'password' => null, // Passwordless
+                        'password' => null,
                     ]);
 
-                    // 2. Create Personal Team (Tenant Role)
-                    $trialDays = config('whatsapp.trial_days', 14);
-                    $teamName = (explode('@', $identifier)[0] ?: $identifier) . "'s Team";
-
+                    // ── Create team ─────────────────────────────────────────────
                     $team = \App\Models\Team::forceCreate([
                         'user_id' => $user->id,
-                        'name' => $teamName,
+                        'name' => (explode('@', $identifier)[0] ?: $identifier) . "'s Team",
                         'personal_team' => true,
                         'subscription_plan' => 'trial',
                         'subscription_status' => 'trial',
-                        'trial_ends_at' => now()->addDays($trialDays),
+                        'trial_ends_at' => now()->addMonths(
+                            (int) get_setting('offer_trial_months', 6)
+                        ),
                     ]);
 
                     $user->ownedTeams()->save($team);
                     $user->forceFill(['current_team_id' => $team->id])->save();
+
+                    // ── Welcome credit (gated through full 6-rule eligibility) ──
+                    if (app(OfferEligibilityService::class)->isEligible($team)) {
+                        $credit = (float) get_setting('offer_initial_credit', 5.00);
+                        if ($credit > 0) {
+                            app(\App\Services\BillingService::class)->deposit(
+                                $team,
+                                $credit,
+                                'Welcome Gift (Launch Offer)'
+                            );
+                        }
+                        app(OfferEligibilityService::class)->markClaimed($team);
+                    }
+
+                    // ── Record fingerprints + hit IP rate limiter ────────────────
+                    $this->identity->record(team: $team, user: $user, ip: $ip);
 
                     AuditService::log('Auth.Signup', $user->id, $identifier, $provider, ['team_id' => $team->id]);
                 }

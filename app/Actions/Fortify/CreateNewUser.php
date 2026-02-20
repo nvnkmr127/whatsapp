@@ -4,9 +4,13 @@ namespace App\Actions\Fortify;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Services\UniqueIdentityService;
+use App\Services\OfferEligibilityService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Laravel\Jetstream\Jetstream;
 
@@ -14,22 +18,49 @@ class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules;
 
+    public function __construct(
+        private readonly UniqueIdentityService $identity,
+    ) {
+    }
+
     /**
-     * Create a newly registered user.
+     * Validate, enforce identity uniqueness, then create the user + team.
      *
-     * @param  array<string, string>  $input
+     * @param array<string, string> $input
      */
     public function create(array $input): User
     {
+        // ── Step 1: Standard field validation ──────────────────────────
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => $this->passwordRules(),
-            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
+            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature()
+                ? ['accepted', 'required']
+                : '',
         ])->validate();
 
-        return DB::transaction(function () use ($input) {
-            return tap(User::create([
+        // ── Step 2: Unique Identity Enforcement ────────────────────────
+        // All six checks must pass before we touch the database.
+        $ip = request()?->ip() ?? '0.0.0.0';
+
+        $identityResult = $this->identity->check(
+            email: $input['email'],
+            ip: $ip,
+            wabaId: null,   // unknown yet; re-checked at WA connect
+            phoneNumberId: null,   // same
+            paymentFingerprint: $input['payment_fingerprint'] ?? null,
+        );
+
+        if (!$identityResult->passed) {
+            throw ValidationException::withMessages([
+                'email' => $identityResult->denial_reason,
+            ]);
+        }
+
+        // ── Step 3: Create user + team atomically ──────────────────────
+        return DB::transaction(function () use ($input, $ip) {
+            $user = User::create([
                 'name' => $input['name'],
                 'email' => $input['email'],
                 'password' => Hash::make($input['password']),
@@ -38,33 +69,54 @@ class CreateNewUser implements CreatesNewUsers
                 'utm_campaign' => $input['utm_campaign'] ?? null,
                 'utm_content' => $input['utm_content'] ?? null,
                 'utm_term' => $input['utm_term'] ?? null,
-            ]), function (User $user) {
-                $this->createTeam($user);
-            });
+            ]);
+
+            $team = $this->createTeam($user);
+
+            // ── Step 4: Record fingerprints AFTER successful creation ───
+            $this->identity->record(
+                team: $team,
+                user: $user,
+                ip: $ip,
+                paymentFingerprint: $input['payment_fingerprint'] ?? null,
+            );
+
+            return $user;
         });
     }
 
     /**
-     * Create a personal team for the user.
+     * Create a personal team for the user with trial + launch offer gift.
      */
-    protected function createTeam(User $user): void
+    protected function createTeam(User $user): Team
     {
         $team = Team::forceCreate([
             'user_id' => $user->id,
             'name' => explode(' ', $user->name, 2)[0] . "'s Team",
             'personal_team' => true,
             'subscription_status' => 'trial',
-            'trial_ends_at' => now()->addMonths((int) get_setting('offer_trial_months', 6)),
+            'trial_ends_at' => now()->addMonths(
+                (int) get_setting('offer_trial_months', 6)
+            ),
         ]);
 
         $user->ownedTeams()->save($team);
 
-        // specific: Launch Gift
-        if (get_setting('offer_enabled', true)) {
+        // Launch gift credit – only when all 5 offer eligibility rules pass
+        if (app(OfferEligibilityService::class)->isEligible($team)) {
             $initialCredit = (float) get_setting('offer_initial_credit', 5.00);
             if ($initialCredit > 0) {
-                app(\App\Services\BillingService::class)->deposit($team, $initialCredit, 'Welcome Gift (Launch Offer)');
+                app(\App\Services\BillingService::class)->deposit(
+                    $team,
+                    $initialCredit,
+                    'Welcome Gift (Launch Offer)'
+                );
+
+                // Stamp offer as claimed on the team immediately
+                app(OfferEligibilityService::class)->markClaimed($team);
             }
         }
+
+        return $team;
     }
 }

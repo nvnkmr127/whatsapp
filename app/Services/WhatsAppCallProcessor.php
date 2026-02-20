@@ -171,6 +171,10 @@ class WhatsAppCallProcessor
                 ]);
             }
 
+            // Notify CallService to mark agent as busy
+            $callService = new CallService($call->team);
+            $callService->handleCallStarted($call);
+
             event(new CallAnswered($call->fresh()));
         }
     }
@@ -207,6 +211,17 @@ class WhatsAppCallProcessor
                 $call->markAsFailed($callData['failure_reason'] ?? 'Call terminated');
                 event(new CallFailed($call));
                 break;
+        }
+
+        // Notify CallService to handle agent cooldown/availability
+        $callService = new CallService($call->team);
+        $callService->handleCallEnded($call);
+
+        // Record terminal event for safeguards (missed/failed)
+        if (in_array($status, ['missed', 'failed', 'no_answer', 'rejected'])) {
+            $safeguardService = new CallSafeguardService();
+            $type = in_array($status, ['missed', 'no_answer', 'rejected']) ? 'missed' : 'failed';
+            $safeguardService->recordEvent($call->team, $type);
         }
 
         // Trigger log to message thread
@@ -253,8 +268,39 @@ class WhatsAppCallProcessor
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
             ]);
+
+            // Route call to an agent if not already assigned
+            if (!$call->agent_id) {
+                $routingService = new CallRoutingService($team);
+                $routingResult = $routingService->findAgent($contact);
+
+                if ($routingResult['agent']) {
+                    $call->update(['agent_id' => $routingResult['agent']->id]);
+
+                    // Set sticky assignment if contact is not currently assigned
+                    if (!$contact->assigned_to) {
+                        $contact->update(['assigned_to' => $routingResult['agent']->id]);
+                    }
+
+                    Log::info("Inbound call routed to agent", [
+                        'call_id' => $call->call_id,
+                        'agent_id' => $routingResult['agent']->id,
+                        'method' => $routingResult['method']
+                    ]);
+                } else if (isset($routingResult['action']) && $routingResult['action'] === 'auto_reply') {
+                    // Trigger fallback auto-reply if needed
+                    Log::info("Inbound call triggered fallback action", [
+                        'call_id' => $call->call_id,
+                        'action' => 'auto_reply'
+                    ]);
+                }
+
+                // Dispatch timeout monitor delayed by configured timeout
+                \App\Jobs\MonitorCallTimeoutJob::dispatch($call->id)
+                    ->delay(now()->addSeconds($team->getCallRoutingConfig()['ring_timeout_seconds'] ?? 30));
+            }
         } catch (\Exception $e) {
-            Log::error("Failed to ensure contact/conv for call: " . $e->getMessage());
+            Log::error("Failed to ensure contact/conv/routing for call: " . $e->getMessage());
         }
     }
 }

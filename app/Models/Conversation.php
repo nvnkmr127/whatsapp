@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use \App\Traits\HasTeam;
+
 class Conversation extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTeam;
 
     protected $guarded = [];
 

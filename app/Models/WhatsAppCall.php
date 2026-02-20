@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+use \App\Traits\HasTeam;
+
 class WhatsAppCall extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTeam;
 
     protected $table = 'whatsapp_calls';
 
@@ -16,6 +18,7 @@ class WhatsAppCall extends Model
         'team_id',
         'contact_id',
         'conversation_id',
+        'agent_id',
         'call_id',
         'direction',
         'status',
@@ -61,6 +64,14 @@ class WhatsAppCall extends Model
     public function conversation(): BelongsTo
     {
         return $this->belongsTo(Conversation::class);
+    }
+
+    /**
+     * Get the agent associated with the call.
+     */
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'agent_id');
     }
 
     /**

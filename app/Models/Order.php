@@ -4,8 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use \App\Traits\HasTeam;
+
 class Order extends Model
 {
+    use HasTeam;
+
     protected $fillable = [
         'team_id',
         'order_id', // Meta Order ID

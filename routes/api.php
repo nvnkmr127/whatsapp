@@ -9,7 +9,7 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/webhooks/trigger/{id}', [\App\Http\Controllers\Api\WebhookTriggerController::class, 'trigger'])->middleware('auth:sanctum');
 
-Route::group(['middleware' => ['auth:sanctum', 'throttle:api'], 'prefix' => 'v1'], function () {
+Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Http\Middleware\BlockTrialFieldsViaApi::class], 'prefix' => 'v1'], function () {
     // Contacts
     Route::get('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'index']);
     Route::post('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'store']);

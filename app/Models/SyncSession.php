@@ -4,8 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use \App\Traits\HasTeam;
+
 class SyncSession extends Model
 {
+    use HasTeam;
+
     protected $fillable = [
         'integration_id',
         'type',

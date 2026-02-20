@@ -2,33 +2,42 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\EntitlementService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * CheckTenantSubscription
+ * ════════════════════════
+ * API / tenant-layer subscription gate. Delegates ALL status decisions to
+ * EntitlementService — never inspects Team columns directly.
+ */
 class CheckTenantSubscription
 {
-    /**
-     * Handle an incoming request.
-     */
+    public function __construct(private readonly EntitlementService $entitlements)
+    {
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
-        $team = $request->user()?->currentTeam;
+        $user = $request->user();
+
+        // Super Admins bypass all subscription checks
+        if ($user?->is_super_admin) {
+            return $next($request);
+        }
+
+        $team = $user?->currentTeam;
 
         if (!$team) {
             return $next($request);
         }
 
-        // List of statuses that are allowed access
-        $allowedStatuses = ['active', 'trial'];
+        $e = $this->entitlements->for($team);
 
-        // If you are a Super Admin, you bypass this check
-        if ($request->user()->is_super_admin) {
-            return $next($request);
-        }
-
-        if (!in_array($team->subscription_status, $allowedStatuses)) {
-            abort(403, 'Your subscription is inactive. Please contact billing.');
+        if (!$e->active()) {
+            abort(403, "Your subscription is inactive ({$e->statusLabel()}). Please contact billing.");
         }
 
         return $next($request);

@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use \App\Traits\HasTeam;
+
 class WhatsAppFlow extends Model
 {
+    use HasTeam;
+
     protected $table = 'whatsapp_flows';
     protected $guarded = [];
 

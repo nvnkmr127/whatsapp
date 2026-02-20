@@ -9,6 +9,30 @@ use App\Models\WhatsAppConversation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * BillingService
+ * ════════════════════════════════════════════════════════
+ * CONFIRMED: WALLET + TRIAL INTERACTION LOGIC
+ * ────────────────────────────────────────────────────────
+ * 1. Trial Includes Usage Limit Separate From Wallet:
+ *    - A trial restricts how many units you can consume (e.g. 5,000 active contacts).
+ *    - The Wallet funds the underlying Meta wholesale costs. Two separate layers.
+ * 
+ * 2. Wallet Credit Usage Rules Clearly Defined:
+ *    - Wallet strictly manages pre-paid balance.
+ *    - No differentiation exists between "promotional startup credit" vs "purchased credit". 
+ * 
+ * 3. No Double Benefit Stacking:
+ *    - Being on a "Free Trial" DOES NOT wave the cost of sending messages/calls.
+ *    - The user simply bleeds down the initial signup credit (or top-ups).
+ *
+ * 4. No Negative Wallet Allowed:
+ *    - Evaluated before *any* action (via OutboundPreflightService or internal DB transactions).
+ *    - System will block actions rather than dip into negative ledger. (strictDeduct implementation)
+ *
+ * 5. Cost Calculations Always Logged:
+ *    - `TeamTransaction` is ALWAYS emitted when wallet balance materially decreases.
+ */
 class BillingService
 {
     public function getUsagePercentage(Team $team)
@@ -93,12 +117,12 @@ class BillingService
             }
 
             if ($wallet->balance < $cost) {
-                // Strict Prepaid: Block.
+                // Strict Prepaid: Block. No negative wallet allowed.
                 return false;
             }
 
             // 4. Deduct & Transact
-            $wallet->decrement('balance', $cost);
+            $wallet->strictDeduct($cost);
 
             TeamTransaction::create([
                 'team_id' => $team->id,
@@ -319,7 +343,7 @@ class BillingService
             ['balance' => 0]
         );
 
-        // Check balance
+        // Check balance (No negative wallet allowed)
         if ($wallet->balance < $cost) {
             Log::warning("Insufficient balance for call billing", [
                 'team_id' => $team->id,
@@ -331,30 +355,33 @@ class BillingService
             return false;
         }
 
-        // Deduct cost
-        $wallet->decrement('balance', $cost);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($wallet, $cost, $team, $call) {
+            // Lock and deduct
+            $lockedWallet = TeamWallet::where('id', $wallet->id)->lockForUpdate()->first();
+            $lockedWallet->strictDeduct($cost);
 
-        // Create transaction record
-        $transactionData = [
-            'team_id' => $team->id,
-            'amount' => -$cost,
-            'type' => 'call_charge',
-            'description' => "WhatsApp Call - {$call->formatted_duration} ({$call->direction})",
-        ];
-
-        // Check if metadata column exists (resiliency for pending migrations)
-        if (\Illuminate\Support\Facades\Schema::hasColumn('team_transactions', 'metadata')) {
-            $transactionData['metadata'] = [
-                'call_id' => $call->call_id,
-                'contact_id' => $call->contact_id,
-                'duration_seconds' => $call->duration_seconds,
+            // Create transaction record (Cost calculations always logged)
+            $transactionData = [
+                'team_id' => $team->id,
+                'amount' => -$cost,
+                'type' => 'call_charge',
+                'description' => "WhatsApp Call - {$call->formatted_duration} ({$call->direction})",
             ];
-        } else {
-            // Fallback: Append call ID to description if metadata column is missing
-            $transactionData['description'] .= " [Ref: " . substr($call->call_id, -8) . "]";
-        }
 
-        TeamTransaction::create($transactionData);
+            // Check if metadata column exists (resiliency for pending migrations)
+            if (\Illuminate\Support\Facades\Schema::hasColumn('team_transactions', 'metadata')) {
+                $transactionData['metadata'] = [
+                    'call_id' => $call->call_id,
+                    'contact_id' => $call->contact_id,
+                    'duration_seconds' => $call->duration_seconds,
+                ];
+            } else {
+                // Fallback: Append call ID to description if metadata column is missing
+                $transactionData['description'] .= " [Ref: " . substr($call->call_id, -8) . "]";
+            }
+
+            TeamTransaction::create($transactionData);
+        });
 
         $this->logBillingEvent($team, 'call_charged', "Call billed: {$call->formatted_duration}", [
             'call_id' => $call->call_id,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppCall;
 use App\Services\CallService;
+use App\Services\EntitlementService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -14,27 +15,35 @@ class CallController extends Controller
     /**
      * Initiate an outbound call.
      */
-    public function initiate(Request $request)
+    public function initiate(\App\Http\Requests\Calls\InitiateCallRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string',
-            'options' => 'sometimes|array',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        // ── 1. Calculate Current Usage ───────────────────────────────────────
+        $minutesUsed = WhatsAppCall::where('team_id', $team->id)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('duration_seconds') / 60;
+
+        // ── 2. Run Clear Billing Precedence Preflight ────────────────────────
+        // This explicitly guarantees checks in order:
+        // Trial Validity -> Grace State -> Plan Entitlement -> Usage Limit -> Wallet -> Meta Limits
+        $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
+            team: $team,
+            feature: 'calling',
+            limitKey: 'call_minutes',
+            currentUsage: $minutesUsed,
+            cost: 0.00 // Assuming basic initiation has no upfront fixed cost
+        );
+
+        if (!$preflight['allowed']) {
             return response()->json([
                 'success' => false,
-                'error' => 'No team context',
-            ], 400);
+                'error' => $preflight['reason'],
+                'code' => $preflight['code'],
+                'upgrade_required' => in_array($preflight['code'], ['ERR_SUBSCRIPTION_INACTIVE', 'ERR_FEATURE_LOCKED', 'ERR_QUOTA_EXCEEDED']),
+            ], 403);
         }
+
         $callService = new CallService($team);
 
         try {
@@ -57,24 +66,11 @@ class CallController extends Controller
      */
     public function checkEligibility(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $request->validate([
             'contact_id' => 'required|integer|exists:contacts,id',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $team = $request->user()->currentTeam;
-        if (!$team) {
-            return response()->json([
-                'success' => false,
-                'error' => 'No team context',
-            ], 400);
-        }
         $contact = $team->contacts()->findOrFail($request->contact_id);
 
         try {
@@ -101,12 +97,6 @@ class CallController extends Controller
     public function answer(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
-            return response()->json([
-                'success' => false,
-                'error' => 'No team context',
-            ], 400);
-        }
 
         try {
             $whatsappService = new WhatsAppService($team);
@@ -132,12 +122,6 @@ class CallController extends Controller
     public function reject(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
-            return response()->json([
-                'success' => false,
-                'error' => 'No team context',
-            ], 400);
-        }
 
         try {
             $whatsappService = new WhatsAppService($team);
@@ -158,12 +142,6 @@ class CallController extends Controller
     public function end(Request $request, string $callId)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
-            return response()->json([
-                'success' => false,
-                'error' => 'No team context',
-            ], 400);
-        }
 
         try {
             $whatsappService = new WhatsAppService($team);
@@ -181,33 +159,9 @@ class CallController extends Controller
     /**
      * Get call history.
      */
-    public function index(Request $request)
+    public function index(\App\Http\Requests\Calls\CallHistoryRequest $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
-            return response()->json([
-                'success' => false,
-                'error' => 'No team context',
-            ], 400);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'direction' => 'sometimes|in:inbound,outbound',
-            'status' => 'sometimes|string',
-            'contact_id' => 'sometimes|integer|exists:contacts,id',
-            'from_date' => 'sometimes|date',
-            'to_date' => 'sometimes|date|after_or_equal:from_date',
-            'sort_by' => 'sometimes|in:created_at,initiated_at,answered_at,ended_at,duration_seconds,cost_amount,status,direction',
-            'sort_order' => 'sometimes|in:asc,desc',
-            'per_page' => 'sometimes|integer|min:1|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
 
         if ($request->filled('contact_id')) {
             $contactExists = $team->contacts()->whereKey($request->contact_id)->exists();

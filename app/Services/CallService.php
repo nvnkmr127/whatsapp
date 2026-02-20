@@ -6,6 +6,7 @@ use App\Models\Team;
 use App\Models\WhatsAppCall;
 use App\Models\Contact;
 use App\Models\User;
+use App\Services\EntitlementService;
 use Illuminate\Support\Facades\Log;
 
 class CallService
@@ -83,6 +84,8 @@ class CallService
 
     /**
      * Check if team has exceeded usage limits.
+     * Reads the call-minute limit from EntitlementService so that
+     * offer settings and billing overrides are respected.
      */
     public function checkUsageLimits(): array
     {
@@ -91,23 +94,31 @@ class CallService
             ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
             ->sum('duration_seconds') / 60;
 
-        if (!$this->team->max_call_minutes_per_month) {
+        // ── Read from EntitlementService (offer > plan > raw column) ──────────
+        $entitledLimit = app(EntitlementService::class)->for($this->team)->limit('call_minutes');
+
+        // Fall back to the team-level column when the entitlement system
+        // does not have a 'call_minutes' mapping for this plan
+        $limit = $entitledLimit > 0
+            ? $entitledLimit
+            : ($this->team->max_call_minutes_per_month ?? 0);
+
+        if (!$limit) {
             return [
                 'allowed' => true,
-                'minutes_used' => $minutesUsed,
+                'minutes_used' => round($minutesUsed, 2),
                 'minutes_limit' => null,
                 'minutes_remaining' => null,
             ];
         }
 
-        $limit = $this->team->max_call_minutes_per_month;
-        $remaining = $limit - $minutesUsed;
+        $remaining = max(0, $limit - $minutesUsed);
 
         if ($minutesUsed >= $limit) {
             return [
                 'allowed' => false,
-                'reason' => "Monthly call limit of {$limit} minutes has been reached. Used: {$minutesUsed} minutes.",
-                'minutes_used' => $minutesUsed,
+                'reason' => "Monthly call limit of {$limit} minutes has been reached. Used: " . round($minutesUsed, 1) . ' minutes.',
+                'minutes_used' => round($minutesUsed, 2),
                 'minutes_limit' => $limit,
                 'minutes_remaining' => 0,
             ];
@@ -115,9 +126,9 @@ class CallService
 
         return [
             'allowed' => true,
-            'minutes_used' => $minutesUsed,
+            'minutes_used' => round($minutesUsed, 2),
             'minutes_limit' => $limit,
-            'minutes_remaining' => $remaining,
+            'minutes_remaining' => round($remaining, 2),
         ];
     }
 
@@ -228,6 +239,28 @@ class CallService
                 'initiated_at' => $call->initiated_at?->diffForHumans(),
             ];
         })->toArray();
+    }
+
+    /**
+     * Handle call start and mark agent as busy.
+     */
+    public function handleCallStarted(WhatsAppCall $call): void
+    {
+        $agentId = $call->agent_id;
+        if (!$agentId) {
+            return;
+        }
+
+        // Update agent status to busy in the team pivot
+        $this->team->users()->updateExistingPivot($agentId, [
+            'call_status' => 'busy',
+        ]);
+
+        Log::info("Agent marked as busy", [
+            'team_id' => $this->team->id,
+            'agent_id' => $agentId,
+            'call_id' => $call->call_id,
+        ]);
     }
 
     /**

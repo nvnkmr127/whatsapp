@@ -4,6 +4,9 @@ namespace App\Livewire\Admin;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Services\OfferAuditService;
+use App\Services\OfferEligibilityService;
+use App\Services\TrialOverrideService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +28,16 @@ class Crm extends Component
     public $stats = [];
     public $funnel = [];
     public $selectedTeamId = null;
+
+    // ── Override modal state ───────────────────────────────────────────
+    /** Number of days to extend trial (used in extend modal) */
+    public int $extendDays = 30;
+    /** Admin-supplied reason for every override action */
+    public string $overrideReason = '';
+    /** Plan name for manual conversion */
+    public string $convertPlan = 'starter';
+    /** Confirmation text for revoke (must type team name) */
+    public string $revokeConfirmation = '';
 
     protected $queryString = ['search', 'statusFilter', 'setupFilter', 'funnelStage', 'showOfferOnly'];
 
@@ -87,21 +100,126 @@ class Crm extends Component
         return redirect()->route('admin.impersonate.enter', ['user' => $userId]);
     }
 
-    public function toggleOffer($teamId)
+    // ------------------------------------------------------------------
+    // Trial Override Actions (all delegate to TrialOverrideService)
+    // ------------------------------------------------------------------
+
+    /**
+     * Force-assign a trial, bypassing eligibility rules.
+     * Requires an explicit reason.
+     */
+    public function forceTrial(int $teamId): void
+    {
+        if (!Auth::user()->isSuperAdmin())
+            abort(403);
+
+        if (empty(trim($this->overrideReason))) {
+            session()->flash('error', 'A reason is required for forced trial assignment.');
+            return;
+        }
+
+        $team = Team::findOrFail($teamId);
+        $result = app(TrialOverrideService::class)->forceTrial(
+            team: $team,
+            admin: Auth::user(),
+            months: null, // uses offer_trial_months setting
+            reason: $this->overrideReason,
+        );
+
+        $this->overrideReason = '';
+        session()->flash($result['success'] ? 'message' : 'error', $result['message']);
+    }
+
+    /**
+     * Extend an existing trial by $extendDays days.
+     */
+    public function extendTrial(int $teamId): void
+    {
+        if (!Auth::user()->isSuperAdmin())
+            abort(403);
+
+        $team = Team::findOrFail($teamId);
+        $result = app(TrialOverrideService::class)->extendTrial(
+            team: $team,
+            admin: Auth::user(),
+            days: max(1, (int) $this->extendDays),
+            reason: $this->overrideReason,
+        );
+
+        $this->extendDays = 30;
+        $this->overrideReason = '';
+        session()->flash($result['success'] ? 'message' : 'error', $result['message']);
+    }
+
+    /**
+     * Immediately revoke a trial. Requires the admin to type the team name
+     * as confirmation to prevent accidental revocations.
+     */
+    public function revokeTrial(int $teamId): void
+    {
+        if (!Auth::user()->isSuperAdmin())
+            abort(403);
+
+        $team = Team::findOrFail($teamId);
+
+        if (strtolower(trim($this->revokeConfirmation)) !== strtolower($team->name)) {
+            session()->flash('error', "Revocation cancelled: confirmation text does not match team name '{$team->name}'.");
+            return;
+        }
+
+        if (empty(trim($this->overrideReason))) {
+            session()->flash('error', 'A reason is required for trial revocation.');
+            return;
+        }
+
+        $result = app(TrialOverrideService::class)->revokeTrial(
+            team: $team,
+            admin: Auth::user(),
+            reason: $this->overrideReason,
+        );
+
+        $this->revokeConfirmation = '';
+        $this->overrideReason = '';
+        session()->flash($result['success'] ? 'message' : 'error', $result['message']);
+    }
+
+    /**
+     * Manually convert a team to active paid status.
+     */
+    public function convertToActive(int $teamId): void
+    {
+        if (!Auth::user()->isSuperAdmin())
+            abort(403);
+
+        $team = Team::findOrFail($teamId);
+        $result = app(TrialOverrideService::class)->convertToActive(
+            team: $team,
+            admin: Auth::user(),
+            plan: $this->convertPlan ?: null,
+            reason: $this->overrideReason,
+        );
+
+        $this->overrideReason = '';
+        session()->flash($result['success'] ? 'message' : 'error', $result['message']);
+    }
+
+    /**
+     * Legacy: kept for backward compatibility with any existing Blade calls.
+     * Delegates to forceTrial or convertToActive based on current status.
+     *
+     * @deprecated  Use forceTrial() / convertToActive() instead.
+     */
+    public function toggleOffer($teamId): void
     {
         $team = Team::findOrFail($teamId);
+
         if ($team->subscription_status === 'trial') {
-            $team->update([
-                'subscription_status' => 'active',
-                'trial_ends_at' => null
-            ]);
+            $this->overrideReason = 'Legacy toggleOffer → promote';
+            $this->convertToActive((int) $teamId);
         } else {
-            $team->update([
-                'subscription_status' => 'trial',
-                'trial_ends_at' => now()->addMonths(6)
-            ]);
+            $this->overrideReason = 'Legacy toggleOffer → force trial';
+            $this->forceTrial((int) $teamId);
         }
-        session()->flash('message', 'Offer toggled for ' . $team->name);
     }
 
     public function saveNote()

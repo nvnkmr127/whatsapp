@@ -228,9 +228,7 @@
                             </td>
                             <td class="px-8 py-6 text-right" onclick="event.stopPropagation()">
                                 <div class="flex items-center justify-end gap-3">
-                                    <button wire:click="toggleOffer({{ $team->id }})" class="p-3 bg-white rounded-xl border border-slate-200 text-slate-400 hover:text-amber-500 hover:border-amber-200 hover:bg-amber-50 transition-all duration-300" title="Toggle Launch Offer">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path></svg>
-                                    </button>
+                                    {{-- Fast-toggle button removed. All overrides must now go through the Advanced Modal to require justification. --}}
                                     
                                     <button wire:click="impersonate({{ $team->owner->id }})" class="p-3 bg-white rounded-xl border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all duration-300" title="Enter Instance">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
@@ -328,7 +326,21 @@
                     </div>
 
                     {{-- Right Content: Details --}}
-                    <div class="flex-1 overflow-y-auto p-12 bg-white">
+                    <div class="flex-1 overflow-y-auto p-12 bg-white relative">
+                        {{-- Flash Messages --}}
+                        @if (session()->has('message'))
+                            <div class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-4 rounded-2xl text-xs font-bold shadow-sm flex items-center justify-between">
+                                {{ session('message') }}
+                                <button onclick="this.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700">&times;</button>
+                            </div>
+                        @endif
+                        @if (session()->has('error'))
+                            <div class="mb-6 bg-rose-50 border border-rose-200 text-rose-700 px-5 py-4 rounded-2xl text-xs font-bold shadow-sm flex items-center justify-between">
+                                {{ session('error') }}
+                                <button onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-700">&times;</button>
+                            </div>
+                        @endif
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                             {{-- Integration Section --}}
                             <div class="space-y-8">
@@ -441,6 +453,70 @@
                                         View Full Transcript
                                     </button>
                                 @endif
+                            </div>
+                        </div>
+
+                        {{-- ════════════════════════════════════════════════════════
+                             Super Admin Overrides
+                        ════════════════════════════════════════════════════════ --}}
+                        <div class="mt-16 pt-12 border-t border-slate-100">
+                            <h5 class="flex items-center gap-3 text-sm font-black text-slate-900 uppercase tracking-[0.3em] mb-2">
+                                <span class="text-rose-500">Super Admin</span> Overrides
+                            </h5>
+                            <p class="text-xs text-slate-500 mb-8 max-w-2xl">Use these tools carefully. All actions bypass standard eligibility checks, immediately invalidate Entitlement caches, and commit permanent audit trails.</p>
+
+                            <div class="bg-rose-50/30 border border-rose-100 rounded-[2rem] p-6 space-y-6">
+                                {{-- Audit Reason (Required for all) --}}
+                                <div>
+                                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Mandatory Audit Reason</label>
+                                    <input type="text" wire:model="overrideReason" placeholder="Required: Why are you overriding this team's state?" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all shadow-sm">
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-rose-100/50">
+                                    {{-- LEFT COL: Actions --}}
+                                    <div class="space-y-4">
+                                        @if($selectedTeam->subscription_status === 'trial')
+                                            {{-- Extend Trial --}}
+                                            <div class="flex gap-2">
+                                                <input type="number" wire:model="extendDays" min="1" class="w-24 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-center appearance-none cursor-text focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" placeholder="Days">
+                                                <button wire:click="extendTrial({{ $selectedTeam->id }})" class="flex-1 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 hover:border-amber-300 transition-all">
+                                                    Extend Trial
+                                                </button>
+                                            </div>
+
+                                            {{-- Revoke Trial --}}
+                                            <div class="flex gap-2">
+                                                <input type="text" wire:model="revokeConfirmation" placeholder="Type team name" class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 placeholder-slate-300">
+                                                <button wire:click="revokeTrial({{ $selectedTeam->id }})" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 border border-rose-600 transition-all shadow-md shadow-rose-500/20">
+                                                    Revoke
+                                                </button>
+                                            </div>
+                                        @else
+                                            {{-- Force Trial --}}
+                                            <div class="flex gap-2">
+                                                <button wire:click="forceTrial({{ $selectedTeam->id }})" class="w-full px-4 py-3 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 hover:border-amber-300 transition-all">
+                                                    Force New Trial (Bypass Eligibility)
+                                                </button>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- RIGHT COL: Manual Conversion --}}
+                                    <div class="space-y-4 bg-white/50 rounded-xl p-4 border border-indigo-100">
+                                        <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Promote to Paid</p>
+                                        <div class="flex flex-col gap-2">
+                                            <select wire:model="convertPlan" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                                                <option value="starter">Starter Plan</option>
+                                                <option value="growth">Growth Plan</option>
+                                                <option value="scale">Scale Plan</option>
+                                                <option value="enterprise">Enterprise Plan</option>
+                                            </select>
+                                            <button wire:click="convertToActive({{ $selectedTeam->id }})" class="w-full px-4 py-2 bg-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-md shadow-indigo-500/20">
+                                                Convert to Paid
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Services\OfferAuditService;
+use App\Services\OfferEligibilityService;
 use Illuminate\Http\Request;
 
 class SuperAdminController extends Controller
@@ -89,17 +91,29 @@ class SuperAdminController extends Controller
                     'name' => $validated['company_name'],
                     'personal_team' => false,
                     'subscription_plan' => $validated['plan'],
-                    'subscription_status' => 'active',
+                    'subscription_status' => 'active',      // Admin creations start active
                     'subscription_ends_at' => $subscriptionDuration,
                 ]);
 
                 // 3. Attach User to Team as Owner
                 $user->teams()->attach($team, ['role' => 'admin']);
-                $user->forceFill([
-                    'current_team_id' => $team->id,
-                ])->save();
+                $user->forceFill(['current_team_id' => $team->id])->save();
 
-                // 4. Log the tenant creation
+                // 4. Offer gift – only when ALL 6 eligibility rules pass
+                $offerApplied = app(OfferEligibilityService::class)->isEligible($team);
+                if ($offerApplied) {
+                    $credit = (float) get_setting('offer_initial_credit', 5.00);
+                    if ($credit > 0) {
+                        app(\App\Services\BillingService::class)->deposit(
+                            $team,
+                            $credit,
+                            'Welcome Gift (Launch Offer – Admin Created)'
+                        );
+                    }
+                    app(OfferEligibilityService::class)->markClaimed($team);
+                }
+
+                // 5. Log the tenant creation
                 \Illuminate\Support\Facades\Log::info('Tenant created', [
                     'team_id' => $team->id,
                     'team_name' => $team->name,
@@ -107,6 +121,9 @@ class SuperAdminController extends Controller
                     'plan' => $validated['plan'],
                     'created_by' => auth()->user()->email,
                 ]);
+
+                // 6. Offer audit trail (admin attribution)
+                OfferAuditService::logManualTenantCreated($team, auth()->user(), $offerApplied);
 
                 return $team;
             });

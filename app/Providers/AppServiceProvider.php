@@ -11,7 +11,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // ── Entitlement stack – singletons so in-request cache is shared ──
+        $this->app->singleton(\App\Services\OfferSettingsService::class);
+        $this->app->singleton(\App\Services\OfferEligibilityService::class);
+        $this->app->singleton(\App\Services\EntitlementService::class);
+        $this->app->singleton(\App\Services\TrialOverrideService::class);
+        $this->app->singleton(\App\Services\OutboundPreflightService::class);
+
     }
 
     /**
@@ -19,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── Model Observers ─────────────────────────────────────────────
+        \App\Models\Team::observe(\App\Observers\TeamObserver::class);
+        \App\Models\User::observe(\App\Observers\UserObserver::class);
+        \App\Models\Contact::observe(\App\Observers\ContactObserver::class);
+
         \Illuminate\Support\Facades\View::composer('*', \App\Http\View\Composers\GlobalSettingsComposer::class);
 
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {

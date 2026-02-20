@@ -96,6 +96,27 @@ class SendCampaignMessageJob implements ShouldQueue
         }, $bodyVars);
 
         try {
+            // --- MID-QUEUE PREFLIGHT GUARANTEE (RE-CHECK LIMITS BEFORE DISPATCHING TO API) ---
+            // Recalculates exact constraints mid-flight to stop an "enqueue, then drain" infinite queue exploit.
+            $messagesUsed = Message::where('team_id', $campaign->team_id)
+                ->where('direction', 'outbound')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+            // Re-auth using the current snapshot against wallet and limits
+            $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
+                team: $campaign->team,
+                feature: 'send_message',
+                limitKey: 'message_limit',
+                currentUsage: $messagesUsed,
+                cost: 0 // Detailed costing handled atomically by BillingService downstream, but trial/limits checked here.
+            );
+
+            if (!$preflight['allowed']) {
+                throw new \Exception("Preflight re-check failed mid-queue: {$preflight['reason']} [Code: {$preflight['code']}]");
+            }
+
             // --- SAFEGUARD: Check Template Status ---
             // Prevent sending if template was paused/rejected mid-campaign
             $tpl = \App\Models\WhatsappTemplate::where('team_id', $campaign->team_id)

@@ -363,39 +363,49 @@ class CallConsentService
     {
         $automationId = $context['automation_id'] ?? null;
 
-        if (!$automationId) {
-            return [
-                'passed' => true,
-                'automation_active' => false,
-                'details' => [
-                    'no_automation' => true,
-                ],
-            ];
+        // 1. If we are currently IN an automation trigger
+        if ($automationId) {
+            $automationType = $context['automation_type'] ?? null;
+            $allowedTypes = ['support_flow', 'callback_request', 'escalation'];
+
+            if (!in_array($automationType, $allowedTypes)) {
+                return [
+                    'passed' => false,
+                    'automation_active' => true,
+                    'block_code' => 'AUTOMATION_BLOCKS_CALLING',
+                    'details' => [
+                        'automation_id' => $automationId,
+                        'automation_type' => $automationType,
+                        'reason' => 'This automation type does not allow calling',
+                    ],
+                ];
+            }
         }
 
-        // Check if automation allows calling
-        $automationType = $context['automation_type'] ?? null;
-        $allowedTypes = ['support_flow', 'callback_request', 'escalation'];
+        // 2. Check for any background ACTIVE automation run for this contact
+        // If an agent tries to call while a bot is actively handling the user, it might be blocked.
+        $activeRun = \App\Models\AutomationRun::where('contact_id', $contact->id)
+            ->where('status', 'active')
+            ->first();
 
-        if (!in_array($automationType, $allowedTypes)) {
+        if ($activeRun) {
             return [
                 'passed' => false,
                 'automation_active' => true,
-                'block_code' => 'AUTOMATION_BLOCKS_CALLING',
+                'block_code' => 'ACTIVE_AUTOMATION_RUNNING',
                 'details' => [
-                    'automation_id' => $automationId,
-                    'automation_type' => $automationType,
-                    'reason' => 'This automation type does not allow calling',
+                    'automation_id' => $activeRun->automation_id,
+                    'status' => 'active',
+                    'reason' => 'Contact is currently in an active automation/bot flow.',
                 ],
             ];
         }
 
         return [
             'passed' => true,
-            'automation_active' => true,
+            'automation_active' => false,
             'details' => [
                 'automation_id' => $automationId,
-                'automation_type' => $automationType,
                 'automation_allows_calling' => true,
             ],
         ];

@@ -4,8 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use \App\Traits\HasTeam;
+
 class WebhookPayload extends Model
 {
+    use HasTeam;
+
     protected $guarded = [];
 
     protected $casts = [

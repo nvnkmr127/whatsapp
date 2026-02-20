@@ -92,6 +92,22 @@ Route::middleware([
         // Launch Offer Settings
         Route::get('/admin/offer-settings', \App\Livewire\Admin\OfferSettings::class)->name('admin.offer-settings');
 
+        // Entitlement debug: full snapshot for any team (Super Admin only)
+        Route::get('/admin/entitlement/{team}', function (\App\Models\Team $team) {
+            $snapshot = app(\App\Services\EntitlementService::class)->for($team)->toArray();
+            return response()->json($snapshot, 200, ['Content-Type' => 'application/json'], JSON_PRETTY_PRINT);
+        })->name('admin.entitlement.debug');
+
+        // Offer settings schema (for UI generation / debugging)
+        Route::get('/admin/offer-settings/schema', function () {
+            return response()->json(
+                app(\App\Services\OfferSettingsService::class)->schema()->toArray(),
+                200,
+                ['Content-Type' => 'application/json'],
+                JSON_PRETTY_PRINT
+            );
+        })->name('admin.offer-settings.schema');
+
         // CRM (System-wide User Management)
         Route::get('/admin/crm', \App\Livewire\Admin\Crm::class)->name('admin.crm');
 
