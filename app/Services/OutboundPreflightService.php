@@ -63,7 +63,7 @@ class OutboundPreflightService
 
         // ── 3. Plan Entitlement ─────────────────────────────────────
         // Explicitly check if the current tier (Trial or Paid) enables this capability.
-        if (!$e->hasFeature($feature)) {
+        if (!$e->can($feature)) {
             return [
                 'allowed' => false,
                 'code' => 'ERR_FEATURE_LOCKED',

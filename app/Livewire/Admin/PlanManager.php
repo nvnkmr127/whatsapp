@@ -54,7 +54,16 @@ class PlanManager extends Component
         $this->initial_wallet_balance = $plan->initial_wallet_balance;
         $this->message_limit = $plan->message_limit;
         $this->agent_limit = $plan->agent_limit;
-        $this->features = $plan->features ?? [];
+
+        $features = $plan->features ?? [];
+        if (is_string($features)) {
+            $features = json_decode($features, true) ?? [];
+        }
+        if (!is_array($features)) {
+            $features = [];
+        }
+        $this->features = $features;
+
         $this->call_minutes_limit = $this->features['call_minutes_limit'] ?? 0;
         $this->showModal = true;
     }
@@ -63,13 +72,21 @@ class PlanManager extends Component
     {
         $this->validate();
 
+        $currentFeatures = $this->features;
+        if (is_string($currentFeatures)) {
+            $currentFeatures = json_decode($currentFeatures, true) ?? [];
+        }
+        if (!is_array($currentFeatures)) {
+            $currentFeatures = [];
+        }
+
         $data = [
             'name' => $this->name,
             'monthly_price' => $this->monthly_price,
             'initial_wallet_balance' => $this->initial_wallet_balance,
             'message_limit' => $this->message_limit,
             'agent_limit' => $this->agent_limit,
-            'features' => array_merge($this->features, ['call_minutes_limit' => $this->call_minutes_limit]),
+            'features' => array_merge($currentFeatures, ['call_minutes_limit' => $this->call_minutes_limit]),
         ];
 
         if ($this->editingPlan) {

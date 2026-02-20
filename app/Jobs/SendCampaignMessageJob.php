@@ -107,7 +107,7 @@ class SendCampaignMessageJob implements ShouldQueue
             // Re-auth using the current snapshot against wallet and limits
             $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
                 team: $campaign->team,
-                feature: 'send_message',
+                feature: 'campaigns',
                 limitKey: 'message_limit',
                 currentUsage: $messagesUsed,
                 cost: 0 // Detailed costing handled atomically by BillingService downstream, but trial/limits checked here.
