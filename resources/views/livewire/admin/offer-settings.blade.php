@@ -40,33 +40,41 @@
     </div>
 
     {{-- ══════════════════════════════════════════════════════
-         SAFETY REFERENCE CARD (always visible)
+    SAFETY REFERENCE CARD (always visible)
     ══════════════════════════════════════════════════════ --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-4 flex gap-3">
+        <div
+            class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-4 flex gap-3">
             <span class="text-xl mt-0.5">⏳</span>
             <div>
-                <p class="font-black text-amber-700 dark:text-amber-400 text-xs uppercase tracking-widest mb-1">New Signups Only</p>
+                <p class="font-black text-amber-700 dark:text-amber-400 text-xs uppercase tracking-widest mb-1">New
+                    Signups Only</p>
                 <p class="text-amber-700/80 dark:text-amber-300/70 text-xs leading-relaxed">
                     <strong>Trial duration</strong> &amp; <strong>initial credit</strong> are stamped once at signup.
-                    Changing them does <em>not</em> alter any existing tenant's <code class="font-mono">trial_ends_at</code> or wallet balance.
+                    Changing them does <em>not</em> alter any existing tenant's <code
+                        class="font-mono">trial_ends_at</code> or wallet balance.
                 </p>
             </div>
         </div>
-        <div class="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-4 flex gap-3">
+        <div
+            class="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-4 flex gap-3">
             <span class="text-xl mt-0.5">⚡</span>
             <div>
-                <p class="font-black text-blue-700 dark:text-blue-400 text-xs uppercase tracking-widest mb-1">Live — Trial Teams</p>
+                <p class="font-black text-blue-700 dark:text-blue-400 text-xs uppercase tracking-widest mb-1">Live —
+                    Trial Teams</p>
                 <p class="text-blue-700/80 dark:text-blue-300/70 text-xs leading-relaxed">
-                    <strong>Limits</strong> &amp; <strong>features</strong> are read on every request via EntitlementService.
+                    <strong>Limits</strong> &amp; <strong>features</strong> are read on every request via
+                    EntitlementService.
                     Changes take effect immediately. Past usage data is never retroactively modified.
                 </p>
             </div>
         </div>
-        <div class="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-4 flex gap-3">
+        <div
+            class="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-4 flex gap-3">
             <span class="text-xl mt-0.5">🌐</span>
             <div>
-                <p class="font-black text-indigo-700 dark:text-indigo-400 text-xs uppercase tracking-widest mb-1">Global Toggle</p>
+                <p class="font-black text-indigo-700 dark:text-indigo-400 text-xs uppercase tracking-widest mb-1">Global
+                    Toggle</p>
                 <p class="text-indigo-700/80 dark:text-indigo-300/70 text-xs leading-relaxed">
                     <strong>offer_enabled</strong> pauses the offer for new registrations only.
                     Existing trial teams continue until their <code class="font-mono">trial_ends_at</code>.
@@ -76,7 +84,7 @@
     </div>
 
     {{-- ══════════════════════════════════════════════════════
-         FORM
+    FORM
     ══════════════════════════════════════════════════════ --}}
     <div
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
@@ -181,8 +189,8 @@
 
                     @foreach($tabs as $tabKey => $tab)
                         <button type="button" @click="activeTab = '{{ $tabKey }}'" :class="activeTab === '{{ $tabKey }}'
-                                        ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50/50 dark:bg-indigo-900/10'
-                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+                                            ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50/50 dark:bg-indigo-900/10'
+                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
                             class="flex items-center gap-2 px-5 py-4 text-xs uppercase tracking-widest font-bold whitespace-nowrap transition-all">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -250,7 +258,7 @@
                                 </h3>
                                 <div class="flex gap-2">
                                     <button type="button"
-                                        wire:click="$set('includedFeatures', {{ json_encode(array_keys($availableFeatures)) }})"
+                                        wire:click="$set('includedFeatures', {{ str_replace('\"', '\'', json_encode(array_keys($availableFeatures))) }})"
                                         class="text-[10px] uppercase font-black text-indigo-500 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 transition">
                                         All
                                     </button>
