@@ -290,17 +290,7 @@ class UniqueIdentityService
             return $this->ok("Public email domain – domain uniqueness check skipped.");
         }
 
-        // Business domain – apply limit
-        $limit = (int) get_setting('identity_domain_limit', self::DOMAIN_LIMIT_DEFAULT);
-        $count = IdentityFingerprint::countTeams(IdentityFingerprint::TYPE_EMAIL_DOMAIN, $fingerprint);
-
-        if ($limit > 0 && $count >= $limit) {
-            return $this->fail(
-                "Your organisation domain '{$domain}' has already reached the maximum number of trial accounts ({$limit})."
-            );
-        }
-
-        return $this->ok("Domain '{$domain}' is within the allowed trial limit.");
+        return $this->ok("Domain '{$domain}' uniqueness check skipped.");
     }
 
     // ------------------------------------------------------------------

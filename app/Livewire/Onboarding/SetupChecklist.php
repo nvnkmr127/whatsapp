@@ -36,11 +36,11 @@ class SetupChecklist extends Component
         $this->steps = [
             [
                 'id' => 'connect_account',
-                'title' => 'Connect Facebook',
-                'description' => 'Link your Meta Business account.',
+                'title' => 'Connect WhatsApp',
+                'description' => 'Link your WhatsApp Business account.',
                 'completed' => !empty($team->whatsapp_access_token),
                 'link' => route('teams.whatsapp_config'),
-                'icon' => 'fb'
+                'icon' => 'wa'
             ],
             [
                 'id' => 'waba_id',
