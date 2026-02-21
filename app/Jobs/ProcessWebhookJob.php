@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 class ProcessWebhookJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \App\Traits\ChecksTenantMaintenanceMode;
 
     protected $payloadId;
     public $traceId;
@@ -91,6 +92,15 @@ class ProcessWebhookJob implements ShouldQueue
                 $teamId = \Illuminate\Support\Facades\Cache::remember("team_id_by_phone_id:{$phoneId}", 3600, function () use ($phoneId) {
                     return Team::where('whatsapp_phone_number_id', $phoneId)->value('id');
                 });
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // MAINTENANCE GUARD: Release back to queue if team is under
+            // backup/restore maintenance. Webhook data is PRESERVED (not dropped).
+            // Will be re-processed after maintenance mode lifts.
+            // ─────────────────────────────────────────────────────────────
+            if ($teamId && $this->isTeamUnderMaintenance($teamId, 'release', 60)) {
+                return;
             }
 
             // Fallback 1: Resolve via WABA ID at entry level (entry[0].id)

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 class PrepareCampaignJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \App\Traits\ChecksTenantMaintenanceMode;
 
     public $campaignId;
     public $criteria; // ['selection_type' => 'all' or 'ids' => [...]]
@@ -36,6 +37,15 @@ class PrepareCampaignJob implements ShouldQueue
     {
         $campaign = Campaign::find($this->campaignId);
         if (!$campaign) {
+            return;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // MAINTENANCE GUARD: If the team is under backup/restore, discard
+        // this job. PostRestoreStateResetService marks campaigns as 'interrupted'
+        // so the admin can relaunch them intentionally after restore.
+        // ─────────────────────────────────────────────────────────────
+        if ($this->isTeamUnderMaintenance($campaign->team_id, 'delete')) {
             return;
         }
 

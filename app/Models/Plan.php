@@ -16,6 +16,9 @@ class Plan extends Model
         'automation_run_limit',
         'contact_limit',
         'ai_conversation_limit',
+        'max_backups_per_team',
+        'max_storage_mb',
+        'cooldown_hours_between_backups',
         'features',
     ];
 
@@ -27,6 +30,9 @@ class Plan extends Model
         'automation_run_limit' => 'integer',
         'contact_limit' => 'integer',
         'ai_conversation_limit' => 'integer',
+        'max_backups_per_team' => 'integer',
+        'max_storage_mb' => 'integer',
+        'cooldown_hours_between_backups' => 'integer',
         'features' => 'array',
     ];
 

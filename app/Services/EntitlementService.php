@@ -260,7 +260,14 @@ class EntitlementService
         // All known limit keys (union of LIMIT_MAP keys + known plan keys)
         $limitKeys = array_merge(
             array_keys($this->offerSettings->limitMap()),
-            ['ai_conversation_limit', 'automation_run_limit', 'contact_limit']
+            [
+                'ai_conversation_limit',
+                'automation_run_limit',
+                'contact_limit',
+                'max_backups_per_team',
+                'max_storage_mb',
+                'cooldown_hours_between_backups'
+            ]
         );
 
         $limits = [];
@@ -320,9 +327,23 @@ class EntitlementService
 
         $agents = $team->users()->count() + $team->teamInvitations()->count();
 
+        // Backup usage
+        $backupStats = \App\Models\TenantBackup::where('team_id', $team->id)
+            ->where('status', 'completed')
+            ->selectRaw('count(*) as count, sum(size) as total_size')
+            ->first();
+
+        $lastBackup = \App\Models\TenantBackup::where('team_id', $team->id)
+            ->where('status', 'completed')
+            ->latest()
+            ->first();
+
         return [
             'messages_this_month' => $messages,
             'agent_count' => $agents,
+            'max_backups_per_team_count' => $backupStats->count ?? 0,
+            'max_storage_mb_count' => round(($backupStats->total_size ?? 0) / (1024 * 1024), 2),
+            'last_backup_at' => $lastBackup?->created_at,
         ];
     }
 

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 class ExecuteAutomationNodeJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \App\Traits\ChecksTenantMaintenanceMode;
 
     public $runId;
     public $nodeId;
@@ -63,6 +64,14 @@ class ExecuteAutomationNodeJob implements ShouldQueue
 
         if (!$run) {
             Log::warning("AutomationRun #{$this->runId} not found in database.");
+            return;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // MAINTENANCE GUARD: If team is under backup/restore, discard this job.
+        // PostRestoreStateResetService aborts all runs — no double-processing.
+        // ─────────────────────────────────────────────────────────────
+        if ($this->isTeamUnderMaintenance($run->automation->team_id, 'delete')) {
             return;
         }
 

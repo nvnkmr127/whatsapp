@@ -118,7 +118,10 @@ class ContactStateManager
      */
     public function calculateAvgResponseTime(Contact $contact): ?int
     {
-        $responseTimes = DB::table('messages as customer_msg')
+        // Database-agnostic implementation.
+        // TIMESTAMPDIFF(SECOND, …) is MySQL-only and crashes on SQLite.
+        // We fetch the raw timestamp pairs and compute the diff in PHP using Carbon.
+        $pairs = DB::table('messages as customer_msg')
             ->join('messages as agent_msg', function ($join) {
                 $join->on('agent_msg.contact_id', '=', 'customer_msg.contact_id')
                     ->on('agent_msg.created_at', '>', 'customer_msg.created_at')
@@ -126,11 +129,25 @@ class ContactStateManager
             })
             ->where('customer_msg.contact_id', $contact->id)
             ->where('customer_msg.direction', 'inbound')
-            ->select(DB::raw('MIN(TIMESTAMPDIFF(SECOND, customer_msg.created_at, agent_msg.created_at)) as response_time'))
-            ->groupBy('customer_msg.id')
-            ->pluck('response_time');
+            ->select(
+                'customer_msg.id as customer_id',
+                DB::raw('MIN(agent_msg.created_at) as agent_time'),
+                DB::raw('MAX(customer_msg.created_at) as customer_time')
+            )
+            ->groupBy('customer_msg.id', 'customer_msg.created_at')
+            ->get();
 
-        return $responseTimes->isEmpty() ? null : (int) $responseTimes->avg();
+        if ($pairs->isEmpty()) {
+            return null;
+        }
+
+        $responseTimes = $pairs->map(function ($pair) {
+            // Calculate seconds difference in PHP — works on any DB driver
+            return \Carbon\Carbon::parse($pair->agent_time)
+                ->diffInSeconds(\Carbon\Carbon::parse($pair->customer_time));
+        });
+
+        return (int) $responseTimes->avg();
     }
 
     /**

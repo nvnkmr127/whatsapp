@@ -15,6 +15,9 @@ class PlanSeeder extends Seeder
                 'monthly_price' => 29.00,
                 'message_limit' => 1000,
                 'agent_limit' => 2,
+                'max_backups_per_team' => 1,
+                'max_storage_mb' => 50,
+                'cooldown_hours_between_backups' => 168, // 1 week
                 'features' => json_encode([
                     'chat' => true,
                     'contacts' => true,
@@ -26,6 +29,8 @@ class PlanSeeder extends Seeder
                     'ai' => false,
                     'api_access' => false,
                     'webhooks' => false,
+                    'backups' => false,
+                    'cloud_backups' => false,
                 ])
             ],
             [
@@ -33,6 +38,9 @@ class PlanSeeder extends Seeder
                 'monthly_price' => 99.00,
                 'message_limit' => 10000,
                 'agent_limit' => 10,
+                'max_backups_per_team' => 5,
+                'max_storage_mb' => 512,
+                'cooldown_hours_between_backups' => 24, // 1 day
                 'features' => json_encode([
                     'chat' => true,
                     'contacts' => true,
@@ -44,6 +52,8 @@ class PlanSeeder extends Seeder
                     'ai' => true,
                     'api_access' => false,
                     'webhooks' => true,
+                    'backups' => true,
+                    'cloud_backups' => true,
                 ])
             ],
             [
@@ -51,6 +61,9 @@ class PlanSeeder extends Seeder
                 'monthly_price' => 299.00,
                 'message_limit' => 100000,
                 'agent_limit' => 50,
+                'max_backups_per_team' => 20,
+                'max_storage_mb' => 2048,
+                'cooldown_hours_between_backups' => 6, // 6 hours
                 'features' => json_encode([
                     'chat' => true,
                     'contacts' => true,
@@ -62,6 +75,8 @@ class PlanSeeder extends Seeder
                     'ai' => true,
                     'api_access' => true,
                     'webhooks' => true,
+                    'backups' => true,
+                    'cloud_backups' => true,
                 ])
             ],
         ];

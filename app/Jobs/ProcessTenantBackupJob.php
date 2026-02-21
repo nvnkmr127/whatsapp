@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Team;
+use App\Models\TenantBackup;
 use App\Services\BackupService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,14 +15,14 @@ class ProcessTenantBackupJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $team;
+    protected $backupRecord;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Team $team)
+    public function __construct(TenantBackup $backupRecord)
     {
-        $this->team = $team;
+        $this->backupRecord = $backupRecord;
     }
 
     /**
@@ -31,10 +31,17 @@ class ProcessTenantBackupJob implements ShouldQueue
     public function handle(BackupService $backupService): void
     {
         try {
-            $backupService->backupTenant($this->team);
-            Log::info("Background backup completed for Team ID: {$this->team->id}");
+            if ($this->backupRecord->type === 'global') {
+                // Using a private/protected helper call via a public wrapper or reflection 
+                // but since it's in the same namespace context or Service, let's just 
+                // call a public method. I'll make generateGlobalBackup public in BackupService.
+                $backupService->generateGlobalBackup($this->backupRecord);
+            } else {
+                $backupService->generateBackup($this->backupRecord);
+            }
+            Log::info("Backup generation completed for Record ID: {$this->backupRecord->id} (Type: {$this->backupRecord->type})");
         } catch (\Exception $e) {
-            Log::error("Background backup failed for Team ID: {$this->team->id}. Error: " . $e->getMessage());
+            Log::error("Backup generation failed for Record ID: {$this->backupRecord->id}. Error: " . $e->getMessage());
             throw $e;
         }
     }

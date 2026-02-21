@@ -258,12 +258,17 @@ class BillingService
 
     public function deposit(Team $team, $amount, $note = 'Deposit')
     {
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException("Deposit amount must be positive.");
+        }
+
         $wallet = TeamWallet::firstOrCreate(
             ['team_id' => $team->id],
             ['balance' => 0]
         );
 
-        $wallet->increment('balance', $amount);
+        // Use the authorised channel — bypasses the direct-manipulation guard.
+        $wallet->incrementBalance($amount);
 
         TeamTransaction::create([
             'team_id' => $team->id,

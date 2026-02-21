@@ -113,7 +113,7 @@ abstract class DomainEvent implements DomainEventContract
         }
 
         if (!isset($metadata['actor_id']) && auth()->check()) {
-            $metadata['actor_id'] = request()->user()->id;
+            $metadata['actor_id'] = auth()->id();
         }
 
         return array_merge($defaults, $metadata);

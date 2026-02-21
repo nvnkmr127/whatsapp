@@ -202,11 +202,28 @@ Route::middleware([
         Route::post('/disconnect', [GoogleDriveController::class, 'disconnect'])->name('disconnect');
     });
 
-    // Backup & Restore
-    Route::get('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'index'])->name('backups.index');
-    Route::post('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'store'])->name('backups.store');
-    Route::get('/backups/{id}/download', [\App\Http\Controllers\Backup\BackupController::class, 'download'])->name('backups.download');
-    Route::post('/backups/{id}/restore', [\App\Http\Controllers\Backup\RestoreController::class, 'restore'])->name('backups.restore');
+    // ─────────────────────────────────────────────────────────────────────
+    // Backup & Restore — Admin Only (manage-settings permission required)
+    // ─────────────────────────────────────────────────────────────────────
+    // Security model:
+    //   - All routes require `can:manage-settings` (Jetstream Admin role).
+    //   - Download issues a 5-minute signed URL; no file path is ever exposed.
+    //   - Signed stream route is also auth-protected to prevent token sharing.
+    //   - All actions are audit-logged (see BackupController & RestoreController).
+    // ─────────────────────────────────────────────────────────────────────
+    Route::middleware(['can:manage-settings'])->group(function () {
+        Route::get('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'index'])->name('backups.index');
+        Route::post('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'store'])->name('backups.store');
+        Route::get('/backups/{id}/download', [\App\Http\Controllers\Backup\BackupController::class, 'download'])->name('backups.download');
+        Route::post('/backups/{id}/restore', [\App\Http\Controllers\Backup\RestoreController::class, 'restore'])->name('backups.restore');
+    });
+
+    // Signed download stream — validates Laravel signed URL token + auth session.
+    // Reached only via a temporary URL issued by BackupController::download().
+    // The `signed` middleware rejects any forged or expired URL automatically.
+    Route::get('/backups/{id}/download/stream', [\App\Http\Controllers\Backup\SecureDownloadController::class, 'stream'])
+        ->name('backups.download.stream')
+        ->middleware(['signed']);
     // Identity Management
     Route::delete('/identities/{identity}', [\App\Http\Controllers\UserIdentityController::class, 'destroy'])->name('identities.destroy');
 

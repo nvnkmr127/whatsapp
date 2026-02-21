@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Contact;
+use App\Models\ConsentRegistry;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ConsentService
 {
@@ -46,14 +48,21 @@ class ConsentService
             // Preserve original opt-in source and timestamp if re-opting in
             $originalSource = $contact->opt_in_source;
             $originalTimestamp = $contact->opt_in_at;
+            $expiresAt = now()->addMonths($expiryMonths);
 
             $contact->update([
                 'opt_in_status' => 'opted_in',
                 'opt_in_source' => $originalSource ?? $source,
                 'opt_in_at' => $originalTimestamp ?? now(),
-                'opt_in_expires_at' => now()->addMonths($expiryMonths),
+                'opt_in_expires_at' => $expiresAt,
             ]);
 
+            // ── Dual-write to immutable Consent Registry ──────────────────────
+            // This is the GDPR-authoritative record. Even if the contacts table
+            // is overwritten by a backup restore, this registry entry survives.
+            $this->writeRegistry($contact, 'OPT_IN', $source, $notes, $proofUrl, $expiresAt);
+
+            // Append-only audit log (legacy — kept for BI queries)
             $this->logAction($contact, 'OPT_IN', $source, $notes, $proofUrl);
         });
 
@@ -84,6 +93,14 @@ class ConsentService
                 'opt_in_status' => 'opted_out',
             ]);
 
+            // ── CRITICAL: Dual-write to immutable Consent Registry ────────────
+            // This opt-out MUST survive any future backup restore.
+            // BackupService::rehydrateConsentFromRegistry() will re-apply
+            // this entry to the contacts table after every restore, even if
+            // the restore SQL would have overwritten opt_in_status back to 'opted_in'.
+            $this->writeRegistry($contact, 'OPT_OUT', $source, $notes, $proofUrl, null);
+
+            // Append-only audit log (legacy — kept for BI queries)
             $this->logAction($contact, 'OPT_OUT', $source, $notes, $proofUrl);
 
             // Cancel pending campaign messages
@@ -136,6 +153,152 @@ class ConsentService
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Failed to cancel pending messages: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Write an authoritative entry to the immutable Consent Registry.
+     * This is the GDPR-compliant record that BackupService uses to
+     * re-apply consent state after a restore.
+     */
+    protected function writeRegistry(
+        Contact $contact,
+        string $action,
+        ?string $source,
+        ?string $notes,
+        ?string $proofUrl,
+        ?\Carbon\Carbon $expiresAt
+    ): void {
+        try {
+            ConsentRegistry::create([
+                'team_id' => $contact->team_id,
+                'contact_id' => $contact->id,
+                'phone_number' => $contact->phone_number,
+                'action' => $action,
+                'source' => $source,
+                'channel' => 'whatsapp',
+                'notes' => $notes,
+                'proof_url' => $proofUrl,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'expires_at' => $expiresAt,
+                'recorded_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            // Registry write failure is CRITICAL — log loudly but do not swallow.
+            // The consent action itself succeeded; we still need to alarm on this.
+            Log::critical('ConsentRegistry write failed — GDPR compliance at risk!', [
+                'contact_id' => $contact->id,
+                'phone_number' => $contact->phone_number,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+            // Re-throw: a failed registry write should abort the consent transaction.
+            throw $e;
+        }
+    }
+
+    /**
+     * Rehydrate a contact's consent status from the Consent Registry.
+     *
+     * Called by BackupService AFTER every tenant restore to ensure that
+     * opt-outs recorded AFTER the backup timestamp are not silently reverted.
+     *
+     * Strategy: "latest registry entry wins" — if the registry says OPT_OUT
+     * but the restored contacts table says opted_in, the registry takes precedence.
+     */
+    public function rehydrateContactFromRegistry(Contact $contact): void
+    {
+        $latest = ConsentRegistry::getLatestAuthoritativeState(
+            $contact->team_id,
+            $contact->phone_number
+        );
+
+        if (!$latest) {
+            // No authoritative registry entry — nothing to enforce.
+            return;
+        }
+
+        $registryStatus = $latest->action === 'OPT_OUT' ? 'opted_out' : 'opted_in';
+
+        if ($contact->opt_in_status !== $registryStatus) {
+            Log::warning('ConsentRegistry mismatch after restore — re-applying registry decision', [
+                'contact_id' => $contact->id,
+                'phone_number' => $contact->phone_number,
+                'contacts_said' => $contact->opt_in_status,
+                'registry_says' => $registryStatus,
+                'registry_entry' => $latest->id,
+                'registry_created' => $latest->created_at,
+            ]);
+
+            // Use DB update to bypass Eloquent booted hooks (version tracking etc.)
+            // but WITHOUT touching registry — contacts table is a cache here.
+            \Illuminate\Support\Facades\DB::table('contacts')
+                ->where('id', $contact->id)
+                ->update([
+                    'opt_in_status' => $registryStatus,
+                    'updated_at' => now(),
+                ]);
+
+            // Append a registry audit record noting the correction
+            ConsentRegistry::create([
+                'team_id' => $contact->team_id,
+                'contact_id' => $contact->id,
+                'phone_number' => $contact->phone_number,
+                'action' => $latest->action,
+                'source' => 'RESTORE_REHYDRATION',
+                'channel' => 'system',
+                'notes' => "Auto-corrected after backup restore. Registry entry #{$latest->id} ({$latest->created_at}) took precedence over restored contacts.opt_in_status='{$contact->opt_in_status}'.",
+                'ip_address' => null,
+                'recorded_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Rehydrate ALL contacts for a team after a restore.
+     * Called by BackupService::restoreTenant() as the final step.
+     */
+    public function rehydrateTeamFromRegistry(int $teamId): void
+    {
+        // Find all phone numbers that have OPT_OUT as their latest state
+        $optedOutPhones = ConsentRegistry::latestOptOuts($teamId)
+            ->pluck('phone_number')
+            ->toArray();
+
+        if (empty($optedOutPhones)) {
+            Log::info('ConsentRegistry rehydration: no override needed', ['team_id' => $teamId]);
+            return;
+        }
+
+        Log::warning('ConsentRegistry rehydration: enforcing opt-outs that were in registry but may have been overwritten by restore', [
+            'team_id' => $teamId,
+            'count' => count($optedOutPhones),
+        ]);
+
+        // Force all these contacts back to opted_out — their STOP is permanent.
+        $affected = \Illuminate\Support\Facades\DB::table('contacts')
+            ->where('team_id', $teamId)
+            ->whereIn('phone_number', $optedOutPhones)
+            ->where('opt_in_status', '!=', 'opted_out') // Only update mismatches
+            ->update([
+                'opt_in_status' => 'opted_out',
+                'updated_at' => now(),
+            ]);
+
+        if ($affected > 0) {
+            Log::warning("ConsentRegistry rehydration corrected {$affected} contact(s) after restore", [
+                'team_id' => $teamId,
+                'affected' => $affected,
+            ]);
+
+            // Bulk cancel any pending outbound messages for these re-blocked contacts
+            \App\Models\CampaignSnapshotContact::whereIn('phone_number', $optedOutPhones)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'cancelled',
+                    'error' => 'Contact opt-out re-enforced after backup restore (ConsentRegistry)',
+                ]);
         }
     }
 
