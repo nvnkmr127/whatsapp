@@ -72,8 +72,51 @@ class ComplianceManager extends Component
 
     public function exportCompliance()
     {
-        // TODO: Implement CSV export
-        session()->flash('message', 'Export functionality coming soon!');
-        $this->showExportModal = false;
+        if (!Auth::check() || !Auth::user()->currentTeam) {
+            return;
+        }
+
+        $teamId = Auth::user()->currentTeam->id;
+        $fileName = 'compliance_logs_' . now()->format('Y_m_d_His') . '.csv';
+
+        // Capture current state variables for the closure
+        $searchTerm = $this->searchTerm;
+        $filterStatus = $this->filterStatus;
+        $filterDateRange = $this->filterDateRange;
+
+        return response()->streamDownload(function () use ($teamId, $searchTerm, $filterStatus, $filterDateRange) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Date', 'Contact Name', 'Phone', 'Action', 'Source', 'Reason']);
+
+            ConsentLog::where('team_id', $teamId)
+                ->when($searchTerm, function ($query) use ($searchTerm) {
+                    $query->whereHas('contact', function ($q) use ($searchTerm) {
+                        $q->where('name', 'like', '%' . $searchTerm . '%')
+                            ->orWhere('phone', 'like', '%' . $searchTerm . '%');
+                    });
+                })
+                ->when($filterStatus !== 'all', function ($query) use ($filterStatus) {
+                    $query->where('action', $filterStatus === 'granted' ? 'OPT_IN' : 'OPT_OUT');
+                })
+                ->when($filterDateRange, function ($query) use ($filterDateRange) {
+                    $query->where('created_at', '>=', now()->subDays((int) $filterDateRange));
+                })
+                ->with('contact')
+                ->orderBy('created_at', 'desc')
+                ->chunk(100, function ($logs) use ($handle) {
+                    foreach ($logs as $log) {
+                        fputcsv($handle, [
+                            $log->created_at->format('Y-m-d H:i:s'),
+                            $log->contact->name ?? 'Unknown',
+                            $log->contact->phone_number ?? 'Unknown',
+                            $log->action,
+                            $log->source ?? 'N/A',
+                            $log->reason ?? 'N/A',
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $fileName);
     }
 }

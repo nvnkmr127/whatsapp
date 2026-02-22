@@ -961,10 +961,10 @@ class WhatsAppService
         $uploadResponse = Http::withHeaders([
             'Authorization' => 'OAuth ' . $this->team->whatsapp_access_token,
             'file_offset' => 0,
-        ])->withBody(
-                file_get_contents($file->getRealPath()),
-                $file->getMimeType()
-            )->post($uploadUrl);
+            'Content-Type' => $file->getMimeType(),
+        ])->send('POST', $uploadUrl, [
+            'body' => fopen($file->getRealPath(), 'r')
+        ]);
 
         if ($uploadResponse->failed()) {
             throw new \Exception("Failed to upload file content: " . $uploadResponse->body());
