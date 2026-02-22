@@ -222,11 +222,15 @@ class OTPService
         $systemPhoneId = env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
 
         if ($systemToken && $systemPhoneId) {
-            return new Team([
+            $team = new Team([
                 'whatsapp_access_token' => $systemToken,
                 'whatsapp_phone_number_id' => $systemPhoneId,
                 'whatsapp_business_account_id' => env('WHATSAPP_SYSTEM_WABA_ID'),
             ]);
+            // Force state to READY for system credentials
+            $team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+            $team->id = 0; // System team ID
+            return $team;
         }
 
         return Team::whereNotNull('whatsapp_access_token')

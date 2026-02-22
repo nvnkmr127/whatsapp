@@ -140,6 +140,26 @@ class PasswordlessAuthController extends Controller
                     }
                 }
 
+                if ($user) {
+                    // 3. User exists by field, so LINK this identity
+                    UserIdentity::updateOrCreate(
+                        ['provider' => $provider, 'provider_id' => $identifier],
+                        ['user_id' => $user->id, 'last_login_at' => now()]
+                    );
+
+                    // Login and return
+                    Auth::login($user, true);
+                    AuditService::log('Auth.Success', $user->id, $identifier, $provider);
+
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'message' => 'Login successful.',
+                            'redirect' => route('dashboard'),
+                        ]);
+                    }
+                    return redirect()->intended(route('dashboard'));
+                }
+
                 if (!$user) {
                     // ── Identity uniqueness check (mirrors CreateNewUser) ──────
                     $ip = $request->ip() ?? '0.0.0.0';
