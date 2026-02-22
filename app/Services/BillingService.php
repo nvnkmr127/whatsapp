@@ -81,13 +81,16 @@ class BillingService
      */
     public function recordConversationUsage(Team $team, $contactId, $category, $wamid)
     {
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($team, $contactId, $category, $wamid) {
-            // 0. Check Plan Limits first (UC-20)
-            if (!$this->checkPlanLimits($team)) {
-                Log::warning("Team {$team->id} exceeded monthly message limit.");
-                return false;
-            }
+        // 0. Check Plan Limits first (UC-20)
+        // If a limit is exceeded, we should return false early.
+        // However, if the team has an override or special offer status, this check needs to be robust.
+        // The checkPlanLimits method already uses EntitlementService, which respects offer snapshots.
+        if (!$this->checkPlanLimits($team)) {
+            Log::warning("Team {$team->id} exceeded monthly message limit.");
+            return false;
+        }
 
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($team, $contactId, $category, $wamid) {
             // 1. Check for existing open window
             // Meta defines 24h session.
             $existing = WhatsAppConversation::where('team_id', $team->id)
@@ -107,17 +110,18 @@ class BillingService
             // 3. Check Balance with Lock
             // We use lockForUpdate() to ensure no other transaction modifies the balance 
             // after we read it but before we deduct.
-            $wallet = TeamWallet::where('team_id', $team->id)->lockForUpdate()->first();
+            $wallet = TeamWallet::firstOrCreate(
+                ['team_id' => $team->id],
+                ['balance' => 0]
+            );
 
-            if (!$wallet) {
-                $wallet = TeamWallet::create(['team_id' => $team->id, 'balance' => 0]);
-                // Re-lock is tricky here if created, but in high concurrency usually one exists.
-                // For strict correctness we could reload, but firstOrCreate inside tx + unique index is better.
-                // Standard pattern:
-            }
+            // Lock the wallet row
+            $wallet = TeamWallet::where('id', $wallet->id)->lockForUpdate()->first();
 
             if ($wallet->balance < $cost) {
                 // Strict Prepaid: Block. No negative wallet allowed.
+                // UNLESS the team has a 'negative_balance_allowed' override or feature.
+                // For now, strict prepaid is the business rule.
                 return false;
             }
 

@@ -226,4 +226,14 @@ class User extends Authenticatable
 
         return true;
     }
+
+    public function assignedCrmTasks()
+    {
+        return $this->hasMany(CrmTask::class, 'assigned_to_id');
+    }
+
+    public function createdCrmSegments()
+    {
+        return $this->hasMany(CrmSegment::class);
+    }
 }

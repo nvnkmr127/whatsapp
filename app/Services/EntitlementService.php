@@ -293,7 +293,17 @@ class EntitlementService
         }
 
         // 2. Offer limit (if eligible)
+        // If a snapshot exists, use it (Static Allocation). Otherwise use global settings (Dynamic).
         if ($offerEligible && $this->offerSettings->hasLimitMapping($key)) {
+            $snapshot = $team->offer_snapshot;
+            $limitKey = $this->offerSettings->limitKey($key); // e.g., 'offer_message_limit'
+
+            // Prioritize snapshot values if available
+            if (is_array($snapshot) && array_key_exists($limitKey, $snapshot)) {
+                return (int) $snapshot[$limitKey];
+            }
+            
+            // Fallback to dynamic global settings if no snapshot exists
             return $this->offerSettings->limitValue($key) ?? 0;
         }
 

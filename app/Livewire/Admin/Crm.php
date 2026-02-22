@@ -29,6 +29,27 @@ class Crm extends Component
     public $funnel = [];
     public $selectedTeamId = null;
 
+    // ── CRM Activity & Tasks ───────────────────────────────────────────
+    public $activityType = 'note';
+    public $activityContent = '';
+    public $activityOutcome = '';
+    public $activityDuration = null;
+
+    public $taskTitle = '';
+    public $taskDescription = '';
+    public $taskDueDate = '';
+    public $taskPriority = 'medium';
+    public $taskAssignee = null;
+
+    // ── Advanced Filters & Segments ────────────────────────────────────
+    public $showFilters = false;
+    public $filterRevenueMin;
+    public $filterRevenueMax;
+    public $filterDateStart;
+    public $filterDateEnd;
+    public $filterLeadScoreMin;
+    public $segmentName = '';
+
     // ── Override modal state ───────────────────────────────────────────
     /** Number of days to extend trial (used in extend modal) */
     public int $extendDays = 30;
@@ -93,6 +114,104 @@ class Crm extends Component
     public function closeUser()
     {
         $this->selectedTeamId = null;
+        $this->reset(['activityType', 'activityContent', 'activityOutcome', 'activityDuration', 'taskTitle', 'taskDescription', 'taskDueDate', 'taskPriority', 'taskAssignee']);
+    }
+
+    public function addActivity()
+    {
+        $this->validate([
+            'activityType' => 'required',
+            'activityContent' => 'required',
+        ]);
+
+        $team = Team::find($this->selectedTeamId);
+        
+        $team->crmActivities()->create([
+            'type' => $this->activityType,
+            'content' => $this->activityContent,
+            'outcome' => $this->activityOutcome,
+            'duration_minutes' => $this->activityDuration,
+            'performed_at' => now(),
+            'user_id' => Auth::id(),
+        ]);
+
+        $this->reset(['activityType', 'activityContent', 'activityOutcome', 'activityDuration']);
+        session()->flash('message', 'Activity logged.');
+    }
+
+    public function addTask()
+    {
+        $this->validate([
+            'taskTitle' => 'required',
+        ]);
+
+        $team = Team::find($this->selectedTeamId);
+
+        $team->crmTasks()->create([
+            'title' => $this->taskTitle,
+            'description' => $this->taskDescription,
+            'due_date' => $this->taskDueDate ?: null,
+            'priority' => $this->taskPriority,
+            'assigned_to_id' => $this->taskAssignee ?: Auth::id(),
+            'created_by_id' => Auth::id(),
+        ]);
+
+        $this->reset(['taskTitle', 'taskDescription', 'taskDueDate', 'taskPriority', 'taskAssignee']);
+        session()->flash('message', 'Task created.');
+    }
+
+    public function completeTask($taskId)
+    {
+        $task = \App\Models\CrmTask::find($taskId);
+        if ($task) {
+            $task->update(['status' => 'completed', 'completed_at' => now()]);
+            session()->flash('message', 'Task completed.');
+        }
+    }
+
+    public function toggleFilters()
+    {
+        $this->showFilters = !$this->showFilters;
+    }
+    
+    public function saveSegment()
+    {
+        $this->validate(['segmentName' => 'required']);
+        
+        $filters = [
+            'revenue_min' => $this->filterRevenueMin,
+            'revenue_max' => $this->filterRevenueMax,
+            'date_start' => $this->filterDateStart,
+            'date_end' => $this->filterDateEnd,
+            'lead_score_min' => $this->filterLeadScoreMin,
+            'status' => $this->statusFilter,
+            'setup' => $this->setupFilter,
+            'funnel' => $this->funnelStage,
+        ];
+        
+        Auth::user()->createdCrmSegments()->create([
+            'name' => $this->segmentName,
+            'filters' => array_filter($filters), // Remove nulls
+        ]);
+        
+        $this->segmentName = '';
+        session()->flash('message', 'Segment saved.');
+    }
+    
+    public function loadSegment($segmentId)
+    {
+        $segment = \App\Models\CrmSegment::find($segmentId);
+        if ($segment) {
+            $filters = $segment->filters;
+            $this->filterRevenueMin = $filters['revenue_min'] ?? null;
+            $this->filterRevenueMax = $filters['revenue_max'] ?? null;
+            $this->filterDateStart = $filters['date_start'] ?? null;
+            $this->filterDateEnd = $filters['date_end'] ?? null;
+            $this->filterLeadScoreMin = $filters['lead_score_min'] ?? null;
+            $this->statusFilter = $filters['status'] ?? '';
+            $this->setupFilter = $filters['setup'] ?? '';
+            $this->funnelStage = $filters['funnel'] ?? '';
+        }
     }
 
     public function impersonate($userId)
@@ -349,13 +468,26 @@ class Crm extends Component
             };
         }
 
+        if ($this->filterRevenueMin) $query->where('total_revenue', '>=', $this->filterRevenueMin);
+        if ($this->filterRevenueMax) $query->where('total_revenue', '<=', $this->filterRevenueMax);
+        if ($this->filterLeadScoreMin) $query->where('lead_score', '>=', $this->filterLeadScoreMin);
+        if ($this->filterDateStart) $query->whereDate('created_at', '>=', $this->filterDateStart);
+        if ($this->filterDateEnd) $query->whereDate('created_at', '<=', $this->filterDateEnd);
+
         return view('livewire.admin.crm', [
             'teams' => $query->paginate(15),
+            'segments' => \App\Models\CrmSegment::where('user_id', Auth::id())->orWhere('is_shared', true)->get(),
             'selectedTeam' => $this->selectedTeamId ? Team::with([
                 'owner',
                 'users',
                 'messages' => function ($q) {
                     $q->latest()->limit(10);
+                },
+                'crmActivities' => function ($q) {
+                    $q->with('user')->latest();
+                },
+                'crmTasks' => function ($q) {
+                    $q->with('assignedTo')->latest();
                 }
             ])->find($this->selectedTeamId) : null,
         ]);

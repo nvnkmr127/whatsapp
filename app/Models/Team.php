@@ -81,6 +81,7 @@ class Team extends JetstreamTeam
         'offer_claimed_at',
         'offer_excluded',
         'offer_converted_churned',
+        'offer_snapshot', // Added
     ];
 
     /**
@@ -126,6 +127,7 @@ class Team extends JetstreamTeam
             'offer_claimed_at' => 'datetime',
             'offer_excluded' => 'boolean',
             'offer_converted_churned' => 'boolean',
+            'offer_snapshot' => 'array',
             'whatsapp_setup_progress' => 'array',
             'whatsapp_setup_started_at' => 'datetime',
             'whatsapp_setup_completed_at' => 'datetime',
@@ -388,5 +390,15 @@ class Team extends JetstreamTeam
             $score += 30; // Pulse Received (Active)
 
         return min(100, $score);
+    }
+
+    public function crmTasks()
+    {
+        return $this->morphMany(CrmTask::class, 'related_to');
+    }
+
+    public function crmActivities()
+    {
+        return $this->morphMany(CrmActivity::class, 'related_to');
     }
 }

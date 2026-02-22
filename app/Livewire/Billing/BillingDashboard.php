@@ -41,6 +41,16 @@ class BillingDashboard extends Component
         // Get current plan
         $planName = $this->team->subscription_plan ?? 'basic';
         $this->plan = Plan::where('name', $planName)->first();
+        
+        // Fallback if plan doesn't exist (e.g. legacy plan or bad data)
+        if (!$this->plan) {
+            $this->plan = Plan::where('name', 'basic')->first();
+            // Optional: Log warning or auto-correct team plan
+            if ($this->plan) {
+                // Temporary fix: Show basic plan details even if team has invalid plan string
+            }
+        }
+        
         $this->plans = Plan::all();
 
         // Get wallet
@@ -58,9 +68,11 @@ class BillingDashboard extends Component
         $this->trialEndsAt = $this->team->trial_ends_at;
 
         // Backward compatibility for existing view variable
-        $this->usage = $this->detailedStats['messages']['usage'];
-        $this->usagePercentage = ($this->detailedStats['messages']['limit'] > 0)
-            ? ($this->usage / $this->detailedStats['messages']['limit']) * 100
+        // Ensure keys exist in detailedStats to prevent errors
+        $msgStats = $this->detailedStats['messages'] ?? ['usage' => 0, 'limit' => 0];
+        $this->usage = $msgStats['usage'];
+        $this->usagePercentage = ($msgStats['limit'] > 0)
+            ? ($this->usage / $msgStats['limit']) * 100
             : 0;
     }
 

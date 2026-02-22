@@ -52,10 +52,17 @@
                         </div>
                         <div class="text-center md:text-right px-8 py-4 bg-white/5 rounded-3xl border border-white/5">
                             <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">Offer Expires In</p>
-                            <div class="text-3xl font-black text-white leading-none mb-1">
-                                {{ now()->diffInDays($trialEndsAt) }} Days
-                            </div>
-                            <p class="text-[10px] font-bold text-slate-400">Valid until {{ $trialEndsAt->format('F d, Y') }}</p>
+                            @if($trialEndsAt)
+                                <div class="text-3xl font-black text-white leading-none mb-1">
+                                    {{ now()->diffInDays($trialEndsAt) }} Days
+                                </div>
+                                <p class="text-[10px] font-bold text-slate-400">Valid until {{ $trialEndsAt->format('F d, Y') }}</p>
+                            @else
+                                <div class="text-3xl font-black text-white leading-none mb-1">
+                                    --
+                                </div>
+                                <p class="text-[10px] font-bold text-slate-400">Expiration date not set</p>
+                            @endif
                         </div>
                     </div>
                 </div>

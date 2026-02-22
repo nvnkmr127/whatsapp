@@ -50,6 +50,9 @@
 
         <!-- Right Side Actions -->
         <div class="flex items-center gap-2">
+            <!-- Usage Stats -->
+            <livewire:components.header-stats />
+
             <!-- Theme Toggle -->
             <button @click="toggleTheme()"
                 class="p-2.5 rounded-2xl text-slate-400 hover:text-amber-500 hover:bg-white dark:hover:bg-slate-900 shadow-none hover:shadow-lg transition-all duration-300 focus:outline-none group">

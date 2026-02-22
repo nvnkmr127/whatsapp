@@ -396,17 +396,32 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-6">
                                 <div>
+                                    <x-label for="profile_photo" value="Profile Picture" class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                                    <div class="flex items-center gap-4">
+                                        @if ($profile_photo)
+                                            <img src="{{ $profile_photo->temporaryUrl() }}" class="w-16 h-16 rounded-xl object-cover border-2 border-wa-teal">
+                                        @elseif($profile_picture_url)
+                                            <img src="{{ $profile_picture_url }}" class="w-16 h-16 rounded-xl object-cover border-2 border-slate-200 dark:border-slate-700">
+                                        @endif
+                                        <input type="file" wire:model="profile_photo" id="profile_photo" accept="image/*" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 dark:file:bg-slate-800 file:text-wa-teal hover:file:bg-slate-200 transition-all cursor-pointer">
+                                    </div>
+                                    <x-input-error for="profile_photo" class="mt-2" />
+                                </div>
+
+                                <div>
                                     <x-label for="profile_description" value="Business Description"
                                         class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                     <textarea id="profile_description" wire:model="profile_description" rows="4"
                                         class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all"
                                         placeholder="Briefly describe your business..."></textarea>
+                                    <x-input-error for="profile_description" class="mt-2" />
                                 </div>
                                 <div>
                                     <x-label for="profile_about" value="About Text"
                                         class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                     <x-input id="profile_about" type="text" wire:model="profile_about"
                                         class="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl" />
+                                    <x-input-error for="profile_about" class="mt-2" />
                                 </div>
                             </div>
 
@@ -417,6 +432,7 @@
                                             class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                         <x-input id="profile_email" type="email" wire:model="profile_email"
                                             class="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl" />
+                                        <x-input-error for="profile_email" class="mt-2" />
                                     </div>
                                     <div>
                                         <x-label for="profile_vertical" value="Industry (Vertical)"
@@ -424,23 +440,25 @@
                                         <select id="profile_vertical" wire:model="profile_vertical"
                                             class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all">
                                             <option value="">Select industry...</option>
-                                            <option value="AUTO">Automotive</option>
-                                            <option value="BEAUTY">Beauty & Personal Care</option>
-                                            <option value="APPAREL">Clothing & Apparel</option>
-                                            <option value="EDU">Education</option>
-                                            <option value="ENTERTAIN">Entertainment</option>
-                                            <option value="EVENT_PLAN">Event Planning</option>
-                                            <option value="FINANCE">Finance & Banking</option>
-                                            <option value="FOOD">Food & Beverage</option>
-                                            <option value="GOVT">Government</option>
-                                            <option value="HOTEL">Hotel & Accommodations</option>
-                                            <option value="HEALTH">Health & Medical</option>
+                                            <option value="AUTOMOTIVE">Automotive</option>
+                                            <option value="BEAUTY_SPA_AND_SALON">Beauty, Spa & Salon</option>
+                                            <option value="CLOTHING_AND_APPAREL">Clothing & Apparel</option>
+                                            <option value="EDUCATION">Education</option>
+                                            <option value="ENTERTAINMENT">Entertainment</option>
+                                            <option value="EVENT_PLANNING_AND_SERVICE">Event Planning & Service</option>
+                                            <option value="FINANCE_AND_BANKING">Finance & Banking</option>
+                                            <option value="FOOD_AND_GROCERY">Food & Grocery</option>
+                                            <option value="PUBLIC_SERVICE">Public Service / Government</option>
+                                            <option value="HOTEL_AND_LODGING">Hotel & Lodging</option>
+                                            <option value="MEDICAL_AND_HEALTH">Medical & Health</option>
                                             <option value="NON_PROFIT">Non-profit</option>
-                                            <option value="PROF_SERVICES">Professional Services</option>
-                                            <option value="RETAIL">Retail</option>
-                                            <option value="TRAVEL">Travel & Transportation</option>
+                                            <option value="PROFESSIONAL_SERVICES">Professional Services</option>
+                                            <option value="SHOPPING_AND_RETAIL">Shopping & Retail</option>
+                                            <option value="TRAVEL_AND_TRANSPORTATION">Travel & Transportation</option>
+                                            <option value="RESTAURANT">Restaurant</option>
                                             <option value="OTHER">Other</option>
                                         </select>
+                                        <x-input-error for="profile_vertical" class="mt-2" />
                                     </div>
                                 </div>
                                 <div>
@@ -448,6 +466,7 @@
                                         class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                     <x-input id="profile_address" type="text" wire:model="profile_address"
                                         class="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl" />
+                                    <x-input-error for="profile_address" class="mt-2" />
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
@@ -455,6 +474,7 @@
                                         <button type="button" wire:click="addWebsite"
                                             class="text-xs font-bold text-green-600 hover:text-green-700">+ ADD WEBSITE</button>
                                     </div>
+                                    <x-input-error for="profile_websites.*" class="mb-2" />
                                     <div class="space-y-3">
                                         @foreach($profile_websites as $index => $website)
                                             <div class="flex items-center gap-2">

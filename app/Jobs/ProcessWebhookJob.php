@@ -88,10 +88,20 @@ class ProcessWebhookJob implements ShouldQueue
             $phoneId = $metadata['phone_number_id'] ?? null;
             $teamId = null;
 
+            // Helper to resolve and cache Team ID (only caches hits to avoid caching nulls during race conditions)
+            $resolveTeamId = function ($key, $column, $value) {
+                $tid = \Illuminate\Support\Facades\Cache::get($key);
+                if (!$tid) {
+                    $tid = Team::where($column, $value)->value('id');
+                    if ($tid) {
+                        \Illuminate\Support\Facades\Cache::put($key, $tid, 3600);
+                    }
+                }
+                return $tid;
+            };
+
             if ($phoneId) {
-                $teamId = \Illuminate\Support\Facades\Cache::remember("team_id_by_phone_id:{$phoneId}", 3600, function () use ($phoneId) {
-                    return Team::where('whatsapp_phone_number_id', $phoneId)->value('id');
-                });
+                $teamId = $resolveTeamId("team_id_by_phone_id:{$phoneId}", 'whatsapp_phone_number_id', $phoneId);
             }
 
             // ─────────────────────────────────────────────────────────────
@@ -107,9 +117,7 @@ class ProcessWebhookJob implements ShouldQueue
             if (!$teamId) {
                 $wabaId = $body['entry'][0]['id'] ?? null;
                 if ($wabaId) {
-                    $teamId = \Illuminate\Support\Facades\Cache::remember("team_id_by_waba_id:{$wabaId}", 3600, function () use ($wabaId) {
-                        return Team::where('whatsapp_business_account_id', $wabaId)->value('id');
-                    });
+                    $teamId = $resolveTeamId("team_id_by_waba_id:{$wabaId}", 'whatsapp_business_account_id', $wabaId);
                 }
             }
 
@@ -118,9 +126,7 @@ class ProcessWebhookJob implements ShouldQueue
             if (!$teamId) {
                 $discoveredWabaId = $change['waba_id'] ?? $change['waba_info']['waba_id'] ?? null;
                 if ($discoveredWabaId) {
-                    $teamId = \Illuminate\Support\Facades\Cache::remember("team_id_by_waba_id:{$discoveredWabaId}", 3600, function () use ($discoveredWabaId) {
-                        return Team::where('whatsapp_business_account_id', $discoveredWabaId)->value('id');
-                    });
+                    $teamId = $resolveTeamId("team_id_by_waba_id:{$discoveredWabaId}", 'whatsapp_business_account_id', $discoveredWabaId);
                 }
             }
 
@@ -132,11 +138,28 @@ class ProcessWebhookJob implements ShouldQueue
             ]);
 
             if (!$teamId) {
-                Log::warning("WhatsApp Webhook: Could not resolve Team ID", [
-                    'phone_id' => $phoneId,
-                    'entry_id' => $body['entry'][0]['id'] ?? 'N/A',
-                    'discovered_waba_id' => $discoveredWabaId ?? 'N/A'
-                ]);
+                // Retry logic for race conditions (e.g., Embedded Signup where Team isn't updated yet)
+                $hasPotentialId = $phoneId || ($body['entry'][0]['id'] ?? null) || $discoveredWabaId;
+                
+                if ($hasPotentialId) {
+                    Log::warning("WhatsApp Webhook: Could not resolve Team ID (Attempt " . $this->attempts() . "). Retrying...", [
+                        'phone_id' => $phoneId,
+                        'entry_id' => $body['entry'][0]['id'] ?? 'N/A',
+                        'discovered_waba_id' => $discoveredWabaId ?? 'N/A'
+                    ]);
+
+                    if ($this->attempts() < $this->tries) {
+                        $delay = $this->backoff[$this->attempts() - 1] ?? 60;
+                        $this->release($delay);
+                        return;
+                    } else {
+                        Log::error("WhatsApp Webhook: Failed to resolve Team ID after " . $this->tries . " attempts.");
+                        $payloadRecord->update(['status' => 'failed', 'error_message' => 'Could not resolve Team ID after retries']);
+                        return;
+                    }
+                }
+
+                Log::warning("WhatsApp Webhook: Could not resolve Team ID and no identifiers found.");
             }
 
             // 1. Handle Messages (Inbound)

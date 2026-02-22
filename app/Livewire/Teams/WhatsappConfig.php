@@ -13,6 +13,7 @@ use Livewire\Attributes\Title;
 class WhatsappConfig extends Component
 {
     use WhatsApp;
+    use \Livewire\WithFileUploads;
 
     // Connection Fields
     public $wm_fb_app_id;
@@ -29,6 +30,7 @@ class WhatsappConfig extends Component
     public $profile_vertical;
     public $profile_websites = [];
     public $profile_picture_url;
+    public $profile_photo; // For file upload
     public $is_editing_profile = false;
 
 
@@ -264,6 +266,7 @@ class WhatsappConfig extends Component
             'profile_vertical' => 'nullable|string|max:128',
             'profile_websites.*' => 'nullable|url|max:256',
             'profile_picture_url' => 'nullable|url|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png|max:5120', // 5MB limit, JPEG/PNG only
         ]);
 
         try {
@@ -274,20 +277,32 @@ class WhatsappConfig extends Component
                 'description' => $this->profile_description,
                 'email' => $this->profile_email,
                 'vertical' => $this->profile_vertical,
-                'websites' => array_filter($this->profile_websites), // Remove empty websites
+                'websites' => array_values(array_filter($this->profile_websites)), // Ensure sequential array
             ];
+
+            // Handle Profile Photo Upload
+            if ($this->profile_photo) {
+                try {
+                    $handle = $waService->uploadMediaForTemplate($this->profile_photo);
+                    if ($handle) {
+                        $profileData['profile_picture_handle'] = $handle;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Profile Photo Upload Failed: " . $e->getMessage());
+                    $this->addError('profile_photo', 'Failed to upload photo: ' . $e->getMessage());
+                    return; // Stop processing
+                }
+            }
 
             $response = $waService->updateBusinessProfile($profileData);
 
             if ($response['status']) {
-                // If profile picture URL is provided, update it separately
-                if (!empty($this->profile_picture_url)) {
-                    // $waService->updateBusinessProfilePicture($this->profile_picture_url); // Removed as method likely missing in service, checking...
-                    Log::warning("Profile Picture update skipped as method not confirmed in WhatsAppService.");
-                }
-
+                // If profile picture URL is provided (manual URL override), update it separately?
+                // Actually, the API handles `profile_picture_handle`.
+                
                 $this->dispatch('notify', 'Business profile updated successfully.');
                 $this->is_editing_profile = false;
+                $this->profile_photo = null; // Reset
                 $this->loadBusinessProfile(); // Reload to reflect changes
             } else {
                 $this->dispatch('notify', 'Failed to update business profile: ' . $response['message']);
@@ -882,7 +897,11 @@ class WhatsappConfig extends Component
 
     public function addWebsite()
     {
-        $this->profile_websites[] = '';
+        if (count($this->profile_websites) < 2) {
+            $this->profile_websites[] = '';
+        } else {
+            $this->dispatch('notify', title: 'Limit Reached', message: 'You can add up to 2 websites.', type: 'warning');
+        }
     }
 
     public function removeWebsite($index)

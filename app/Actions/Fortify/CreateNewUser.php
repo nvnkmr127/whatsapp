@@ -104,17 +104,32 @@ class CreateNewUser implements CreatesNewUsers
 
         // Launch gift credit – only when all 5 offer eligibility rules pass
         if (app(OfferEligibilityService::class)->isEligible($team)) {
-            $initialCredit = (float) get_setting('offer_initial_credit', 5.00);
+            $offerSettings = app(\App\Services\OfferSettingsService::class);
+            $initialCredit = (float) $offerSettings->get('offer_initial_credit', 5.00);
+            
+            // Deposit credit
             if ($initialCredit > 0) {
                 app(\App\Services\BillingService::class)->deposit(
                     $team,
                     $initialCredit,
                     'Welcome Gift (Launch Offer)'
                 );
-
-                // Stamp offer as claimed on the team immediately
-                app(OfferEligibilityService::class)->markClaimed($team);
             }
+
+            // Snapshot all offer limits to lock them in for this team
+            $snapshot = [
+                'message_limit' => $offerSettings->get('offer_message_limit'),
+                'agent_limit' => $offerSettings->get('offer_agent_limit'),
+                'whatsapp_limit' => $offerSettings->get('offer_whatsapp_limit'),
+                'contacts_limit' => $offerSettings->get('offer_contacts_limit'),
+                'campaign_limit' => $offerSettings->get('offer_campaign_limit'),
+                'automation_limit' => $offerSettings->get('offer_automation_limit'),
+                'call_minutes_limit' => $offerSettings->get('offer_call_minutes_limit'),
+                'included_features' => $offerSettings->get('offer_included_features'),
+            ];
+
+            // Stamp offer as claimed on the team immediately + save snapshot
+            app(OfferEligibilityService::class)->markClaimed($team, $snapshot);
         }
 
         return $team;

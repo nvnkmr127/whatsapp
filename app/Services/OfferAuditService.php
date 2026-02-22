@@ -35,7 +35,7 @@ class OfferAuditService
     /**
      * Fired when the system successfully assigns the trial offer during signup.
      */
-    public static function logTrialAssigned(Team $team, User $owner, string $via = 'signup'): void
+    public static function logTrialAssigned(Team $team, User $owner, string $via = 'signup', ?array $snapshot = null): void
     {
         static::write(
             event: 'Offer.System.TrialAssigned',
@@ -47,6 +47,7 @@ class OfferAuditService
                 'offer_claimed_at' => $team->offer_claimed_at?->toDateTimeString(),
                 'owner_email' => $owner->email,
                 'owner_id' => $owner->id,
+                'allocated_limits' => $snapshot, // Include snapshot in logs
             ]
         );
     }

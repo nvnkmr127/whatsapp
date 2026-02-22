@@ -90,13 +90,16 @@ class OfferEligibilityService
      *   • Team deletion (TeamObserver propagates on deleting)
      *   • WABA disconnect (TeamObserver blocks clearing offer_claimed_at)
      */
-    public function markClaimed(Team $team): void
+    public function markClaimed(Team $team, ?array $snapshot = null): void
     {
         $claimedAt = now();
 
         // ── Team-level claim ──────────────────────────────────────────
         if ($team->offer_claimed_at === null) {
             $team->offer_claimed_at = $claimedAt;
+            if ($snapshot) {
+                $team->offer_snapshot = $snapshot; // Save the limits snapshot
+            }
             $team->saveQuietly();
         }
 
@@ -110,7 +113,7 @@ class OfferEligibilityService
 
         // ── Audit trail ───────────────────────────────────────────────
         if ($owner) {
-            OfferAuditService::logTrialAssigned($team, $owner);
+            OfferAuditService::logTrialAssigned($team, $owner, 'signup', $snapshot);
         }
     }
 
