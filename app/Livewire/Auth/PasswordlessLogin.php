@@ -18,6 +18,14 @@ class PasswordlessLogin extends Component
     public $error = '';
     public $resendCountdown = 0;
 
+    public function mount()
+    {
+        $lastSent = session('otp_last_sent_at');
+        if ($lastSent && now()->diffInSeconds($lastSent) < 60) {
+            $this->resendCountdown = 60 - now()->diffInSeconds($lastSent);
+        }
+    }
+
     public function updatedCode($value)
     {
         if (strlen($value) === 6) {
@@ -29,6 +37,11 @@ class PasswordlessLogin extends Component
         'identifier' => 'required',
         'type' => 'required|in:email,phone',
     ];
+
+    public function updatedType($value)
+    {
+        $this->reset(['identifier', 'error', 'message']);
+    }
 
     public function requestOtp(OTPService $otpService)
     {
@@ -46,8 +59,13 @@ class PasswordlessLogin extends Component
         $this->error = '';
         $this->message = '';
 
-        if ($this->resendCountdown > 0) {
-            $this->error = "Please wait {$this->resendCountdown} seconds before requesting a new code.";
+        // Check rate limit using session
+        $lastSent = session('otp_last_sent_at');
+        if ($lastSent && now()->diffInSeconds($lastSent) < 60) {
+            $remaining = 60 - now()->diffInSeconds($lastSent);
+            $this->error = "Please wait {$remaining} seconds before requesting a new code.";
+            // Sync the frontend timer just in case
+            $this->dispatch('start-timer', duration: $remaining);
             return;
         }
 
@@ -55,9 +73,11 @@ class PasswordlessLogin extends Component
             $sent = $otpService->send($this->identifier, $this->type);
 
             if ($sent) {
+                session(['otp_last_sent_at' => now()]);
                 $this->step = 'verify';
                 $this->message = 'A 6-digit code has been sent to your ' . ($this->type === 'email' ? 'email' : 'WhatsApp') . '.';
-                $this->startResendTimer();
+                $this->resendCountdown = 60;
+                $this->dispatch('start-timer', duration: 60);
             } else {
                 $this->error = 'Failed to send OTP. Please check your details and try again.';
             }
@@ -66,13 +86,6 @@ class PasswordlessLogin extends Component
             Log::error("OTP Request Error: " . $e->getMessage());
         }
     }
-
-    public function startResendTimer()
-    {
-        $this->resendCountdown = 60;
-    }
-
-
 
     public function verifyOtp(OTPService $otpService)
     {

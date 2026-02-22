@@ -44,7 +44,8 @@
                                                                 const response = await fetch('https://ipapi.co/json/');
                                                                 if (!response.ok) return; // Silently fail on non-200 responses
                                                                 const data = await response.json();
-                                                                if (data.country_calling_code) {
+                                                                // Check if we are still on the phone tab before setting
+                                                                if (data.country_calling_code && (await $wire.get('type')) === 'phone') {
                                                                     $wire.set('identifier', data.country_calling_code);
                                                                 }
                                                             } catch (error) {
@@ -207,22 +208,25 @@
             </button>
 
             <!-- Resend / Change -->
-            <div class="text-center mt-6" x-data="{ timer: @entangle('resendCountdown') }"
+            <div class="text-center mt-6" 
+                x-data="{ timer: {{ $resendCountdown }} }"
+                @start-timer.window="timer = $event.detail.duration"
                 x-init="setInterval(() => { if(timer > 0) timer-- }, 1000)">
-                @if ($resendCountdown > 0)
-                    <p class="text-sm font-bold text-slate-400 flex items-center justify-center gap-2" x-show="timer > 0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        <span x-text="timer"></span>s
-                    </p>
-                @else
+                
+                <p class="text-sm font-bold text-slate-400 flex items-center justify-center gap-2" x-show="timer > 0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span x-text="timer"></span>s
+                </p>
+
+                <div x-show="timer <= 0" style="display: none;">
                     <button type="button" wire:click="requestOtp"
                         class="text-sm font-bold text-wa-teal hover:text-wa-dark transition-colors">
                         Didn't receive a code? Resend
                     </button>
-                @endif
+                </div>
 
                 <button type="button" wire:click="$set('step', 'request')"
                     class="block mt-2 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors mx-auto">

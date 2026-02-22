@@ -6,7 +6,7 @@ use App\Livewire\Settings\AiSettings;
 use App\Http\Controllers\Integrations\GoogleDriveController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->to('https://watxio.com/');
 });
 
 Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
