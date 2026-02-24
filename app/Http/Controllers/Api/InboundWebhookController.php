@@ -99,6 +99,7 @@ class InboundWebhookController extends Controller
                 'deduplication_hash' => $dedupeHash,
                 'signature' => $signature,
                 'status' => 'duplicate',
+                'team_id' => $source->team_id,
                 'waba_id' => $source->team->whatsapp_business_account_id ?? null,
             ]);
 
@@ -137,6 +138,7 @@ class InboundWebhookController extends Controller
                     ?? $request->header('Stripe-Signature')
                     ?? $request->header('X-WC-Webhook-Signature'),
                 'status' => 'skipped',
+                'team_id' => $source->team_id,
                 'waba_id' => $source->team->whatsapp_business_account_id ?? null,
             ]);
 
@@ -176,6 +178,7 @@ class InboundWebhookController extends Controller
                     ?? $request->header('Stripe-Signature')
                     ?? $request->header('X-WC-Webhook-Signature'),
                 'status' => 'pending',
+                'team_id' => $source->team_id,
                 'waba_id' => $source->team->whatsapp_business_account_id ?? null,
             ]);
 
