@@ -153,7 +153,7 @@ class EmailDispatcher
                 'username' => $config->username,
                 'password' => $config->password,
                 'encryption' => $config->encryption,
-                'timeout' => null,
+                'timeout' => 30,
                 'local_domain' => env('MAIL_EHLO_DOMAIN'),
             ]
         ]);

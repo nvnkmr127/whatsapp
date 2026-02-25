@@ -50,21 +50,21 @@ return [
         ],
 
         'transactional' => [
-            'transport' => 'smtp',
+            'transport' => env('MAIL_TRANSACTIONAL_TRANSPORT', env('MAIL_MAILER', 'smtp')),
             'host' => env('MAIL_TRANSACTIONAL_HOST', env('MAIL_HOST')),
             'port' => env('MAIL_TRANSACTIONAL_PORT', env('MAIL_PORT')),
             'username' => env('MAIL_TRANSACTIONAL_USERNAME', env('MAIL_USERNAME')),
             'password' => env('MAIL_TRANSACTIONAL_PASSWORD', env('MAIL_PASSWORD')),
-            'timeout' => null,
+            'timeout' => env('MAIL_TRANSACTIONAL_TIMEOUT', 30),
         ],
 
         'marketing' => [
-            'transport' => 'smtp',
+            'transport' => env('MAIL_MARKETING_TRANSPORT', env('MAIL_MAILER', 'smtp')),
             'host' => env('MAIL_MARKETING_HOST', env('MAIL_HOST')),
             'port' => env('MAIL_MARKETING_PORT', env('MAIL_PORT')),
             'username' => env('MAIL_MARKETING_USERNAME', env('MAIL_USERNAME')),
             'password' => env('MAIL_MARKETING_PASSWORD', env('MAIL_PASSWORD')),
-            'timeout' => null,
+            'timeout' => env('MAIL_MARKETING_TIMEOUT', 60),
         ],
 
         'ses' => [
