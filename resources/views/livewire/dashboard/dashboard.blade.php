@@ -41,6 +41,43 @@
         </div>
     </div>
 
+    <!-- Super Admin Command Center (Only for Super Admins) -->
+    @if(auth()->user()->isSuperAdmin())
+        <div
+            class="bg-indigo-600 dark:bg-indigo-950/40 rounded-[2.5rem] p-8 border border-indigo-400/20 shadow-2xl shadow-indigo-500/20 relative overflow-hidden group mb-6">
+            <div
+                class="absolute -right-12 -top-12 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000">
+            </div>
+
+            <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
+                <div>
+                    <h2 class="text-2xl font-black text-white uppercase tracking-tight">System Command Center</h2>
+                    <p class="text-indigo-100 font-medium mt-1">Global infrastructure control, tenant management, and
+                        platform billing.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4">
+                    <a href="{{ route('admin.dashboard') }}"
+                        class="px-6 py-3 bg-white text-indigo-600 font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all">
+                        Tenant Manager
+                    </a>
+                    <a href="{{ route('settings.system') }}"
+                        class="px-6 py-3 bg-white/10 text-white font-black uppercase tracking-widest text-xs rounded-2xl border border-white/20 backdrop-blur-md hover:bg-white/20 transition-all">
+                        Platform Settings
+                    </a>
+                    <a href="{{ route('admin.email-templates.index') }}"
+                        class="px-6 py-3 bg-white/10 text-white font-black uppercase tracking-widest text-xs rounded-2xl border border-white/20 backdrop-blur-md hover:bg-white/20 transition-all">
+                        Mail Engine
+                    </a>
+                    <a href="{{ route('admin.plans') }}"
+                        class="px-6 py-3 bg-white/10 text-white font-black uppercase tracking-widest text-xs rounded-2xl border border-white/20 backdrop-blur-md hover:bg-white/20 transition-all">
+                        Billing Plans
+                    </a>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Onboarding Checklist -->
     @livewire('onboarding.setup-checklist')
 
