@@ -11,7 +11,6 @@ Route::get('/', function () {
 
 Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
 
-Route::get('/dev/login/{email}', [\App\Http\Controllers\DevController::class, 'loginAs'])->name('dev.login');
 
 // Passwordless Auth Routes
 Route::prefix('auth')->name('auth.')->group(function () {

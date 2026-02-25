@@ -320,11 +320,11 @@ document.addEventListener('livewire:init', () => {
 
             try {
                 const res = await axios.post(`/api/v1/conversations/${this.conversationId}/lock`);
-                if (res.data.success) {
+                if (res.data && res.data.success) {
                     this.lockedBy = { id: this.myUserId, name: 'Me' };
                     this.startHeartbeat();
                     return true;
-                } else {
+                } else if (res.data) {
                     this.lockedBy = { id: res.data.owner, name: 'Agent ' + res.data.owner };
                     return false;
                 }
@@ -381,7 +381,7 @@ document.addEventListener('livewire:init', () => {
                 this.typingUser = name;
                 if (this.typingTimer) clearTimeout(this.typingTimer);
                 this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
-                
+
                 // Only accept lock from others if I don't own it myself
                 if (!this.amIOwner()) {
                     this.setLockState(id, name);

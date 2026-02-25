@@ -46,22 +46,17 @@ class PasswordlessAuthController extends Controller
      */
     public function verifyOtp(\App\Http\Requests\Auth\OTPVerifyRequest $request)
     {
-        // Check for auto-login in local environment
-        $autoLogin = $request->has('auto_login') && $request->auto_login === 'true' && app()->environment('local');
 
         $identifier = $request->identifier;
         $type = $request->type;
         $code = $request->code ?? null;
 
-        // Verify OTP only if not auto-login
-        if (!$autoLogin) {
-            if (!$this->otpService->verify($identifier, $code)) {
-                AuditService::log('Auth.Failure', null, $identifier, $type . '_otp', ['reason' => 'Invalid or expired OTP']);
-                if ($request->expectsJson()) {
-                    return response()->json(['message' => 'Invalid or expired OTP.'], 422);
-                }
-                return redirect()->back()->withErrors(['code' => 'Invalid or expired code.']);
+        if (!$this->otpService->verify($identifier, $code)) {
+            AuditService::log('Auth.Failure', null, $identifier, $type . '_otp', ['reason' => 'Invalid or expired OTP']);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Invalid or expired OTP.'], 422);
             }
+            return redirect()->back()->withErrors(['code' => 'Invalid or expired code.']);
         }
 
         return DB::transaction(function () use ($identifier, $type, $request) {

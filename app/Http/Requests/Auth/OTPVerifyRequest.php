@@ -22,12 +22,8 @@ class OTPVerifyRequest extends FormRequest
         $rules = [
             'identifier' => 'required|string',
             'type' => 'required|in:email,phone',
+            'code' => 'required|string|size:6',
         ];
-
-        // Only require code if not auto-login (local env handled in controller)
-        if (!$this->has('auto_login')) {
-            $rules['code'] = 'required|string|size:6';
-        }
 
         return $rules;
     }

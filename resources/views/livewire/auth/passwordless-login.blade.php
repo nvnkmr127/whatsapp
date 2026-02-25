@@ -38,24 +38,24 @@
                 @else
                     <input id="identifier" type="tel" wire:model="identifier" placeholder="+1 (555) 000-0000" required autofocus
                         x-init="
-                                                    if (!$wire.identifier) {
-                                                        const fetchGeoIp = async () => {
-                                                            try {
-                                                                const response = await fetch('https://ipapi.co/json/');
-                                                                if (!response.ok) return; // Silently fail on non-200 responses
-                                                                const data = await response.json();
-                                                                // Check if we are still on the phone tab before setting
-                                                                if (data.country_calling_code && (await $wire.get('type')) === 'phone') {
-                                                                    $wire.set('identifier', data.country_calling_code);
-                                                                }
-                                                            } catch (error) {
-                                                                // Silently handle errors to avoid console noise
-                                                                console.debug('GeoIP lookup failed:', error);
+                                                            if (!$wire.identifier) {
+                                                                const fetchGeoIp = async () => {
+                                                                    try {
+                                                                        const response = await fetch('https://ipapi.co/json/');
+                                                                        if (!response.ok) return; // Silently fail on non-200 responses
+                                                                        const data = await response.json();
+                                                                        // Check if we are still on the phone tab before setting
+                                                                        if (data.country_calling_code && (await $wire.get('type')) === 'phone') {
+                                                                            $wire.set('identifier', data.country_calling_code);
+                                                                        }
+                                                                    } catch (error) {
+                                                                        // Silently handle errors to avoid console noise
+                                                                        console.debug('GeoIP lookup failed:', error);
+                                                                    }
+                                                                };
+                                                                fetchGeoIp();
                                                             }
-                                                        };
-                                                        fetchGeoIp();
-                                                    }
-                                                "
+                                                        "
                         class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal focus:bg-white dark:focus:bg-slate-900 transition-all duration-300 hover:border-slate-200 dark:hover:border-slate-700" />
                 @endif
                 @error('identifier')
@@ -74,26 +74,6 @@
                 </span>
             </button>
 
-            <!-- Auto-Login Button (Local Environment Only) with enhanced gradient -->
-            @if($isLocal)
-                <button wire:click="autoLogin" wire:loading.attr="disabled" type="button"
-                    class="w-full mt-3 py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-amber-500/30 hover:scale-[1.02] hover:shadow-2xl hover:shadow-amber-500/40 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group">
-                    <span
-                        class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
-                    <span wire:loading.remove class="flex items-center justify-center gap-2 relative z-10">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                        Quick Login (Dev Mode)
-                    </span>
-                    <span wire:loading class="flex items-center justify-center gap-2 relative z-10">
-                        Logging in...
-                    </span>
-                </button>
-                <p class="text-xs text-center text-amber-600 dark:text-amber-400 font-bold mt-2">
-                    ⚡ Skip OTP verification in local environment
-                </p>
-            @endif
         </div>
     @else
         <!-- Verify OTP Step -->
@@ -114,64 +94,64 @@
 
             <!-- OTP Input -->
             <div class="mb-10" x-data="{ 
-                                        length: 6,
-                                        otp: Array(6).fill(''),
-                                        code: @entangle('code'),
-                                        init() {
-                                            this.$watch('otp', value => {
-                                                this.code = value.join('');
-                                            });
-                                        },
-                                        handleInput(e, index) {
-                                            const input = e.target;
-                                            const val = input.value.replace(/[^0-9]/g, '');
-
-                                            this.otp[index] = val;
-                                            input.value = val;
-
-                                            if (val && index < this.length - 1) {
-                                                this.$nextTick(() => {
-                                                    const next = document.getElementById('otp-' + (index + 1));
-                                                    if (next) {
-                                                        next.focus();
-                                                        next.select();
-                                                    }
+                                            length: 6,
+                                            otp: Array(6).fill(''),
+                                            code: @entangle('code'),
+                                            init() {
+                                                this.$watch('otp', value => {
+                                                    this.code = value.join('');
                                                 });
-                                            }
-                                        },
-                                        handleKeydown(e, index) {
-                                            if (e.key === 'Backspace') {
-                                                if (!this.otp[index] && index > 0) {
-                                                    const prev = document.getElementById('otp-' + (index - 1));
-                                                    if (prev) {
-                                                        prev.focus();
-                                                        prev.select();
+                                            },
+                                            handleInput(e, index) {
+                                                const input = e.target;
+                                                const val = input.value.replace(/[^0-9]/g, '');
+
+                                                this.otp[index] = val;
+                                                input.value = val;
+
+                                                if (val && index < this.length - 1) {
+                                                    this.$nextTick(() => {
+                                                        const next = document.getElementById('otp-' + (index + 1));
+                                                        if (next) {
+                                                            next.focus();
+                                                            next.select();
+                                                        }
+                                                    });
+                                                }
+                                            },
+                                            handleKeydown(e, index) {
+                                                if (e.key === 'Backspace') {
+                                                    if (!this.otp[index] && index > 0) {
+                                                        const prev = document.getElementById('otp-' + (index - 1));
+                                                        if (prev) {
+                                                            prev.focus();
+                                                            prev.select();
+                                                        }
+                                                    }
+                                                    // Clear current index binding on backspace if exists
+                                                    if (this.otp[index]) {
+                                                        this.otp[index] = '';
                                                     }
                                                 }
-                                                // Clear current index binding on backspace if exists
-                                                if (this.otp[index]) {
-                                                    this.otp[index] = '';
+                                            },
+                                            handlePaste(e) {
+                                                e.preventDefault();
+                                                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                                                const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
+
+                                                if (cleanPaste) {
+                                                    cleanPaste.split('').forEach((char, i) => {
+                                                        if (i < this.length) this.otp[i] = char;
+                                                    });
+
+                                                    this.$nextTick(() => {
+                                                        const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
+                                                        const dest = document.getElementById('otp-' + destIndex);
+                                                        if (dest) dest.focus();
+                                                    });
                                                 }
                                             }
-                                        },
-                                        handlePaste(e) {
-                                            e.preventDefault();
-                                            const paste = (e.clipboardData || window.clipboardData).getData('text');
-                                            const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
-
-                                            if (cleanPaste) {
-                                                cleanPaste.split('').forEach((char, i) => {
-                                                    if (i < this.length) this.otp[i] = char;
-                                                });
-
-                                                this.$nextTick(() => {
-                                                    const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
-                                                    const dest = document.getElementById('otp-' + destIndex);
-                                                    if (dest) dest.focus();
-                                                });
-                                            }
-                                        }
-                                    }" x-init="init()">
+                                        }" x-init="init()">
                 <label class="text-xs font-black uppercase tracking-widest text-slate-400 block text-center mb-6">
                     Enter 6-Digit Verification Code
                 </label>
@@ -208,11 +188,10 @@
             </button>
 
             <!-- Resend / Change -->
-            <div class="text-center mt-6" 
-                x-data="{ timer: {{ $resendCountdown }} }"
+            <div class="text-center mt-6" x-data="{ timer: {{ $resendCountdown }} }"
                 @start-timer.window="timer = $event.detail.duration"
                 x-init="setInterval(() => { if(timer > 0) timer-- }, 1000)">
-                
+
                 <p class="text-sm font-bold text-slate-400 flex items-center justify-center gap-2" x-show="timer > 0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
