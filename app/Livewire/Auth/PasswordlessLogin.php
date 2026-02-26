@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 class PasswordlessLogin extends Component
 {
     public $identifier = '';
-    public $type = 'email'; // email or phone
+    public $type = 'phone'; // email or phone
     public $code = '';
     public $step = 'request'; // request or verify
     public $message = '';
@@ -38,22 +38,17 @@ class PasswordlessLogin extends Component
         'type' => 'required|in:email,phone',
     ];
 
-    public function updatedType($value)
-    {
-        $this->reset(['identifier', 'error', 'message']);
-    }
+
 
     public function requestOtp(OTPService $otpService)
     {
-        if ($this->type === 'email') {
-            $this->identifier = strtolower(trim($this->identifier));
-        } else {
-            // Remove non-numeric characters and ensure leading + for phone
-            $this->identifier = preg_replace('/[^0-9+]/', '', $this->identifier);
-            if (!str_starts_with($this->identifier, '+')) {
-                $this->identifier = '+' . $this->identifier;
-            }
+        // Remove non-numeric characters and ensure leading + for phone
+        $this->identifier = preg_replace('/[^0-9+]/', '', $this->identifier);
+        if (!str_starts_with($this->identifier, '+')) {
+            $this->identifier = '+' . $this->identifier;
         }
+
+        $this->type = 'phone'; // Enforce phone type
 
         $this->validate();
         $this->error = '';
