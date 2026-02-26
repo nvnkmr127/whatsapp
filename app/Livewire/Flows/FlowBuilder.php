@@ -31,6 +31,17 @@ class FlowBuilder extends Component
         'OTHER'
     ];
 
+    protected function generateValidId($prefix = '')
+    {
+        // Meta Flows IDs must only contain alphabets and underscores
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_';
+        $random = '';
+        for ($i = 0; $i < 10; $i++) {
+            $random .= $chars[rand(0, strlen($chars) - 1)];
+        }
+        return $prefix . $random;
+    }
+
     protected $rules = [
         'name' => 'required|string|max:255',
         'screens' => 'required|array|min:1',
@@ -79,7 +90,7 @@ class FlowBuilder extends Component
 
     public function addScreen()
     {
-        $id = 'screen_' . uniqid();
+        $id = $this->generateValidId('screen_');
         $this->screens[] = [
             'id' => $id,
             'title' => 'New Screen',
@@ -126,33 +137,33 @@ class FlowBuilder extends Component
                 break;
             case 'TextInput':
                 $component['label'] = 'Label';
-                $component['name'] = 'field_' . uniqid();
+                $component['name'] = $this->generateValidId('field_');
                 $component['required'] = true;
                 break;
             case 'Dropdown':
             case 'Select':
                 $component['label'] = 'Select Option';
-                $component['name'] = 'select_' . uniqid();
-                $component['options'] = [['label' => 'Option 1', 'value' => '1']];
+                $component['name'] = $this->generateValidId('select_');
+                $component['options'] = [['label' => 'Option 1', 'value' => 'opt_one']];
                 break;
             case 'TextArea':
                 $component['label'] = 'Description';
-                $component['name'] = 'description_' . uniqid();
+                $component['name'] = $this->generateValidId('description_');
                 $component['required'] = false;
                 break;
             case 'CheckboxGroup':
                 $component['label'] = 'Choose many';
-                $component['name'] = 'cb_' . uniqid();
-                $component['options'] = [['label' => 'Choice 1', 'value' => '1']];
+                $component['name'] = $this->generateValidId('cb_');
+                $component['options'] = [['label' => 'Choice 1', 'value' => 'choice_one']];
                 break;
             case 'RadioGroup':
                 $component['label'] = 'Choose one';
-                $component['name'] = 'rg_' . uniqid();
-                $component['options'] = [['label' => 'Option 1', 'value' => '1']];
+                $component['name'] = $this->generateValidId('rg_');
+                $component['options'] = [['label' => 'Option 1', 'value' => 'opt_one']];
                 break;
             case 'DateField':
                 $component['label'] = 'Pick a date';
-                $component['name'] = 'date_' . uniqid();
+                $component['name'] = $this->generateValidId('date_');
                 break;
             case 'PhotoPicker':
                 // Check if screen already has a media picker
@@ -163,7 +174,7 @@ class FlowBuilder extends Component
                     }
                 }
                 $component['label'] = 'Upload Photo';
-                $component['name'] = 'photo_' . uniqid();
+                $component['name'] = $this->generateValidId('photo_');
                 $component['photo_source'] = 'camera,gallery';
                 break;
             case 'DocumentPicker':
@@ -174,7 +185,7 @@ class FlowBuilder extends Component
                     }
                 }
                 $component['label'] = 'Upload File';
-                $component['name'] = 'doc_' . uniqid();
+                $component['name'] = $this->generateValidId('doc_');
                 $component['allowed_types'] = ['application/pdf', 'image/jpeg', 'image/png'];
                 break;
             case 'Image':
@@ -224,7 +235,7 @@ class FlowBuilder extends Component
     {
         $this->screens[$screenIndex]['components'][$componentIndex]['options'][] = [
             'label' => 'New Option',
-            'value' => uniqid()
+            'value' => $this->generateValidId('opt_')
         ];
     }
 

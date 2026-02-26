@@ -75,7 +75,11 @@ class WhatsAppFlowService
      */
     public function updateFlowDesign(WhatsAppFlow $flow, array $designData)
     {
-        // 0. Safety Check: Validate against Meta Policies
+        // 0. ID Sanitization: Auto-fix legacy numeric IDs for Meta compliance
+        $designData = $this->deepSanitize($designData);
+        $flow->update(['design_data' => $designData]);
+
+        // 1. Safety Check: Validate against Meta Policies
         $this->validateContentPolicy($designData);
 
         // 1. Generate Meta-compatible JSON (v3.0/v6.0)
@@ -163,8 +167,58 @@ class WhatsAppFlowService
     }
 
     /**
-     * Convert visual builder data to Meta Flow JSON v3.0.
+     * Sanitize ID for Meta compliance (alphabets and underscores only).
      */
+    protected function sanitizeId($id)
+    {
+        if (!$id)
+            return $id;
+        // Meta requires [a-zA-Z_]+
+        // Map 0-9 to g-p to avoid collisions with hex 'a-f' from uniqid()
+        $map = [
+            '0' => 'g',
+            '1' => 'h',
+            '2' => 'i',
+            '3' => 'j',
+            '4' => 'k',
+            '5' => 'l',
+            '6' => 'm',
+            '7' => 'n',
+            '8' => 'o',
+            '9' => 'p'
+        ];
+        return strtr((string) $id, $map);
+    }
+
+    /**
+     * Recursively sanitize all internal IDs/names in the design structure.
+     */
+    protected function deepSanitize(array $design)
+    {
+        if (isset($design['screens'])) {
+            foreach ($design['screens'] as &$screen) {
+                if (isset($screen['id'])) {
+                    $screen['id'] = $this->sanitizeId($screen['id']);
+                }
+                if (isset($screen['components'])) {
+                    foreach ($screen['components'] as &$comp) {
+                        if (isset($comp['name'])) {
+                            $comp['name'] = $this->sanitizeId($comp['name']);
+                        }
+                        if (isset($comp['options'])) {
+                            foreach ($comp['options'] as &$opt) {
+                                if (isset($opt['value'])) {
+                                    $opt['value'] = $this->sanitizeId($opt['value']);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $design;
+    }
+
     /**
      * Convert visual builder data to Meta Flow JSON v3.0 (or v6.0).
      */
@@ -177,13 +231,11 @@ class WhatsAppFlowService
 
         // First pass: Identify screens and their components
         foreach ($design['screens'] as $index => $screen) {
-            $screenId = $screen['id'];
+            $screenId = $this->sanitizeId($screen['id']);
             $isTerminal = false;
 
             // Determine next screen ID relative to current index (Linear Flow Assumption)
-            // This is crucial: We are enforcing a linear flow (1->2->3) for simplicity 
-            // to satisfy the "No Loops" and "Entry Screen" (Screen 1 has no inbound) rules.
-            $nextScreenId = isset($design['screens'][$index + 1]) ? $design['screens'][$index + 1]['id'] : null;
+            $nextScreenId = isset($design['screens'][$index + 1]) ? $this->sanitizeId($design['screens'][$index + 1]['id']) : null;
 
             // Map components
             $children = [];
@@ -314,7 +366,7 @@ class WhatsAppFlowService
             case 'TextInput':
                 return [
                     'type' => 'TextInput',
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'input-type' => 'text' // Default
@@ -322,53 +374,54 @@ class WhatsAppFlowService
             case 'TextArea':
                 return [
                     'type' => 'TextArea', // Meta supports TextArea
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false
                 ];
             case 'CheckboxGroup':
                 return [
                     'type' => 'CheckboxGroup',
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'min-selected-items' => 1,
                     'max-selected-items' => 5,
                     'data-source' => array_map(function ($opt) {
-                        return ['id' => $opt['value'], 'title' => $opt['label']];
+                        return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
                     }, $comp['options'] ?? [])
                 ];
             case 'RadioGroup':
                 return [
                     'type' => 'RadioButtonsGroup', // Meta name
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'data-source' => array_map(function ($opt) {
-                        return ['id' => $opt['value'], 'title' => $opt['label']];
+                        return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
                     }, $comp['options'] ?? [])
                 ];
             case 'Select':
             case 'Dropdown':
                 return [
                     'type' => 'Dropdown',
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'data-source' => array_map(function ($opt) {
-                        return ['id' => $opt['value'], 'title' => $opt['label']];
+                        return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
                     }, $comp['options'] ?? [])
                 ];
+            case 'DateField':
                 return [
                     'type' => 'DatePicker',
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                 ];
             case 'PhotoPicker':
                 return [
                     'type' => 'PhotoPicker',
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'photo-source' => $comp['photo_source'] ?? 'camera,gallery',
@@ -377,15 +430,7 @@ class WhatsAppFlowService
             case 'DocumentPicker':
                 return [
                     'type' => 'DocumentPicker',
-                    'name' => $comp['name'],
-                    'label' => $comp['label'],
-                    'required' => $comp['required'] ?? false,
-                    'max-file-size' => 25 * 1024 * 1024, // 25MB Max
-                    'allowed-types' => $comp['allowed_types'] ?? ['application/pdf', 'image/jpeg', 'image/png']
-                ];
-                return [
-                    'type' => 'DocumentPicker',
-                    'name' => $comp['name'],
+                    'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'max-file-size' => 25 * 1024 * 1024, // 25MB Max
