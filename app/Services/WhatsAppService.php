@@ -963,8 +963,8 @@ class WhatsAppService
             'file_offset' => 0,
             'Content-Type' => $file->getMimeType(),
         ])->send('POST', $uploadUrl, [
-            'body' => fopen($file->getRealPath(), 'r')
-        ]);
+                    'body' => fopen($file->getRealPath(), 'r')
+                ]);
 
         if ($uploadResponse->failed()) {
             throw new \Exception("Failed to upload file content: " . $uploadResponse->body());
@@ -1874,7 +1874,9 @@ class WhatsAppService
     protected function sendRequestFullUrl($url, $method, $data = [], $endpoint = 'unknown')
     {
         $client = Http::withToken($this->token)
-            ->withHeaders(['Content-Type' => 'application/json']);
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->timeout(20) // 20s timeout (increased from default or missing)
+            ->retry(2, 500); // 2 retries with 500ms delay for transient errors (429, 500, etc)
 
         $response = null;
         $method = strtolower($method);

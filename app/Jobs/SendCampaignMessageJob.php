@@ -28,12 +28,12 @@ class SendCampaignMessageJob implements ShouldQueue
     /**
      * The number of times the job may be attempted.
      */
-    public $tries = 3;
+    public $tries = 5;
 
     /**
      * The number of seconds to wait before retrying the job.
      */
-    public $backoff = [60, 300, 600];
+    public $backoff = [60, 300, 600, 1200, 3600];
 
     public function __construct($campaignId, $contactId)
     {

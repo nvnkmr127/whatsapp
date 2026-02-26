@@ -77,7 +77,7 @@ trait WhatsApp
                 'url' => $url
             ]);
 
-            $response = Http::get($url, $params);
+            $response = Http::timeout(15)->get($url, $params);
 
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
@@ -90,7 +90,7 @@ trait WhatsApp
                     Log::warning("WhatsApp Trait: AppSecret Proof failed, retrying without proof.");
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::get($url, $params);
+                    $response = Http::timeout(15)->get($url, $params);
                 }
             }
 
@@ -198,7 +198,7 @@ trait WhatsApp
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
-            $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
+            $response = Http::timeout(15)->get(self::getBaseUrl() . "{$phoneNumberId}", $params);
 
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
@@ -211,7 +211,7 @@ trait WhatsApp
                     Log::warning("WhatsApp Trait: AppSecret Proof failed for Phone Details, retrying without proof.");
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::get(self::getBaseUrl() . "{$phoneNumberId}", $params);
+                    $response = Http::timeout(15)->get(self::getBaseUrl() . "{$phoneNumberId}", $params);
                 }
             }
 
@@ -274,7 +274,7 @@ trait WhatsApp
                 'is_system_token' => $isSystemToken
             ]);
 
-            $response = Http::withToken($token)->post($url, $params);
+            $response = Http::timeout(15)->withToken($token)->post($url, $params);
 
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
@@ -287,7 +287,7 @@ trait WhatsApp
                     Log::warning("WhatsApp Trait: AppSecret Proof failed for Registration, retrying without proof.");
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::withToken($token)->post($url, $params);
+                    $response = Http::timeout(15)->withToken($token)->post($url, $params);
                 }
             }
 
@@ -330,7 +330,7 @@ trait WhatsApp
                 'token_prefix' => substr($shortLivedToken, 0, 8) . '...'
             ]);
 
-            $response = Http::get(self::$facebookAPI . 'oauth/access_token', [
+            $response = Http::timeout(15)->get(self::$facebookAPI . 'oauth/access_token', [
                 'grant_type' => 'fb_exchange_token',
                 'client_id' => $appId,
                 'client_secret' => $appSecret,
@@ -385,7 +385,7 @@ trait WhatsApp
 
             Log::debug("WhatsApp Trait: Subscribing to webhooks", ['waba_id' => $wabaId, 'is_system_token' => $isSystemToken]);
 
-            $response = Http::withToken($token)->post($url, $params);
+            $response = Http::timeout(15)->withToken($token)->post($url, $params);
 
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
@@ -397,7 +397,7 @@ trait WhatsApp
                     Log::warning("WhatsApp Trait: AppSecret Proof failed, retrying without proof.");
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::withToken($token)->post($url, $params);
+                    $response = Http::timeout(15)->withToken($token)->post($url, $params);
                 }
                 // Retry without app_id if Permission Error (#200) - sometimes passing app_id causes strict BM checks
                 elseif ($code == 200 && str_contains($msg, 'Permissions error')) {
@@ -405,7 +405,7 @@ trait WhatsApp
                     unset($params['app_id']);
                     // We must keep appsecret_proof if it was there, but it depends on app_id? 
                     // Usually appsecret_proof is hash(token, secret). Independent of app_id param.
-                    $response = Http::withToken($token)->post($url, $params);
+                    $response = Http::timeout(15)->withToken($token)->post($url, $params);
                 }
             }
 
@@ -442,7 +442,7 @@ trait WhatsApp
                 'token_prefix' => substr($token, 0, 8) . '...'
             ]);
 
-            $response = Http::get(self::$facebookAPI . 'debug_token', [
+            $response = Http::timeout(15)->get(self::$facebookAPI . 'debug_token', [
                 'input_token' => $token,
                 'access_token' => $appToken,
             ]);
@@ -503,7 +503,7 @@ trait WhatsApp
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
-            $response = Http::withToken($token)->get($url, $params);
+            $response = Http::timeout(15)->withToken($token)->get($url, $params);
 
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
@@ -516,7 +516,7 @@ trait WhatsApp
                     Log::warning("WhatsApp Trait: AppSecret Proof failed on Check, retrying without proof.");
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::withToken($token)->get($url, $params);
+                    $response = Http::timeout(15)->withToken($token)->get($url, $params);
                 }
             }
 
