@@ -131,31 +131,24 @@ class WhatsAppFlowService
      */
     public function publishFlow(WhatsAppFlow $flow, bool $isRetry = false)
     {
-        $logFile = __DIR__ . '/debug_flow.log';
-        file_put_contents($logFile, "[" . date('H:i:s') . "] Attempting publish for flow {$flow->flow_id}. Retry: " . ($isRetry ? 'Yes' : 'No') . PHP_EOL, FILE_APPEND);
-
         // 1. Trigger Publish On Meta
         $response = Http::withToken((string) $this->token)
             ->post("{$this->baseUrl}/{$flow->flow_id}/publish");
 
         if ($response->failed()) {
             $body = $response->body();
-            file_put_contents($logFile, "[" . date('H:i:s') . "] Publish FAILED. Body: " . $body . PHP_EOL, FILE_APPEND);
-
             $error = json_decode($body, true);
             $code = $error['error']['code'] ?? 0;
             $subcode = $error['error']['error_subcode'] ?? 0;
 
-            file_put_contents($logFile, "[" . date('H:i:s') . "] Extracted Code: $code, Subcode: $subcode" . PHP_EOL, FILE_APPEND);
-
             // Handle Missing Public Key (Error 139002 / Subcode 4233012)
             if (($subcode == 4233012 || $code == 139002) && !$isRetry) {
-                file_put_contents($logFile, "[" . date('H:i:s') . "] Missing public key detected. Attempting repair..." . PHP_EOL, FILE_APPEND);
-                if ($this->ensurePublicKeyUploaded()) {
-                    file_put_contents($logFile, "[" . date('H:i:s') . "] Repair success. Retrying publish..." . PHP_EOL, FILE_APPEND);
-                    return $this->publishFlow($flow, true);
-                } else {
-                    file_put_contents($logFile, "[" . date('H:i:s') . "] Repair FAILED." . PHP_EOL, FILE_APPEND);
+                try {
+                    if ($this->ensurePublicKeyUploaded()) {
+                        return $this->publishFlow($flow, true);
+                    }
+                } catch (\Exception $e) {
+                    throw new \Exception("Meta Flow Publish Failed: " . $body . " | Auto-repair failed with error: " . $e->getMessage());
                 }
             }
 
@@ -195,11 +188,7 @@ class WhatsAppFlowService
      */
     public function ensurePublicKeyUploaded()
     {
-        $logFile = __DIR__ . '/debug_flow.log';
-        file_put_contents($logFile, "[" . date('H:i:s') . "] Starting ensurePublicKeyUploaded for Team #{$this->team->id}" . PHP_EOL, FILE_APPEND);
         try {
-            $settings = $this->team->whatsapp_settings ?? [];
-
             // 1. Generate RSA Key Pair (2048-bit)
             $res = openssl_pkey_new([
                 "private_key_bits" => 2048,
@@ -207,21 +196,21 @@ class WhatsAppFlowService
             ]);
 
             if (!$res) {
-                file_put_contents($logFile, "[" . date('H:i:s') . "] OpenSSL key generation failed: " . openssl_error_string() . PHP_EOL, FILE_APPEND);
-                return false;
+                throw new \Exception("OpenSSL key generation failed: " . openssl_error_string());
             }
 
             openssl_pkey_export($res, $privateKey);
             $publicKeyData = openssl_pkey_get_details($res);
             if (!$publicKeyData) {
-                file_put_contents($logFile, "[" . date('H:i:s') . "] Failed to get public key details." . PHP_EOL, FILE_APPEND);
-                return false;
+                throw new \Exception("Failed to get public key details from OpenSSL.");
             }
             $publicKey = $publicKeyData["key"];
 
             // 2. Upload to Meta Phone Number Public Key Endpoint
             $phoneId = $this->team->whatsapp_phone_number_id;
-            file_put_contents($logFile, "[" . date('H:i:s') . "] Uploading public key to Meta for Phone ID: {$phoneId}" . PHP_EOL, FILE_APPEND);
+            if (!$phoneId) {
+                throw new \Exception("Team whatsapp_phone_number_id is missing. Please check your WhatsApp integration settings.");
+            }
 
             $response = Http::withToken((string) $this->token)
                 ->post("{$this->baseUrl}/{$phoneId}/public_key", [
@@ -229,13 +218,11 @@ class WhatsAppFlowService
                 ]);
 
             if ($response->failed()) {
-                file_put_contents($logFile, "[" . date('H:i:s') . "] Meta Public Key Upload Failed. Response: " . $response->body() . PHP_EOL, FILE_APPEND);
-                return false;
+                throw new \Exception("Meta Public Key Upload API Failed: " . $response->body());
             }
 
-            file_put_contents($logFile, "[" . date('H:i:s') . "] Meta Public Key Upload Success: " . $response->body() . PHP_EOL, FILE_APPEND);
-
             // 3. Persist keys to Team Settings (for future decryption)
+            $settings = $this->team->whatsapp_settings ?? [];
             $settings['flow_public_key'] = $publicKey;
             $settings['flow_private_key'] = $privateKey;
             $settings['flow_public_key_id'] = $response->json()['id'] ?? 'auto';
@@ -243,11 +230,10 @@ class WhatsAppFlowService
 
             $this->team->update(['whatsapp_settings' => $settings]);
 
-            file_put_contents($logFile, "[" . date('H:i:s') . "] Keys saved to team settings." . PHP_EOL, FILE_APPEND);
             return true;
         } catch (\Exception $e) {
-            file_put_contents($logFile, "[" . date('H:i:s') . "] Exception in ensurePublicKeyUploaded: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
-            return false;
+            Log::error("Flow Public Key Repair Failed: " . $e->getMessage());
+            throw $e; // Re-throw to be caught by publishFlow
         }
     }
 
