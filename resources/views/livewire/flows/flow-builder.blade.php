@@ -161,9 +161,9 @@
             </div>
         </div>
 
-        <!-- Canvas -->
         <div class="flex-1 bg-slate-50 dark:bg-slate-950 p-12 overflow-y-auto flex justify-center">
-            @if(isset($screens[$selectedScreenIndex]))
+            @php $selectedScreen = data_get($screens, $selectedScreenIndex); @endphp
+            @if($selectedScreen)
                 <div
                     class="w-[400px] h-[700px] bg-white dark:bg-slate-900 rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] border-[12px] border-slate-950 dark:border-slate-800 overflow-hidden flex flex-col relative scale-[0.85] ring-4 ring-indigo-500/10 ring-offset-4 ring-offset-slate-50 dark:ring-offset-slate-950">
                     <div
@@ -183,11 +183,11 @@
                         <div class="border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
                             <label class="text-[9px] font-black uppercase tracking-widest text-wa-teal">Header
                                 Text</label>
-                            <input type="text" wire:model="screens.{{ $selectedScreenIndex }}.title"
+                            <input type="text" wire:model.live="screens.{{ $selectedScreenIndex }}.title"
                                 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight bg-transparent border-none p-0 focus:ring-0 w-full">
                         </div>
 
-                        @foreach($screens[$selectedScreenIndex]['components'] as $cIndex => $component)
+                        @foreach(($selectedScreen['components'] ?? []) as $cIndex => $component)
                             <div wire:key="comp-canvas-{{ $selectedScreenIndex }}-{{ $cIndex }}-{{ $component['name'] ?? $cIndex }}"
                                 wire:click="$set('selectedComponentIndex', {{ $cIndex }})"
                                 class="relative group p-4 border-2 rounded-2xl transition-all cursor-pointer {{ $selectedComponentIndex === $cIndex ? 'border-wa-teal bg-indigo-50/10' : 'border-transparent hover:border-slate-100' }}">
@@ -322,8 +322,12 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-8">
-                @if($selectedComponentIndex !== null)
-                    @php $comp = $screens[$selectedScreenIndex]['components'][$selectedComponentIndex]; @endphp
+                @php 
+                    $currScreen = data_get($screens, $selectedScreenIndex);
+                    $comp = ($currScreen && isset($currScreen['components'][$selectedComponentIndex])) ? $currScreen['components'][$selectedComponentIndex] : null;
+                @endphp
+
+                @if($selectedComponentIndex !== null && $comp)
                     <div wire:key="prop-editor-{{ $selectedScreenIndex }}-{{ $selectedComponentIndex }}">
                         <p class="text-[10px] font-black uppercase tracking-widest text-wa-teal mb-4">Editing
                             {{ $comp['type'] }}

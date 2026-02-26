@@ -47,7 +47,7 @@ class AutomationService
         if (!$this->handoff->shouldProcess($contact))
             return false;
 
-        $messageContent = strtolower(trim($messageContent));
+        $messageContent = mb_strtolower(trim($messageContent));
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
             ->where('trigger_type', 'keyword')
@@ -57,11 +57,38 @@ class AutomationService
 
         foreach ($automations as $automation) {
             /** @var Automation $automation */
-            $keywords = $automation->trigger_config['keywords'] ?? [];
+            $config = $automation->trigger_config ?? [];
+            $keywords = $config['keywords'] ?? [];
+            $isRegex = $config['is_regex'] ?? false;
+
             foreach ($keywords as $keyword) {
                 $trimmedKeyword = trim($keyword);
-                if ($trimmedKeyword !== "" && str_contains($messageContent, strtolower($trimmedKeyword))) {
-                    Log::debug("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword '$trimmedKeyword'");
+                if ($trimmedKeyword === "")
+                    continue;
+
+                $matched = false;
+                if ($isRegex) {
+                    try {
+                        // Ensure delimiters are present, add / if missing
+                        $pattern = $trimmedKeyword;
+                        if (!str_starts_with($pattern, '/') || !str_ends_with($pattern, '/')) {
+                            // Escape delimiters if we wrap it ourselves
+                            $pattern = '/' . str_replace('/', '\/', $pattern) . '/i';
+                        }
+                        if (preg_match($pattern, $messageContent)) {
+                            $matched = true;
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Invalid Regex in Automation #{$automation->id}: {$trimmedKeyword}");
+                    }
+                } else {
+                    if (str_contains($messageContent, mb_strtolower($trimmedKeyword))) {
+                        $matched = true;
+                    }
+                }
+
+                if ($matched) {
+                    Log::debug("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword/regex '$trimmedKeyword'");
                     $this->start($automation, $contact);
                     return true;
                 }
