@@ -206,19 +206,19 @@ class WhatsAppFlowService
             }
             $publicKey = $publicKeyData["key"];
 
-            // 2. Upload to Meta Phone Number Public Key Endpoint
-            $phoneId = $this->team->whatsapp_phone_number_id;
-            if (!$phoneId) {
-                throw new \Exception("Team whatsapp_phone_number_id is missing. Please check your WhatsApp integration settings.");
+            // 2. Upload to Meta Business Account Public Key Endpoint
+            // Note: Meta documentation says public_key is managed at WABA account level for Flows.
+            if (!$this->wabaId) {
+                throw new \Exception("WhatsApp Business Account ID (WABA) is missing. Please check your system settings.");
             }
 
             $response = Http::withToken((string) $this->token)
-                ->post("{$this->baseUrl}/{$phoneId}/public_key", [
+                ->post("{$this->baseUrl}/{$this->wabaId}/public_key", [
                     'public_key' => $publicKey,
                 ]);
 
             if ($response->failed()) {
-                throw new \Exception("Meta Public Key Upload API Failed: " . $response->body());
+                throw new \Exception("Meta Public Key Upload API Failed (WABA: {$this->wabaId}): " . $response->body());
             }
 
             // 3. Persist keys to Team Settings (for future decryption)
