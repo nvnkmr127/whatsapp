@@ -336,6 +336,7 @@ class AutomationService
         }
 
         Log::info("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
+        $run->increment('step_count');
 
         // Process Node-Level Stage Tagging
         $this->handleNodeTagging($run, $node);

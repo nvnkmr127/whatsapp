@@ -18,7 +18,7 @@ class ContactStateManager
 
         // Recency (0-30 points)
         $daysSinceLastMessage = $contact->last_interaction_at
-            ? now()->diffInDays($contact->last_interaction_at)
+            ? (int) abs(now()->diffInDays($contact->last_interaction_at, false))
             : 999;
 
         if ($daysSinceLastMessage <= 1) {
@@ -80,7 +80,7 @@ class ContactStateManager
     public function calculateLifecycleState(Contact $contact): string
     {
         $daysSinceLastMessage = $contact->last_interaction_at
-            ? now()->diffInDays($contact->last_interaction_at)
+            ? (int) abs(now()->diffInDays($contact->last_interaction_at, false))
             : 999;
 
         $messageCount = $contact->message_count ?? 0;
@@ -143,8 +143,9 @@ class ContactStateManager
 
         $responseTimes = $pairs->map(function ($pair) {
             // Calculate seconds difference in PHP — works on any DB driver
-            return \Carbon\Carbon::parse($pair->agent_time)
-                ->diffInSeconds(\Carbon\Carbon::parse($pair->customer_time));
+            // Force absolute difference to avoid SQL range errors (1264) if clock drift occurs
+            return (int) abs(\Carbon\Carbon::parse($pair->agent_time)
+                ->diffInSeconds(\Carbon\Carbon::parse($pair->customer_time), false));
         });
 
         return (int) $responseTimes->avg();
@@ -227,7 +228,7 @@ class ContactStateManager
             'is_within_24h_window' => $this->isWithin24hWindow($contact),
             'has_pending_reply' => $this->hasPendingReply($contact),
             'days_since_last_message' => $contact->last_interaction_at
-                ? now()->diffInDays($contact->last_interaction_at)
+                ? (int) abs(now()->diffInDays($contact->last_interaction_at, false))
                 : null,
         ]);
     }

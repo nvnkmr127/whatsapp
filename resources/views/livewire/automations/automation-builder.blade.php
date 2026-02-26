@@ -877,7 +877,7 @@
                              <div class="space-y-4" x-show="selectedNode.type === 'template'">
                                 <div class="space-y-1">
                                     <label class="block text-xs font-bold text-slate-500 uppercase transition-colors" :class="getFieldError('nodeText') ? 'text-rose-500' : ''">Template Name</label>
-                                    <select wire:model.blur="nodeText" wire:change="updatedNodeText($event.target.value)"
+                                    <select wire:model.live="nodeText"
                                         class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200 transition-all shadow-sm"
                                         :class="getFieldError('nodeText') ? 'border-rose-500 ring-rose-500/20' : ''">
                                         <option value="">Select Template...</option>
@@ -953,6 +953,22 @@
                                         :class="getFieldError('nodeUrl') ? 'border-rose-500 ring-rose-500/20' : ''"
                                         placeholder="https://... or ID">
                                     <p x-show="getFieldError('nodeUrl')" class="text-[10px] text-rose-500 font-bold px-1 mt-1" x-text="getFieldError('nodeUrl')?.message"></p>
+                                    
+                                    <!-- Media Preview -->
+                                    <template x-if="['image'].includes(selectedNode.type) && nodeUrl">
+                                        <div class="mt-3 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                                            <img :src="nodeUrl.startsWith('http') ? nodeUrl : ('/storage/' + nodeUrl)" 
+                                                class="w-full h-auto max-h-48 object-contain rounded-lg"
+                                                alt="Preview">
+                                        </div>
+                                    </template>
+                                    <template x-if="['video'].includes(selectedNode.type) && nodeUrl">
+                                        <div class="mt-3 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                                            <video :src="nodeUrl.startsWith('http') ? nodeUrl : ('/storage/' + nodeUrl)" 
+                                                class="w-full h-auto max-h-48 object-contain rounded-lg" 
+                                                controls></video>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                             

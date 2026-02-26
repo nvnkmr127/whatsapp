@@ -910,7 +910,7 @@ class MessageWindow extends Component
                     'status' => $msg->status,
                     'created_at' => $msg->created_at->timestamp, // Unix for easier JS sort
                     'pretty_time' => $msg->created_at->format('H:i'),
-                    'media_url' => $msg->media_url ? (\Illuminate\Support\Facades\Storage::url($msg->media_url)) : null,
+                    'media_url' => $msg->media_url ? (str_starts_with($msg->media_url, 'http') ? $msg->media_url : \Illuminate\Support\Facades\Storage::url($msg->media_url)) : null,
                     'media_type' => $msg->media_type,
                     'caption' => $msg->caption,
                     'error_message' => $msg->error_message, // For failed status
