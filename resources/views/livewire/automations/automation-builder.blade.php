@@ -1320,19 +1320,19 @@
 
                                             <div class="space-y-1">
                                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Image URL</label>
-                                                <input type="text" wire:model.blur="nodeCards.{{ $cardIndex }}.image" wire:change="updateCardData"
+                                                <input type="text" wire:model.blur="nodeCards.{{ $cardIndex }}.image" wire:change="updateNodeData"
                                                     class="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
                                                     placeholder="https://...">
                                             </div>
                                             <div class="space-y-1">
                                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Title</label>
-                                                <input type="text" wire:model.blur="nodeCards.{{ $cardIndex }}.title" wire:change="updateCardData"
+                                                <input type="text" wire:model.blur="nodeCards.{{ $cardIndex }}.title" wire:change="updateNodeData"
                                                     class="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
                                                     placeholder="Card Title">
                                             </div>
                                             <div class="space-y-1">
                                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Description</label>
-                                                <textarea wire:model.blur="nodeCards.{{ $cardIndex }}.description" wire:change="updateCardData" rows="2"
+                                                <textarea wire:model.blur="nodeCards.{{ $cardIndex }}.description" wire:change="updateNodeData" rows="2"
                                                     class="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs px-2 py-1.5"
                                                     placeholder="Description..."></textarea>
                                             </div>
@@ -1343,7 +1343,7 @@
                                                  <div class="space-y-2">
                                                      @foreach($card['buttons'] as $btnIndex => $btn)
                                                         <div class="flex items-center gap-2">
-                                                            <input type="text" wire:model.blur="nodeCards.{{ $cardIndex }}.buttons.{{ $btnIndex }}.title" wire:change="updateCardData"
+                                                            <input type="text" wire:model.blur="nodeCards.{{ $cardIndex }}.buttons.{{ $btnIndex }}.title" wire:change="updateNodeData"
                                                                 class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs px-2 py-1.5">
                                                             <button wire:click="removeCardButton({{ $cardIndex }}, {{ $btnIndex }})" class="text-slate-400 hover:text-red-500">
                                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

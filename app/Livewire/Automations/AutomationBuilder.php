@@ -852,8 +852,6 @@ class AutomationBuilder extends Component
                         }
                     }
                     $node['data']['contacts'] = $contacts;
-                } elseif ($type === 'carousel') {
-                    $node['data']['cards'] = $this->nodeCards;
                 }
             }
         }
