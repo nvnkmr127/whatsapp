@@ -131,19 +131,28 @@ class WhatsAppFlowService
      */
     public function publishFlow(WhatsAppFlow $flow, bool $isRetry = false)
     {
+        Log::debug("WhatsAppFlowService: Attempting to publish flow {$flow->flow_id}. Retry: " . ($isRetry ? 'Yes' : 'No'));
+
         // 1. Trigger Publish On Meta
         $response = Http::withToken((string) $this->token)
             ->post("{$this->baseUrl}/{$flow->flow_id}/publish");
 
         if ($response->failed()) {
             $error = $response->json();
+            $code = $error['error']['code'] ?? 0;
             $subcode = $error['error']['error_subcode'] ?? 0;
 
+            Log::warning("Flow Publish Failed for flow {$flow->flow_id}. Code: $code, Subcode: $subcode. Response: " . $response->body());
+
             // Handle Missing Public Key (Error 139002 / Subcode 4233012)
-            if ($subcode === 4233012 && !$isRetry) {
-                Log::info("Publish failed due to missing public key. Attempting auto-generation and upload...");
+            // Relaxed comparison (==) to handle string/int differences
+            if (($subcode == 4233012 || $code == 139002) && !$isRetry) {
+                Log::info("Publish failed due to missing public key (Code: $code, Subcode: $subcode). Attempting auto-generation and upload...");
                 if ($this->ensurePublicKeyUploaded()) {
+                    Log::info("Public key uploaded successfully. Retrying publish...");
                     return $this->publishFlow($flow, true); // Retry once
+                } else {
+                    Log::error("Failed to ensure public key is uploaded for Team ID: {$this->team->id}");
                 }
             }
 
@@ -185,10 +194,6 @@ class WhatsAppFlowService
     {
         try {
             $settings = $this->team->whatsapp_settings ?? [];
-            if (isset($settings['flow_public_key_uploaded_at'])) {
-                // Key already uploaded recently, might be a different error
-                // But if we're here, Meta thinks it's missing. Let's re-upload.
-            }
 
             // 1. Generate RSA Key Pair (2048-bit)
             $res = openssl_pkey_new([
@@ -207,7 +212,7 @@ class WhatsAppFlowService
 
             // 2. Upload to Meta Phone Number Public Key Endpoint
             $phoneId = $this->team->whatsapp_phone_number_id;
-            Log::info("Uploading public key to Meta for Phone ID: {$phoneId}");
+            Log::info("WhatsAppFlowService: Uploading public key to Meta for Phone ID: {$phoneId} (Team #{$this->team->id})");
 
             $response = Http::withToken((string) $this->token)
                 ->post("{$this->baseUrl}/{$phoneId}/public_key", [
@@ -215,9 +220,11 @@ class WhatsAppFlowService
                 ]);
 
             if ($response->failed()) {
-                Log::error("Meta Public Key Upload Failed: " . $response->body());
+                Log::error("Meta Public Key Upload Failed for Phone ID: {$phoneId}. Response: " . $response->body());
                 return false;
             }
+
+            Log::info("Meta Public Key Upload Success: " . $response->body());
 
             // 3. Persist keys to Team Settings (for future decryption)
             $settings['flow_public_key'] = $publicKey;
@@ -230,7 +237,7 @@ class WhatsAppFlowService
             Log::info("Successfully uploaded and saved Flow Public Key for Team #{$this->team->id}");
             return true;
         } catch (\Exception $e) {
-            Log::error("Error in ensurePublicKeyUploaded: " . $e->getMessage());
+            Log::error("Error in ensurePublicKeyUploaded for Team #{$this->team->id}: " . $e->getMessage());
             return false;
         }
     }
