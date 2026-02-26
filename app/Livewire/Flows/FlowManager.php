@@ -74,7 +74,7 @@ class FlowManager extends Component
     public function syncFlows()
     {
         try {
-            $service = new \App\Services\WhatsAppFlowService();
+            $service = app(\App\Services\WhatsAppFlowService::class);
             $service->setTeam(Auth::user()->currentTeam);
             $flows = $service->getFlowsFromMeta();
 

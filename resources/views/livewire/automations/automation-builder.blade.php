@@ -438,6 +438,7 @@
                         ],
                         'Logic & Flow' => [
                             ['type' => 'condition', 'label' => 'Condition', 'icon' => 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z', 'color' => 'text-amber-500', 'bg' => 'bg-amber-50 dark:bg-amber-900/20'],
+                            ['type' => 'tag_contact', 'label' => 'Assign Tag', 'icon' => 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z', 'color' => 'text-emerald-500', 'bg' => 'bg-emerald-50 dark:bg-emerald-900/20'],
                             ['type' => 'delay', 'label' => 'Delay / Wait', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', 'color' => 'text-slate-500', 'bg' => 'bg-slate-100 dark:bg-slate-800'],
                         ],
                         'Inputs' => [
@@ -651,13 +652,26 @@
                             </template>
                             
                             <!-- Node Label Editor -->
-                            <div class="space-y-1">
-                                <label class="block text-xs font-bold text-slate-500 uppercase italic">Identifying Label</label>
-                                <input type="text" wire:model.live="nodeLabel" placeholder="Enter node name..."
-                                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200 transition-all"
-                                    :class="getFieldError('nodeLabel') ? 'border-rose-500 ring-rose-500/20' : ''">
-                                <p x-show="!getFieldError('nodeLabel')" class="text-[9px] text-slate-400 px-1">Internal use only, helps organize your flow.</p>
-                                <p x-show="getFieldError('nodeLabel')" class="text-[10px] text-rose-500 font-bold px-1" x-text="getFieldError('nodeLabel')?.message"></p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase italic">Identifying Label</label>
+                                    <input type="text" wire:model.live="nodeLabel" placeholder="Enter node name..."
+                                        class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200 transition-all"
+                                        :class="getFieldError('nodeLabel') ? 'border-rose-500 ring-rose-500/20' : ''">
+                                    <p x-show="!getFieldError('nodeLabel')" class="text-[9px] text-slate-400 px-1">Internal use only.</p>
+                                    <p x-show="getFieldError('nodeLabel')" class="text-[10px] text-rose-500 font-bold px-1" x-text="getFieldError('nodeLabel')?.message"></p>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase italic">Stage Tag</label>
+                                    <input type="text" wire:model.live="nodeTag" list="available-stage-tags" placeholder="e.g. Qualified Lead"
+                                        class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200 transition-all">
+                                    <datalist id="available-stage-tags">
+                                        @foreach($availableTags as $tag)
+                                            <option value="{{ data_get($tag, 'name') }}">
+                                        @endforeach
+                                    </datalist>
+                                    <p class="text-[9px] text-slate-400 px-1 italic">Auto-swaps previous stage tag.</p>
+                                </div>
                             </div>
 
                             <div class="h-px bg-slate-100 dark:bg-slate-800"></div>
@@ -738,7 +752,7 @@
                                                 class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
                                                 <option value="">Choose a template...</option>
                                                 @foreach($approvedTemplates as $tmpl)
-                                                    <option value="{{ $tmpl['name'] }}">{{ $tmpl['name'] }} ({{ $tmpl['language'] }})</option>
+                                                    <option value="{{ data_get($tmpl, 'name') }}">{{ data_get($tmpl, 'name') }} ({{ data_get($tmpl, 'language') }})</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -771,7 +785,7 @@
                                                 class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
                                                 <option value="">Choose a template...</option>
                                                 @foreach($approvedTemplates as $tmpl)
-                                                    <option value="{{ $tmpl['name'] }}">{{ $tmpl['name'] }} ({{ $tmpl['language'] }})</option>
+                                                    <option value="{{ data_get($tmpl, 'name') }}">{{ data_get($tmpl, 'name') }} ({{ data_get($tmpl, 'language') }})</option>
                                                 @endforeach
                                             </select>
                                             <p class="text-[10px] text-slate-400 mt-1">
@@ -780,16 +794,16 @@
                                         </div>
                                     </div>
 
-                                    <!-- Tag Assigned -->
                                     <div x-show="['tag_assigned'].includes($wire.triggerType)" class="space-y-1">
                                         <label class="block text-xs font-bold text-slate-500 uppercase">Select Tag</label>
-                                        <select wire:model.blur="triggerConfig.tag_name"
-                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
-                                            <option value="">Choose a tag...</option>
+                                        <input type="text" wire:model.blur="triggerConfig.tag_name" list="available-trigger-tags"
+                                            class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200"
+                                            placeholder="Choose or type a tag...">
+                                        <datalist id="available-trigger-tags">
                                             @foreach($availableTags as $tag)
-                                                <option value="{{ $tag['name'] }}">{{ $tag['name'] }}</option>
+                                                <option value="{{ data_get($tag, 'name') }}">
                                             @endforeach
-                                        </select>
+                                        </datalist>
                                         <p class="text-[10px] text-slate-400 mt-1">
                                             Triggers the flow when this tag is assigned to a contact.
                                         </p>
@@ -821,13 +835,9 @@
                                             </div>
                                             @foreach($triggerConfig['add_tags'] ?? [] as $index => $tag)
                                                 <div class="flex items-center gap-2">
-                                                    <select wire:model.blur="triggerConfig.add_tags.{{ $index }}" 
-                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5 appearance-none">
-                                                        <option value="">Select Tag...</option>
-                                                        @foreach($availableTags as $availableTag)
-                                                            <option value="{{ $availableTag['name'] }}">{{ $availableTag['name'] }}</option>
-                                                        @endforeach
-                                                    </select>
+                                                    <input type="text" wire:model.blur="triggerConfig.add_tags.{{ $index }}" list="available-stage-tags"
+                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
+                                                        placeholder="Tag name...">
                                                     <button wire:click="removeStartTag({{ $index }})" class="text-slate-400 hover:text-rose-500">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                     </button>
@@ -843,13 +853,9 @@
                                             </div>
                                             @foreach($triggerConfig['remove_tags'] ?? [] as $index => $tag)
                                                 <div class="flex items-center gap-2">
-                                                     <select wire:model.blur="triggerConfig.remove_tags.{{ $index }}" 
-                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5 appearance-none">
-                                                        <option value="">Select Tag...</option>
-                                                        @foreach($availableTags as $availableTag)
-                                                            <option value="{{ $availableTag['name'] }}">{{ $availableTag['name'] }}</option>
-                                                        @endforeach
-                                                    </select>
+                                                     <input type="text" wire:model.blur="triggerConfig.remove_tags.{{ $index }}" list="available-stage-tags"
+                                                        class="flex-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold px-2 py-1.5"
+                                                        placeholder="Tag name...">
                                                     <button wire:click="removeRemoveTag({{ $index }})" class="text-slate-400 hover:text-rose-500">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                     </button>
@@ -876,7 +882,7 @@
                                         :class="getFieldError('nodeText') ? 'border-rose-500 ring-rose-500/20' : ''">
                                         <option value="">Select Template...</option>
                                         @foreach($approvedTemplates as $tmpl)
-                                            <option value="{{ $tmpl['name'] }}">{{ $tmpl['name'] }} ({{ $tmpl['language'] }})</option>
+                                            <option value="{{ data_get($tmpl, 'name') }}">{{ data_get($tmpl, 'name') }} ({{ data_get($tmpl, 'language') }})</option>
                                         @endforeach
                                     </select>
                                     <p x-show="getFieldError('nodeText')" class="text-[10px] text-rose-500 font-bold px-1 mt-1" x-text="getFieldError('nodeText')?.message"></p>
@@ -1211,6 +1217,15 @@
                                 <textarea wire:model.blur="nodeJson" wire:change="updateNodeData" rows="6"
                                     class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200"
                                     placeholder='{"key": "value"}'></textarea>
+                            </div>
+
+                            <!-- Tag Contact Action -->
+                            <div class="space-y-1" x-show="selectedNode.type === 'tag_contact'">
+                                <label class="block text-xs font-bold text-slate-500 uppercase">Assign Contact Tag</label>
+                                <input type="text" wire:model.blur="nodeTag" list="available-stage-tags" wire:change="updateNodeData"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200 transition-all shadow-sm"
+                                    placeholder="e.g. High Intent">
+                                <p class="text-[10px] text-slate-400 mt-1">This tag will be added to the contact when they reach this step.</p>
                             </div>
 
                             <!-- Send Flow Selection -->

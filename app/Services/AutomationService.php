@@ -249,6 +249,23 @@ class AutomationService
                 'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']]
             ]);
 
+            // Process Trigger Tags
+            $triggerConfig = $automation->trigger_config ?? [];
+            if (!empty($triggerConfig['add_tags'])) {
+                foreach ($triggerConfig['add_tags'] as $tagName) {
+                    $tag = \App\Models\ContactTag::firstOrCreate(['team_id' => $automation->team_id, 'name' => $tagName]);
+                    $contact->tags()->syncWithoutDetaching([$tag->id]);
+                }
+            }
+            if (!empty($triggerConfig['remove_tags'])) {
+                foreach ($triggerConfig['remove_tags'] as $tagName) {
+                    $tag = \App\Models\ContactTag::where('team_id', $automation->team_id)->where('name', $tagName)->first();
+                    if ($tag) {
+                        $contact->tags()->detach($tag->id);
+                    }
+                }
+            }
+
             Log::debug("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
 
             // Track Funnel Event
@@ -292,6 +309,9 @@ class AutomationService
         }
 
         Log::info("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
+
+        // Process Node-Level Stage Tagging
+        $this->handleNodeTagging($run, $node);
 
         // Logic Entry
         try {
@@ -691,8 +711,47 @@ STRICT GROUNDING RULES:
         if ($node['type'] === 'tag_contact') {
             $tagName = $node['data']['tag'] ?? 'Lead';
             $tag = \App\Models\ContactTag::firstOrCreate(['team_id' => $run->automation->team_id, 'name' => $tagName]);
-            DB::table('contact_tag_pivot')->updateOrInsert(['contact_id' => $run->contact_id, 'tag_id' => $tag->id]);
+            $run->contact->tags()->syncWithoutDetaching([$tag->id]);
         }
+    }
+
+    protected function handleNodeTagging(AutomationRun $run, array $node)
+    {
+        $tagToAssign = $node['data']['tag'] ?? null;
+        if (!$tagToAssign)
+            return;
+
+        $state = $run->state_data;
+        $previousTag = $state['current_stage_tag'] ?? null;
+
+        if ($previousTag === $tagToAssign)
+            return;
+
+        $teamId = $run->automation->team_id;
+        $contact = $run->contact;
+
+        DB::transaction(function () use ($run, $tagToAssign, $previousTag, &$state, $teamId, $contact) {
+            // 1. Remove previous stage tag if it belongs to this flow run tracking
+            if ($previousTag) {
+                $pTag = \App\Models\ContactTag::where('team_id', $teamId)->where('name', $previousTag)->first();
+                if ($pTag) {
+                    $contact->tags()->detach($pTag->id);
+                }
+            }
+
+            // 2. Assign new tag
+            $tag = \App\Models\ContactTag::firstOrCreate([
+                'team_id' => $teamId,
+                'name' => $tagToAssign
+            ]);
+
+            $contact->tags()->syncWithoutDetaching([$tag->id]);
+
+            // 3. Update state
+            $state['current_stage_tag'] = $tagToAssign;
+        });
+
+        $run->update(['state_data' => $state]);
     }
 
     protected function sendNodeMessage($run, $node)

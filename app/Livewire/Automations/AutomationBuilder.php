@@ -43,6 +43,7 @@ class AutomationBuilder extends Component
     public $nodeUrl = '';
     public $nodeMethod = 'GET';
     public $nodeSaveTo = '';
+    public $nodeTag = '';
     public $nodeHours = 0;
     public $nodeMinutes = 0;
 
@@ -447,7 +448,7 @@ class AutomationBuilder extends Component
     public function addNode($type)
     {
         $id = uniqid();
-        $data = ['label' => ucfirst(str_replace('_', ' ', $type))];
+        $data = ['label' => ucfirst(str_replace('_', ' ', $type)), 'tag' => ''];
 
         switch ($type) {
             case 'message':
@@ -534,6 +535,9 @@ class AutomationBuilder extends Component
                     ]
                 ];
                 break;
+            case 'tag_contact':
+                $data['tag'] = 'Lead';
+                break;
         }
 
         $this->nodes[] = [
@@ -586,6 +590,7 @@ class AutomationBuilder extends Component
         $this->nodeOptions = [];
         $this->nodeLanguage = 'en';
         $this->nodeOperator = 'eq';
+        $this->nodeTag = '';
 
         foreach ($this->nodes as $node) {
             if ($node['id'] === $id) {
@@ -594,6 +599,7 @@ class AutomationBuilder extends Component
 
                 if ($id) {
                     $this->nodeLabel = $data['label'] ?? ucfirst($type);
+                    $this->nodeTag = $data['tag'] ?? '';
                 }
 
                 if ($type === 'text') {
@@ -766,6 +772,7 @@ class AutomationBuilder extends Component
                 if ($type !== 'trigger') {
                     $node['data']['label'] = $this->nodeLabel ?: ($node['data']['label'] ?? ucfirst($type));
                 }
+                $node['data']['tag'] = $this->nodeTag;
 
                 if ($type === 'text') {
                     $node['data']['text'] = $this->nodeText;

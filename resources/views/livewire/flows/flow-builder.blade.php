@@ -129,7 +129,8 @@
             </div>
             <div class="flex-1 overflow-y-auto p-4 space-y-2">
                 @foreach($screens as $index => $screen)
-                    <button wire:click="$set('selectedScreenIndex', {{ $index }})"
+                    <button wire:key="screen-btn-{{ $index }}-{{ $screen['id'] }}"
+                        wire:click="$set('selectedScreenIndex', {{ $index }})"
                         class="w-full p-4 rounded-2xl border transition-all text-left flex items-center justify-between group {{ $selectedScreenIndex === $index ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800/50' : 'bg-transparent border-transparent hover:bg-slate-50' }}">
                         <div>
                             <p
@@ -187,7 +188,8 @@
                         </div>
 
                         @foreach($screens[$selectedScreenIndex]['components'] as $cIndex => $component)
-                            <div wire:click="$set('selectedComponentIndex', {{ $cIndex }})"
+                            <div wire:key="comp-canvas-{{ $selectedScreenIndex }}-{{ $cIndex }}-{{ $component['name'] ?? $cIndex }}"
+                                wire:click="$set('selectedComponentIndex', {{ $cIndex }})"
                                 class="relative group p-4 border-2 rounded-2xl transition-all cursor-pointer {{ $selectedComponentIndex === $cIndex ? 'border-wa-teal bg-indigo-50/10' : 'border-transparent hover:border-slate-100' }}">
                                 @if(isset($component['type']) && $component['type'] === 'TextBody')
                                     <p class="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -322,7 +324,7 @@
             <div class="flex-1 overflow-y-auto p-6 space-y-8">
                 @if($selectedComponentIndex !== null)
                     @php $comp = $screens[$selectedScreenIndex]['components'][$selectedComponentIndex]; @endphp
-                    <div>
+                    <div wire:key="prop-editor-{{ $selectedScreenIndex }}-{{ $selectedComponentIndex }}">
                         <p class="text-[10px] font-black uppercase tracking-widest text-wa-teal mb-4">Editing
                             {{ $comp['type'] }}
                         </p>
@@ -340,7 +342,8 @@
                                 <div>
                                     <label
                                         class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Label</label>
-                                    <input type="text"
+                                    <input type="text" id="input-label-{{ $selectedScreenIndex }}-{{ $selectedComponentIndex }}"
+                                        autocomplete="off"
                                         wire:model.live="screens.{{ $selectedScreenIndex }}.components.{{ $selectedComponentIndex }}.label"
                                         class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20">
                                 </div>
@@ -348,7 +351,8 @@
                                     <label
                                         class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Field
                                         Unique ID</label>
-                                    <input type="text"
+                                    <input type="text" id="input-name-{{ $selectedScreenIndex }}-{{ $selectedComponentIndex }}"
+                                        autocomplete="off"
                                         wire:model.live="screens.{{ $selectedScreenIndex }}.components.{{ $selectedComponentIndex }}.name"
                                         class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500/20">
                                 </div>
@@ -366,6 +370,8 @@
                                     <label
                                         class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Label</label>
                                     <input type="text"
+                                        id="input-label-select-{{ $selectedScreenIndex }}-{{ $selectedComponentIndex }}"
+                                        autocomplete="off"
                                         wire:model.live="screens.{{ $selectedScreenIndex }}.components.{{ $selectedComponentIndex }}.label"
                                         class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20">
                                 </div>
@@ -381,7 +387,8 @@
                                     </div>
                                     <div class="space-y-2">
                                         @foreach($comp['options'] ?? [] as $oIndex => $option)
-                                            <div class="flex items-center gap-2">
+                                            <div wire:key="opt-{{ $selectedScreenIndex }}-{{ $selectedComponentIndex }}-{{ $oIndex }}"
+                                                class="flex items-center gap-2">
                                                 <input type="text"
                                                     wire:model.live="screens.{{ $selectedScreenIndex }}.components.{{ $selectedComponentIndex }}.options.{{ $oIndex }}.label"
                                                     class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-xs font-bold"

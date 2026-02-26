@@ -96,7 +96,8 @@ class FlowBuilder extends Component
         if (count($this->screens) > 1) {
             unset($this->screens[$index]);
             $this->screens = array_values($this->screens);
-            $this->selectedScreenIndex = max(0, $this->selectedScreenIndex - 1);
+            $this->selectedScreenIndex = max(0, min($this->selectedScreenIndex, count($this->screens) - 1));
+            $this->selectedComponentIndex = null;
         }
     }
 
@@ -205,8 +206,10 @@ class FlowBuilder extends Component
 
         if ($footerIndex !== null) {
             array_splice($this->screens[$this->selectedScreenIndex]['components'], $footerIndex, 0, [$component]);
+            $this->selectedComponentIndex = $footerIndex;
         } else {
             $this->screens[$this->selectedScreenIndex]['components'][] = $component;
+            $this->selectedComponentIndex = count($this->screens[$this->selectedScreenIndex]['components']) - 1;
         }
     }
 
@@ -275,7 +278,7 @@ class FlowBuilder extends Component
         $flow = WhatsAppFlow::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->flowId);
 
         try {
-            $service = new WhatsAppFlowService();
+            $service = app(WhatsAppFlowService::class);
             $service->setTeam(Auth::user()->currentTeam);
 
             if (!$flow->flow_id) {

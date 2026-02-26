@@ -16,9 +16,9 @@ class WhatsAppFlowService
     protected $token;
     protected $wabaId;
 
-    public function __construct(WhatsAppService $whatsappService, Team $team = null)
+    public function __construct(WhatsAppService $whatsappService = null, Team $team = null)
     {
-        $this->whatsappService = $whatsappService;
+        $this->whatsappService = $whatsappService ?: app(WhatsAppService::class);
         $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
         if ($team) {
             $this->setTeam($team);
