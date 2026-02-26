@@ -233,6 +233,20 @@ class OTPService
             return $team;
         }
 
+        // 1. Prioritize teams that have both a token AND at least one approved template
+        $activeTeam = Team::whereNotNull('whatsapp_access_token')
+            ->where('whatsapp_access_token', '!=', '')
+            ->whereNotNull('whatsapp_phone_number_id')
+            ->whereHas('whatsappTemplates', function ($q) {
+                $q->where('status', 'APPROVED');
+            })
+            ->first();
+
+        if ($activeTeam) {
+            return $activeTeam;
+        }
+
+        // 2. Fallback to any team with a token
         return Team::whereNotNull('whatsapp_access_token')
             ->where('whatsapp_access_token', '!=', '')
             ->whereNotNull('whatsapp_phone_number_id')
@@ -253,10 +267,24 @@ class OTPService
         if ($tpl)
             return $tpl;
 
-        // 2. Fallback to common names
+        // 2. Look for templates with "otp" or "verification" in the name
+        $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
+            ->where('status', 'APPROVED')
+            ->where(function ($q) {
+                $q->where('name', 'like', '%otp%')
+                    ->orWhere('name', 'like', '%verification%')
+                    ->orWhere('name', 'like', '%code%');
+            })
+            ->orderByRaw("FIELD(name, 'verification_code', 'otp', 'verification', 'code') DESC")
+            ->first();
+
+        if ($tpl)
+            return $tpl;
+
+        // 3. Last resort: Any approved UTILITY template (might be dangerous, but better than failing)
         return \App\Models\WhatsappTemplate::where('team_id', $team->id)
-            ->whereIn('name', ['verification_code', 'otp', 'verification'])
-            ->orderByRaw("FIELD(name, 'verification_code', 'otp', 'verification')")
+            ->where('category', 'UTILITY')
+            ->where('status', 'APPROVED')
             ->first();
     }
 
