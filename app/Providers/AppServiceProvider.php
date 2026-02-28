@@ -83,7 +83,14 @@ class AppServiceProvider extends ServiceProvider
                     return true;
                 }
 
-                return $user->hasTeamPermission($user->currentTeam, $permission) || $user->ownsTeam($user->currentTeam);
+                $team = $user->currentTeam ?? $user->allTeams()->first();
+
+                if (!$team) {
+                    \Illuminate\Support\Facades\Log::warning("Gate check failed: User {$user->id} has no team association for permission {$permission}");
+                    return false;
+                }
+
+                return $user->hasTeamPermission($team, $permission) || $user->ownsTeam($team);
             });
         }
 

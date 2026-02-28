@@ -79,6 +79,21 @@ class BasicDetailsPopup extends Component
             'address' => $this->address,
         ])->save();
 
+        // Ensure user has at least one team (Critical Fallback)
+        if ($user->allTeams()->isEmpty()) {
+            $team = \App\Models\Team::forceCreate([
+                'user_id' => $user->id,
+                'name' => $this->company_name ?: (explode(' ', $user->name, 2)[0] . "'s Team"),
+                'personal_team' => true,
+                'subscription_status' => 'trial',
+                'trial_ends_at' => now()->addMonths(6),
+            ]);
+            $user->ownedTeams()->save($team);
+            $user->forceFill(['current_team_id' => $team->id])->save();
+            $user->refresh();
+            \Illuminate\Support\Facades\Log::info('Created missing personal team for user during onboarding');
+        }
+
         \Illuminate\Support\Facades\Log::info('User details saved');
 
         // Ensure current team is assigned if still missing
