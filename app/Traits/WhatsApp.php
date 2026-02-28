@@ -433,9 +433,17 @@ trait WhatsApp
     public function debugToken(string $token): array
     {
         try {
-            $appId = config('whatsapp.app_id');
+            // Priority: Settings DB (UI-entered) > WHATSAPP_APP_ID env > FACEBOOK_APP_ID env
+            // The settings DB key matches what WhatsappConfig::loadSettings() reads (whatsapp_wm_fb_app_id).
+            $appId = get_setting('whatsapp_wm_fb_app_id')
+                ?: config('whatsapp.app_id');
             $appSecret = config('whatsapp.app_secret');
             $appToken = $appId . '|' . $appSecret;
+
+            if (empty($appId) || empty($appSecret)) {
+                Log::warning("WhatsApp Trait: debugToken skipped — App ID or Secret not configured.");
+                return ['status' => false, 'message' => 'WhatsApp App ID or Secret not configured.'];
+            }
 
             Log::debug("WhatsApp Trait: Debugging token", [
                 'app_id' => $appId,
@@ -453,21 +461,17 @@ trait WhatsApp
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
-                    Log::warning("WhatsApp Trait: Token Debug Mismatch", [
-                        'message' => 'Configured App ID does not match Token App ID',
-                        'config_app_id' => $appId
+                    Log::warning("WhatsApp Trait: Token Debug Mismatch — token was generated under a different App ID.", [
+                        'config_app_id' => $appId,
+                        'hint' => 'Set WHATSAPP_APP_ID in .env to the App ID your System User token belongs to, or update it via the WhatsApp Setup page.',
                     ]);
-                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
+                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ({$appId}). Set WHATSAPP_APP_ID in your .env to the correct App ID."];
                 }
 
                 Log::error("WhatsApp Trait: Token Debug Failed", [
                     'status' => $response->status(),
                     'error' => $errorData,
                 ]);
-
-                if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
-                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
-                }
 
                 return ['status' => false, 'message' => $errorMessage ?? 'Token debug failed'];
             }

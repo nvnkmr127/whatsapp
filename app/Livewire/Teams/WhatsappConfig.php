@@ -169,14 +169,14 @@ class WhatsappConfig extends Component
             $this->is_whatsmark_connected = true;
             $this->wm_business_account_id = $team->whatsapp_business_account_id;
             // $this->wm_access_token = $team->whatsapp_access_token; // DO NOT EXPOSE TO FRONTEND
-            $this->outbound_webhook_url = $team->outbound_webhook_url;
         } else {
             $this->is_whatsmark_connected = false;
             $this->wm_business_account_id = null;
-            $this->outbound_webhook_url = null;
         }
 
-
+        // Always load outbound_webhook_url regardless of connection state —
+        // it is stored on the team model and is independent of whatsapp_connected.
+        $this->outbound_webhook_url = $team->outbound_webhook_url;
 
         $this->is_webhook_connected = !empty($this->outbound_webhook_url);
 
@@ -296,20 +296,19 @@ class WhatsappConfig extends Component
 
             $response = $waService->updateBusinessProfile($profileData);
 
-            if ($response['status']) {
-                // If profile picture URL is provided (manual URL override), update it separately?
-                // Actually, the API handles `profile_picture_handle`.
-                
-                $this->dispatch('notify', 'Business profile updated successfully.');
+            if ($response['success'] ?? false) {
+                $this->dispatch('notify', title: 'Profile Updated', message: 'Business profile updated successfully.', type: 'success');
                 $this->is_editing_profile = false;
                 $this->profile_photo = null; // Reset
                 $this->loadBusinessProfile(); // Reload to reflect changes
             } else {
-                $this->dispatch('notify', 'Failed to update business profile: ' . $response['message']);
+                $errorMessage = $response['message'] ?? ($response['error']['message'] ?? 'Unknown error from WhatsApp API.');
+                Log::error("WhatsApp Profile Update Failed for team {$team->id}: " . json_encode($response));
+                $this->dispatch('notify', title: 'Update Failed', message: 'Failed to update business profile: ' . $errorMessage, type: 'error');
             }
         } catch (\Exception $e) {
             Log::error("Failed to update WhatsApp business profile for team {$team->id}: " . $e->getMessage());
-            $this->dispatch('notify', 'An error occurred while updating the business profile: ' . $e->getMessage());
+            $this->dispatch('notify', title: 'Error', message: 'An error occurred while updating the business profile: ' . $e->getMessage(), type: 'error');
         }
     }
 
@@ -656,17 +655,30 @@ class WhatsappConfig extends Component
             'outbound_webhook_url' => 'nullable|url'
         ]);
 
-        set_setting('whatsapp_outbound_webhook_url', $this->outbound_webhook_url);
+        $team = auth()->user()->currentTeam;
 
-        // Also update the Team model directly if strictly needed for listeners, 
-        // but 'get_setting' implies global or team-scoped settings helper. 
-        // Assuming get_setting handles current team context.
-        // If the listener uses $team->outbound_webhook_url, we need to update the Team model too.
-        if (auth()->user()->currentTeam) {
-            auth()->user()->currentTeam->update(['outbound_webhook_url' => $this->outbound_webhook_url]);
+        if (!$team) {
+            $this->dispatch('notify', title: 'Error', message: 'No active team found.', type: 'error');
+            return;
         }
 
-        $this->dispatch('notify', 'Outbound webhook URL updated successfully.');
+        try {
+            // Save directly to the Team model — this is where loadSettings() reads from.
+            // The set_setting() helper writes to a global settings table (not team-scoped),
+            // so it is NOT used for outbound_webhook_url loading. Only the Team column matters.
+            $team->forceFill([
+                'outbound_webhook_url' => $this->outbound_webhook_url ?: null,
+            ])->save();
+
+            // Update the local Livewire state to reflect the saved value
+            $this->outbound_webhook_url = $team->fresh()->outbound_webhook_url;
+            $this->is_webhook_connected = !empty($this->outbound_webhook_url);
+
+            $this->dispatch('notify', title: 'Webhook Saved', message: 'Outbound webhook URL updated successfully.', type: 'success');
+        } catch (\Exception $e) {
+            Log::error("Failed to update outbound webhook for team {$team->id}: " . $e->getMessage());
+            $this->dispatch('notify', title: 'Error', message: 'Failed to save webhook URL: ' . $e->getMessage(), type: 'error');
+        }
     }
 
     public function setupWebhook()

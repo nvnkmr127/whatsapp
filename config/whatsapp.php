@@ -21,9 +21,15 @@ return [
     |--------------------------------------------------------------------------
     | Facebook App Credentials
     |--------------------------------------------------------------------------
+    |
+    | WHATSAPP_APP_ID should be the App ID of the Meta App that is configured
+    | for WhatsApp Business API (Cloud API). This may differ from FACEBOOK_APP_ID
+    | which is used for Facebook Login (OAuth). Use WHATSAPP_APP_ID in .env to
+    | avoid the "Token App ID mismatch" error during token verification.
+    |
     */
-    'app_id' => env('FACEBOOK_APP_ID'),
-    'app_secret' => env('FACEBOOK_CLIENT_SECRET'),
+    'app_id' => env('WHATSAPP_APP_ID', env('FACEBOOK_APP_ID')),
+    'app_secret' => env('WHATSAPP_APP_SECRET', env('FACEBOOK_CLIENT_SECRET')),
 
     /*
     |--------------------------------------------------------------------------

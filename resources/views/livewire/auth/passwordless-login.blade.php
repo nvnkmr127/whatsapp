@@ -22,22 +22,22 @@
                 </label>
                 <input id="identifier" type="tel" wire:model="identifier" placeholder="+1 (555) 000-0000" required autofocus
                     x-init="
-                            if (!$wire.identifier) {
-                                const fetchGeoIp = async () => {
-                                    try {
-                                        const response = await fetch('https://ipapi.co/json/');
-                                        if (!response.ok) return;
-                                        const data = await response.json();
-                                        if (data.country_calling_code) {
-                                            $wire.set('identifier', data.country_calling_code);
+                                if (!$wire.identifier) {
+                                    const fetchGeoIp = async () => {
+                                        try {
+                                            const response = await fetch('https://ipapi.co/json/');
+                                            if (!response.ok) return;
+                                            const data = await response.json();
+                                            if (data.country_calling_code) {
+                                                $wire.set('identifier', data.country_calling_code);
+                                            }
+                                        } catch (error) {
+                                            console.debug('GeoIP lookup failed:', error);
                                         }
-                                    } catch (error) {
-                                        console.debug('GeoIP lookup failed:', error);
-                                    }
-                                };
-                                fetchGeoIp();
-                            }
-                        "
+                                    };
+                                    fetchGeoIp();
+                                }
+                            "
                     class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal focus:bg-white dark:focus:bg-slate-900 transition-all duration-300 hover:border-slate-200 dark:hover:border-slate-700" />
                 @error('identifier')
                     <span class="text-xs font-bold text-rose-500 uppercase mt-2 block animate-slide-up">{{ $message }}</span>
@@ -75,64 +75,72 @@
 
             <!-- OTP Input -->
             <div class="mb-10" x-data="{ 
-                                                        length: 6,
-                                                        otp: Array(6).fill(''),
-                                                        code: @entangle('code'),
-                                                        init() {
-                                                            this.$watch('otp', value => {
-                                                                this.code = value.join('');
-                                                            });
-                                                        },
-                                                        handleInput(e, index) {
-                                                            const input = e.target;
-                                                            const val = input.value.replace(/[^0-9]/g, '');
-
-                                                            this.otp[index] = val;
-                                                            input.value = val;
-
-                                                            if (val && index < this.length - 1) {
-                                                                this.$nextTick(() => {
-                                                                    const next = document.getElementById('otp-' + (index + 1));
-                                                                    if (next) {
-                                                                        next.focus();
-                                                                        next.select();
+                                                            length: 6,
+                                                            otp: Array(6).fill(''),
+                                                            verifying: false,
+                                                            code: @entangle('code'),
+                                                            init() {
+                                                                this.$watch('otp', value => {
+                                                                    this.code = value.join('');
+                                                                    if (value.every(v => v !== '') && value.join('').length === this.length && !this.verifying) {
+                                                                        this.verifying = true;
+                                                                        this.$nextTick(() => $wire.verifyOtp());
+                                                                    }
+                                                                    if (value.some(v => v === '')) {
+                                                                        this.verifying = false;
                                                                     }
                                                                 });
-                                                            }
-                                                        },
-                                                        handleKeydown(e, index) {
-                                                            if (e.key === 'Backspace') {
-                                                                if (!this.otp[index] && index > 0) {
-                                                                    const prev = document.getElementById('otp-' + (index - 1));
-                                                                    if (prev) {
-                                                                        prev.focus();
-                                                                        prev.select();
+                                                            },
+                                                            handleInput(e, index) {
+                                                                const input = e.target;
+                                                                const val = input.value.replace(/[^0-9]/g, '');
+
+                                                                this.otp[index] = val;
+                                                                input.value = val;
+
+                                                                if (val && index < this.length - 1) {
+                                                                    this.$nextTick(() => {
+                                                                        const next = document.getElementById('otp-' + (index + 1));
+                                                                        if (next) {
+                                                                            next.focus();
+                                                                            next.select();
+                                                                        }
+                                                                    });
+                                                                }
+                                                            },
+                                                            handleKeydown(e, index) {
+                                                                if (e.key === 'Backspace') {
+                                                                    if (!this.otp[index] && index > 0) {
+                                                                        const prev = document.getElementById('otp-' + (index - 1));
+                                                                        if (prev) {
+                                                                            prev.focus();
+                                                                            prev.select();
+                                                                        }
+                                                                    }
+                                                                    // Clear current index binding on backspace if exists
+                                                                    if (this.otp[index]) {
+                                                                        this.otp[index] = '';
                                                                     }
                                                                 }
-                                                                // Clear current index binding on backspace if exists
-                                                                if (this.otp[index]) {
-                                                                    this.otp[index] = '';
+                                                            },
+                                                            handlePaste(e) {
+                                                                e.preventDefault();
+                                                                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                                                                const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
+
+                                                                if (cleanPaste) {
+                                                                    cleanPaste.split('').forEach((char, i) => {
+                                                                        if (i < this.length) this.otp[i] = char;
+                                                                    });
+
+                                                                    this.$nextTick(() => {
+                                                                        const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
+                                                                        const dest = document.getElementById('otp-' + destIndex);
+                                                                        if (dest) dest.focus();
+                                                                    });
                                                                 }
                                                             }
-                                                        },
-                                                        handlePaste(e) {
-                                                            e.preventDefault();
-                                                            const paste = (e.clipboardData || window.clipboardData).getData('text');
-                                                            const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
-
-                                                            if (cleanPaste) {
-                                                                cleanPaste.split('').forEach((char, i) => {
-                                                                    if (i < this.length) this.otp[i] = char;
-                                                                });
-
-                                                                this.$nextTick(() => {
-                                                                    const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
-                                                                    const dest = document.getElementById('otp-' + destIndex);
-                                                                    if (dest) dest.focus();
-                                                                });
-                                                            }
-                                                        }
-                                                    }" x-init="init()">
+                                                        }" x-init="init()">
                 <label class="text-xs font-black uppercase tracking-widest text-slate-400 block text-center mb-6">
                     Enter 6-Digit Verification Code
                 </label>
@@ -140,10 +148,21 @@
                 <div class="flex justify-between gap-2 sm:gap-4 mb-8">
                     <template x-for="(i, index) in length" :key="index">
                         <input type="text" maxlength="1" inputmode="numeric" :id="'otp-' + index" x-model="otp[index]"
-                            class="otp-input w-12 h-16 sm:w-14 sm:h-20 bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white font-black text-2xl sm:text-3xl text-center focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal transition-all outline-none"
+                            :disabled="verifying"
+                            :class="verifying ? 'opacity-60 cursor-not-allowed scale-95 border-wa-teal/40' : 'border-transparent'"
+                            class="otp-input w-12 h-16 sm:w-14 sm:h-20 bg-slate-50 dark:bg-slate-800/50 border-2 rounded-2xl text-slate-900 dark:text-white font-black text-2xl sm:text-3xl text-center focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal transition-all outline-none"
                             @input="handleInput($event, index)" @keydown="handleKeydown($event, index)"
                             @paste="handlePaste($event)">
                     </template>
+                </div>
+
+                <!-- Auto-verifying indicator -->
+                <div x-show="verifying" class="flex items-center justify-center gap-2 mb-4 text-wa-teal text-xs font-bold uppercase tracking-widest animate-pulse">
+                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Verifying...
                 </div>
 
                 @error('code')
@@ -153,9 +172,17 @@
 
             <!-- Verify Button -->
             <button wire:click="verifyOtp" wire:loading.attr="disabled" type="button"
+                x-bind:disabled="verifying"
                 class="w-full py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                <span wire:loading.remove>
+                <span wire:loading.remove x-show="!verifying">
                     Verify & Sign In
+                </span>
+                <span x-show="verifying" wire:loading.remove class="flex items-center justify-center gap-2">
+                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Verifying...
                 </span>
                 <span wire:loading class="flex items-center justify-center gap-2">
                     <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
