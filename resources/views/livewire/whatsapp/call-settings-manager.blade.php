@@ -118,8 +118,45 @@
                    <h2 class="text-xl font-black gradient-text-premium uppercase tracking-tighter">System <span class="text-wa-teal font-black">Rules</span></h2>
                 </div>
 
-                <div class="space-y-6">
-                    <label class="flex items-center gap-4 group cursor-pointer p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-transparent hover:border-wa-teal/20 transition-all">
+                <div class="space-y-6"
+                     x-data="{
+                         get hasCallHours() {
+                             // At least one business hour day must be enabled via the Enforce Hours toggle
+                             return $wire.syncWithBusinessHours;
+                         },
+                         get hasCallback() {
+                             return $wire.callbackPermissionEnabled;
+                         },
+                         get canEnableCalling() {
+                             return this.hasCallHours && this.hasCallback;
+                         }
+                     }">
+
+                    {{-- Dependency notice: shown when Enable Calling is on but prereqs are missing --}}
+                    <div x-show="$wire.callingEnabled && !canEnableCalling"
+                         x-cloak
+                         class="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-2">
+                        <p class="text-xs font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider">⚠️ Calling Prerequisites Not Met</p>
+                        <p class="text-[11px] text-amber-600 dark:text-amber-400">Enable Calling is on, but the following are required for it to work correctly with Meta:</p>
+                        <ul class="space-y-1 mt-1">
+                            <template x-if="!hasCallHours">
+                                <li class="flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300 font-bold">
+                                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <strong>Call Hours not enforced</strong> — Enable "Enforce Hours" and configure at least one active day.
+                                </li>
+                            </template>
+                            <template x-if="!hasCallback">
+                                <li class="flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300 font-bold">
+                                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <strong>Callback Requests disabled</strong> — Enable "Callback Requests" so customers outside hours receive a callback offer.
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    {{-- Enable Calling Toggle --}}
+                    <label class="flex items-center gap-4 group cursor-pointer p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-transparent hover:border-wa-teal/20 transition-all"
+                           :class="$wire.callingEnabled && !canEnableCalling ? 'border-amber-300 dark:border-amber-700' : ''">
                         <div class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model="callingEnabled" class="sr-only peer">
                             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal"></div>
@@ -127,9 +164,14 @@
                         <div class="flex-1">
                             <span class="block text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Enable Calling</span>
                             <span class="block text-[10px] font-bold text-slate-400 mt-0.5">Allow customers to initiate calls</span>
+                            <span x-show="$wire.callingEnabled && !canEnableCalling"
+                                  class="block text-[10px] font-bold text-amber-500 mt-1">
+                                Requires call hours + callback — see warning above.
+                            </span>
                         </div>
                     </label>
 
+                    {{-- Callback Permission Toggle --}}
                     <label class="flex items-center gap-4 group cursor-pointer p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-transparent hover:border-wa-teal/20 transition-all">
                         <div class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model="callbackPermissionEnabled" class="sr-only peer">
@@ -138,6 +180,10 @@
                         <div class="flex-1">
                             <span class="block text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Callback Requests</span>
                             <span class="block text-[10px] font-bold text-slate-400 mt-0.5">Automated permission workflows</span>
+                            <span x-show="$wire.callingEnabled && !hasCallback"
+                                  class="block text-[10px] font-bold text-amber-500 mt-1">
+                                Required when calling is enabled.
+                            </span>
                         </div>
                     </label>
 
@@ -148,6 +194,10 @@
                             <option value="show">Always Visible</option>
                             <option value="hide">Hidden from UI</option>
                         </select>
+                        {{-- Hint: call_hours needed for call button to behave correctly --}}
+                        <p class="text-[10px] text-slate-400 font-medium px-1" x-show="$wire.callIconVisibility === 'show' && !hasCallHours" x-cloak>
+                            💡 Call button visible 24/7 — enable "Enforce Hours" on the right to restrict call hours.
+                        </p>
                     </div>
 
                     <button wire:click="updateCallSettings" wire:loading.attr="disabled"

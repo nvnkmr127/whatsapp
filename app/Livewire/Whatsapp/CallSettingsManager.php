@@ -230,6 +230,31 @@ class CallSettingsManager extends Component
             return;
         }
 
+        // ── Prerequisite checks ──────────────────────────────────────────────
+        // Warn if calling is being enabled but call_hours or callback_permission are not set.
+        if ($this->callingEnabled) {
+            $prereqWarnings = [];
+
+            if (!$this->syncWithBusinessHours) {
+                $prereqWarnings[] = 'Call Hours are not enforced (enable "Enforce Hours" and set your active days).';
+            }
+
+            if (!$this->callbackPermissionEnabled) {
+                $prereqWarnings[] = 'Callback Requests are disabled (required so customers outside hours can request a callback).';
+            }
+
+            if (!empty($prereqWarnings)) {
+                $this->dispatch(
+                    'notify',
+                    title: 'Warning',
+                    message: 'Calling enabled with incomplete setup: ' . implode(' ', $prereqWarnings),
+                    type: 'warning'
+                );
+                // We still save — this is a soft warning, not a hard block.
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         try {
             // Prepare settings for Meta API
             $metaSettings = [
@@ -301,7 +326,17 @@ class CallSettingsManager extends Component
                 'away_message' => $this->awayMessage,
             ])->save();
 
-            if (isset($response['success']) && $response['success']) {
+            // ── Response handling (mirrors WhatsappConfig::updateBehaviorSettings) ──
+            if (isset($response['calling_not_supported']) && $response['calling_not_supported']) {
+                // Error #141000: phone number is not a valid Cloud API number for calling.
+                // Settings are saved locally; calling must be enabled by Meta first.
+                $this->dispatch(
+                    'notify',
+                    title: 'Saved Locally',
+                    message: 'Call settings saved. However, WhatsApp Calling (error #141000) is not yet enabled for this phone number by Meta. Contact Meta or your BSP to activate calling on your number.',
+                    type: 'info'
+                );
+            } elseif (isset($response['success']) && $response['success']) {
                 $this->dispatch('notify', title: 'Success', message: 'Call settings updated successfully', type: 'success');
             } else {
                 $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown error');
