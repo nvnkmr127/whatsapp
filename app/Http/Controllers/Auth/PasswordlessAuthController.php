@@ -86,8 +86,11 @@ class PasswordlessAuthController extends Controller
                 );
 
                 // Update primary field if missing
-                if ($type === 'email' && empty($user->email)) {
-                    $user->forceFill(['email' => $identifier])->save();
+                if ($type === 'email') {
+                    $user->forceFill([
+                        'email' => $user->email ?: $identifier,
+                        'email_verified_at' => now(),
+                    ])->save();
                 } elseif ($type === 'phone' && empty($user->phone)) {
                     $user->forceFill(['phone' => $identifier])->save();
                 }
@@ -105,8 +108,11 @@ class PasswordlessAuthController extends Controller
                 $identity->update(['last_login_at' => now()]);
 
                 // Update primary field if missing
-                if ($type === 'email' && empty($user->email)) {
-                    $user->forceFill(['email' => $identifier])->save();
+                if ($type === 'email') {
+                    $user->forceFill([
+                        'email' => $user->email ?: $identifier,
+                        'email_verified_at' => now(),
+                    ])->save();
                 } elseif ($type === 'phone' && empty($user->phone)) {
                     $user->forceFill(['phone' => $identifier])->save();
                 }
@@ -175,6 +181,7 @@ class PasswordlessAuthController extends Controller
                         'email' => ($type === 'email') ? $identifier : null,
                         'phone' => ($type === 'phone') ? $identifier : null,
                         'password' => null,
+                        'email_verified_at' => now(),
                     ]);
 
                     // ── Create team ─────────────────────────────────────────────

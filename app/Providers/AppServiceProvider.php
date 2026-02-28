@@ -90,7 +90,15 @@ class AppServiceProvider extends ServiceProvider
                     return false;
                 }
 
-                return $user->hasTeamPermission($team, $permission) || $user->ownsTeam($team);
+                $ownsTeam = $user->ownsTeam($team);
+                $hasPermission = $user->hasTeamPermission($team, $permission);
+
+                if (!$ownsTeam && !$hasPermission) {
+                    \Illuminate\Support\Facades\Log::warning("Gate check failed: User {$user->id} does not have permission {$permission} on team {$team->id}. Owns team: " . ($ownsTeam ? 'YES' : 'NO') . ", Has direct permission: " . ($hasPermission ? 'YES' : 'NO'));
+                    return false;
+                }
+
+                return true;
             });
         }
 

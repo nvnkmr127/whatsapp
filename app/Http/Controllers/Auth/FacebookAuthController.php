@@ -80,10 +80,13 @@ class FacebookAuthController extends Controller
                 $user = $identity->user;
                 $identity->update(['last_login_at' => now()]);
 
-                // Update email if it's missing on the user record
+                // Update email if it's missing or unverified on the user record
                 $email = $facebookUser->getEmail();
-                if (empty($user->email) && $email) {
-                    $user->forceFill(['email' => $email])->save();
+                if ((empty($user->email) && $email) || empty($user->email_verified_at)) {
+                    $user->forceFill([
+                        'email' => $user->email ?: $email,
+                        'email_verified_at' => now(),
+                    ])->save();
                 }
             } else {
                 // 3. No identity, check if User exists by email (Account Linking)
@@ -107,6 +110,7 @@ class FacebookAuthController extends Controller
                         'name' => $facebookUser->getName() ?: 'Facebook User',
                         'email' => $email,
                         'password' => null, // Passwordless
+                        'email_verified_at' => now(),
                     ]);
 
                     // ── Create team ─────────────────────────────────────────────

@@ -79,9 +79,12 @@ class GoogleAuthController extends Controller
                 $user = $identity->user;
                 $identity->update(['last_login_at' => now()]);
 
-                // Update email if it's missing on the user record
-                if (empty($user->email)) {
-                    $user->forceFill(['email' => $googleUser->getEmail()])->save();
+                // Update email if it's missing on the user record, and ensure verified
+                if (empty($user->email) || empty($user->email_verified_at)) {
+                    $user->forceFill([
+                        'email' => $googleUser->getEmail(),
+                        'email_verified_at' => now(),
+                    ])->save();
                 }
             } else {
                 // 3. No identity, check if User exists by email (Account Linking)
@@ -103,6 +106,7 @@ class GoogleAuthController extends Controller
                         'name' => $googleUser->getName(),
                         'email' => $googleUser->getEmail(),
                         'password' => null, // Passwordless
+                        'email_verified_at' => now(),
                     ]);
 
                     // ── Create team ─────────────────────────────────────────────
