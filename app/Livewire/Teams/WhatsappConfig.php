@@ -50,6 +50,7 @@ class WhatsappConfig extends Component
     public $wm_quality_rating;
     public $wm_phone_display;
     public $wm_verified_name;
+    public $wm_business_verification_status = 'unknown'; // verified | not_verified | pending | rejected | unknown
 
     public $token_info = [];
     public $credits = 0;
@@ -192,6 +193,7 @@ class WhatsappConfig extends Component
         $this->wm_quality_rating = $team->whatsapp_quality_rating ?: 'UNKNOWN';
         $this->wm_phone_display = $team->whatsapp_phone_display ?: '';
         $this->wm_verified_name = $team->whatsapp_verified_name ?: '';
+        $this->wm_business_verification_status = $team->whatsapp_business_verification_status ?? 'unknown';
         $this->tokenLastValidated = $team->whatsapp_token_last_validated;
         $this->tokenExpiresAt = $team->whatsapp_token_expires_at;
 
@@ -769,11 +771,53 @@ class WhatsappConfig extends Component
             // Also reload business profile details
             $this->loadBusinessProfile();
 
+            // Check business verification status from Meta
+            $this->checkBusinessVerification();
+
             $this->dispatch('notify', 'Account info synced successfully!');
         } else {
             $this->dispatch('notify', 'Sync failed: ' . $result['message']);
         }
         $this->refreshHealth();
+    }
+
+    /**
+     * Fetch and persist the Business Verification Status from Meta.
+     */
+    public function checkBusinessVerification()
+    {
+        $team = auth()->user()->currentTeam->fresh();
+
+        if (!$team->whatsapp_business_account_id || !$team->whatsapp_access_token) {
+            return;
+        }
+
+        try {
+            $result = $this->getBusinessVerificationStatus(
+                $team->whatsapp_business_account_id,
+                $team->whatsapp_access_token
+            );
+
+            if ($result['status']) {
+                $this->wm_business_verification_status = $result['verification_status'];
+
+                // Persist to DB so it survives page reloads
+                $team->update([
+                    'whatsapp_business_verification_status' => $this->wm_business_verification_status,
+                ]);
+
+                Log::info('WhatsApp Config: Business verification status updated', [
+                    'team_id' => $team->id,
+                    'status' => $this->wm_business_verification_status,
+                ]);
+            } else {
+                Log::warning('WhatsApp Config: Could not fetch business verification status', [
+                    'message' => $result['message'] ?? 'Unknown error',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp Config: Exception while checking business verification: ' . $e->getMessage());
+        }
     }
 
     public function refreshHealth()
@@ -791,6 +835,7 @@ class WhatsappConfig extends Component
         $this->wm_quality_rating = $team->whatsapp_quality_rating ?: 'UNKNOWN';
         $this->wm_phone_display = $team->whatsapp_phone_display ?: '';
         $this->wm_verified_name = $team->whatsapp_verified_name ?: '';
+        $this->wm_business_verification_status = $team->whatsapp_business_verification_status ?? 'unknown';
 
         $this->healthScore = $health['overall_score'] ?? 0;
         $this->healthStatus = $health['status'] ?? 'unknown';

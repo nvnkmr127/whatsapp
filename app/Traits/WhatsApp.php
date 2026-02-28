@@ -598,6 +598,88 @@ trait WhatsApp
     }
 
     /**
+     * Get the Business Verification Status from Meta's WABA API.
+     * Returns 'verified', 'not_verified', 'pending', 'rejected' or null on error.
+     */
+    public function getBusinessVerificationStatus(?string $wabaId = null, ?string $token = null): array
+    {
+        try {
+            $accountId = $wabaId ?? $this->getAccountID();
+            $token = $token ?? $this->getToken();
+
+            if (empty($accountId) || empty($token)) {
+                return ['status' => false, 'message' => 'WABA ID or Access Token not configured.'];
+            }
+
+            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $isSystemToken = str_starts_with($token, 'EAAB');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
+            $params = [
+                'fields' => 'id,name,account_review_status,business_verification_status',
+                'access_token' => $token,
+            ];
+
+            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
+                $params['appsecret_proof'] = $appSecretProof;
+            }
+
+            Log::debug('WhatsApp Trait: Fetching business verification status', [
+                'waba_id' => $accountId,
+                'is_system_token' => $isSystemToken,
+            ]);
+
+            $response = Http::timeout(15)->get(self::getBaseUrl() . "{$accountId}", $params);
+
+            // Retry without appsecret_proof on proof errors
+            if ($response->failed()) {
+                $errorData = $response->json();
+                if (
+                    ($errorData['error']['code'] ?? 0) == 100 &&
+                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
+                ) {
+                    Log::warning('WhatsApp Trait: AppSecret Proof failed for verification status, retrying without proof.');
+                    $this->skipAppSecretProof = true;
+                    unset($params['appsecret_proof']);
+                    $response = Http::timeout(15)->get(self::getBaseUrl() . "{$accountId}", $params);
+                }
+            }
+
+            if ($response->failed()) {
+                $errorData = $response->json();
+                $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+                Log::error('WhatsApp Trait: Failed to fetch business verification status', [
+                    'status' => $response->status(),
+                    'error' => $errorData,
+                ]);
+                return ['status' => false, 'message' => $errorMessage];
+            }
+
+            $data = $response->json();
+
+            // Prefer `business_verification_status` (BM-level), fall back to `account_review_status`
+            $verificationStatus = $data['business_verification_status']
+                ?? $data['account_review_status']
+                ?? null;
+
+            Log::info('WhatsApp Trait: Business verification status fetched', [
+                'waba_id' => $accountId,
+                'verification_status' => $verificationStatus,
+                'raw_data' => $data,
+            ]);
+
+            return [
+                'status' => true,
+                'verification_status' => strtolower($verificationStatus ?? 'unknown'),
+                'raw' => $data,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp Trait: Error fetching business verification status: ' . $e->getMessage());
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Fetch the Facebook Business Manager ID from a WhatsApp Business Account.
      */
     public function getFacebookBusinessId(string $wabaId, string $token): ?string

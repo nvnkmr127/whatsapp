@@ -68,6 +68,7 @@ class Team extends JetstreamTeam
         'calling_safeguards',
         'calling_suspended_until',
         'whatsapp_connected',
+        'whatsapp_business_verification_status',
         'whatsapp_settings',
         'ai_auto_reply_enabled',
         'welcome_message_enabled',

@@ -254,9 +254,11 @@
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SETUP
-                                        <span class="text-wa-teal">PROGRESS</span></h3>
+                                        <span class="text-wa-teal">PROGRESS</span>
+                                    </h3>
                                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                        {{ $setupProgress['completed'] }}/{{ $setupProgress['total'] }} STEPS COMPLETED</p>
+                                        {{ $setupProgress['completed'] }}/{{ $setupProgress['total'] }} STEPS COMPLETED
+                                    </p>
                                 </div>
                             </div>
                             <div class="text-2xl font-black text-slate-900 dark:text-white">{{ $setupProgress['progress'] }}%
@@ -310,7 +312,8 @@
                                     <div class="flex-grow">
                                         <h4
                                             class="text-sm font-bold {{ $step['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }} uppercase tracking-wider">
-                                            {{ $step['title'] }}</h4>
+                                            {{ $step['title'] }}
+                                        </h4>
                                         <p class="text-[11px] font-medium text-slate-500 mt-0.5">{{ $step['description'] }}
                                             @if($step['id'] === 'webhook_setup' && $step['status'] !== 'completed')
                                                 <button wire:click="setupWebhook" wire:loading.attr="disabled"
@@ -338,7 +341,8 @@
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SYSTEM
-                                        <span class="text-wa-teal">HEALTH</span></h3>
+                                        <span class="text-wa-teal">HEALTH</span>
+                                    </h3>
                                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">REAL-TIME MONITORING
                                     </p>
                                 </div>
@@ -685,19 +689,19 @@
 
                         <!-- Call Settings -->
                         <div class="space-y-6" x-data="{
-                                          req: {
-                                              cloud_api:   false,
-                                              no_coexist:  false,
-                                              sip_off:     false,
-                                              biz_verified: false,
-                                              waba_ok:     false,
-                                              country_ok:  false,
-                                              no_ivr:      false,
-                                          },
-                                          get allMet() {
-                                              return Object.values(this.req).every(v => v === true);
-                                          }
-                                      }">
+                                                  req: {
+                                                      cloud_api:   false,
+                                                      no_coexist:  false,
+                                                      sip_off:     false,
+                                                      biz_verified: false,
+                                                      waba_ok:     false,
+                                                      country_ok:  false,
+                                                      no_ivr:      false,
+                                                  },
+                                                  get allMet() {
+                                                      return Object.values(this.req).every(v => v === true);
+                                                  }
+                                              }">
                             <h4
                                 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">
                                 WhatsApp Calling</h4>
@@ -949,6 +953,62 @@
                                     <span class="text-xs opacity-70 italic">Verified display name:
                                         {{ $wm_verified_name ?? 'Not Verified' }}</span>
                                 </div>
+                            </div>
+
+                            {{-- Business Verification Status Card --}}
+                            @php
+                                $verificationStatus = strtolower($wm_business_verification_status ?? 'unknown');
+                                $verificationConfig = match ($verificationStatus) {
+                                    'verified' => ['bg' => 'bg-emerald-50 dark:bg-emerald-900/20', 'border' => 'border-emerald-200 dark:border-emerald-700', 'text' => 'text-emerald-700 dark:text-emerald-400', 'badge_bg' => 'bg-emerald-500', 'badge_text' => 'text-white', 'label' => '✅ Verified', 'icon_fill' => '#10b981'],
+                                    'pending' => ['bg' => 'bg-amber-50 dark:bg-amber-900/20', 'border' => 'border-amber-200 dark:border-amber-700', 'text' => 'text-amber-700 dark:text-amber-400', 'badge_bg' => 'bg-amber-400', 'badge_text' => 'text-white', 'label' => '⏳ Pending Review', 'icon_fill' => '#f59e0b'],
+                                    'not_verified' => ['bg' => 'bg-rose-50 dark:bg-rose-900/20', 'border' => 'border-rose-200 dark:border-rose-700', 'text' => 'text-rose-700 dark:text-rose-400', 'badge_bg' => 'bg-rose-500', 'badge_text' => 'text-white', 'label' => '❌ Not Verified', 'icon_fill' => '#ef4444'],
+                                    'rejected' => ['bg' => 'bg-rose-50 dark:bg-rose-900/20', 'border' => 'border-rose-200 dark:border-rose-700', 'text' => 'text-rose-700 dark:text-rose-400', 'badge_bg' => 'bg-rose-600', 'badge_text' => 'text-white', 'label' => '🚫 Rejected', 'icon_fill' => '#dc2626'],
+                                    default => ['bg' => 'bg-slate-50 dark:bg-slate-800/50', 'border' => 'border-slate-200 dark:border-slate-700', 'text' => 'text-slate-500 dark:text-slate-400', 'badge_bg' => 'bg-slate-400', 'badge_text' => 'text-white', 'label' => '— Unknown', 'icon_fill' => '#94a3b8'],
+                                };
+                            @endphp
+                            <div
+                                class="flex items-center justify-between gap-4 p-4 {{ $verificationConfig['bg'] }} rounded-2xl border {{ $verificationConfig['border'] }} {{ $verificationConfig['text'] }}">
+                                <div class="flex items-center gap-3">
+                                    {{-- Shield icon --}}
+                                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    <div>
+                                        <span class="block text-xs font-black uppercase tracking-widest opacity-60 mb-0.5">Meta
+                                            Business Verification</span>
+                                        <span
+                                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold {{ $verificationConfig['badge_bg'] }} {{ $verificationConfig['badge_text'] }} shadow-sm">
+                                            {{ $verificationConfig['label'] }}
+                                        </span>
+                                        @if(in_array($verificationStatus, ['not_verified', 'rejected']))
+                                            <a href="https://business.facebook.com/settings/security" target="_blank"
+                                                class="block text-[11px] underline mt-1 opacity-80 hover:opacity-100 font-semibold">
+                                                Verify your business on Meta →
+                                            </a>
+                                        @elseif($verificationStatus === 'pending')
+                                            <span class="block text-[11px] mt-1 opacity-70 italic">Verification is in review. This
+                                                may take a few days.</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <button wire:click="checkBusinessVerification" wire:loading.attr="disabled"
+                                    title="Refresh verification status from Meta"
+                                    class="flex-shrink-0 p-2 text-current opacity-60 hover:opacity-100 transition-opacity rounded-xl hover:bg-black/5 dark:hover:bg-white/10">
+                                    <svg wire:loading wire:target="checkBusinessVerification" class="animate-spin w-4 h-4"
+                                        fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                        </path>
+                                    </svg>
+                                    <svg wire:loading.remove wire:target="checkBusinessVerification" class="w-4 h-4" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
                             </div>
 
                             <div class="pt-2 text-right">
