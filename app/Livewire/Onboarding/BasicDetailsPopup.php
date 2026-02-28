@@ -20,6 +20,17 @@ class BasicDetailsPopup extends Component
             return;
         }
 
+        // Auto-assign current team if missing (e.g. after fresh registration or data inconsistency)
+        if (is_null($user->current_team_id)) {
+            $personalTeam = $user->ownedTeams()->first() ?? $user->allTeams()->first();
+            if ($personalTeam) {
+                $user->forceFill([
+                    'current_team_id' => $personalTeam->id,
+                ])->save();
+                $user->refresh();
+            }
+        }
+
         $team = $user->currentTeam;
 
         // Open if phone is missing OR if team looks like default
@@ -33,7 +44,7 @@ class BasicDetailsPopup extends Component
         $this->address = $user->address ?? ($team ? $team->billing_address : '');
 
         // If it looks like default team name, clear it so they fill their actual business name
-        if (str_ends_with($this->company_name, "'s Team")) {
+        if ($this->company_name && str_ends_with($this->company_name, "'s Team")) {
             $this->company_name = '';
         }
     }
@@ -69,6 +80,12 @@ class BasicDetailsPopup extends Component
         ])->save();
 
         \Illuminate\Support\Facades\Log::info('User details saved');
+
+        // Ensure current team is assigned if still missing
+        if (!$user->currentTeam && $user->allTeams()->isNotEmpty()) {
+            $user->forceFill(['current_team_id' => $user->allTeams()->first()->id])->save();
+            $user->refresh();
+        }
 
         $team = $user->currentTeam;
         if ($team) {

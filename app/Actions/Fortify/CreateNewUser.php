@@ -101,12 +101,13 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         $user->ownedTeams()->save($team);
+        $user->forceFill(['current_team_id' => $team->id])->save();
 
         // Launch gift credit – only when all 5 offer eligibility rules pass
         if (app(OfferEligibilityService::class)->isEligible($team)) {
             $offerSettings = app(\App\Services\OfferSettingsService::class);
             $initialCredit = (float) $offerSettings->get('offer_initial_credit', 5.00);
-            
+
             // Deposit credit
             if ($initialCredit > 0) {
                 app(\App\Services\BillingService::class)->deposit(
