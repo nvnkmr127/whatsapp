@@ -319,42 +319,59 @@ class WhatsappConfig extends Component
         try {
             $team = auth()->user()->currentTeam;
 
+            // Always save timezone locally
             $team->forceFill([
                 'timezone' => $this->timezone,
             ])->save();
 
-            // Save Call Settings to Meta
-            $waService = new \App\Services\WhatsAppService($team);
-            $settings = [
+            // Save calling settings to local cache regardless of Meta response
+            $currentSettings = $team->whatsapp_settings ?? [];
+            $callingSettings = [
                 'status' => $this->callingEnabled ? 'enabled' : 'disabled',
                 'call_icon_visibility' => $this->callButtonVisible ? 'show' : 'hide',
                 'callback_permission_status' => $this->callbackPermissionEnabled ? 'enabled' : 'disabled',
             ];
-
-            // Sync with Meta
-            $response = $waService->updateSystemCallSettings($settings);
-
-            // Update local cache regardless of Meta success
-            $currentSettings = $team->whatsapp_settings ?? [];
-            $currentSettings['calling'] = $settings;
-
+            $currentSettings['calling'] = $callingSettings;
             $team->forceFill(['whatsapp_settings' => $currentSettings])->save();
 
-            if ($response['success'] ?? false) {
-                $this->dispatch('notify', title: 'Settings Saved', message: 'Behavior settings saved and synced with Meta.', type: 'success');
-            } elseif ($response['calling_not_supported'] ?? false) {
-                // Meta error #141000 — phone not enrolled in WhatsApp Cloud API Calling.
-                // Local settings are saved; show an informational notice, not an error.
-                $this->dispatch(
-                    'notify',
-                    title: 'Settings Saved',
-                    message: 'Timezone saved. WhatsApp Calling features are not yet activated for your phone number — contact Meta Support or enable it via Meta Business Manager.',
-                    type: 'info'
-                );
-            } else {
-                $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown Meta API Error');
-                $this->dispatch('notify', title: 'Meta Sync Warning', message: 'Saved locally, but Meta sync failed: ' . $msg, type: 'warning');
+            // Only attempt to sync calling settings with Meta if calling is enabled.
+            // When disabled there's nothing meaningful to push and we avoid needless error logs.
+            if ($this->callingEnabled) {
+                $waService = new \App\Services\WhatsAppService($team);
+                $response = $waService->updateSystemCallSettings($callingSettings);
+
+                if ($response['calling_not_supported'] ?? false) {
+                    // Meta error #141000 — phone not yet enrolled in Cloud API Calling.
+                    // Settings saved locally; show a clear, actionable info notice.
+                    $this->dispatch(
+                        'notify',
+                        title: 'Settings Saved',
+                        message: 'Behavior settings saved. Note: WhatsApp Calling is not yet activated on your number — enable it via Meta Business Manager or contact Meta Support.',
+                        type: 'info'
+                    );
+                    return;
+                }
+
+                if (!($response['success'] ?? false)) {
+                    // Some other Meta API failure — saved locally but warn about sync.
+                    $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown Meta API error');
+                    $this->dispatch(
+                        'notify',
+                        title: 'Saved (Meta Sync Failed)',
+                        message: 'Settings saved locally. Meta sync failed: ' . $msg,
+                        type: 'warning'
+                    );
+                    return;
+                }
             }
+
+            // All good — single clean success message
+            $this->dispatch(
+                'notify',
+                title: 'Settings Saved',
+                message: 'Behavior settings saved successfully.',
+                type: 'success'
+            );
 
         } catch (\Exception $e) {
             Log::error("Failed to update Business Behavior: " . $e->getMessage());
