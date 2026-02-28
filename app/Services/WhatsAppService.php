@@ -1140,34 +1140,10 @@ class WhatsAppService
             return ['success' => true, 'message' => 'No settings to update'];
         }
 
-        // Meta's /{phone_id}/settings endpoint requires calling settings nested
-        // under the 'calling' key (NOT 'calling_features').
-        // Correct format: POST {"calling": {"status": "ENABLED", ...}}
         $payload = ['calling' => $callingPayload];
 
         $url = "{$this->baseUrl}/{$this->phoneId}/settings";
-        $response = $this->sendRequestFullUrl($url, 'post', $payload);
-
-        // Error #141000: Phone number is not enrolled in WhatsApp Cloud API Calling.
-        // This is a Meta-side account restriction, not a code error.
-        // Return a clean, structured result so callers can show a helpful UI message.
-        if (!($response['success'] ?? true)) {
-            $errorCode = $response['error']['code']
-                ?? $response['error']['error']['code']
-                ?? null;
-
-            if ($errorCode === 141000 || $errorCode === '141000') {
-                Log::info("WhatsAppService: Calling not supported for phone {$this->phoneId} (team {$this->team->id}). Meta error #141000.");
-                return [
-                    'success' => false,
-                    'calling_not_supported' => true,
-                    'message' => 'WhatsApp Business Calling is not yet enabled for this phone number. Contact Meta Support or enable it in your Meta Business Manager.',
-                    'status_code' => 400,
-                ];
-            }
-        }
-
-        return $response;
+        return $this->sendRequestFullUrl($url, 'post', $payload);
     }
 
     /**
@@ -1898,9 +1874,19 @@ class WhatsAppService
     {
         $client = Http::withToken($this->token)
             ->withHeaders(['Content-Type' => 'application/json'])
-            ->timeout(20) // 20s timeout (increased from default or missing)
-            ->retry(2, 500); // 2 retries with 500ms delay for transient errors (429, 500, etc)
-
+            ->timeout(20)
+            ->retry(2, 500, function ($exception, $request) {
+                // Only retry on network/connection errors or 5xx server errors.
+                // Do NOT retry on 4xx client errors (e.g. #141000) — they will
+                // never succeed with the same payload.
+                if ($exception instanceof \Illuminate\Http\Client\ConnectionException) {
+                    return true;
+                }
+                if ($exception instanceof \Illuminate\Http\Client\RequestException) {
+                    return $exception->response->status() >= 500;
+                }
+                return false;
+            }, throw: false);  // Never throw — always return the response so callers can inspect it.
         $response = null;
         $method = strtolower($method);
 
@@ -1918,24 +1904,44 @@ class WhatsAppService
             }
 
             if ($response->failed()) {
+                $responseJson = $response->json();
+                $errorCode = $responseJson['error']['code'] ?? null;
+
+                // #141000 — Phone not enrolled in Cloud API Calling.
+                // This is expected for numbers not yet provisioned by Meta.
+                // Log as info, not error, to keep logs clean.
+                if ($errorCode === 141000) {
+                    Log::info('WhatsApp: Calling not supported for this number (#141000)', [
+                        'url' => $url,
+                        'code' => 141000,
+                    ]);
+                    return [
+                        'success' => false,
+                        'calling_not_supported' => true,
+                        'error' => $responseJson,
+                        'status_code' => $response->status(),
+                        'message' => $responseJson['error']['message'] ?? 'Calling not supported',
+                    ];
+                }
+
                 if ($response->status() === 401 && $this->team) {
                     $this->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
-                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'critical', $data, ['error' => $response->json()]);
+                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'critical', $data, ['error' => $responseJson]);
                 } elseif ($this->team) {
-                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'failed', $data, ['error' => $response->json()]);
+                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'failed', $data, ['error' => $responseJson]);
                 }
 
                 Log::error('WhatsApp API Error', [
                     'status' => $response->status(),
-                    'error' => $response->json(),
+                    'error' => $responseJson,
                     'payload' => $data,
                     'url' => $url,
                 ]);
                 return [
                     'success' => false,
-                    'error' => $response->json(),
+                    'error' => $responseJson,
                     'status_code' => $response->status(),
-                    'message' => $response->json()['error']['message'] ?? 'Unknown API Error'
+                    'message' => $responseJson['error']['message'] ?? 'Unknown API Error'
                 ];
             }
 
