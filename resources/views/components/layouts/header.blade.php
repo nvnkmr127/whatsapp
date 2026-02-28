@@ -121,12 +121,12 @@
 
                                 @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
                                     <x-dropdown-link href="{{ route('teams.create') }}"
-                                        class="rounded-xl flex items-center gap-3">
-                                        <svg class="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        {{ __('Create New Team') }}
+                                        class="rounded-xl flex items-center gap-3"></x-dropdown-link>
+                                    <svg class="w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    {{ __('Create New Team') }}
                                     </x-dropdown-link>
                                 @endcan
                             </div>

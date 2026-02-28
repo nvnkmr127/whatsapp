@@ -31,7 +31,27 @@ class TeamPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        // Super Admins are exempt
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Logic: Account-wide limits (like max number of teams) are governed by the Personal Team's plan/offer.
+        $personalTeam = $user->personalTeam();
+
+        if (!$personalTeam) {
+            // If they have no personal team yet, allow creating the first one
+            return $user->ownedTeams()->count() < 1;
+        }
+
+        $limit = $personalTeam->entitlement()->limit('team_limit');
+
+        // 0 = unlimited
+        if ($limit === 0) {
+            return true;
+        }
+
+        return $user->ownedTeams()->count() < $limit;
     }
 
     /**

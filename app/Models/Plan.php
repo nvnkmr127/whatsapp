@@ -13,6 +13,7 @@ class Plan extends Model
         'initial_wallet_balance',
         'message_limit',
         'agent_limit',
+        'team_limit', // Added
         'automation_run_limit',
         'contact_limit',
         'ai_conversation_limit',
@@ -27,6 +28,7 @@ class Plan extends Model
         'initial_wallet_balance' => 'decimal:2',
         'message_limit' => 'integer',
         'agent_limit' => 'integer',
+        'team_limit' => 'integer', // Added
         'automation_run_limit' => 'integer',
         'contact_limit' => 'integer',
         'ai_conversation_limit' => 'integer',

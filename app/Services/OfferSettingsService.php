@@ -143,6 +143,13 @@ class OfferSettingsService
             'label' => 'Call Minutes / Month (0 = unlimited)',
             'group' => 'limits',
         ],
+        [
+            'key' => 'offer_team_limit',
+            'type' => 'int',
+            'default' => 1,
+            'label' => 'Max Teams Allowed',
+            'group' => 'limits',
+        ],
 
         // ── Feature flags ──────────────────────────────────────────────
         [
@@ -182,6 +189,7 @@ class OfferSettingsService
         'campaign_limit' => 'offer_campaign_limit',
         'automation_limit' => 'offer_automation_limit',
         'call_minutes' => 'offer_call_minutes_limit',
+        'team_limit' => 'offer_team_limit',
     ];
 
     // ------------------------------------------------------------------
