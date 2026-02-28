@@ -1140,8 +1140,10 @@ class WhatsAppService
             return ['success' => true, 'message' => 'No settings to update'];
         }
 
-        // Meta's settings endpoint expects parameters at the top level, not wrapped in 'calling'
-        $payload = $callingPayload;
+        // Meta's /{phone_id}/settings endpoint requires calling features nested
+        // under the 'calling_features' key. Sending them at the top level causes:
+        // "(#100) One feature setting must be specified"
+        $payload = ['calling_features' => $callingPayload];
 
         $url = "{$this->baseUrl}/{$this->phoneId}/settings";
         return $this->sendRequestFullUrl($url, 'post', $payload);

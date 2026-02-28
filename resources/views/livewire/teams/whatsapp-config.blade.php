@@ -440,22 +440,23 @@
                                         <select id="profile_vertical" wire:model="profile_vertical"
                                             class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all">
                                             <option value="">Select industry...</option>
-                                            <option value="AUTOMOTIVE">Automotive</option>
-                                            <option value="BEAUTY_SPA_AND_SALON">Beauty, Spa & Salon</option>
-                                            <option value="CLOTHING_AND_APPAREL">Clothing & Apparel</option>
-                                            <option value="EDUCATION">Education</option>
-                                            <option value="ENTERTAINMENT">Entertainment</option>
-                                            <option value="EVENT_PLANNING_AND_SERVICE">Event Planning & Service</option>
-                                            <option value="FINANCE_AND_BANKING">Finance & Banking</option>
-                                            <option value="FOOD_AND_GROCERY">Food & Grocery</option>
-                                            <option value="PUBLIC_SERVICE">Public Service / Government</option>
-                                            <option value="HOTEL_AND_LODGING">Hotel & Lodging</option>
-                                            <option value="MEDICAL_AND_HEALTH">Medical & Health</option>
-                                            <option value="NON_PROFIT">Non-profit</option>
-                                            <option value="PROFESSIONAL_SERVICES">Professional Services</option>
-                                            <option value="SHOPPING_AND_RETAIL">Shopping & Retail</option>
-                                            <option value="TRAVEL_AND_TRANSPORTATION">Travel & Transportation</option>
+                                            <option value="AUTO">Automotive</option>
+                                            <option value="BEAUTY">Beauty, Spa &amp; Salon</option>
+                                            <option value="APPAREL">Clothing &amp; Apparel</option>
+                                            <option value="EDU">Education</option>
+                                            <option value="ENTERTAIN">Entertainment</option>
+                                            <option value="EVENT_PLAN">Event Planning &amp; Service</option>
+                                            <option value="FIN">Finance &amp; Banking</option>
+                                            <option value="GROCERY">Food &amp; Grocery</option>
+                                            <option value="GOVT">Government &amp; Public Service</option>
+                                            <option value="HOTEL">Hotel &amp; Lodging</option>
+                                            <option value="HEALTH">Medical &amp; Health</option>
+                                            <option value="NONPROFIT">Non-profit</option>
+                                            <option value="PROF_SERVICES">Professional Services</option>
+                                            <option value="RETAIL">Shopping &amp; Retail</option>
+                                            <option value="TRAVEL">Travel &amp; Transportation</option>
                                             <option value="RESTAURANT">Restaurant</option>
+                                            <option value="NOT_A_BIZ">Not a Business</option>
                                             <option value="OTHER">Other</option>
                                         </select>
                                         <x-input-error for="profile_vertical" class="mt-2" />

@@ -271,14 +271,16 @@ class WhatsappConfig extends Component
 
         try {
             $waService = new \App\Services\WhatsAppService($team);
-            $profileData = [
-                'about' => $this->profile_about,
-                'address' => $this->profile_address,
-                'description' => $this->profile_description,
-                'email' => $this->profile_email,
-                'vertical' => $this->profile_vertical,
-                'websites' => array_values(array_filter($this->profile_websites)), // Ensure sequential array
-            ];
+
+            // Only send fields that have a value — blank strings cause 400 errors from Meta.
+            $profileData = array_filter([
+                'about' => $this->profile_about ?: null,
+                'address' => $this->profile_address ?: null,
+                'description' => $this->profile_description ?: null,
+                'email' => $this->profile_email ?: null,
+                'vertical' => $this->profile_vertical ?: null,
+                'websites' => array_values(array_filter($this->profile_websites)) ?: null,
+            ], fn($v) => $v !== null);
 
             // Handle Profile Photo Upload
             if ($this->profile_photo) {
@@ -339,7 +341,7 @@ class WhatsappConfig extends Component
             $team->forceFill(['whatsapp_settings' => $currentSettings])->save();
 
             if (isset($response['success']) && $response['success']) {
-                $this->dispatch('notify', 'Behavior settings saved and synced with Meta.');
+                $this->dispatch('notify', title: 'Settings Saved', message: 'Behavior settings saved and synced with Meta.', type: 'success');
             } else {
                 $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown Meta API Error');
                 $this->dispatch('notify', title: 'Meta Sync Warning', message: 'Saved locally, but Meta failed: ' . $msg, type: 'warning');
