@@ -1129,6 +1129,12 @@ class WhatsAppService
             $callingPayload['call_hours'] = $settings['call_hours'];
         }
 
+        // 5. SIP Configuration (for Session Initiation Protocol)
+        if (isset($settings['sip_config'])) {
+            $callingPayload['sip_config'] = $settings['sip_config'];
+        }
+
+
         Log::debug("WhatsAppService: Preparation for Meta settings sync", [
             'team_id' => $this->team->id,
             'has_weekly_hours' => count($weeklyHours),

@@ -263,6 +263,26 @@ class CallSettingsManager extends Component
                 'callback_permission_status' => $this->callbackPermissionEnabled ? 'ENABLED' : 'DISABLED',
             ];
 
+
+            if ($this->sipEnabled) {
+                $metaSettings['sip_config'] = [
+                    'uri' => $this->sipUri,
+                    'username' => $this->sipUsername,
+                    'realm' => $this->sipRealm,
+                ];
+
+                if (!empty($this->sipPassword)) {
+                    $metaSettings['sip_config']['password'] = $this->sipPassword;
+                } elseif (!empty($this->settings->sip_config['password'])) {
+                    try {
+                        $metaSettings['sip_config']['password'] = decrypt($this->settings->sip_config['password']);
+                    } catch (\Exception $e) {
+                        Log::error("Failed to decrypt SIP password for Meta sync: " . $e->getMessage());
+                    }
+                }
+            }
+
+
             if ($this->syncWithBusinessHours) {
                 $metaSettings['business_hours'] = $this->formatBusinessHoursForMeta();
                 $metaSettings['timezone'] = $this->timezone;
