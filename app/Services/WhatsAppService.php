@@ -1146,7 +1146,28 @@ class WhatsAppService
         $payload = ['calling' => $callingPayload];
 
         $url = "{$this->baseUrl}/{$this->phoneId}/settings";
-        return $this->sendRequestFullUrl($url, 'post', $payload);
+        $response = $this->sendRequestFullUrl($url, 'post', $payload);
+
+        // Error #141000: Phone number is not enrolled in WhatsApp Cloud API Calling.
+        // This is a Meta-side account restriction, not a code error.
+        // Return a clean, structured result so callers can show a helpful UI message.
+        if (!($response['success'] ?? true)) {
+            $errorCode = $response['error']['code']
+                ?? $response['error']['error']['code']
+                ?? null;
+
+            if ($errorCode === 141000 || $errorCode === '141000') {
+                Log::info("WhatsAppService: Calling not supported for phone {$this->phoneId} (team {$this->team->id}). Meta error #141000.");
+                return [
+                    'success' => false,
+                    'calling_not_supported' => true,
+                    'message' => 'WhatsApp Business Calling is not yet enabled for this phone number. Contact Meta Support or enable it in your Meta Business Manager.',
+                    'status_code' => 400,
+                ];
+            }
+        }
+
+        return $response;
     }
 
     /**

@@ -340,11 +340,20 @@ class WhatsappConfig extends Component
 
             $team->forceFill(['whatsapp_settings' => $currentSettings])->save();
 
-            if (isset($response['success']) && $response['success']) {
+            if ($response['success'] ?? false) {
                 $this->dispatch('notify', title: 'Settings Saved', message: 'Behavior settings saved and synced with Meta.', type: 'success');
+            } elseif ($response['calling_not_supported'] ?? false) {
+                // Meta error #141000 — phone not enrolled in WhatsApp Cloud API Calling.
+                // Local settings are saved; show an informational notice, not an error.
+                $this->dispatch(
+                    'notify',
+                    title: 'Settings Saved',
+                    message: 'Timezone saved. WhatsApp Calling features are not yet activated for your phone number — contact Meta Support or enable it via Meta Business Manager.',
+                    type: 'info'
+                );
             } else {
                 $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown Meta API Error');
-                $this->dispatch('notify', title: 'Meta Sync Warning', message: 'Saved locally, but Meta failed: ' . $msg, type: 'warning');
+                $this->dispatch('notify', title: 'Meta Sync Warning', message: 'Saved locally, but Meta sync failed: ' . $msg, type: 'warning');
             }
 
         } catch (\Exception $e) {
