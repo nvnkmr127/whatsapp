@@ -25,13 +25,17 @@
                     <div
                         class="flex items-center gap-3 bg-{{ $integrationStateColor }}-50 dark:bg-{{ $integrationStateColor }}-900/20 px-4 py-2 rounded-2xl border border-{{ $integrationStateColor }}-100 dark:border-{{ $integrationStateColor }}-800">
                         <span class="relative flex h-3 w-3">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-{{ $integrationStateColor }}-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-{{ $integrationStateColor === 'green' ? 'wa-teal' : $integrationStateColor . '-500' }}"></span>
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-{{ $integrationStateColor }}-400 opacity-75"></span>
+                            <span
+                                class="relative inline-flex rounded-full h-3 w-3 bg-{{ $integrationStateColor === 'green' ? 'wa-teal' : $integrationStateColor . '-500' }}"></span>
                         </span>
                         <div class="flex flex-col">
-                            <span class="text-sm font-bold text-{{ $integrationStateColor }}-700 dark:text-{{ $integrationStateColor }}-400 uppercase tracking-tight">{{ $is_whatsmark_connected ? 'Connected' : 'Disconnected' }}</span>
+                            <span
+                                class="text-sm font-bold text-{{ $integrationStateColor }}-700 dark:text-{{ $integrationStateColor }}-400 uppercase tracking-tight">{{ $is_whatsmark_connected ? 'Connected' : 'Disconnected' }}</span>
                             @if($tokenLastValidated)
-                                <span class="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Validated {{ $tokenLastValidated->diffForHumans() }}</span>
+                                <span class="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Validated
+                                    {{ $tokenLastValidated->diffForHumans() }}</span>
                             @endif
                         </div>
                     </div>
@@ -54,52 +58,63 @@
                 <!-- Critical Alert Banner -->
                 <!-- Health & Governance Alert Banner -->
                 @if(in_array($integrationState, ['suspended', 'restricted']) || $tokenDaysUntilExpiry < 7 || $wm_quality_rating === 'RED')
-                    <div class="mb-10 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800/50 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-rose-100 dark:shadow-none">
+                    <div
+                        class="mb-10 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800/50 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-rose-100 dark:shadow-none">
                         <div class="flex items-center gap-5 text-center md:text-left">
                             <div class="p-4 bg-rose-500 text-white rounded-2xl shadow-xl shadow-rose-200 dark:shadow-none">
                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                                    </path>
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="text-lg font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter">CRITICAL GOVERNANCE ALERT</h4>
+                                <h4 class="text-lg font-black text-rose-900 dark:text-rose-100 uppercase tracking-tighter">CRITICAL
+                                    GOVERNANCE ALERT</h4>
                                 <p class="text-sm font-bold text-rose-700 dark:text-rose-400 opacity-80 uppercase tracking-widest">
                                     @if($wm_quality_rating === 'RED')
                                         Account Quality is RED. Campaign launching is blocked to prevent banning.
                                     @elseif($token_valid && $tokenDaysUntilExpiry < 7)
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                                                </path>
+                                            </svg>
+                                            <span>
+                                                @if($tokenDaysUntilExpiry <= 0)
+                                                    WhatsApp Access Token has expired. Re-connect immediately to restore service.
+                                                @else
+                                                    WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }}
+                                                    {{ Str::plural('day', $tokenDaysUntilExpiry) }}. Re-connect soon.
+                                                @endif
+                                            </span>
+                                        </div>
+                                    @elseif(!$token_valid)
                                     <div class="flex items-center gap-2">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                        </svg>
-                                        <span>
-                                            @if($tokenDaysUntilExpiry <= 0)
-                                                WhatsApp Access Token has expired. Re-connect immediately to restore service.
-                                            @else
-                                                WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }} {{ Str::plural('day', $tokenDaysUntilExpiry) }}. Re-connect soon.
-                                            @endif
-                                        </span>
-                                    </div>
-                                @elseif(!$token_valid)
-                                    <div class="flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                                            </path>
                                         </svg>
                                         <span>WhatsApp Access Token is invalid or expired. Please re-authenticate.</span>
                                     </div>
                                 @else
-                                        {{ $integrationState === 'suspended' ? 'Your Meta session has expired. Messaging is blocked.' : 'Your account is restricted by Meta.' }}
-                                    @endif
+                                    {{ $integrationState === 'suspended' ? 'Your Meta session has expired. Messaging is blocked.' : 'Your account is restricted by Meta.' }}
+                                @endif
                                 </p>
                             </div>
                         </div>
                         <div class="flex gap-4">
                             @if($integrationState === 'suspended' || $tokenDaysUntilExpiry < 7)
-                                <button onclick="launchWhatsAppSignup()" class="px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
+                                <button onclick="launchWhatsAppSignup()"
+                                    class="px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
                                     {{ $tokenDaysUntilExpiry < 7 ? 'REFRESH CONNECTION' : 'RE-AUTHENTICATE NOW' }}
                                 </button>
                             @endif
-                            <button wire:click="validateConnection" class="px-8 py-4 bg-white dark:bg-slate-800 text-rose-600 border-2 border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-50 transition-all">
-                                RE-CHECK 
+                            <button wire:click="validateConnection"
+                                class="px-8 py-4 bg-white dark:bg-slate-800 text-rose-600 border-2 border-rose-200 dark:border-rose-800 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-50 transition-all">
+                                RE-CHECK
                             </button>
                         </div>
                     </div>
@@ -172,11 +187,14 @@
                                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                                     Limit
                                     <div class="group relative inline-block">
-                                        <svg class="w-3 h-3 text-slate-300 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        <svg class="w-3 h-3 text-slate-300 cursor-help" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
-                                        <div class="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-[10px] text-white rounded-lg w-48 shadow-xl">
-                                            Meta limits the number of business-initiated conversations you can start in 24h. 
+                                        <div
+                                            class="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-[10px] text-white rounded-lg w-48 shadow-xl">
+                                            Meta limits the number of business-initiated conversations you can start in 24h.
                                             Tier 250, 1K (1,000), 10K, 100K, or Unlimited.
                                         </div>
                                     </div>
@@ -223,24 +241,31 @@
                 <!-- Readiness & Health Section -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8">
                     <!-- Setup Progress Widget -->
-                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+                    <div
+                        class="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
                         <div class="flex items-center justify-between mb-8">
                             <div class="flex items-center gap-3">
                                 <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                                        </path>
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SETUP <span class="text-wa-teal">PROGRESS</span></h3>
-                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">{{ $setupProgress['completed'] }}/{{ $setupProgress['total'] }} STEPS COMPLETED</p>
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SETUP
+                                        <span class="text-wa-teal">PROGRESS</span></h3>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                        {{ $setupProgress['completed'] }}/{{ $setupProgress['total'] }} STEPS COMPLETED</p>
                                 </div>
                             </div>
-                            <div class="text-2xl font-black text-slate-900 dark:text-white">{{ $setupProgress['progress'] }}%</div>
+                            <div class="text-2xl font-black text-slate-900 dark:text-white">{{ $setupProgress['progress'] }}%
+                            </div>
                         </div>
 
                         <div class="w-full bg-slate-200 dark:bg-slate-700 h-3 rounded-full mb-10 overflow-hidden shadow-inner">
-                            <div class="bg-gradient-to-r from-wa-teal to-green-400 h-full rounded-full transition-all duration-1000 ease-out shadow-lg" style="width: {{ $setupProgress['progress'] }}%"></div>
+                            <div class="bg-gradient-to-r from-wa-teal to-green-400 h-full rounded-full transition-all duration-1000 ease-out shadow-lg"
+                                style="width: {{ $setupProgress['progress'] }}%"></div>
                         </div>
 
                         <div class="space-y-6">
@@ -248,35 +273,48 @@
                                 <div class="flex items-start gap-4 group">
                                     <div class="mt-1 flex-shrink-0">
                                         @if($step['status'] === 'completed')
-                                            <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-200 dark:shadow-none">
+                                            <div
+                                                class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-green-200 dark:shadow-none">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                        d="M5 13l4 4L19 7"></path>
                                                 </svg>
                                             </div>
                                         @elseif($step['status'] === 'warning')
-                                            <div class="w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-rose-200 dark:shadow-none animate-pulse">
+                                            <div
+                                                class="w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-rose-200 dark:shadow-none animate-pulse">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                                                    </path>
                                                 </svg>
                                             </div>
                                         @elseif($step['status'] === 'pending')
-                                            <div class="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-200 dark:shadow-none">
+                                            <div
+                                                class="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-200 dark:shadow-none">
                                                 <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                        stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor"
+                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                                    </path>
                                                 </svg>
                                             </div>
                                         @else
-                                            <div class="w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center">
+                                            <div
+                                                class="w-6 h-6 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center">
                                                 <div class="w-2 h-2 bg-current rounded-full"></div>
                                             </div>
                                         @endif
                                     </div>
                                     <div class="flex-grow">
-                                        <h4 class="text-sm font-bold {{ $step['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }} uppercase tracking-wider">{{ $step['title'] }}</h4>
+                                        <h4
+                                            class="text-sm font-bold {{ $step['status'] === 'completed' ? 'text-slate-900 dark:text-white' : 'text-slate-400' }} uppercase tracking-wider">
+                                            {{ $step['title'] }}</h4>
                                         <p class="text-[11px] font-medium text-slate-500 mt-0.5">{{ $step['description'] }}
                                             @if($step['id'] === 'webhook_setup' && $step['status'] !== 'completed')
-                                                <button wire:click="setupWebhook" wire:loading.attr="disabled" class="ml-2 text-[10px] font-bold text-wa-teal uppercase hover:underline">
+                                                <button wire:click="setupWebhook" wire:loading.attr="disabled"
+                                                    class="ml-2 text-[10px] font-bold text-wa-teal uppercase hover:underline">
                                                     Fix
                                                 </button>
                                             @endif
@@ -288,37 +326,47 @@
                     </div>
 
                     <!-- Account Health Widget -->
-                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+                    <div
+                        class="bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
                         <div class="flex items-center justify-between mb-8">
                             <div class="flex items-center gap-3">
                                 <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl text-indigo-600">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SYSTEM <span class="text-wa-teal">HEALTH</span></h3>
-                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">REAL-TIME MONITORING</p>
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">SYSTEM
+                                        <span class="text-wa-teal">HEALTH</span></h3>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">REAL-TIME MONITORING
+                                    </p>
                                 </div>
                             </div>
-                            <button wire:click="refreshHealth" wire:loading.attr="disabled" class="p-2 text-slate-400 hover:text-wa-teal transition-colors">
-                                <svg wire:loading.class="animate-spin" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            <button wire:click="refreshHealth" wire:loading.attr="disabled"
+                                class="p-2 text-slate-400 hover:text-wa-teal transition-colors">
+                                <svg wire:loading.class="animate-spin" class="w-5 h-5" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                    </path>
                                 </svg>
                             </button>
                         </div>
 
                         <div class="relative flex items-center justify-center mb-10">
                             <svg class="w-32 h-32 transform -rotate-90">
-                                <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="12" fill="transparent" class="text-slate-100 dark:text-slate-800" />
-                                <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="12" fill="transparent" 
-                                        stroke-dasharray="{{ 2 * pi() * 58 }}" 
-                                        stroke-dashoffset="{{ (1 - $healthScore/100) * 2 * pi() * 58 }}" 
-                                        class="{{ $healthStatus === 'healthy' ? 'text-wa-teal' : ($healthStatus === 'warning' ? 'text-orange-500' : 'text-rose-500') }} transition-all duration-1000 ease-out" />
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="12" fill="transparent"
+                                    class="text-slate-100 dark:text-slate-800" />
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="12" fill="transparent"
+                                    stroke-dasharray="{{ 2 * pi() * 58 }}"
+                                    stroke-dashoffset="{{ (1 - $healthScore / 100) * 2 * pi() * 58 }}"
+                                    class="{{ $healthStatus === 'healthy' ? 'text-wa-teal' : ($healthStatus === 'warning' ? 'text-orange-500' : 'text-rose-500') }} transition-all duration-1000 ease-out" />
                             </svg>
                             <div class="absolute flex flex-col items-center">
                                 <span class="text-3xl font-black text-slate-900 dark:text-white">{{ $healthScore }}</span>
-                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">{{ $healthStatus }}</span>
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-slate-400">{{ $healthStatus }}</span>
                             </div>
                         </div>
 
@@ -326,33 +374,42 @@
                             <!-- Token Health Score -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Access Token</span>
-                                    <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $tokenHealthScore }}%</span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Access
+                                        Token</span>
+                                    <span
+                                        class="text-xs font-bold text-slate-900 dark:text-white">{{ $tokenHealthScore }}%</span>
                                 </div>
                                 <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-1000" style="width: {{ $tokenHealthScore }}%"></div>
+                                    <div class="bg-indigo-500 h-full rounded-full transition-all duration-1000"
+                                        style="width: {{ $tokenHealthScore }}%"></div>
                                 </div>
                             </div>
 
                             <!-- Quality Rating Score -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Quality rating</span>
-                                    <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $qualityHealthScore }}%</span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Quality
+                                        rating</span>
+                                    <span
+                                        class="text-xs font-bold text-slate-900 dark:text-white">{{ $qualityHealthScore }}%</span>
                                 </div>
                                 <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-amber-500 h-full rounded-full transition-all duration-1000" style="width: {{ $qualityHealthScore }}%"></div>
+                                    <div class="bg-amber-500 h-full rounded-full transition-all duration-1000"
+                                        style="width: {{ $qualityHealthScore }}%"></div>
                                 </div>
                             </div>
 
                             <!-- Messaging Usage Score -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Messaging usage</span>
-                                    <span class="text-xs font-bold text-slate-900 dark:text-white">{{ $messagingUsagePercent }}%</span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Messaging
+                                        usage</span>
+                                    <span
+                                        class="text-xs font-bold text-slate-900 dark:text-white">{{ $messagingUsagePercent }}%</span>
                                 </div>
                                 <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width: {{ $messagingUsagePercent }}%"></div>
+                                    <div class="bg-purple-500 h-full rounded-full transition-all duration-1000"
+                                        style="width: {{ $messagingUsagePercent }}%"></div>
                                 </div>
                             </div>
                         </div>
@@ -396,14 +453,18 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-6">
                                 <div>
-                                    <x-label for="profile_photo" value="Profile Picture" class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                                    <x-label for="profile_photo" value="Profile Picture"
+                                        class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                     <div class="flex items-center gap-4">
                                         @if ($profile_photo)
-                                            <img src="{{ $profile_photo->temporaryUrl() }}" class="w-16 h-16 rounded-xl object-cover border-2 border-wa-teal">
+                                            <img src="{{ $profile_photo->temporaryUrl() }}"
+                                                class="w-16 h-16 rounded-xl object-cover border-2 border-wa-teal">
                                         @elseif($profile_picture_url)
-                                            <img src="{{ $profile_picture_url }}" class="w-16 h-16 rounded-xl object-cover border-2 border-slate-200 dark:border-slate-700">
+                                            <img src="{{ $profile_picture_url }}"
+                                                class="w-16 h-16 rounded-xl object-cover border-2 border-slate-200 dark:border-slate-700">
                                         @endif
-                                        <input type="file" wire:model="profile_photo" id="profile_photo" accept="image/*" class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 dark:file:bg-slate-800 file:text-wa-teal hover:file:bg-slate-200 transition-all cursor-pointer">
+                                        <input type="file" wire:model="profile_photo" id="profile_photo" accept="image/*"
+                                            class="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 dark:file:bg-slate-800 file:text-wa-teal hover:file:bg-slate-200 transition-all cursor-pointer">
                                     </div>
                                     <x-input-error for="profile_photo" class="mt-2" />
                                 </div>
@@ -596,66 +657,189 @@
                 <div class="py-12">
                     <div class="flex items-center gap-3 mb-6">
                         <div class="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600">
-                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">BUSINESS <span class="text-wa-teal">BEHAVIOR</span></h3>
+                        <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">BUSINESS <span
+                                class="text-wa-teal">BEHAVIOR</span></h3>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                         <!-- Time & Hours -->
-                         <div class="space-y-6">
-                             <div>
-                                <x-label for="timezone" value="Timezone" class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                        <!-- Time & Hours -->
+                        <div class="space-y-6">
+                            <div>
+                                <x-label for="timezone" value="Timezone"
+                                    class="text-xs font-bold text-slate-500 uppercase mb-2" />
                                 <select id="timezone" wire:model="timezone"
                                     class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:ring-wa-teal focus:border-wa-teal transition-all">
                                     @foreach($this->timezones as $tz)
                                         <option value="{{ $tz }}">{{ $tz }}</option>
                                     @endforeach
                                 </select>
-                             </div>
+                            </div>
 
 
-                         </div>
+                        </div>
 
-                         <!-- Call Settings -->
-                         <div class="space-y-6">
-                             <h4 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">WhatsApp Calling</h4>
-                             
-                             <div class="space-y-3">
-                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                        <!-- Call Settings -->
+                        <div class="space-y-6" x-data="{
+                                          req: {
+                                              cloud_api:   false,
+                                              no_coexist:  false,
+                                              sip_off:     false,
+                                              biz_verified: false,
+                                              waba_ok:     false,
+                                              country_ok:  false,
+                                              no_ivr:      false,
+                                          },
+                                          get allMet() {
+                                              return Object.values(this.req).every(v => v === true);
+                                          }
+                                      }">
+                            <h4
+                                class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2">
+                                WhatsApp Calling</h4>
+
+                            {{-- ── Eligibility Checklist ── --}}
+                            <div
+                                class="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-5 space-y-4">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01M12 3a9 9 0 110 18A9 9 0 0112 3z" />
+                                    </svg>
+                                    <div>
+                                        <p class="text-sm font-bold text-amber-800 dark:text-amber-300">Before enabling Calling,
+                                            confirm all requirements</p>
+                                        <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                                            WhatsApp Business Calling is <strong>allowlist-gated</strong> by Meta. Your phone
+                                            number must meet every criterion below, then be
+                                            <a href="https://developers.facebook.com/docs/whatsapp/cloud-api/calling"
+                                                target="_blank" class="underline font-bold hover:text-amber-900">enabled by
+                                                Meta</a>.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    {{-- Requirement rows --}}
+                                    @php
+                                        $reqs = [
+                                            ['key' => 'cloud_api', 'label' => 'Phone is on Cloud API', 'desc' => 'Not using On-Premises / legacy BSP API.'],
+                                            ['key' => 'no_coexist', 'label' => 'Not in Coexistence mode', 'desc' => 'Number is not simultaneously used with the WhatsApp Business App.'],
+                                            ['key' => 'sip_off', 'label' => 'SIP calling is disabled', 'desc' => 'SIP must be off so the Graph API calling endpoint works.'],
+                                            ['key' => 'biz_verified', 'label' => 'Business is Verified on Meta', 'desc' => 'Meta Business Manager shows your business as verified.'],
+                                            ['key' => 'waba_ok', 'label' => 'WhatsApp Business Account in good standing', 'desc' => 'WABA is approved with no policy violations.'],
+                                            ['key' => 'country_ok', 'label' => 'Country / region is supported', 'desc' => 'Calling is available in your country (not all regions are launched yet).'],
+                                            ['key' => 'no_ivr', 'label' => 'Not an IVR / toll-free number', 'desc' => 'If using toll-free, IVR must allow WhatsApp registration calls through.'],
+                                        ];
+                                     @endphp
+
+                                    @foreach($reqs as $r)
+                                        <label
+                                            class="flex items-start gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-amber-100/60 dark:hover:bg-amber-800/30 transition-colors"
+                                            :class="req.{{ $r['key'] }} ? 'bg-green-50 dark:bg-green-900/20' : ''">
+                                            <div class="flex-shrink-0 mt-0.5">
+                                                <input type="checkbox" x-model="req.{{ $r['key'] }}"
+                                                    class="rounded border-amber-300 text-green-500 focus:ring-green-500 bg-white dark:bg-slate-900 w-4 h-4">
+                                            </div>
+                                            <div>
+                                                <span
+                                                    class="block text-sm font-semibold text-slate-900 dark:text-white leading-tight"
+                                                    :class="req.{{ $r['key'] }} ? 'line-through opacity-60' : ''">
+                                                    {{ $r['label'] }}
+                                                </span>
+                                                <span
+                                                    class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ $r['desc'] }}</span>
+                                            </div>
+                                            <div class="ml-auto flex-shrink-0 mt-0.5" x-show="req.{{ $r['key'] }}">
+                                                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                                        d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </div>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                {{-- Progress bar --}}
+                                <div>
+                                    <div class="flex justify-between text-xs text-amber-700 dark:text-amber-400 mb-1">
+                                        <span>Requirements confirmed</span>
+                                        <span x-text="Object.values(req).filter(v=>v).length + ' / {{ count($reqs) }}'"></span>
+                                    </div>
+                                    <div class="w-full bg-amber-200 dark:bg-amber-800 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full transition-all duration-500"
+                                            :style="'width: ' + (Object.values(req).filter(v=>v).length / {{ count($reqs) }} * 100) + '%'">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-amber-700 dark:text-amber-400 font-medium" x-show="!allMet">
+                                    ⚠️ Confirm all requirements above to unlock calling settings.
+                                </p>
+                                <p class="text-xs text-green-700 dark:text-green-400 font-bold" x-show="allMet" x-cloak>
+                                    ✅ All requirements confirmed. You can now configure calling below, then contact Meta to
+                                    enable it on your phone number.
+                                </p>
+                            </div>
+
+                            {{-- ── Calling Toggles (gated by allMet) ── --}}
+                            <div class="space-y-3 transition-all duration-300"
+                                :class="allMet ? 'opacity-100' : 'opacity-40 pointer-events-none select-none'">
+
+                                <div x-show="!allMet"
+                                    class="text-xs text-center text-slate-400 dark:text-slate-600 italic pb-1">
+                                    Complete the checklist above to enable these settings.
+                                </div>
+
+                                <label
+                                    class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
                                     <div class="flex-shrink-0">
-                                        <input type="checkbox" wire:model="callingEnabled" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                        <input type="checkbox" wire:model="callingEnabled"
+                                            class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
                                     </div>
                                     <div>
-                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Calling</span>
-                                        <span class="block text-xs text-slate-500">Allow customers to voice/video call you.</span>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable
+                                            Calling</span>
+                                        <span class="block text-xs text-slate-500">Allow customers to voice/video call you via
+                                            WhatsApp.</span>
                                     </div>
                                 </label>
 
-                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                                <label
+                                    class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
                                     <div class="flex-shrink-0">
-                                        <input type="checkbox" wire:model="callButtonVisible" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                        <input type="checkbox" wire:model="callButtonVisible"
+                                            class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
                                     </div>
                                     <div>
-                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Show Call Button</span>
-                                        <span class="block text-xs text-slate-500">Display the phone icon in the chat thread.</span>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Show Call
+                                            Button</span>
+                                        <span class="block text-xs text-slate-500">Display the phone icon in the chat
+                                            thread.</span>
                                     </div>
                                 </label>
 
-
-                                <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+                                <label
+                                    class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
                                     <div class="flex-shrink-0">
-                                        <input type="checkbox" wire:model="callbackPermissionEnabled" class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
+                                        <input type="checkbox" wire:model="callbackPermissionEnabled"
+                                            class="rounded border-slate-300 text-wa-teal focus:ring-wa-teal bg-white dark:bg-slate-900 w-5 h-5">
                                     </div>
                                     <div>
-                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Callback Requests</span>
-                                        <span class="block text-xs text-slate-500">Allow customers to request a callback when unavailable.</span>
+                                        <span class="block text-sm font-bold text-slate-900 dark:text-white">Enable Callback
+                                            Requests</span>
+                                        <span class="block text-xs text-slate-500">Allow customers to request a callback when
+                                            you're unavailable.</span>
                                     </div>
                                 </label>
-                             </div>
-                         </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-8 flex justify-end">
@@ -663,9 +847,13 @@
                             class="bg-slate-900 dark:bg-white dark:text-slate-900 rounded-2xl px-8 py-3 shadow-lg transition-all hover:scale-105 font-bold text-xs uppercase tracking-widest text-white">
                             <span wire:loading.remove>SAVE BEHAVIOR SETTINGS</span>
                             <span wire:loading class="flex items-center">
-                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg"
+                                    fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                                    </circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
                                 </svg>
                                 SAVING...
                             </span>
@@ -695,7 +883,8 @@
                                 <label class="text-xs font-bold text-slate-500 uppercase flex justify-between">
                                     Phone Number ID
                                     <div class="flex gap-2">
-                                        <button wire:click="loadAvailablePhoneNumbers" class="text-xs text-blue-600 hover:text-blue-700 font-bold" title="Refresh List">
+                                        <button wire:click="loadAvailablePhoneNumbers"
+                                            class="text-xs text-blue-600 hover:text-blue-700 font-bold" title="Refresh List">
                                             REFRESH
                                         </button>
                                         <button
@@ -712,12 +901,15 @@
                                         <div class="space-y-3">
                                             <p class="text-xs text-amber-600 font-bold">Select a Phone Number so connect:</p>
                                             @foreach($available_phone_numbers as $phone)
-                                                <div class="flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
+                                                <div
+                                                    class="flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
                                                     <div class="flex flex-col">
-                                                        <span class="font-bold text-slate-900 dark:text-white">{{ $phone['display_phone_number'] ?? $phone['verified_name'] ?? 'Unknown' }}</span>
+                                                        <span
+                                                            class="font-bold text-slate-900 dark:text-white">{{ $phone['display_phone_number'] ?? $phone['verified_name'] ?? 'Unknown' }}</span>
                                                         <span class="text-xs text-slate-500">ID: {{ $phone['id'] }}</span>
                                                     </div>
-                                                    <button wire:click="selectPhoneNumber('{{ $phone['id'] }}', '{{ $phone['display_phone_number'] ?? '' }}')" 
+                                                    <button
+                                                        wire:click="selectPhoneNumber('{{ $phone['id'] }}', '{{ $phone['display_phone_number'] ?? '' }}')"
                                                         class="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700">
                                                         SELECT
                                                     </button>
@@ -766,19 +958,24 @@
                                         &times; DISCONNECT ACCOUNT
                                     </button>
                                 @else
-                                    <div class="flex flex-col items-end gap-3 p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200 dark:border-rose-800">
-                                        <label class="text-[10px] font-black text-rose-600 uppercase">Type 'DISCONNECT' to confirm</label>
+                                    <div
+                                        class="flex flex-col items-end gap-3 p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200 dark:border-rose-800">
+                                        <label class="text-[10px] font-black text-rose-600 uppercase">Type 'DISCONNECT' to
+                                            confirm</label>
                                         <div class="flex gap-2">
-                                            <input type="text" wire:model="disconnectConfirmation" placeholder="Type here..." 
+                                            <input type="text" wire:model="disconnectConfirmation" placeholder="Type here..."
                                                 class="text-xs rounded-xl border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 focus:ring-rose-500">
-                                            <button wire:click="disconnect" class="px-4 py-2 bg-rose-600 text-white text-[10px] font-black rounded-xl">CONFIRM</button>
+                                            <button wire:click="disconnect"
+                                                class="px-4 py-2 bg-rose-600 text-white text-[10px] font-black rounded-xl">CONFIRM</button>
                                             <button wire:click="cancelDisconnect" class="text-slate-400 hover:text-slate-600">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"></path>
                                                 </svg>
                                             </button>
                                         </div>
-                                        <p class="text-[9px] text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning: This will stop all active bot automations instantly.</p>
+                                        <p class="text-[9px] text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning:
+                                            This will stop all active bot automations instantly.</p>
                                     </div>
                                 @endif
                             </div>
@@ -875,10 +1072,11 @@
                             </svg>
                             META BUSINESS MANAGER
                         </a>
-                        <div class="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <div
+                            class="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
                             <input type="text" wire:model="registrationPin" placeholder="6-digit PIN" maxlength="6"
                                 class="w-32 border-none bg-transparent text-xs font-bold text-center tracking-widest focus:ring-0 text-slate-900 dark:text-white" />
-                            
+
                             <button wire:click="registerNumber" wire:loading.attr="disabled"
                                 wire:confirm="Are you sure you want to register this number with the provided PIN?"
                                 class="px-4 py-2 bg-wa-teal hover:bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-green-200 dark:shadow-none transition-all hover:scale-105 disabled:opacity-50 whitespace-nowrap">
@@ -917,7 +1115,10 @@
                     <div id="fb-login-container">
                         <button onclick="launchWhatsAppSignup()" id="fb-login-btn" type="button"
                             class="inline-flex items-center px-8 py-4 border border-transparent text-sm font-bold rounded-2xl shadow-xl text-white bg-[#25D366] hover:bg-[#1DA851] transition-all hover:scale-105 active:scale-95">
-                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                            </svg>
                             CONNECT WITH WHATSAPP
                         </button>
                         <div id="https-warning"
@@ -1069,27 +1270,27 @@
                     if (response.authResponse) {
                         const code = response.authResponse.accessToken;
                         // Use window.axios to be safe
-                        (window.axios || axios).post('{{ route("whatsapp.onboard.exchange") }}', { 
+                        (window.axios || axios).post('{{ route("whatsapp.onboard.exchange") }}', {
                             access_token: code,
                             waba_id: null // Let backend discover WABA ID from token scopes/account
                         })
-                        .then(function (res) {
-                            if (res.data.status) {
-                                @this.handleEmbeddedSuccess(res.data.access_token, res.data.waba_id);
-                            } else {
-                                alert('Error: ' + res.data.message);
-                            }
-                        })
-                        .catch(function (error) {
-                            console.error(error);
-                            alert('System error during token exchange. Check console for details.');
-                        });
+                            .then(function (res) {
+                                if (res.data.status) {
+                                    @this.handleEmbeddedSuccess(res.data.access_token, res.data.waba_id);
+                                } else {
+                                    alert('Error: ' + res.data.message);
+                                }
+                            })
+                            .catch(function (error) {
+                                console.error(error);
+                                alert('System error during token exchange. Check console for details.');
+                            });
                     }
                 }, {
                     scope: 'whatsapp_business_management, whatsapp_business_messaging, business_management',
-                    extras: { 
-                        feature: 'whatsapp_embedded_signup', 
-                        sessionInfoVersion: '2' 
+                    extras: {
+                        feature: 'whatsapp_embedded_signup',
+                        sessionInfoVersion: '2'
                     }
                 });
             };
