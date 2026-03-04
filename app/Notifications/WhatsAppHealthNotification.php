@@ -35,6 +35,7 @@ class WhatsAppHealthNotification extends Notification
             'quality_red' => '🚨 CRITICAL: WhatsApp Account Restricted',
             'quality_yellow' => '⚠️ WARNING: WhatsApp Quality Drop',
             'token_expiry' => '🔑 ACTION REQUIRED: WhatsApp Token Expiring',
+            'token_password_changed' => '🔐 ACTION REQUIRED: WhatsApp Session Disconnected',
             'webhook_pulse' => '📉 ISSUE: WhatsApp Webhooks Interrupted',
             default => '🔔 WhatsApp System Alert'
         };

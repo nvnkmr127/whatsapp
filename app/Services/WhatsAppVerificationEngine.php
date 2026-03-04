@@ -35,12 +35,25 @@ class WhatsAppVerificationEngine
             return $this->updateState(IntegrationState::DISCONNECTED, ['error' => 'No token provided']);
         }
 
-        $results = [
-            'tier1' => $this->verifyTier1Identity(),
-            'tier2' => $this->verifyTier2Entity(),
-            'tier3' => $this->verifyTier3Readiness(),
-            'tier4' => $this->verifyTier4Health(),
-        ];
+        // Tier 1: Identity & Token Validity
+        $results['tier1'] = $this->verifyTier1Identity();
+        if (!$results['tier1']['status']) {
+            $finalState = $this->determineFinalState($results);
+            return $this->updateState($finalState, $results);
+        }
+
+        // Tier 2: Entity Verification (Phone Number)
+        $results['tier2'] = $this->verifyTier2Entity();
+        if (!$results['tier2']['status']) {
+            $finalState = $this->determineFinalState($results);
+            return $this->updateState($finalState, $results);
+        }
+
+        // Tier 3: Readiness (Webhooks & Templates)
+        $results['tier3'] = $this->verifyTier3Readiness();
+
+        // Tier 4: Health (Quality Rating)
+        $results['tier4'] = $this->verifyTier4Health();
 
         // Determine final state based on results
         $finalState = $this->determineFinalState($results);
@@ -79,6 +92,13 @@ class WhatsAppVerificationEngine
 
         $data = $debug['data'];
 
+        // Persist token details for Health Dashboard
+        $expiresAt = $data['expires_at'] ?? null;
+        $this->team->update([
+            'whatsapp_token_last_validated' => now(),
+            'whatsapp_token_expires_at' => $expiresAt ? \Carbon\Carbon::createFromTimestamp($expiresAt) : null,
+        ]);
+
         // Scope check
         $scopes = $data['scopes'] ?? [];
         $required = ['whatsapp_business_messaging', 'whatsapp_business_management'];
@@ -90,7 +110,6 @@ class WhatsAppVerificationEngine
         }
 
         // Rule 2: Token Grace Period check
-        $expiresAt = $data['expires_at'] ?? null;
         $isExpiringSoon = false;
         if ($expiresAt) {
             $expiry = \Carbon\Carbon::createFromTimestamp($expiresAt);
@@ -167,13 +186,13 @@ class WhatsAppVerificationEngine
 
     protected function determineFinalState(array $results): IntegrationState
     {
-        if (!$results['tier1']['status'])
+        if (!($results['tier1']['status'] ?? false))
             return IntegrationState::SUSPENDED;
-        if (!$results['tier2']['status'])
+        if (!($results['tier2']['status'] ?? false))
             return IntegrationState::AUTHENTICATED;
-        if (!$results['tier3']['status'] || !$results['tier3']['webhook_subscribed'])
+        if (!($results['tier3']['status'] ?? false) || !($results['tier3']['webhook_subscribed'] ?? false))
             return IntegrationState::PROVISIONED;
-        if (!$results['tier4']['status'])
+        if (!($results['tier4']['status'] ?? false))
             return IntegrationState::RESTRICTED;
 
         // Check for READY_WARNING (Rule 2)

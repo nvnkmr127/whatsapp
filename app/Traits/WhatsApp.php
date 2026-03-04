@@ -41,12 +41,12 @@ trait WhatsApp
     /**
      * Handle cases where the access token is invalid, expired, or revoked.
      */
-    protected function handleTokenFailure($response, string $context = 'API Call'): void
+    protected function handleTokenFailure($response, string $context = 'API Call', ?array $errorData = null): void
     {
-        $status = $response->status();
-        $errorData = $response->json();
-        $errorCode = $errorData['error']['code'] ?? null;
-        $subcode = $errorData['error']['error_subcode'] ?? null;
+        $status = $response?->status() ?? 401;
+        $errorData = $errorData ?? $response?->json();
+        $errorCode = $errorData['error']['code'] ?? $errorData['code'] ?? null;
+        $subcode = $errorData['error']['error_subcode'] ?? $errorData['error_subcode'] ?? null;
 
         // Code 190: Access token has expired or is invalid
         // Status 401: Unauthorized (standard for token issues)
@@ -57,12 +57,24 @@ trait WhatsApp
                 $reason = "Session invalidated (Code: {$errorCode}, Sub: {$subcode})";
                 if ($subcode == 460) {
                     $reason = "Session invalidated: Password changed on Facebook account.";
+                    $this->triggerHealthNotification($team, 'token_password_changed', "Your WhatsApp connection has been disconnected because of a password change on the linked Facebook account. Please reconnect to restore service.");
                 }
 
                 $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
 
                 Log::warning("WhatsApp Trait: [{$context}] Detected invalid token for team {$team->id}. Reason: {$reason}");
             }
+        }
+    }
+
+    protected function triggerHealthNotification($team, string $type, string $message): void
+    {
+        try {
+            if ($team && $team->owner) {
+                $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification($team, $type, $message));
+            }
+        } catch (\Exception $e) {
+            Log::error("WhatsApp Trait: Failed to send health notification: " . $e->getMessage());
         }
     }
 
@@ -510,9 +522,24 @@ trait WhatsApp
                 return ['status' => false, 'message' => $errorMessage ?? 'Token debug failed'];
             }
 
+            $data = $response->json('data');
+            $isValid = $data['is_valid'] ?? false;
+
+            if (!$isValid) {
+                // If it's invalid, trigger the failure handler to suspend/notify
+                $this->handleTokenFailure($response, 'Token Debug', $data['error'] ?? $data);
+
+                $errorMsg = $data['error']['message'] ?? 'Token is invalid or has expired.';
+                return [
+                    'status' => false,
+                    'message' => $errorMsg,
+                    'data' => $data
+                ];
+            }
+
             return [
                 'status' => true,
-                'data' => $response->json('data')
+                'data' => $data
             ];
         } catch (\Throwable $e) {
             Log::error("WhatsApp Token Debug Error: " . $e->getMessage());
