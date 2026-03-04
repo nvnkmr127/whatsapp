@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="py-12 bg-slate-50/50 dark:bg-slate-900/50 min-h-screen">
+    <div x-data="{ showWorkspaceDetails: false, selectedTeam: null }" class="py-12 bg-slate-50/50 dark:bg-slate-900/50 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             <!-- Page Header -->
@@ -109,6 +109,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Total Messages -->
                 <div
@@ -242,12 +243,6 @@
                                             Company</th>
                                         <th
                                             class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            Owner</th>
-                                        <th
-                                            class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            Plan</th>
-                                        <th
-                                            class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">
                                             Status</th>
                                         <th
                                             class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">
@@ -274,24 +269,6 @@
                                                 </div>
                                             </td>
                                             <td class="px-8 py-6">
-                                                <div class="flex items-center gap-3">
-                                                    <img src="{{ $team->owner->profile_photo_url }}"
-                                                        alt="{{ $team->owner->name }}" class="w-6 h-6 rounded-full">
-                                                    <div>
-                                                        <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                                            {{ $team->owner->name }}
-                                                        </div>
-                                                        <div class="text-xs text-slate-500">{{ $team->owner->email }}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-8 py-6">
-                                                <span
-                                                    class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-wider rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                                                    {{ ucfirst($team->subscription_plan ?? 'Basic') }}
-                                                </span>
-                                            </td>
-                                            <td class="px-8 py-6">
                                                 <div class="flex items-center gap-2">
                                                     <span
                                                         class="w-2 h-2 rounded-full {{ $team->subscription_status === 'active' ? 'bg-wa-green shadow-lg shadow-wa-green/40' : 'bg-slate-400' }}"></span>
@@ -304,6 +281,24 @@
                                             <td class="px-8 py-6 text-right">
                                                 <div
                                                     class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button @click="showWorkspaceDetails = true; selectedTeam = { 
+                                                            name: '{{ addslashes($team->name) }}',
+                                                            ownerName: '{{ addslashes($team->owner->name) }}',
+                                                            ownerEmail: '{{ addslashes($team->owner->email) }}',
+                                                            ownerPhone: '{{ addslashes($team->owner->phone ?? 'N/A') }}',
+                                                            ownerPhoto: '{{ $team->owner->profile_photo_url }}',
+                                                            plan: '{{ ucfirst($team->subscription_plan ?? 'Basic') }}',
+                                                            status: '{{ ucfirst($team->subscription_status) }}',
+                                                            createdAt: '{{ $team->created_at->format('M d, Y') }}',
+                                                            address: '{{ addslashes($team->billing_address ?? 'Not Provided') }}'
+                                                        }"
+                                                        class="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                                                        title="View Details">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                    </button>
                                                     <a href="{{ route('admin.impersonate.enter', $team->owner->id) }}"
                                                         class="p-2 text-slate-400 hover:text-rose-500 transition-colors"
                                                         title="Impersonate Owner">
@@ -447,6 +442,76 @@
                             </div>
                         @endif
                     </div>
+                </div>
+            </div>
+        </div>
+
+    {{-- Workspace Details Modal --}}
+    <div x-show="showWorkspaceDetails" 
+        class="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 lg:p-8"
+        x-cloak
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+        
+        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-md" @click="showWorkspaceDetails = false"></div>
+
+        <div class="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800"
+            x-transition:enter="transition ease-out duration-300 transform"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+            
+            <div class="p-8">
+                <div class="flex items-center gap-6 mb-8">
+                    <img :src="selectedTeam?.ownerPhoto" class="w-20 h-20 rounded-[2rem] border-4 border-indigo-50 dark:border-indigo-900/50 shadow-xl shadow-indigo-500/10">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight" x-text="selectedTeam?.name"></h3>
+                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest" x-text="'Joined ' + selectedTeam?.createdAt"></p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Owner Identity</p>
+                                <p class="text-sm font-bold text-slate-900 dark:text-white" x-text="selectedTeam?.ownerName"></p>
+                                <p class="text-xs text-slate-500 font-medium" x-text="selectedTeam?.ownerEmail"></p>
+                            </div>
+                            <div x-show="selectedTeam?.ownerPhone !== 'N/A'">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Phone</p>
+                                <p class="text-sm font-bold text-slate-900 dark:text-white" x-text="selectedTeam?.ownerPhone"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Plan</p>
+                            <p class="text-xs font-black text-indigo-600 dark:text-indigo-400" x-text="selectedTeam?.plan"></p>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Life Status</p>
+                            <p class="text-xs font-black uppercase" 
+                               :class="selectedTeam?.status === 'Active' ? 'text-wa-green' : 'text-slate-400'"
+                               x-text="selectedTeam?.status"></p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Business Address</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 font-medium italic" x-text="selectedTeam?.address"></p>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <button @click="showWorkspaceDetails = false" 
+                        class="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        Close Intelligence Panel
+                    </button>
                 </div>
             </div>
         </div>
