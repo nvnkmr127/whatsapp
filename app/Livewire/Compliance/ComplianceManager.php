@@ -34,7 +34,7 @@ class ComplianceManager extends Component
             ->when($this->searchTerm, function ($query) {
                 $query->whereHas('contact', function ($q) {
                     $q->where('name', 'like', '%' . $this->searchTerm . '%')
-                        ->orWhere('phone', 'like', '%' . $this->searchTerm . '%');
+                        ->orWhere('phone_number', 'like', '%' . $this->searchTerm . '%');
                 });
             })
             ->when($this->filterStatus !== 'all', function ($query) {
@@ -92,7 +92,7 @@ class ComplianceManager extends Component
                 ->when($searchTerm, function ($query) use ($searchTerm) {
                     $query->whereHas('contact', function ($q) use ($searchTerm) {
                         $q->where('name', 'like', '%' . $searchTerm . '%')
-                            ->orWhere('phone', 'like', '%' . $searchTerm . '%');
+                            ->orWhere('phone_number', 'like', '%' . $searchTerm . '%');
                     });
                 })
                 ->when($filterStatus !== 'all', function ($query) use ($filterStatus) {

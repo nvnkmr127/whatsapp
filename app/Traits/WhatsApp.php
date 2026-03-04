@@ -38,6 +38,34 @@ trait WhatsApp
         return $this->team->whatsapp_business_account_id ?? auth()->user()->currentTeam->whatsapp_business_account_id ?? '';
     }
 
+    /**
+     * Handle cases where the access token is invalid, expired, or revoked.
+     */
+    protected function handleTokenFailure($response, string $context = 'API Call'): void
+    {
+        $status = $response->status();
+        $errorData = $response->json();
+        $errorCode = $errorData['error']['code'] ?? null;
+        $subcode = $errorData['error']['error_subcode'] ?? null;
+
+        // Code 190: Access token has expired or is invalid
+        // Status 401: Unauthorized (standard for token issues)
+        if ($status === 401 || $errorCode == 190) {
+            $team = $this->team ?? auth()->user()?->currentTeam;
+            if ($team) {
+                // Determine if it was a password change (#460) or general expiry
+                $reason = "Session invalidated (Code: {$errorCode}, Sub: {$subcode})";
+                if ($subcode == 460) {
+                    $reason = "Session invalidated: Password changed on Facebook account.";
+                }
+
+                $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
+
+                Log::warning("WhatsApp Trait: [{$context}] Detected invalid token for team {$team->id}. Reason: {$reason}");
+            }
+        }
+    }
+
     public function loadTemplatesFromWhatsApp(?string $wabaId = null, ?string $token = null): array
     {
         try {
@@ -98,6 +126,7 @@ trait WhatsApp
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+                $this->handleTokenFailure($response, 'Template Sync');
 
                 Log::error("WhatsApp Trait: API Call Failed", [
                     'status' => $response->status(),
@@ -219,6 +248,7 @@ trait WhatsApp
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+                $this->handleTokenFailure($response, 'Phone Details');
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token."];
@@ -295,6 +325,7 @@ trait WhatsApp
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+                $this->handleTokenFailure($response, 'Phone Registration');
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token."];
@@ -413,6 +444,7 @@ trait WhatsApp
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+                $this->handleTokenFailure($response, 'Webhook Subscribe');
 
                 Log::error("WhatsApp Trait: Webhook Subscription Failed", ['status' => $response->status(), 'error' => $errorData]);
 
@@ -467,6 +499,8 @@ trait WhatsApp
                     ]);
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ({$appId}). Set WHATSAPP_APP_ID in your .env to the correct App ID."];
                 }
+
+                $this->handleTokenFailure($response, 'Token Debug');
 
                 Log::error("WhatsApp Trait: Token Debug Failed", [
                     'status' => $response->status(),
@@ -528,6 +562,7 @@ trait WhatsApp
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+                $this->handleTokenFailure($response, 'Webhook Check');
 
                 Log::error("WhatsApp Trait: Webhook Check Failed", ['error' => $errorData]);
 
@@ -648,6 +683,8 @@ trait WhatsApp
             if ($response->failed()) {
                 $errorData = $response->json();
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
+                $this->handleTokenFailure($response, 'Business Verification Status');
                 Log::error('WhatsApp Trait: Failed to fetch business verification status', [
                     'status' => $response->status(),
                     'error' => $errorData,

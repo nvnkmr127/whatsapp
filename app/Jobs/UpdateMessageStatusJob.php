@@ -125,7 +125,7 @@ class UpdateMessageStatusJob implements ShouldQueue
         // 1. Sync individual CampaignDetail row status
         // We use phone number and campaign_id to find the matching detail
         \App\Models\CampaignDetail::where('campaign_id', $message->campaign_id)
-            ->where('phone', $message->contact->phone ?? $message->to)
+            ->where('phone', $message->contact->phone_number ?? $message->to)
             ->update([
                 'status' => $newStatus,
                 'updated_at' => now()

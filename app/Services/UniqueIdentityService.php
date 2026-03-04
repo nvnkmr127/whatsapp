@@ -130,12 +130,15 @@ class UniqueIdentityService
         string $ip,
         ?string $paymentFingerprint = null,
     ): void {
-        $domain = $this->apexDomain($user->email);
-
         $entries = [
-            [IdentityFingerprint::TYPE_EMAIL_DOMAIN, IdentityFingerprint::hash($domain)],
             [IdentityFingerprint::TYPE_SIGNUP_IP, IdentityFingerprint::hash($ip)],
         ];
+
+        // Only record domain if user has an email (social users might not have one initially)
+        if ($user->email) {
+            $domain = $this->apexDomain($user->email);
+            $entries[] = [IdentityFingerprint::TYPE_EMAIL_DOMAIN, IdentityFingerprint::hash($domain)];
+        }
 
         if ($paymentFingerprint) {
             $entries[] = [IdentityFingerprint::TYPE_PAYMENT_METHOD, IdentityFingerprint::hash($paymentFingerprint)];
@@ -374,9 +377,16 @@ class UniqueIdentityService
      * Extract the apex (eTLD+1) domain from an email address.
      * Falls back to the raw host if parsing fails.
      */
-    private function apexDomain(string $email): string
+    private function apexDomain(?string $email): string
     {
-        $host = strtolower(substr($email, strrpos($email, '@') + 1));
+        if (empty($email)) {
+            return '';
+        }
+
+        $atPos = strrpos($email, '@');
+        $host = $atPos === false
+            ? strtolower($email)
+            : strtolower(substr($email, $atPos + 1));
 
         // Strip common sub-domains (mail., smtp., mx., etc.)
         $parts = explode('.', $host);

@@ -25,15 +25,15 @@ class GlobalSearch extends Component
         $contacts = Contact::where('team_id', $teamId)
             ->where(function ($query) {
                 $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('phone', 'like', '%' . $this->search . '%');
+                    ->orWhere('phone_number', 'like', '%' . $this->search . '%');
             })
             ->limit(5)
             ->get()
             ->map(function ($contact) {
                 return [
                     'type' => 'Contact',
-                    'title' => $contact->name ?? $contact->phone,
-                    'subtitle' => $contact->phone,
+                    'title' => $contact->name ?? $contact->phone_number,
+                    'subtitle' => $contact->phone_number,
                     'url' => route('contacts.show', $contact->id), // Assuming this route exists
                     'icon' => 'user'
                 ];
