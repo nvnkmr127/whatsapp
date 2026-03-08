@@ -103,9 +103,19 @@ class WhatsappConfig extends Component
         'wm_default_phone_number_id' => 'nullable',
     ];
 
+    public $readyToLoad = false;
+
     public function mount()
     {
         $this->loadSettings();
+        
+        // Defer heavy API calls to loadData()
+    }
+
+    public function loadData()
+    {
+        $this->readyToLoad = true;
+
         if ($this->is_whatsmark_connected) {
             $this->loadBusinessProfile();
             $this->refreshHealth();
@@ -117,7 +127,7 @@ class WhatsappConfig extends Component
             }
 
             // [NEW] Self-Heal: Fetch Facebook Business ID if missing
-            $team = auth()->user()->currentTeam;
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
             if ($team && $team->whatsapp_connected && !$team->facebook_business_id && $team->whatsapp_business_account_id) {
                 // Determine token to use
                 $token = $this->wm_access_token ?: $team->whatsapp_access_token;
@@ -136,7 +146,7 @@ class WhatsappConfig extends Component
 
     public function loadSettings()
     {
-        $team = auth()->user()->currentTeam->fresh();
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
 
         if (!$team) {
             $this->is_whatsmark_connected = false;
@@ -253,9 +263,9 @@ class WhatsappConfig extends Component
 
     public function updateBusinessProfile()
     {
-        $team = auth()->user()->currentTeam;
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
-        if (!auth()->user()->ownsTeam($team)) {
+        if (!\Illuminate\Support\Facades\Auth::user()->ownsTeam($team)) {
             $this->dispatch('notify', title: 'Unauthorized', type: 'error');
             return;
         }
@@ -319,7 +329,7 @@ class WhatsappConfig extends Component
     public function updateBehaviorSettings()
     {
         try {
-            $team = auth()->user()->currentTeam;
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
             // Always save timezone locally
             $team->forceFill([
@@ -398,7 +408,7 @@ class WhatsappConfig extends Component
 
             // Check for duplicate WABA usage in Trial teams (Abuse Protection)
             $duplicate = \App\Models\Team::where('whatsapp_business_account_id', $wabaId)
-                ->where('id', '!=', auth()->user()->currentTeam->id)
+                ->where('id', '!=', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
                 ->whereIn('subscription_status', ['trial', 'expired'])
                 ->exists();
 
@@ -421,7 +431,7 @@ class WhatsappConfig extends Component
             Log::debug("WhatsApp Setup: Long-lived token acquired", ['expires_at' => $expiresAt]);
 
             // 2. Pre-Save to Team for subsequent calls
-            $team = auth()->user()->currentTeam;
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
             $team->update([
                 'whatsapp_access_token' => $longLivedToken,
                 'whatsapp_business_account_id' => $wabaId,
@@ -468,13 +478,13 @@ class WhatsappConfig extends Component
 
         // If specific team/user doesn't have a token yet, require it.
         // Or if we are switching accounts, we likely need a new token.
-        if (empty(auth()->user()->currentTeam->whatsapp_access_token)) {
+        if (empty(\Illuminate\Support\Facades\Auth::user()->currentTeam->whatsapp_access_token)) {
             $rules['wm_access_token'] = 'required';
         }
 
         $this->validate($rules);
 
-        $team = auth()->user()->currentTeam;
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
         // Start audit trail
         $auditId = $this->startAudit('connect');
@@ -499,7 +509,7 @@ class WhatsappConfig extends Component
 
             // Check for duplicate WABA usage in Trial teams (Abuse Protection)
             $duplicate = \App\Models\Team::where('whatsapp_business_account_id', $this->wm_business_account_id)
-                ->where('id', '!=', auth()->user()->currentTeam->id)
+                ->where('id', '!=', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
                 ->whereIn('subscription_status', ['trial', 'expired'])
                 ->exists();
 
@@ -627,7 +637,7 @@ class WhatsappConfig extends Component
 
     public function validateConnection()
     {
-        $team = auth()->user()->currentTeam;
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
         $engine = app(\App\Services\WhatsAppVerificationEngine::class)->setTeam($team);
 
         $result = $engine->verify();
@@ -663,8 +673,8 @@ class WhatsappConfig extends Component
         $this->is_webhook_connected = false;
         // $this->wm_access_token = ''; // Already removed
 
-        if (auth()->user()->currentTeam) {
-            auth()->user()->currentTeam->forceFill([
+        if (\Illuminate\Support\Facades\Auth::user()->currentTeam) {
+            \Illuminate\Support\Facades\Auth::user()->currentTeam->forceFill([
                 'whatsapp_access_token' => null,
                 'whatsapp_business_account_id' => null,
                 'whatsapp_phone_number_id' => null,
@@ -685,7 +695,7 @@ class WhatsappConfig extends Component
             'outbound_webhook_url' => 'nullable|url'
         ]);
 
-        $team = auth()->user()->currentTeam;
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
         if (!$team) {
             $this->dispatch('notify', title: 'Error', message: 'No active team found.', type: 'error');
@@ -713,7 +723,7 @@ class WhatsappConfig extends Component
 
     public function setupWebhook()
     {
-        $team = auth()->user()->currentTeam;
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
         if (!$team->whatsapp_access_token || !$this->wm_business_account_id) {
             $this->dispatch('notify', 'Missing configuration. Please connect first.');
             return;
@@ -736,7 +746,7 @@ class WhatsappConfig extends Component
             return;
         }
 
-        $team = auth()->user()->currentTeam->fresh();
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
 
         if (!$team->whatsapp_business_account_id || !$team->whatsapp_access_token) {
             $this->dispatch('notify', 'WhatsApp configuration missing. Please reconnect.');
@@ -760,7 +770,7 @@ class WhatsappConfig extends Component
             $this->wm_verified_name = $data['verified_name'] ?? '';
 
             // Persist to Team
-            $team = auth()->user()->currentTeam;
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
             $team->update([
                 'whatsapp_messaging_limit' => $this->wm_messaging_limit,
                 'whatsapp_quality_rating' => $this->wm_quality_rating,
@@ -786,7 +796,7 @@ class WhatsappConfig extends Component
      */
     public function checkBusinessVerification()
     {
-        $team = auth()->user()->currentTeam->fresh();
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
 
         if (!$team->whatsapp_business_account_id || !$team->whatsapp_access_token) {
             return;
@@ -826,7 +836,7 @@ class WhatsappConfig extends Component
             return;
         }
 
-        $team = auth()->user()->currentTeam->fresh();
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
         $monitor = app(\App\Services\WhatsAppHealthMonitor::class);
         $health = $monitor->checkHealth($team);
 
@@ -857,7 +867,7 @@ class WhatsappConfig extends Component
 
     public function getSetupProgress()
     {
-        $team = auth()->user()->currentTeam->fresh();
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
         $state = $team->whatsapp_setup_state;
 
         $steps = [
@@ -950,7 +960,7 @@ class WhatsappConfig extends Component
     public function loadBusinessProfile()
     {
         try {
-            $team = auth()->user()->currentTeam->fresh();
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
             if (!$team->whatsapp_access_token || !$team->whatsapp_phone_number_id) {
                 return;
             }
@@ -1021,7 +1031,7 @@ class WhatsappConfig extends Component
 
             // For now, let's just make a simple call if we don't have numbers yet.
             if (empty($this->available_phone_numbers) && $this->is_whatsmark_connected) {
-                $token = $this->wm_access_token ?: auth()->user()->currentTeam->whatsapp_access_token;
+                $token = $this->wm_access_token ?: \Illuminate\Support\Facades\Auth::user()->currentTeam->whatsapp_access_token;
                 if (!$token)
                     return;
 
@@ -1040,7 +1050,7 @@ class WhatsappConfig extends Component
 
     public function selectPhoneNumber($phoneId, $displayPhone)
     {
-        $team = auth()->user()->currentTeam;
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
         // Uniqueness check
         $existing = \App\Models\Team::where('whatsapp_phone_number_id', $phoneId)
@@ -1080,8 +1090,8 @@ class WhatsappConfig extends Component
     private function startAudit(string $action): int
     {
         return \App\Models\WhatsAppSetupAudit::create([
-            'team_id' => auth()->user()->currentTeam->id,
-            'user_id' => auth()->id(),
+            'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
+            'user_id' => \Illuminate\Support\Facades\Auth::id(),
             'action' => $action,
             'status' => 'in_progress',
             'ip_address' => request()->ip(),

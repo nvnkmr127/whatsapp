@@ -1,4 +1,35 @@
-<div class="space-y-8 animate-in fade-in duration-500">
+<div wire:init="loadData" class="space-y-8 animate-in fade-in duration-500">
+    @if(!$readyToLoad)
+        <!-- Skeleton Loading UI -->
+        <div class="animate-pulse space-y-12">
+            <!-- Header Skeleton -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+                    <div class="space-y-3">
+                        <div class="h-8 w-64 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+                        <div class="h-4 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+                    </div>
+                </div>
+                <div class="h-10 w-32 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-12 border border-slate-50 dark:border-slate-800">
+                <!-- Stats Grid Skeleton -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                    @for($i = 0; $i < 3; $i++)
+                        <div class="h-48 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800"></div>
+                    @endfor
+                </div>
+
+                <!-- Progress & Health Skeleton -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div class="h-96 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800"></div>
+                    <div class="h-96 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800"></div>
+                </div>
+            </div>
+        </div>
+    @else
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div class="flex items-center gap-4">
@@ -1276,6 +1307,7 @@
         </div>
     @endif
 </div><!-- End Main Card -->
+@endif
 
 <script>
     document.addEventListener('livewire:initialized', () => {
