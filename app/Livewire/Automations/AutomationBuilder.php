@@ -25,6 +25,9 @@ class AutomationBuilder extends Component
         'webhook_url' => null,
         'template_name' => null,
         'button_text' => null,
+        'source_id' => null,
+        'headline' => null,
+        'source_url' => null,
     ];
     public $triggerKeywordsString = ''; // Helper for comma-separated keywords
 
@@ -249,6 +252,9 @@ class AutomationBuilder extends Component
                 'webhook_url' => null,
                 'template_name' => null,
                 'button_text' => null,
+                'source_id' => null,
+                'headline' => null,
+                'source_url' => null,
             ], $automation->trigger_config ?? []);
 
             // Backward compatibility
@@ -756,6 +762,9 @@ class AutomationBuilder extends Component
                 $node['data']['template_name'] = $this->triggerConfig['template_name'] ?? null;
                 $node['data']['button_text'] = $this->triggerConfig['button_text'] ?? null;
                 $node['data']['webhook_url'] = $this->triggerConfig['webhook_url'] ?? null;
+                $node['data']['source_id'] = $this->triggerConfig['source_id'] ?? null;
+                $node['data']['headline'] = $this->triggerConfig['headline'] ?? null;
+                $node['data']['source_url'] = $this->triggerConfig['source_url'] ?? null;
             }
         }
 

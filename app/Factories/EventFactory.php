@@ -23,6 +23,7 @@ class EventFactory
             'payload' => [
                 'provider_id' => $message['id'],
                 'from_phone' => $message['from'],
+                'referral' => $message['referral'] ?? null,
                 'to_phone_id' => $metadata['phone_number_id'],
                 'waba_id' => $webhookData['entry'][0]['id'] ?? null,
                 'contact_name' => $contact['profile']['name'] ?? null,

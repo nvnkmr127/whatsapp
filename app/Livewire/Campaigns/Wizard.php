@@ -52,12 +52,12 @@ class Wizard extends Component
 
     public function mount()
     {
-        $this->name = request('default_name', 'Campaign ' . date('Y-m-d H:i'));
+        $this->name = session('default_name', request('default_name', 'Campaign ' . date('Y-m-d H:i')));
         $this->scheduled_at = now()->addMinutes(5)->format('Y-m-d\TH:i');
 
-        if (request()->has('retarget_ids')) {
+        if (session()->has('retarget_ids') || request()->has('retarget_ids')) {
             $this->audienceType = 'contacts';
-            $this->selectedContacts = request('retarget_ids');
+            $this->selectedContacts = session('retarget_ids', request('retarget_ids'));
             $this->calculateAudience();
         }
     }
@@ -65,7 +65,7 @@ class Wizard extends Component
     #[Computed]
     public function templates()
     {
-        return WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+        return WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
             ->where('status', 'APPROVED')
             ->get();
     }
@@ -73,13 +73,13 @@ class Wizard extends Component
     #[Computed]
     public function tags()
     {
-        return ContactTag::where('team_id', auth()->user()->currentTeam->id)->get();
+        return ContactTag::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->get();
     }
 
     #[Computed]
     public function contacts()
     {
-        return Contact::where('team_id', auth()->user()->currentTeam->id)
+        return Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
             ->orderBy('name')
             ->get();
     }
@@ -101,7 +101,7 @@ class Wizard extends Component
 
     public function calculateAudience()
     {
-        $query = Contact::where('team_id', auth()->user()->currentTeam->id);
+        $query = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id);
 
         if ($this->audienceType === 'tags' && !empty($this->selectedTags)) {
             $query->whereHas('tags', function ($q) {
@@ -130,7 +130,7 @@ class Wizard extends Component
         $this->headerTextVar = null;
 
         if ($value) {
-            $template = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->find($value);
+            $template = WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->find($value);
             if ($template) {
                 // Initialize variables based on body params count
                 $bodyText = '';
@@ -162,7 +162,7 @@ class Wizard extends Component
             $this->scheduled_at = now();
         }
 
-        $template = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->findOrFail($this->selectedTemplateId);
+        $template = WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->findOrFail($this->selectedTemplateId);
 
         // Handle Media Header
         $finalHeaderMedia = null;
@@ -186,7 +186,7 @@ class Wizard extends Component
         }
 
         $campaign = Campaign::create([
-            'team_id' => auth()->user()->currentTeam->id,
+            'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
             'name' => $this->name,
             'campaign_name' => $this->name,
             'template_id' => $template->id,
@@ -222,7 +222,7 @@ class Wizard extends Component
             return null;
         }
 
-        $template = WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)->find($this->selectedTemplateId);
+        $template = WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->find($this->selectedTemplateId);
         if (!$template) {
             return null;
         }

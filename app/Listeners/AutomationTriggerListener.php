@@ -66,7 +66,16 @@ class AutomationTriggerListener
                 return;
             }
 
-            // 2. Check triggers
+            // 3. Check Referral Trigger
+            $metadata = $message->metadata ?? [];
+            if (isset($metadata['referral'])) {
+                if ($automationService->checkReferralTriggers($contact, $metadata['referral'])) {
+                    Log::info("AutomationTriggerListener: Referral trigger matched for contact {$contact->id}");
+                    return;
+                }
+            }
+
+            // 4. Check triggers
             if ($automationService->checkTriggers($contact, $content)) {
                 Log::info("AutomationTriggerListener: Trigger matched for contact {$contact->id}");
             } else {

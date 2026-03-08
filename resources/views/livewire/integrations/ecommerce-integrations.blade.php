@@ -76,6 +76,21 @@
                 <button wire:click="openConnectModal('meta_commerce')"
                     class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 w-full">Connect Meta</button>
             </div>
+
+            <!-- Meta Marketing API -->
+            <div
+                class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
+                <div class="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-blue-600">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
+                    </svg>
+                </div>
+                <h3 class="font-bold text-lg">Meta Marketing</h3>
+                <p class="text-gray-500 text-sm mb-4">Manage Facebook & Instagram Ads from your dashboard.</p>
+                <button wire:click="openConnectModal('meta_marketing')"
+                    class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 w-full">Connect Ads</button>
+            </div>
         </div>
 
         <!-- Active Connections -->
@@ -176,6 +191,10 @@
                                             <strong>Webhook Verification URL:</strong><br>
                                             <code
                                                 class="text-gray-600 block my-1 bg-white p-1 border rounded">{{ url('/api/webhooks/meta/commerce') }}</code>
+                                        </div>
+                                    @elseif($integration->type == 'meta_marketing')
+                                        <div class="mt-2 text-xs bg-gray-100 p-2 rounded">
+                                            <strong>Status:</strong> Connected to Meta Marketing API
                                         </div>
                                     @endif
 
@@ -494,6 +513,19 @@
                             <x-input-error for="meta_access_token" class="mt-2" />
                             <p class="text-xs text-gray-500 mt-1">Obtain this from Meta Business Suite -> Settings -> System
                                 Users.</p>
+                        </div>
+                    @endif
+
+                    @if($selectedType == 'meta_marketing')
+                        <div>
+                            <x-label for="meta_marketing_token" value="Meta Marketing Access Token" />
+                            <x-input id="meta_marketing_token" type="password" class="mt-1 block w-full"
+                                wire:model="meta_marketing_token" placeholder="EAAG..." />
+                            <x-input-error for="meta_marketing_token" class="mt-2" />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Obtain this from Meta Business Suite -> System Users.
+                                Ensure it has 'ads_management' and 'ads_read' permissions.
+                            </p>
                         </div>
                     @endif
 

@@ -39,7 +39,7 @@ class CampaignList extends Component
     public function delete()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
-        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->find($this->campaignIdToDelete);
+        $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->current_team_id)->find($this->campaignIdToDelete);
         if ($campaign) {
             $campaign->delete();
             $this->dispatch('notify', 'Campaign deleted successfully.');
@@ -60,7 +60,7 @@ class CampaignList extends Component
 
     public function retarget()
     {
-        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($this->selectedCampaignId);
+        $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->current_team_id)->findOrFail($this->selectedCampaignId);
         $query = \App\Models\CampaignDetail::where('campaign_id', $this->selectedCampaignId);
 
         switch ($this->retargetingCriteria) {
@@ -88,10 +88,12 @@ class CampaignList extends Component
             return;
         }
 
-        return redirect()->route('campaigns.create', [
+        session([
             'retarget_ids' => $contactIds,
             'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
         ]);
+
+        return redirect()->route('campaigns.create');
     }
 
     #[Layout('components.layouts.app')]
@@ -104,14 +106,14 @@ class CampaignList extends Component
         }
 
         // Add team scope
-        if (auth()->check() && auth()->user()->current_team_id) {
-            $query->where('team_id', auth()->user()->current_team_id);
+        if (\Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->current_team_id) {
+            $query->where('team_id', \Illuminate\Support\Facades\Auth::user()->current_team_id);
         }
 
         $campaigns = $query->latest()->paginate(10);
 
         // Module-Level Core Metrics
-        $teamId = auth()->user()->current_team_id;
+        $teamId = \Illuminate\Support\Facades\Auth::user()->current_team_id;
         $stats = [
             'active' => Campaign::where('team_id', $teamId)->whereIn('status', ['processing', 'sending'])->count(),
             'success_rate' => Campaign::where('team_id', $teamId)->where('sent_count', '>', 0)->select(DB::raw('AVG((del_count / sent_count) * 100)'))->value('AVG((del_count / sent_count) * 100)') ?? 100,

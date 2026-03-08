@@ -27,9 +27,9 @@ class CampaignManager extends Component
 
     public function mount()
     {
-        $this->availableTags = ContactTag::where('team_id', auth()->user()->currentTeam->id)->get();
+        $this->availableTags = ContactTag::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->get();
         // Templates should come from DB or API
-        $this->availableTemplates = \App\Models\WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
+        $this->availableTemplates = \App\Models\WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
             ->where('status', 'APPROVED')
             ->get();
     }
@@ -46,7 +46,7 @@ class CampaignManager extends Component
         ];
 
         $campaign = Campaign::create([
-            'team_id' => auth()->user()->currentTeam->id,
+            'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
             'name' => $this->name,
             'template_name' => $this->templateName,
             'segment_config' => $segmentConfig,
@@ -79,7 +79,7 @@ class CampaignManager extends Component
 
     public function retarget()
     {
-        $campaign = Campaign::where('team_id', auth()->user()->currentTeam->id)->findOrFail($this->retargetingCampaignId);
+        $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->findOrFail($this->retargetingCampaignId);
 
         $query = $campaign->messages();
 
@@ -109,15 +109,17 @@ class CampaignManager extends Component
             return;
         }
 
-        return redirect()->route('campaigns.create', [
+        session([
             'retarget_ids' => $contactIds,
             'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
         ]);
+
+        return redirect()->route('campaigns.create');
     }
 
     public function render()
     {
-        $campaigns = Campaign::where('team_id', auth()->user()->currentTeam->id)->latest()->paginate(10);
+        $campaigns = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->latest()->paginate(10);
         return view('livewire.campaigns.campaign-manager', ['campaigns' => $campaigns]);
     }
 }

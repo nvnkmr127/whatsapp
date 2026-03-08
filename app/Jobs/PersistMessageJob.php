@@ -143,6 +143,11 @@ class PersistMessageJob implements ShouldQueue
         }
 
         // 6. Create Message Record
+        $meta = $msgData;
+        if (isset($data['referral'])) {
+            $meta['referral'] = $data['referral'];
+        }
+
         $message = Message::create([
             'team_id' => $team->id,
             'contact_id' => $contact->id,
@@ -151,7 +156,7 @@ class PersistMessageJob implements ShouldQueue
             'direction' => 'inbound',
             'type' => $msgData['type'],
             'content' => $content,
-            'metadata' => json_encode($msgData),
+            'metadata' => json_encode($meta),
             'status' => 'delivered',
             'media_id' => $mediaId,
             'media_type' => $mediaType,

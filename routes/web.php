@@ -196,6 +196,10 @@ Route::middleware([
     Route::get('/commerce/products', \App\Livewire\Commerce\ProductManager::class)->name('commerce.products')->middleware(['can:manage-campaigns', 'plan_feature:commerce']);
     Route::get('/commerce/settings', \App\Livewire\Commerce\CommerceSettings::class)->name('commerce.settings')->middleware(['can:manage-settings', 'plan_feature:commerce']);
     Route::get('/integrations/ecommerce', \App\Livewire\Integrations\EcommerceIntegrations::class)->name('integrations.ecommerce')->middleware(['can:manage-settings', 'plan_feature:commerce']);
+    
+    // Ads Manager (New)
+    Route::get('/ads/manager', \App\Livewire\Ads\MetaAdsManager::class)->name('ads.manager')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
+    Route::get('/ads/create/{adAccountId?}', \App\Livewire\Ads\CreateAdCampaign::class)->name('ads.create')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
     // Google Drive Integration
     Route::prefix('integrations/google-drive')->name('integrations.google-drive.')->group(function () {

@@ -685,6 +685,7 @@
                                         <select wire:model.live="triggerType" wire:change="updateNodeData"
                                             class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
                                             <option value="keyword">Keyword/Regex Match</option>
+                                            <option value="referral">Ad/Referral Click</option>
                                             <option value="user_starts_conversation">User Starts Conversation</option>
                                             <option value="template_response">Template Response (Quick Reply)</option>
                                             <option value="template_selected">Template Selected</option>
@@ -737,6 +738,27 @@
                                             </div>
                                         </div>
                                         <p class="text-[9px] text-slate-400">If enabled, keywords are treated as Regular Expressions.</p>
+                                    </div>
+
+                                    <!-- Ad/Referral Config -->
+                                    <div x-show="['referral'].includes($wire.triggerType)" class="space-y-4">
+                                        <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                                            <p class="text-xs text-slate-500 leading-relaxed">
+                                                Triggers when a user clicks a "Click to WhatsApp" ad or referral link. Leave fields empty to match ANY referral.
+                                            </p>
+                                        </div>
+
+                                        <div class="space-y-1">
+                                            <label class="block text-xs font-bold text-slate-500 uppercase">Ad Source ID (Exact)</label>
+                                            <input type="text" wire:model.blur="triggerConfig.source_id" placeholder="e.g. 1234567890"
+                                                class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                                        </div>
+
+                                        <div class="space-y-1">
+                                            <label class="block text-xs font-bold text-slate-500 uppercase">Headline (Contains)</label>
+                                            <input type="text" wire:model.blur="triggerConfig.headline" placeholder="e.g. 20% Off"
+                                                class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
+                                        </div>
                                     </div>
 
                                     <!-- User Starts Conversation -->

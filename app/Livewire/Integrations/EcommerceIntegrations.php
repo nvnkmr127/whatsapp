@@ -22,6 +22,7 @@ class EcommerceIntegrations extends Component
     public $consumer_secret; // WooCommerce
     public $meta_catalog_id; // Meta Commerce
     public $meta_access_token; // Meta Commerce
+    public $meta_marketing_token; // Meta Marketing API
 
     // Diagnostics & Settings
     public $showDiagnosticsModal = false;
@@ -45,7 +46,7 @@ class EcommerceIntegrations extends Component
     public function render()
     {
         $integrations = Integration::where('team_id', auth()->user()->currentTeam->id)
-            ->whereIn('type', ['shopify', 'woocommerce', 'custom', 'meta_commerce'])
+            ->whereIn('type', ['shopify', 'woocommerce', 'custom', 'meta_commerce', 'meta_marketing'])
             ->get();
 
         return view('livewire.integrations.ecommerce-integrations', [
@@ -57,7 +58,7 @@ class EcommerceIntegrations extends Component
     {
         $this->selectedType = $type;
         $this->showConnectModal = true;
-        $this->reset(['name', 'domain', 'access_token', 'url', 'consumer_key', 'consumer_secret', 'meta_catalog_id', 'meta_access_token']);
+        $this->reset(['name', 'domain', 'access_token', 'url', 'consumer_key', 'consumer_secret', 'meta_catalog_id', 'meta_access_token', 'meta_marketing_token']);
         $this->name = ucfirst(str_replace('_', ' ', $type)) . ' Integration';
     }
 
@@ -101,6 +102,13 @@ class EcommerceIntegrations extends Component
             $credentials = [
                 'catalog_id' => $this->meta_catalog_id,
                 'access_token' => $this->meta_access_token,
+            ];
+        } elseif ($this->selectedType === 'meta_marketing') {
+            $this->validate([
+                'meta_marketing_token' => 'required|string',
+            ]);
+            $credentials = [
+                'access_token' => $this->meta_marketing_token,
             ];
         }
 

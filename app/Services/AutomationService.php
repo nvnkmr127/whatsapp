@@ -203,6 +203,50 @@ class AutomationService
         return false;
     }
 
+    public function checkReferralTriggers(Contact $contact, $referralData)
+    {
+        if (!$this->handoff->shouldProcess($contact))
+            return false;
+
+        $automations = Automation::where('team_id', $contact->team_id)
+            ->where('is_active', true)
+            ->where('trigger_type', 'referral')
+            ->get();
+
+        foreach ($automations as $automation) {
+            /** @var Automation $automation */
+            $config = $automation->trigger_config ?? [];
+
+            // 1. Source ID Match (Ad ID)
+            $targetSourceId = $config['source_id'] ?? null;
+            if ($targetSourceId && ($referralData['source_id'] ?? '') !== $targetSourceId) {
+                continue;
+            }
+
+            // 2. Headline Match (Partial)
+            $targetHeadline = $config['headline'] ?? null;
+            if ($targetHeadline && !str_contains(strtolower($referralData['headline'] ?? ''), strtolower($targetHeadline))) {
+                continue;
+            }
+
+            // 3. Source URL Match (Partial)
+            $targetUrl = $config['source_url'] ?? null;
+            if ($targetUrl && !str_contains(strtolower($referralData['source_url'] ?? ''), strtolower($targetUrl))) {
+                continue;
+            }
+
+            $variables = [];
+            foreach ($referralData as $key => $value) {
+                if (is_scalar($value)) {
+                    $variables["referral_$key"] = $value;
+                }
+            }
+            $this->start($automation, $contact, $variables);
+            return true;
+        }
+        return false;
+    }
+
     protected function isAgentAssigned(Contact $contact): bool
     {
         return (bool) $contact->assigned_to;

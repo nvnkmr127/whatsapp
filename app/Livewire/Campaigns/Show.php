@@ -22,7 +22,7 @@ class Show extends Component
 
     public function retarget()
     {
-        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($this->campaignId);
+        $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->current_team_id)->findOrFail($this->campaignId);
         // Use CampaignDetail to target ALL contacts, including those who never got a message (failed/pending)
         $query = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId);
 
@@ -53,10 +53,12 @@ class Show extends Component
             return;
         }
 
-        return redirect()->route('campaigns.create', [
+        session([
             'retarget_ids' => $contactIds,
             'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
         ]);
+
+        return redirect()->route('campaigns.create');
     }
 
     public function mount($campaignId)
@@ -66,7 +68,7 @@ class Show extends Component
         // Verify team ownership early
         $campaign = Campaign::findOrFail($campaignId);
 
-        $user = auth()->user();
+        $user = \Illuminate\Support\Facades\Auth::user();
         if ($user->is_super_admin) {
             return; // Super admin bypass
         }
