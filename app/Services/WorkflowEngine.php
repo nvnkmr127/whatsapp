@@ -85,8 +85,17 @@ class WorkflowEngine
         ]);
 
         try {
-            foreach ($workflow->actions as $action) {
-                $this->executeAction($action, $subject, $context);
+            // Check for JSON Definition (Advanced Workflow)
+            if (!empty($workflow->definition)) {
+                $this->executeFlow($workflow->definition, $subject, $context);
+            } else {
+                // Legacy Logic: Linear Actions
+                foreach ($workflow->actions as $action) {
+                    if ($action->delay_minutes > 0) {
+                        // Skip delay for MVP
+                    }
+                    $this->executeAction($action->action_type, $action->action_config ?? [], $subject, $context);
+                }
             }
 
             $log->update([
@@ -109,19 +118,80 @@ class WorkflowEngine
     }
 
     /**
+     * Recursive execution of the flow definition
+     */
+    protected function executeFlow(array $nodes, Model $subject, array $context)
+    {
+        foreach ($nodes as $node) {
+            try {
+                if (($node['type'] ?? 'action') === 'condition') {
+                    if ($this->evaluateCondition($node, $subject)) {
+                        if (!empty($node['true_nodes'])) {
+                            $this->executeFlow($node['true_nodes'], $subject, $context);
+                        }
+                    } else {
+                        if (!empty($node['false_nodes'])) {
+                            $this->executeFlow($node['false_nodes'], $subject, $context);
+                        }
+                    }
+                } else {
+                    $actionType = $node['action_type'] ?? null;
+                    $config = $node['config'] ?? [];
+                    
+                    if ($actionType) {
+                        $this->executeAction($actionType, $config, $subject, $context);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Workflow Node Execution Error: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Evaluate a condition node against the subject
+     */
+    protected function evaluateCondition(array $node, Model $subject): bool
+    {
+        $field = $node['config']['field'] ?? '';
+        $operator = $node['config']['operator'] ?? '=';
+        $value = $node['config']['value'] ?? '';
+
+        $actualValue = $this->resolveFieldValue($subject, $field);
+
+        return match ($operator) {
+            '=' => $actualValue == $value,
+            '!=' => $actualValue != $value,
+            '>' => is_numeric($actualValue) && $actualValue > $value,
+            '<' => is_numeric($actualValue) && $actualValue < $value,
+            'contains' => is_array($actualValue) 
+                ? in_array($value, $actualValue) 
+                : str_contains((string)$actualValue, (string)$value),
+            'not_contains' => is_array($actualValue) 
+                ? !in_array($value, $actualValue) 
+                : !str_contains((string)$actualValue, (string)$value),
+            default => false,
+        };
+    }
+
+    protected function resolveFieldValue(Model $subject, string $field)
+    {
+        if ($field === 'contact.tags') {
+            return $subject->tags->pluck('name')->toArray();
+        }
+        
+        $parts = explode('.', $field);
+        $attribute = end($parts);
+
+        return $subject->getAttribute($attribute);
+    }
+
+    /**
      * Execute a single action.
      */
-    protected function executeAction(WorkflowAction $action, Model $subject, array $context)
+    protected function executeAction(string $actionType, array $config, Model $subject, array $context)
     {
-        // Handle delays (TODO: Implement job dispatch for delayed actions)
-        if ($action->delay_minutes > 0) {
-            // For now, we skip delay implementation and execute immediately
-            // In production, this would dispatch a delayed job
-        }
-
-        $config = $action->action_config ?? [];
-
-        switch ($action->action_type) {
+        switch ($actionType) {
             case 'add_tag':
                 if ($subject instanceof Contact && isset($config['tag_id'])) {
                     $subject->tags()->syncWithoutDetaching([$config['tag_id']]);

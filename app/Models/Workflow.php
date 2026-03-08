@@ -15,6 +15,7 @@ class Workflow extends Model
         'team_id',
         'name',
         'description',
+        'definition',
         'is_active',
         'trigger_type',
         'trigger_config',
@@ -26,6 +27,7 @@ class Workflow extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'trigger_config' => 'array',
+        'definition' => 'array',
         'last_executed_at' => 'datetime',
         'execution_count' => 'integer',
     ];

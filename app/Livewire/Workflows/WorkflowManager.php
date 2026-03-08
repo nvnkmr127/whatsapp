@@ -34,7 +34,7 @@ class WorkflowManager extends Component
 
     public function loadWorkflows()
     {
-        $this->workflows = Workflow::where('team_id', auth()->user()->currentTeam->id)
+        $this->workflows = Workflow::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
             ->latest()
             ->get();
     }
@@ -51,7 +51,7 @@ class WorkflowManager extends Component
     {
         $workflow = Workflow::with('actions')->find($id);
         
-        if (!$workflow || $workflow->team_id !== auth()->user()->currentTeam->id) {
+        if (!$workflow || $workflow->team_id !== \Illuminate\Support\Facades\Auth::user()->currentTeam->id) {
             return;
         }
 
@@ -62,13 +62,20 @@ class WorkflowManager extends Component
         $this->isActive = $workflow->is_active;
         $this->triggerType = $workflow->trigger_type;
         $this->triggerConfig = $workflow->trigger_config ?? [];
-        $this->actions = $workflow->actions->map(function ($action) {
-            return [
-                'type' => $action->action_type,
-                'config' => $action->action_config ?? [],
-                'delay' => $action->delay_minutes ?? 0,
-            ];
-        })->toArray();
+        
+        // Load Definition (New) or Convert Actions (Legacy)
+        if (!empty($workflow->definition)) {
+            $this->actions = $workflow->definition;
+        } else {
+            $this->actions = $workflow->actions->map(function ($action) {
+                return [
+                    'type' => 'action',
+                    'action_type' => $action->action_type,
+                    'config' => $action->action_config ?? [],
+                    'delay' => $action->delay_minutes ?? 0,
+                ];
+            })->toArray();
+        }
 
         $this->showCreateModal = true;
     }
@@ -80,40 +87,28 @@ class WorkflowManager extends Component
             'triggerType' => 'required|string',
         ]);
 
-        $teamId = auth()->user()->currentTeam->id;
+        $teamId = \Illuminate\Support\Facades\Auth::user()->currentTeam->id;
+
+        $data = [
+            'name' => $this->name,
+            'description' => $this->description,
+            'is_active' => $this->isActive,
+            'trigger_type' => $this->triggerType,
+            'trigger_config' => $this->triggerConfig,
+            'definition' => $this->actions, // Save JSON Flow
+        ];
 
         if ($this->activeWorkflowId) {
             $workflow = Workflow::find($this->activeWorkflowId);
-            $workflow->update([
-                'name' => $this->name,
-                'description' => $this->description,
-                'is_active' => $this->isActive,
-                'trigger_type' => $this->triggerType,
-                'trigger_config' => $this->triggerConfig,
-            ]);
+            $workflow->update($data);
         } else {
-            $workflow = Workflow::create([
-                'team_id' => $teamId,
-                'name' => $this->name,
-                'description' => $this->description,
-                'is_active' => $this->isActive,
-                'trigger_type' => $this->triggerType,
-                'trigger_config' => $this->triggerConfig,
-                'created_by' => auth()->id(),
-            ]);
+            $data['team_id'] = $teamId;
+            $data['created_by'] = \Illuminate\Support\Facades\Auth::id();
+            $workflow = Workflow::create($data);
         }
 
-        // Sync Actions
-        $workflow->actions()->delete();
-
-        foreach ($this->actions as $index => $actionData) {
-            $workflow->actions()->create([
-                'action_type' => $actionData['type'],
-                'action_config' => $actionData['config'] ?? [],
-                'order' => $index,
-                'delay_minutes' => $actionData['delay'] ?? 0,
-            ]);
-        }
+        // We no longer sync to workflow_actions table as it's deprecated for advanced flows
+        // Or we could sync a simplified linear version for reporting if needed, but let's skip for now.
 
         $this->showCreateModal = false;
         $this->loadWorkflows();
@@ -123,10 +118,38 @@ class WorkflowManager extends Component
     public function addAction()
     {
         $this->actions[] = [
-            'type' => 'add_tag',
+            'type' => 'action',
+            'action_type' => 'add_tag',
             'config' => [],
             'delay' => 0,
         ];
+    }
+
+    public function addCondition()
+    {
+        $this->actions[] = [
+            'type' => 'condition',
+            'config' => ['field' => '', 'operator' => '=', 'value' => ''],
+            'true_nodes' => [],
+            'false_nodes' => [],
+        ];
+    }
+
+    public function addNestedAction($parentIndex, $branch)
+    {
+        // branch is 'true_nodes' or 'false_nodes'
+        $this->actions[$parentIndex][$branch][] = [
+            'type' => 'action',
+            'action_type' => 'add_tag',
+            'config' => [],
+            'delay' => 0,
+        ];
+    }
+
+    public function removeNestedAction($parentIndex, $branch, $childIndex)
+    {
+        unset($this->actions[$parentIndex][$branch][$childIndex]);
+        $this->actions[$parentIndex][$branch] = array_values($this->actions[$parentIndex][$branch]);
     }
 
     public function removeAction($index)
@@ -137,7 +160,7 @@ class WorkflowManager extends Component
 
     public function render()
     {
-        $teamId = auth()->user()->currentTeam->id;
+        $teamId = \Illuminate\Support\Facades\Auth::user()->currentTeam->id;
 
         return view('livewire.workflows.workflow-manager', [
             'tags' => ContactTag::where('team_id', $teamId)->get(),
@@ -145,7 +168,7 @@ class WorkflowManager extends Component
                 $q->where('team_id', $teamId);
             })->get(),
             'pipelines' => Pipeline::where('team_id', $teamId)->get(),
-            'users' => auth()->user()->currentTeam->allUsers(),
+            'users' => \Illuminate\Support\Facades\Auth::user()->currentTeam->allUsers(),
         ]);
     }
 }
