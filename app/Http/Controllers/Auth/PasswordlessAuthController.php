@@ -211,6 +211,18 @@ class PasswordlessAuthController extends Controller
                     // ── Record fingerprints ──
                     $this->identity->record(team: $team, user: $user, ip: $ip);
 
+                    // ── Save UTM Parameters ──
+                    $utms = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+                    $utmData = [];
+                    foreach ($utms as $utm) {
+                        if (request()->hasCookie($utm)) {
+                            $utmData[$utm] = request()->cookie($utm);
+                        }
+                    }
+                    if (!empty($utmData)) {
+                        $user->forceFill($utmData)->save();
+                    }
+
                     // ── Check Referral ──
                     if (request()->hasCookie('referral_code')) {
                         $code = request()->cookie('referral_code');

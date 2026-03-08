@@ -55,7 +55,7 @@
                         @if($filter === 'leads')
                             <th class="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">Identifier</th>
                             <th class="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">Requested At</th>
-                            <th class="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">Source IP</th>
+                            <th class="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">Source</th>
                             <th class="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em]">Type</th>
                             <th class="px-8 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em]">Action</th>
                         @else
@@ -89,7 +89,13 @@
                                     </div>
                                 </td>
                                 <td class="px-8 py-6">
-                                    <span class="font-mono text-xs text-slate-500">{{ $team->ip_address }}</span>
+                                    @if(isset($team->metadata['utm_source']))
+                                        <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase tracking-widest border border-slate-200">
+                                            {{ $team->metadata['utm_source'] }}
+                                        </span>
+                                    @else
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Direct</span>
+                                    @endif
                                 </td>
                                 <td class="px-8 py-6">
                                     @if(filter_var($team->identifier, FILTER_VALIDATE_EMAIL))

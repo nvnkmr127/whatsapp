@@ -57,9 +57,21 @@ class OTPService
         if ($sent) {
             // Log for CRM tracking of new leads
             if (!$teamId) {
-                AuditService::log('auth.otp.requested', null, $identifier, $type, [
+                $metadata = [
                     'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists()
-                ]);
+                ];
+
+                // Capture UTMs from request if available
+                $utms = ['utm_source', 'utm_medium', 'utm_campaign'];
+                foreach ($utms as $utm) {
+                    if (request()->has($utm)) {
+                        $metadata[$utm] = request()->query($utm);
+                    } elseif (request()->hasCookie($utm)) {
+                        $metadata[$utm] = request()->cookie($utm);
+                    }
+                }
+
+                AuditService::log('auth.otp.requested', null, $identifier, $type, $metadata);
             }
 
             $webhookService = app(\App\Services\WebhookService::class);

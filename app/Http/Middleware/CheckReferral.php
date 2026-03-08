@@ -15,16 +15,24 @@ class CheckReferral
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $response = $next($request);
+
+        // 1. Capture Referral Code
         if ($request->has('ref')) {
             $code = $request->query('ref');
-            
-            // Check if affiliate exists
             if (\App\Models\Affiliate::where('code', $code)->exists()) {
-                // Store in cookie for 30 days
-                return $next($request)->withCookie(cookie('referral_code', $code, 43200));
+                $response->withCookie(cookie('referral_code', $code, 43200)); // 30 days
             }
         }
 
-        return $next($request);
+        // 2. Capture UTM Parameters
+        $utms = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+        foreach ($utms as $utm) {
+            if ($request->has($utm)) {
+                $response->withCookie(cookie($utm, $request->query($utm), 43200)); // 30 days
+            }
+        }
+
+        return $response;
     }
 }
