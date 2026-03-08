@@ -62,11 +62,40 @@ class OnboardingService
     }
 
     /**
+     * Get new leads who requested OTP but haven't signed up (OTP Leads)
+     */
+    public function getOtpLeads()
+    {
+        // Get unique identifiers from audit logs for OTP requests
+        // We fetch recent 500 to avoid performance issues
+        return \App\Models\AuditLog::where('event_type', 'auth.otp.requested')
+            ->whereNull('user_id')
+            ->latest()
+            ->limit(500)
+            ->get()
+            ->unique('identifier')
+            ->filter(function ($log) {
+                // Filter out those who successfully signed up
+                $identifier = $log->identifier;
+                $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL);
+                
+                if ($isEmail) {
+                    return !\App\Models\User::where('email', $identifier)->exists();
+                }
+                
+                // For phone, simple check (might need formatting normalization in future)
+                return !\App\Models\User::where('phone', $identifier)->exists();
+            })
+            ->values(); // Reset keys
+    }
+
+    /**
      * Get counts for all stages
      */
     public function getFunnelCounts()
     {
         return [
+            'leads' => $this->getOtpLeads()->count(),
             'not_started' => $this->getSignupsNotStarted()->count(),
             'abandoned' => $this->getAbandonedSetup()->count(),
             'completed_no_activity' => $this->getSetupCompletedNoActivity()->count(),

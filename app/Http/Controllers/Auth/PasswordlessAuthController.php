@@ -211,6 +211,22 @@ class PasswordlessAuthController extends Controller
                     // ── Record fingerprints ──
                     $this->identity->record(team: $team, user: $user, ip: $ip);
 
+                    // ── Check Referral ──
+                    if (request()->hasCookie('referral_code')) {
+                        $code = request()->cookie('referral_code');
+                        $affiliate = \App\Models\Affiliate::where('code', $code)->first();
+                        
+                        if ($affiliate) {
+                            \App\Models\Referral::create([
+                                'affiliate_id' => $affiliate->id,
+                                'user_id' => $user->id,
+                                'visitor_ip' => $ip,
+                                'status' => 'converted',
+                                'converted_at' => now(),
+                            ]);
+                        }
+                    }
+
                     AuditService::log('Auth.Signup', $user->id, $identifier, $provider, ['team_id' => $team->id]);
                 }
 

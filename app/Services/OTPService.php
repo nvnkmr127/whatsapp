@@ -55,6 +55,13 @@ class OTPService
         }
 
         if ($sent) {
+            // Log for CRM tracking of new leads
+            if (!$teamId) {
+                AuditService::log('auth.otp.requested', null, $identifier, $type, [
+                    'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists()
+                ]);
+            }
+
             $webhookService = app(\App\Services\WebhookService::class);
             $eventData = [
                 'identifier' => $identifier,

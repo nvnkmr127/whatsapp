@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\CheckSystemMaintenanceMode::class,
             \App\Http\Middleware\SetUserTimezone::class,
+            \App\Http\Middleware\CheckReferral::class,
         ]);
 
         $middleware->alias([

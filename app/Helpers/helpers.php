@@ -67,3 +67,10 @@ if (!function_exists('audit')) {
         return \App\Services\AuditService::log($event, $userId, $identifier, $provider, $metadata);
     }
 }
+
+if (!function_exists('money')) {
+    function money($amount, $currency = 'USD')
+    {
+        return '$' . number_format((float) $amount, 2);
+    }
+}
