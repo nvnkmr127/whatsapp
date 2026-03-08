@@ -58,4 +58,20 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'ai' => [
+        'openai' => [
+            'api_key' => env('OPENAI_API_KEY'),
+            'default_model' => env('OPENAI_DEFAULT_MODEL', 'gpt-4o'),
+        ],
+        'anthropic' => [
+            'api_key' => env('ANTHROPIC_API_KEY'),
+            'default_model' => env('ANTHROPIC_DEFAULT_MODEL', 'claude-3-5-sonnet-20241022'),
+        ],
+        'gemini' => [
+            'api_key' => env('GEMINI_API_KEY'),
+            'default_model' => env('GEMINI_DEFAULT_MODEL', 'gemini-1.5-pro'),
+        ],
+        'default_provider' => env('AI_DEFAULT_PROVIDER', 'openai'),
+    ],
+
 ];

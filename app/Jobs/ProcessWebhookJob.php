@@ -177,13 +177,14 @@ class ProcessWebhookJob implements ShouldQueue
                     // Construct standardized event
                     $event = \App\Factories\EventFactory::makeInboundMessage($body);
 
-                    Log::debug("WhatsApp Webhook: Immediate Dispatch for Inbound Message", [
+                    Log::debug("WhatsApp Webhook: Dispatching PersistMessageJob for Inbound Message", [
                         'team_id' => $teamId,
                         'message_id' => $wamid
                     ]);
 
-                    // ⚡ SPEED OPTIMIZATION: Dispatch immediately instead of waiting for the Polling Consumer
-                    \App\Jobs\PersistMessageJob::dispatchSync($event['payload']);
+                    // ⚡ Dispatch to messages queue for parallel processing
+                    \App\Jobs\PersistMessageJob::dispatch($event['payload'])
+                        ->onQueue('messages');
 
                     // Still publish to EventBus for audit/fan-out
                     $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $teamId);
@@ -208,13 +209,14 @@ class ProcessWebhookJob implements ShouldQueue
                         'details' => $statusData
                     ];
 
-                    Log::debug("WhatsApp Webhook: Immediate Dispatch for Status Update", [
+                    Log::debug("WhatsApp Webhook: Dispatching UpdateMessageStatusJob for Status Update", [
                         'message_id' => $wamid,
                         'status' => $newStatus
                     ]);
 
-                    // ⚡ SPEED OPTIMIZATION: Dispatch immediately
-                    \App\Jobs\UpdateMessageStatusJob::dispatchSync($payload);
+                    // ⚡ Dispatch to messages queue for parallel processing
+                    \App\Jobs\UpdateMessageStatusJob::dispatch($payload)
+                        ->onQueue('messages');
 
                     // Still publish to EventBus
                     $eventBus->publish('whatsapp_events', 'message.status', $payload, $teamId);

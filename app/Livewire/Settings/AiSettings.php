@@ -3,14 +3,19 @@
 namespace App\Livewire\Settings;
 
 use App\Models\Setting;
+use App\Services\AI\AIProviderManager;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class AiSettings extends Component
 {
+    public $ai_provider = 'openai';
     public $openai_api_key;
-    public $openai_model = 'gpt-4o';
+    public $anthropic_api_key;
+    public $gemini_api_key;
+    public $ai_model;
     public $ai_persona;
+    public $available_models = [];
 
     // New Advanced Settings
     public $temperature = 0.7;
@@ -47,8 +52,13 @@ class AiSettings extends Component
 
         $teamId = Auth::user()->currentTeam->id;
 
+        $this->ai_provider = get_setting("ai_provider_$teamId", 'openai');
         $this->openai_api_key = get_setting("ai_openai_api_key_$teamId");
-        $this->openai_model = get_setting("ai_openai_model_$teamId", 'gpt-4o');
+        $this->anthropic_api_key = get_setting("ai_anthropic_api_key_$teamId");
+        $this->gemini_api_key = get_setting("ai_gemini_api_key_$teamId");
+        
+        $this->updateAvailableModels();
+        $this->ai_model = get_setting("ai_model_$teamId");
         $this->ai_persona = get_setting("ai_persona_$teamId", $this->presets['support']);
 
         $this->temperature = (float) get_setting("ai_temperature_$teamId", 0.7);
@@ -75,6 +85,17 @@ class AiSettings extends Component
             ->get()->toArray();
     }
 
+    public function updatedAiProvider()
+    {
+        $this->updateAvailableModels();
+        $this->ai_model = array_key_first($this->available_models);
+    }
+
+    protected function updateAvailableModels()
+    {
+        $this->available_models = AIProviderManager::getModelsForProvider($this->ai_provider);
+    }
+
     public function updatedInstructionType($value)
     {
         if ($value !== 'custom' && isset($this->presets[$value])) {
@@ -89,8 +110,8 @@ class AiSettings extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
         $this->validate([
-            'openai_api_key' => 'required|string',
-            'openai_model' => 'required|string',
+            'ai_provider' => 'required|string|in:openai,anthropic,gemini',
+            'ai_model' => 'required|string',
             'ai_persona' => 'required|string',
             'temperature' => 'required|numeric|min:0|max:1',
             'retry_attempts' => 'integer|min:0|max:5',
@@ -98,8 +119,11 @@ class AiSettings extends Component
 
         $teamId = Auth::user()->currentTeam->id;
 
+        set_setting("ai_provider_$teamId", $this->ai_provider, 'ai_settings');
         set_setting("ai_openai_api_key_$teamId", $this->openai_api_key, 'ai_settings');
-        set_setting("ai_openai_model_$teamId", $this->openai_model, 'ai_settings');
+        set_setting("ai_anthropic_api_key_$teamId", $this->anthropic_api_key, 'ai_settings');
+        set_setting("ai_gemini_api_key_$teamId", $this->gemini_api_key, 'ai_settings');
+        set_setting("ai_model_$teamId", $this->ai_model, 'ai_settings');
         set_setting("ai_persona_$teamId", $this->ai_persona, 'ai_settings');
 
         set_setting("ai_temperature_$teamId", $this->temperature, 'ai_settings');
@@ -129,20 +153,20 @@ class AiSettings extends Component
     public function testConnection()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
-        $this->validate(['openai_api_key' => 'required|string']);
+
+        $apiKeyField = "{$this->ai_provider}_api_key";
+        if (empty($this->$apiKeyField)) {
+            session()->flash('test_error', 'Please enter an API key first.');
+            return;
+        }
 
         try {
-            $response = \Illuminate\Support\Facades\Http::withToken($this->openai_api_key)
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => 'gpt-3.5-turbo',
-                    'messages' => [['role' => 'user', 'content' => 'Hello']],
-                    'max_tokens' => 5
-                ]);
+            $success = AIProviderManager::testConnection($this->ai_provider, $this->$apiKeyField);
 
-            if ($response->successful()) {
+            if ($success) {
                 session()->flash('test_success', 'Connection Successful! API Key is active.');
             } else {
-                session()->flash('test_error', 'Connection Failed: ' . ($response->json('error.message') ?? 'Unknown error'));
+                session()->flash('test_error', 'Connection Failed: Invalid API key or service unavailable.');
             }
         } catch (\Exception $e) {
             session()->flash('test_error', 'Connection Failed: ' . $e->getMessage());
