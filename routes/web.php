@@ -137,6 +137,8 @@ Route::middleware([
         return view('contacts.index');
     })->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 
+    Route::get('/deals', \App\Livewire\Deals\DealManager::class)->name('deals.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
+
     // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
     Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
