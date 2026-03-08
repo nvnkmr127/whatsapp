@@ -28,7 +28,13 @@ class AppServiceProvider extends ServiceProvider
         // ── Model Observers ─────────────────────────────────────────────
         \App\Models\Team::observe(\App\Observers\TeamObserver::class);
         \App\Models\User::observe(\App\Observers\UserObserver::class);
+        
+        // Contact Observers
         \App\Models\Contact::observe(\App\Observers\ContactObserver::class);
+        \App\Models\Contact::observe(\App\Observers\WorkflowObserver::class);
+
+        // Deal Observers
+        \App\Models\Deal::observe(\App\Observers\DealObserver::class);
 
         \Illuminate\Support\Facades\View::composer('*', \App\Http\View\Composers\GlobalSettingsComposer::class);
 

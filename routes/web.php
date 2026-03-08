@@ -108,7 +108,10 @@ Route::middleware([
         })->name('admin.offer-settings.schema');
 
         // CRM (System-wide User Management)
-        Route::get('/admin/crm', \App\Livewire\Admin\Crm::class)->name('admin.crm');
+        Route::get('/admin/crm', \App\Livewire\Crm\CrmHub::class)->name('admin.crm');
+        
+        // Automation Workflows (Super Admin)
+        Route::get('/admin/workflows', \App\Livewire\Workflows\WorkflowManager::class)->name('workflows.index');
 
         // Email Templates (System)
         Route::get('/admin/email-templates', \App\Livewire\Admin\EmailTemplates\Index::class)->name('admin.email-templates.index');
@@ -132,12 +135,10 @@ Route::middleware([
     Route::post('/api/v1/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
     Route::post('/api/v1/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
 
-    // CRM (Managers, Admins)
+    // Unified CRM (Managers, Admins)
     Route::get('/contacts', function () {
         return view('contacts.index');
     })->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
-
-    Route::get('/deals', \App\Livewire\Deals\DealManager::class)->name('deals.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 
     // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
     Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
