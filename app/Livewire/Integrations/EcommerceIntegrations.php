@@ -51,7 +51,7 @@ class EcommerceIntegrations extends Component
 
         return view('livewire.integrations.ecommerce-integrations', [
             'integrations' => $integrations
-        ])->layout('layouts.app');
+        ]); // Removed layout call as it's likely used inside a layout already or as a full page component where layout is defined in routes or class
     }
 
     public function openConnectModal($type)
