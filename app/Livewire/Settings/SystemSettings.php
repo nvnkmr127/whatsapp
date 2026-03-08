@@ -40,6 +40,11 @@ class SystemSettings extends Component
     public $supportEmail;
     public $maintenanceMode = false;
 
+    // System WhatsApp Configuration
+    public $systemWabaId;
+    public $systemPhoneNumberId;
+    public $systemAccessToken;
+
     public $timezones = [
         'UTC' => 'UTC',
         'America/New_York' => 'Eastern Time (US & Canada)',
@@ -144,6 +149,11 @@ class SystemSettings extends Component
         $this->selectedCountry = $settings['selected_country'] ?? null;
         $this->language = $settings['primary_language'] ?? 'en';
 
+        // Load System WhatsApp Settings
+        $this->systemWabaId = $settings['system_waba_id'] ?? '';
+        $this->systemPhoneNumberId = $settings['system_phone_number_id'] ?? '';
+        $this->systemAccessToken = $settings['system_access_token'] ?? '';
+
         if ($this->selectedCountry && isset($this->countries[$this->selectedCountry])) {
             $this->metaPolicyInfo = $this->countries[$this->selectedCountry]['policy'];
         }
@@ -153,7 +163,22 @@ class SystemSettings extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
-        $this->validate();
+        $this->validate([
+            'teamName' => ['required', 'string', 'max:255'],
+            'timezone' => ['required', 'string', 'in:' . implode(',', array_keys($this->timezones))],
+            'logo' => ['nullable', 'image', 'max:2048'],
+            'primaryColor' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
+            'currencySymbol' => ['required', 'string', 'max:10'],
+            'dateFormat' => ['required', 'string', 'in:Y-m-d,d/m/Y,m/d/Y,d-m-Y'],
+            'paginationLimit' => ['required', 'integer', 'min:5', 'max:100'],
+            'supportEmail' => ['nullable', 'email'],
+            'maintenanceMode' => ['boolean'],
+            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US'],
+            'language' => ['required', 'string', 'max:5'],
+            'systemWabaId' => ['nullable', 'string'],
+            'systemPhoneNumberId' => ['nullable', 'string'],
+            'systemAccessToken' => ['nullable', 'string'],
+        ]);
 
         $team = Auth::user()->currentTeam;
 
@@ -185,6 +210,9 @@ class SystemSettings extends Component
             'maintenance_mode' => $this->maintenanceMode,
             'selected_country' => $this->selectedCountry,
             'primary_language' => $this->language,
+            'system_waba_id' => $this->systemWabaId,
+            'system_phone_number_id' => $this->systemPhoneNumberId,
+            'system_access_token' => $this->systemAccessToken,
         ];
 
         foreach ($settings as $key => $value) {

@@ -65,6 +65,8 @@
                             <option value="contact_created">Contact Created</option>
                             <option value="deal_stage_changed">Deal Stage Changed</option>
                             <option value="tag_added">Tag Added</option>
+                            <option value="onboarding_incomplete_24h">Incomplete Setup (24h)</option>
+                            <option value="onboarding_no_activity_3d">No Activity (3 Days)</option>
                         </select>
                     </div>
 

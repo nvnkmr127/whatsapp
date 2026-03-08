@@ -203,6 +203,36 @@
                         </div>
                     </div>
 
+                    <!-- System Notification Channel -->
+                    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+                        <div class="p-8 md:p-10 space-y-8">
+                            <div>
+                                <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2 mb-6">System Notification Channel (WhatsApp)</h3>
+                                <p class="text-xs text-slate-500 mb-6">Configure the WhatsApp account used for system notifications and automated workflow messages.</p>
+                                
+                                <div class="grid grid-cols-1 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">System WABA ID</label>
+                                        <input type="text" wire:model="systemWabaId" placeholder="e.g. 1000..."
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-mono font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Phone Number ID</label>
+                                        <input type="text" wire:model="systemPhoneNumberId" placeholder="e.g. 1000..."
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-mono font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Access Token</label>
+                                        <input type="password" wire:model="systemAccessToken" placeholder="EAAB..."
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-mono font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Operational & Workspace Card -->
                     <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
                         <div class="p-8 md:p-10 space-y-8">
