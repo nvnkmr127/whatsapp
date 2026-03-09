@@ -321,6 +321,12 @@
                                 <option value="crm_event">Third-Party CRM Event</option>
                                 <option value="ecommerce_event">E-commerce Event</option>
                             </optgroup>
+                            <optgroup label="Onboarding Events">
+                                <option value="user_signed_up">Account Created (Signup)</option>
+                                <option value="whatsapp_connected">WhatsApp API Linked</option>
+                                <option value="profile_completed">Business Profile Finished</option>
+                                <option value="onboarding_completed">Onboarding Fully Completed</option>
+                            </optgroup>
                         </select>
                         @error('triggerType') <span
                         class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror

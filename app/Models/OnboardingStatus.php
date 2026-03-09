@@ -16,6 +16,9 @@ class OnboardingStatus extends Model
         'ai_training_completed',
         'onboarding_completed',
         'last_activity_at',
+        'reminders_sent_count',
+        'was_recovered',
+        'recovered_at',
     ];
 
     protected $casts = [

@@ -56,6 +56,24 @@
                     documents, and configure auto-replies.</p>
             </a>
 
+            @if(Auth::user()->is_super_admin)
+                <!-- Onboarding Automation -->
+                <a href="{{ route('settings.onboarding-automation') }}"
+                    class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl text-indigo-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Lifecycle</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed">Map WhatsApp templates to onboarding
+                        stages and inactivity reminders.</p>
+                </a>
+            @endif
+
             <!-- Chat Routing -->
             <a href="{{ route('settings.chat-routing') }}"
                 class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
