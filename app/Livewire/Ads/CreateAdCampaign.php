@@ -34,14 +34,34 @@ class CreateAdCampaign extends Component
     public $budgetType = 'DAILY'; // DAILY, LIFETIME
     public $dailyBudget = 10;
 
-    // Form Data - Targeting (Simplified placeholders for "Advanced" feel)
-    public $location = 'United States';
+    // Form Data - Targeting
+    public $selectedCountries = ['US'];
+    public $countries = [
+        ['code' => 'US', 'name' => 'United States'],
+        ['code' => 'GB', 'name' => 'United Kingdom'],
+        ['code' => 'CA', 'name' => 'Canada'],
+        ['code' => 'AU', 'name' => 'Australia'],
+        ['code' => 'IN', 'name' => 'India'],
+        ['code' => 'DE', 'name' => 'Germany'],
+        ['code' => 'FR', 'name' => 'France'],
+        ['code' => 'BR', 'name' => 'Brazil'],
+        ['code' => 'MX', 'name' => 'Mexico'],
+        ['code' => 'ID', 'name' => 'Indonesia'],
+        ['code' => 'ES', 'name' => 'Spain'],
+        ['code' => 'IT', 'name' => 'Italy'],
+        ['code' => 'NG', 'name' => 'Nigeria'],
+        ['code' => 'ZA', 'name' => 'South Africa'],
+        ['code' => 'AE', 'name' => 'United Arab Emirates'],
+    ];
+    public $countrySearch = '';
     public $ageMin = 18;
     public $ageMax = 65;
     public $gender = 'ALL'; // ALL, MALE, FEMALE
 
     // Creative
+    public $mediaType = 'IMAGE'; // IMAGE, VIDEO
     public $adImage;
+    public $adVideo;
     public $primaryText = "Chat with us on WhatsApp for exclusive deals!";
     public $headline = "Talk to an Expert";
     public $callToAction = 'WHATSAPP_MESSAGE';
@@ -52,6 +72,7 @@ class CreateAdCampaign extends Component
 
     // UI Status
     public $isLaunching = false;
+    public $audienceReach = 0;
 
     public function mount($adAccountId = null)
     {
@@ -70,6 +91,44 @@ class CreateAdCampaign extends Component
             ->get();
 
         $this->campaignName = "WhatsApp Campaign " . date('Y-m-d');
+        $this->updateAudienceReach();
+    }
+
+    public function addCountry($code)
+    {
+        if (!in_array($code, $this->selectedCountries)) {
+            $this->selectedCountries[] = $code;
+        }
+        $this->updateAudienceReach();
+    }
+
+    public function removeCountry($code)
+    {
+        $this->selectedCountries = array_diff($this->selectedCountries, [$code]);
+        $this->updateAudienceReach();
+    }
+
+    public function updateAudienceReach()
+    {
+        $base = count($this->selectedCountries) * 2500000;
+        if ($base === 0)
+            $base = 1000000;
+        $ageFactor = ($this->ageMax - $this->ageMin) / 47;
+        $genderFactor = ($this->gender === 'ALL') ? 1.0 : 0.5;
+        $this->audienceReach = round($base * $ageFactor * $genderFactor);
+    }
+
+    public function updatedAgeMin()
+    {
+        $this->updateAudienceReach();
+    }
+    public function updatedAgeMax()
+    {
+        $this->updateAudienceReach();
+    }
+    public function updatedGender()
+    {
+        $this->updateAudienceReach();
     }
 
     public function nextStep()
@@ -93,15 +152,22 @@ class CreateAdCampaign extends Component
         } elseif ($step === 2) {
             $this->validate([
                 'dailyBudget' => 'required|numeric|min:1',
-                'location' => 'required|string',
+                'selectedCountries' => 'required|array|min:1',
             ]);
         } elseif ($step === 3) {
-            $this->validate([
+            $rules = [
                 'primaryText' => 'required|string',
                 'headline' => 'required|string',
-                'adImage' => 'required|image|max:10240', // 10MB max
                 'selectedAutomationId' => 'required|exists:automations,id'
-            ]);
+            ];
+
+            if ($this->mediaType === 'IMAGE') {
+                $rules['adImage'] = 'required|image|max:10240';
+            } else {
+                $rules['adVideo'] = 'required|file|mimes:mp4,mov,avi|max:51200'; // 50MB
+            }
+
+            $this->validate($rules);
         }
     }
 
@@ -110,18 +176,11 @@ class CreateAdCampaign extends Component
         $this->isLaunching = true;
 
         try {
-            // In a real implementation:
-            // 1. Upload Image to Meta
-            // 2. Create Campaign
-            // 3. Create Ad Set with targeting
-            // 4. Create Creative with Automation deep link
-            // 5. Create Ad
-
-            sleep(3); // Visual feedback
+            // Simulated launch process
+            sleep(3);
 
             session()->flash('message', 'Campaign launched successfully! It will appear in your manager shortly.');
             return redirect()->route('ads.manager');
-
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to launch: ' . $e->getMessage());
         } finally {
