@@ -40,17 +40,23 @@ class WorkflowEngine
      */
     public function trigger(string $triggerType, Model $subject, array $context = [])
     {
-        $teamId = $subject->team_id ?? $subject->getAttribute('team_id');
+        $teamId = $subject->team_id ?? $subject->getAttribute('team_id') ?? ($subject->currentTeam?->id ?? null);
 
-        if (!$teamId) {
-            Log::warning("Workflow trigger {$triggerType} ignored: No team_id found on subject.");
-            return;
+        // If still no team_id, and it's a User, try to find an owned team
+        if (!$teamId && $subject instanceof \App\Models\User) {
+            $teamId = $subject->ownedTeams()->first()?->id ?? $subject->teams()->first()?->id;
         }
 
         // Find active workflows matching the trigger
-        $workflows = Workflow::where('team_id', $teamId)
-            ->where('is_active', true)
+        $workflows = Workflow::where('is_active', true)
             ->where('trigger_type', $triggerType)
+            ->where(function ($q) use ($teamId) {
+                if ($teamId) {
+                    $q->where('team_id', $teamId)->orWhereNull('team_id');
+                } else {
+                    $q->whereNull('team_id');
+                }
+            })
             ->get();
 
         foreach ($workflows as $workflow) {
@@ -383,6 +389,12 @@ class WorkflowEngine
             return $context[$field];
         }
 
+        // 2.1 Onboarding Status Resolution
+        if (str_starts_with($field, 'onboarding.') && $subject instanceof \App\Models\User) {
+            $onboardingKey = substr($field, 11);
+            return $subject->onboardingStatus?->{$onboardingKey};
+        }
+
         // 3. Subject Relationships
         if ($field === 'contact.tags') {
             return $subject->tags->pluck('name')->toArray();
@@ -434,6 +446,42 @@ class WorkflowEngine
                     } elseif ($subject instanceof Deal) {
                         $subject->update(['owner_id' => $config['user_id']]);
                         Log::info("Workflow assigned Deal {$subject->id} to User {$config['user_id']}");
+                    }
+                }
+                break;
+
+            case 'send_whatsapp_template':
+                $templateName = $config['template_name'] ?? null;
+                if ($templateName) {
+                    $team = $subject->team ?? $subject->currentTeam ?? null;
+                    if (!$team && method_exists($subject, 'ownedTeams')) {
+                        $team = $subject->ownedTeams()->first();
+                    }
+
+                    $to = $config['to'] ?? ($subject instanceof Contact ? $subject->phone_number : ($subject->phone ?? null));
+
+                    if ($team && $to) {
+                        try {
+                            // Variable resolution: replace {name} or {user.name} in variables
+                            $bodyParams = [];
+                            foreach (($config['variables'] ?? []) as $var) {
+                                if ($var === '{name}') {
+                                    $bodyParams[] = $subject->name ?? 'User';
+                                } else {
+                                    $bodyParams[] = $var;
+                                }
+                            }
+
+                            (new \App\Services\WhatsAppService($team))->sendTemplate(
+                                $to,
+                                $templateName,
+                                $config['language'] ?? 'en_US',
+                                $bodyParams
+                            );
+                            Log::info("Workflow sent WhatsApp template {$templateName} to {$to}");
+                        } catch (\Exception $e) {
+                            Log::error("Workflow failed to send WhatsApp template: " . $e->getMessage());
+                        }
                     }
                 }
                 break;

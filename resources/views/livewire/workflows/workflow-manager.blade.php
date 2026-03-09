@@ -56,6 +56,12 @@
             @forelse($workflows as $workflow)
                 <div
                     class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-50 dark:border-slate-800 flex flex-col h-full relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+                    @if(!$workflow->team_id)
+                        <div class="absolute top-6 right-6 z-20">
+                            <span
+                                class="px-3 py-1 bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">Template</span>
+                        </div>
+                    @endif
                     <!-- Decorative Circle -->
                     <div
                         class="absolute -right-12 -top-12 w-40 h-40 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/20 transition-colors">
@@ -143,7 +149,8 @@
                                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conversions
                                 </div>
                                 <div class="text-sm font-black text-slate-900 dark:text-emerald-400">
-                                    {{ number_format($workflow->conversions_count ?? 0) }}</div>
+                                    {{ number_format($workflow->conversions_count ?? 0) }}
+                                </div>
                             </div>
                             <div>
                                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time Saved

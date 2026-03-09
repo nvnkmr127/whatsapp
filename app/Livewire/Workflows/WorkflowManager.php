@@ -54,7 +54,10 @@ class WorkflowManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-workflows');
 
-        $query = Workflow::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam?->id)
+        $query = Workflow::where(function ($q) {
+            $q->where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam?->id)
+                ->orWhereNull('team_id');
+        })
             ->withCount('actions')
             ->latest();
 

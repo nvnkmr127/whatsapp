@@ -23,6 +23,22 @@ use Illuminate\Support\Facades\Log;
 class UserObserver
 {
     // ------------------------------------------------------------------
+    // created – fires AFTER the SQL INSERT
+    // ------------------------------------------------------------------
+
+    public function created(User $user): void
+    {
+        // 1. Initialize Onboarding Status
+        $user->onboardingStatus()->create([
+            'account_created' => true,
+            'last_activity_at' => now(),
+        ]);
+
+        // 2. Trigger "User Signed Up" Workflows
+        app(\App\Services\WorkflowEngine::class)->trigger('user_signed_up', $user);
+    }
+
+    // ------------------------------------------------------------------
     // updating – fires BEFORE the SQL UPDATE
     // ------------------------------------------------------------------
 
