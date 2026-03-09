@@ -86,7 +86,7 @@
                         </div>
                         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Spend</p>
                         <h4 class="text-3xl font-black text-slate-900 mt-1">
-                            ${{ number_format($summaryStats['total_spend'], 2) }}</h4>
+                            {{ $currency }}{{ number_format($summaryStats['total_spend'], 2) }}</h4>
                     </div>
 
                     <div
@@ -135,7 +135,7 @@
                             </div>
                         </div>
                         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Avg. CPC</p>
-                        <h4 class="text-3xl font-black text-slate-900 mt-1">${{ number_format($summaryStats['avg_cpc'], 2) }}
+                        <h4 class="text-3xl font-black text-slate-900 mt-1">{{ $currency }}{{ number_format($summaryStats['avg_cpc'], 2) }}
                         </h4>
                     </div>
                 </div>
@@ -387,12 +387,12 @@
                                                             Objective: {{ $campaign['objective'] }}</div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
-                                                        ${{ number_format($campaign['insights']['spend'] ?? 0, 2) }}</td>
+                                                        {{ $currency }}{{ number_format($campaign['insights']['spend'] ?? 0, 2) }}</td>
                                                     <td class="px-6 py-5 text-right">
                                                         <div class="font-black text-slate-900">
                                                             {{ number_format($metrics['conversions']) }}</div>
                                                         <div class="text-[10px] text-slate-400 font-medium">
-                                                            ${{ number_format($campaign['insights']['cost_per_conversion'] ?? 0, 2) }}/conv
+                                                            {{ $currency }}{{ number_format($campaign['insights']['cost_per_conversion'] ?? 0, 2) }}/conv
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right">
@@ -480,9 +480,9 @@
                                                         <div class="text-[10px] text-slate-400 font-medium">ID: {{ $adSet['id'] }}</div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
-                                                        ${{ number_format(($adSet['daily_budget'] ?? 0) / 100, 2) }}</td>
+                                                        {{ $currency }}{{ number_format(($adSet['daily_budget'] ?? 0) / 100, 2) }}</td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
-                                                        ${{ number_format($adSet['insights']['spend'] ?? 0, 2) }}</td>
+                                                        {{ $currency }}{{ number_format($adSet['insights']['spend'] ?? 0, 2) }}</td>
                                                     <td class="px-6 py-5 text-right font-bold text-slate-600">
                                                         {{ number_format($adSet['insights']['clicks'] ?? 0) }}</td>
                                                     <td class="px-6 py-5 text-right text-sm text-slate-600 font-medium">
@@ -548,7 +548,7 @@
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
-                                                        ${{ number_format($ad['insights']['spend'] ?? 0, 2) }}</td>
+                                                        {{ $currency }}{{ number_format($ad['insights']['spend'] ?? 0, 2) }}</td>
                                                     <td class="px-6 py-5 text-right font-bold text-slate-600">
                                                         {{ number_format($ad['insights']['clicks'] ?? 0) }}</td>
                                                     <td class="px-6 py-5 text-right text-sm text-slate-600 font-medium">

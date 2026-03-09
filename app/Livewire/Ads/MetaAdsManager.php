@@ -15,6 +15,7 @@ class MetaAdsManager extends Component
     public $integrationId;
     public $adAccounts = [];
     public $selectedAdAccount = null;
+    public $currency = '$'; // Default to $
 
     // Drill Down Data
     public $viewLevel = 'campaigns'; // campaigns, adsets, ads
@@ -87,10 +88,33 @@ class MetaAdsManager extends Component
     public function selectAdAccount($accountId)
     {
         $this->selectedAdAccount = $accountId;
+
+        // Find currency for the selected account
+        $account = collect($this->adAccounts)->firstWhere('id', $accountId);
+        if ($account && isset($account['currency'])) {
+            $this->currency = $this->getCurrencySymbol($account['currency']);
+        }
+
         $this->viewLevel = 'campaigns';
         $this->selectedCampaign = null;
         $this->selectedAdSet = null;
         $this->loadCampaigns();
+    }
+
+    protected function getCurrencySymbol($code)
+    {
+        $map = [
+            'USD' => '$',
+            'INR' => '₹',
+            'EUR' => '€',
+            'GBP' => '£',
+            'BRL' => 'R$',
+            'MXN' => '$',
+            'IDR' => 'Rp',
+            'NGN' => '₦',
+            'AED' => 'د.إ',
+        ];
+        return $map[$code] ?? $code . ' ';
     }
 
     public function setDatePreset($preset)
@@ -180,7 +204,7 @@ class MetaAdsManager extends Component
                     $this->smartInsights[] = [
                         'type' => 'critical',
                         'title' => 'High Cost',
-                        'message' => "CPC for '{$item['name']}' is unusually high ($$cpc). Consider broadening your audience targeting.",
+                        'message' => "CPC for '{$item['name']}' is unusually high ({$this->currency}{$cpc}). Consider broadening your audience targeting.",
                         'object_id' => $item['id']
                     ];
                 }
