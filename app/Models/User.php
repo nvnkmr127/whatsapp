@@ -236,4 +236,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(CrmSegment::class);
     }
+
+    public function onboardingStatus()
+    {
+        return $this->hasOne(OnboardingStatus::class);
+    }
 }

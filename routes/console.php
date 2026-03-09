@@ -49,7 +49,7 @@ Schedule::command('broadcast:consume --seconds=55')
 Schedule::command('whatsapp:audit-compliance')->weekly()->sundays()->at('04:00');
 
 // CRM Automation
-Schedule::command('workflows:check-onboarding')->hourly();
+Schedule::job(new \App\Jobs\CheckOnboardingInactivityJob)->everyTenMinutes();
 
 
 

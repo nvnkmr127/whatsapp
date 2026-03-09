@@ -28,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // ── Model Observers ─────────────────────────────────────────────
         \App\Models\Team::observe(\App\Observers\TeamObserver::class);
         \App\Models\User::observe(\App\Observers\UserObserver::class);
+        \App\Models\OnboardingStatus::observe(\App\Observers\OnboardingObserver::class);
 
         // Contact Observers
         \App\Models\Contact::observe(\App\Observers\ContactObserver::class);
