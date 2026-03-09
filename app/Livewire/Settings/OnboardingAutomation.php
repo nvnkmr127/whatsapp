@@ -30,6 +30,12 @@ class OnboardingAutomation extends Component
     public $onboardingChannel = 'whatsapp'; // whatsapp, email, both
 
     public $templates = [];
+    public $availablePlaceholders = [
+        '{name}' => 'User Full Name',
+        '{setup_link}' => 'Onboarding/Setup URL',
+        '{email}' => 'User Email Address',
+        '{company}' => 'Team/Company Name'
+    ];
 
     #[Layout('layouts.app')]
     public function render()
@@ -43,9 +49,35 @@ class OnboardingAutomation extends Component
 
         $stats['lost'] = max(0, $stats['signups'] - $stats['completed']);
 
+        // Get previews for selected templates
+        $previews = [
+            'remote' => $this->getTemplatePreview($this->remoteReminderTemplate),
+            'profile' => $this->getTemplatePreview($this->profileReminderTemplate),
+            'campaign' => $this->getTemplatePreview($this->campaignTutorialTemplate),
+        ];
+
         return view('livewire.settings.onboarding-automation', [
-            'stats' => $stats
+            'stats' => $stats,
+            'previews' => $previews
         ]);
+    }
+
+    protected function getTemplatePreview($name)
+    {
+        if (!$name)
+            return null;
+
+        $template = collect($this->templates)->firstWhere('name', $name);
+        if (!$template)
+            return null;
+
+        $content = [];
+        foreach ($template['components'] ?? [] as $component) {
+            if (isset($component['text'])) {
+                $content[] = $component['text'];
+            }
+        }
+        return implode("\n", $content);
     }
 
     public function mount()
@@ -56,10 +88,10 @@ class OnboardingAutomation extends Component
 
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
-        // Load all approved templates
+        // Load all approved templates with components for preview
         $this->templates = WhatsappTemplate::where('status', 'APPROVED')
             ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'components'])
             ->toArray();
 
         // Load current settings
@@ -76,6 +108,16 @@ class OnboardingAutomation extends Component
         $this->secondDelay = (int) get_setting('onboarding_second_delay', 2);
         $this->thirdDelay = (int) get_setting('onboarding_third_delay', 24);
         $this->onboardingChannel = get_setting('onboarding_channel', 'whatsapp');
+    }
+
+    public function addPlaceholder($field, $placeholder)
+    {
+        $current = $this->$field;
+        if (empty($current)) {
+            $this->$field = $placeholder;
+        } else {
+            $this->$field = $current . ', ' . $placeholder;
+        }
     }
 
     public function save()

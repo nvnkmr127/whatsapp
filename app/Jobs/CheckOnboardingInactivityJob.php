@@ -79,6 +79,8 @@ class CheckOnboardingInactivityJob implements ShouldQueue
                         $variables[] = url('/whatsapp/setup'); // Or your specific landing page
                     } elseif ($placeholder === '{email}') {
                         $variables[] = $user->email;
+                    } elseif ($placeholder === '{company}') {
+                        $variables[] = $team->name ?? 'our platform';
                     } else {
                         // If it's just plain text or unknown, keep as is or empty
                         $variables[] = str_replace(['{', '}'], '', $placeholder);
