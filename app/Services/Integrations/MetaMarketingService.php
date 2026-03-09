@@ -72,7 +72,7 @@ class MetaMarketingService
     {
         // Metric fields we want
         $fields = 'impressions,clicks,spend,cpc,ctr,actions,conversions,cost_per_conversion';
-        
+
         return $this->makeRequest('GET', "/{$objectId}/insights", [
             'level' => $level,
             'date_preset' => $datePreset,
@@ -113,6 +113,16 @@ class MetaMarketingService
     }
 
     /**
+     * Update the status of an object (Campaign, AdSet, Ad).
+     */
+    public function updateStatus($objectId, $status)
+    {
+        return $this->makeRequest('POST', "/{$objectId}", [
+            'status' => $status
+        ]);
+    }
+
+    /**
      * Send Conversion Event (CAPI).
      * 
      * @param string $pixelId The Meta Pixel ID to send events to.
@@ -123,7 +133,7 @@ class MetaMarketingService
     {
         // CAPI requires 'data' wrapper and 'access_token' as query param or form field
         // Endpoint: POST /{pixel_id}/events
-        
+
         return $this->makeRequest('POST', "/{$pixelId}/events", [
             'data' => $events,
             // 'test_event_code' => 'TEST12345' // Optional: Add for testing in Events Manager
@@ -141,7 +151,7 @@ class MetaMarketingService
 
         try {
             $url = "{$this->baseUrl}{$endpoint}";
-            
+
             // Append access token to all requests
             $params['access_token'] = $this->accessToken;
 

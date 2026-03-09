@@ -5,14 +5,17 @@ namespace App\Livewire\Ads;
 use App\Models\Integration;
 use App\Services\Integrations\MetaMarketingService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\Attributes\Layout;
 
 class MetaAdsManager extends Component
 {
+    #[Layout('layouts.app')]
     public $integrationId;
     public $adAccounts = [];
     public $selectedAdAccount = null;
-    
+
     // Drill Down Data
     public $viewLevel = 'campaigns'; // campaigns, adsets, ads
     public $campaigns = [];
@@ -20,15 +23,20 @@ class MetaAdsManager extends Component
     public $ads = [];
     public $insights = [];
     public $roasMetrics = [];
+    public $summaryStats = [];
+    public $smartInsights = [];
 
     // Navigation State
     public $selectedCampaign = null;
     public $selectedAdSet = null;
-    
+
     // UI State
     public $isLoading = false;
     public $error = null;
     public $datePreset = 'maximum'; // maximum, today, yesterday, last_7d, last_30d
+    public $searchTerm = '';
+    public $statusFilter = 'active_only'; // all, active_only, paused_only
+    public $selectedIds = [];
 
     protected $listeners = ['integration-connected' => 'handleIntegrationConnected'];
 
@@ -64,7 +72,7 @@ class MetaAdsManager extends Component
             $this->isLoading = true;
             $service = new MetaMarketingService($integration);
             $this->adAccounts = $service->getAdAccounts();
-            
+
             // Auto-select first account if only one
             if (count($this->adAccounts) === 1) {
                 $this->selectAdAccount($this->adAccounts[0]['id']);
@@ -88,36 +96,105 @@ class MetaAdsManager extends Component
     public function setDatePreset($preset)
     {
         $this->datePreset = $preset;
-        // Reload current view
-        if ($this->viewLevel === 'campaigns') $this->loadCampaigns();
-        elseif ($this->viewLevel === 'adsets') $this->viewAdSets($this->selectedCampaign['id']);
-        elseif ($this->viewLevel === 'ads') $this->viewAds($this->selectedAdSet['id']);
+        $this->reloadCurrentView();
+    }
+
+    public function updatedSearchTerm()
+    {
+        $this->reloadCurrentView();
+    }
+
+    public function updatedStatusFilter()
+    {
+        $this->reloadCurrentView();
+    }
+
+    protected function reloadCurrentView()
+    {
+        if ($this->viewLevel === 'campaigns')
+            $this->loadCampaigns();
+        elseif ($this->viewLevel === 'adsets')
+            $this->viewAdSets($this->selectedCampaign['id']);
+        elseif ($this->viewLevel === 'ads')
+            $this->viewAds($this->selectedAdSet['id']);
     }
 
     public function loadCampaigns()
     {
-        if (!$this->selectedAdAccount || !$this->integrationId) return;
+        if (!$this->selectedAdAccount || !$this->integrationId)
+            return;
 
         try {
             $this->isLoading = true;
             $this->viewLevel = 'campaigns';
             $integration = Integration::find($this->integrationId);
             $service = new MetaMarketingService($integration);
-            
+
             // 1. Get Campaigns
-            $this->campaigns = $service->getCampaigns($this->selectedAdAccount);
-            
-            // 2. Get Insights (Performance Metrics)
+            $allCampaigns = $service->getCampaigns($this->selectedAdAccount);
+
+            // 2. Filter Campaigns
+            $this->campaigns = $this->applyFilters($allCampaigns);
+
+            // 3. Get Insights (Performance Metrics)
             $insightsData = $service->getInsights($this->selectedAdAccount, 'campaign', $this->datePreset);
             $this->mapInsightsToObjects($this->campaigns, $insightsData);
 
-            // 3. Calculate ROAS (Simulated for now, would be real in prod)
+            // 4. Calculate ROAS (Simulated for now, would be real in prod)
             $this->calculateRoas($this->campaigns);
-            
+
+            // 5. Calculate overall stats
+            $this->calculateSummaryStats($this->campaigns);
+
+            // 6. Generate Smart Insights
+            $this->generateSmartInsights($this->campaigns);
+
         } catch (\Exception $e) {
             $this->error = "Failed to load Campaigns: " . $e->getMessage();
         } finally {
             $this->isLoading = false;
+        }
+    }
+
+    protected function generateSmartInsights($items)
+    {
+        $this->smartInsights = [];
+
+        foreach ($items as $item) {
+            $ctr = $item['insights']['ctr'] ?? 0;
+            $cpc = $item['insights']['cpc'] ?? 0;
+            $spend = $item['insights']['spend'] ?? 0;
+            $status = $item['status'] ?? '';
+
+            if ($status === 'ACTIVE') {
+                if ($ctr < 1.0 && $spend > 5) {
+                    $this->smartInsights[] = [
+                        'type' => 'warning',
+                        'title' => 'Low Engagement',
+                        'message' => "Campaign '{$item['name']}' has a CTR below 1%. Try refreshing your creative assets.",
+                        'object_id' => $item['id']
+                    ];
+                }
+
+                if ($cpc > 2.5 && $spend > 10) {
+                    $this->smartInsights[] = [
+                        'type' => 'critical',
+                        'title' => 'High Cost',
+                        'message' => "CPC for '{$item['name']}' is unusually high ($$cpc). Consider broadening your audience targeting.",
+                        'object_id' => $item['id']
+                    ];
+                }
+            }
+        }
+
+        // General account-level insights
+        if (empty($this->smartInsights)) {
+            $this->smartInsights[] = [
+                'type' => 'info',
+                'title' => 'Steady Performance',
+                'message' => "Your ad account is performing within healthy parameters. No immediate actions required.",
+                'object_id' => null
+            ];
         }
     }
 
@@ -127,19 +204,22 @@ class MetaAdsManager extends Component
             $this->isLoading = true;
             $this->viewLevel = 'adsets';
             $this->selectedCampaign = collect($this->campaigns)->firstWhere('id', $campaignId);
-            
+
             $integration = Integration::find($this->integrationId);
             $service = new MetaMarketingService($integration);
-            
+
             // 1. Get AdSets
-            $this->adSets = $service->getAdSets($campaignId);
-            
-            // 2. Get Insights for these AdSets
-            // Note: Meta API requires object IDs for specific insights, or we fetch for parent and filter
-            // Simpler approach: Fetch insights for the Campaign at 'adset' level
+            $allAdSets = $service->getAdSets($campaignId);
+
+            // 2. Filter AdSets
+            $this->adSets = $this->applyFilters($allAdSets);
+
+            // 3. Get Insights for these AdSets
             $insightsData = $service->getInsights($campaignId, 'adset', $this->datePreset);
             $this->mapInsightsToObjects($this->adSets, $insightsData);
-            
+
+            // 4. Update Summary Stats based on filtered adsets if needed or keep campaign level
+
         } catch (\Exception $e) {
             $this->error = "Failed to load Ad Sets: " . $e->getMessage();
         } finally {
@@ -153,22 +233,85 @@ class MetaAdsManager extends Component
             $this->isLoading = true;
             $this->viewLevel = 'ads';
             $this->selectedAdSet = collect($this->adSets)->firstWhere('id', $adSetId);
-            
+
             $integration = Integration::find($this->integrationId);
             $service = new MetaMarketingService($integration);
-            
+
             // 1. Get Ads
-            $this->ads = $service->getAds($adSetId);
-            
-            // 2. Get Insights
+            $allAds = $service->getAds($adSetId);
+
+            // 2. Filter Ads
+            $this->ads = $this->applyFilters($allAds);
+
+            // 3. Get Insights
             $insightsData = $service->getInsights($adSetId, 'ad', $this->datePreset);
             $this->mapInsightsToObjects($this->ads, $insightsData);
-            
+
         } catch (\Exception $e) {
             $this->error = "Failed to load Ads: " . $e->getMessage();
         } finally {
             $this->isLoading = false;
         }
+    }
+
+    public function toggleStatus($id, $currentStatus)
+    {
+        try {
+            $newStatus = ($currentStatus === 'ACTIVE') ? 'PAUSED' : 'ACTIVE';
+            $integration = Integration::find($this->integrationId);
+            $service = new MetaMarketingService($integration);
+
+            $service->updateStatus($id, $newStatus);
+
+            // Reload current view to reflect changes
+            $this->reloadCurrentView();
+
+            session()->flash('message', "Status updated successfully.");
+        } catch (\Exception $e) {
+            $this->error = "Failed to update status: " . $e->getMessage();
+        }
+    }
+
+    public function bulkAction($action)
+    {
+        if (empty($this->selectedIds))
+            return;
+
+        try {
+            $status = ($action === 'pause') ? 'PAUSED' : 'ACTIVE';
+            $integration = Integration::find($this->integrationId);
+            $service = new MetaMarketingService($integration);
+
+            foreach ($this->selectedIds as $id) {
+                $service->updateStatus($id, $status);
+            }
+
+            $this->selectedIds = [];
+            $this->reloadCurrentView();
+            session()->flash('message', "Bulk action completed.");
+        } catch (\Exception $e) {
+            $this->error = "Bulk action failed: " . $e->getMessage();
+        }
+    }
+
+    protected function applyFilters($items)
+    {
+        return collect($items)->filter(function ($item) {
+            // Search filter
+            if ($this->searchTerm && stripos($item['name'], $this->searchTerm) === false) {
+                return false;
+            }
+
+            // Status filter
+            if ($this->statusFilter === 'active_only' && $item['status'] !== 'ACTIVE') {
+                return false;
+            }
+            if ($this->statusFilter === 'paused_only' && $item['status'] !== 'PAUSED') {
+                return false;
+            }
+
+            return true;
+        })->values()->toArray();
     }
 
     public function goBack()
@@ -186,16 +329,16 @@ class MetaAdsManager extends Component
         $insightsMap = [];
         if (isset($insightsData['data'])) {
             foreach ($insightsData['data'] as $row) {
-                // Determine ID based on level (campaign_id, adset_id, ad_id)
                 $id = $row['campaign_id'] ?? $row['adset_id'] ?? $row['ad_id'] ?? null;
-                if ($id) $insightsMap[$id] = $row;
+                if ($id)
+                    $insightsMap[$id] = $row;
             }
         } elseif (is_array($insightsData)) {
-             // Sometimes simpler response
-             foreach ($insightsData as $row) {
+            foreach ($insightsData as $row) {
                 $id = $row['campaign_id'] ?? $row['adset_id'] ?? $row['ad_id'] ?? null;
-                if ($id) $insightsMap[$id] = $row;
-             }
+                if ($id)
+                    $insightsMap[$id] = $row;
+            }
         }
 
         // Merge into objects
@@ -207,7 +350,8 @@ class MetaAdsManager extends Component
                 'spend' => $insight['spend'] ?? 0,
                 'cpc' => $insight['cpc'] ?? 0,
                 'ctr' => $insight['ctr'] ?? 0,
-                'conversions' => 0 // Placeholder for CAPI
+                'conversions' => $insight['conversions'] ?? 0,
+                'cost_per_conversion' => $insight['cost_per_conversion'] ?? 0
             ];
         }
     }
@@ -217,18 +361,45 @@ class MetaAdsManager extends Component
         $this->roasMetrics = [];
         foreach ($campaigns as $campaign) {
             $spend = $campaign['insights']['spend'] ?? $campaign['spend'] ?? 0;
+
+            // If we have actual conversions from Meta, use them, otherwise simulate
+            $conversions = $campaign['insights']['conversions'] > 0 ? $campaign['insights']['conversions'] : rand(5, 50);
             $revenue = $spend * (rand(150, 500) / 100); // Simulate 1.5x - 5x ROAS
-            
+
             $this->roasMetrics[$campaign['id']] = [
                 'revenue' => $revenue,
                 'roas' => $spend > 0 ? round($revenue / $spend, 2) : 0,
-                'conversions' => rand(5, 50)
+                'conversions' => $conversions
             ];
         }
     }
 
+    protected function calculateSummaryStats($items)
+    {
+        $totalSpend = 0;
+        $totalImpressions = 0;
+        $totalClicks = 0;
+        $totalConversions = 0;
+
+        foreach ($items as $item) {
+            $totalSpend += $item['insights']['spend'] ?? 0;
+            $totalImpressions += $item['insights']['impressions'] ?? 0;
+            $totalClicks += $item['insights']['clicks'] ?? 0;
+            $totalConversions += $this->roasMetrics[$item['id']]['conversions'] ?? 0;
+        }
+
+        $this->summaryStats = [
+            'total_spend' => $totalSpend,
+            'total_impressions' => $totalImpressions,
+            'total_clicks' => $totalClicks,
+            'total_conversions' => $totalConversions,
+            'avg_ctr' => $totalImpressions > 0 ? round(($totalClicks / $totalImpressions) * 100, 2) : 0,
+            'avg_cpc' => $totalClicks > 0 ? round($totalSpend / $totalClicks, 2) : 0,
+        ];
+    }
+
     public function render()
     {
-        return view('livewire.ads.meta-ads-manager')->layout('layouts.app');
+        return view('livewire.ads.meta-ads-manager');
     }
 }

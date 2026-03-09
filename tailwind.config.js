@@ -19,6 +19,8 @@ export default {
             },
             colors: {
                 wa: {
+                    soft: '#f0fdfa',  // Very light teal for backgrounds
+                    brand: '#25D366', // Primary brand green
                     light: '#dcf8c6', // Light green for bubbles
                     green: '#25D366', // Primary brand green
                     teal: '#128C7E',  // Dark teal for headers
