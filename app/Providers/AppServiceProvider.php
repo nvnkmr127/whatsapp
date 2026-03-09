@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // ── Model Observers ─────────────────────────────────────────────
         \App\Models\Team::observe(\App\Observers\TeamObserver::class);
         \App\Models\User::observe(\App\Observers\UserObserver::class);
-        
+
         // Contact Observers
         \App\Models\Contact::observe(\App\Observers\ContactObserver::class);
         \App\Models\Contact::observe(\App\Observers\WorkflowObserver::class);
@@ -73,6 +73,9 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PersistDomainEvents::class
         );
 
+        // Register Workflow Event Subscriber for advanced trigger events
+        \Illuminate\Support\Facades\Event::subscribe(\App\Listeners\WorkflowEventSubscriber::class);
+
         $permissions = [
             'manage-settings',
             'manage-billing',
@@ -80,6 +83,7 @@ class AppServiceProvider extends ServiceProvider
             'manage-contacts',
             'manage-campaigns',
             'manage-templates',
+            'manage-workflows',
         ];
 
         foreach ($permissions as $permission) {

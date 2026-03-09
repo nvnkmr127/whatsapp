@@ -16,7 +16,9 @@ class CampaignManager extends Component
 
     // Form Config
     public $name;
+    public $campaignType = 'template'; // 'template' or 'workflow'
     public $templateName;
+    public $workflowId;
     public $selectedTags = []; // IDs
     public $sendNow = true;
     public $scheduledAt;
@@ -24,6 +26,7 @@ class CampaignManager extends Component
     // Loaded Data
     public $availableTemplates = [];
     public $availableTags = [];
+    public $availableWorkflows = [];
 
     public function mount()
     {
@@ -32,14 +35,27 @@ class CampaignManager extends Component
         $this->availableTemplates = \App\Models\WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
             ->where('status', 'APPROVED')
             ->get();
+
+        $this->availableWorkflows = collect();
+        if (class_exists(\App\Models\Workflow::class)) {
+            $this->availableWorkflows = \App\Models\Workflow::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
+                ->where('is_active', true)
+                ->get();
+        }
     }
 
     public function create()
     {
         $this->validate([
             'name' => 'required',
-            'templateName' => 'required',
+            'campaignType' => 'required|in:template,workflow',
         ]);
+
+        if ($this->campaignType === 'template') {
+            $this->validate(['templateName' => 'required']);
+        } else {
+            $this->validate(['workflowId' => 'required']);
+        }
 
         $segmentConfig = [
             'tags' => $this->selectedTags
@@ -48,16 +64,41 @@ class CampaignManager extends Component
         $campaign = Campaign::create([
             'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
             'name' => $this->name,
-            'template_name' => $this->templateName,
+            'template_name' => $this->campaignType === 'template' ? $this->templateName : null,
             'segment_config' => $segmentConfig,
             'status' => 'draft',
             'scheduled_at' => $this->sendNow ? now() : $this->scheduledAt,
         ]);
 
+        if ($this->campaignType === 'workflow') {
+            // Save workflow data in campaign
+            $campaign->update(['segment_config' => array_merge($segmentConfig, ['workflow_id' => $this->workflowId])]);
+        }
+
         if ($this->sendNow) {
-            (new BroadcastService())->launch($campaign);
-            audit('campaign.launched', "Campaign '{$campaign->name}' launched immediately.", $campaign);
-            session()->flash('message', 'Campaign launched successfully!');
+            array_push($this->selectedTags, ...session('retarget_ids', []));
+
+            if ($this->campaignType === 'workflow') {
+                $query = \App\Models\Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id);
+                if (!empty($this->selectedTags)) {
+                    $query->whereHas('tags', function ($q) {
+                        $q->whereIn('contact_tags.id', $this->selectedTags);
+                    });
+                }
+                $contacts = $query->get();
+                $workflow = \App\Models\Workflow::find($this->workflowId);
+
+                if ($workflow && $contacts->count() > 0) {
+                    app(\App\Services\WorkflowEngine::class)->triggerBatch($workflow, $contacts, ['source' => 'campaign']);
+                }
+                $campaign->update(['status' => 'completed', 'sent_count' => $contacts->count(), 'total_contacts' => $contacts->count()]);
+                audit('campaign.workflow_launched', null, $campaign->id, 'campaign', ['name' => $campaign->name, 'workflow' => $workflow->name, 'count' => $contacts->count()]);
+                session()->flash('message', 'Workflow sequence batch launched successfully!');
+            } else {
+                app(BroadcastService::class)->launch($campaign);
+                audit('campaign.launched', null, $campaign->id, 'campaign', ['name' => $campaign->name]);
+                session()->flash('message', 'Campaign launched successfully!');
+            }
         } else {
             $campaign->update(['status' => 'scheduled']);
             audit('campaign.scheduled', "Campaign '{$campaign->name}' scheduled for {$campaign->scheduled_at}.", $campaign);

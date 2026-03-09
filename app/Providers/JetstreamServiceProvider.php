@@ -56,6 +56,7 @@ class JetstreamServiceProvider extends ServiceProvider
             'manage-contacts',
             'manage-campaigns',
             'manage-templates',
+            'manage-workflows',
         ])->description('Administrator users can perform any action and manage billing.');
 
         Jetstream::role('manager', 'Manager', [
@@ -65,6 +66,7 @@ class JetstreamServiceProvider extends ServiceProvider
             'manage-campaigns',
             'manage-contacts',
             'manage-templates',
+            'manage-workflows',
         ])->description('Managers can handle campaigns and contacts but cannot manage billing.');
 
         Jetstream::role('agent', 'Support Agent', [

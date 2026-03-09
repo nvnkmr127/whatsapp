@@ -196,18 +196,28 @@ class ContactService
         return array_unique(array_merge($ids, $existingIds));
     }
 
-    /**
-     * Helper to trigger automation logic for assigned tags.
-     */
     protected function triggerTagAutomation(Contact $contact, array $ids)
     {
         if (!empty($ids)) {
             try {
-                $automationService = app(AutomationService::class);
-                $automationService->checkSpecialTriggers($contact, 'tag_assigned');
+                if (class_exists(AutomationService::class)) {
+                    $automationService = app(AutomationService::class);
+                    $automationService->checkSpecialTriggers($contact, 'tag_assigned');
+                }
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());
                 // Don't throw - tag assignment should succeed even if automation fails
+            }
+
+            // Native Workflow Engine Support
+            foreach ($ids as $id) {
+                try {
+                    if (class_exists(\App\Services\WorkflowEngine::class)) {
+                        app(\App\Services\WorkflowEngine::class)->trigger('tag_added', $contact, ['tag_id' => $id]);
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Workflow tag_added Trigger Failed: ' . $e->getMessage());
+                }
             }
         }
     }

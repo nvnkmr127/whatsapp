@@ -67,13 +67,39 @@ class Deal extends Model
 
             if ($deal->isDirty('status')) {
                 $deal->logStatusChange();
-                
+
                 if (in_array($deal->status, ['won', 'lost'])) {
                     $deal->actual_close_date = now();
                 }
             }
 
             $deal->last_activity_at = now();
+        });
+
+        static::created(function ($deal) {
+            try {
+                if (class_exists(\App\Services\WorkflowEngine::class)) {
+                    app(\App\Services\WorkflowEngine::class)->trigger('deal_created', $deal, ['source' => 'system']);
+                }
+            } catch (\Exception $e) {
+            }
+        });
+
+        static::updated(function ($deal) {
+            try {
+                if (class_exists(\App\Services\WorkflowEngine::class)) {
+                    if ($deal->wasChanged('stage_id')) {
+                        app(\App\Services\WorkflowEngine::class)->trigger('deal_stage_changed', $deal, [
+                            'old_stage' => $deal->getOriginal('stage_id'),
+                            'new_stage' => $deal->stage_id
+                        ]);
+                    }
+                    if ($deal->wasChanged('status') && $deal->status === 'won') {
+                        app(\App\Services\WorkflowEngine::class)->trigger('deal_won', $deal, ['value' => $deal->value]);
+                    }
+                }
+            } catch (\Exception $e) {
+            }
         });
     }
 
@@ -121,13 +147,13 @@ class Deal extends Model
     {
         $this->stage_id = $stage->id;
         $this->probability = $stage->probability;
-        
+
         if ($stage->is_closed_won) {
             $this->status = 'won';
         } elseif ($stage->is_closed_lost) {
             $this->status = 'lost';
         }
-        
+
         $this->save();
     }
 
@@ -161,7 +187,7 @@ class Deal extends Model
         if ($this->exists) {
             $oldStage = PipelineStage::find($this->getOriginal('stage_id'));
             $newStage = PipelineStage::find($this->stage_id);
-            
+
             $this->activities()->create([
                 'type' => 'stage_change',
                 'content' => "Stage changed from {$oldStage->name} to {$newStage->name}",
@@ -179,7 +205,7 @@ class Deal extends Model
     {
         if ($this->exists) {
             $oldStatus = $this->getOriginal('status');
-            
+
             $this->activities()->create([
                 'type' => 'status_change',
                 'content' => "Status changed from {$oldStatus} to {$this->status}",
@@ -195,8 +221,8 @@ class Deal extends Model
 
     public function getIsOverdueAttribute(): bool
     {
-        return $this->expected_close_date 
-            && $this->expected_close_date->isPast() 
+        return $this->expected_close_date
+            && $this->expected_close_date->isPast()
             && $this->status === 'open';
     }
 
@@ -205,7 +231,7 @@ class Deal extends Model
         if (!$this->stage->expected_days) {
             return false;
         }
-        
+
         return $this->days_in_stage > $this->stage->expected_days;
     }
 }

@@ -20,16 +20,27 @@ class Workflow extends Model
         'trigger_type',
         'trigger_config',
         'execution_count',
+        'success_count',
+        'failure_count',
+        'conversions_count',
+        'time_saved_minutes',
         'last_executed_at',
         'created_by',
+        'folder',
+        'tags',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'trigger_config' => 'array',
-        'definition' => 'array',
+        'trigger_config' => 'encrypted:array',
+        'definition' => 'encrypted:array',
+        'tags' => 'array',
         'last_executed_at' => 'datetime',
         'execution_count' => 'integer',
+        'success_count' => 'integer',
+        'failure_count' => 'integer',
+        'conversions_count' => 'integer',
+        'time_saved_minutes' => 'integer',
     ];
 
     public function team(): BelongsTo

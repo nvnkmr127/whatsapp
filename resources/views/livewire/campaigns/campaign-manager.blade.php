@@ -154,18 +154,67 @@
                         class="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-wa-teal focus:border-wa-teal transition-all">
                 </div>
 
-                <!-- Template -->
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp
-                        Template</label>
-                    <select wire:model="templateName"
-                        class="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-wa-teal focus:border-wa-teal transition-all">
-                        <option value="">-- Select Template --</option>
-                        @foreach($availableTemplates as $tpl)
-                            <option value="{{ $tpl->name }}">{{ $tpl->name }} ({{ $tpl->language }})</option>
-                        @endforeach
-                    </select>
+                <!-- Type Selector -->
+                <div class="grid grid-cols-2 gap-4">
+                    <label
+                        class="flex flex-col p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:border-wa-teal transition-all group {{ $campaignType === 'template' ? 'ring-2 ring-wa-teal border-transparent' : '' }}">
+                        <div class="flex items-center gap-3 mb-2">
+                            <input type="radio" wire:model.live="campaignType" value="template"
+                                class="text-wa-teal focus:ring-wa-teal">
+                            <span
+                                class="font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs">Standard
+                                Broadcast</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-500 pl-7">Send a simple WhatsApp template to a
+                            list.</span>
+                    </label>
+
+                    <label
+                        class="flex flex-col p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:border-indigo-500 transition-all group {{ $campaignType === 'workflow' ? 'ring-2 ring-indigo-500 border-transparent' : '' }}">
+                        <div class="flex items-center gap-3 mb-2">
+                            <input type="radio" wire:model.live="campaignType" value="workflow"
+                                class="text-indigo-500 focus:ring-indigo-500">
+                            <span
+                                class="font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs"><span
+                                    class="text-indigo-500">Intelligent</span> Batch</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-500 pl-7">Launch thousands into an automated
+                            Workflow sequence.</span>
+                    </label>
                 </div>
+
+                @if($campaignType === 'template')
+                    <!-- Template -->
+                    <div class="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp
+                            Template</label>
+                        <select wire:model="templateName"
+                            class="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-wa-teal focus:border-wa-teal transition-all">
+                            <option value="">-- Select Template --</option>
+                            @foreach($availableTemplates as $tpl)
+                                <option value="{{ $tpl->name }}">{{ $tpl->name }} ({{ $tpl->language }})</option>
+                            @endforeach
+                        </select>
+                        @error('templateName') <span
+                        class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror
+                    </div>
+                @else
+                    <!-- Workflow -->
+                    <div class="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest">Select Visual
+                            Workflow</label>
+                        <select wire:model="workflowId"
+                            class="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                            <option value="">-- Select Automated Workflow --</option>
+                            @foreach($availableWorkflows as $wf)
+                                <option value="{{ $wf->id }}">{{ $wf->name }}
+                                    ({{ $wf->actions_count ?? count($wf->definition ?? []) }} nodes)</option>
+                            @endforeach
+                        </select>
+                        @error('workflowId') <span
+                        class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror
+                    </div>
+                @endif
 
                 <!-- Audience -->
                 <div class="space-y-2">

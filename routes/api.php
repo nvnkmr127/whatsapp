@@ -8,6 +8,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::post('/webhooks/trigger/{id}', [\App\Http\Controllers\Api\WebhookTriggerController::class, 'trigger'])->middleware('auth:sanctum');
+Route::post('/webhooks/workflow/{workflowId}', [\App\Http\Controllers\Api\WorkflowWebhookController::class, 'handle']);
+Route::post('/webhooks/workflow-incoming/{webhookUrlId}', [\App\Http\Controllers\Api\WorkflowIncomingWebhookController::class, 'handle']);
 
 Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Http\Middleware\BlockTrialFieldsViaApi::class], 'prefix' => 'v1'], function () {
     // Contacts

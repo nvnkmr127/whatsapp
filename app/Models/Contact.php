@@ -14,6 +14,17 @@ class Contact extends Model
         static::updating(function ($contact) {
             $contact->version = ($contact->version ?? 0) + 1;
         });
+
+        static::created(function ($contact) {
+            try {
+                if (class_exists(\App\Services\WorkflowEngine::class)) {
+                    app(\App\Services\WorkflowEngine::class)->trigger('contact_created', $contact, ['source' => 'system']);
+                }
+            } catch (\Exception $e) {
+                // Fail silently to not disrupt standard UI logic
+                \Illuminate\Support\Facades\Log::error("Workflow trigger failed on Contact Creation: " . $e->getMessage());
+            }
+        });
     }
 
     protected $guarded = [];
