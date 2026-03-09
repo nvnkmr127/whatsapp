@@ -187,6 +187,7 @@
                                         @endif
                                     </button>
                                 @endforeach
+                            </div>
                         @endif
                     </div>
 
