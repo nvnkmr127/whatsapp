@@ -192,7 +192,7 @@
         </x-slot>
 
         <x-slot name="content">
-            <div class="min-h-[500px] overflow-x-hidden">
+            <div class="max-h-[70vh] min-h-[500px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-2">
                 {{-- Wizard Progress Header --}}
                 <div class="mb-10">
                     <div class="flex items-center justify-between max-w-4xl mx-auto">
