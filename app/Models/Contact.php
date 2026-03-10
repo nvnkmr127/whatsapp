@@ -29,6 +29,10 @@ class Contact extends Model
 
     protected $guarded = [];
 
+    protected $attributes = [
+        'opt_in_status' => 'opted_in',
+    ];
+
     protected $casts = [
         'custom_attributes' => 'array',
         'last_interaction_at' => 'datetime',
