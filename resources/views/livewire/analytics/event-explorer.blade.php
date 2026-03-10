@@ -4,18 +4,22 @@
         <!-- Left: Title & Subtitle -->
         <div class="max-w-xl">
             <h1 class="text-5xl font-black tracking-tight uppercase leading-none mb-4">
-                <span class="text-slate-900 dark:text-white">Event</span> 
+                <span class="text-slate-900 dark:text-white">Event</span>
                 <span class="text-wa-teal">Explorer</span>
             </h1>
             <p class="text-slate-500 font-medium text-lg leading-relaxed">
                 System nervous system observability & real-time trace tracking.
             </p>
             @if($filterTraceId)
-                <div class="mt-4 flex items-center gap-2 bg-indigo-500/10 text-indigo-500 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20 w-fit">
+                <div
+                    class="mt-4 flex items-center gap-2 bg-indigo-500/10 text-indigo-500 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20 w-fit">
                     <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
                     Trace: {{ Str::limit($filterTraceId, 12) }}
                     <button wire:click="$set('filterTraceId', '')" class="hover:text-indigo-700 transition ml-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
             @endif
@@ -26,25 +30,29 @@
             <!-- Row 1: State & Filters -->
             <div class="flex items-center gap-8">
                 <div class="flex flex-col items-end">
-                    <span class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mb-0.5">Observability State</span>
+                    <span class="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mb-0.5">Observability
+                        State</span>
                     <span class="text-sm font-bold text-wa-teal flex items-center gap-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></span>
                         Real-time Tracking Active
                     </span>
                 </div>
 
-                <div class="flex items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-[1.25rem] shadow-sm border border-slate-100 dark:border-slate-800 gap-6">
+                <div
+                    class="flex items-center bg-white dark:bg-slate-900 px-6 py-4 rounded-[1.25rem] shadow-sm border border-slate-100 dark:border-slate-800 gap-6">
                     <div class="flex items-center gap-3">
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model.live="showNoise" class="sr-only peer">
-                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-wa-teal"></div>
+                            <div
+                                class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-wa-teal">
+                            </div>
                         </label>
                         <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Noise</span>
                     </div>
 
                     <div class="w-px h-6 bg-slate-100 dark:bg-slate-800"></div>
 
-                    <select wire:model.live="filterModule" 
+                    <select wire:model.live="filterModule"
                         class="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:ring-0 cursor-pointer p-0 pr-8">
                         <option value="">All Sources</option>
                         @foreach($modules as $m)
@@ -67,20 +75,24 @@
             <!-- Row 2: Search Bar -->
             <div class="flex items-center gap-4">
                 <div class="relative group w-[340px]">
-                    <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-wa-teal transition-colors">
+                    <div
+                        class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-wa-teal transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
-                    <input type="text" wire:model.live.debounce.300ms="search" placeholder="SEARCH EVENTS..." 
+                    <input type="text" wire:model.live.debounce.300ms="search" placeholder="SEARCH EVENTS..."
                         class="pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.1em] text-slate-600 dark:text-slate-300 focus:ring-wa-teal focus:border-wa-teal shadow-sm transition-all w-full" />
                 </div>
 
                 @if($search || $filterModule || $filterCategory || $filterTraceId || $showNoise)
-                    <button wire:click="clearFilters" 
+                    <button wire:click="clearFilters"
                         class="p-4 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-slate-900 rounded-[1.25rem] transition-all shadow-sm group">
-                        <svg class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        <svg class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 @endif
@@ -325,22 +337,26 @@
 
                                     <div class="space-y-6">
                                         <div x-show="tab === 'payload'" x-transition>
-                                            <div class="bg-slate-900 rounded-3xl p-8 relative overflow-hidden group">
+                                            <div class="bg-slate-900 rounded-[2.5rem] p-8 relative overflow-hidden group">
                                                 <div
                                                     class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <span
                                                         class="text-[10px] font-black text-wa-teal uppercase tracking-widest">JSON
                                                         OBJECT</span>
                                                 </div>
-                                                <pre
-                                                    class="text-sm font-mono text-emerald-400/90 leading-relaxed overflow-x-auto"><code>{{ json_encode($selectedEvent->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                                                <div class="overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar">
+                                                    <pre
+                                                        class="text-sm font-mono text-emerald-400/90 leading-relaxed"><code>{{ json_encode($selectedEvent->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div x-show="tab === 'meta'" x-transition>
                                             <div class="bg-slate-900 rounded-3xl p-8 relative">
-                                                <pre
-                                                    class="text-sm font-mono text-wa-blue/90 leading-relaxed overflow-x-auto"><code>{{ json_encode($selectedEvent->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                                                <div class="overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar">
+                                                    <pre
+                                                        class="text-sm font-mono text-wa-blue/90 leading-relaxed"><code>{{ json_encode($selectedEvent->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                                                </div>
                                             </div>
                                         </div>
 

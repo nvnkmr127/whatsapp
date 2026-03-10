@@ -78,7 +78,8 @@
                             <div>
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                                     Metadata Payload</h4>
-                                <div class="bg-slate-900 rounded-2xl p-6 overflow-x-auto shadow-inner">
+                                <div
+                                    class="bg-slate-900 rounded-2xl p-6 overflow-x-auto overflow-y-auto max-h-60 custom-scrollbar shadow-inner">
                                     <pre
                                         class="text-indigo-300 font-mono text-xs">{{ json_encode($log->metadata, JSON_PRETTY_PRINT) ?: '{}' }}</pre>
                                 </div>
@@ -129,7 +130,8 @@
                                         class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Initiated
                                         At</span>
                                     <div class="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                        {{ $log->sent_at->format('M d, Y H:i:s') }}</div>
+                                        {{ $log->sent_at->format('M d, Y H:i:s') }}
+                                    </div>
                                 </div>
                                 @if($log->delivered_at)
                                     <div>
@@ -137,7 +139,8 @@
                                             class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Delivered
                                             At</span>
                                         <div class="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                            {{ $log->delivered_at->format('M d, Y H:i:s') }}</div>
+                                            {{ $log->delivered_at->format('M d, Y H:i:s') }}
+                                        </div>
                                     </div>
                                 @endif
                             </div>

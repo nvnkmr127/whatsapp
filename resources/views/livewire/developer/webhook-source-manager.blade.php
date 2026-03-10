@@ -954,7 +954,9 @@
                                     @if(isset($testResult['mapped_data']))
                                         <div class="bg-slate-900 text-wa-teal rounded-[2rem] p-6 shadow-xl border border-slate-800">
                                             <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Resolved Data</h5>
-                                            <pre class="text-[10px] font-mono">{{ json_encode($testResult['mapped_data'], JSON_PRETTY_PRINT) }}</pre>
+                                            <div class="overflow-x-auto overflow-y-auto max-h-60 custom-scrollbar">
+                                                <pre class="text-[10px] font-mono">{{ json_encode($testResult['mapped_data'], JSON_PRETTY_PRINT) }}</pre>
+                                            </div>
                                         </div>
                                     @endif
                                 </div>

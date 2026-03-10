@@ -216,7 +216,9 @@
                         </svg>
                         <span>View Raw Analytics Response</span>
                     </button>
-                    <div x-show="open" class="mt-4 bg-gray-900 rounded-lg p-4 overflow-x-auto" style="display: none;">
+                    <div x-show="open"
+                        class="mt-4 bg-gray-900 rounded-lg p-4 overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar"
+                        style="display: none;">
                         <pre
                             class="text-xs text-green-400 font-mono">{{ json_encode($metaAnalytics, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>

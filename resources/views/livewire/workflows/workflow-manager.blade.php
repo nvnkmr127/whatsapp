@@ -1355,7 +1355,8 @@
                                             </svg>
                                             View Context Payload
                                         </button>
-                                        <div x-show="expanded" class="mt-3 bg-slate-900 rounded-xl p-4 overflow-x-auto"
+                                        <div x-show="expanded"
+                                            class="mt-3 bg-slate-900 rounded-xl p-4 overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar"
                                             style="display: none;">
                                             <pre class="text-[10px] leading-relaxed text-emerald-400 font-mono">@php
                                                 try {

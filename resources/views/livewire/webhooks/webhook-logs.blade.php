@@ -203,11 +203,11 @@
                     </div>
                 @endif
 
-                <!-- JSON Payload -->
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Raw Data
                         JSON</label>
-                    <div class="bg-[#0D1117] rounded-2xl p-6 overflow-x-auto border border-slate-800 shadow-2xl">
+                    <div
+                        class="bg-[#0D1117] rounded-2xl p-6 overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar border border-slate-800 shadow-2xl">
                         <pre
                             class="text-xs font-mono text-wa-teal leading-relaxed select-all">{{ json_encode($selectedPayload?->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>

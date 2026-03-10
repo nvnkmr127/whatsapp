@@ -407,8 +407,10 @@
                             <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <span class="text-[10px] font-black text-wa-teal uppercase tracking-widest">JSON PKT</span>
                             </div>
-                            <pre
-                                class="text-emerald-400/90 font-mono text-xs overflow-x-auto custom-scrollbar leading-relaxed"><code>{{ json_encode($selectedEvent->event_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                            <div class="overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar">
+                                <pre
+                                    class="text-emerald-400/90 font-mono text-xs leading-relaxed"><code>{{ json_encode($selectedEvent->event_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code></pre>
+                            </div>
                         </div>
                     </div>
                 </div>

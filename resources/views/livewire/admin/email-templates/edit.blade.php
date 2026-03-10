@@ -141,8 +141,8 @@
                                     <code
                                         class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200 font-mono cursor-help"
                                         title="Use as {{ '{' . '{ ' . $var . ' }' . '}' }}">
-                                                {{ $var }}
-                                            </code>
+                                                    {{ $var }}
+                                                </code>
                                 @empty
                                     <span class="text-xs text-slate-400 italic">No variables defined</span>
                                 @endforelse
@@ -154,8 +154,10 @@
                 @if($activeTab === 'preview')
                     <div class="bg-indigo-900 rounded-[2.5rem] shadow-xl p-8 text-white">
                         <h3 class="text-xs font-black text-indigo-300 uppercase tracking-widest mb-4">Preview Data</h3>
-                        <pre
-                            class="text-[10px] font-mono text-indigo-100 overflow-x-auto whitespace-pre-wrap">{{ json_encode($previewData, JSON_PRETTY_PRINT) }}</pre>
+                        <div class="overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar">
+                            <pre
+                                class="text-[10px] font-mono text-indigo-100 whitespace-pre-wrap">{{ json_encode($previewData, JSON_PRETTY_PRINT) }}</pre>
+                        </div>
                     </div>
                 @endif
             </div>
