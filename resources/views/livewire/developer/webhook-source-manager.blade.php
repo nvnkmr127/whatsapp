@@ -267,7 +267,7 @@
                                 <div class="space-y-2 group">
                                     <x-label value="Platform"
                                         class="uppercase text-[10px] tracking-widest font-black text-slate-400 group-focus-within:text-wa-teal transition-colors" />
-                                    <select wire:model.live="platform" wire:change="selectPlatform($event.target.value)"
+                                    <select wire:model.live="platform"
                                         class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.5rem] py-4 px-6 font-bold text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/10 transition-all shadow-inner appearance-none cursor-pointer">
                                         @foreach($platforms as $key => $preset)
                                             <option value="{{ $key }}">{{ $preset['name'] }}</option>

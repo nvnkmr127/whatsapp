@@ -177,7 +177,7 @@ class WebhookSourceManager extends Component
         $this->editingId = $source->id;
     }
 
-    public function selectPlatform($platform)
+    public function updatedPlatform($platform)
     {
         $this->platform = $platform;
         $preset = config("webhook-platforms.{$platform}");
@@ -306,7 +306,7 @@ class WebhookSourceManager extends Component
                     'status' => $payload->status,
                     'error_message' => $payload->error_message,
                     'mapped_data' => $payload->mapped_data,
-                    'created_at' => $payload->created_at->diffForHumans(),
+                    'created_at' => $payload->created_at ? $payload->created_at->diffForHumans() : 'Unknown',
                 ];
             })->values()->toArray();
     }
@@ -815,7 +815,8 @@ class WebhookSourceManager extends Component
             // Resolve Parameters
             $parameters = [];
             if (!empty($this->templateParameters)) {
-                $maxParam = max(array_keys($this->templateParameters));
+                $keys = array_keys($this->templateParameters);
+                $maxParam = !empty($keys) ? max($keys) : 0;
                 for ($i = 1; $i <= $maxParam; $i++) {
                     $path = $this->templateParameters[$i] ?? null;
                     if ($path) {
