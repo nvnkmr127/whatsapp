@@ -694,64 +694,66 @@
                                 @if(!empty($templateParams))
                                     <div class="col-span-full space-y-4">
                                         <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Variable Assignments</h5>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            @foreach($templateParams as $paramNum)
-                                                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group">
-                                                    <div class="flex items-center justify-between mb-4">
-                                                        <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-wa-teal flex items-center justify-center font-black text-xs border border-purple-100 dark:border-purple-500/20">
-                                                            {{ $paramNum }}
-                                                        </span>
-                                                        @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
-                                                            <button wire:click="$set('templateParameters.{{ $paramNum }}', '')" class="text-[10px] font-black text-wa-teal hover:underline uppercase tracking-widest">Switch to Dynamic</button>
-                                                        @else
-                                                            <button wire:click="$set('templateParameters.{{ $paramNum }}', 'STATIC:')" class="text-[10px] font-black text-slate-400 hover:text-wa-teal hover:underline uppercase tracking-widest">Set Static Value</button>
-                                                        @endif
-                                                    </div>
-
-                                                    {{-- Template Context Snippet --}}
-                                                    @php
-                                                        $fullContent = $selectedTemplate->content;
-                                                        $snippet = '';
-                                                        // Look for the variable in the content and grab surrounding text
-                                                        if (preg_match('/(?:^|(.{0,40}))\{\{' . $paramNum . '\}\}(.{0,40}|$)/s', $fullContent, $matches)) {
-                                                            $before = $matches[1] ?? '';
-                                                            $after = $matches[2] ?? '';
-                                                            $snippet = ($before ? '...' : '') . e($before) . '<span class="text-wa-teal font-black underline">[' . $paramNum . ']</span>' . e($after) . ($after ? '...' : '');
-                                                        }
-                                                    @endphp
-                                                    @if($snippet)
-                                                        <div class="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 text-[11px] font-medium text-slate-600 dark:text-slate-400 italic leading-relaxed">
-                                                            {!! $snippet !!}
+                                        <div class="max-h-[60vh] overflow-y-auto custom-scrollbar p-1 pr-4 -mr-4">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                @foreach($templateParams as $paramNum)
+                                                    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all group">
+                                                        <div class="flex items-center justify-between mb-4">
+                                                            <span class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-wa-teal flex items-center justify-center font-black text-xs border border-purple-100 dark:border-purple-500/20">
+                                                                {{ $paramNum }}
+                                                            </span>
+                                                            @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
+                                                                <button wire:click="$set('templateParameters.{{ $paramNum }}', '')" class="text-[10px] font-black text-wa-teal hover:underline uppercase tracking-widest">Switch to Dynamic</button>
+                                                            @else
+                                                                <button wire:click="$set('templateParameters.{{ $paramNum }}', 'STATIC:')" class="text-[10px] font-black text-slate-400 hover:text-wa-teal hover:underline uppercase tracking-widest">Set Static Value</button>
+                                                            @endif
                                                         </div>
-                                                    @endif
 
-                                                    <div class="space-y-4">
-                                                        @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
-                                                            <input type="text" 
-                                                                   value="{{ substr($templateParameters[$paramNum] ?? '', 7) }}"
-                                                                   @change="$wire.set('templateParameters.{{ $paramNum }}', 'STATIC:' + $event.target.value)"
-                                                                   class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner"
-                                                                   placeholder="Fixed Text Value..." />
-                                                        @else
-                                                            <select wire:model.live="templateParameters.{{ $paramNum }}" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-mono text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner cursor-pointer">
-                                                                <option value="">-- Map to Field --</option>
-                                                                @foreach($mappingContext as $key => $value)
-                                                                    <option value="{{ $key }}">{{ $key }} ({{ Str::limit(is_string($value) ? $value : json_encode($value), 20) }})</option>
-                                                                @endforeach
-                                                            </select>
+                                                        {{-- Template Context Snippet --}}
+                                                        @php
+                                                            $fullContent = $selectedTemplate->content;
+                                                            $snippet = '';
+                                                            // Look for the variable in the content and grab surrounding text
+                                                            if (preg_match('/(?:^|(.{0,40}))\{\{' . $paramNum . '\}\}(.{0,40}|$)/s', $fullContent, $matches)) {
+                                                                $before = $matches[1] ?? '';
+                                                                $after = $matches[2] ?? '';
+                                                                $snippet = ($before ? '...' : '') . e($before) . '<span class="text-wa-teal font-black underline">[' . $paramNum . ']</span>' . e($after) . ($after ? '...' : '');
+                                                            }
+                                                        @endphp
+                                                        @if($snippet)
+                                                            <div class="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 text-[11px] font-medium text-slate-600 dark:text-slate-400 italic leading-relaxed">
+                                                                {!! $snippet !!}
+                                                            </div>
                                                         @endif
 
-                                                        <select wire:model="transformation_rules.param_{{ $paramNum }}" class="w-full bg-transparent border-t-0 border-x-0 border-b-2 border-slate-100 dark:border-slate-800 focus:border-purple-500 focus:ring-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">
-                                                            <option value="">No Transformation</option>
-                                                            <option value="uppercase">UPPERCASE</option>
-                                                            <option value="lowercase">lowercase</option>
-                                                            <option value="ucwords">Title Case</option>
-                                                            <option value="format_phone">Phone E.164</option>
-                                                            <option value="stripe_amount_to_decimal">Stripe (/100)</option>
-                                                        </select>
+                                                        <div class="space-y-4">
+                                                            @if(str_starts_with($templateParameters[$paramNum] ?? '', 'STATIC:'))
+                                                                <input type="text" 
+                                                                       value="{{ substr($templateParameters[$paramNum] ?? '', 7) }}"
+                                                                       @change="$wire.set('templateParameters.{{ $paramNum }}', 'STATIC:' + $event.target.value)"
+                                                                       class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-bold text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner"
+                                                                       placeholder="Fixed Text Value..." />
+                                                            @else
+                                                                <select wire:model.live="templateParameters.{{ $paramNum }}" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[1.25rem] py-3 px-5 font-mono text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner cursor-pointer">
+                                                                    <option value="">-- Map to Field --</option>
+                                                                    @foreach($mappingContext as $key => $value)
+                                                                        <option value="{{ $key }}">{{ $key }} ({{ Str::limit(is_string($value) ? $value : json_encode($value), 20) }})</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            @endif
+
+                                                            <select wire:model="transformation_rules.param_{{ $paramNum }}" class="w-full bg-transparent border-t-0 border-x-0 border-b-2 border-slate-100 dark:border-slate-800 focus:border-purple-500 focus:ring-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer">
+                                                                <option value="">No Transformation</option>
+                                                                <option value="uppercase">UPPERCASE</option>
+                                                                <option value="lowercase">lowercase</option>
+                                                                <option value="ucwords">Title Case</option>
+                                                                <option value="format_phone">Phone E.164</option>
+                                                                <option value="stripe_amount_to_decimal">Stripe (/100)</option>
+                                                            </select>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            @endforeach
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
                                 @else
@@ -810,39 +812,41 @@
                                     </button>
                                 </div>
 
-                                <div class="space-y-4">
-                                    @foreach($filtering_rules_ui as $index => $rule)
-                                        <div class="flex flex-col md:flex-row gap-4 animate-in slide-in-from-left duration-300">
-                                            <div class="flex-1">
-                                                <select wire:model="filtering_rules_ui.{{ $index }}.field" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-mono text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm cursor-pointer">
-                                                    <option value="">-- Select Field --</option>
-                                                    @foreach($mappingContext as $key => $value)
-                                                        <option value="{{ $key }}">{{ $key }}</option>
-                                                    @endforeach
-                                                </select>
+                                <div class="max-h-[300px] overflow-y-auto custom-scrollbar p-1 pr-4 -mr-4">
+                                    <div class="space-y-4">
+                                        @foreach($filtering_rules_ui as $index => $rule)
+                                            <div class="flex flex-col md:flex-row gap-4 animate-in slide-in-from-left duration-300">
+                                                <div class="flex-1">
+                                                    <select wire:model="filtering_rules_ui.{{ $index }}.field" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-mono text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm cursor-pointer">
+                                                        <option value="">-- Select Field --</option>
+                                                        @foreach($mappingContext as $key => $value)
+                                                            <option value="{{ $key }}">{{ $key }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="w-full md:w-40">
+                                                    <select wire:model="filtering_rules_ui.{{ $index }}.operator" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-bold text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm cursor-pointer">
+                                                        <option value="equals">Equals</option>
+                                                        <option value="not_equals">Not Equals</option>
+                                                        <option value="contains">Contains</option>
+                                                        <option value="not_contains">Not Contains</option>
+                                                        <option value="exists">Exists</option>
+                                                    </select>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <input type="text" wire:model="filtering_rules_ui.{{ $index }}.value" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-bold text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm" placeholder="Value to match..." />
+                                                </div>
+                                                <button wire:click="removeFilterRule({{ $index }})" class="p-3 text-slate-300 hover:text-rose-500 transition-colors">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                </button>
                                             </div>
-                                            <div class="w-full md:w-40">
-                                                <select wire:model="filtering_rules_ui.{{ $index }}.operator" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-bold text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm cursor-pointer">
-                                                    <option value="equals">Equals</option>
-                                                    <option value="not_equals">Not Equals</option>
-                                                    <option value="contains">Contains</option>
-                                                    <option value="not_contains">Not Contains</option>
-                                                    <option value="exists">Exists</option>
-                                                </select>
+                                        @endforeach
+                                        @if(empty($filtering_rules_ui))
+                                            <div class="text-center p-8 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
+                                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No filters - all requests will be processed</p>
                                             </div>
-                                            <div class="flex-1">
-                                                <input type="text" wire:model="filtering_rules_ui.{{ $index }}.value" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-bold text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm" placeholder="Value to match..." />
-                                            </div>
-                                            <button wire:click="removeFilterRule({{ $index }})" class="p-3 text-slate-300 hover:text-rose-500 transition-colors">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                            </button>
-                                        </div>
-                                    @endforeach
-                                    @if(empty($filtering_rules_ui))
-                                        <div class="text-center p-8 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
-                                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No filters - all requests will be processed</p>
-                                        </div>
-                                    @endif
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
 
