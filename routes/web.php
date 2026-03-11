@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LeadCaptureWidgetController;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Developer\KnowledgeBaseManager;
 use App\Livewire\Settings\AiSettings;
@@ -31,6 +32,13 @@ Route::prefix('auth')->name('auth.')->group(function () {
     Route::get('/facebook/callback', [\App\Http\Controllers\Auth\FacebookAuthController::class, 'callback'])->name('facebook.callback');
 });
 
+// Lead Capture QR Routes (Public)
+Route::get('/qr/{slug}', [LeadCaptureWidgetController::class, 'show'])->name('qr.show');
+Route::get('/qr/{slug}/image', [LeadCaptureWidgetController::class, 'qr'])->name('qr.image');
+Route::post('/qr/{slug}/lead', [LeadCaptureWidgetController::class, 'lead'])->name('qr.lead');
+Route::get('/growth-tools/config/{slug}', [LeadCaptureWidgetController::class, 'config'])->name('qr.config');
+Route::get('/growth-tools/click/{slug}', [LeadCaptureWidgetController::class, 'trackClick'])->name('qr.click');
+
 Route::middleware([
     'auth:sanctum',
     'Laravel\Jetstream\Http\Middleware\AuthenticateSession',
@@ -40,6 +48,8 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+
+    Route::get('/growth-tools', \App\Livewire\LeadCapture\WidgetManager::class)->name('growth-tools')->middleware(['can:manage-campaigns']);
 
     // Webhooks - See developer section for webhook management routes
     Route::get('/webhooks/logs', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
@@ -214,12 +224,6 @@ Route::middleware([
     // ─────────────────────────────────────────────────────────────────────
     // Backup & Restore — Admin Only (manage-settings permission required)
     // ─────────────────────────────────────────────────────────────────────
-    // Security model:
-    //   - All routes require `can:manage-settings` (Jetstream Admin role).
-    //   - Download issues a 5-minute signed URL; no file path is ever exposed.
-    //   - Signed stream route is also auth-protected to prevent token sharing.
-    //   - All actions are audit-logged (see BackupController & RestoreController).
-    // ─────────────────────────────────────────────────────────────────────
     Route::middleware(['can:manage-settings'])->group(function () {
         Route::get('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'index'])->name('backups.index');
         Route::post('/backups', [\App\Http\Controllers\Backup\BackupController::class, 'store'])->name('backups.store');
@@ -227,12 +231,11 @@ Route::middleware([
         Route::post('/backups/{id}/restore', [\App\Http\Controllers\Backup\RestoreController::class, 'restore'])->name('backups.restore');
     });
 
-    // Signed download stream — validates Laravel signed URL token + auth session.
-    // Reached only via a temporary URL issued by BackupController::download().
-    // The `signed` middleware rejects any forged or expired URL automatically.
+    // Signed download stream
     Route::get('/backups/{id}/download/stream', [\App\Http\Controllers\Backup\SecureDownloadController::class, 'stream'])
         ->name('backups.download.stream')
         ->middleware(['signed']);
+
     // Identity Management
     Route::delete('/identities/{identity}', [\App\Http\Controllers\UserIdentityController::class, 'destroy'])->name('identities.destroy');
 

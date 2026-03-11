@@ -142,6 +142,27 @@ class PersistMessageJob implements ShouldQueue
             }
         }
 
+        // 5.b QR Code Lead Capture Tracking
+        if ($content && preg_match('/\[ref:([a-zA-Z0-9-]+)\]/', $content, $matches)) {
+            $slug = $matches[1];
+            $widget = \App\Models\LeadCaptureWidget::where('slug', $slug)->first();
+            if ($widget) {
+                $widget->increment('conversion_count');
+
+                // Track as Lead Source if available
+                $leadSource = \App\Models\LeadSource::firstOrCreate(
+                    ['team_id' => $team->id, 'name' => "QR: " . $widget->name],
+                    ['type' => 'custom']
+                );
+
+                if (!$contact->lead_source_id) {
+                    $contact->update(['lead_source_id' => $leadSource->id]);
+                }
+
+                Log::info("Lead Capture Conversion tracked for Widget: {$widget->name}, Slug: {$slug}");
+            }
+        }
+
         // 6. Create Message Record
         $meta = $msgData;
         if (isset($data['referral'])) {

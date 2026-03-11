@@ -3,6 +3,7 @@
 namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ContactDetails extends Component
@@ -10,6 +11,10 @@ class ContactDetails extends Component
     public $conversationId;
     public $conversation;
     public $contact;
+    public $timeline = [];
+    public $mediaVault = [];
+    public $heatmap = [];
+    public $activeTab = 'timeline'; // Default tab
 
     public $newNoteBody = '';
 
@@ -30,8 +35,20 @@ class ContactDetails extends Component
 
         if ($this->conversation) {
             $this->contact = $this->conversation->contact;
+            if ($this->contact) {
+                $this->timeline = $this->contact->getTimeline(!Auth::user()?->is_super_admin);
+                $this->mediaVault = $this->contact->getMediaVault();
+                $this->heatmap = $this->contact->getInteractionHeatmap();
+            } else {
+                $this->timeline = [];
+                $this->mediaVault = [];
+                $this->heatmap = [];
+            }
         } else {
             $this->contact = null;
+            $this->timeline = [];
+            $this->mediaVault = [];
+            $this->heatmap = [];
         }
     }
 

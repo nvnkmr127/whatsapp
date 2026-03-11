@@ -210,91 +210,235 @@
                     </div>
                 </section>
 
-                <section>
-                    <h5
-                        class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight mb-3 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167a2.405 2.405 0 011.002-2.736l3.144-1.921A1.76 1.76 0 0111 5.882zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <div
+                        class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2">
+                        <svg class="w-3.5 h-3.5 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                clip-rule="evenodd" />
                         </svg>
-                        Campaign History
-                    </h5>
-                    <div class="space-y-2">
-                        @php
-                            $uniqueCampaigns = $contact->attributedMessages
-                                ->map(fn($m) => $m->attributedCampaign)
-                                ->filter()
-                                ->unique('id')
-                                ->sortByDesc('created_at');
-                        @endphp
-
-                        @forelse($uniqueCampaigns as $camp)
-                            <div
-                                class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
-                                <div class="flex flex-col">
-                                    <span
-                                        class="text-[10px] font-black text-slate-900 dark:text-white truncate max-w-[140px]">{{ $camp->name }}</span>
-                                    <span
-                                        class="text-[8px] font-bold text-slate-400 uppercase">{{ $camp->created_at->format('M d, Y') }}</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal border border-wa-teal/20 rounded text-[7px] font-black uppercase">Interacted</span>
-                                </div>
-                            </div>
-                        @empty
-                            <div
-                                class="py-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
-                                <span class="text-[10px] font-black text-slate-400 uppercase italic">No Campaign
-                                    Reach</span>
-                            </div>
-                        @endforelse
+                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Metadata
+                            Encrypted</span>
                     </div>
                 </section>
 
-                <section>
-                    <h5 class="text-[10px] font-bold text-slate-400/70 uppercase tracking-[0.2em] mb-4">Notes</h5>
-
-                    <div class="space-y-4 mb-6">
-                        @forelse($conversation->notes as $note)
-                            <div
-                                class="relative pl-6 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-wa-teal/20 before:rounded-full">
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-[10px] font-black text-wa-teal uppercase">{{ $note->user->name }}</span>
-                                    <span
-                                        class="text-[10px] font-bold text-slate-400">{{ $note->created_at->diffForHumans() }}</span>
-                                </div>
-                                <p class="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    {{ $note->content }}
-                                </p>
-                            </div>
-                        @empty
-                            <div
-                                class="w-full py-8 text-center bg-slate-50/50 dark:bg-slate-900/30 rounded-3xl border border-slate-100 dark:border-slate-800">
-                                <span class="text-[10px] font-black text-slate-300 uppercase italic tracking-widest">No
-                                    notes
-                                    created.</span>
-                            </div>
-                        @endforelse
+                <!-- Profile Intelligence Tabs -->
+                <section x-data="{ activeTab: @entangle('activeTab') }">
+                    <div class="flex items-center gap-4 mb-6 border-b border-slate-100 dark:border-slate-800 pb-1">
+                        <button @click="activeTab = 'timeline'"
+                            :class="activeTab === 'timeline' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                            class="text-[10px] uppercase tracking-widest transition-all">Timeline</button>
+                        <button @click="activeTab = 'vault'"
+                            :class="activeTab === 'vault' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                            class="text-[10px] uppercase tracking-widest transition-all">Media Vault</button>
+                        <button @click="activeTab = 'heatmap'"
+                            :class="activeTab === 'heatmap' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                            class="text-[10px] uppercase tracking-widest transition-all">Heatmap</button>
                     </div>
 
-                    <form wire:submit.prevent="addNote" class="relative group">
-                        <textarea wire:model="newNoteBody"
-                            class="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-wa-teal/20 focus:border-wa-teal transition-all min-h-[100px]"
-                            placeholder="Add a note..."></textarea>
-                        <div class="absolute right-3 bottom-3 flex items-center gap-2">
-                            <span
-                                class="text-[10px] font-black text-slate-300 uppercase tracking-widest pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity mr-2">Press
-                                CTRL+ENTER to deploy</span>
-                            <button type="submit"
-                                class="p-2.5 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                            </button>
+                    <!-- Timeline Tab Content -->
+                    <div x-show="activeTab === 'timeline'" x-cloak x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-y-2">
+                        <div
+                            class="relative pl-4 space-y-6 before:absolute before:left-0 before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                            @forelse($timeline as $item)
+                                <div class="relative">
+                                    <!-- Dot -->
+                                    <div class="absolute -left-[1.375rem] top-1.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-950 shadow-sm
+                                                                        {{ $item['type'] === 'message' ? 'bg-wa-teal' : '' }}
+                                                                        {{ $item['type'] === 'note' ? 'bg-amber-400' : '' }}
+                                                                        {{ $item['type'] === 'order' ? 'bg-indigo-500' : '' }}
+                                                                        {{ $item['type'] === 'deal' ? 'bg-emerald-500' : '' }}
+                                                                        {{ $item['type'] === 'automation' ? 'bg-purple-500' : '' }}
+                                                                        {{ $item['type'] === 'event' || $item['type'] === 'activity_log' || $item['type'] === 'crm_activity' ? 'bg-slate-400' : '' }}
+                                                                    "></div>
+
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-black uppercase tracking-wider
+                                                                            {{ $item['type'] === 'message' ? 'text-wa-teal' : '' }}
+                                                                            {{ $item['type'] === 'note' ? 'text-amber-500' : '' }}
+                                                                            {{ $item['type'] === 'order' ? 'text-indigo-500' : '' }}
+                                                                            {{ $item['type'] === 'deal' ? 'text-emerald-500' : '' }}
+                                                                            {{ $item['type'] === 'automation' ? 'text-purple-500' : '' }}
+                                                                            {{ $item['type'] === 'event' || $item['type'] === 'activity_log' || $item['type'] === 'crm_activity' ? 'text-slate-500' : 'text-slate-600' }}
+                                                                        ">
+                                                {{ $item['title'] }}
+                                            </span>
+                                            <span class="text-[9px] font-bold text-slate-400">
+                                                {{ $item['occurred_at']->diffForHumans() }}
+                                            </span>
+                                        </div>
+
+                                        @if($item['type'] === 'message')
+                                            <div
+                                                class="p-2.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                <p class="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed italic">
+                                                    "{{ Str::limit($item['description'], 100) }}"
+                                                </p>
+                                            </div>
+                                        @elseif($item['type'] === 'note')
+                                            <div
+                                                class="p-3 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100/50 dark:border-amber-900/20">
+                                                <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                                    {{ $item['description'] }}
+                                                </p>
+                                                @if($item['user'] ?? false)
+                                                    <div class="mt-2 flex items-center gap-1.5">
+                                                        <div
+                                                            class="w-4 h-4 rounded-full bg-amber-200 flex items-center justify-center text-[8px] font-black text-amber-700">
+                                                            {{ substr($item['user'], 0, 1) }}
+                                                        </div>
+                                                        <span
+                                                            class="text-[9px] font-black text-amber-600 uppercase">{{ $item['user'] }}</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @elseif($item['type'] === 'order')
+                                            <div
+                                                class="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100/50 dark:border-indigo-900/20 flex items-center justify-between">
+                                                <div class="flex flex-col">
+                                                    <span
+                                                        class="text-xs font-bold text-indigo-700 dark:text-indigo-300">{{ $item['description'] }}</span>
+                                                    <span class="text-[9px] font-black text-indigo-400 uppercase">Revenue Event</span>
+                                                </div>
+                                                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                                </svg>
+                                            </div>
+                                        @elseif($item['type'] === 'deal')
+                                            <div
+                                                class="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-900/20 flex items-center justify-between">
+                                                <div class="flex flex-col">
+                                                    <span
+                                                        class="text-xs font-bold text-emerald-700 dark:text-emerald-300">{{ $item['description'] }}</span>
+                                                    <span class="text-[9px] font-black text-emerald-400 uppercase">Pipeline Progress</span>
+                                                </div>
+                                                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                        @else
+                                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                {{ $item['description'] }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
+                            @empty
+                                <div
+                                    class="py-8 text-center bg-slate-50/50 dark:bg-slate-900/30 rounded-3xl border border-slate-100 dark:border-slate-800">
+                                    <span class="text-[10px] font-black text-slate-300 uppercase italic tracking-widest">No
+                                        activities
+                                        detected.</span>
+                                </div>
+                            @endforelse
                         </div>
-                    </form>
+                    </div>
+
+                    <!-- Media Vault Tab Content -->
+                    <div x-show="activeTab === 'vault'" x-cloak x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-y-2">
+                        <div class="grid grid-cols-3 gap-2">
+                            @forelse($mediaVault as $media)
+                                @if(in_array($media->type, ['image', 'video', 'document']))
+                                    <div class="relative group aspect-square rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 cursor-pointer hover:shadow-lg transition-all"
+                                        title="{{ $media->caption }}">
+                                        @if($media->type === 'image')
+                                            <img src="{{ $media->media_url }}" class="w-full h-full object-cover">
+                                        @elseif($media->type === 'video')
+                                            <div class="w-full h-full flex items-center justify-center bg-slate-900">
+                                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            </div>
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center">
+                                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                </svg>
+                                            </div>
+                                        @endif
+                                        <!-- Overlay -->
+                                        <div
+                                            class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <span class="text-[8px] font-black text-white uppercase">{{ $media->created_at->format('M d') }}</span>
+                                        </div>
+                                    </div>
+                                @endif
+                            @empty
+                                <div
+                                    class="col-span-3 py-12 text-center bg-slate-50/50 dark:bg-slate-900/30 rounded-3xl border border-slate-100 dark:border-slate-800">
+                                    <span class="text-[10px] font-black text-slate-300 uppercase italic tracking-widest">No
+                                        media found.</span>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <!-- Heatmap Tab Content -->
+                    <div x-show="activeTab === 'heatmap'" x-cloak x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-y-2">
+                        <div class="flex flex-col gap-1">
+                            @php
+                                $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                            @endphp
+                            <div class="flex items-center gap-1 mb-2">
+                                <div class="w-8"></div>
+                                @foreach([0, 6, 12, 18] as $h)
+                                    <div class="flex-1 text-[8px] text-slate-400 font-black uppercase text-center">{{ $h }}:00
+                                    </div>
+                                @endforeach
+                            </div>
+                            @foreach($days as $index => $day)
+                                @php
+                                    $dayNum = $index + 1; // 1 (Sun) to 7 (Sat)
+                                @endphp
+                                <div class="flex items-center gap-1 h-3">
+                                    <div class="w-8 text-[8px] font-black text-slate-500 uppercase">{{ $day }}</div>
+                                    <div class="flex-1 flex gap-0.5 h-full">
+                                        @for($h = 0; $h < 24; $h++)
+                                            @php
+                                                $count = $heatmap[$dayNum][$h] ?? 0;
+                                                $intensity = ($count > 0) ? min(100, $count * 20 + 10) : 0;
+                                                $color = $intensity > 0 ? "rgba(34, 197, 94, " . ($intensity / 100) . ")" : "transparent";
+                                                if ($intensity > 0 && $intensity < 20) $color = "rgba(34, 197, 94, 0.1)";
+                                            @endphp
+                                            <div class="flex-1 rounded-[1px] border border-slate-100 dark:border-slate-800/20"
+                                                style="background-color: {{ $color }};"
+                                                title="{{ $count }} events at {{ $h }}:00 on {{ $day }}"></div>
+                                        @endfor
+                                    </div>
+                                </div>
+                            @endforeach
+                            <p class="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Peak
+                                Engagement Signal Intensity</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                        <h6 class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Quick Note</h6>
+                        <form wire:submit.prevent="addNote" class="relative group">
+                            <textarea wire:model="newNoteBody"
+                                class="w-full p-4 bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-wa-teal/20 focus:border-wa-teal transition-all min-h-[80px]"
+                                placeholder="Add a note to this profile..."></textarea>
+                            <div class="absolute right-3 bottom-3">
+                                <button type="submit"
+                                    class="p-2 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </section>
             </div>
         </div>

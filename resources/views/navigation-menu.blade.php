@@ -39,6 +39,10 @@
                             </x-nav-link>
                         @endif
 
+                        <x-nav-link href="{{ route('growth-tools') }}" :active="request()->routeIs('growth-tools')">
+                            {{ __('Growth Tools') }}
+                        </x-nav-link>
+
                         @if(auth()->user()->hasPlanFeature('templates'))
                             @can('manage-templates')
                                 <x-nav-link href="{{ route('templates.index') }}" :active="request()->routeIs('templates.*')">
@@ -288,6 +292,10 @@
                         {{ __('Campaigns') }}
                     </x-responsive-nav-link>
                 @endif
+
+                <x-responsive-nav-link href="{{ route('growth-tools') }}" :active="request()->routeIs('growth-tools')">
+                    {{ __('Growth Tools') }}
+                </x-responsive-nav-link>
 
                 @if(auth()->user()->hasPlanFeature('templates'))
                     @can('manage-templates')

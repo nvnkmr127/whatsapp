@@ -100,6 +100,11 @@ class Sidebar extends Component
                 'plan_feature' => 'templates'
             ],
             [
+                'route' => 'growth-tools',
+                'label' => 'Growth Tools',
+                'icon' => 'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h2M4 8h2m12 0h2M4 6h16M4 18h16',
+            ],
+            [
                 'route' => 'automations.index',
                 'label' => 'Bot Manager',
                 'icon' => 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z',

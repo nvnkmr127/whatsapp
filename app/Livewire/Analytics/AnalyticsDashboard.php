@@ -44,6 +44,8 @@ class AnalyticsDashboard extends Component
                 'ticketsResolved' => Ticket::where('team_id', $teamId)
                     ->where('status', 'resolved')
                     ->count(),
+                'qrScans' => \App\Models\LeadCaptureWidget::where('team_id', $teamId)->sum('scan_count'),
+                'qrConversions' => \App\Models\LeadCaptureWidget::where('team_id', $teamId)->sum('conversion_count'),
                 'transactions' => TeamTransaction::where('team_id', $teamId)
                     ->latest()
                     ->take(10)
@@ -78,6 +80,8 @@ class AnalyticsDashboard extends Component
             'msgSent' => $stats['msgSent'],
             'msgReceived' => $stats['msgReceived'],
             'ticketsResolved' => $stats['ticketsResolved'],
+            'qrScans' => $stats['qrScans'],
+            'qrConversions' => $stats['qrConversions'],
             'transactions' => $stats['transactions'],
             'metaAnalytics' => $this->metaAnalytics,
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())

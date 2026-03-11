@@ -57,67 +57,140 @@
                 {{-- Content Grid --}}
                 <div class="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                    {{-- Left Column: Messages & Activity --}}
-                    <div class="space-y-6">
-                        {{-- Recent Messages --}}
-                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">Recent Messages
-                                </h4>
-                                <span class="text-[9px] text-slate-400 font-medium">Last 5</span>
+                    {{-- Left Column: Intelligence Dashboard --}}
+                    <div class="space-y-6 lg:col-span-1">
+                        @php
+                            $timeline = $contact->getTimeline(!auth()->user()?->is_super_admin)->take(10);
+                            $mediaVault = $contact->getMediaVault()->take(6);
+                            $heatmap = $contact->getInteractionHeatmap();
+                        @endphp
+
+                        {{-- Intelligence Tabs --}}
+                        <div x-data="{ activeTab: 'messages' }" class="bg-white dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-6 overflow-x-auto scrollbar-hide">
+                                <button @click="activeTab = 'messages'" 
+                                    :class="activeTab === 'messages' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                                    class="text-[10px] uppercase tracking-widest transition-all whitespace-nowrap">Messages</button>
+                                <button @click="activeTab = 'timeline'" 
+                                    :class="activeTab === 'timeline' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                                    class="text-[10px] uppercase tracking-widest transition-all whitespace-nowrap">Timeline</button>
+                                <button @click="activeTab = 'vault'" 
+                                    :class="activeTab === 'vault' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                                    class="text-[10px] uppercase tracking-widest transition-all whitespace-nowrap">Vault</button>
+                                <button @click="activeTab = 'heatmap'" 
+                                    :class="activeTab === 'heatmap' ? 'text-wa-teal border-b-2 border-wa-teal font-black pb-2' : 'text-slate-400 font-bold pb-2 hover:text-slate-600'"
+                                    class="text-[10px] uppercase tracking-widest transition-all whitespace-nowrap">Intensity</button>
                             </div>
 
-                            @php
-                                $recentMessages = $contact->conversations()
-                                    ->with('messages')
-                                    ->latest()
-                                    ->first()
-                                        ?->messages()
-                                    ->latest()
-                                    ->limit(5)
-                                    ->get() ?? collect();
-                            @endphp
-
-                            <div class="space-y-3 max-h-80 overflow-y-auto">
-                                @forelse($recentMessages as $message)
-                                    <div
-                                        class="flex gap-2 {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }}">
-                                        <div
-                                            class="max-w-[85%] {{ $message->direction === 'outbound' ? 'bg-wa-teal/10 text-wa-teal' : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300' }} rounded-xl px-4 py-3 shadow-sm">
-                                            <p class="text-sm font-medium">{{ $message->content ?: 'Media message' }}</p>
-                                            <span
-                                                class="text-[10px] opacity-60 font-medium mt-1 block">{{ $message->created_at->diffForHumans() }}</span>
-                                        </div>
+                            <div class="p-6">
+                                <!-- Messages Tab -->
+                                <div x-show="activeTab === 'messages'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2">
+                                    <div class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+                                        @php
+                                            $directMessages = $contact->messages()->latest()->take(10)->get();
+                                        @endphp
+                                        @forelse($directMessages as $msg)
+                                            <div class="flex {{ $msg->direction === 'outbound' ? 'justify-end' : 'justify-start' }}">
+                                                <div class="max-w-[85%] {{ $msg->direction === 'outbound' ? 'bg-wa-teal text-white rounded-l-2xl rounded-tr-2xl' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-r-2xl rounded-tl-2xl' }} px-4 py-2 shadow-sm">
+                                                    <p class="text-xs font-semibold leading-relaxed">{{ $msg->content ?: 'Media Object' }}</p>
+                                                    <span class="text-[8px] opacity-70 block mt-1 text-right">{{ $msg->created_at->diffForHumans() }}</span>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="text-center py-8 text-slate-400 text-xs italic">No messages sent yet</div>
+                                        @endforelse
                                     </div>
-                                @empty
-                                    <div class="text-center py-8 text-slate-400 text-sm italic">No messages yet</div>
-                                @endforelse
+                                </div>
+                                <!-- Timeline Tab -->
+                                <div x-show="activeTab === 'timeline'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2">
+                                    <div class="relative pl-4 space-y-6 before:absolute before:left-0 before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                                        @forelse($timeline as $item)
+                                            <div class="relative">
+                                                <div class="absolute -left-[1.375rem] top-1.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 shadow-sm
+                                                    {{ $item['type'] === 'message' ? 'bg-wa-teal' : '' }}
+                                                    {{ $item['type'] === 'note' ? 'bg-amber-400' : '' }}
+                                                    {{ $item['type'] === 'order' ? 'bg-indigo-500' : '' }}
+                                                    {{ $item['type'] === 'deal' ? 'bg-emerald-500' : '' }}
+                                                    {{ $item['type'] === 'automation' ? 'bg-purple-500' : '' }}
+                                                    {{ $item['type'] === 'event' || $item['type'] === 'activity_log' || $item['type'] === 'crm_activity' ? 'bg-slate-400' : '' }}
+                                                "></div>
+                                                <div class="flex flex-col gap-1">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="text-[9px] font-black uppercase tracking-wider text-slate-500">{{ $item['title'] }}</span>
+                                                        <span class="text-[8px] font-bold text-slate-400">{{ $item['occurred_at']->diffForHumans() }}</span>
+                                                    </div>
+                                                    <p class="text-xs font-medium text-slate-600 dark:text-slate-300">{{ Str::limit($item['description'], 120) }}</p>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="text-center py-8 text-slate-400 text-xs italic">No activities yet</div>
+                                        @endforelse
+                                    </div>
+                                </div>
+
+                                <!-- Media Vault Tab -->
+                                <div x-show="activeTab === 'vault'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2">
+                                    <div class="grid grid-cols-3 gap-3">
+                                        @forelse($mediaVault as $media)
+                                            <div class="relative group aspect-square rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.05]">
+                                                @if($media->type === 'image')
+                                                    <img src="{{ $media->media_url }}" class="w-full h-full object-cover">
+                                                @elseif($media->type === 'video')
+                                                    <div class="w-full h-full flex items-center justify-center bg-slate-900">
+                                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                    </div>
+                                                @else
+                                                    <div class="w-full h-full flex items-center justify-center">
+                                                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @empty
+                                            <div class="col-span-3 text-center py-12 text-slate-400 text-xs italic">No media assets found</div>
+                                        @endforelse
+                                    </div>
+                                </div>
+
+                                <!-- Heatmap Tab -->
+                                <div x-show="activeTab === 'heatmap'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2">
+                                    <div class="flex flex-col gap-1">
+                                        @php $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; @endphp
+                                        @foreach($days as $index => $day)
+                                            @php $dayNum = $index + 1; @endphp
+                                            <div class="flex items-center gap-1 h-3">
+                                                <div class="w-8 text-[8px] font-black text-slate-500 uppercase">{{ $day }}</div>
+                                                <div class="flex-1 flex gap-0.5 h-full">
+                                                    @for($h = 0; $h < 24; $h++)
+                                                        @php
+                                                            $count = $heatmap[$dayNum][$h] ?? 0;
+                                                            $intensity = ($count > 0) ? min(100, $count * 20 + 10) : 0;
+                                                            $color = $intensity > 0 ? "rgba(34, 197, 94, " . ($intensity / 100) . ")" : "transparent";
+                                                        @endphp
+                                                        <div class="flex-1 rounded-[1px] border border-slate-100 dark:border-slate-800/10"
+                                                            style="background-color: {{ $color }};"></div>
+                                                    @endfor
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                        <p class="mt-4 text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">Peak Engagement Signal Intensity</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {{-- Contact Metrics --}}
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
-                                <div class="text-2xl font-black text-slate-900 dark:text-white">
-                                    {{ $contact->message_count ?? 0 }}
-                                </div>
-                                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">Messages
-                                </div>
+                        {{-- Quick Metrics --}}
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-800/50">
+                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->messages()->count() }}</div>
+                                <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Msgs</div>
                             </div>
-                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
-                                <div class="text-2xl font-black text-slate-900 dark:text-white">
-                                    {{ $contact->conversation_count ?? 0 }}
-                                </div>
-                                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
-                                    Conversations</div>
+                            <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-800/50">
+                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->conversations()->count() }}</div>
+                                <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Convos</div>
                             </div>
-                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
-                                <div class="text-2xl font-black text-slate-900 dark:text-white">
-                                    {{ $contact->engagement_score ?? 0 }}
-                                </div>
-                                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
-                                    Engagement
-                                </div>
+                            <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-800/50">
+                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->tags()->count() }}</div>
+                                <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Tags</div>
                             </div>
                         </div>
                     </div>
