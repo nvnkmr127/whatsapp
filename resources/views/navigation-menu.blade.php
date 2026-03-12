@@ -81,7 +81,7 @@
                         @endif
 
                         @if(auth()->user()->hasPlanFeature('analytics'))
-                            <x-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
+                            <x-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics*')">
                                 {{ __('Analytics') }}
                             </x-nav-link>
                         @endif
@@ -322,7 +322,7 @@
                 @endif
 
                 @if(auth()->user()->hasPlanFeature('analytics'))
-                    <x-responsive-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics')">
+                    <x-responsive-nav-link href="{{ route('analytics') }}" :active="request()->routeIs('analytics*')">
                         {{ __('Analytics') }}
                     </x-responsive-nav-link>
                 @endif

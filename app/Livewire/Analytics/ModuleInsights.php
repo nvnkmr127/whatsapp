@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\WhatsappTemplate;
 use App\Models\ConsentLog;
 use App\Models\WhatsAppHealthSnapshot;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -19,6 +20,8 @@ class ModuleInsights extends Component
     public $activeModule = 'inbox';
     public $stats = [];
     public $insights = [];
+    public $templateHeatmap = [];
+    public $selectedTemplateId = null;
 
     public function mount()
     {
@@ -29,6 +32,16 @@ class ModuleInsights extends Component
     {
         $this->activeModule = $module;
         $this->loadModuleData($module);
+    }
+
+    public function updatedSelectedTemplateId($value): void
+    {
+        if ($this->activeModule !== 'template') {
+            return;
+        }
+
+        $this->selectedTemplateId = is_numeric($value) ? (int) $value : null;
+        $this->loadModuleData('template');
     }
 
     public function loadModuleData($module)
@@ -48,6 +61,7 @@ class ModuleInsights extends Component
 
         // Role-Based Insight Filtering
         $this->stats = $data['stats'];
+        $this->templateHeatmap = $data['template_heatmap'] ?? [];
         $this->insights = collect($data['insights'])->filter(function ($insight) use ($role) {
             // Admins see everything
             if ($role === 'admin' || $role === 'owner')
@@ -185,6 +199,8 @@ class ModuleInsights extends Component
         $totalTemplates = WhatsappTemplate::where('team_id', $teamId)->count();
         $approvedTemplates = WhatsappTemplate::where('team_id', $teamId)->where('status', 'APPROVED')->count();
         $rejectionRate = $totalTemplates > 0 ? (WhatsappTemplate::where('team_id', $teamId)->where('status', 'REJECTED')->count() / $totalTemplates) * 100 : 0;
+        $templateHeatmap = $this->buildTemplatePerformanceHeatmap((int) $teamId, $this->selectedTemplateId);
+        $this->selectedTemplateId = $templateHeatmap['selected_template_id'] ?? null;
 
         $insights = [];
         if ($rejectionRate > 10) {
@@ -196,6 +212,38 @@ class ModuleInsights extends Component
             ];
         }
 
+        if (!empty($templateHeatmap['best_slot']) && !empty($templateHeatmap['selected_template_name'])) {
+            $slot = $templateHeatmap['best_slot'];
+            $insights[] = [
+                'type' => 'info',
+                'message' => sprintf(
+                    '"%s" performs best on %s at %s with a %.1f%% read rate (%sx baseline, %s confidence).',
+                    $templateHeatmap['selected_template_name'],
+                    $slot['day_label'],
+                    $slot['hour_label'],
+                    $slot['read_rate'],
+                    number_format($slot['multiplier'], 1),
+                    strtolower($slot['confidence'])
+                ),
+                'action_label' => 'Plan Next Send',
+                'action_url' => '#campaigns',
+            ];
+        }
+
+        if (!empty($templateHeatmap['is_low_sample']) && !empty($templateHeatmap['selected_template_name'])) {
+            $insights[] = [
+                'type' => 'warning',
+                'message' => sprintf(
+                    'Timing guidance for "%s" is based on only %d sends. Add %d+ more sends for stronger confidence.',
+                    $templateHeatmap['selected_template_name'],
+                    (int) ($templateHeatmap['sample_size'] ?? 0),
+                    (int) ($templateHeatmap['sample_gap'] ?? 0)
+                ),
+                'action_label' => 'Increase Sample Size',
+                'action_url' => '#campaigns',
+            ];
+        }
+
         return [
             'stats' => [
                 ['label' => 'Verified Assets', 'value' => number_format($approvedTemplates), 'trend' => 'neutral', 'status' => 'success'],
@@ -203,8 +251,219 @@ class ModuleInsights extends Component
                 ['label' => 'Peak Delivery', 'value' => '99.8%', 'trend' => 'up', 'status' => 'success'],
                 ['label' => 'Media Ratio', 'value' => '40%', 'trend' => 'up', 'status' => 'neutral'],
             ],
-            'insights' => $insights
+            'insights' => $insights,
+            'template_heatmap' => $templateHeatmap,
         ];
+    }
+
+    protected function buildTemplatePerformanceHeatmap(int $teamId, $selectedTemplateId = null): array
+    {
+        $driver = DB::getDriverName();
+        $sentTsExpr = "COALESCE(messages.sent_at, messages.created_at)";
+        $dayExpr = $driver === 'sqlite'
+            ? "CAST(strftime('%w', {$sentTsExpr}) AS INTEGER)"
+            : "WEEKDAY({$sentTsExpr})";
+        $hourExpr = $driver === 'sqlite'
+            ? "CAST(strftime('%H', {$sentTsExpr}) AS INTEGER)"
+            : "HOUR({$sentTsExpr})";
+
+        $rows = Message::query()
+            ->join('campaigns', 'campaigns.id', '=', 'messages.campaign_id')
+            ->where('messages.team_id', $teamId)
+            ->where('messages.direction', 'outbound')
+            ->where('messages.type', 'template')
+            ->whereNotNull('campaigns.template_id')
+            ->whereNotNull('messages.campaign_id')
+            ->whereRaw("{$sentTsExpr} >= ?", [Carbon::now()->subDays(90)])
+            ->selectRaw('campaigns.template_id')
+            ->selectRaw("{$dayExpr} as day_index")
+            ->selectRaw("{$hourExpr} as hour_index")
+            ->selectRaw('COUNT(*) as sent_count')
+            ->selectRaw("SUM(CASE WHEN messages.read_at IS NOT NULL OR messages.status = 'read' THEN 1 ELSE 0 END) as read_count")
+            ->groupBy('campaigns.template_id')
+            ->groupByRaw($dayExpr)
+            ->groupByRaw($hourExpr)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $templateTotals = [];
+        foreach ($rows as $row) {
+            $templateId = (int) $row->template_id;
+            if (!isset($templateTotals[$templateId])) {
+                $templateTotals[$templateId] = ['sent' => 0, 'read' => 0];
+            }
+
+            $templateTotals[$templateId]['sent'] += (int) $row->sent_count;
+            $templateTotals[$templateId]['read'] += (int) $row->read_count;
+        }
+
+        if (empty($templateTotals)) {
+            return [];
+        }
+
+        $availableTemplateIds = array_map('intval', array_keys($templateTotals));
+        $requestedTemplateId = is_numeric($selectedTemplateId) ? (int) $selectedTemplateId : null;
+
+        if ($requestedTemplateId && in_array($requestedTemplateId, $availableTemplateIds, true)) {
+            $selectedTemplateId = $requestedTemplateId;
+        } else {
+            $selectedTemplateId = (int) collect($templateTotals)
+                ->sortByDesc('sent')
+                ->keys()
+                ->first();
+        }
+
+        $templateNames = WhatsappTemplate::query()
+            ->whereIn('id', array_keys($templateTotals))
+            ->pluck('name', 'id')
+            ->map(fn($name) => trim((string) $name))
+            ->all();
+
+        $templateOptions = collect($templateTotals)
+            ->map(function (array $totals, $templateId) use ($templateNames) {
+                $templateId = (int) $templateId;
+                $sent = (int) ($totals['sent'] ?? 0);
+                $read = (int) ($totals['read'] ?? 0);
+
+                return [
+                    'id' => $templateId,
+                    'name' => $templateNames[$templateId] ?? ('Template #' . $templateId),
+                    'sent' => $sent,
+                    'read_rate' => $sent > 0 ? round(($read / $sent) * 100, 1) : 0.0,
+                ];
+            })
+            ->sortByDesc('sent')
+            ->values()
+            ->all();
+
+        $dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        $matrix = [];
+
+        for ($day = 0; $day < 7; $day++) {
+            $matrix[$day] = [];
+            for ($hour = 0; $hour < 24; $hour++) {
+                $matrix[$day][$hour] = [
+                    'hour' => $hour,
+                    'hour_label' => sprintf('%02d:00', $hour),
+                    'sent' => 0,
+                    'read' => 0,
+                    'read_rate' => 0.0,
+                    'intensity' => 0,
+                ];
+            }
+        }
+
+        foreach ($rows as $row) {
+            if ((int) $row->template_id !== $selectedTemplateId) {
+                continue;
+            }
+
+            $dayIndex = $this->normalizeWeekdayIndex((int) $row->day_index, $driver);
+            $hourIndex = max(0, min(23, (int) $row->hour_index));
+
+            $sent = (int) $row->sent_count;
+            $read = (int) $row->read_count;
+            $rate = $sent > 0 ? round(($read / $sent) * 100, 1) : 0.0;
+
+            $matrix[$dayIndex][$hourIndex] = [
+                'hour' => $hourIndex,
+                'hour_label' => sprintf('%02d:00', $hourIndex),
+                'sent' => $sent,
+                'read' => $read,
+                'read_rate' => $rate,
+                'intensity' => 0,
+            ];
+        }
+
+        $maxRate = 0.0;
+        $bestSlot = null;
+        $selectedTotalSent = (int) ($templateTotals[$selectedTemplateId]['sent'] ?? 0);
+        $selectedTotalRead = (int) ($templateTotals[$selectedTemplateId]['read'] ?? 0);
+        $baselineRate = $selectedTotalSent > 0 ? ($selectedTotalRead / $selectedTotalSent) * 100 : 0.0;
+        $minReliableSamples = max(3, (int) floor($selectedTotalSent * 0.03));
+        $recommendedSampleSize = 100;
+        $sampleGap = max(0, $recommendedSampleSize - $selectedTotalSent);
+        $isLowSample = $selectedTotalSent < $recommendedSampleSize;
+
+        for ($day = 0; $day < 7; $day++) {
+            for ($hour = 0; $hour < 24; $hour++) {
+                $cell = $matrix[$day][$hour];
+                $maxRate = max($maxRate, (float) $cell['read_rate']);
+
+                if ($cell['sent'] < $minReliableSamples) {
+                    continue;
+                }
+
+                if ($bestSlot === null || $cell['read_rate'] > $bestSlot['read_rate']) {
+                    $bestSlot = [
+                        'day_label' => $dayLabels[$day],
+                        'hour_label' => $cell['hour_label'],
+                        'read_rate' => (float) $cell['read_rate'],
+                        'sent' => (int) $cell['sent'],
+                        'multiplier' => $baselineRate > 0 ? round($cell['read_rate'] / $baselineRate, 2) : 0,
+                        'confidence' => $this->calculateSlotConfidence((int) $cell['sent'], $selectedTotalSent),
+                    ];
+                }
+            }
+        }
+
+        if ($maxRate > 0) {
+            for ($day = 0; $day < 7; $day++) {
+                for ($hour = 0; $hour < 24; $hour++) {
+                    $rate = (float) $matrix[$day][$hour]['read_rate'];
+                    $matrix[$day][$hour]['intensity'] = (int) round(($rate / $maxRate) * 100);
+                }
+            }
+        }
+
+        $rowsForView = [];
+        for ($day = 0; $day < 7; $day++) {
+            $rowsForView[] = [
+                'day_label' => $dayLabels[$day],
+                'cells' => $matrix[$day],
+            ];
+        }
+
+        return [
+            'selected_template_id' => $selectedTemplateId,
+            'selected_template_name' => $templateNames[$selectedTemplateId] ?? ('Template #' . $selectedTemplateId),
+            'template_options' => $templateOptions,
+            'rows' => $rowsForView,
+            'baseline_rate' => round($baselineRate, 1),
+            'best_slot' => $bestSlot,
+            'window_days' => 90,
+            'sample_size' => $selectedTotalSent,
+            'recommended_sample_size' => $recommendedSampleSize,
+            'sample_gap' => $sampleGap,
+            'is_low_sample' => $isLowSample,
+        ];
+    }
+
+    protected function normalizeWeekdayIndex(int $dayIndex, string $driver): int
+    {
+        if ($driver === 'sqlite') {
+            // SQLite day index starts on Sunday (0). Shift to Monday-first.
+            return ($dayIndex + 6) % 7;
+        }
+
+        // MySQL WEEKDAY already returns Monday=0..Sunday=6.
+        return max(0, min(6, $dayIndex));
+    }
+
+    protected function calculateSlotConfidence(int $slotSamples, int $totalSamples): string
+    {
+        if ($slotSamples >= 25 || ($totalSamples > 0 && ($slotSamples / $totalSamples) >= 0.12)) {
+            return 'High';
+        }
+
+        if ($slotSamples >= 10 || ($totalSamples > 0 && ($slotSamples / $totalSamples) >= 0.06)) {
+            return 'Medium';
+        }
+
+        return 'Low';
     }
 
     protected function getCommerceStats($teamId)

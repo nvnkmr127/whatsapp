@@ -147,6 +147,13 @@
                                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </a>
+                                    <a href="{{ route('automations.analytics', $bot->id) }}"
+                                        class="p-2 text-slate-400 hover:text-emerald-500 transition-colors" title="Analytics">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 3v18h18M9 17V9m4 8V5m4 12v-6" />
+                                        </svg>
+                                    </a>
                                     <button wire:click="confirmDelete({{ $bot->id }})"
                                         class="p-2 text-slate-400 hover:text-rose-500 transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

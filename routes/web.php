@@ -134,6 +134,11 @@ Route::middleware([
         // Email Logs (Tracking)
         Route::get('/admin/email-logs', [\App\Http\Controllers\Admin\EmailLogController::class, 'index'])->name('admin.email-logs.index');
         Route::get('/admin/email-logs/{log}', [\App\Http\Controllers\Admin\EmailLogController::class, 'show'])->name('admin.email-logs.show');
+
+        // System Health Dashboard
+        Route::get('/admin/health', [\App\Http\Controllers\Admin\SystemHealthController::class, 'index'])->name('admin.health');
+        Route::post('/admin/health/jobs/retry', [\App\Http\Controllers\Admin\SystemHealthController::class, 'retryJobs'])->name('admin.health.jobs.retry');
+        Route::post('/admin/health/jobs/clear', [\App\Http\Controllers\Admin\SystemHealthController::class, 'clearJobs'])->name('admin.health.jobs.clear');
     });
 
     // Logout and Exit Impersonation (Universal)
@@ -173,6 +178,8 @@ Route::middleware([
 
     Route::get('/automations', \App\Livewire\Automations\AutomationList::class)->name('automations.index')->middleware(['can:manage-campaigns', 'plan_feature:automations']);
 
+    Route::get('/automations/{automationId}/analytics', \App\Livewire\Automations\AutomationAnalytics::class)->name('automations.analytics')->middleware(['can:manage-campaigns', 'plan_feature:automations']);
+
     Route::get('/automations/builder/{automationId?}', \App\Livewire\Automations\AutomationBuilder::class)->name('automations.builder')->middleware(['can:manage-campaigns', 'plan_feature:automations']);
 
     // WhatsApp Flows
@@ -182,6 +189,8 @@ Route::middleware([
     Route::get('/analytics', \App\Livewire\Analytics\AnalyticsDashboard::class)->name('analytics')->middleware(['can:manage-settings', 'plan_feature:analytics']);
     Route::get('/analytics/events', \App\Livewire\Analytics\EventDashboard::class)->name('analytics.events')->middleware(['can:manage-settings', 'plan_feature:analytics']);
     Route::get('/analytics/explorer', \App\Livewire\Analytics\EventExplorer::class)->name('analytics.explorer')->middleware(['can:manage-settings', 'plan_feature:analytics']);
+    Route::get('/analytics/templates', \App\Livewire\Analytics\TemplateHeatmap::class)->name('analytics.templates')->middleware(['can:manage-settings', 'plan_feature:analytics']);
+    Route::get('/analytics/cohorts', \App\Livewire\Analytics\CohortAnalysis::class)->name('analytics.cohorts')->middleware(['can:manage-settings', 'plan_feature:analytics']);
 
     // WhatsApp Calling
     Route::get('/calls', \App\Livewire\Calls\CallHistory::class)->name('calls.history')->middleware('can:chat-access');

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\AssignCorrelationId::class);
+        $middleware->append(\App\Http\Middleware\NewRelicTransactionName::class);
 
         $middleware->web(append: [
             \App\Http\Middleware\CheckSystemMaintenanceMode::class,

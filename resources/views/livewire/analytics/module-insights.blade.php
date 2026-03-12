@@ -80,6 +80,102 @@
         @endforeach
     </div>
 
+    @if($activeModule === 'template' && !empty($templateHeatmap['rows']))
+        <div class="mt-10 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-800/30">
+            <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Template Performance Heatmap</p>
+                    <h3 class="text-base font-black text-slate-900 dark:text-white mt-1">
+                        {{ $templateHeatmap['selected_template_name'] ?? 'Top Template' }}
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Read rates by send hour and weekday for the last {{ $templateHeatmap['window_days'] ?? 90 }} days.
+                    </p>
+                </div>
+                <div class="flex flex-col items-start sm:items-end gap-2 text-xs text-slate-500 dark:text-slate-400 w-full sm:w-auto">
+                    @if(!empty($templateHeatmap['template_options']))
+                        <div class="w-full sm:w-72">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Template</label>
+                            <select wire:model="selectedTemplateId"
+                                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-semibold px-3 py-2">
+                                @foreach($templateHeatmap['template_options'] as $option)
+                                    <option value="{{ $option['id'] }}">
+                                        {{ $option['name'] }} ({{ number_format($option['sent']) }} sends, {{ number_format($option['read_rate'], 1) }}%)
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div>
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">Baseline:</span>
+                        {{ number_format($templateHeatmap['baseline_rate'] ?? 0, 1) }}%
+                        <span class="mx-2 text-slate-300">|</span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">Sends:</span>
+                        {{ number_format($templateHeatmap['sample_size'] ?? 0) }}
+                    </div>
+                </div>
+            </div>
+
+            @if(!empty($templateHeatmap['is_low_sample']))
+                <div class="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 flex items-center justify-between gap-3">
+                    <p class="text-xs font-semibold text-amber-700 dark:text-amber-200">
+                        Limited sample size: {{ number_format($templateHeatmap['sample_size'] ?? 0) }} sends. Add at least {{ number_format($templateHeatmap['sample_gap'] ?? 0) }} more sends for stronger timing reliability.
+                    </p>
+                    <span class="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300">
+                        Low data confidence
+                    </span>
+                </div>
+            @endif
+
+            <div class="overflow-x-auto">
+                <div class="min-w-[1100px]">
+                    <div class="grid grid-cols-[72px_repeat(24,minmax(0,1fr))] gap-1 mb-2">
+                        <div></div>
+                        @for($hour = 0; $hour < 24; $hour++)
+                            <div class="text-[9px] font-bold text-center text-slate-400">{{ sprintf('%02d', $hour) }}</div>
+                        @endfor
+                    </div>
+
+                    @foreach($templateHeatmap['rows'] as $row)
+                        <div class="grid grid-cols-[72px_repeat(24,minmax(0,1fr))] gap-1 mb-1">
+                            <div class="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 py-1">
+                                {{ $row['day_label'] }}
+                            </div>
+
+                            @foreach($row['cells'] as $cell)
+                                @php
+                                    $alpha = 0.08 + (($cell['intensity'] ?? 0) / 100) * 0.8;
+                                    $bg = 'background-color: rgba(13, 148, 136, ' . number_format($alpha, 2, '.', '') . ');';
+                                @endphp
+                                <div class="h-7 rounded-md border border-white/40 dark:border-slate-700/40"
+                                    style="{{ $bg }}"
+                                    title="{{ $row['day_label'] }} {{ $cell['hour_label'] }}: {{ number_format($cell['read_rate'], 1) }}% read ({{ $cell['read'] }}/{{ $cell['sent'] }})">
+                                </div>
+                            @endforeach
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <div class="flex items-center gap-2">
+                    <span>Lower read rate</span>
+                    <div class="h-2 w-20 rounded-full bg-gradient-to-r from-slate-200 to-teal-600/80"></div>
+                    <span>Higher read rate</span>
+                </div>
+                @if(!empty($templateHeatmap['best_slot']))
+                    <div>
+                        Best slot: <span class="font-bold text-teal-600 dark:text-teal-300">{{ $templateHeatmap['best_slot']['day_label'] }} {{ $templateHeatmap['best_slot']['hour_label'] }}</span>
+                        ({{ number_format($templateHeatmap['best_slot']['read_rate'], 1) }}%)
+                        <span class="ml-2 px-2 py-0.5 rounded-md text-[10px] font-bold {{ ($templateHeatmap['best_slot']['confidence'] ?? 'Low') === 'High' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : (($templateHeatmap['best_slot']['confidence'] ?? 'Low') === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200') }}">
+                            {{ $templateHeatmap['best_slot']['confidence'] ?? 'Low' }} confidence
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
     <!-- Contextual Suggestion -->
     <!-- Contextual Insights Layer -->
     @if(count($insights) > 0)

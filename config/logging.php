@@ -132,6 +132,10 @@ return [
             'path' => storage_path('logs/whatsapp_debug.log'),
             'level' => 'debug',
         ],
+        'newrelic' => [
+            'driver' => 'custom',
+            'via' => Monolog\Handler\NewRelicHandler::class,
+        ],
 
     ],
 

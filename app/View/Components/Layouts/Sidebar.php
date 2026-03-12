@@ -148,6 +148,8 @@ class Sidebar extends Component
                     ['route' => 'analytics', 'label' => 'Dashboard'],
                     ['route' => 'analytics.events', 'label' => 'Customer Events'],
                     ['route' => 'analytics.explorer', 'label' => 'Event Explorer'],
+                    ['route' => 'analytics.templates', 'label' => 'Template Heatmap'],
+                    ['route' => 'analytics.cohorts', 'label' => 'Cohort Analysis'],
                     ['route' => 'calls.analytics', 'label' => 'Voice Analytics'],
                 ]
             ],
