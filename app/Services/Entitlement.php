@@ -84,6 +84,9 @@ final class Entitlement
             return 'Expired';
         }
         if ($this->onTrial) {
+            if ($this->trialEndsAt === null) {
+                return 'Trial';
+            }
             $days = $this->trialDaysRemaining;
             return $days > 0 ? "Trial ({$days}d left)" : 'Trial (expiring today)';
         }

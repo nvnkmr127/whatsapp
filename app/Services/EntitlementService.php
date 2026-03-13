@@ -113,12 +113,13 @@ class EntitlementService
 
     private function resolve(Team $team): Entitlement
     {
-        $status = $team->subscription_status;
+        $status = $team->subscription_status ?? 'trial';
         $now = Carbon::now();
 
         // ── 1. Subscription status classification ──────────────────────
         $onTrial = ($status === 'trial');
-        $trialActive = $onTrial && $team->trial_ends_at && $team->trial_ends_at->isFuture();
+        // If trial_ends_at is null, we assume it is still active (unlimited trial)
+        $trialActive = $onTrial && ($team->trial_ends_at === null || $team->trial_ends_at->isFuture());
         $trialExpired = $onTrial && $team->trial_ends_at && $team->trial_ends_at->isPast();
 
         $isPaid = in_array($status, ['active', 'canceled'], true);
