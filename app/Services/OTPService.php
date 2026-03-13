@@ -221,6 +221,8 @@ class OTPService
                 return false;
             }
 
+            $credentialSource = $this->getOtpCredentialSource($team);
+
             // Find an available template (priority to AUTHENTICATION category)
             $tpl = $this->findOtpTemplate($team);
 
@@ -229,7 +231,12 @@ class OTPService
                 return false;
             }
 
-            Log::info("Using WhatsApp template '{$tpl->name}' ({$tpl->language}) for OTP to {$phone}");
+            Log::info("Using WhatsApp template '{$tpl->name}' ({$tpl->language}) for OTP to {$phone}", [
+                'team_id' => $team->id,
+                'credential_source' => $credentialSource,
+                'phone_number_id' => $team->whatsapp_phone_number_id,
+                'token_fingerprint' => $this->tokenFingerprint($team->whatsapp_access_token),
+            ]);
 
             return $this->sendCustomWhatsAppOtp($phone, $code, $tpl->name, $tpl->language, [$code], $team);
         } catch (\Exception $e) {
@@ -377,6 +384,35 @@ class OTPService
                 $parameters
             );
 
+            // If current credentials are denied by Meta permissions,
+            // retry once with the team's stored credentials.
+            if ($this->isMetaPermissionDenied($response)) {
+                $teamFromDb = Team::query()->find($team->id);
+
+                if (
+                    $teamFromDb
+                    && !empty($teamFromDb->whatsapp_access_token)
+                    && !empty($teamFromDb->whatsapp_phone_number_id)
+                ) {
+                    Log::warning('OTP send got Meta permission denial with current credentials; retrying with team stored credentials', [
+                        'team_id' => $team->id,
+                        'credential_source' => $this->getOtpCredentialSource($team),
+                        'current_phone_id' => $team->whatsapp_phone_number_id,
+                        'current_token_fingerprint' => $this->tokenFingerprint($team->whatsapp_access_token),
+                        'fallback_phone_id' => $teamFromDb->whatsapp_phone_number_id,
+                        'fallback_token_fingerprint' => $this->tokenFingerprint($teamFromDb->whatsapp_access_token),
+                    ]);
+
+                    $fallbackService = new WhatsAppService($teamFromDb);
+                    $response = $fallbackService->sendTemplate(
+                        $phone,
+                        $templateName,
+                        $language,
+                        $parameters
+                    );
+                }
+            }
+
             if ($response['success'] ?? false) {
                 $this->persistOtp($phone, $code, 'phone', $team->id);
 
@@ -395,11 +431,53 @@ class OTPService
                 return true;
             }
 
-            Log::warning("WhatsApp template send failed for custom OTP: " . json_encode($response));
+            Log::warning("WhatsApp template send failed for custom OTP", [
+                'team_id' => $team->id,
+                'credential_source' => $this->getOtpCredentialSource($team),
+                'phone_number_id' => $team->whatsapp_phone_number_id,
+                'token_fingerprint' => $this->tokenFingerprint($team->whatsapp_access_token),
+                'response' => $response,
+            ]);
             return false;
         } catch (\Exception $e) {
             Log::error("Failed to send Custom WhatsApp OTP to {$phone}: " . $e->getMessage());
             return false;
         }
+    }
+
+    protected function isMetaPermissionDenied(array $response): bool
+    {
+        $status = (int) ($response['status_code'] ?? 0);
+        $code = (int) ($response['error']['error']['code'] ?? 0);
+        $message = strtolower((string) ($response['message'] ?? ($response['error']['error']['message'] ?? '')));
+
+        return ($status === 403 || $code === 200)
+            && str_contains($message, 'necessary permissions to send messages');
+    }
+
+    protected function getOtpCredentialSource(Team $team): string
+    {
+        $systemToken = (string) env('WHATSAPP_SYSTEM_ACCESS_TOKEN', '');
+        $systemPhoneId = (string) env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID', '');
+
+        if (
+            $systemToken !== ''
+            && $systemPhoneId !== ''
+            && (string) $team->whatsapp_phone_number_id === $systemPhoneId
+            && (string) $team->whatsapp_access_token === $systemToken
+        ) {
+            return 'system';
+        }
+
+        return 'team';
+    }
+
+    protected function tokenFingerprint(?string $token): ?string
+    {
+        if (!$token) {
+            return null;
+        }
+
+        return substr(hash('sha256', $token), 0, 12);
     }
 }
