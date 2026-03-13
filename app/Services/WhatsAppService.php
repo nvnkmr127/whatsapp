@@ -147,7 +147,8 @@ class WhatsAppService
         // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
         if (!$this->team->canAccess('send_message')) {
-            throw new \Exception("Monthly message limit reached or subscription inactive. (Policy UC-20).");
+            $denial = $this->team->entitlement()->denialReason('send_message');
+            throw new \Exception($denial ?: "Monthly message limit reached or subscription inactive. (Policy UC-20).");
         }
 
         // 1. Resolve Conversation
@@ -225,7 +226,8 @@ class WhatsAppService
         // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
         if (!$this->team->canAccess('send_message')) {
-            throw new \Exception("Monthly message limit reached or subscription inactive.");
+            $denial = $this->team->entitlement()->denialReason('send_message');
+            throw new \Exception($denial ?: "Monthly message limit reached or subscription inactive.");
         }
 
         // 1. Resolve Conversation
@@ -314,7 +316,8 @@ class WhatsAppService
         // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
         if (!$this->team->canAccess('send_message')) {
-            throw new \Exception("Monthly message limit reached or subscription inactive.");
+            $denial = $this->team->entitlement()->denialReason('send_message');
+            throw new \Exception($denial ?: "Monthly message limit reached or subscription inactive.");
         }
 
         // 1. Resolve Conversation
@@ -424,7 +427,8 @@ class WhatsAppService
         // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
         if (!$this->team->canAccess('send_message')) {
-            throw new \Exception("Monthly message limit reached or subscription inactive.");
+            $denial = $this->team->entitlement()->denialReason('send_message');
+            throw new \Exception($denial ?: "Monthly message limit reached or subscription inactive.");
         }
 
         // 1. Resolve Conversation
@@ -678,7 +682,8 @@ class WhatsAppService
 
         // 5. Check Wallet & Plan Limits
         if (!$this->team->canAccess('send_message')) {
-            return ['success' => false, 'error' => 'Plan Limit Reached or Subscription Inactive'];
+            $denial = $this->team->entitlement()->denialReason('send_message');
+            return ['success' => false, 'error' => $denial ?: 'Plan Limit Reached or Subscription Inactive'];
         }
 
         $billing = app(\App\Services\BillingService::class);

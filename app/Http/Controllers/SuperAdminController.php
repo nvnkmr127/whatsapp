@@ -237,18 +237,51 @@ class SuperAdminController extends Controller
     {
         $team = Team::findOrFail($id);
         $name = $team->name;
-
-        // Optional: Add logic to delete users if they only belong to this team,
-        // or just detach them. For now, we'll just delete the team which might 
-        // cascade depending on foreign keys, but let's be safe and simple.
-        // Assuming cascade delete is set up on DB level or we just delete team.
-
         $team->delete();
 
         return redirect()
             ->route('admin.dashboard')
             ->with('flash.banner', "Workspace '{$name}' deleted successfully!")
             ->with('flash.bannerStyle', 'success');
+    }
+
+    public function grantOffer($id)
+    {
+        $team = Team::findOrFail($id);
+
+        if ($team->offer_claimed_at) {
+            return redirect()->back()->with('flash.banner', "Offer already claimed by {$team->name}.")->with('flash.bannerStyle', 'danger');
+        }
+
+        $months = (int) get_setting('offer_trial_months', 6);
+        $credit = (float) get_setting('offer_initial_credit', 5.00);
+
+        // 1. Force Trial State
+        $team->update([
+            'subscription_status' => 'trial',
+            'trial_ends_at' => now()->addMonths($months),
+        ]);
+
+        // 2. Deposit Credit
+        if ($credit > 0) {
+            app(\App\Services\BillingService::class)->deposit(
+                $team,
+                $credit,
+                'Welcome Gift (Launch Offer – Manually Granted)'
+            );
+        }
+
+        // 3. Mark Claimed (Snapshot + Timestamp)
+        // We use current global settings for the snapshot
+        $svc = app(\App\Services\OfferSettingsService::class);
+        $snapshot = [];
+        foreach ($svc->limitMap() as $limitSlug => $settingsKey) {
+            $snapshot[$settingsKey] = $svc->get($settingsKey);
+        }
+
+        app(\App\Services\OfferEligibilityService::class)->markClaimed($team, $snapshot);
+
+        return redirect()->back()->with('flash.banner', "Launch Offer ($months Months) granted to {$team->name}.")->with('flash.bannerStyle', 'success');
     }
 
     public function auditLogs(Request $request)

@@ -97,6 +97,7 @@ Route::middleware([
         Route::get('/admin/plans', \App\Livewire\Admin\PlanManager::class)->name('admin.plans');
         Route::post('/admin/tenants/{id}/overrides', [\App\Http\Controllers\SuperAdminController::class, 'storeOverride'])->name('admin.tenants.overrides.store');
         Route::delete('/admin/tenants/{id}/overrides/{overrideId}', [\App\Http\Controllers\SuperAdminController::class, 'deleteOverride'])->name('admin.tenants.overrides.destroy');
+        Route::post('/admin/tenants/{id}/grant-offer', [\App\Http\Controllers\SuperAdminController::class, 'grantOffer'])->name('admin.tenants.grant-offer');
 
         // Impersonation
         Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\Admin\ImpersonationController::class, 'enter'])->name('admin.impersonate.enter');

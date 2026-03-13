@@ -151,7 +151,45 @@
                         </div>
 
                         <!-- Info Section (Read Only) -->
-                        <div class="pt-6 border-t border-slate-50 dark:border-slate-800">
+                        <div class="pt-6 border-t border-slate-50 dark:border-slate-800 space-y-4">
+                            @if(!$team->offer_claimed_at)
+                            <div class="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-900/30 flex justify-between items-center gap-4">
+                                <div class="flex gap-4">
+                                    <div class="flex-shrink-0 pt-1">
+                                        <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V6a2 2 0 10-2 2h2z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-black text-emerald-900 dark:text-emerald-100 uppercase tracking-wide">Launch Offer Eligibility</h4>
+                                        <p class="text-xs font-medium text-emerald-700 dark:text-emerald-300 mt-1">
+                                            This workspace has not claimed the 6-month launch offer. You can manually grant it now.
+                                        </p>
+                                    </div>
+                                </div>
+                                <form action="{{ route('admin.tenants.grant-offer', $team->id) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="px-6 py-3 bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-emerald-600/20 hover:scale-105 active:scale-95 transition-all">
+                                        Grant Offer
+                                    </button>
+                                </form>
+                            </div>
+                            @else
+                            <div class="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl p-6 border border-indigo-100 dark:border-indigo-900/30 flex gap-4">
+                                <div class="flex-shrink-0 pt-1">
+                                    <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-wide">Launch Offer Claimed</h4>
+                                    <p class="text-xs font-medium text-indigo-700 dark:text-indigo-300 mt-1">
+                                        Claimed on: {{ $team->offer_claimed_at->format('M d, Y H:i') }} UTC
+                                    </p>
+                                </div>
+                            </div>
+                            @endif
+
                             <div class="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl p-6 flex gap-4">
                                 <div class="flex-shrink-0 pt-1">
                                     <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor"

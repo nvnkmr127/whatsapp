@@ -130,8 +130,13 @@ class EntitlementService
         // Active = can use the product right now
         $active = !$hardExpired;
 
-        // ── 2. Offer eligibility ───────────────────────────────────────
-        $offerEligible = $onTrial && $active && $this->offerEligibility->isEligible($team);
+        // ── 2. Offer eligibility / Aktivität ─────────────────────────────
+        // A team qualifies for offer benefits if they are on an active trial AND
+        // (have already claimed it OR currently qualify to claim it).
+        $offerEligible = $onTrial && $active && (
+            $team->offer_claimed_at !== null || 
+            $this->offerEligibility->isEligible($team)
+        );
 
         // ── 3. Feature flags ───────────────────────────────────────────
         // Resolved via the same chain as Team::hasFeature() but all in one place
