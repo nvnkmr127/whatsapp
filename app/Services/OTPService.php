@@ -15,6 +15,16 @@ class OTPService
     protected $maxAttempts = 5;
     protected $maxRequestsPer24h = 10; // "Dead drop" threshold
 
+    protected function persistOtp(string $identifier, string $code, string $type, ?int $teamId = null): void
+    {
+        Cache::put($this->getCacheKey($identifier), [
+            'hash' => Hash::make($code),
+            'attempts' => 0,
+            'team_id' => $teamId,
+            'type' => $type,
+        ], $this->ttl);
+    }
+
     /**
      * Send OTP to email or phone.
      */
@@ -36,14 +46,6 @@ class OTPService
 
         $code = (string) rand(100000, 999999);
 
-        // Securely store hashed code, attempt count, and team context
-        Cache::put($this->getCacheKey($identifier), [
-            'hash' => Hash::make($code),
-            'attempts' => 0,
-            'team_id' => $teamId,
-            'type' => $type,
-        ], $this->ttl);
-
         // Increment total requests in 24h for this identifier
         $this->incrementRequestCount($identifier);
 
@@ -55,6 +57,10 @@ class OTPService
         }
 
         if ($sent) {
+            if ($type === 'email') {
+                $this->persistOtp($identifier, $code, $type, $teamId);
+            }
+
             // Log for CRM tracking of new leads
             if (!$teamId) {
                 $metadata = [
@@ -211,7 +217,7 @@ class OTPService
         try {
             $team = $this->findSendingTeam();
             if (!$team) {
-                Log::error("No team or system credentials found for sending WhatsApp OTP.");
+                Log::error("No eligible team or system credentials found for sending WhatsApp OTP.");
                 return false;
             }
 
@@ -259,7 +265,8 @@ class OTPService
             ->whereHas('whatsappTemplates', function ($q) {
                 $q->where('status', 'APPROVED');
             })
-            ->first();
+            ->get()
+            ->first(fn(Team $team) => $team->canAccess('send_message'));
 
         if ($activeTeam) {
             return $activeTeam;
@@ -269,7 +276,8 @@ class OTPService
         return Team::whereNotNull('whatsapp_access_token')
             ->where('whatsapp_access_token', '!=', '')
             ->whereNotNull('whatsapp_phone_number_id')
-            ->first();
+            ->get()
+            ->first(fn(Team $team) => $team->canAccess('send_message'));
     }
 
     /**
@@ -320,14 +328,6 @@ class OTPService
         int $otpPosition = 0
     ): bool {
         try {
-            // Securely store hashed code, attempt count, and team context
-            Cache::put($this->getCacheKey($phone), [
-                'hash' => Hash::make($code),
-                'attempts' => 0,
-                'team_id' => $team->id,
-                'type' => 'phone',
-            ], $this->ttl);
-
             $whatsappService = new WhatsAppService($team);
 
             // Replace the specific position with the OTP code
@@ -343,6 +343,8 @@ class OTPService
             );
 
             if ($response['success'] ?? false) {
+                $this->persistOtp($phone, $code, 'phone', $team->id);
+
                 // Dispatch general otp.sent event
                 try {
                     app(\App\Services\WebhookService::class)->dispatch($team->id, 'otp.sent', [
