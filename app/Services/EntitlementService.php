@@ -113,7 +113,9 @@ class EntitlementService
 
     private function resolve(Team $team): Entitlement
     {
-        $status = $team->subscription_status ?? 'trial';
+        $status = strtolower($team->subscription_status ?? 'trial');
+        if (empty($status)) $status = 'trial';
+        
         $now = Carbon::now();
 
         // ── 1. Subscription status classification ──────────────────────
