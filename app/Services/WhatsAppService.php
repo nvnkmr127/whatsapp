@@ -1986,7 +1986,13 @@ class WhatsAppService
         if ($state === \App\Enums\IntegrationState::PROVISIONED) {
             if (!empty($this->team->whatsapp_access_token) && !empty($this->team->whatsapp_phone_number_id)) {
                 $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
-                $this->team->save();
+                // Only persist the state change if the model has not had credentials
+                // injected from outside (e.g. system env override). Checking isDirty
+                // on credential fields guards against writing system credentials into
+                // the team's own DB row.
+                if (!$this->team->isDirty(['whatsapp_access_token', 'whatsapp_phone_number_id'])) {
+                    $this->team->save();
+                }
                 return;
             }
         }

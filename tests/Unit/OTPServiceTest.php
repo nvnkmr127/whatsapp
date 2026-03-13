@@ -235,4 +235,46 @@ class OTPServiceTest extends TestCase
         $this->assertNotNull($selectedTeam);
         $this->assertSame($activeTeam->id, $selectedTeam->id);
     }
+
+    public function test_find_sending_team_with_system_env_uses_real_team_id_not_zero()
+    {
+        $dbTeam = Team::query()->create([
+            'name' => 'System Overlay Team',
+            'whatsapp_access_token' => 'original-token',
+            'whatsapp_phone_number_id' => 'original-phone-id',
+            'subscription_status' => 'active',
+        ]);
+
+        WhatsappTemplate::query()->create([
+            'team_id' => $dbTeam->id,
+            'name' => 'verification_code',
+            'language' => 'en',
+            'category' => 'AUTHENTICATION',
+            'status' => 'APPROVED',
+        ]);
+
+        $_ENV['WHATSAPP_SYSTEM_ACCESS_TOKEN']    = 'sys-token-abc';
+        $_ENV['WHATSAPP_SYSTEM_PHONE_NUMBER_ID'] = 'sys-phone-123';
+        putenv('WHATSAPP_SYSTEM_ACCESS_TOKEN=sys-token-abc');
+        putenv('WHATSAPP_SYSTEM_PHONE_NUMBER_ID=sys-phone-123');
+
+        $service = new class extends OTPService {
+            public function resolveSendingTeam(): ?Team
+            {
+                return $this->findSendingTeam();
+            }
+        };
+
+        $selectedTeam = $service->resolveSendingTeam();
+
+        $this->assertNotNull($selectedTeam);
+        $this->assertNotEquals(0, $selectedTeam->id, 'System team must not be id=0 (breaks template lookup)');
+        $this->assertSame($dbTeam->id, $selectedTeam->id);
+        $this->assertSame('sys-token-abc', (string) $selectedTeam->whatsapp_access_token);
+        $this->assertSame('sys-phone-123', $selectedTeam->whatsapp_phone_number_id);
+
+        putenv('WHATSAPP_SYSTEM_ACCESS_TOKEN');
+        putenv('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
+        unset($_ENV['WHATSAPP_SYSTEM_ACCESS_TOKEN'], $_ENV['WHATSAPP_SYSTEM_PHONE_NUMBER_ID']);
+    }
 }

@@ -44,7 +44,7 @@ class OTPService
             return false;
         }
 
-        $code = (string) rand(100000, 999999);
+        $code = (string) random_int(100000, 999999);
 
         // Increment total requests in 24h for this identifier
         $this->incrementRequestCount($identifier);
@@ -247,18 +247,53 @@ class OTPService
         $systemPhoneId = env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
 
         if ($systemToken && $systemPhoneId) {
-            $team = new Team([
-                'whatsapp_access_token' => $systemToken,
-                'whatsapp_phone_number_id' => $systemPhoneId,
-                'whatsapp_business_account_id' => env('WHATSAPP_SYSTEM_WABA_ID'),
-            ]);
-            // Force state to READY for system credentials
-            $team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
-            $team->id = 0; // System team ID
-            return $team;
+            // Find the best real DB team that has approved OTP templates so that
+            // template lookups, contact creation, and billing all use a valid team_id.
+            // Then override only the WhatsApp credentials with the system values.
+            //
+            // Previously this created a synthetic team with id=0, which caused:
+            //  - sendTemplate() querying WhatsappTemplate::where('team_id', 0) → 0 rows → failure
+            //  - getOrCreateContact() creating orphaned contacts with team_id=0
+            //  - BillingService creating an orphaned TeamWallet(team_id=0)
+            //  - verifyReadyToSend() calling $team->save() attempting to INSERT team id=0
+            $realTeam = Team::whereNotNull('whatsapp_access_token')
+                ->where('whatsapp_access_token', '!=', '')
+                ->whereHas('whatsappTemplates', function ($q) {
+                    $q->where('status', 'APPROVED')
+                      ->where(function ($q2) {
+                          $q2->where('category', 'AUTHENTICATION')
+                             ->orWhere('name', 'like', '%otp%')
+                             ->orWhere('name', 'like', '%verification%')
+                             ->orWhere('name', 'like', '%code%');
+                      });
+                })
+                ->first();
+
+            // Fallback: any team with any approved template
+            if (!$realTeam) {
+                $realTeam = Team::whereNotNull('whatsapp_access_token')
+                    ->where('whatsapp_access_token', '!=', '')
+                    ->whereHas('whatsappTemplates', function ($q) {
+                        $q->where('status', 'APPROVED');
+                    })
+                    ->first();
+            }
+
+            if ($realTeam) {
+                // Override only the sending credentials with system values.
+                // The real team_id is preserved so template/contact/billing resolve correctly.
+                $realTeam->whatsapp_access_token = $systemToken;
+                $realTeam->whatsapp_phone_number_id = $systemPhoneId;
+                if (env('WHATSAPP_SYSTEM_WABA_ID')) {
+                    $realTeam->whatsapp_business_account_id = env('WHATSAPP_SYSTEM_WABA_ID');
+                }
+                $realTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+                return $realTeam;
+            }
+            // System credentials set but no DB team has templates — fall through
         }
 
-        // 1. Prioritize teams that have both a token AND at least one approved template
+        // 1. Prioritize teams with a token AND at least one approved OTP-style template
         $activeTeam = Team::whereNotNull('whatsapp_access_token')
             ->where('whatsapp_access_token', '!=', '')
             ->whereNotNull('whatsapp_phone_number_id')
