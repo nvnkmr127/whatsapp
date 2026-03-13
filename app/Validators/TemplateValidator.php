@@ -30,9 +30,6 @@ class TemplateValidator
         $errors = [];
         $score = 100;
 
-        $templateName = $template->name;
-        \Illuminate\Support\Facades\Log::debug("Validating Template: {$templateName}", ['id' => $template->id, 'team' => $template->team_id]);
-
         // 1. Lifecycle Check
         if ($template->status !== 'APPROVED') {
             $score -= 50;
@@ -256,7 +253,6 @@ class TemplateValidator
         if (preg_match_all('/\{\{(\d+)\}\}/', $text, $matches)) {
             $indices = array_unique(array_map('intval', $matches[1]));
             sort($indices);
-            \Illuminate\Support\Facades\Log::debug("Checking variables", ['raw' => $matches[1], 'unique_sorted' => $indices]);
 
             // Meta requires first to be {{1}}, second {{2}}...
             // The set of unique indices must be exactly [1, 2, ..., count]
