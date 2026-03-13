@@ -81,6 +81,14 @@ class BillingService
      */
     public function recordConversationUsage(Team $team, $contactId, $category, $wamid)
     {
+        if ((bool) config('app.full_access_all', false)) {
+            Log::warning("Global full-access bypass enabled; skipping billing gate for team {$team->id}", [
+                'team_id' => $team->id,
+                'category' => $category,
+            ]);
+            return true;
+        }
+
         // 0. Check Plan Limits first (UC-20)
         // If a limit is exceeded, we should return false early.
         // However, if the team has an override or special offer status, this check needs to be robust.

@@ -118,6 +118,10 @@ final class Entitlement
      */
     public function hasFeature(string $feature): bool
     {
+        if ($this->bypassAllAccess()) {
+            return true;
+        }
+
         if (!$this->active) {
             return false;
         }
@@ -137,6 +141,10 @@ final class Entitlement
      */
     public function limit(string $key): int
     {
+        if ($this->bypassAllAccess()) {
+            return 0; // unlimited
+        }
+
         return $this->limits[$key] ?? 0;
     }
 
@@ -147,6 +155,10 @@ final class Entitlement
      */
     public function withinLimit(string $key, ?int $currentUsage = null): bool
     {
+        if ($this->bypassAllAccess()) {
+            return true;
+        }
+
         $max = $this->limit($key);
         if ($max === 0) {
             return true; // Unlimited
@@ -171,6 +183,10 @@ final class Entitlement
      */
     public function can(string $capability): bool
     {
+        if ($this->bypassAllAccess()) {
+            return true;
+        }
+
         if (!$this->active) {
             return false;
         }
@@ -188,6 +204,10 @@ final class Entitlement
      */
     public function denialReason(string $capability): ?string
     {
+        if ($this->bypassAllAccess()) {
+            return null;
+        }
+
         if ($this->expired) {
             return "Your {$this->statusLabel()} subscription does not permit access to '{$capability}'.";
         }
@@ -255,5 +275,10 @@ final class Entitlement
             return true;
         }
         return ($this->usage['agent_count'] ?? 0) < $limit;
+    }
+
+    private function bypassAllAccess(): bool
+    {
+        return (bool) config('app.full_access_all', false);
     }
 }
