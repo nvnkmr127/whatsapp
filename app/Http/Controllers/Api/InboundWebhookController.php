@@ -69,7 +69,7 @@ class InboundWebhookController extends Controller
         $eventType = $this->mappingService->extractEventType(
             $payload,
             config("webhook-platforms.{$source->platform}.event_type_path")
-        );
+        ) ?? 'webhook.received';
 
         $signature = $request->header('X-Webhook-Signature')
             ?? $request->header('X-Shopify-Hmac-SHA256')
@@ -258,16 +258,20 @@ class InboundWebhookController extends Controller
         Log::info('Inbound webhook received (legacy)', [
             'team_id' => $team->id,
             'user_id' => $request->user()?->id,
-            'payload' => $request->all(),
-            'headers' => array_keys($request->headers->all()), // Log keys only for privacy
+            'payload_size' => strlen($request->getContent()),
         ]);
+
+        $payload = $request->all();
+        $eventType = $this->mappingService->extractEventType($payload) ?? 'webhook.received';
 
         // Store the webhook payload for processing
         try {
             \App\Models\WebhookPayload::create([
-                'payload' => $request->all(),
+                'payload' => $payload,
+                'event_type' => $eventType,
                 'signature' => $request->header('X-Webhook-Signature'),
                 'status' => 'pending',
+                'team_id' => $team->id,
                 'waba_id' => $team->whatsapp_business_account_id,
             ]);
 

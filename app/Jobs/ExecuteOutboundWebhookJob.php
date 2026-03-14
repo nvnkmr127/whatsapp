@@ -39,6 +39,7 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
 
         $payload = [
             'event' => $this->eventType,
+            'event_type' => $this->eventType, // Added for consistency with API expectations
             'timestamp' => now()->toIso8601String(),
             'data' => $this->data,
         ];

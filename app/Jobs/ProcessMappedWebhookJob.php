@@ -376,9 +376,15 @@ class ProcessMappedWebhookJob implements ShouldQueue
             throw new \Exception('Forward URL not configured');
         }
 
+        $forwardPayload = array_merge($this->payload->mapped_data ?? [], [
+            'event_type' => $this->payload->event_type,
+            'event' => $this->payload->event_type,
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
         $response = Http::withHeaders($headers)
             ->send($method, $url, [
-                'json' => $this->payload->mapped_data,
+                'json' => $forwardPayload,
             ]);
 
         if (!$response->successful()) {

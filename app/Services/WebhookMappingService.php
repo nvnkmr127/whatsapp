@@ -139,11 +139,12 @@ class WebhookMappingService
      */
     public function extractEventType(array $payload, ?string $eventTypePath = null): ?string
     {
-        if (!$eventTypePath) {
-            return $payload['event'] ?? $payload['type'] ?? $payload['topic'] ?? null;
+        $type = null;
+        if ($eventTypePath) {
+            $type = $this->extractNestedValue($payload, $eventTypePath);
         }
 
-        return $this->extractNestedValue($payload, $eventTypePath);
+        return $type ?? $payload['event_type'] ?? $payload['event'] ?? $payload['type'] ?? $payload['topic'] ?? null;
     }
 
     /**
