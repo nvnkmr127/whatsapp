@@ -624,39 +624,63 @@ trait WhatsApp
     public function getAccessibleWabaIds(string $token): array
     {
         try {
-            // First try client_whatsapp_business_accounts on 'me' (works for System Users and some integrations)
-            $response = Http::withToken($token)->get(self::getBaseUrl() . 'me/client_whatsapp_business_accounts');
+            $wabaIds = [];
 
-            if ($response->successful()) {
-                $data = $response->json('data');
-                if (!empty($data)) {
-                    return array_column($data, 'id');
-                }
+            // Direct user edges (covers different app setups and account ownership modes).
+            $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, 'me/whatsapp_business_accounts'));
+            $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, 'me/client_whatsapp_business_accounts'));
+
+            // Business-level edges (embedded signup often grants access through BM ownership/client links).
+            $businessIds = $this->fetchPaginatedGraphIds($token, 'me/businesses');
+            foreach ($businessIds as $businessId) {
+                $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, $businessId . '/owned_whatsapp_business_accounts'));
+                $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, $businessId . '/client_whatsapp_business_accounts'));
             }
 
-            // Fallback: Check businesses -> client_whatsapp_business_accounts
-            $response = Http::withToken($token)->get(self::getBaseUrl() . 'me/businesses', [
-                'fields' => 'client_whatsapp_business_accounts'
+            $wabaIds = array_values(array_unique(array_filter($wabaIds)));
+
+            Log::debug('WhatsApp Trait: Accessible WABA discovery result', [
+                'count' => count($wabaIds),
+                'waba_ids' => $wabaIds,
             ]);
 
-            if ($response->successful()) {
-                $businesses = $response->json('data');
-                $wabaIds = [];
-                foreach ($businesses as $business) {
-                    if (!empty($business['client_whatsapp_business_accounts']['data'])) {
-                        foreach ($business['client_whatsapp_business_accounts']['data'] as $waba) {
-                            $wabaIds[] = $waba['id'];
-                        }
-                    }
-                }
-                return array_unique($wabaIds);
-            }
-
-            return [];
+            return $wabaIds;
         } catch (\Throwable $e) {
             Log::error("WhatsApp Trait: Failed to fetch accessible WABA IDs: " . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * Fetch all IDs from a Graph edge, following pagination.
+     */
+    private function fetchPaginatedGraphIds(string $token, string $edgePath): array
+    {
+        $ids = [];
+        $nextUrl = self::getBaseUrl() . ltrim($edgePath, '/');
+
+        while ($nextUrl) {
+            $response = Http::timeout(15)->withToken($token)->get($nextUrl);
+
+            if ($response->failed()) {
+                Log::warning('WhatsApp Trait: Graph edge fetch failed', [
+                    'edge' => $edgePath,
+                    'status' => $response->status(),
+                    'error' => $response->json('error.message') ?? 'Unknown error',
+                ]);
+                break;
+            }
+
+            foreach (($response->json('data') ?? []) as $row) {
+                if (!empty($row['id'])) {
+                    $ids[] = (string) $row['id'];
+                }
+            }
+
+            $nextUrl = $response->json('paging.next');
+        }
+
+        return $ids;
     }
 
     /**

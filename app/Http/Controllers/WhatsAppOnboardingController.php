@@ -100,6 +100,9 @@ class WhatsAppOnboardingController extends Controller
 
                         if (in_array($wabaId, $accessibleWabas)) {
                             // The input was actually valid
+                        } elseif ($team->whatsapp_business_account_id && in_array($team->whatsapp_business_account_id, $accessibleWabas)) {
+                            // Preserve existing team linkage when refreshing/reconnecting through embedded flow.
+                            $wabaId = $team->whatsapp_business_account_id;
                         } else {
                             // Input was likely a User ID or null. Pick first.
                             $wabaId = $accessibleWabas[0];
