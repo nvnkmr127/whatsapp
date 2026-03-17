@@ -342,6 +342,14 @@ class Team extends JetstreamTeam
     }
 
     /**
+     * Check if the team still has persisted WhatsApp linkage data.
+     */
+    public function hasStoredWhatsAppConnection(): bool
+    {
+        return !empty($this->whatsapp_access_token) && !empty($this->whatsapp_business_account_id);
+    }
+
+    /**
      * Check if the team is currently in a subscription grace period.
      */
     public function isInGracePeriod(): bool

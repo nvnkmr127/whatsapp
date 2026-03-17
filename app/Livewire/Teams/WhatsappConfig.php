@@ -128,7 +128,7 @@ class WhatsappConfig extends Component
 
             // [NEW] Self-Heal: Fetch Facebook Business ID if missing
             $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
-            if ($team && $team->whatsapp_connected && !$team->facebook_business_id && $team->whatsapp_business_account_id) {
+            if ($team && $this->is_whatsmark_connected && !$team->facebook_business_id && $team->whatsapp_business_account_id) {
                 // Determine token to use
                 $token = $this->wm_access_token ?: $team->whatsapp_access_token;
 
@@ -174,6 +174,22 @@ class WhatsappConfig extends Component
                 // $this->wm_access_token = null; // DO NOT EXPOSE TO FRONTEND
                 // Proceed as disconnected
             }
+        }
+
+        if (!$team->whatsapp_connected && $team->hasStoredWhatsAppConnection()) {
+            $updates = ['whatsapp_connected' => true];
+
+            if (!$team->whatsapp_setup_state || $team->whatsapp_setup_state === \App\Enums\IntegrationState::DISCONNECTED) {
+                $updates['whatsapp_setup_state'] = \App\Enums\IntegrationState::AUTHENTICATED;
+            }
+
+            $team->update($updates);
+            $team = $team->fresh();
+
+            Log::info("WhatsApp Config: Self-healed stale disconnected flag for Team {$team->id}", [
+                'waba_id' => $team->whatsapp_business_account_id,
+                'phone_id' => $team->whatsapp_phone_number_id,
+            ]);
         }
 
         if ($team->whatsapp_connected) {
