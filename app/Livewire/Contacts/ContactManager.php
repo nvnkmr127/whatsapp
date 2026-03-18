@@ -93,7 +93,7 @@ class ContactManager extends Component
 
         if ($this->filterTag) {
             $query->whereHas('tags', function ($q) {
-                $q->where('id', $this->filterTag);
+                $q->where('contact_tags.id', $this->filterTag);
             });
         }
 
@@ -444,7 +444,7 @@ class ContactManager extends Component
 
         if ($this->filterTag) {
             $query->whereHas('tags', function ($q) {
-                $q->where('id', $this->filterTag);
+                $q->where('contact_tags.id', $this->filterTag);
             });
         }
 

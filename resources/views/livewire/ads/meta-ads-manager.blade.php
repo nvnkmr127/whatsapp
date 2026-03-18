@@ -349,7 +349,7 @@
                                                 <th class="px-6 py-4">Campaign Info</th>
                                                 <th class="px-6 py-4 text-right">Spent</th>
                                                 <th class="px-6 py-4 text-right">Messages Started</th>
-                                                <th class="px-6 py-4 text-right">Return \(ROAS\)</th>
+                                                <th class="px-6 py-4 text-right">Return (ROAS)</th>
                                                 <th class="px-6 py-4 text-right">Click Rate</th>
                                                 <th class="px-6 py-4">Action</th>
                                             </tr>
@@ -383,7 +383,7 @@
                                                             </svg>
                                                         </div>
                                                         <div class="text-[10px] text-slate-400 font-medium">ID: {{ $campaign['id'] }} •
-                                                            Goal: {{ $campaign[\'objective\'] }}</div>
+                                                            Goal: {{ $campaign['objective'] }}</div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
                                                         {{ $currency }}{{ number_format($campaign['insights']['spend'] ?? 0, 2) }}</td>
