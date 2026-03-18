@@ -11,10 +11,10 @@
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                    Cohort <span class="text-violet-600 dark:text-violet-400">Analysis</span>
+                    Monthly <span class="text-violet-600 dark:text-violet-400">Groups</span>
                 </h1>
             </div>
-            <p class="text-slate-500 font-medium">Track how contacts acquired each month convert over time — and spot seasonal trends.</p>
+            <p class="text-slate-500 font-medium">See how people who joined each month buy over time.</p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -93,7 +93,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
         </svg>
-        Calculating cohorts…
+        Calculating groups...
     </div>
 
     @if(empty($cohorts))
@@ -105,7 +105,7 @@
                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
             </div>
-            <h3 class="text-base font-black text-slate-700 dark:text-slate-200">No cohort data yet</h3>
+            <h3 class="text-base font-black text-slate-700 dark:text-slate-200">No group data yet</h3>
             <p class="text-sm text-slate-400 mt-1 max-w-sm">
                 Contacts need {{ $metric === 'orders' ? 'paid orders' : 'follow-up conversations' }} to appear here.
                 Data covers contacts added in the last {{ $months }} months.
@@ -118,23 +118,23 @@
         @if(!empty($summary))
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Cohorts Tracked</p>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Months Tracked</p>
                 <p class="text-2xl font-black text-slate-900 dark:text-white">{{ $summary['total_cohorts'] }}</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">monthly cohorts</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">months of data</p>
             </div>
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Contacts Analysed</p>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">People Checked</p>
                 <p class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($summary['total_contacts']) }}</p>
                 <p class="text-[10px] text-slate-400 mt-0.5">last {{ $months }} months</p>
             </div>
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Avg 30-Day Rate</p>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Avg 30-Day Success</p>
                 <p class="text-2xl font-black text-violet-600 dark:text-violet-400">{{ number_format($summary['avg_30d'], 1) }}%</p>
                 <p class="text-[10px] text-slate-400 mt-0.5">{{ $metric === 'orders' ? 'order conversion' : 're-engagement' }}</p>
             </div>
             @if(!empty($summary['best']))
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Best Cohort (30d)</p>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Best Month \(30d\)</p>
                 <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400">{{ number_format($summary['best']['windows'][30]['rate'], 1) }}%</p>
                 <p class="text-[10px] text-slate-400 mt-0.5">{{ $summary['best']['cohort_label'] }}</p>
             </div>
@@ -187,9 +187,9 @@
             {{-- Table Header --}}
             <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Cohort Conversion Table</p>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Monthly Success Table</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                        % of contacts in each acquisition cohort who
+                        % of people who joined each month who
                         {{ $metric === 'orders' ? 'placed a paid order' : 'started a follow-up conversation' }}
                         within 30 / 60 / 90 days.
                     </p>
@@ -205,7 +205,7 @@
                 <table class="w-full text-left">
                     <thead>
                         <tr class="border-b border-slate-100 dark:border-slate-800">
-                            <th class="px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 w-40">Cohort</th>
+                            <th class="px-6 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 w-40">Group/Month</th>
                             <th class="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Contacts</th>
                             <th class="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 text-center w-40">30 Days</th>
                             <th class="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-slate-400 text-center w-40">60 Days</th>
@@ -250,7 +250,7 @@
             </div>
 
             <div class="px-6 py-3 border-t border-slate-50 dark:border-slate-800 text-[10px] text-slate-400">
-                Hover a cell to see exact converted / total counts. Cohorts with no conversions show —.
+                Hover a cell to see exact converted / total counts. Months with no sales show —.
             </div>
         </div>
 

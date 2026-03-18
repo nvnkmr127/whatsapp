@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Developer;
 
+use App\Models\Message;
 use App\Models\WebhookSource;
 use App\Models\WhatsappTemplate;
 use App\Services\WebhookAuthService;
@@ -23,10 +24,12 @@ class WebhookSourceManager extends Component
     public $is_active = true;
     public $editingId = null;
     public $search = '';
+    public $exportDateRange = 30; // Days back to include in exports (7, 30, or 90)
+    public $exportStatusFilter = 'all'; // Filter exports by message status: all, sent, delivered, read, failed
 
     protected $queryString = ['search'];
 
-    // Wizard State
+    // Wizard State - tracks the step-by-step configuration process
     public $currentStep = 1;
     public $isCapturing = false;
     public $capturedPayload = null;
@@ -855,6 +858,172 @@ class WebhookSourceManager extends Component
             \Illuminate\Support\Facades\Log::error("Test send error: " . $e->getMessage());
             $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
         }
+    }
+
+    public function exportWebhookReport()
+    {
+        return $this->streamWebhookExport($this->normalizeExportStatusFilter());
+    }
+
+    public function exportFailedWebhookReport()
+    {
+        return $this->streamWebhookExport('failed');
+    }
+
+    public function exportWebhookReportForSource(int $sourceId)
+    {
+        return $this->streamWebhookExportForSource($sourceId, $this->normalizeExportStatusFilter());
+    }
+
+    public function exportFailedWebhookReportForSource(int $sourceId)
+    {
+        return $this->streamWebhookExportForSource($sourceId, 'failed');
+    }
+
+    protected function streamWebhookExport(string $statusFilter)
+    {
+        $teamId = $this->resolveExportTeamId();
+        if (!$teamId) {
+            $this->dispatch('notify', 'Please select a team to export webhook report.', 'error');
+            return null;
+        }
+
+        $startDate = now()->subDays((int) $this->exportDateRange);
+
+        return response()->streamDownload(function () use ($teamId, $startDate, $statusFilter) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Created At',
+                'Message ID',
+                'Direction',
+                'Status',
+                'Contact Name',
+                'Contact Number',
+                'Contact Email',
+                'Sent At',
+                'Delivered At',
+                'Read At',
+                'Error Message',
+                'Message Content',
+            ]);
+
+            Message::query()
+                ->with('contact:id,name,phone_number,email')
+                ->where('team_id', $teamId)
+                ->where('direction', 'outbound')
+                ->where('created_at', '>=', $startDate)
+                ->whereIn('status', ['sent', 'delivered', 'read', 'failed'])
+                ->when($statusFilter !== 'all', function ($query) use ($statusFilter) {
+                    $query->where('status', $statusFilter);
+                })
+                ->orderByDesc('created_at')
+                ->chunk(500, function ($messages) use ($handle) {
+                    foreach ($messages as $message) {
+                        fputcsv($handle, [
+                            optional($message->created_at)->format('Y-m-d H:i:s'),
+                            $message->whatsapp_message_id,
+                            $message->direction,
+                            $message->status,
+                            optional($message->contact)->name,
+                            optional($message->contact)->phone_number,
+                            optional($message->contact)->email,
+                            optional($message->sent_at)->format('Y-m-d H:i:s'),
+                            optional($message->delivered_at)->format('Y-m-d H:i:s'),
+                            optional($message->read_at)->format('Y-m-d H:i:s'),
+                            $message->error_message,
+                            $message->content,
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $statusFilter === 'failed' ? 'webhook-failed-report.csv' : 'webhook-message-report.csv');
+    }
+
+    protected function streamWebhookExportForSource(int $sourceId, string $statusFilter)
+    {
+        $source = WebhookSource::findOrFail($sourceId);
+        $this->authorize('view', $source);
+
+        $startDate = now()->subDays((int) $this->exportDateRange);
+
+        return response()->streamDownload(function () use ($source, $startDate, $statusFilter) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Source Name',
+                'Created At',
+                'Message ID',
+                'Direction',
+                'Status',
+                'Contact Name',
+                'Contact Number',
+                'Contact Email',
+                'Sent At',
+                'Delivered At',
+                'Read At',
+                'Error Message',
+                'Message Content',
+            ]);
+
+            Message::query()
+                ->with('contact:id,name,phone_number,email')
+                ->where('team_id', $source->team_id)
+                ->where('webhook_source_id', $source->id)
+                ->where('direction', 'outbound')
+                ->where('created_at', '>=', $startDate)
+                ->whereIn('status', ['sent', 'delivered', 'read', 'failed'])
+                ->when($statusFilter !== 'all', function ($query) use ($statusFilter) {
+                    $query->where('status', $statusFilter);
+                })
+                ->orderByDesc('created_at')
+                ->chunk(500, function ($messages) use ($handle, $source) {
+                    foreach ($messages as $message) {
+                        fputcsv($handle, [
+                            $source->name,
+                            optional($message->created_at)->format('Y-m-d H:i:s'),
+                            $message->whatsapp_message_id,
+                            $message->direction,
+                            $message->status,
+                            optional($message->contact)->name,
+                            optional($message->contact)->phone_number,
+                            optional($message->contact)->email,
+                            optional($message->sent_at)->format('Y-m-d H:i:s'),
+                            optional($message->delivered_at)->format('Y-m-d H:i:s'),
+                            optional($message->read_at)->format('Y-m-d H:i:s'),
+                            $message->error_message,
+                            $message->content,
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $statusFilter === 'failed'
+            ? 'webhook-source-' . $source->id . '-failed.csv'
+            : 'webhook-source-' . $source->id . '-report.csv');
+    }
+
+    protected function resolveExportTeamId(): ?int
+    {
+        $user = auth()->user();
+        $team = $user->currentTeam;
+
+        if ($team) {
+            return (int) $team->id;
+        }
+
+        if ($user->is_super_admin) {
+            return (int) optional(\App\Models\Team::first())->id;
+        }
+
+        return null;
+    }
+
+    protected function normalizeExportStatusFilter(): string
+    {
+        $allowed = ['all', 'sent', 'delivered', 'read', 'failed'];
+        return in_array($this->exportStatusFilter, $allowed, true) ? $this->exportStatusFilter : 'all';
     }
 
 

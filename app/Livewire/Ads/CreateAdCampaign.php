@@ -22,10 +22,10 @@ class CreateAdCampaign extends Component
     // Wizard Steps
     public $currentStep = 1;
     public $steps = [
-        1 => 'Campaign details',
-        2 => 'Targeting & schedule',
-        3 => 'Creative & link',
-        4 => 'Final review'
+        1 => 'Campaign Info',
+        2 => 'Who & When',
+        3 => 'Ad Design',
+        4 => 'Review'
     ];
 
     // Form Data - Campaign
@@ -179,10 +179,10 @@ class CreateAdCampaign extends Component
             // Simulated launch process
             sleep(3);
 
-            session()->flash('message', 'Campaign launched successfully! It will appear in your manager shortly.');
+            session()->flash('message', 'Ad started successfully! It will show up in your manager soon.');
             return redirect()->route('ads.manager');
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to launch: ' . $e->getMessage());
+            session()->flash('error', 'Could not start: ' . $e->getMessage());
         } finally {
             $this->isLaunching = false;
         }

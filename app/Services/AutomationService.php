@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Automation;
+use App\Models\Message;
 use App\Models\AutomationRun;
 use App\Models\AutomationStepLedger;
 use App\Models\Contact;
@@ -460,7 +461,15 @@ class AutomationService
                     return 'pause'; // Stop execution
                 }
 
-                $this->whatsapp->sendText($run->contact->phone_number, $node['data']['text'] ?? '');
+                $text = $node['data']['text'] ?? '';
+                $trackingMessage = $this->createAutomationTrackingMessage(
+                    $run,
+                    'text',
+                    $text,
+                    ['node_id' => $node['id'] ?? null, 'node_type' => $node['type']]
+                );
+
+                $this->whatsapp->sendText($run->contact->phone_number, $text, $trackingMessage);
                 return 'continue';
 
             case 'image':
@@ -473,14 +482,42 @@ class AutomationService
                     if (str_starts_with($url, '/')) {
                         $url = url($url);
                     }
-                    $this->whatsapp->sendMedia($run->contact->phone_number, $node['type'], $url, $node['data']['caption'] ?? '');
+                    $trackingMessage = $this->createAutomationTrackingMessage(
+                        $run,
+                        $node['type'],
+                        $node['data']['caption'] ?? null,
+                        ['node_id' => $node['id'] ?? null, 'node_type' => $node['type']],
+                        [
+                            'media_type' => $node['type'],
+                            'media_url' => $url,
+                            'caption' => $node['data']['caption'] ?? null,
+                        ]
+                    );
+
+                    $this->whatsapp->sendMedia($run->contact->phone_number, $node['type'], $url, $node['data']['caption'] ?? '', $trackingMessage);
                 }
                 return 'continue';
 
             case 'template':
                 $templateName = $node['data']['template_name'] ?? null;
                 if ($templateName) {
-                    $this->whatsapp->sendTemplate($run->contact->phone_number, $templateName, $node['data']['language'] ?? 'en_US');
+                    $trackingMessage = $this->createAutomationTrackingMessage(
+                        $run,
+                        'template',
+                        $templateName,
+                        ['node_id' => $node['id'] ?? null, 'node_type' => $node['type'], 'template_name' => $templateName]
+                    );
+
+                    $this->whatsapp->sendTemplate(
+                        $run->contact->phone_number,
+                        $templateName,
+                        $node['data']['language'] ?? 'en_US',
+                        [],
+                        [],
+                        [],
+                        null,
+                        $trackingMessage
+                    );
                 }
                 return 'continue';
 
@@ -834,10 +871,49 @@ STRICT GROUNDING RULES:
             foreach ($node['data']['buttons'] ?? [] as $b) {
                 $btns[$b['id']] = $b['title'];
             }
-            $this->whatsapp->sendInteractiveButtons($run->contact->phone_number, $text, $btns);
+            $trackingMessage = $this->createAutomationTrackingMessage(
+                $run,
+                'interactive',
+                $text,
+                ['node_id' => $node['id'] ?? null, 'node_type' => $node['type'], 'buttons' => $btns]
+            );
+
+            $this->whatsapp->sendInteractiveButtons($run->contact->phone_number, $text, $btns, $trackingMessage);
         } else {
-            $this->whatsapp->sendText($run->contact->phone_number, $text);
+            $trackingMessage = $this->createAutomationTrackingMessage(
+                $run,
+                'text',
+                $text,
+                ['node_id' => $node['id'] ?? null, 'node_type' => $node['type']]
+            );
+
+            $this->whatsapp->sendText($run->contact->phone_number, $text, $trackingMessage);
         }
+    }
+
+    protected function createAutomationTrackingMessage(AutomationRun $run, string $type, ?string $content = null, array $meta = [], array $extraFields = []): Message
+    {
+        $conversation = app(ConversationService::class)->ensureActiveConversation($run->contact);
+
+        $baseMeta = [
+            'is_bot' => true,
+            'automation' => true,
+            'automation_id' => $run->automation_id,
+            'automation_run_id' => $run->id,
+        ];
+
+        return Message::create(array_merge([
+            'team_id' => $run->automation->team_id,
+            'contact_id' => $run->contact_id,
+            'conversation_id' => $conversation->id,
+            'automation_id' => $run->automation_id,
+            'automation_run_id' => $run->id,
+            'type' => $type,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'content' => $content,
+            'metadata' => array_merge($baseMeta, $meta),
+        ], $extraFields));
     }
 
     protected function logHistory(AutomationRun $run, $nodeId, $event)

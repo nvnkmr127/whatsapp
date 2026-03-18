@@ -13,12 +13,22 @@
                     <span class="text-wa-teal dark:wa-teal">Billing</span>
                 </h1>
             </div>
-            <p class="text-slate-500 font-medium">Monitor your metrics, usage, and financial transactions.</p>
+            <p class="text-slate-500 font-medium">Keep track of your stats, usage, and money.</p>
         </div>
 
         <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Time</label>
+                <select wire:model.live="dateRange"
+                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    <option value="7">7d</option>
+                    <option value="30">30d</option>
+                    <option value="90">90d</option>
+                </select>
+            </div>
+
             <div class="hidden md:flex flex-col items-end mr-4">
-                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Data Freshness</span>
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Updated</span>
                 <span class="text-xs font-bold text-wa-teal flex items-center gap-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></span>
                     Synced: {{ $lastUpdated->diffForHumans() }}
@@ -39,7 +49,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Export
+                Download Billing
             </button>
             <button wire:click="toggleSchedule"
                 class="flex items-center gap-2 px-6 py-3 {{ $isScheduled ? 'bg-wa-teal text-white' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' }} font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95">
@@ -91,7 +101,7 @@
             <div class="relative z-10">
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Sent (30d)</h3>
                 <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($msgSent) }}</div>
-                <p class="mt-4 text-[10px] font-bold text-wa-teal uppercase tracking-widest">Outbound Traffic</p>
+                <p class="mt-4 text-[10px] font-bold text-wa-teal uppercase tracking-widest">Sent Messages</p>
             </div>
         </div>
 
@@ -108,7 +118,7 @@
             <div class="relative z-10">
                 <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Received (30d)</h3>
                 <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($msgReceived) }}</div>
-                <p class="mt-4 text-[10px] font-bold text-purple-500 uppercase tracking-widest">Inbound Engagement</p>
+                <p class="mt-4 text-[10px] font-bold text-purple-500 uppercase tracking-widest">Received Messages</p>
             </div>
         </div>
 
@@ -129,11 +139,11 @@
                     </div>
                     <div class="text-xs font-bold text-slate-400">/ {{ number_format($qrScans) }} scans</div>
                 </div>
-                <p class="mt-4 text-[10px] font-bold text-indigo-500 uppercase tracking-widest">QR Conversions</p>
+                <p class="mt-4 text-[10px] font-bold text-indigo-500 uppercase tracking-widest">QR Code Scans</p>
             </div>
         </div>
 
-        <!-- Tickets Resolved -->
+        <!-- Issues Fixed -->
         <div
             class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
             <div
@@ -144,11 +154,130 @@
                 </svg>
             </div>
             <div class="relative z-10">
-                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Tickets Resolved</h3>
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Issues Fixed</h3>
                 <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($ticketsResolved) }}
                 </div>
                 <p class="mt-4 text-[10px] font-bold text-orange-500 uppercase tracking-widest">Customer Support</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Webhook Delivery Report -->
+    <div
+        class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 sm:p-10 shadow-xl border border-slate-50 dark:border-slate-800 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    Message <span class="text-wa-teal">Delivery Report</span>
+                </h3>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    Sent message statuses for last {{ $this->dateRange }} days
+                </p>
+                <div class="mt-2 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
+                    <span class="px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                        Delivery Rate: {{ number_format($webhookSummary['delivery_rate'], 1) }}%
+                    </span>
+                    <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                        Read Rate: {{ number_format($webhookSummary['read_rate'], 1) }}%
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</label>
+                    <select wire:model.live="webhookStatusFilter"
+                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
+                        <option value="all">All</option>
+                        <option value="sent">Sent</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="read">Read</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <button wire:click="exportWebhookReport"
+                    class="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Delivery Report
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="rounded-2xl border border-slate-100 dark:border-slate-800 p-5 bg-slate-50/70 dark:bg-slate-800/30">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Sent</p>
+                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['sent']) }}</p>
+            </div>
+            <div class="rounded-2xl border border-blue-100 dark:border-blue-900/30 p-5 bg-blue-50/70 dark:bg-blue-900/10">
+                <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Delivered</p>
+                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['delivered']) }}</p>
+            </div>
+            <div class="rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-5 bg-emerald-50/70 dark:bg-emerald-900/10">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Read</p>
+                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['read']) }}</p>
+            </div>
+            <div class="rounded-2xl border border-rose-100 dark:border-rose-900/30 p-5 bg-rose-50/70 dark:bg-rose-900/10">
+                <p class="text-[10px] font-black uppercase tracking-widest text-rose-500">Failed</p>
+                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['failed']) }}</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 dark:bg-slate-800/40">
+                    <tr>
+                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Time</th>
+                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Contact</th>
+                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Number</th>
+                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Message ID</th>
+                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Error</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    @forelse($webhookDetails as $message)
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors">
+                            <td class="px-5 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                {{ $message->created_at?->format('Y-m-d H:i') }}
+                            </td>
+                            <td class="px-5 py-4 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                {{ $message->contact?->name ?: 'Unknown' }}
+                                @if($message->contact?->email)
+                                    <div class="text-[10px] text-slate-400">{{ $message->contact->email }}</div>
+                                @endif
+                            </td>
+                            <td class="px-5 py-4 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                {{ $message->contact?->phone_number ?: '-' }}
+                            </td>
+                            <td class="px-5 py-4">
+                                <span class="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded
+                                {{ $message->status === 'failed' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/20 dark:text-rose-300' : '' }}
+                                {{ $message->status === 'read' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300' : '' }}
+                                {{ $message->status === 'delivered' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : '' }}
+                                {{ $message->status === 'sent' ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' : '' }}">
+                                    {{ $message->status }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-4 text-[11px] font-mono text-slate-500 dark:text-slate-400 max-w-[240px] truncate">
+                                {{ $message->whatsapp_message_id ?: '-' }}
+                            </td>
+                            <td class="px-5 py-4 text-xs text-rose-500 max-w-[260px] truncate">
+                                {{ $message->error_message ?: '-' }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-5 py-8 text-center text-sm font-semibold text-slate-400">
+                                No message activity for this period.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -159,10 +288,10 @@
                 class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                        Official Meta Data
+                        Official Facebook Data
                     </h3>
                     <p class="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-                        Verified billing and usage metrics directly from WhatsApp Cloud API. Source: Meta Graph API.
+                        Official billing and usage info from WhatsApp.
                     </p>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -190,7 +319,7 @@
                     <!-- Stat Card 1 -->
                     <div class="bg-gray-50 dark:bg-gray-700 overflow-hidden rounded-lg">
                         <div class="px-4 py-5 sm:p-6">
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Total Conversation
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Total Chat
                                 Cost</dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                                 {{-- Placeholder as actual summation requires parsing --}}
@@ -206,7 +335,7 @@
                     <!-- Stat Card 2 -->
                     <div class="bg-gray-50 dark:bg-gray-700 overflow-hidden rounded-lg">
                         <div class="px-4 py-5 sm:p-6">
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Granularity</dt>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Time Period</dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                                 Daily
                             </dd>
@@ -216,7 +345,7 @@
                     <!-- Stat Card 3 -->
                     <div class="bg-gray-50 dark:bg-gray-700 overflow-hidden rounded-lg">
                         <div class="px-4 py-5 sm:p-6">
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Data Points</dt>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-300 truncate">Records</dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                                 {{ count($metaAnalytics['data'] ?? []) }}
                             </dd>
@@ -235,7 +364,7 @@
                                 d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
                                 clip-rule="evenodd" />
                         </svg>
-                        <span>View Raw Analytics Response</span>
+                        <span>View Data Response</span>
                     </button>
                     <div x-show="open"
                         class="mt-4 bg-gray-900 rounded-lg p-4 overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar"
@@ -259,9 +388,9 @@
                 <div class="flex items-center justify-between mb-10">
                     <div>
                         <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Message
-                            <span class="text-wa-teal">Velocity</span>
+                            <span class="text-wa-teal">Speed</span>
                         </h3>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time volume
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Live message
                             tracking</p>
                     </div>
                     <div class="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -362,7 +491,7 @@
                         <div class="text-xs font-black text-wa-teal dark:wa-teal uppercase tracking-widest mb-1">
                             Coming Soon</div>
                         <p class="text-sm text-blue-800 dark:text-blue-300 leading-relaxed font-medium">Agent
-                            performance metrics, average resolution time, and satisfaction scores will appear here.</p>
+                            stats, response time, and happiness scores will appear here.</p>
                     </div>
                 </div>
             </div>

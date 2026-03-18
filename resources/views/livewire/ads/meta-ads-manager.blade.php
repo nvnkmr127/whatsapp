@@ -9,9 +9,9 @@
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
-                    <span class="text-gray-400 text-sm font-medium">Campaign Manager</span>
+                    <span class="text-gray-400 text-sm font-medium">Ad Manager</span>
                 </div>
-                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Ads Dashboard</h2>
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Ads Overview</h2>
             </div>
 
             <div class="flex items-center gap-3">
@@ -22,7 +22,7 @@
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
-                        Create New Ad
+                        Create Ad
                     </a>
                 @endif
                 <button wire:click="$refresh"
@@ -62,8 +62,8 @@
                                 d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.826L10.242 9.172a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.101-1.101" />
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-black text-slate-800">Connect to Meta Marketing</h3>
-                    <p class="text-slate-500 mt-2">You need to connect your Facebook Business Account to start managing ads.
+                    <h3 class="text-2xl font-black text-slate-800">Connect Facebook</h3>
+                    <p class="text-slate-500 mt-2">Connect your Facebook account to create and manage ads.
                     </p>
                 </div>
                 <livewire:integrations.meta-embedded-signup />
@@ -82,9 +82,9 @@
                                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">Live</span>
+                            <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">Active</span>
                         </div>
-                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Spend</p>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Money Spent</p>
                         <h4 class="text-3xl font-black text-slate-900 mt-1">
                             {{ $currency }}{{ number_format($summaryStats['total_spend'], 2) }}</h4>
                     </div>
@@ -100,7 +100,7 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Conversations</p>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Messages Started</p>
                         <h4 class="text-3xl font-black text-slate-900 mt-1">
                             {{ number_format($summaryStats['total_conversions']) }}</h4>
                     </div>
@@ -118,7 +118,7 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Impressions</p>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Times Seen</p>
                         <h4 class="text-3xl font-black text-slate-900 mt-1">
                             {{ number_format($summaryStats['total_impressions']) }}</h4>
                     </div>
@@ -134,7 +134,7 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Avg. CPC</p>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Cost Per Click</p>
                         <h4 class="text-3xl font-black text-slate-900 mt-1">{{ $currency }}{{ number_format($summaryStats['avg_cpc'], 2) }}
                         </h4>
                     </div>
@@ -147,7 +147,7 @@
                 <div class="lg:col-span-3 space-y-6">
                     <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 overflow-hidden">
                         <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Ad Accounts</h3>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Your Accounts</h3>
                             <span
                                 class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg text-xs font-bold">{{ count($adAccounts) }}</span>
                         </div>
@@ -191,13 +191,13 @@
                         @endif
                     </div>
 
-                    <!-- Smart Insights -->
+                    <!-- Smart Tips -->
                     @if(!empty($smartInsights))
                         <div class="mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             <div class="flex items-center justify-between mb-5">
-                                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Smart Insights</h3>
+                                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Smart Tips</h3>
                                 <div class="flex items-center gap-1.5">
-                                    <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">Live</span>
+                                    <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">Active</span>
                                     <span class="flex h-1.5 w-1.5 rounded-full bg-wa-teal animate-pulse"></span>
                                 </div>
                             </div>
@@ -249,9 +249,8 @@
                                         d="M4 6h16M4 12h16m-7 6h7" />
                                 </svg>
                             </div>
-                            <h3 class="text-2xl font-black text-slate-900">Select Ad Account</h3>
-                            <p class="text-slate-500 mt-2 max-w-xs text-sm leading-relaxed">Choose an account from the left to
-                                start analyzing your "Click-to-WhatsApp" performance.</p>
+                            <h3 class="text-2xl font-black text-slate-900">Choose an Account</h3>
+                            <p class="text-slate-500 mt-2 max-w-xs text-sm leading-relaxed">Pick an account on the left to see how your WhatsApp ads are doing.</p>
                         </div>
                     @else
                         <div class="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden flex flex-col">
@@ -310,7 +309,7 @@
                                             </svg>
                                         </div>
                                         <input type="text" wire:model.live.debounce.300ms="searchTerm"
-                                            placeholder="Search by name..."
+                                            placeholder="Search names..."
                                             class="w-full bg-white border-gray-200 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-wa-teal/20 focus:border-wa-teal transition-all placeholder-slate-400">
                                     </div>
 
@@ -318,16 +317,16 @@
                                         <select wire:model.live="statusFilter"
                                             class="bg-white border-gray-200 rounded-2xl px-4 py-3 text-sm focus:ring-wa-teal/20 focus:border-wa-teal transition-all">
                                             <option value="all">All Status</option>
-                                            <option value="active_only">Active Only</option>
-                                            <option value="paused_only">Paused Only</option>
+                                            <option value="active_only">Only Active</option>
+                                            <option value="paused_only">Only Paused</option>
                                         </select>
 
                                         @if(!empty($selectedIds))
                                             <div class="flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
                                                 <button wire:click="bulkAction('resume')"
-                                                    class="bg-green-100 text-green-700 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-green-200 transition-colors">Resume</button>
+                                                    class="bg-green-100 text-green-700 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-green-200 transition-colors">Start</button>
                                                 <button wire:click="bulkAction('pause')"
-                                                    class="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">Pause</button>
+                                                    class="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">Stop</button>
                                             </div>
                                         @endif
                                     </div>
@@ -347,11 +346,11 @@
                                                         onclick="toggleCheckboxes(this)">
                                                 </th>
                                                 <th class="px-6 py-4">Status</th>
-                                                <th class="px-6 py-4">Campaign Details</th>
-                                                <th class="px-6 py-4 text-right">Spend</th>
-                                                <th class="px-6 py-4 text-right">Conversations</th>
-                                                <th class="px-6 py-4 text-right">ROAS</th>
-                                                <th class="px-6 py-4 text-right">CTR</th>
+                                                <th class="px-6 py-4">Campaign Info</th>
+                                                <th class="px-6 py-4 text-right">Spent</th>
+                                                <th class="px-6 py-4 text-right">Messages Started</th>
+                                                <th class="px-6 py-4 text-right">Return \(ROAS\)</th>
+                                                <th class="px-6 py-4 text-right">Click Rate</th>
                                                 <th class="px-6 py-4">Action</th>
                                             </tr>
                                         </thead>
@@ -384,7 +383,7 @@
                                                             </svg>
                                                         </div>
                                                         <div class="text-[10px] text-slate-400 font-medium">ID: {{ $campaign['id'] }} •
-                                                            Objective: {{ $campaign['objective'] }}</div>
+                                                            Goal: {{ $campaign[\'objective\'] }}</div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
                                                         {{ $currency }}{{ number_format($campaign['insights']['spend'] ?? 0, 2) }}</td>
@@ -392,7 +391,7 @@
                                                         <div class="font-black text-slate-900">
                                                             {{ number_format($metrics['conversions']) }}</div>
                                                         <div class="text-[10px] text-slate-400 font-medium">
-                                                            {{ $currency }}{{ number_format($campaign['insights']['cost_per_conversion'] ?? 0, 2) }}/conv
+                                                            {{ $currency }}{{ number_format($campaign['insights']['cost_per_conversion'] ?? 0, 2) }}/msg
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right">
@@ -407,7 +406,7 @@
                                                         <div class="flex items-center gap-2">
                                                             <button wire:click="viewAdSets('{{ $campaign['id'] }}')"
                                                                 class="p-2 text-slate-400 hover:text-wa-teal transition-colors"
-                                                                title="View Ad Sets">
+                                                                title="View Ad Groups">
                                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                                     viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -434,8 +433,7 @@
                                                                 </svg>
                                                             </div>
                                                             <h4 class="font-black text-slate-900">No campaigns found</h4>
-                                                            <p class="text-sm text-slate-400 mt-1">Try adjusting your filters or
-                                                                keywords.</p>
+                                                            <p class="text-sm text-slate-400 mt-1">Try changing your search or filters.</p>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -449,11 +447,11 @@
                                             <tr
                                                 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-gray-100 bg-slate-50/50">
                                                 <th class="px-6 py-4">Status</th>
-                                                <th class="px-6 py-4">Ad Set Details</th>
-                                                <th class="px-6 py-4 text-right">Daily Budget</th>
-                                                <th class="px-6 py-4 text-right">Spend</th>
+                                                <th class="px-6 py-4">Ad Group Info</th>
+                                                <th class="px-6 py-4 text-right">Daily Limit</th>
+                                                <th class="px-6 py-4 text-right">Spent</th>
                                                 <th class="px-6 py-4 text-right">Clicks</th>
-                                                <th class="px-6 py-4 text-right">CTR</th>
+                                                <th class="px-6 py-4 text-right">Click Rate</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-50">
@@ -490,8 +488,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="px-6 py-20 text-center text-gray-400 text-sm">No ad sets
-                                                        found in this campaign.</td>
+                                                    <td colspan="6" class="px-6 py-20 text-center text-gray-400 text-sm">No ad groups found here.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -504,10 +501,10 @@
                                                 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-gray-100 bg-slate-50/50">
                                                 <th class="px-6 py-4">Preview</th>
                                                 <th class="px-6 py-4">Status</th>
-                                                <th class="px-6 py-4">Ad Details</th>
-                                                <th class="px-6 py-4 text-right">Spend</th>
+                                                <th class="px-6 py-4">Ad Info</th>
+                                                <th class="px-6 py-4 text-right">Spent</th>
                                                 <th class="px-6 py-4 text-right">Clicks</th>
-                                                <th class="px-6 py-4 text-right">CTR</th>
+                                                <th class="px-6 py-4 text-right">Click Rate</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-50">
@@ -543,8 +540,7 @@
                                                             </div>
                                                             <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
                                                             <a href="{{ $ad['preview_shareable_link'] ?? '#' }}" target="_blank"
-                                                                class="text-[10px] font-bold text-blue-500 hover:text-blue-700 underline tracking-wide">Live
-                                                                Preview</a>
+                                                                class="text-[10px] font-bold text-blue-500 hover:text-blue-700 underline tracking-wide">View Ad</a>
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-5 text-right font-black text-slate-900">
@@ -556,8 +552,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="px-6 py-20 text-center text-gray-400 text-sm">No ads found in
-                                                        this set.</td>
+                                                    <td colspan="6" class="px-6 py-20 text-center text-gray-400 text-sm">No ads found here.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -571,7 +566,7 @@
                                     <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">
                                         Showing
                                         {{ count($viewLevel === 'campaigns' ? $campaigns : ($viewLevel === 'adsets' ? $adSets : $ads)) }}
-                                        Results
+                                        Items
                                     </div>
                                     @if($viewLevel !== 'campaigns')
                                         <button wire:click="goBack"
@@ -580,7 +575,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                                             </svg>
-                                            Back to {{ $viewLevel === 'ads' ? 'Ad Sets' : 'Campaigns' }}
+                                            Back to {{ $viewLevel === 'ads' ? 'Ad Groups' : 'Campaigns' }}
                                         </button>
                                     @endif
                                 </div>

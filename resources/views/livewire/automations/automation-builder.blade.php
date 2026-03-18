@@ -344,7 +344,7 @@
             <div class="flex items-center gap-4">
                 <a href="{{ route('automations.index') }}"
                     class="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    title="Back to Automations">
+                    title="Back to Bots">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -354,7 +354,7 @@
                 <div class="flex flex-col">
                     <input type="text" wire:model.blur="name"
                         class="bg-transparent border-0 p-0 text-sm font-bold text-slate-800 dark:text-white leading-tight focus:ring-0 placeholder-slate-400"
-                        placeholder="Untitled Automation">
+                        placeholder="Untitled Bot">
                     <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
                         {{ $triggerType === 'keyword' ? 'Keywords: ' . implode(', ', $triggerConfig['keywords'] ?? []) : ucfirst(str_replace('_', ' ', $triggerType)) }}
                     </span>
@@ -366,7 +366,7 @@
 
                 <button type="button" wire:click.prevent="save"
                     class="text-xs font-bold px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-sm">
-                    Save as Draft
+                    Save for Later
                 </button>
 
                 <button type="button" wire:click.prevent="publish"
@@ -386,7 +386,7 @@
                         </svg>
                     </template>
 
-                    <span x-text="!$wire.isActivatable ? 'Fix Errors to Publish' : 'Publish Flow'"></span>
+                    <span x-text="!$wire.isActivatable ? 'Fix Errors to Turn On' : 'Turn On'"></span>
                 </button>
             </div>
         </div>
@@ -394,7 +394,7 @@
         <!-- Workspace -->
         <div class="flex-1 flex overflow-hidden relative">
 
-            <!-- Preflight Checklist Sidebar -->
+            <!-- Checklist Sidebar -->
 
 
         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-lg space-y-2 pointer-events-none">
@@ -479,7 +479,7 @@
         <div class="flex-1 bg-slate-50 dark:bg-slate-950 relative overflow-hidden cursor-grab active:cursor-grabbing" id="canvas-container"
              @mousedown="startPan($event)" @mousemove="pan($event)" @mouseup="endPan()" @mouseleave="endPan()" @wheel="zoom($event)">
              
-             <!-- Preflight Checklist Sidebar (Moved to Canvas) -->
+             <!-- Checklist Sidebar (Moved to Canvas) -->
             <div x-show="validationIssues && validationIssues.length > 0"
                 x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-8 opacity-0"
                 x-transition:enter-end="translate-y-0 opacity-100"
@@ -494,7 +494,7 @@
                                 class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                         </div>
-                        <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest">Preflight Checklist</h4>
+                        <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest">Checklist</h4>
                     </div>
                     <span
                         class="text-[10px] font-bold bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300"
@@ -572,7 +572,7 @@
              :class="{'translate-x-0': true}">
             
             <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
-                <h3 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400" x-text="selectedId ? 'Node Properties' : (selectedEdgeIndex !== null ? 'Edge Properties' : 'Automation Summary')"></h3>
+                <h3 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400" x-text="selectedId ? 'Step Details' : (selectedEdgeIndex !== null ? 'Path Details' : 'Bot Summary')"></h3>
                 <button x-show="selectedId || selectedEdgeIndex !== null" @click="deselectAll()" class="p-1 px-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 hover:bg-wa-teal hover:text-white transition-all">
                     Done
                 </button>
@@ -681,7 +681,7 @@
                                 <div class="space-y-4">
                                      <!-- Trigger Type Dropdown -->
                                     <div class="space-y-1">
-                                        <label class="block text-xs font-bold text-slate-500 uppercase">Trigger Event</label>
+                                        <label class="block text-xs font-bold text-slate-500 uppercase">When this happens:</label>
                                         <select wire:model.live="triggerType" wire:change="updateNodeData"
                                             class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
                                             <option value="keyword">Keyword/Regex Match</option>
@@ -1172,7 +1172,7 @@
                                 </select>
                             </div>
 
-                            <!-- Standalone Delay Node Properties -->
+                            <!-- Standalone Delay Step Details -->
                             <div class="space-y-4" x-show="selectedNode.type === 'delay'">
                                 <div class="space-y-2">
                                     <label class="block text-xs font-bold text-slate-500 uppercase transition-colors" :class="getFieldError('nodeDelayValue') ? 'text-rose-500' : ''">Wait Duration</label>
@@ -1201,7 +1201,7 @@
                                     placeholder="Please share your location..."></textarea>
                             </div>
 
-                            <!-- Contact Node Properties -->
+                            <!-- Contact Step Details -->
                             <div class="space-y-1" x-show="['contact'].includes(selectedNode.type)">
                                 <div class="flex items-center justify-between mb-2">
                                     <label class="text-xs font-bold text-slate-500 uppercase">Contacts</label>
@@ -1416,7 +1416,7 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-black text-slate-800 dark:text-white">Publish Flow Review</h2>
+                    <h2 class="text-xl font-black text-slate-800 dark:text-white">Turn On Review</h2>
                     <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Moving to Version v{{ $version + 1 }}</p>
                 </div>
             </div>
@@ -1465,7 +1465,7 @@
 
                 <!-- Version Note -->
                 <div class="space-y-2">
-                    <label class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Publication Notes</label>
+                    <label class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Notes</label>
                     <textarea wire:model.blur="publishNote" rows="3" 
                         placeholder="What changed in this version? (e.g. Optimized the welcome branch)"
                         class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:ring-wa-teal focus:border-wa-teal transition-all"></textarea>
@@ -1483,7 +1483,7 @@
                 <div class="flex gap-3">
                     <button wire:click="confirmPublish"
                         class="px-8 py-2.5 bg-wa-teal hover:bg-wa-dark text-white rounded-xl font-black text-sm shadow-xl shadow-wa-teal/20 transition-all flex items-center gap-2">
-                        <span>Go Live Now</span>
+                        <span>Turn On Now</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
                     </button>
                 </div>
@@ -1494,12 +1494,12 @@
     <!-- Save Error Modal -->
     <x-dialog-modal wire:model.live="showErrorModal">
         <x-slot name="title">
-            {{ __('Flow Validation Failed') }}
+            {{ __('Couldn\'t Save') }}
         </x-slot>
 
         <x-slot name="content">
             <div class="text-sm text-slate-600 dark:text-slate-400">
-                {{ __('Please correct the following errors before saving:') }}
+                {{ __('Please fix these errors before saving:') }}
                 <ul class="list-disc list-inside mt-2 text-red-600 dark:text-red-400 space-y-1">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>

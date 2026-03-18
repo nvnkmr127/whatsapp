@@ -55,7 +55,7 @@ class Show extends Component
 
         session([
             'retarget_ids' => $contactIds,
-            'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
+            'default_name' => "Follow-up: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
         ]);
 
         return redirect()->route('campaigns.create');

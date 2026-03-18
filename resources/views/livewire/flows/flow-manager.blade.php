@@ -9,10 +9,9 @@
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Smart <span
-                        class="text-wa-teal">Flows</span></h1>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Smart <span class="text-wa-teal">Forms</span></h1>
             </div>
-            <p class="text-slate-500 font-medium">Design, manage, and deploy interactive conversational experiences.</p>
+            <p class="text-slate-500 font-medium">Build and manage interactive forms in chat.</p>
         </div>
         <div class="flex items-center gap-3">
             <button wire:click="syncFlows" wire:loading.attr="disabled"
@@ -28,7 +27,7 @@
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                     </path>
                 </svg>
-                Sync Meta
+                Sync with Facebook
             </button>
             <button wire:click="$toggle('showCreateModal')"
                 class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
@@ -109,12 +108,11 @@
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                 </div>
-                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">No Flows Yet</h3>
-                <p class="text-slate-500 font-medium max-w-sm mt-2 mb-8">Design intelligent forms and automated interactions
-                    to capture structured data effortlessly.</p>
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">No Forms Yet</h3>
+                <p class="text-slate-500 font-medium max-w-sm mt-2 mb-8">Design easy forms to collect info from your users.</p>
                 <button wire:click="$toggle('showCreateModal')"
                     class="px-12 py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-2xl shadow-wa-teal/20 hover:scale-105 transition-all">
-                    Build Your First Smart Flow
+                    Build Your First Form
                 </button>
             </div>
         @endforelse
@@ -128,7 +126,7 @@
                 class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div class="p-8 pb-0 flex justify-between items-center">
                     <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Create <span class="text-wa-teal">Flow</span>
+                        Create <span class="text-wa-teal">Form</span>
                     </h2>
                     <button wire:click="$toggle('showCreateModal')"
                         class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -141,7 +139,7 @@
 
                 <div class="p-8 space-y-6">
                     <div class="space-y-2">
-                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Flow Name</label>
+                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Form Name</label>
                         <input type="text" wire:model.defer="name" placeholder="E.g. Customer Feedback Survey"
                             class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20">
                         @error('name') <span class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span>
@@ -158,10 +156,8 @@
                             </div>
                             <div class="flex-1">
                                 <span
-                                    class="block text-sm font-black text-slate-900 dark:text-white uppercase tracking-wide group-hover:text-wa-teal transition-colors">Use
-                                    Data Endpoint</span>
-                                <p class="text-slate-500 text-xs font-medium mt-1 leading-relaxed">Enable for dynamic
-                                    content (e.g. login, calculators). Requires server-side processing.</p>
+                                    class="block text-sm font-black text-slate-900 dark:text-white uppercase tracking-wide group-hover:text-wa-teal transition-colors">Dynamic Data</span>
+                                <p class="text-slate-500 text-xs font-medium mt-1 leading-relaxed">Turn on if your form needs to talk to your server (like logging in or calculating things).</p>
                             </div>
                         </label>
                     </div>

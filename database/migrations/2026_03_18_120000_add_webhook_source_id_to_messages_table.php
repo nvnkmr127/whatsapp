@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            if (!Schema::hasColumn('messages', 'webhook_source_id')) {
+                $table->foreignId('webhook_source_id')
+                    ->nullable()
+                    ->after('webhook_workflow_id')
+                    ->constrained('webhook_sources')
+                    ->nullOnDelete();
+
+                $table->index(['team_id', 'webhook_source_id', 'created_at'], 'messages_team_source_created_idx');
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            if (Schema::hasColumn('messages', 'webhook_source_id')) {
+                $table->dropIndex('messages_team_source_created_idx');
+                $table->dropConstrainedForeignId('webhook_source_id');
+            }
+        });
+    }
+};

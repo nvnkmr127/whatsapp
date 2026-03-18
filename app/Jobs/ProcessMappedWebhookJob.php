@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Contact;
+use App\Models\Message;
 use App\Models\WebhookPayload;
 use App\Models\WhatsappTemplate;
 use App\Services\WhatsAppService;
@@ -172,6 +173,12 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $messageId = $result['data']['messages'][0]['id'] ?? 'unknown';
+
+        if ($messageId !== 'unknown' && $this->payload->webhook_source_id) {
+            Message::where('whatsapp_message_id', $messageId)->update([
+                'webhook_source_id' => $this->payload->webhook_source_id,
+            ]);
+        }
 
         Log::info('Webhook triggered template send', [
             'phone' => $phoneNumber,

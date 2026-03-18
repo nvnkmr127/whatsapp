@@ -20,7 +20,7 @@
                 class="bg-white dark:bg-gray-800 px-8 py-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
                 <div>
                     <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        Campaign Report <span class="text-indigo-600">#{{ $campaign->id }}</span>
+                        Message Report <span class="text-indigo-600">#{{ $campaign->id }}</span>
                     </h3>
                     <div class="mt-1 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
                         <span class="font-medium text-gray-900 dark:text-gray-200">{{ $campaign->name }}</span>
@@ -37,7 +37,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Retarget
+                        Message Again
                     </button>
                     <a href="{{ route('campaigns.index') }}"
                         class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
@@ -307,34 +307,32 @@
                                                                         <span
                                                                             class="text-sm font-bold text-gray-900 dark:text-white">{{ $msg->contact->name ?? 'Unknown' }}</span>
                                                                         <span
-                                                                            class="text-xs text-gray-400">{{ $msg->phone ?? $msg->contact->phone_number }}</span>
+                                                                            class="text-xs text-gray-400">{{ $msg->phone ?? $msg->contact?->phone_number ?? 'N/A' }}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td class="px-8 py-4">
                                                                     <span
                                                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                                                                                                                                                                                        {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
+                                                                        {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
                                     ($msg->status == 'delivered' ? 'bg-blue-100 text-blue-800' :
                                         ($msg->status == 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
                                                                         {{ $msg->status }}
                                                                     </span>
                                                                 </td>
                                                                 <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ $msg->created_at->format('d M H:i') }}
+                                                                    {{ $msg->created_at ? $msg->created_at->format('d M H:i') : '-' }}
                                                                 </td>
                                                                 <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{-- CampaignDetail doesn't track exact delivered_at, using updated_at if status
-                                                                    match --}}
-                                                                    {{ ($msg->status == 'delivered' || $msg->status == 'read') ? $msg->updated_at->format('d M H:i') : '-' }}
+                                                                    {{ ($msg->status == 'delivered' || $msg->status == 'read') ? ($msg->updated_at ? $msg->updated_at->format('d M H:i') : '-') : '-' }}
                                                                 </td>
                                                                 <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ ($msg->status == 'read') ? $msg->updated_at->format('d M H:i') : '-' }}
+                                                                    {{ ($msg->status == 'read') ? ($msg->updated_at ? $msg->updated_at->format('d M H:i') : '-') : '-' }}
                                                                 </td>
                                                             </tr>
                                 @empty
                                     <tr>
                                         <td colspan="6" class="px-8 py-12 text-center text-gray-400 italic">No messages
-                                            found for this campaign.</td>
+                                            found for this message.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -359,10 +357,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Retarget
-                        Audience</h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Re-engage based on
-                        interaction</p>
+                    <h3 class="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Message Again</h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Send again based on interaction</p>
                 </div>
             </div>
         </x-slot>
@@ -371,36 +367,31 @@
             <div class="space-y-4">
                 <div
                     class="p-4 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20">
-                    <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Retarget
-                        Users Who:</label>
+                    <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Send to People Who:</label>
                     <div class="space-y-2">
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="not_read"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't Read
-                                (Delivered but ignored)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Got it but didn't read</span>
                         </label>
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="not_delivered"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't Receive
-                                (Failed/Sent but not delivered)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't receive it</span>
                         </label>
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="read"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Read (Engaged
-                                users)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Read it</span>
                         </label>
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="failed"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Failed
-                                (Errors)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Had an error</span>
                         </label>
                     </div>
                 </div>
@@ -415,7 +406,7 @@
                 </button>
                 <button wire:click="retarget"
                     class="px-8 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
-                    Create Retargeting Campaign
+                    Create Follow-up Message
                 </button>
             </div>
         </x-slot>

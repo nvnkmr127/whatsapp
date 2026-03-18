@@ -23,26 +23,40 @@ class CampaignFunnel extends Component
 
     public function loadFunnelData()
     {
-        $teamId = auth()->user()->currentTeam->id;
+        $teamId = \Illuminate\Support\Facades\Auth::user()->current_team_id;
 
-        // 1. Broadcast Sent (Outreach)
-        $sentRaw = Message::where('team_id', $teamId)
-            ->when($this->campaignId, fn($q) => $q->where('campaign_id', $this->campaignId))
-            ->where('direction', 'outbound')
-            ->whereNotNull('campaign_id')
-            ->count();
+        if ($this->campaignId) {
+            // Use CampaignDetail for exact campaign tracking
+            $sentRaw = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+                ->whereIn('status', ['sent', 'delivered', 'read'])
+                ->count();
 
-        // 2. Delivered
-        $deliveredRaw = Message::where('team_id', $teamId)
-            ->when($this->campaignId, fn($q) => $q->where('campaign_id', $this->campaignId))
-            ->whereIn('status', ['delivered', 'read'])
-            ->count();
+            $deliveredRaw = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+                ->whereIn('status', ['delivered', 'read'])
+                ->count();
 
-        // 3. Read
-        $readRaw = Message::where('team_id', $teamId)
-            ->when($this->campaignId, fn($q) => $q->where('campaign_id', $this->campaignId))
-            ->where('status', 'read')
-            ->count();
+            $readRaw = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+                ->where('status', 'read')
+                ->count();
+        } else {
+            // 1. Broadcast Sent (Outreach)
+            $sentRaw = Message::where('team_id', $teamId)
+                ->where('direction', 'outbound')
+                ->whereNotNull('campaign_id')
+                ->count();
+
+            // 2. Delivered
+            $deliveredRaw = Message::where('team_id', $teamId)
+                ->whereNotNull('campaign_id')
+                ->whereIn('status', ['delivered', 'read'])
+                ->count();
+
+            // 3. Read
+            $readRaw = Message::where('team_id', $teamId)
+                ->whereNotNull('campaign_id')
+                ->where('status', 'read')
+                ->count();
+        }
 
         // 4. Customer Reply (Engagement)
         // Attribute inbound messages received within 24h of a campaign message

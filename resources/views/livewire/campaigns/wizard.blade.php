@@ -10,7 +10,7 @@
             </div>
             <div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    Campaign <span class="text-wa-teal">Creator</span>
+                    Message <span class="text-wa-teal">Creator</span>
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 font-medium tracking-tight">
                     Step {{ $step }} of 4: {{ $this->steps[$step] ?? 'Unknown' }}
@@ -48,8 +48,7 @@
                 <div class="max-w-2xl">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
                         Campaign <span class="text-wa-teal">Setup</span></h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Give your campaign a name
-                        and decide when it hits the network.</p>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Give your message a name and decide when to send it.</p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -64,7 +63,7 @@
                         </div>
 
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Schedule Mode</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">When to Send</label>
                             <div class="grid grid-cols-1 gap-4">
                                 {{-- Now --}}
                                 <div wire:click="$set('scheduleMode', 'now')"
@@ -80,7 +79,7 @@
                                         <div>
                                             <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-tight">
                                                 Send Immediately</h4>
-                                            <p class="text-xs text-slate-500 font-medium">Broadcast to all recipients immediately.</p>
+                                            <p class="text-xs text-slate-500 font-medium">Send to everyone right away.</p>
                                         </div>
                                     </div>
                                     @if ($scheduleMode === 'now')
@@ -126,7 +125,7 @@
 
                         @if ($scheduleMode === 'later')
                             <div class="animate-in fade-in slide-in-from-top-2 duration-300">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Dispatch Time</label>
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Send Time</label>
                                 <input type="datetime-local" wire:model="scheduled_at"
                                     class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal transition-all">
                                 <x-input-error for="scheduled_at" class="mt-2" />
@@ -147,7 +146,7 @@
                 <div class="pt-12 border-t border-slate-50 dark:border-slate-800 flex justify-end">
                     <button wire:click="$set('step', 2)"
                         class="px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
-                        Next: Select Audience
+                        Next: Choose People
                     </button>
                 </div>
             </div>
@@ -158,14 +157,14 @@
             <div class="p-10 md:p-16 space-y-12 flex-1 animate-in slide-in-from-right-4 duration-500">
                 <div class="max-w-2xl">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
-                        Select <span class="text-wa-teal">Audience</span></h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Who are we reaching out to today? Filter by tags or select specific contacts.</p>
+                        Choose <span class="text-wa-teal">People</span></h3>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Who are we sending this to? Filter by tags or select specific people.</p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     <div class="lg:col-span-2 space-y-8">
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Selection Mode</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">How to Choose</label>
                             <div class="flex flex-wrap gap-4">
                                 <button wire:click="$set('audienceType', 'tags')" 
                                     class="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-2 transition-all {{ $audienceType === 'tags' ? 'bg-wa-teal text-white border-wa-teal' : 'bg-transparent text-slate-500 border-slate-100 dark:border-slate-800' }}">
@@ -225,8 +224,8 @@
                                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                                     </div>
                                     <div>
-                                        <h4 class="font-bold text-blue-900 dark:text-blue-300">Global Broadcast</h4>
-                                        <p class="text-sm text-blue-700/70 dark:text-blue-400 font-medium">This campaign will target every contact in your database with an active opt-in.</p>
+                                        <h4 class="font-bold text-blue-900 dark:text-blue-300">Send to Everyone</h4>
+                                        <p class="text-sm text-blue-700/70 dark:text-blue-400 font-medium">This will send a message to all your contacts.</p>
                                     </div>
                                 </div>
                             </div>
@@ -235,11 +234,11 @@
 
                     <div class="space-y-6">
                         <div class="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 sticky top-8">
-                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Audience Size</h4>
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Number of People</h4>
                             
                             <div class="space-y-6">
                                 <div>
-                                    <p class="text-sm font-bold text-slate-500 mb-1 leading-none uppercase tracking-[0.1em]">Total Audience</p>
+                                    <p class="text-sm font-bold text-slate-500 mb-1 leading-none uppercase tracking-[0.1em]">Total People</p>
                                     <div class="flex items-baseline gap-2">
                                         <span class="text-5xl font-black text-slate-900 dark:text-white tabular-nums">{{ $audienceCount }}</span>
                                         <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Contacts</span>
@@ -251,7 +250,7 @@
                                 </div>
 
                                 <p class="text-[10px] font-bold text-slate-400 leading-relaxed uppercase">
-                                    Audience size is live. This reflects the exact number of messages that will be dispatched.
+                                    This is exactly how many messages will be sent.
                                 </p>
                             </div>
                         </div>
@@ -262,7 +261,7 @@
                     <button wire:click="$set('step', 1)" class="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Back to Config</button>
                     <button wire:click="$set('step', 3)"
                         class="px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
-                        Next: Configure Message
+                        Next: Write Message
                     </button>
                 </div>
             </div>
@@ -273,8 +272,8 @@
             <div class="p-10 md:p-16 space-y-12 flex-1 animate-in slide-in-from-right-4 duration-500">
                 <div class="max-w-2xl">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
-                        Campaign <span class="text-orange-500">Message</span></h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Select a template and configure the message content.</p>
+                        Your <span class="text-orange-500">Message</span></h3>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Select a template and fill in the details.</p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
@@ -284,7 +283,7 @@
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Select Template</label>
                             <select wire:model.live="selectedTemplateId" 
                                 class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 transition-all cursor-pointer">
-                                <option value="">-- Choose Approved Template --</option>
+                                <option value="">-- Choose a Template --</option>
                                 @foreach($this->templates as $t)
                                     <option value="{{ $t->id }}">{{ str_replace('_', ' ', $t->name) }} ({{ strtoupper($t->language) }})</option>
                                 @endforeach
@@ -331,7 +330,7 @@
                             {{-- Variables --}}
                             @if($info['paramCount'] > 0)
                                 <div class="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Variables Mapping</label>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Fill in the Blanks</label>
                                     <div class="space-y-3">
                                         @for($i = 1; $i <= $info['paramCount']; $i++)
                                             <div class="relative group">
@@ -344,7 +343,7 @@
                                     </div>
                                     <p class="text-[10px] font-bold text-orange-500 uppercase flex items-center gap-2">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        Tip: Variables will be applied to the Body component.
+                                        Tip: These details will be added to your message.
                                     </p>
                                 </div>
                             @endif
@@ -422,7 +421,7 @@
                 <div class="max-w-2xl">
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
                         Final <span class="text-purple-600">Review</span></h3>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Everything looks ready. Perform a final check before we launch the campaign.</p>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Everything looks ready. Check your details one last time before sending.</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -433,7 +432,7 @@
                     </div>
 
                     <div class="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Total Audience</p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Total People</p>
                         <div class="flex items-baseline gap-2">
                             <span class="text-2xl font-black text-slate-900 dark:text-white">{{ $audienceCount }}</span>
                             <span class="text-[10px] font-black text-slate-400 uppercase">Contacts</span>
@@ -460,17 +459,17 @@
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                         </div>
                         <div>
-                            <h4 class="text-xl font-black text-purple-900 dark:text-purple-300 uppercase tracking-tight">Campaign Ready</h4>
+                            <h4 class="text-xl font-black text-purple-900 dark:text-purple-300 uppercase tracking-tight">Ready to Send</h4>
                             <p class="text-sm text-purple-700/70 dark:text-purple-400 font-medium italic">Ready to send to {{ $audienceCount }} contacts.</p>
                         </div>
                     </div>
 
                     <button wire:click="launch" wire:loading.attr="disabled"
                         class="px-12 py-5 bg-purple-600 text-white font-black uppercase tracking-[0.2em] text-sm rounded-2xl shadow-2xl shadow-purple-500/30 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-3">
-                        <span wire:loading.remove>🚀 Launch Campaign</span>
+                        <span wire:loading.remove>🚀 Send Message</span>
                         <span wire:loading class="flex items-center">
                             <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            Engaging...
+                            Sending...
                         </span>
                     </button>
                 </div>

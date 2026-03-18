@@ -11,19 +11,54 @@
                             d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Webhook <span
-                        class="text-wa-teal dark:text-wa-teal">Sources</span></h1>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Incoming <span
+                        class="text-wa-teal dark:text-wa-teal">Messages</span></h1>
             </div>
-            <p class="text-slate-500 font-medium">Configure webhooks from external platforms - Get unique URL, send
-                data, map fields visually</p>
+            <p class="text-slate-500 font-medium">Track messages received from external platforms - Monitor delivery status, view contact details</p>
         </div>
         <div class="flex items-center gap-4">
+            <div class="hidden md:flex items-center gap-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Range</label>
+                <select wire:model.live="exportDateRange"
+                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    <option value="7">7d</option>
+                    <option value="30">30d</option>
+                    <option value="90">90d</option>
+                </select>
+            </div>
+            <div class="hidden md:flex items-center gap-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</label>
+                <select wire:model.live="exportStatusFilter"
+                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    <option value="all">All</option>
+                    <option value="sent">Sent</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="read">Read</option>
+                    <option value="failed">Failed</option>
+                </select>
+            </div>
+            <button wire:click="exportWebhookReport"
+                class="px-4 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download All Messages
+            </button>
+            <button wire:click="exportFailedWebhookReport"
+                class="px-4 py-3 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/30 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-100 dark:hover:bg-rose-950/30 transition-all shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Failed Messages
+            </button>
             <a href="{{ route('webhooks.logs') }}" 
                 class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Webhook History
+                Activity Log
             </a>
             <button wire:click="openNewSource"
                 class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
@@ -40,10 +75,8 @@
         <div
             class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/50 dark:bg-slate-800/10 gap-4">
             <div>
-                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Active Webhook
-                    Sources</h3>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manage your existing
-                    integrations</p>
+                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Incoming Message Sources</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Track where messages are coming from</p>
             </div>
 
             <div class="relative group max-w-sm w-full">
@@ -110,6 +143,22 @@
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                    </button>
+                                    <button wire:click="exportWebhookReportForSource({{ $source->id }})"
+                                        class="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-xl transition-all"
+                                        title="Export Source Report CSV">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                    </button>
+                                    <button wire:click="exportFailedWebhookReportForSource({{ $source->id }})"
+                                        class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all"
+                                        title="Export Source Failed CSV">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                         </svg>
                                     </button>
                                     <button wire:click="duplicate({{ $source->id }})"

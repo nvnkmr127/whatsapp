@@ -9,10 +9,9 @@
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">My <span
-                        class="text-wa-teal">Automations</span></h1>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">My <span class="text-wa-teal">Bots</span></h1>
             </div>
-            <p class="text-slate-500 font-medium">Design and manage your automated conversation flows.</p>
+            <p class="text-slate-500 font-medium">Build and manage your automatic chat replies.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-3">
             <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
@@ -40,7 +39,7 @@
             <div class="relative group w-full sm:w-64">
                 <input wire:model.live.debounce.300ms="search" type="text"
                     class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border-none rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium text-sm shadow-sm"
-                    placeholder="Search logic...">
+                    placeholder="Search bots...">
                 <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-wa-teal transition-colors"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -175,8 +174,7 @@
                                                 d="M13 10V3L4 14h7v7l9-11h-7z" />
                                         </svg>
                                     </div>
-                                    <div class="text-slate-400 font-bold uppercase tracking-widest text-xs">No Automations
-                                        Found</div>
+                                    <div class="text-slate-400 font-bold uppercase tracking-widest text-xs">No Bots Found</div>
                                 </div>
                             </td>
                         </tr>
@@ -195,12 +193,11 @@
     <!-- Delete Confirmation Modal -->
     <x-confirmation-modal wire:model="confirmingDeletion">
         <x-slot name="title">
-            <span class="text-slate-900 dark:text-white uppercase font-black tracking-tight">Delete Automation?</span>
+            <span class="text-slate-900 dark:text-white uppercase font-black tracking-tight">Delete Bot?</span>
         </x-slot>
 
         <x-slot name="content">
-            <span class="text-slate-500 font-medium tracking-tight">Are you sure you want to permanently delete this
-                automation? This action cannot be undone.</span>
+            <span class="text-slate-500 font-medium tracking-tight">Are you sure you want to delete this bot? You can\'t undo this.</span>
         </x-slot>
 
         <x-slot name="footer">

@@ -18,6 +18,10 @@ class AnalyticsDashboard extends Component
     public $lastRefresh; // Restored
     public $metaAnalytics = [];
     public $walletId;
+    public $webhookDetailsLimit = 100;
+    public $webhookStatusFilter = 'all';
+
+    protected array $webhookStatuses = ['sent', 'delivered', 'read', 'failed'];
 
     public function render()
     {
@@ -30,7 +34,7 @@ class AnalyticsDashboard extends Component
 
         // 2. Usage Stats (cached briefly to reduce repeated queries per re-render)
         $stats = cache()->remember("{$cachePrefix}:stats:{$this->dateRange}", 60, function () use ($teamId) {
-            $start = now()->subDays(30);
+            $start = now()->subDays($this->dateRange);
 
             return [
                 'msgSent' => Message::where('team_id', $teamId)
@@ -52,6 +56,10 @@ class AnalyticsDashboard extends Component
                     ->get(),
                 'lastUpdated' => Message::where('team_id', $teamId)->latest()->value('updated_at') ?? now(),
             ];
+        });
+
+        $webhookReport = cache()->remember("{$cachePrefix}:webhook-report:{$this->dateRange}:{$this->webhookDetailsLimit}:{$this->webhookStatusFilter}", 60, function () use ($teamId) {
+            return $this->buildWebhookReport($teamId);
         });
 
         // 3. Official Meta Analytics (cached longer to avoid frequent API calls)
@@ -87,6 +95,8 @@ class AnalyticsDashboard extends Component
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())
                 ->where('report_type', 'monthly_usage')->exists(),
             'lastUpdated' => $stats['lastUpdated'],
+            'webhookSummary' => $webhookReport['summary'],
+            'webhookDetails' => $webhookReport['details'],
         ]);
     }
 
@@ -171,6 +181,123 @@ class AnalyticsDashboard extends Component
                 });
             fclose($handle);
         }, 'transactions.csv');
+    }
+
+    public function exportWebhookReport()
+    {
+        $teamId = auth()->user()->currentTeam->id;
+        $startDate = now()->subDays($this->dateRange);
+        $statusFilter = $this->normalizeWebhookStatusFilter();
+
+        return response()->streamDownload(function () use ($teamId, $startDate, $statusFilter) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Created At',
+                'Message ID',
+                'Direction',
+                'Status',
+                'Contact Name',
+                'Contact Number',
+                'Contact Email',
+                'Sent At',
+                'Delivered At',
+                'Read At',
+                'Error Message',
+                'Message Content',
+            ]);
+
+            Message::query()
+                ->with('contact:id,name,phone_number,email')
+                ->where('team_id', $teamId)
+                ->where('direction', 'outbound')
+                ->where('created_at', '>=', $startDate)
+                ->whereIn('status', ['sent', 'delivered', 'read', 'failed'])
+                ->when($statusFilter !== 'all', function ($query) use ($statusFilter) {
+                    $query->where('status', $statusFilter);
+                })
+                ->orderByDesc('created_at')
+                ->chunk(500, function ($messages) use ($handle) {
+                    foreach ($messages as $message) {
+                        fputcsv($handle, [
+                            optional($message->created_at)->format('Y-m-d H:i:s'),
+                            $message->whatsapp_message_id,
+                            $message->direction,
+                            $message->status,
+                            optional($message->contact)->name,
+                            optional($message->contact)->phone_number,
+                            optional($message->contact)->email,
+                            optional($message->sent_at)->format('Y-m-d H:i:s'),
+                            optional($message->delivered_at)->format('Y-m-d H:i:s'),
+                            optional($message->read_at)->format('Y-m-d H:i:s'),
+                            $message->error_message,
+                            $message->content,
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, 'webhook-message-report.csv');
+    }
+
+    protected function buildWebhookReport(int $teamId): array
+    {
+        $startDate = now()->subDays($this->dateRange);
+        $statusFilter = $this->normalizeWebhookStatusFilter();
+
+        $summary = Message::query()
+            ->where('team_id', $teamId)
+            ->where('direction', 'outbound')
+            ->where('created_at', '>=', $startDate)
+            ->selectRaw("status, COUNT(*) as total")
+            ->whereIn('status', $this->webhookStatuses)
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $summaryValues = [
+            'sent' => (int) ($summary['sent'] ?? 0),
+            'delivered' => (int) ($summary['delivered'] ?? 0),
+            'read' => (int) ($summary['read'] ?? 0),
+            'failed' => (int) ($summary['failed'] ?? 0),
+        ];
+
+        $attempted = array_sum($summaryValues);
+        $deliveredOrRead = $summaryValues['delivered'] + $summaryValues['read'];
+
+        $deliveryRate = $attempted > 0 ? round(($deliveredOrRead / $attempted) * 100, 1) : 0;
+        $readRate = $attempted > 0 ? round(($summaryValues['read'] / $attempted) * 100, 1) : 0;
+
+        $details = Message::query()
+            ->with('contact:id,name,phone_number,email')
+            ->where('team_id', $teamId)
+            ->where('direction', 'outbound')
+            ->where('created_at', '>=', $startDate)
+            ->whereIn('status', $this->webhookStatuses)
+            ->when($statusFilter !== 'all', function ($query) use ($statusFilter) {
+                $query->where('status', $statusFilter);
+            })
+            ->latest()
+            ->limit($this->webhookDetailsLimit)
+            ->get();
+
+        return [
+            'summary' => array_merge($summaryValues, [
+                'attempted' => $attempted,
+                'delivery_rate' => $deliveryRate,
+                'read_rate' => $readRate,
+            ]),
+            'details' => $details,
+        ];
+    }
+
+    protected function normalizeWebhookStatusFilter(): string
+    {
+        if ($this->webhookStatusFilter === 'all') {
+            return 'all';
+        }
+
+        return in_array($this->webhookStatusFilter, $this->webhookStatuses, true)
+            ? $this->webhookStatusFilter
+            : 'all';
     }
 
     public function toggleSchedule()

@@ -84,12 +84,12 @@
         <div class="mt-10 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 bg-slate-50/60 dark:bg-slate-800/30">
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Template Performance Heatmap</p>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Best Times to Send</p>
                     <h3 class="text-base font-black text-slate-900 dark:text-white mt-1">
                         {{ $templateHeatmap['selected_template_name'] ?? 'Top Template' }}
                     </h3>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Read rates by send hour and weekday for the last {{ $templateHeatmap['window_days'] ?? 90 }} days.
+                        When people read messages over the last {{ $templateHeatmap['window_days'] ?? 90 }} days.
                     </p>
                 </div>
                 <div class="flex flex-col items-start sm:items-end gap-2 text-xs text-slate-500 dark:text-slate-400 w-full sm:w-auto">
@@ -107,10 +107,10 @@
                         </div>
                     @endif
                     <div>
-                        <span class="font-semibold text-slate-700 dark:text-slate-200">Baseline:</span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">Average:</span>
                         {{ number_format($templateHeatmap['baseline_rate'] ?? 0, 1) }}%
                         <span class="mx-2 text-slate-300">|</span>
-                        <span class="font-semibold text-slate-700 dark:text-slate-200">Sends:</span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">Sent:</span>
                         {{ number_format($templateHeatmap['sample_size'] ?? 0) }}
                     </div>
                 </div>
@@ -119,10 +119,10 @@
             @if(!empty($templateHeatmap['is_low_sample']))
                 <div class="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 flex items-center justify-between gap-3">
                     <p class="text-xs font-semibold text-amber-700 dark:text-amber-200">
-                        Limited sample size: {{ number_format($templateHeatmap['sample_size'] ?? 0) }} sends. Add at least {{ number_format($templateHeatmap['sample_gap'] ?? 0) }} more sends for stronger timing reliability.
+                        Not enough data yet: {{ number_format($templateHeatmap['sample_size'] ?? 0) }} sends. Add at least {{ number_format($templateHeatmap['sample_gap'] ?? 0) }} more sends for stronger timing reliability.
                     </p>
                     <span class="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300">
-                        Low data confidence
+                        Needs more data
                     </span>
                 </div>
             @endif
@@ -209,7 +209,7 @@
                                    ($insight['type'] === 'warning' ? 'text-amber-700 dark:text-amber-300' : 
                                    ($insight['type'] === 'money' ? 'text-emerald-700 dark:text-emerald-300' :
                                    'text-slate-900 dark:text-white')) }}">
-                                {{ $insight['type'] === 'money' ? 'Revenue Opportunity' : ($insight['type'] === 'critical' ? 'Urgent Action Required' : 'Optimization Signal') }}
+                                {{ $insight['type'] === 'money' ? 'Chance to make money' : ($insight['type'] === 'critical' ? 'Fix this now' : 'Way to improve') }}
                             </h4>
                             @if(isset($insight['action_label']))
                                 <a href="{{ $insight['action_url'] }}" class="hidden sm:flex text-[10px] font-bold items-center gap-1 hover:underline
@@ -243,7 +243,7 @@
         <!-- Empty State / Clean Bill of Health -->
         <div class="mt-8 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/50 flex items-center justify-center gap-2">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">All systems optimal. No alerts.</span>
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Everything looks good. No issues.</span>
         </div>
     @endif
 </div>

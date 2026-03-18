@@ -13,8 +13,8 @@
                     </svg>
                 </div>
             </div>
-            <h3 class="text-2xl font-black tracking-tight">Launching Campaign...</h3>
-            <p class="text-white/60 mt-2 font-medium">Syncing with Meta Ads Manager</p>
+            <h3 class="text-2xl font-black tracking-tight">Starting Ad...</h3>
+            <p class="text-white/60 mt-2 font-medium">Syncing with Ad Manager</p>
         </div>
     @endif
 
@@ -32,7 +32,7 @@
                     <span class="text-gray-400 text-xs font-bold uppercase tracking-widest">Wizard</span>
                 </div>
                 <h2 class="text-4xl font-black text-slate-900 tracking-tight">New Ad Campaign</h2>
-                <p class="text-slate-500 mt-2 text-lg">Create a "Click-to-WhatsApp" campaign in 4 easy steps.</p>
+                <p class="text-slate-500 mt-2 text-lg">Create a WhatsApp ad in 4 easy steps.</p>
             </div>
 
             <!-- Horizontal Stepper -->
@@ -68,7 +68,7 @@
                     class="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden min-h-[500px] flex flex-col">
 
                     <div class="flex-1 p-8 lg:p-12 overflow-y-auto">
-                        <!-- Step 1: Campaign Details -->
+                        <!-- Step 1: Campaign Info -->
                         @if($currentStep === 1)
                             <div class="max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <h3 class="text-2xl font-black text-slate-900 mb-2">Basic Info</h3>
@@ -79,7 +79,7 @@
                                     <div class="group">
                                         <label
                                             class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 group-focus-within:text-wa-teal transition-colors">Campaign
-                                            Display Name</label>
+                                            Name</label>
                                         <input type="text" wire:model="campaignName"
                                             class="w-full bg-slate-50 border-gray-200 rounded-2xl px-5 py-4 text-slate-700 focus:ring-4 focus:ring-wa-teal/10 focus:border-wa-teal focus:bg-white transition-all text-lg font-bold"
                                             placeholder="e.g. Summer Flash Sale 2024">
@@ -91,7 +91,7 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div>
                                             <label
-                                                class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Objective</label>
+                                                class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Goal</label>
                                             <div
                                                 class="bg-wa-soft border border-wa-teal/20 rounded-2xl p-4 flex items-center gap-4">
                                                 <div
@@ -104,18 +104,18 @@
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <div class="font-black text-slate-900 text-sm">WhatsApp Traffic</div>
+                                                    <div class="font-black text-slate-900 text-sm">WhatsApp Chats</div>
                                                     <div
                                                         class="text-[10px] text-wa-dark font-bold uppercase tracking-tight">
-                                                        Optimized for Chat</div>
+                                                        Best for Chats</div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div>
                                             <label
-                                                class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Conversion
-                                                Level</label>
+                                                class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Where to
+                                                Chat</label>
                                             <div
                                                 class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center gap-4">
                                                 <div
@@ -130,7 +130,7 @@
                                                     <div class="font-black text-slate-900 text-sm">Messaging Apps</div>
                                                     <div
                                                         class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-                                                        Direct to Business</div>
+                                                        Direct to You</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -145,7 +145,7 @@
                                 class="grid grid-cols-1 lg:grid-cols-2 gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div class="space-y-10">
                                     <div>
-                                        <h3 class="text-2xl font-black text-slate-900 mb-2">Budget & Schedule</h3>
+                                        <h3 class="text-2xl font-black text-slate-900 mb-2">Budget</h3>
                                         <p class="text-slate-500 mb-6">How much would you like to spend?</p>
 
                                         <div class="flex gap-4 p-1.5 bg-slate-100 rounded-2xl mb-6">
@@ -171,14 +171,14 @@
                                     </div>
 
                                     <div>
-                                        <h3 class="text-2xl font-black text-slate-900 mb-2">Audience</h3>
+                                        <h3 class="text-2xl font-black text-slate-900 mb-2">Who will see this</h3>
                                         <p class="text-slate-500 mb-6">Who do you want to see your ad?</p>
 
                                         <div class="space-y-6">
                                             <div class="group">
                                                 <label
-                                                    class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Country
-                                                    Targeting</label>
+                                                    class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Select
+                                                    Countries</label>
 
                                                 <!-- Selected Countries Tags -->
                                                 <div class="flex flex-wrap gap-2 mb-4">
@@ -269,8 +269,8 @@
 
                                     <div class="relative z-10">
                                         <div class="flex items-center justify-between mb-8">
-                                            <h4 class="text-xs font-black text-wa-teal uppercase tracking-[0.3em]">Potential
-                                                Reach</h4>
+                                            <h4 class="text-xs font-black text-wa-teal uppercase tracking-[0.3em]">Audience
+                                                Size</h4>
                                             <div
                                                 class="flex h-2 w-2 rounded-full {{ $audienceReach > 100000 ? 'bg-wa-teal' : 'bg-rose-500' }} animate-pulse shadow-[0_0_8px_rgba(37,211,102,0.8)]">
                                             </div>
@@ -318,8 +318,8 @@
                                 class="grid grid-cols-1 lg:grid-cols-2 gap-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div class="space-y-10">
                                     <div>
-                                        <h3 class="text-2xl font-black text-slate-900 mb-2">Ad Creative</h3>
-                                        <p class="text-slate-500 mb-8">Make your ad stand out with great copy and visuals.
+                                        <h3 class="text-2xl font-black text-slate-900 mb-2">Ad Design</h3>
+                                        <p class="text-slate-500 mb-8">Make your ad stand out with great text and images.
                                         </p>
 
                                         <!-- Media Switcher -->
@@ -407,7 +407,7 @@
                                             <div class="space-y-6">
                                                 <div class="group">
                                                     <label
-                                                        class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 group-focus-within:text-wa-teal">Primary
+                                                        class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 group-focus-within:text-wa-teal">Main
                                                         Text</label>
                                                     <textarea wire:model.live="primaryText" rows="3"
                                                         class="w-full bg-slate-50 border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-wa-teal/20 focus:border-wa-teal transition-all"
@@ -416,7 +416,7 @@
 
                                                 <div class="group">
                                                     <label
-                                                        class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 group-focus-within:text-wa-teal">Headline</label>
+                                                        class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 group-focus-within:text-wa-teal">Short Title</label>
                                                     <input type="text" wire:model.live="headline"
                                                         class="w-full bg-slate-50 border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-wa-teal/20 focus:border-wa-teal transition-all"
                                                         placeholder="Catchy headline">
@@ -434,14 +434,14 @@
                                                         d="M13 10V3L4 14h7v7l9-11h-7z" />
                                                 </svg>
                                             </div>
-                                            <h4 class="font-black text-slate-900 leading-tight">Post-Click Automation</h4>
+                                            <h4 class="font-black text-slate-900 leading-tight">Automatic Reply</h4>
                                         </div>
-                                        <p class="text-slate-500 text-sm mb-6 leading-relaxed">Choose which automation flow
-                                            starts when someone clicks your ad.</p>
+                                        <p class="text-slate-500 text-sm mb-6 leading-relaxed">Choose which bot replies
+                                            when someone clicks your ad.</p>
 
                                         <select wire:model="selectedAutomationId"
                                             class="w-full bg-white border-blue-200 rounded-xl px-5 py-3.5 text-sm font-bold text-slate-700 shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all">
-                                            <option value="">Select a Bot Flow...</option>
+                                            <option value="">Select a Bot...</option>
                                             @foreach($automations as $auto)
                                                 <option value="{{ $auto->id }}">{{ $auto->name }}</option>
                                             @endforeach
@@ -452,7 +452,7 @@
                                 <!-- Meta Ad Preview -->
                                 <div class="flex flex-col items-center sticky top-8">
                                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Live
-                                        Meta Preview</span>
+                                        Ad Preview</span>
 
                                     <div
                                         class="bg-white w-full max-w-[340px] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden">
@@ -554,8 +554,8 @@
                                             d="M5 13l4 4L19 7" />
                                     </svg>
                                 </div>
-                                <h3 class="text-4xl font-black text-slate-900 tracking-tight">Ready to Launch?</h3>
-                                    <p class="text-slate-500 mt-4 text-lg">Review your campaign details one last time before we push it to Meta.</p>
+                                <h3 class="text-4xl font-black text-slate-900 tracking-tight">Ready to Start?</h3>
+                                    <p class="text-slate-500 mt-4 text-lg">Check your ad info one last time before we send it to Facebook.</p>
 
                                     <div class="mt-12 bg-gray-50 rounded-[40px] p-10 text-left border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-10 relative overflow-hidden">
                                         <div class="absolute -top-10 -right-10 w-40 h-40 bg-slate-200/50 rounded-full blur-3xl"></div>
@@ -599,7 +599,7 @@
                                                 </div>
                                             </div>
                                             <div>
-                                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Automation Bot</label>
+                                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Bot</label>
                                                 <div class="flex items-center gap-2">
                                                     <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                                                     <div class="text-sm font-black text-blue-600">
@@ -634,7 +634,7 @@
                             @else
                                 <button wire:click="launchCampaign" class="bg-wa-teal hover:bg-wa-dark text-white px-12 py-5 rounded-[22px] font-black shadow-2xl shadow-wa-teal/20 transition-all flex items-center gap-3 active:scale-95 hover:-translate-y-1">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    Launch Ad Campaign
+                                    Start Ad
                                 </button>
                             @endif
                         </div>

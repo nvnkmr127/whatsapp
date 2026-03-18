@@ -194,8 +194,8 @@ class MetaAdsManager extends Component
                 if ($ctr < 1.0 && $spend > 5) {
                     $this->smartInsights[] = [
                         'type' => 'warning',
-                        'title' => 'Low Engagement',
-                        'message' => "Campaign '{$item['name']}' has a CTR below 1%. Try refreshing your creative assets.",
+                        'title' => 'Low Clicks',
+                        'message' => "Campaign '{$item['name']}' has very few clicks. Try changing your images or text.",
                         'object_id' => $item['id']
                     ];
                 }
@@ -204,7 +204,7 @@ class MetaAdsManager extends Component
                     $this->smartInsights[] = [
                         'type' => 'critical',
                         'title' => 'High Cost',
-                        'message' => "CPC for '{$item['name']}' is unusually high ({$this->currency}{$cpc}). Consider broadening your audience targeting.",
+                        'message' => "Clicks for '{$item['name']}' are very expensive ({$this->currency}{$cpc}). Try showing your ad to more people.",
                         'object_id' => $item['id']
                     ];
                 }
@@ -215,8 +215,8 @@ class MetaAdsManager extends Component
         if (empty($this->smartInsights)) {
             $this->smartInsights[] = [
                 'type' => 'info',
-                'title' => 'Steady Performance',
-                'message' => "Your ad account is performing within healthy parameters. No immediate actions required.",
+                'title' => 'Doing Well',
+                'message' => "Your ads are doing fine right now. No need to change anything.",
                 'object_id' => null
             ];
         }
@@ -312,9 +312,9 @@ class MetaAdsManager extends Component
 
             $this->selectedIds = [];
             $this->reloadCurrentView();
-            session()->flash('message', "Bulk action completed.");
+            session()->flash('message', "Changes saved.");
         } catch (\Exception $e) {
-            $this->error = "Bulk action failed: " . $e->getMessage();
+            $this->error = "Action failed: " . $e->getMessage();
         }
     }
 

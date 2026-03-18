@@ -9,10 +9,9 @@
                             d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                     </svg>
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Broadcast <span
-                        class="text-wa-teal">Studio</span></h1>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Message <span class="text-wa-teal">Studio</span></h1>
             </div>
-            <p class="text-slate-500 font-medium">Launch and monitor your bulk WhatsApp message campaigns.</p>
+            <p class="text-slate-500 font-medium">Send and track your large WhatsApp message groups.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-center gap-3">
             <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
@@ -43,7 +42,7 @@
             <div class="relative group w-full sm:w-64">
                 <input wire:model.live.debounce.300ms="search" type="text"
                     class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border-none rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium text-sm shadow-sm"
-                    placeholder="Find campaigns...">
+                    placeholder="Find messages...">
                 <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-wa-teal transition-colors"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -95,7 +94,7 @@
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             <span
-                                class="text-xs font-bold">{{ $campaign->scheduled_at ? $campaign->scheduled_at->format('M d, Y • H:i') : 'Instant Dispatch' }}</span>
+                                class="text-xs font-bold">{{ $campaign->scheduled_at ? $campaign->scheduled_at->format('M d, Y • H:i') : 'Sent Now' }}</span>
                         </div>
                     </div>
 
@@ -105,7 +104,7 @@
                             @if(in_array($campaign->status, ['processing', 'sending', 'queued']))
                                 <a href="{{ route('campaigns.live', $campaign->id) }}"
                                     class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-teal/20">
-                                    Live Monitor
+                                    Live View
                                 </a>
                             @endif
 
@@ -142,9 +141,8 @@
                     </svg>
                 </div>
                 <div class="text-center">
-                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">No Active
-                        Campaigns</h3>
-                    <p class="text-slate-500 font-medium mt-1">Start your first broadcast outreach today.</p>
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">No Active Messages</h3>
+                    <p class="text-slate-500 font-medium mt-1">Start sending your first message today.</p>
                 </div>
                 <a href="{{ route('campaigns.create') }}"
                     class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.05] transition-all">
@@ -163,12 +161,11 @@
     <!-- Delete Confirmation Modal -->
     <x-confirmation-modal wire:model="confirmingDeletion">
         <x-slot name="title">
-            <span class="text-slate-900 dark:text-white uppercase font-black tracking-tight">Erase Campaign?</span>
+            <span class="text-slate-900 dark:text-white uppercase font-black tracking-tight">Delete Message?</span>
         </x-slot>
 
         <x-slot name="content">
-            <span class="text-slate-500 font-medium">This will permanently delete the campaign and its history record.
-                Analaytics will be archived.</span>
+            <span class="text-slate-500 font-medium">This will delete the message and its history. Past stats will be saved.</span>
         </x-slot>
 
         <x-slot name="footer">
@@ -180,7 +177,7 @@
 
                 <x-danger-button wire:click="delete" wire:loading.attr="disabled"
                     class="rounded-xl bg-rose-500 text-white font-black uppercase tracking-widest text-[10px] py-3 shadow-lg shadow-rose-500/20">
-                    Erase Permanently
+                    Delete Permanently
                 </x-danger-button>
             </div>
         </x-slot>
@@ -216,29 +213,25 @@
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="not_read"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't Read
-                                (Delivered but ignored)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Got it but didn\'t read</span>
                         </label>
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="not_delivered"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn't Receive
-                                (Failed/System Error)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Didn\'t receive it</span>
                         </label>
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="read"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Read (Engaged
-                                users)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Read it</span>
                         </label>
                         <label
                             class="flex items-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-300 transition-colors">
                             <input type="radio" wire:model="retargetingCriteria" value="failed"
                                 class="text-indigo-500 focus:ring-indigo-500 border-gray-300">
-                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Failed
-                                (Errors)</span>
+                            <span class="ml-3 text-sm font-bold text-slate-700 dark:text-slate-300">Had an error</span>
                         </label>
                     </div>
                 </div>
@@ -253,7 +246,7 @@
                 </button>
                 <button wire:click="retarget"
                     class="px-8 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
-                    Create Retargeting Campaign
+                    Send Follow-up Message
                 </button>
             </div>
         </x-slot>

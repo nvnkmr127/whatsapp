@@ -4,7 +4,7 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
             <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                Console <span class="text-wa-teal">Overview</span>
+                Main <span class="text-wa-teal">Dashboard</span>
             </h1>
             <p class="mt-2 text-slate-500 font-medium">
                 Welcome back, <span
@@ -14,7 +14,7 @@
         </div>
         <div class="flex flex-wrap items-center gap-4">
             <div class="hidden md:flex flex-col items-end mr-2">
-                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Data Freshness</span>
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Updated</span>
                 <span class="text-xs font-bold text-wa-teal flex items-center gap-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></span>
                     Stats Updated: {{ $lastUpdated->diffForHumans() }}
@@ -51,9 +51,8 @@
 
             <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div>
-                    <h2 class="text-2xl font-black text-white uppercase tracking-tight">System Command Center</h2>
-                    <p class="text-indigo-100 font-medium mt-1">Global infrastructure control, tenant management, and
-                        platform billing.</p>
+                    <h2 class="text-2xl font-black text-white uppercase tracking-tight">System Controls</h2>
+                    <p class="text-indigo-100 font-medium mt-1">Manage users, settings, and billing.</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4">
@@ -233,9 +232,9 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
                     <div>
                         <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                            Message <span class="text-wa-teal">Velocity</span>
+                            Message <span class="text-wa-teal">Speed</span>
                         </h3>
-                        <p class="text-slate-500 font-medium">Real-time volume tracking across all channels</p>
+                        <p class="text-slate-500 font-medium">Live message tracking</p>
                     </div>
 
                     <div class="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-slate-400">
