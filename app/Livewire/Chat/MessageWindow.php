@@ -23,6 +23,10 @@ class MessageWindow extends Component
     public $activeAgents = [];
     public $availableCategories = [];
 
+    protected $listeners = [
+        'refresh-tags' => 'loadConversation'
+    ];
+
     // Template Modal State
     public $templateMediaUrl = '';
     public $showTemplateListModal = false;
@@ -401,19 +405,41 @@ class MessageWindow extends Component
 
     public function exportConversation()
     {
-        if ($this->conversation) {
-            // Trigger download - this could be enhanced with a job for large conversations
-            $this->dispatch('notify', [
-                'type' => 'info',
-                'message' => 'Preparing conversation export...'
-            ]);
+        if (!$this->conversation) return;
 
-            // You can implement PDF generation here or trigger a job
-            // For now, we'll just notify the user
-            $this->dispatch('export-conversation', [
-                'conversationId' => $this->conversation->id
-            ]);
-        }
+        $messages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
+        $filename = "conversation_{$this->conversation->id}_" . now()->format('Y-m-d_H-i-s') . ".csv";
+
+        return response()->streamDownload(function () use ($messages) {
+            $handle = fopen('php://output', 'w');
+            
+            // Add BOM for Excel UTF-8 support
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // CSV Headers
+            fputcsv($handle, ['Timestamp', 'Sender', 'Type', 'Content', 'Status']);
+
+            foreach ($messages as $msg) {
+                $sender = $msg->direction === 'inbound' 
+                    ? ($this->conversation->contact->name ?? $this->conversation->contact->phone_number)
+                    : (isset($msg->metadata['agent_name']) ? "Agent ({$msg->metadata['agent_name']})" : "System/Agent");
+
+                $content = $msg->content;
+                if ($msg->type !== 'text') {
+                    $content = "[{$msg->type}] " . ($msg->caption ?? "Media asset: " . ($msg->media_url ?? 'N/A'));
+                }
+
+                fputcsv($handle, [
+                    $msg->created_at->format('Y-m-d H:i:s'),
+                    $sender,
+                    ucfirst($msg->type),
+                    $content,
+                    ucfirst($msg->status)
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename);
     }
 
     public function saveCallNote($messageId, $note)
@@ -517,6 +543,7 @@ class MessageWindow extends Component
 
         $metadata['tags'] = $tags;
         $this->conversation->update(['metadata' => $metadata]);
+        $this->dispatch('refresh-tags');
         $this->loadConversation();
     }
 

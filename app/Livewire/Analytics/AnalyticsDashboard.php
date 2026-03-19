@@ -279,7 +279,55 @@ class AnalyticsDashboard extends Component
                 });
 
             fclose($handle);
-        }, 'webhook-message-report.csv');
+        }, 'delivery-report-messages.csv');
+    }
+
+    public function exportFilteredContacts()
+    {
+        $teamId = auth()->user()->currentTeam->id;
+
+        return response()->streamDownload(function () use ($teamId) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Contact Name',
+                'Phone Number',
+                'Email',
+                'Last Message Status',
+                'Last Activity',
+            ]);
+
+            // Get unique contact IDs from the filtered message set
+            $contactIds = $this->webhookDetailsQuery($teamId, false)
+                ->distinct()
+                ->pluck('contact_id')
+                ->filter()
+                ->toArray();
+
+            if (!empty($contactIds)) {
+                // Fetch contacts in chunks
+                \App\Models\Contact::whereIn('id', $contactIds)
+                    ->chunk(500, function ($contacts) use ($handle, $teamId) {
+                        foreach ($contacts as $contact) {
+                            // Get latest message status for this contact from the filtered range
+                            $latestMsg = Message::where('contact_id', $contact->id)
+                                ->where('team_id', $teamId)
+                                ->where('direction', 'outbound')
+                                ->latest()
+                                ->first();
+
+                            fputcsv($handle, [
+                                $contact->name,
+                                $contact->phone_number,
+                                $contact->email,
+                                optional($latestMsg)->status ?? 'N/A',
+                                optional($contact->updated_at)->format('Y-m-d H:i:s'),
+                            ]);
+                        }
+                    });
+            }
+
+            fclose($handle);
+        }, 'delivery-report-contacts.csv');
     }
 
     protected function buildWebhookSummary(int $teamId): array

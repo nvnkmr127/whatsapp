@@ -19,6 +19,7 @@ class WhatsappTemplate extends Model
         'variable_config' => 'array',
         'total_sent' => 'integer',
         'total_read' => 'integer',
+        'last_synced_at' => 'datetime',
     ];
 
     public function team()

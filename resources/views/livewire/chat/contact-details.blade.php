@@ -193,17 +193,7 @@
                     </div>
                 </section>
 
-                    <div
-                        class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2">
-                        <svg class="w-3.5 h-3.5 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Metadata
-                            Encrypted</span>
-                    </div>
-                </section>
+
 
                 <!-- Profile Intelligence Tabs -->
                 <section x-data="{ activeTab: @entangle('activeTab') }">

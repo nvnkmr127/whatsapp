@@ -1037,11 +1037,7 @@
         </x-slot>
     </x-dialog-modal>
 
-    @if($sources->hasPages())
-        <div class="mt-8 p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
-            {{ $sources->links() }}
-        </div>
-    @endif
+
 
     {{-- Test Modal --}}
     @if($showTestModal)
@@ -1323,9 +1319,21 @@
         </x-slot>
 
         <x-slot name="footer">
-            <x-secondary-button wire:click="closeSourceReportModal" class="!rounded-lg">
-                Close Report
-            </x-secondary-button>
+            <div class="flex items-center justify-between w-full">
+                <div class="flex items-center gap-2">
+                    <button wire:click="exportWebhookReportForSource({{ $selectedSourceForReport?->id }})" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-bold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-800 transition-all shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download Report
+                    </button>
+                    <button wire:click="exportDirectedSourceContacts({{ $selectedSourceForReport?->id }})" class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-bold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 active:bg-emerald-800 transition-all shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Extract Contacts
+                    </button>
+                </div>
+                <x-secondary-button wire:click="closeSourceReportModal" class="!rounded-lg">
+                    Close Report
+                </x-secondary-button>
+            </div>
         </x-slot>
     </x-dialog-modal>
 </div>

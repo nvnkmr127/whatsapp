@@ -424,14 +424,25 @@
                             <div class="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1 group-hover:text-emerald-500 transition-colors">Read Rate</div>
                             <div class="text-xl font-black text-emerald-600 dark:text-emerald-400 leading-none">{{ number_format($webhookSummary['read_rate'], 1) }}%</div>
                         </div>
-                        <button wire:click="exportWebhookReport" 
-                            class="ml-2 flex flex-col items-center justify-center gap-1.5 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-95 transition-all">
-                            <div class="text-[8px] font-black uppercase tracking-[0.2em] opacity-70">Download</div>
-                            <div class="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                                REPT
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            </div>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button wire:click="exportWebhookReport" 
+                                class="flex flex-col items-center justify-center gap-1.5 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-95 transition-all">
+                                <div class="text-[8px] font-black uppercase tracking-[0.2em] opacity-70">Download</div>
+                                <div class="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                                    REPT
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                </div>
+                            </button>
+
+                            <button wire:click="exportFilteredContacts" 
+                                class="flex flex-col items-center justify-center gap-1.5 px-6 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl shadow-xl shadow-emerald-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                                <div class="text-[8px] font-black uppercase tracking-[0.2em] opacity-70">Extract</div>
+                                <div class="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                                    LIST
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

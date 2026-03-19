@@ -23,6 +23,7 @@ class ConversationList extends Component
             return [
                 "echo-private:teams." . Auth::user()->currentTeam->id . ",.MessageReceived" => '$refresh',
                 'chat-messages-read' => '$refresh',
+                'refresh-tags' => '$refresh',
             ];
         }
         return [];

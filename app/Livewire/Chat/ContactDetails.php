@@ -21,6 +21,8 @@ class ContactDetails extends Component
 
     public $newNoteBody = '';
 
+    protected $listeners = ['refresh-tags' => 'loadData'];
+
     public function mount($conversationId)
     {
         $this->conversationId = $conversationId;
@@ -108,6 +110,7 @@ class ContactDetails extends Component
         if (!$this->conversation)
             return;
 
+        $this->conversation->refresh();
         $metadata = $this->conversation->metadata;
         if (!is_array($metadata)) {
             $metadata = [];
@@ -117,11 +120,13 @@ class ContactDetails extends Component
         if (in_array($categoryId, $tags)) {
             $tags = array_values(array_filter($tags, fn($id) => $id != $categoryId));
         } else {
-            $tags[] = $categoryId;
+            $tags[] = (int) $categoryId;
         }
 
         $metadata['tags'] = $tags;
         $this->conversation->update(['metadata' => $metadata]);
+        
+        $this->dispatch('refresh-tags');
         $this->loadData();
     }
 
