@@ -304,104 +304,107 @@
 
     <!-- Preview/Edit Modal -->
     @if($showModal)
-    @teleport('body')
-    <div class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Overlay -->
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" wire:click="closeModal"></div>
+    <div x-data>
+        <template x-teleport="body">
+            <div class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" wire:click="closeModal"></div>
 
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-                <div class="p-8">
-                    <div class="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight" id="modal-title">
-                                {{ $modalMode === 'edit' ? 'Edit Information' : 'Preview Information' }}
-                            </h3>
-                            <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">{{ $editingName }}</p>
-                        </div>
-                        <button wire:click="closeModal" class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+                    <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+                        <div class="p-8">
+                            <div class="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight" id="modal-title">
+                                        {{ $modalMode === 'edit' ? 'Edit Information' : 'Preview Information' }}
+                                    </h3>
+                                    <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1">{{ $editingName }}</p>
+                                </div>
+                                <button wire:click="closeModal" class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
 
-                    <div class="space-y-6">
-                        @if($modalMode === 'edit')
-                        <div>
-                            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Display Name</label>
-                            <input type="text" wire:model="editingName" class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white">
-                        </div>
-                        @endif
+                            <div class="space-y-6">
+                                @if($modalMode === 'edit')
+                                <div>
+                                    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Display Name</label>
+                                    <input type="text" wire:model="editingName" class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white">
+                                </div>
+                                @endif
 
-                        <div>
-                            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Content</label>
-                            @if($modalMode === 'edit')
-                            <textarea wire:model="editingContent" rows="15" class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-[1.5rem] text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white resize-none leading-relaxed"></textarea>
-                            @else
-                            <div class="w-full px-8 py-6 bg-slate-50 dark:bg-slate-800 rounded-[1.5rem] text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto whitespace-pre-wrap">
-                                @if($editingType === 'url')
-                                    <div class="py-4">
-                                        <div class="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-2xl">
-                                            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-                                                <thead class="bg-slate-50 dark:bg-slate-800/50">
-                                                    <tr>
-                                                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Type</th>
-                                                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Website Address (URL)</th>
-                                                        <th class="px-6 py-3 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody class="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
-                                                    <tr>
-                                                        <td class="px-6 py-4 whitespace-nowrap">
-                                                            <span class="px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-wa-teal dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50">Website</span>
-                                                        </td>
-                                                        <td class="px-6 py-4">
-                                                            <div class="text-sm font-bold text-slate-900 dark:text-white break-all">{{ $this->editingSource?->path }}</div>
-                                                        </td>
-                                                        <td class="px-6 py-4 text-right whitespace-nowrap">
-                                                            <a href="{{ $this->editingSource?->path }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-wa-teal hover:text-indigo-700 transition-colors">
-                                                                Visit
-                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 012 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                                </svg>
-                                                            </a>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex gap-3">
-                                            <svg class="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <p class="text-xs font-medium text-amber-700 dark:text-amber-400">Website content is extracted automatically and cannot be edited manually. To update the information, please remove and re-add the URL.</p>
-                                        </div>
+                                <div>
+                                    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Content</label>
+                                    @if($modalMode === 'edit')
+                                    <textarea wire:model="editingContent" rows="15" class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-[1.5rem] text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white resize-none leading-relaxed"></textarea>
+                                    @else
+                                    <div class="w-full px-8 py-6 bg-slate-50 dark:bg-slate-800 rounded-[1.5rem] text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto whitespace-pre-wrap">
+                                        @if($editingType === 'url')
+                                            <div class="py-4">
+                                                <div class="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-2xl">
+                                                    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                                                        <thead class="bg-slate-50 dark:bg-slate-800/50">
+                                                            <tr>
+                                                                <th class="px-6 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Type</th>
+                                                                <th class="px-6 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Website Address (URL)</th>
+                                                                <th class="px-6 py-3 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
+                                                            <tr>
+                                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                                    <span class="px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-wa-teal dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50">Website</span>
+                                                                </td>
+                                                                <td class="px-6 py-4">
+                                                                    <div class="text-sm font-bold text-slate-900 dark:text-white break-all">{{ $this->editingSource?->path }}</div>
+                                                                </td>
+                                                                <td class="px-6 py-4 text-right whitespace-nowrap">
+                                                                    <a href="{{ $this->editingSource?->path }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-wa-teal hover:text-indigo-700 transition-colors">
+                                                                        Visit
+                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 012 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                                        </svg>
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex gap-3">
+                                                    <svg class="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400">Website content is extracted automatically and cannot be edited manually. To update the information, please remove and re-add the URL.</p>
+                                                </div>
+                                            </div>
+                                        @else
+                                            {{ $editingContent }}
+                                        @endif
                                     </div>
-                                @else
-                                    {{ $editingContent }}
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mt-8 flex justify-end gap-3">
+                                <button wire:click="closeModal" class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-200 transition-all">
+                                    Close
+                                </button>
+                                @if($modalMode === 'edit')
+                                <button wire:click="saveEdit" class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                                    Save Changes
+                                </button>
                                 @endif
                             </div>
-                            @endif
                         </div>
-                    </div>
-
-                    <div class="mt-8 flex justify-end gap-3">
-                        <button wire:click="closeModal" class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-200 transition-all">
-                            Close
-                        </button>
-                        @if($modalMode === 'edit')
-                        <button wire:click="saveEdit" class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                            Save Changes
-                        </button>
-                        @endif
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
     </div>
-    @endteleport
     @endif
+
 </div>

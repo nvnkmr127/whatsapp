@@ -1,6 +1,8 @@
-@props(['show' => 'false', 'maxWidth' => '2xl', 'closeable' => true])
+@props(['id' => null, 'maxWidth' => '2xl', 'show' => false, 'closeable' => true])
 
 @php
+    $id = $id ?? md5($attributes->wire('model'));
+
     $maxWidth = [
         'sm' => 'max-w-sm',
         'md' => 'max-w-md',
@@ -12,37 +14,51 @@
         '5xl' => 'max-w-5xl',
     ][$maxWidth] ?? $maxWidth;
 
-    // Support wire:model if present
-    $wireModel = $attributes->wire('model')->value();
-    $showVariable = $wireModel ? '$wire.' . $wireModel : $show;
-
-    // Check if the show variable is a literal that shouldn't be assigned to
-    $isLiteral = in_array(strtolower($showVariable), ['true', 'false']) || empty($showVariable);
+    $wireModel = $attributes->wire('model');
 @endphp
 
-@teleport('body')
-<div x-show="{{ $showVariable }}" x-cloak
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" @if($closeable && !$isLiteral)
-    @keydown.escape.window="{{ $showVariable }} = false" @endif>
-
-    <!-- Backdrop -->
-    <div x-show="{{ $showVariable }}" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
-        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @if($closeable && !$isLiteral)
-        @click="{{ $showVariable }} = false" @endif>
-    </div>
-
-    <!-- Modal Panel -->
-    <div x-show="{{ $showVariable }}" x-transition:enter="ease-out duration-300"
-        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200"
-        x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-        x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        class="relative w-full {{ $maxWidth }} bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transform transition-all my-8">
-
-        {{ $slot }}
-
-    </div>
+<div 
+    x-data="{ 
+        show: @if($wireModel) @entangle($wireModel) @else {{ $show ? 'true' : 'false' }} @endif 
+    }"
+    x-on:close.stop="show = false"
+    x-on:keydown.escape.window="show = false"
+>
+    <template x-teleport="body">
+        <div 
+            x-show="show"
+            id="{{ $id }}"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+            x-cloak
+            style="display: none;"
+        >
+            <!-- Backdrop -->
+            <div 
+                x-show="show" 
+                x-transition:enter="ease-out duration-300" 
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" 
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100" 
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+                @if($closeable) @click="show = false" @endif
+            >
+            </div>
+        
+            <!-- Modal Panel -->
+            <div 
+                x-show="show" 
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" 
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                class="relative w-full {{ $maxWidth }} bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transform transition-all my-8"
+            >
+                {{ $slot }}
+            </div>
+        </div>
+    </template>
 </div>
-@endteleport

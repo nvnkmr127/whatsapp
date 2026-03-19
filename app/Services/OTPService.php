@@ -60,7 +60,7 @@ class OTPService
         if ($type === 'email') {
             $sent = $this->sendEmail($identifier, $code);
         } elseif ($type === 'phone') {
-            $sent = $this->sendWhatsApp($identifier, $code);
+            $sent = $this->sendWhatsApp($identifier, $code, $teamId);
         }
 
         if ($sent) {
@@ -219,10 +219,10 @@ class OTPService
         }
     }
 
-    public function sendWhatsApp(string $phone, string $code): bool
+    public function sendWhatsApp(string $phone, string $code, ?int $teamId = null): bool
     {
         try {
-            $team = $this->findSendingTeam();
+            $team = $this->findSendingTeam($teamId);
             if (!$team) {
                 Log::error("No eligible team or system credentials found for sending WhatsApp OTP.");
                 return false;
@@ -234,11 +234,20 @@ class OTPService
             $tpl = $this->findOtpTemplate($team);
 
             if (!$tpl) {
-                Log::error("No synced WhatsApp OTP template found for team {$team->id}. Sync templates from Meta and ensure WHATSAPP_OTP_TEMPLATE_NAME matches an approved template + language in your WABA.", [
-                    'configured_template_name' => config('otp.whatsapp_template_name'),
-                    'app_locale' => app()->getLocale(),
-                ]);
-                return false;
+                // Try one sync pass and retry lookup before failing.
+                if ($this->trySyncOtpTemplates($team)) {
+                    $tpl = $this->findOtpTemplate($team);
+                }
+
+                if (!$tpl) {
+                    Log::error("No synced WhatsApp OTP template found for team {$team->id}. Sync templates from Meta and ensure WHATSAPP_OTP_TEMPLATE_NAME matches an approved template + language in your WABA.", [
+                        'configured_template_name' => config('otp.whatsapp_template_name'),
+                        'app_locale' => app()->getLocale(),
+                        'has_waba_id' => !empty($team->whatsapp_business_account_id),
+                        'has_access_token' => !empty($team->whatsapp_access_token),
+                    ]);
+                    return false;
+                }
             }
 
             Log::info("Using WhatsApp template '{$tpl->name}' ({$tpl->language}) for OTP to {$phone}", [
@@ -258,21 +267,58 @@ class OTPService
     /**
      * Finds a team or system-level configuration to send WhatsApp messages.
      */
-    protected function findSendingTeam(): ?Team
+    protected function findSendingTeam(?int $teamId = null): ?Team
     {
         $systemToken = config('whatsapp.system_access_token');
         $systemPhoneId = config('whatsapp.system_phone_number_id');
 
+        // CASE 1: Platform-wide Authentication (Login or Signup)
+        // If no team context is provided, we MUST use the system number from .env/config.
+        if (!$teamId && $systemToken && $systemPhoneId) {
+            $shellTeam = Team::where('id', 1)->first() ?: Team::first();
+
+            if ($shellTeam) {
+                // Replicate it so we don't modify the globally cached object if any.
+                $shellTeam = $shellTeam->replicate(['id']);
+                $shellTeam->id = Team::where('id', 1)->first() ? 1 : Team::first()->id;
+
+                $shellTeam->whatsapp_access_token = $systemToken;
+                $shellTeam->whatsapp_phone_number_id = $systemPhoneId;
+                if (config('whatsapp.system_waba_id')) {
+                    $shellTeam->whatsapp_business_account_id = config('whatsapp.system_waba_id');
+                }
+                $shellTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+                return $shellTeam;
+            }
+        }
+
+        // CASE 2: Team-Specific Operation (e.g. Account Verification)
+        // If a specific team is requesting an OTP, prioritize their own credentials first.
+        if ($teamId) {
+            $currentTeam = Team::find($teamId);
+            if ($currentTeam && !empty($currentTeam->whatsapp_access_token) && !empty($currentTeam->whatsapp_phone_number_id)) {
+                return $currentTeam;
+            }
+        }
+
+        // CASE 3: Fallback for Team Operations or System defaults
+        // If the current team isn't configured, try to find ANY real team that has the system's credentials synced
+        // so that template lookup and billing resolve correctly without orphaned id=0 records.
         if ($systemToken && $systemPhoneId) {
-            // Find the best real DB team that has approved OTP templates so that
-            // template lookups, contact creation, and billing all use a valid team_id.
-            // Then override only the WhatsApp credentials with the system values.
-            //
-            // Previously this created a synthetic team with id=0, which caused:
-            //  - sendTemplate() querying WhatsappTemplate::where('team_id', 0) → 0 rows → failure
-            //  - getOrCreateContact() creating orphaned contacts with team_id=0
-            //  - BillingService creating an orphaned TeamWallet(team_id=0)
-            //  - verifyReadyToSend() calling $team->save() attempting to INSERT team id=0
+            $realTeam = Team::whereNotNull('whatsapp_access_token')
+                ->where('whatsapp_access_token', $systemToken)
+                ->where('whatsapp_phone_number_id', $systemPhoneId)
+                ->whereHas('whatsappTemplates', function ($q) {
+                    $q->where('status', 'APPROVED');
+                })
+                ->first();
+
+            if ($realTeam) {
+                return $realTeam;
+            }
+
+            // If system credentials exist but aren't tied to any team record yet,
+            // find any team with approved OTP templates to "host" the send operation.
             $realTeam = Team::whereNotNull('whatsapp_access_token')
                 ->where('whatsapp_access_token', '!=', '')
                 ->whereHas('whatsappTemplates', function ($q) {
@@ -286,19 +332,7 @@ class OTPService
                 })
                 ->first();
 
-            // Fallback: any team with any approved template
-            if (!$realTeam) {
-                $realTeam = Team::whereNotNull('whatsapp_access_token')
-                    ->where('whatsapp_access_token', '!=', '')
-                    ->whereHas('whatsappTemplates', function ($q) {
-                        $q->where('status', 'APPROVED');
-                    })
-                    ->first();
-            }
-
             if ($realTeam) {
-                // Override only the sending credentials with system values.
-                // The real team_id is preserved so template/contact/billing resolve correctly.
                 $realTeam->whatsapp_access_token = $systemToken;
                 $realTeam->whatsapp_phone_number_id = $systemPhoneId;
                 if (config('whatsapp.system_waba_id')) {
@@ -307,24 +341,9 @@ class OTPService
                 $realTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
                 return $realTeam;
             }
-            // System credentials set but no DB team has templates — fall through
         }
 
-        // 1. Prioritize teams with a token AND at least one approved OTP-style template
-        $activeTeam = Team::whereNotNull('whatsapp_access_token')
-            ->where('whatsapp_access_token', '!=', '')
-            ->whereNotNull('whatsapp_phone_number_id')
-            ->whereHas('whatsappTemplates', function ($q) {
-                $q->where('status', 'APPROVED');
-            })
-            ->get()
-            ->first(fn(Team $team) => $team->canAccess('send_message'));
-
-        if ($activeTeam) {
-            return $activeTeam;
-        }
-
-        // 2. Fallback to any team with a token
+        // 4. Ultimate Fallback: Any configured team
         return Team::whereNotNull('whatsapp_access_token')
             ->where('whatsapp_access_token', '!=', '')
             ->whereNotNull('whatsapp_phone_number_id')
@@ -424,6 +443,36 @@ class OTPService
         }
 
         return null;
+    }
+
+    /**
+     * Attempt to sync templates for the current team before failing OTP send.
+     */
+    protected function trySyncOtpTemplates(Team $team): bool
+    {
+        if (empty($team->whatsapp_business_account_id) || empty($team->whatsapp_access_token)) {
+            Log::warning('Cannot auto-sync WhatsApp templates for OTP: missing team credentials.', [
+                'team_id' => $team->id,
+                'has_waba_id' => !empty($team->whatsapp_business_account_id),
+                'has_access_token' => !empty($team->whatsapp_access_token),
+            ]);
+            return false;
+        }
+
+        try {
+            $syncedNames = app(\App\Services\TemplateService::class)->syncTemplates($team);
+            Log::info('Auto-synced WhatsApp templates before OTP send.', [
+                'team_id' => $team->id,
+                'synced_count' => count($syncedNames),
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('Auto-sync of WhatsApp templates failed before OTP send.', [
+                'team_id' => $team->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**

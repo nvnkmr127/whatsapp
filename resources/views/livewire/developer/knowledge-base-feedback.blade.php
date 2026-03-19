@@ -157,77 +157,80 @@
 
     <!-- Resolution Modal -->
     @if($showResolutionModal)
-        @teleport('body')
-        <div class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                <!-- Overlay -->
-                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"
-                    wire:click="$set('showResolutionModal', false)"></div>
-
-                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                <div
-                    class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-                    <div class="p-8">
-                        <div class="flex items-center justify-between mb-8">
-                            <div>
-                                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight"
-                                    id="modal-title">
-                                    {{ optional($gaps->find($selectedGapId))->status === 'pending' ? 'Address Knowledge Gap' : 'Resolution Details' }}
-                                </h3>
-                                <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1 italic">
-                                    Closing the loop on:
-                                    "{{ Str::limit(optional($gaps->find($selectedGapId))->query, 40) }}"
-                                </p>
-                            </div>
-                            <button wire:click="$set('showResolutionModal', false)"
-                                class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="space-y-6">
-                            <div>
-                                <label
-                                    class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest italic">Resolution
-                                    Note</label>
-                                @if(optional($gaps->find($selectedGapId))->status === 'pending')
-                                    <textarea wire:model="resolutionNote" rows="6"
-                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-[1.5rem] text-sm font-medium focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white resize-none leading-relaxed"
-                                        placeholder="Explain how you fixed this (e.g., Added 'Cancellation Policy' to Business Brain)..."></textarea>
-                                    @error('resolutionNote') <p
-                                        class="mt-2 text-[10px] font-bold text-rose-500 uppercase italic">{{ $message }}</p>
-                                    @enderror
-                                @else
-                                    <div
-                                        class="w-full px-8 py-6 bg-slate-50 dark:bg-slate-800 rounded-[1.5rem] text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                                        {{ $resolutionNote ?: 'No resolution note provided.' }}
+        <div x-data>
+            <template x-teleport="body">
+                <div class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <!-- Overlay -->
+                        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"
+                            wire:click="$set('showResolutionModal', false)"></div>
+        
+                        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+                        <div
+                            class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+                            <div class="p-8">
+                                <div class="flex items-center justify-between mb-8">
+                                    <div>
+                                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight"
+                                            id="modal-title">
+                                            {{ optional($gaps->find($selectedGapId))->status === 'pending' ? 'Address Knowledge Gap' : 'Resolution Details' }}
+                                        </h3>
+                                        <p class="text-sm text-wa-teal font-bold uppercase tracking-wider mt-1 italic">
+                                            Closing the loop on:
+                                            "{{ Str::limit(optional($gaps->find($selectedGapId))->query, 40) }}"
+                                        </p>
                                     </div>
-                                @endif
+                                    <button wire:click="$set('showResolutionModal', false)"
+                                        class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+        
+                                <div class="space-y-6">
+                                    <div>
+                                        <label
+                                            class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest italic">Resolution
+                                            Note</label>
+                                        @if(optional($gaps->find($selectedGapId))->status === 'pending')
+                                            <textarea wire:model="resolutionNote" rows="6"
+                                                class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-[1.5rem] text-sm font-medium focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white resize-none leading-relaxed"
+                                                placeholder="Explain how you fixed this (e.g., Added 'Cancellation Policy' to Business Brain)..."></textarea>
+                                            @error('resolutionNote') <p
+                                                class="mt-2 text-[10px] font-bold text-rose-500 uppercase italic">{{ $message }}</p>
+                                            @enderror
+                                        @else
+                                            <div
+                                                class="w-full px-8 py-6 bg-slate-50 dark:bg-slate-800 rounded-[1.5rem] text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                                                {{ $resolutionNote ?: 'No resolution note provided.' }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+        
+                                <div class="mt-8 flex justify-end gap-3">
+                                    <button wire:click="$set('showResolutionModal', false)"
+                                        class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-200 transition-all">
+                                        Close
+                                    </button>
+                                    @if(optional($gaps->find($selectedGapId))->status === 'pending')
+                                        <button wire:click="resolveGap"
+                                            class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                                            Mark Resolved
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="mt-8 flex justify-end gap-3">
-                            <button wire:click="$set('showResolutionModal', false)"
-                                class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-200 transition-all">
-                                Close
-                            </button>
-                            @if(optional($gaps->find($selectedGapId))->status === 'pending')
-                                <button wire:click="resolveGap"
-                                    class="px-8 py-3 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                                    Mark Resolved
-                                </button>
-                            @endif
                         </div>
                     </div>
                 </div>
-            </div>
+            </template>
         </div>
-        @endteleport
     @endif
+
 
     @if (session()->has('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)"
