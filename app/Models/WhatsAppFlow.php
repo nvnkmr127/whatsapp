@@ -12,6 +12,28 @@ class WhatsAppFlow extends Model
 {
     use HasTeam;
 
+    protected static function booted()
+    {
+        static::saving(function ($flow) {
+            if (!$flow->isDirty('status')) {
+                return;
+            }
+
+            $oldStatus = $flow->getOriginal('status');
+            $newStatus = $flow->status;
+
+            // Terminal status: DEPRECATED
+            if ($oldStatus === 'DEPRECATED' && $newStatus !== 'DEPRECATED') {
+                throw new \Exception("Cannot transition out of terminal state: DEPRECATED.");
+            }
+
+            // Safety: cannot move back to draft once published (risk of sync error with Meta)
+            if ($oldStatus === 'PUBLISHED' && $newStatus === 'DRAFT') {
+                throw new \Exception("Cannot revert a PUBLISHED flow to DRAFT. Use a new version instead.");
+            }
+        });
+    }
+
     protected $table = 'whatsapp_flows';
     protected $guarded = [];
 

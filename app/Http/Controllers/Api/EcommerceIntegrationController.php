@@ -9,53 +9,64 @@ use App\Models\SyncSession;
 use App\Services\Integrations\IntegrationHealthService;
 use App\Services\Integrations\ShopifyService;
 use App\Services\Integrations\WooCommerceService;
-use App\Services\Integrations\MetaCommerceService;
 use App\Jobs\SyncProductsToMetaJob;
+use App\Traits\StandardApiResponses;
 use Illuminate\Http\Request;
 
 class EcommerceIntegrationController extends Controller
 {
-    protected function assertIntegrationAccess(Integration $integration): void
+    use StandardApiResponses;
+
+    protected function assertIntegrationAccess(Request $request, Integration $integration)
     {
-        $team = auth()->user()?->currentTeam;
+        $team = $request->user()->currentTeam;
         if (!$team || $integration->team_id !== $team->id) {
-            abort(403, 'Unauthorized');
+            return $this->error('Unauthorized access to integration.', 403, null, 'ERR_FORBIDDEN');
         }
+        return null; // All good
     }
 
-    protected function assertProductAccess(Product $product): void
+    protected function assertProductAccess(Request $request, Product $product)
     {
-        $team = auth()->user()?->currentTeam;
+        $team = $request->user()->currentTeam;
         if (!$team || $product->team_id !== $team->id) {
-            abort(403, 'Unauthorized');
+            return $this->error('Unauthorized access to product.', 403, null, 'ERR_FORBIDDEN');
         }
+        return null; // All good
     }
 
     /**
      * Get integration health and status.
      */
-    public function health(Integration $integration, IntegrationHealthService $healthService)
+    public function health(Request $request, Integration $integration, IntegrationHealthService $healthService)
     {
-        $this->assertIntegrationAccess($integration);
+        if ($error = $this->assertIntegrationAccess($request, $integration)) {
+            return $error;
+        }
+
         $health = $healthService->checkHealth($integration);
 
-        return response()->json([
+        return $this->success([
             'integration' => $integration->only(['id', 'name', 'type', 'status', 'health_score', 'last_synced_at']),
-            'health' => $health
-        ]);
+            'health'      => $health
+        ], 'Integration health retrieved.');
     }
 
     /**
      * Trigger a manual sync.
      */
-    public function sync(Integration $integration)
+    public function sync(Request $request, Integration $integration)
     {
-        $this->assertIntegrationAccess($integration);
-        if ($integration->status === 'broken' && !request('force')) {
-            return response()->json(['error' => 'Integration is marked as broken. Fix credentials first.'], 422);
+        if ($error = $this->assertIntegrationAccess($request, $integration)) {
+            return $error;
+        }
+
+        if ($integration->status === 'broken' && !$request->boolean('force')) {
+            return $this->error('Integration is marked as broken. Fix credentials first.', 422, null, 'ERR_INTEGRATION_BROKEN');
         }
 
         try {
+            $count = 0;
             if ($integration->type === 'shopify') {
                 $service = new ShopifyService($integration);
                 $count = $service->syncProducts();
@@ -64,34 +75,35 @@ class EcommerceIntegrationController extends Controller
                 $count = $service->syncProducts();
             } elseif ($integration->type === 'meta_commerce') {
                 SyncProductsToMetaJob::dispatch($integration->id);
-                return response()->json([
-                    'message' => 'Sync job dispatched and running in background.',
-                ]);
+                return $this->success([], 'Sync job dispatched and running in background.');
             } else {
-                return response()->json(['error' => 'Unsupported integration type for polling.'], 400);
+                return $this->error('Unsupported integration type for polling.', 400, null, 'ERR_UNSUPPORTED_TYPE');
             }
 
-            return response()->json([
-                'message' => 'Sync triggered successfully',
+            return $this->success([
                 'synced_count' => $count
-            ]);
+            ], 'Sync triggered successfully.');
+
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return $this->error($e->getMessage(), 500, null, 'ERR_SERVER_ERROR');
         }
     }
 
     /**
      * Get recent sync sessions.
      */
-    public function sessions(Integration $integration)
+    public function sessions(Request $request, Integration $integration)
     {
-        $this->assertIntegrationAccess($integration);
+        if ($error = $this->assertIntegrationAccess($request, $integration)) {
+            return $error;
+        }
+
         $sessions = SyncSession::where('integration_id', $integration->id)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
 
-        return response()->json($sessions);
+        return $this->success($sessions, 'Recent sync sessions retrieved.');
     }
 
     /**
@@ -99,14 +111,17 @@ class EcommerceIntegrationController extends Controller
      */
     public function lockField(Product $product, Request $request)
     {
-        $this->assertProductAccess($product);
+        if ($error = $this->assertProductAccess($request, $product)) {
+            return $error;
+        }
+
         $request->validate([
             'field' => 'required|string',
-            'lock' => 'required|boolean'
+            'lock'  => 'required|boolean'
         ]);
 
         $field = $request->field;
-        $shouldLock = $request->lock;
+        $shouldLock = $request->boolean('lock');
         $lockedFields = $product->locked_fields ?? [];
 
         if ($shouldLock && !in_array($field, $lockedFields)) {
@@ -117,10 +132,9 @@ class EcommerceIntegrationController extends Controller
 
         $product->update(['locked_fields' => $lockedFields]);
 
-        return response()->json([
-            'message' => 'Field lock status updated',
+        return $this->success([
             'locked_fields' => $lockedFields
-        ]);
+        ], 'Field lock status updated.');
     }
 
     /**
@@ -128,17 +142,21 @@ class EcommerceIntegrationController extends Controller
      */
     public function updateSettings(Integration $integration, Request $request)
     {
-        $this->assertIntegrationAccess($integration);
+        if ($error = $this->assertIntegrationAccess($request, $integration)) {
+            return $error;
+        }
+
         $validated = $request->validate([
-            'settings' => 'required|array',
+            'settings'       => 'required|array',
             'webhook_secret' => 'nullable|string'
         ]);
 
         $integration->update([
-            'settings' => array_merge($integration->settings ?? [], $validated['settings']),
+            'settings'       => array_merge($integration->settings ?? [], $validated['settings']),
             'webhook_secret' => $validated['webhook_secret'] ?? $integration->webhook_secret
         ]);
 
-        return response()->json(['message' => 'Settings updated successfully']);
+        return $this->success([], 'Settings updated successfully.');
     }
 }
+

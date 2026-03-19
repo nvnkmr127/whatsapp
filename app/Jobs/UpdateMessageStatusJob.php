@@ -17,6 +17,7 @@ class UpdateMessageStatusJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $data;
+    public $traceId;
 
     /**
      * The number of times the job may be attempted.
@@ -36,10 +37,12 @@ class UpdateMessageStatusJob implements ShouldQueue
      * Create a new job instance.
      *
      * @param array $data ['provider_message_id', 'status', 'timestamp', 'details']
+     * @param string|null $traceId
      */
-    public function __construct(array $data)
+    public function __construct(array $data, ?string $traceId = null)
     {
         $this->data = $data;
+        $this->traceId = $traceId;
     }
 
     /**
@@ -47,6 +50,13 @@ class UpdateMessageStatusJob implements ShouldQueue
      */
     public function handle(): void
     {
+        // 1. Restore Trace Context
+        if ($this->traceId) {
+            \App\Services\TraceContext::set($this->traceId);
+        } else {
+            \App\Services\TraceContext::ensureTraceId();
+        }
+
         $providerMessageId = $this->data['provider_message_id'];
         $status = $this->data['status'];
         $timestamp = $this->data['timestamp'] ?? time();
@@ -70,24 +80,36 @@ class UpdateMessageStatusJob implements ShouldQueue
 
         $oldStatus = $message->status;
 
-        // Map WhatsApp status to our internal status
-        // WhatsApp statuses: sent, delivered, read, failed, deleted
-        $newStatus = $status;
-        if ($status === 'read') {
-            $newStatus = 'read';
-        } elseif ($status === 'delivered') {
-            $newStatus = 'delivered';
-        } elseif ($status === 'failed') {
-            $newStatus = 'failed';
+        // --- STATUS STICKINESS GUARD (UC-SAFE-01) ---
+        // WhatsApp webhooks are not guaranteed to be FIFO. We must prevent 
+        // backward transitions (e.g., 'read' -> 'delivered').
+        $statusRanks = [
+            'queued'    => 0,
+            'sent'      => 1,
+            'delivered' => 2,
+            'read'      => 3,
+            'failed'    => 4, // Terminal
+        ];
+
+        $currentRank = $statusRanks[$oldStatus] ?? 0;
+        $newRank = $statusRanks[$status] ?? 0;
+
+        // Rule: Never move backward unless fixing a 'failed' state (rare)
+        // or if the new status is 'failed' (can happen after 'sent')
+        if ($newRank < $currentRank && $status !== 'failed') {
+            Log::info("UpdateMessageStatusJob: Ignoring backward status transition from '{$oldStatus}' to '{$status}' for message '{$providerMessageId}'");
+            return;
         }
 
         $updateData = [
-            'status' => $newStatus,
+            'status' => $status,
             'updated_at' => now(),
         ];
 
         $eventTime = Carbon::createFromTimestamp($timestamp);
 
+        // --- TIMESTAMP GUARDS ---
+        // Only set timestamps if they haven't been set yet (prevents overwriting original event times)
         if ($status === 'delivered' && empty($message->delivered_at)) {
             $updateData['delivered_at'] = $eventTime;
         }
@@ -96,6 +118,7 @@ class UpdateMessageStatusJob implements ShouldQueue
             if (empty($message->read_at)) {
                 $updateData['read_at'] = $eventTime;
             }
+            // Auto-fill delivered if read came first
             if (empty($message->delivered_at)) {
                 $updateData['delivered_at'] = $eventTime;
             }

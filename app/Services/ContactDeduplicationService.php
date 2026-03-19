@@ -15,15 +15,9 @@ use Illuminate\Support\Facades\Log;
 
 class ContactDeduplicationService
 {
-    /**
-     * Find duplicate contacts for a given contact.
-     * 
-     * @param Contact $contact
-     * @param float $threshold Minimum confidence score (0-100)
-     * @return Collection
-     */
-    public function findDuplicates(Contact $contact, float $threshold = 60): Collection
+    public function findDuplicates(Contact $contact, ?float $threshold = null): Collection
     {
+        $threshold = $threshold ?? (float) config('contacts.deduplication.score_threshold', 60);
         $duplicates = collect();
 
         // Strategy 1: Exact phone match (100% confidence)
@@ -77,7 +71,7 @@ class ContactDeduplicationService
 
         return $candidates->filter(function ($candidate) use ($contact) {
             $similarity = $this->calculateNameSimilarity($contact->name, $candidate->name);
-            return $similarity >= 0.8; // 80% similarity threshold
+            return $similarity >= config('contacts.deduplication.name_similarity_threshold', 0.8);
         });
     }
 
@@ -158,8 +152,9 @@ class ContactDeduplicationService
         // Name similarity
         if ($contact1->name && $contact2->name) {
             $nameSimilarity = $this->calculateNameSimilarity($contact1->name, $contact2->name);
-            if ($nameSimilarity >= 0.8) {
-                $score += 50 * $nameSimilarity;
+            $nameThreshold = config('contacts.deduplication.name_similarity_threshold', 0.8);
+            if ($nameSimilarity >= $nameThreshold) {
+                $score += config('contacts.deduplication.weights.name', 50) * $nameSimilarity;
                 $reasons[] = sprintf('Name similarity: %.0f%%', $nameSimilarity * 100);
             }
         }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class TemplateBot extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -37,10 +38,5 @@ class TemplateBot extends Model
     public function template()
     {
         return $this->belongsTo(WhatsappTemplate::class, 'whatsapp_template_id', 'whatsapp_template_id');
-    }
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Company extends Model
 {
     use HasFactory, SoftDeletes;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -34,10 +35,7 @@ class Company extends Model
         'custom_fields' => 'array',
     ];
 
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function contacts(): HasMany
     {

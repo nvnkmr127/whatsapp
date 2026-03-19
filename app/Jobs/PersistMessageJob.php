@@ -17,14 +17,17 @@ class PersistMessageJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $eventPayload;
+    public $traceId;
 
     /**
      * Create a new job instance.
      * @param array $eventPayload The standardized event payload from the Event Bus.
+     * @param string|null $traceId The correlation ID for tracing.
      */
-    public function __construct(array $eventPayload)
+    public function __construct(array $eventPayload, ?string $traceId = null)
     {
         $this->eventPayload = $eventPayload;
+        $this->traceId = $traceId;
         $this->onQueue('messages'); // Persist on the message queue or a separate 'persistence' queue
     }
 
@@ -33,6 +36,13 @@ class PersistMessageJob implements ShouldQueue
      */
     public function handle(): void
     {
+        // 1. Restore Trace Context
+        if ($this->traceId) {
+            \App\Services\TraceContext::set($this->traceId);
+        } else {
+            \App\Services\TraceContext::ensureTraceId();
+        }
+
         $data = $this->eventPayload;
         Log::info("PersistMessageJob: Starting for Message ID: " . ($data['provider_id'] ?? 'unknown'));
 

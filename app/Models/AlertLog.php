@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class AlertLog extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'rule_id',
@@ -34,8 +35,5 @@ class AlertLog extends Model
         return $this->belongsTo(AlertRule::class, 'rule_id');
     }
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 }

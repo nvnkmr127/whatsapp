@@ -354,13 +354,10 @@
                     <div class="flex flex-col items-center">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 block w-full text-center">Live WhatsApp Preview</label>
                         
-                        <div class="w-full max-w-[320px] bg-[#E5DDD5] dark:bg-slate-950 rounded-[3rem] p-4 shadow-2xl relative border-[8px] border-slate-900">
-                             {{-- Phone Notch --}}
-                             <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-20"></div>
-
-                             <div class="relative z-10 space-y-2 mt-4 min-h-[400px]">
+                        <x-whatsapp-phone class="mt-4" bg="bg-wa-chat-bg" darkBg="dark:bg-wa-dark-bg">
+                             <div class="space-y-2 mt-4 min-h-[400px]">
                                  @if($this->templateInfo)
-                                     <div class="bg-white dark:bg-slate-900 rounded-xl rounded-tl-none shadow-sm p-3 max-w-[90%] animate-in zoom-in-95 duration-300">
+                                     <div class="bg-white dark:bg-wa-dark-surface rounded-xl rounded-tl-none shadow-sm p-3 max-w-[90%] animate-in zoom-in-95 duration-300">
                                          {{-- Preview Header --}}
                                          @if(in_array($info['headerType'], ['IMAGE', 'VIDEO', 'DOCUMENT']))
                                              <div class="bg-slate-100 dark:bg-slate-800 rounded-lg aspect-video mb-3 flex items-center justify-center overflow-hidden">
@@ -401,7 +398,7 @@
                                      </div>
                                  @endif
                              </div>
-                        </div>
+                        </x-whatsapp-phone>
                     </div>
                 </div>
 

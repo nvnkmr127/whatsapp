@@ -34,12 +34,15 @@ class CallOffered implements ShouldBroadcastNow
 
     public function broadcastWith()
     {
+        $this->call->loadMissing('contact');
         return [
             'call_id' => $this->call->call_id,
             'direction' => $this->call->direction,
             'from' => $this->call->from_number,
             'to' => $this->call->to_number,
             'contact_id' => $this->call->contact_id,
+            'contact_name' => $this->call->contact?->name ?? 'Unknown',
+            'contact_avatar' => $this->call->contact?->avatar_url ?? null,
             'timestamp' => $this->call->initiated_at?->toIso8601String(),
             'sdp' => $this->call->metadata['sdp'] ?? null,
             'sdp_type' => 'offer',

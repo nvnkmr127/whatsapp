@@ -24,8 +24,12 @@ class TemplateValidator
     /**
      * Validate template and return a comprehensive readiness profile
      */
-    public function validate(WhatsappTemplate $template, array $runtimeParams = []): ValidationResult
+    public function validate(WhatsappTemplate $template, array|\App\DTOs\TemplateValidationParams $runtimeParams = []): ValidationResult
     {
+        $params = is_array($runtimeParams) 
+            ? \App\DTOs\TemplateValidationParams::fromArray($runtimeParams)
+            : $runtimeParams;
+
         $result = new ValidationResult();
         $errors = [];
         $score = 100;
@@ -110,7 +114,7 @@ class TemplateValidator
             }
 
             if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                if (empty($runtimeParams['header_media_url'])) {
+                if (empty($params->headerMediaUrl)) {
                     $score -= 10; // Potentially unbound if no params provided
                     $errors[] = [
                         'code' => 'MEDIA_UNBOUND',

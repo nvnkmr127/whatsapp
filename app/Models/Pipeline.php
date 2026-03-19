@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Pipeline extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -26,10 +27,7 @@ class Pipeline extends Model
         'position' => 'integer',
     ];
 
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function stages(): HasMany
     {

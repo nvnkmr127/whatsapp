@@ -160,15 +160,14 @@ class BillingService
 
     protected function getCategoryCost($category)
     {
-        // Pricing Logic (Could be from Plans or Config)
-        // Dummy values
-        return match ($category) {
-            'marketing' => 0.10, // $0.10
+        $prices = config('whatsapp.pricing', [
+            'marketing' => 0.10,
             'utility' => 0.05,
             'authentication' => 0.03,
-            'service' => 0.00, // Usually free or first 1000 free
-            default => 0.00,
-        };
+            'service' => 0.00,
+        ]);
+
+        return $prices[strtolower($category)] ?? 0.00;
     }
 
     public function getDetailedUsageStats(Team $team): array
@@ -362,13 +361,15 @@ class BillingService
 
         // Check balance (No negative wallet allowed)
         if ($wallet->balance < $cost) {
-            Log::warning("Insufficient balance for call billing", [
+            Log::error("CRITICAL: Negative wallet prevented for completed call billing. Team {$team->id} has insufficient funds for call {$call->call_id}.", [
                 'team_id' => $team->id,
                 'call_id' => $call->call_id,
                 'cost' => $cost,
                 'balance' => $wallet->balance,
             ]);
-            // Allow call to complete but flag for billing
+            
+            // We do NOT deduct if it would go negative (Rule 4)
+            // But we mark the call as 'billing_failed' in metadata if possible
             return false;
         }
 

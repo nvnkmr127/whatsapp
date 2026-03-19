@@ -14,16 +14,28 @@ class CallService
     protected $team;
     protected $whatsappService;
 
-    public function __construct(Team $team)
+    public function __construct(WhatsAppService $whatsappService)
+    {
+        $this->whatsappService = $whatsappService;
+    }
+
+    /**
+     * Set the context for a specific team.
+     */
+    public function setTeam(?Team $team): self
     {
         $this->team = $team;
-        $this->whatsappService = new WhatsAppService($team);
+        if ($team) {
+            $this->whatsappService->setTeam($team);
+        }
+        return $this;
     }
+
 
     /**
      * Initiate an outbound call with validation.
      */
-    public function initiateCall(string $phoneNumber, array $options = []): array
+    public function initiateCall(string $phoneNumber, array $options = [], ?string $sdp = null): array
     {
         // Find or create contact
         $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
@@ -57,7 +69,7 @@ class CallService
 
         try {
             // Initiate call via WhatsApp Service
-            $response = $this->whatsappService->initiateCall($normalizedPhone, null, $options);
+            $response = $this->whatsappService->initiateCall($normalizedPhone, $sdp, $options);
 
             if ($response['success'] ?? false) {
                 Log::info("Call initiated successfully", [

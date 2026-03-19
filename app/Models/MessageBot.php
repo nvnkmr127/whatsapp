@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class MessageBot extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $table = 'message_bots';
 
     protected $fillable = [
@@ -35,9 +37,4 @@ class MessageBot extends Model
         'trigger' => 'array',
         'is_bot_active' => 'boolean',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }

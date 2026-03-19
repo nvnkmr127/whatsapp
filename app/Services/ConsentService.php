@@ -31,16 +31,23 @@ class ConsentService
 
         // Check if previously opted-out manually by admin (compliance flag)
         if ($contact->opt_in_status === 'opted_out' && $source !== 'MANUAL_ADMIN') {
-            $lastOptOut = \App\Models\ConsentLog::where('contact_id', $contact->id)
-                ->where('action', 'OPT_OUT')
-                ->latest()
-                ->first();
-
-            if ($lastOptOut && $lastOptOut->source === 'MANUAL_ADMIN') {
-                \Illuminate\Support\Facades\Log::warning("Cannot auto-opt-in contact with admin opt-out", [
+            // Meta Rule: Customer sending START keyword MUST override previous opt-outs.
+            if ($source === 'START_KEYWORD') {
+                \Illuminate\Support\Facades\Log::info("Customer START keyword overriding previous opt-out state.", [
                     'contact_id' => $contact->id
                 ]);
-                return false;
+            } else {
+                $lastOptOut = \App\Models\ConsentLog::where('contact_id', $contact->id)
+                    ->where('action', 'OPT_OUT')
+                    ->latest()
+                    ->first();
+
+                if ($lastOptOut && $lastOptOut->source === 'MANUAL_ADMIN') {
+                    \Illuminate\Support\Facades\Log::warning("Cannot auto-opt-in contact with admin opt-out", [
+                        'contact_id' => $contact->id
+                    ]);
+                    return false;
+                }
             }
         }
 

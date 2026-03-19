@@ -9,6 +9,7 @@ use App\Services\WebhookAuthService;
 use App\Services\WebhookMappingService;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -1027,6 +1028,13 @@ class WebhookSourceManager extends Component
     }
 
 
+
+    #[Computed]
+    public function currentSource()
+    {
+        if (!$this->editingId) return null;
+        return WebhookSource::find($this->editingId);
+    }
 
     public function render()
     {

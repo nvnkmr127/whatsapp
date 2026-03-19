@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class KnowledgeBaseSource extends Model
 {
+    use \App\Traits\HasTeam;
+
     const STATUS_PENDING = 'pending';
     const STATUS_PROCESSING = 'processing';
     const STATUS_READY = 'ready';
@@ -29,9 +31,4 @@ class KnowledgeBaseSource extends Model
         'is_active' => 'boolean',
         'last_synced_at' => 'datetime',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }

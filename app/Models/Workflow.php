@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Workflow extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -43,10 +44,7 @@ class Workflow extends Model
         'time_saved_minutes' => 'integer',
     ];
 
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function creator(): BelongsTo
     {

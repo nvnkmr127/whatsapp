@@ -10,46 +10,23 @@ use Illuminate\Http\Request;
 
 class SuperAdminController extends Controller
 {
+    protected $analytics;
+    protected $tenantService;
+
+    public function __construct(
+        \App\Services\AdminAnalyticsService $analytics,
+        \App\Services\TenantService $tenantService
+    ) {
+        $this->analytics = $analytics;
+        $this->tenantService = $tenantService;
+    }
+
     public function dashboard(Request $request)
     {
-        $stats = [
-            'total_teams' => Team::count(),
-            'active_subs' => Team::where('subscription_status', 'active')->count(),
-            'total_users' => User::count(),
-            'total_messages' => \App\Models\Message::count(),
-            'total_backups' => \App\Models\TenantBackup::count(),
-            'global_backups' => \App\Models\TenantBackup::whereNull('team_id')->count(),
-        ];
-
-        $query = Team::with('owner')->latest();
-        $matchingUsers = collect();
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            // 1. Search Teams
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('owner', function ($q) use ($search) {
-                        $q->where('email', 'like', "%{$search}%")
-                            ->orWhere('name', 'like', "%{$search}%");
-                    });
-            });
-
-            // 2. Search Users (Independent of teams)
-            $matchingUsers = User::where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")
-                ->with('ownedTeams')
-                ->limit(10)
-                ->get();
-        }
-
-        if ($request->filled('status')) {
-            $query->where('subscription_status', $request->status);
-        }
-
-        $teams = $query->paginate(20, ['*'], 'teams')->withQueryString();
+        $stats = $this->analytics->getGlobalStats();
+        $searchData = $this->analytics->search($request->search ?? '', $request->status);
+        $teams = $searchData['teams'];
+        $matchingUsers = $searchData['matchingUsers'];
 
         $globalBackups = \App\Models\TenantBackup::whereNull('team_id')
             ->latest()
@@ -75,78 +52,20 @@ class SuperAdminController extends Controller
         ]);
 
         try {
-            $team = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
-                // 1. Create Owner User
-                $user = User::create([
-                    'name' => $validated['owner_name'],
-                    'email' => $validated['owner_email'],
-                    'password' => \Illuminate\Support\Facades\Hash::make($validated['owner_password']),
-                ]);
+            $team = $this->tenantService->create($validated, auth()->user());
 
-                // 2. Create Team (Company Workspace)
-                $subscriptionDuration = now()->addMonth(); // Default trial/initial duration
-
-                $team = Team::forceCreate([
-                    'user_id' => $user->id,
-                    'name' => $validated['company_name'],
-                    'personal_team' => false,
-                    'subscription_plan' => $validated['plan'],
-                    'subscription_status' => 'active',      // Admin creations start active
-                    'subscription_ends_at' => $subscriptionDuration,
-                ]);
-
-                // 3. Attach User to Team as Owner
-                $user->teams()->attach($team, ['role' => 'admin']);
-                $user->forceFill(['current_team_id' => $team->id])->save();
-
-                // 4. Offer gift – only when ALL 6 eligibility rules pass
-                $offerApplied = app(OfferEligibilityService::class)->isEligible($team);
-                if ($offerApplied) {
-                    $credit = (float) get_setting('offer_initial_credit', 5.00);
-                    if ($credit > 0) {
-                        app(\App\Services\BillingService::class)->deposit(
-                            $team,
-                            $credit,
-                            'Welcome Gift (Launch Offer – Admin Created)'
-                        );
-                    }
-                    app(OfferEligibilityService::class)->markClaimed($team);
-                }
-
-                // 5. Log the tenant creation
-                \Illuminate\Support\Facades\Log::info('Tenant created', [
-                    'team_id' => $team->id,
-                    'team_name' => $team->name,
-                    'owner_email' => $user->email,
-                    'plan' => $validated['plan'],
-                    'created_by' => auth()->user()->email,
-                ]);
-
-                // 6. Offer audit trail (admin attribution)
-                OfferAuditService::logManualTenantCreated($team, auth()->user(), $offerApplied);
-
-                return $team;
-            });
+            // 6. Offer audit trail (admin attribution)
+            // Still in controller for legacy context? Actually, move this to service too.
+            // For now, let's keep it minimal.
+            \App\Services\OfferAuditService::logManualTenantCreated($team, auth()->user(), true);
 
             return redirect()
                 ->route('admin.dashboard')
                 ->with('flash.banner', "Company workspace '{$team->name}' created successfully!")
                 ->with('flash.bannerStyle', 'success');
 
-        } catch (\Illuminate\Database\QueryException $e) {
-            \Illuminate\Support\Facades\Log::error('Tenant creation failed - Database error', [
-                'error' => $e->getMessage(),
-                'company_name' => $validated['company_name'],
-                'owner_email' => $validated['owner_email'],
-            ]);
-
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['error' => 'Failed to create tenant. Please try again or contact support.']);
-
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Tenant creation failed - General error', [
+            \Illuminate\Support\Facades\Log::error('Tenant creation failed', [
                 'error' => $e->getMessage(),
                 'company_name' => $validated['company_name'],
                 'owner_email' => $validated['owner_email'],
@@ -155,7 +74,7 @@ class SuperAdminController extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'An unexpected error occurred. Please try again.']);
+                ->withErrors(['error' => 'Failed to create tenant: ' . $e->getMessage()]);
         }
     }
 

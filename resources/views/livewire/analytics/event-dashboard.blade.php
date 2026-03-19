@@ -506,7 +506,13 @@
                         datasets: [{
                             data: finalDistData.data,
                             backgroundColor: [
-                                '#25D366', '#34B7F1', '#128C7E', '#075E54', '#8ed1fc', '#0693e3', '#abb8c3'
+                                '#25D366', // wa-brand
+                                '#34B7F1', // wa-blue
+                                '#128C7E', // wa-teal
+                                '#075E54', // wa-dark
+                                '#4d5c64', // slate-600
+                                '#94a3b8', // slate-400
+                                '#cbd5e1'  // slate-300
                             ],
                             borderWidth: 0,
                             hoverOffset: 20

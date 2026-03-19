@@ -45,7 +45,7 @@
                 <select wire:model.live="filterFolder"
                     class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-sm text-sm">
                     <option value="">All Folders</option>
-                    @foreach(\App\Models\Workflow::whereNotNull('folder')->where('folder', '!=', '')->pluck('folder')->unique() as $f)
+                    @foreach($this->folders as $f)
                         <option value="{{ $f }}">{{ $f }}</option>
                     @endforeach
                 </select>

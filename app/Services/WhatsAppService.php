@@ -9,15 +9,20 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
-    protected $baseUrl;
-    protected $token;
-    protected $phoneId;
+    protected $client;
+    protected $messaging;
+    protected $templates;
+    protected $calls;
     protected $team;
-    public $isBot = false;
+    protected $isBot = false;
 
     public function __construct(?Team $team = null)
     {
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->client = app(\App\Core\WhatsApp\WhatsAppClient::class);
+        $this->messaging = new \App\Services\WhatsApp\MessagingService($this->client);
+        $this->templates = new \App\Services\WhatsApp\TemplateService($this->client, app(\App\Core\WhatsApp\CredentialResolver::class));
+        $this->calls = new \App\Services\WhatsApp\CallService($this->client);
+
         if ($team) {
             $this->setTeam($team);
         }
@@ -26,17 +31,18 @@ class WhatsAppService
     /**
      * Set the context for a specific team.
      */
-    public function setTeam(Team $team)
+    public function setTeam(Team $team): self
     {
-        $this->team = $team; // Store reference
-        $this->token = (string) $team->whatsapp_access_token;
-        $this->phoneId = $team->whatsapp_phone_number_id;
+        $this->team = $team;
+        $this->client->forTeam($team);
 
-        if (!$this->token || !$this->phoneId) {
-            // Log warning instead of throwing if we're just initializing
-            Log::warning("WhatsApp credentials not configured for team: {$team->name}. Token: " . ($this->token ? 'SET' : 'MISSING') . ", PhoneId: " . ($this->phoneId ? 'SET' : 'MISSING'));
-        } else {
-            Log::debug("WhatsAppService: Credentials set for team {$team->id}. Phone ID: {$this->phoneId}");
+        // Propagate to sub-services
+        $this->messaging->setTeam($team);
+        $this->templates->setTeam($team);
+        $this->calls->setTeam($team);
+
+        if (!$team->whatsapp_access_token || !$team->whatsapp_phone_number_id) {
+            Log::warning("WhatsApp credentials not configured for team: {$team->name}.");
         }
 
         return $this;
@@ -134,76 +140,47 @@ class WhatsAppService
      */
     public function sendText($to, $message, $existingMessage = null)
     {
-        // Find contact to check policy
         $contact = $this->getOrCreateContact($to);
-
-        // Enforce 24h Policy for Free Text
         $policy = app(PolicyService::class);
         if ($contact && !$policy->canSendFreeMessage($contact)) {
-            Log::warning("Blocked free message to {$to}. 24h Window Closed or Opt-out.");
-            throw new \Exception("Cannot send free text message. 24-hour window is closed or User opted out. (Policy UC-03). Please use a Template.");
+            Log::warning("Blocked free message to {$to}. 24h Window Closed.");
+            throw new \App\Exceptions\Messaging\WhatsAppPolicyException("Message blocked by 24h policy. Use a Template.");
         }
 
-        // Rule 1: Messaging Lock & Plan Limits
         $this->verifyReadyToSend();
         if (!$this->team->canAccess('send_message')) {
-            $denial = $this->team->entitlement()->denialReason('send_message');
-            throw new \Exception($denial ?: "Monthly message limit reached or subscription inactive. (Policy UC-20).");
+            throw new \App\Exceptions\Messaging\WhatsAppPolicyException("Plan limit reached.");
         }
 
-        // 1. Resolve Conversation
         $conversationService = new \App\Services\ConversationService();
         $conversation = $conversationService->ensureActiveConversation($contact);
 
-        // 2. Pre-Persist or Use Existing
-        $msg = $existingMessage;
-        if (!$msg) {
-            $msg = \App\Models\Message::create([
-                'team_id' => $this->team->id,
-                'contact_id' => $contact->id,
-                'conversation_id' => $conversation->id,
-                'type' => 'text',
-                'direction' => 'outbound',
-                'status' => 'queued',
-                'content' => $message,
-                'metadata' => ['is_bot' => $this->isBot],
-            ]);
-        }
-
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'to' => $to,
+        $msg = $existingMessage ?: \App\Models\Message::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
             'type' => 'text',
-            'text' => ['body' => $message],
-        ];
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'content' => $message,
+            'metadata' => ['is_bot' => $this->isBot],
+        ]);
 
         try {
-            $response = $this->sendRequest('messages', $payload);
+            $response = $this->messaging->sendText($to, $message); // Delegate to specialized service
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
-
-                $msg->update([
-                    'status' => 'sent',
-                    'whatsapp_message_id' => $wamId,
-                    'sent_at' => now(),
-                ]);
-
+                $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
                 \App\Events\MessageSent::dispatch($msg);
             } else {
-                $msg->update([
-                    'status' => 'failed',
-                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
-                ]);
+                $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
             }
 
             return $response;
         } catch (\Exception $e) {
-            $msg->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
+            $msg->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -268,7 +245,7 @@ class WhatsAppService
         ];
 
         try {
-            $response = $this->sendRequest('messages', $payload);
+            $response = $this->client->sendRequest('messages', $payload);
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
@@ -359,7 +336,7 @@ class WhatsAppService
         ];
 
         try {
-            $response = $this->sendRequest('messages', $payload);
+            $response = $this->client->sendRequest('messages', $payload);
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
@@ -449,7 +426,7 @@ class WhatsAppService
                 'metadata' => [
                     'flow_id' => $flowId,
                     'mode' => $mode,
-                    'is_bot' => $this->isBot
+                    'is_bot' => true // WhatsAppService now mostly used by bot/system
                 ],
             ]);
         }
@@ -488,7 +465,7 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest('messages', $payload);
+            $response = $this->client->sendRequest('messages', $payload);
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
@@ -545,7 +522,8 @@ class WhatsAppService
         // Readiness Pre-flight check (Rules UC-04, UC-05)
         $validator = new \App\Validators\TemplateValidator();
         $validator->validate($tpl, [
-            'header_media_url' => $headerParams[0] ?? null
+            'header_media_url' => $headerParams[0] ?? null,
+            'body_variables' => $bodyParams
         ]);
 
         if ($tpl->readiness_score < 70) {
@@ -767,7 +745,7 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest('messages', $payload);
+            $response = $this->client->sendRequest('messages', $payload);
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
@@ -813,7 +791,7 @@ class WhatsAppService
             'message_id' => $messageId,
         ];
 
-        return $this->sendRequest('messages', $payload);
+        return $this->client->sendRequest('messages', $payload);
     }
 
     /**
@@ -821,7 +799,7 @@ class WhatsAppService
      */
     public function getBusinessProfile()
     {
-        return $this->sendRequest('whatsapp_business_profile', [
+        return $this->client->sendRequest('whatsapp_business_profile', [
             'fields' => 'about,address,description,email,profile_picture_url,websites,vertical'
         ], 'get');
     }
@@ -835,7 +813,7 @@ class WhatsAppService
             'messaging_product' => 'whatsapp',
         ] + $data;
 
-        return $this->sendRequest('whatsapp_business_profile', $payload, 'post');
+        return $this->client->sendRequest('whatsapp_business_profile', $payload, 'post');
     }
 
     /**
@@ -852,7 +830,8 @@ class WhatsAppService
         }
 
         $appId = config('whatsapp.app_id');
-        $url = "{$this->baseUrl}/{$wabaId}/message_templates";
+        $baseUrl = $baseUrl;
+        $url = "{$baseUrl}/{$wabaId}/message_templates";
         $allItems = [];
 
         do {
@@ -861,7 +840,7 @@ class WhatsAppService
                 $params['app_id'] = $appId;
             }
 
-            $response = $this->sendRequestFullUrl($url, 'get', $params);
+            $response = $this->client->sendRequestFullUrl($url, 'get', $params);
 
             if (!($response['success'] ?? false)) {
                 return $response; // Return error immediately if any page fails
@@ -886,8 +865,9 @@ class WhatsAppService
         if (!$wabaId) {
             throw new \Exception("WABA ID is not configured.");
         }
-        $url = "{$this->baseUrl}/{$wabaId}/message_templates";
-        return $this->sendRequestFullUrl($url, 'post', $data);
+        $baseUrl = $baseUrl;
+        $url = "{$baseUrl}/{$wabaId}/message_templates";
+        return $this->client->sendRequestFullUrl($url, 'post', $data);
     }
 
     /**
@@ -931,8 +911,9 @@ class WhatsAppService
         if (!$wabaId) {
             throw new \Exception("WABA ID is not configured.");
         }
-        $url = "{$this->baseUrl}/{$wabaId}/message_templates";
-        return $this->sendRequestFullUrl($url, 'delete', ['name' => $name]);
+        $baseUrl = $baseUrl;
+        $url = "{$baseUrl}/{$wabaId}/message_templates";
+        return $this->client->sendRequestFullUrl($url, 'delete', ['name' => $name]);
     }
 
     /**
@@ -985,12 +966,13 @@ class WhatsAppService
      */
     public function getSystemCallSettings()
     {
-        if (!$this->phoneId) {
+        if (!$this->team->whatsapp_phone_number_id) {
             throw new \Exception("Phone ID is not configured.");
         }
 
-        $url = "{$this->baseUrl}/{$this->phoneId}/settings";
-        return $this->sendRequestFullUrl($url, 'get', ['include_sip_credentials' => 'true']);
+        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $url = "{$baseUrl}/{$this->team->whatsapp_phone_number_id}/settings";
+        return $this->client->sendRequestFullUrl($url, 'get', ['include_sip_credentials' => 'true']);
     }
 
     /**
@@ -1001,31 +983,32 @@ class WhatsAppService
      */
     public function disableSipCalling()
     {
-        if (!$this->phoneId) {
+        if (!$this->team->whatsapp_phone_number_id) {
             throw new \Exception("Phone ID is not configured.");
         }
 
         Log::info("Disabling SIP calling for phone", [
             'team_id' => $this->team->id,
-            'phone_id' => $this->phoneId,
+            'phone_id' => $this->team->whatsapp_phone_number_id,
         ]);
 
-        $url = "{$this->baseUrl}/{$this->phoneId}/settings";
+        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $url = "{$baseUrl}/{$this->team->whatsapp_phone_number_id}/settings";
         $payload = [
             'sip_status' => 'DISABLED',
         ];
 
-        $response = $this->sendRequestFullUrl($url, 'post', $payload);
+        $response = $this->client->sendRequestFullUrl($url, 'post', $payload);
 
         if ($response['success'] ?? false) {
             Log::info("SIP calling disabled successfully", [
                 'team_id' => $this->team->id,
-                'phone_id' => $this->phoneId,
+                'phone_id' => $this->team->whatsapp_phone_number_id,
             ]);
         } else {
             Log::error("Failed to disable SIP calling", [
                 'team_id' => $this->team->id,
-                'phone_id' => $this->phoneId,
+                'phone_id' => $this->team->whatsapp_phone_number_id,
                 'error' => $response['error'] ?? 'Unknown error',
             ]);
         }
@@ -1039,7 +1022,7 @@ class WhatsAppService
      */
     public function updateSystemCallSettings(array $settings)
     {
-        if (!$this->phoneId) {
+        if (!$this->team->whatsapp_phone_number_id) {
             throw new \Exception("Phone ID is not configured.");
         }
 
@@ -1153,8 +1136,9 @@ class WhatsAppService
 
         $payload = ['calling' => $callingPayload];
 
-        $url = "{$this->baseUrl}/{$this->phoneId}/settings";
-        return $this->sendRequestFullUrl($url, 'post', $payload);
+        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $url = "{$baseUrl}/{$this->team->whatsapp_phone_number_id}/settings";
+        return $this->client->sendRequestFullUrl($url, 'post', $payload);
     }
 
     /**
@@ -1180,7 +1164,7 @@ class WhatsAppService
         $permission = $permissionService->trackPermissionRequest(
             $contact,
             $this->team,
-            $this->phoneId
+            $this->team->whatsapp_phone_number_id
         );
 
         // Send permission request message via WhatsApp
@@ -1212,7 +1196,7 @@ class WhatsAppService
         ];
 
         try {
-            $response = $this->sendRequest('messages', $payload);
+            $response = $this->client->sendRequest('messages', $payload);
 
             if ($response['success'] ?? false) {
                 Log::info('Call permission request sent', [
@@ -1293,7 +1277,7 @@ class WhatsAppService
             ]
         ];
 
-        return $this->sendRequest('messages', $payload);
+        return $this->client->sendRequest('messages', $payload);
     }
 
     /**
@@ -1387,7 +1371,7 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest('calls', $payload);
+            $response = $this->client->sendRequest('calls', $payload);
 
             if ($response['success'] ?? false) {
                 $callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
@@ -1408,12 +1392,12 @@ class WhatsAppService
                     'call_id' => $callId,
                     'direction' => 'outbound',
                     'status' => 'initiated',
-                    'from_number' => $this->phoneId,
+                    'from_number' => $this->team->whatsapp_phone_number_id,
                     'to_number' => $to,
                     'initiated_at' => now(),
                     'metadata' => array_merge($options, [
                         'sdp' => $sdp,
-                        'phone_number_id' => $this->phoneId
+                        'phone_number_id' => $this->team->whatsapp_phone_number_id
                     ]),
                 ]);
 
@@ -1523,7 +1507,7 @@ class WhatsAppService
             $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
         }
 
-        $phoneIdToUse = $phoneNumberId ?: $this->phoneId;
+        $phoneIdToUse = $phoneNumberId ?: $this->team->whatsapp_phone_number_id;
         if (!$phoneIdToUse) {
             throw new \Exception("Phone ID is not configured.");
         }
@@ -1538,7 +1522,7 @@ class WhatsAppService
                 $startTime = microtime(true);
 
                 $payload['call_id'] = $callId;
-                $response = $this->sendRequest('calls', $payload, 'post');
+                $response = $this->client->sendRequest('calls', $payload, 'post');
 
                 $responseTime = round((microtime(true) - $startTime) * 1000, 2);
 
@@ -1658,12 +1642,12 @@ class WhatsAppService
             $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
         }
 
-        $phoneIdToUse = $phoneNumberId ?: $this->phoneId;
+        $phoneIdToUse = $phoneNumberId ?: $this->team->whatsapp_phone_number_id;
         if (!$phoneIdToUse) {
             throw new \Exception("Phone ID is not configured.");
         }
 
-        return $this->sendRequest('calls', $payload, 'post');
+        return $this->client->sendRequest('calls', $payload, 'post');
     }
 
     /**
@@ -1701,7 +1685,7 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest('calls', $payload, 'post');
+            $response = $this->client->sendRequest('calls', $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsRejected();
@@ -1757,7 +1741,7 @@ class WhatsAppService
         }
 
         try {
-            $response = $this->sendRequest('calls', $payload, 'post');
+            $response = $this->client->sendRequest('calls', $payload, 'post');
 
             if ($response['success'] ?? false) {
                 $call->markAsEnded();
@@ -1800,7 +1784,7 @@ class WhatsAppService
             // Note: WhatsApp Cloud API v21.0 does not currently support direct polling for call status via /calls/{id}.
             // Real-time status updates are delivered via webhooks.
             /*
-            $response = $this->sendRequest("calls/{$callId}", [], 'get');
+            $response = $this->client->sendRequest("calls/{$callId}", [], 'get');
 
             if ($response['success'] ?? false) {
                 // Update local call record with latest status from WhatsApp
@@ -1870,106 +1854,13 @@ class WhatsAppService
         ];
 
         // URL: https://graph.facebook.com/<API_VERSION>/<WABA_ID>
-        $url = "{$this->baseUrl}/{$wabaId}";
+        $baseUrl = $baseUrl;
+        $url = "{$baseUrl}/{$wabaId}";
 
-        return $this->sendRequestFullUrl($url, 'get', $queryParams, 'analytics');
+        return $this->client->sendRequestFullUrl($url, 'get', $queryParams, 'analytics');
     }
 
-    protected function sendRequest($endpoint, $data = [], $method = 'post')
-    {
-        $url = "{$this->baseUrl}/{$this->phoneId}/{$endpoint}";
-        return $this->sendRequestFullUrl($url, $method, $data, $endpoint);
-    }
-
-    protected function sendRequestFullUrl($url, $method, $data = [], $endpoint = 'unknown')
-    {
-        $client = Http::withToken($this->token)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->timeout(20)
-            ->retry(2, 500, function ($exception, $request) {
-                // Only retry on network/connection errors or 5xx server errors.
-                // Do NOT retry on 4xx client errors (e.g. #141000) — they will
-                // never succeed with the same payload.
-                if ($exception instanceof \Illuminate\Http\Client\ConnectionException) {
-                    return true;
-                }
-                if ($exception instanceof \Illuminate\Http\Client\RequestException) {
-                    return $exception->response->status() >= 500;
-                }
-                return false;
-            }, throw: false);  // Never throw — always return the response so callers can inspect it.
-        $response = null;
-        $method = strtolower($method);
-
-        Log::debug("WhatsApp API Sending [$method] to $url", ['data' => $data]);
-
-        try {
-            if ($method === 'post') {
-                $response = $client->post($url, $data);
-            } elseif ($method === 'get') {
-                $response = $client->get($url, $data);
-            } elseif ($method === 'delete') {
-                $response = $client->delete($url, $data);
-            } else {
-                return ['success' => false, 'error' => 'Unsupported method: ' . $method];
-            }
-
-            if ($response->failed()) {
-                $responseJson = $response->json();
-                $errorCode = $responseJson['error']['code'] ?? null;
-
-                // #141000 — Phone not enrolled in Cloud API Calling.
-                // This is expected for numbers not yet provisioned by Meta.
-                // Log as info, not error, to keep logs clean.
-                if ($errorCode === 141000) {
-                    Log::info('WhatsApp: Calling not supported for this number (#141000)', [
-                        'url' => $url,
-                        'code' => 141000,
-                    ]);
-                    return [
-                        'success' => false,
-                        'calling_not_supported' => true,
-                        'error' => $responseJson,
-                        'status_code' => $response->status(),
-                        'message' => $responseJson['error']['message'] ?? 'Calling not supported',
-                    ];
-                }
-
-                if ($response->status() === 401 && $this->team) {
-                    $this->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
-                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'critical', $data, ['error' => $responseJson]);
-                } elseif ($this->team) {
-                    \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'failed', $data, ['error' => $responseJson]);
-                }
-
-                Log::error('WhatsApp API Error', [
-                    'status' => $response->status(),
-                    'error' => $responseJson,
-                    'payload' => $data,
-                    'url' => $url,
-                ]);
-                return [
-                    'success' => false,
-                    'error' => $responseJson,
-                    'status_code' => $response->status(),
-                    'message' => $responseJson['error']['message'] ?? 'Unknown API Error'
-                ];
-            }
-
-            if ($this->team) {
-                \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'success', $data, ['url' => $url]);
-            }
-
-            return ['success' => true, 'data' => $response->json()];
-        } catch (\Exception $e) {
-            Log::error('WhatsApp API Exception', [
-                'message' => $e->getMessage(),
-                'url' => $url,
-                'method' => $method
-            ]);
-            return ['success' => false, 'error' => $e->getMessage(), 'status_code' => 500];
-        }
-    }
+    // Transport logic moved to WhatsAppClient
 
     protected function verifyReadyToSend()
     {

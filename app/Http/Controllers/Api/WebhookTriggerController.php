@@ -3,59 +3,62 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\WebhookWorkflow;
+use App\Traits\StandardApiResponses;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WebhookTriggerController extends Controller
 {
+    use StandardApiResponses;
+
+    /**
+     * Trigger a webhook-based workflow.
+     */
     public function trigger(Request $request, $id)
     {
-        $team = $request->user()->currentTeam;
+        $user = $request->user();
+        $team = $user?->currentTeam;
+        
         if (!$team) {
-            return response()->json(['error' => 'No team context'], 400);
+            return $this->error('No team context selected.', 400);
         }
 
-        $workflow = \App\Models\WebhookWorkflow::where('id', $id)
+        $workflow = WebhookWorkflow::where('id', $id)
             ->where('status', true)
             ->where('team_id', $team->id)
             ->first();
 
         if (!$workflow) {
-            return response()->json(['error' => 'Workflow not found or inactive'], 404);
+            return $this->error('Workflow not found or inactive.', 404);
         }
 
-        // Validate payload
-        // We expect 'phone' or 'recipient_id'
+        // Validate payload: expect 'phone' or 'recipient_id'
         $recipient = $request->input('phone') ?? $request->input('recipient_id');
 
         if (!$recipient) {
-            return response()->json(['error' => 'Missing phone or recipient_id in payload'], 400);
+            return $this->error('Missing phone or recipient_id in payload.', 400);
         }
 
         // Increment trigger count
         $workflow->increment('total_triggers');
 
-        // Send Message
-        // We need to map parameters if template has variables.
-        // For MVP, allow 'parameters' array in payload.
+        // Allow 'parameters' array in payload for template variables
         $parameters = $request->input('parameters', []);
 
         try {
-            // Using a Job to send for reliability, or direct service call.
-            // Let's use WhatsAppService directly for now if available, or Job.
-            // Checking availability of service... assuming we will implement/use sendTemplateMessage
-
-            // Note: We need a way to cleanly send. 
-            // Let's dispatch a job which we can create or use existing if any.
-            // Or use the Trait if we add send method.
-
-            // For now, let's assume we dispatch a job we will ensure exists.
+            // Dispatch job for reliable asynchronous execution
             \App\Jobs\ExecuteWebhookWorkflow::dispatch($workflow, $recipient, $parameters);
 
-            return response()->json(['status' => 'success', 'message' => 'Workflow triggered'], 200);
+            return $this->success([], 'Workflow triggered successfully.');
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Workflow Error: " . $e->getMessage());
-            return response()->json(['error' => 'Internal Server Error'], 500);
+            Log::error("Webhook Workflow Execution Error: " . $e->getMessage(), [
+                'workflow_id' => $workflow->id,
+                'team_id' => $team->id,
+                'recipient' => $recipient
+            ]);
+            return $this->error('Failed to trigger workflow due to server error.', 500, null, 'ERR_SERVER_ERROR');
         }
     }
 }

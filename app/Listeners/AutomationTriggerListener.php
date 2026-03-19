@@ -4,28 +4,25 @@ namespace App\Listeners;
 
 use App\Events\MessageReceived;
 use App\Services\AutomationService;
-use App\Services\WhatsAppService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
-class AutomationTriggerListener
+class AutomationTriggerListener implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    public $queue = 'messages';
+    /**
+     * The name of the queue the job should be sent to.
+     */
+    public $queue = 'automations';
+
     /**
      * Handle the event.
      */
     public function handle(MessageReceived $event): void
     {
-        // Ideally we shouldn't consistently forget all instances, but for certain shared services
-        // that might hold state from previous jobs in the same daemon process (like WhatsAppService with teamId),
-        // we might want a fresh start or ensure we set the team correctly.
-        // The AutomationService does setTeam(), but let's be safe.
-        // app()->forgetInstances(); // This is too aggressive for queue workers generally.
-
         Log::info("AutomationTriggerListener: Handle started for message {$event->message->id}");
         $message = $event->message;
 
@@ -35,7 +32,7 @@ class AutomationTriggerListener
             Log::info("AutomationTriggerListener: Message {$message->id} already processed. Skipping.");
             return;
         }
-        Cache::put($idempotencyKey, true, 60);
+        Cache::put($idempotencyKey, true, 3600); // 1 hour window
 
         // Skip outbound messages
         if ($message->direction !== 'inbound') {
@@ -43,7 +40,7 @@ class AutomationTriggerListener
         }
 
         $contact = $message->contact;
-        $content = $message->content; // Or use raw content if needed for matching
+        $content = $message->content;
 
         try {
             $automationService = app(AutomationService::class);
@@ -83,7 +80,10 @@ class AutomationTriggerListener
             }
 
         } catch (\Exception $e) {
-            Log::error("Automation Failure for Message {$message->id}: " . $e->getMessage());
+            Log::error("Automation Failure for Message {$message->id}: " . $e->getMessage(), [
+                'exception' => $e
+            ]);
         }
     }
 }
+

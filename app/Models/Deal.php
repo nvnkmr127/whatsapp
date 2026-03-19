@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Deal extends Model
 {
     use HasFactory, SoftDeletes;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -103,10 +104,7 @@ class Deal extends Model
         });
     }
 
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function contact(): BelongsTo
     {

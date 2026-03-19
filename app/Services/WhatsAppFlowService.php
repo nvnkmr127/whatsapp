@@ -10,21 +10,6 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppFlowService
 {
-    protected $whatsappService;
-    protected $baseUrl;
-    protected $team;
-    protected $token;
-    protected $wabaId;
-
-    public function __construct(WhatsAppService $whatsappService = null, Team $team = null)
-    {
-        $this->whatsappService = $whatsappService ?: app(WhatsAppService::class);
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
-        if ($team) {
-            $this->setTeam($team);
-        }
-    }
-
     public const CATEGORIES = [
         'SIGN_UP',
         'SIGN_IN',
@@ -36,11 +21,24 @@ class WhatsAppFlowService
         'OTHER'
     ];
 
+    protected CredentialResolver $resolver;
+
+    public function __construct(WhatsAppService $whatsappService = null, Team $team = null, CredentialResolver $resolver = null)
+    {
+        $this->whatsappService = $whatsappService ?: app(WhatsAppService::class);
+        $this->resolver = $resolver ?: app(CredentialResolver::class);
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        if ($team) {
+            $this->setTeam($team);
+        }
+    }
+
     public function setTeam(Team $team)
     {
         $this->team = $team;
-        $this->token = $team->whatsapp_access_token;
-        $this->wabaId = $team->whatsapp_business_account_id;
+        $creds = $this->resolver->resolve($team);
+        $this->token = $creds['token'];
+        $this->wabaId = $creds['waba_id'];
 
         if (!$this->token || !$this->wabaId) {
             throw new \Exception("WhatsApp Business Account credentials missing.");

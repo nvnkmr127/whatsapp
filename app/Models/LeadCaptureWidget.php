@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class LeadCaptureWidget extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -55,10 +56,7 @@ class LeadCaptureWidget extends Model
         'business_hours' => 'array',
     ];
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function getWaMeLinkAttribute()
     {

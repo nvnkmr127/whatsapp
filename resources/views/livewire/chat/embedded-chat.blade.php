@@ -1,4 +1,4 @@
-<div class="flex flex-col h-full bg-[#efe7dd] relative">
+<div class="flex flex-col h-full bg-wa-bg relative">
     <!-- Simplified Header -->
     <div class="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10">
         <div class="flex items-center">
@@ -18,7 +18,7 @@
             @foreach($conversation->messages as $message)
                 <div class="flex {{ $message->direction === 'outbound' ? 'justify-end' : 'justify-start' }}">
                     <div
-                        class="max-w-[85%] {{ $message->direction === 'outbound' ? 'bg-[#d9fdd3] rounded-l-lg rounded-tr-lg' : 'bg-white rounded-r-lg rounded-tl-lg' }} rounded-b-lg p-2 shadow-sm text-sm relative">
+                        class="max-w-[85%] {{ $message->direction === 'outbound' ? 'bg-wa-bubble-out rounded-l-lg rounded-tr-lg' : 'bg-wa-bubble-in rounded-r-lg rounded-tl-lg' }} rounded-b-lg p-2 shadow-sm text-sm relative">
                         <!-- Media Logic ... (simplified for brevity, can reuse partial) -->
                         @if($message->media_url)
                             <div class="mb-1 text-xs text-blue-600 underline">Sent Media</div>
@@ -26,7 +26,7 @@
 
                         <p class="whitespace-pre-wrap leading-relaxed">{{ $message->content }}</p>
                         <span
-                            class="text-[10px] text-gray-400 block text-right mt-1">{{ $message->created_at->format('H:i') }}</span>
+                            class="text-tiny text-gray-400 block text-right mt-1">{{ $message->created_at->format('H:i') }}</span>
                     </div>
                 </div>
             @endforeach

@@ -17,47 +17,26 @@
         </div>
 
         <div class="flex items-center gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-0 scrollbar-hide flex-nowrap">
-            <button wire:click="openTagModal"
-                class="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800 shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
+            <x-app-button variant="secondary" wire:click="openTagModal">
+                <x-icon name="tag" class="w-4 h-4" />
                 Tags
-            </button>
-            <button wire:click="openFieldModal"
-                class="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800 shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+            </x-app-button>
+            <x-app-button variant="secondary" wire:click="openFieldModal">
+                <x-icon name="edit" class="w-4 h-4" />
                 Fields
-            </button>
-            <button wire:click="openImportModal"
-                class="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800 shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
+            </x-app-button>
+            <x-app-button variant="secondary" wire:click="openImportModal">
+                <x-icon name="arrow-up-tray" class="w-4 h-4" />
                 Import
-            </button>
-            <button wire:click="export"
-                class="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800 shadow-sm whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+            </x-app-button>
+            <x-app-button variant="secondary" wire:click="export">
+                <x-icon name="arrow-down-tray" class="w-4 h-4" />
                 Export
-            </button>
-            <button wire:click="create"
-                class="flex-shrink-0 flex items-center justify-center gap-3 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 rounded-2xl shadow-xl shadow-slate-900/20 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M12 4v16m8-8H4" />
-                </svg>
-                <span class="text-[10px] font-black uppercase tracking-widest">
-                    Add Contact
-                </span>
-            </button>
+            </x-app-button>
+            <x-app-button variant="primary" wire:click="create">
+                <x-icon name="plus" class="w-4 h-4" stroke-width="4" />
+                <span>Add Contact</span>
+            </x-app-button>
         </div>
     </div>
 
@@ -71,11 +50,8 @@
                 <input wire:model.live.debounce.300ms="search" type="text"
                     class="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
                     placeholder="Search by name, phone, or email...">
-                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-teal transition-colors"
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <x-icon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-teal transition-colors" />
+
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4">
@@ -129,10 +105,10 @@
                                              class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 object-cover"
                                              loading="lazy">
                                         <div>
-                                            <button wire:click="viewContact({{ $contact->id }})"
-                                                class="text-sm font-black text-slate-900 dark:text-white hover:text-wa-teal transition-colors text-left">
+                                            <span class="text-sm font-black text-slate-900 dark:text-white hover:text-wa-teal transition-colors text-left">
                                                 {{ $contact->name }}
-                                            </button>
+                                            </span>
+
                                         <div class="text-xs text-slate-500 font-medium">
                                             {{ $contact->email ?: 'No email linked' }}
                                         </div>
@@ -218,491 +194,377 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    @if($isModalOpen)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeModal"></div>
-            <div
-                class="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div class="p-8 pb-0">
-                    <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        {{ $contactId ? 'Update' : 'Register' }} <span class="text-wa-teal">Contact</span>
-                    </h2>
+    <!-- Main Contact Modal (Create/Edit) -->
+    <x-app-modal wire:model="isModalOpen" maxWidth="5xl" :backdropClose="false">
+        <div class="p-8 pb-0">
+            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                {{ $contactId ? 'Update' : 'Register' }} <span class="text-wa-teal">Contact</span>
+            </h2>
+        </div>
+
+        <div class="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <!-- Basic Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Full Name</label>
+                    <input type="text" wire:model="name"
+                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all"
+                        placeholder="e.g. John Doe">
+                    @error('name') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">WhatsApp Number</label>
+                    <div class="flex gap-3">
+                        <div class="w-24 shrink-0">
+                            <select wire:model="countryCode" 
+                                class="w-full px-3 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer text-sm">
+                                @foreach($availableCountryCodes as $code => $label)
+                                    <option value="{{ $code }}">{{ $code }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" wire:model="phoneNumberWithoutCode"
+                                class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all font-mono"
+                                placeholder="8686877397">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Email Address</label>
+                    <input type="email" wire:model="email"
+                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all"
+                        placeholder="john@example.com">
+                    @error('email') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
                 </div>
 
-                <div class="p-8 space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</label>
-                            <input type="text" wire:model="name"
-                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                placeholder="e.g. John Doe">
-                            @error('name') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span>
-                            @enderror
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">WhatsApp
-                                Number</label>
-                            <div class="grid grid-cols-3 gap-3">
-                                <div class="col-span-1">
-                                    <select wire:model="countryCode" 
-                                        class="w-full px-3 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer text-sm">
-                                        @foreach($availableCountryCodes as $code => $label)
-                                            <option value="{{ $code }}">{{ $code }}</option>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Language</label>
+                        <input type="text" wire:model="language"
+                            class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all"
+                            placeholder="en">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Status</label>
+                        <select wire:model="opt_in_status"
+                            class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                            <option value="opted_in">Opt-in</option>
+                            <option value="opted_out">Opt-out</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Fields Section -->
+            @if($customFields->isNotEmpty())
+                <div class="pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Additional Metadata</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @foreach($customFields as $field)
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{{ $field->label }}</label>
+                                @if($field->type === 'select')
+                                    <select wire:model="customAttributes.{{ $field->key }}"
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                                        <option value="">Select {{ $field->label }}</option>
+                                        @foreach($field->options as $option)
+                                            <option value="{{ $option }}">{{ $option }}</option>
                                         @endforeach
                                     </select>
-                                    @error('countryCode') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="col-span-2">
-                                    <input type="text" wire:model="phoneNumberWithoutCode"
-                                        class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                        placeholder="8686877397">
-                                    @error('phoneNumberWithoutCode') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                                </div>
+                                @elseif($field->type === 'date')
+                                    <input type="date" wire:model="customAttributes.{{ $field->key }}"
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                @else
+                                    <input type="{{ $field->type === 'number' ? 'number' : 'text' }}"
+                                        wire:model="customAttributes.{{ $field->key }}"
+                                        class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all"
+                                        placeholder="Enter {{ $field->label }}">
+                                @endif
                             </div>
-                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            <!-- Organization Section -->
+            <div class="pt-6 border-t border-slate-100 dark:border-slate-800">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Categorization</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Category</label>
+                        <select wire:model="category_id"
+                            class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                            <option value="">Not Categorized</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Email Address
-                            (Optional)</label>
-                        <input type="email" wire:model="email"
-                            class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                            placeholder="john@example.com">
-                        @error('email') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Language Code</label>
-                            <input type="text" wire:model="language"
-                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                placeholder="en">
-                            @error('language') <span
-                            class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Status</label>
-                            <select wire:model="opt_in_status"
-                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
-                                <option value="opted_in">Opt-in</option>
-                                <option value="opted_out">Opt-out</option>
-                            </select>
-                            @error('opt_in_status') <span
-                            class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                        </div>
-                    </div>
-
-                    <!-- ID: Custom Fields Injection -->
-                    @if($customFields->isNotEmpty())
-                        <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                            <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Additional Information</h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                @foreach($customFields as $field)
-                                    <div class="space-y-2">
-                                        <label
-                                            class="text-xs font-black uppercase tracking-widest text-slate-400">{{ $field->label }}</label>
-
-                                        @if($field->type === 'select')
-                                            <select wire:model="customAttributes.{{ $field->key }}"
-                                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
-                                                <option value="">Select {{ $field->label }}</option>
-                                                @foreach($field->options as $option)
-                                                    <option value="{{ $option }}">{{ $option }}</option>
-                                                @endforeach
-                                            </select>
-                                        @elseif($field->type === 'date')
-                                            <input type="date" wire:model="customAttributes.{{ $field->key }}"
-                                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20">
-                                        @else
-                                            <input type="{{ $field->type === 'number' ? 'number' : 'text' }}"
-                                                wire:model="customAttributes.{{ $field->key }}"
-                                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20"
-                                                placeholder="Enter {{ $field->label }}">
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <div class="space-y-2">
-                            <label class="text-xs font-black uppercase tracking-widest text-slate-400">Contact Category</label>
-                            <select wire:model="category_id"
-                                class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
-                                <option value="">No Category</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('category_id') <span class="text-rose-500 text-[10px] font-bold uppercase">{{ $message }}</span> @enderror
-                        </div>
-
-                        <label class="text-xs font-black uppercase tracking-widest text-slate-400">Select Tags</label>
-                        <div
-                            class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl grid grid-cols-2 gap-3 max-h-40 overflow-y-auto">
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Primary Tag</label>
+                        <select wire:model="selectedTags" 
+                            class="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                            <option value="">No Tag</option>
                             @foreach($tags as $tag)
-                                <label
-                                    class="flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer">
-                                    <input type="checkbox" wire:model="selectedTags" value="{{ $tag->id }}"
-                                        class="w-5 h-5 rounded-lg border-none bg-slate-200 dark:bg-slate-700 text-wa-teal focus:ring-wa-teal/20">
-                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $tag->name }}</span>
-                                </label>
+                                <option value="{{ $tag->id }}">{{ $tag->name }}</option>
                             @endforeach
-                        </div>
+                        </select>
                     </div>
-                </div>
 
-                <div class="p-8 bg-slate-50 dark:bg-slate-800/50 flex gap-4">
-                    <button wire:click="closeModal"
-                        class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:text-slate-600 transition-all border border-slate-100 dark:border-slate-700">
-                        Cancel
-                    </button>
-                    <button wire:click="store"
-                        class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                        Save Contact
-                    </button>
                 </div>
             </div>
         </div>
-    @endif
+
+        <div class="p-8 bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-4">
+            <x-app-button variant="ghost" class="w-full sm:flex-1 py-4 order-2 sm:order-1" wire:click="closeModal">Cancel</x-app-button>
+            <x-app-button variant="primary" class="w-full sm:flex-[2] py-4 order-1 sm:order-2" wire:click="store">Save Contact</x-app-button>
+        </div>
+    </x-app-modal>
+
 
     <!-- Delete Confirmation Modal -->
-    @if($isDeleteModalOpen)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('isDeleteModalOpen', false)"></div>
-            <div
-                class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div class="p-10 text-center space-y-6">
-                    <div
-                        class="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-[2rem] flex items-center justify-center text-rose-500 mx-auto">
-                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Erase
-                            Contact?</h3>
-                        <p class="mt-2 text-slate-500 font-medium text-sm">This action is irreversible. All message history
-                            for this contact will lose its identity link.</p>
-                    </div>
-                    <div class="flex flex-col gap-3">
-                        <button wire:click="delete"
-                            class="w-full py-4 bg-rose-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-rose-500/20 hover:bg-rose-600 transition-all">
-                            Confirm Deletion
-                        </button>
-                        <button wire:click="$set('isDeleteModalOpen', false)"
-                            class="w-full py-4 bg-slate-50 dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:text-slate-600 transition-all">
-                            Keep Contact
-                        </button>
-                    </div>
-                </div>
+    <x-app-modal wire:model="isDeleteModalOpen" maxWidth="md" :backdropClose="false">
+
+        <div class="p-10 text-center space-y-6">
+            <div class="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-[2rem] flex items-center justify-center text-rose-500 mx-auto">
+                <x-icon name="trash" class="w-10 h-10" />
+            </div>
+            <div>
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Erase Contact?</h3>
+                <p class="mt-2 text-slate-500 font-medium text-sm">This action is irreversible. All message history for this contact will lose its identity link.</p>
+            </div>
+            <div class="flex flex-col gap-3">
+                <x-app-button variant="danger" wire:click="delete">Confirm Deletion</x-app-button>
+                <x-app-button variant="ghost" wire:click="$set('isDeleteModalOpen', false)">Keep Contact</x-app-button>
             </div>
         </div>
-    @endif
+    </x-app-modal>
 
-    <!-- Tag Management Modal -->
-    @if($isTagModalOpen)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeTagModal"></div>
-            <div
-                class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div class="p-8 pb-0 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Manage <span class="text-wa-teal">Tags</span>
-                    </h2>
-                    <button wire:click="closeTagModal"
-                        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
 
-                <div class="p-8 space-y-6">
-                    <!-- Create New Tag -->
-                    <div class="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 space-y-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Create New Tag</h3>
-                        <div class="flex gap-4">
-                            <div class="flex-1 space-y-1">
-                                <input type="text" wire:model="newTagName" placeholder="Tag Name (e.g. VIP)"
-                                    class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
-                                @error('newTagName') <span
-                                class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="w-16">
-                                <input type="color" wire:model="newTagColor"
-                                    class="w-full h-10 px-1 py-1 bg-white dark:bg-slate-700 border-none rounded-xl cursor-pointer"
-                                    title="Pick Color">
-                            </div>
-                            <button wire:click="createTag"
-                                class="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold uppercase text-[10px] hover:scale-105 transition-transform">
-                                Add
-                            </button>
-                        </div>
-                        @if (session()->has('tag_message'))
-                            <div class="text-xs font-bold text-wa-teal">{{ session('tag_message') }}</div>
-                        @endif
-                    </div>
+    <!-- Tag Management (Child Component) -->
+    <livewire:contacts.tag-manager />
 
-                    <!-- Existing Tags List -->
-                    <div class="space-y-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Existing Tags</h3>
-                        <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            @forelse($tags as $tag)
-                                <div
-                                    class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-4 h-4 rounded-full" style="background-color: {{ $tag->color }}"></div>
-                                        <span
-                                            class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $tag->name }}</span>
-                                    </div>
-                                    <button wire:click="deleteTag({{ $tag->id }})"
-                                        class="text-slate-400 hover:text-rose-500 transition-colors" title="Delete Tag">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            @empty
-                                <div class="text-center py-6 text-slate-400 text-xs italic">No tags created yet.</div>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
 
     <!-- Custom Fields Management Modal -->
-    @if($isFieldModalOpen)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeFieldModal"></div>
-            <div
-                class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div class="p-8 pb-0 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Manage <span class="text-wa-teal">Fields</span>
-                    </h2>
-                    <button wire:click="closeFieldModal"
-                        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+    <x-app-modal wire:model="isFieldModalOpen" maxWidth="4xl" :backdropClose="false">
+
+        <div class="p-8 pb-0 flex justify-between items-center">
+            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Manage <span class="text-wa-teal">Fields</span>
+            </h2>
+        </div>
+        <div class="p-8 space-y-6">
+            <!-- Create/Edit Form -->
+            <div class="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Label</label>
+                        <input type="text" wire:model="fieldLabel" placeholder="e.g. Birthday"
+                            class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
+                        @error('fieldLabel') <span
+                        class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Type</label>
+                        <select wire:model.live="fieldType"
+                            class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="select">Select (Dropdown)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="p-8 space-y-6">
-                    <!-- Create/Edit Form -->
-                    <div class="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-black uppercase text-slate-400">Label</label>
-                                <input type="text" wire:model="fieldLabel" placeholder="e.g. Birthday"
-                                    class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
-                                @error('fieldLabel') <span
-                                class="text-rose-500 text-[10px] uppercase font-bold">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-black uppercase text-slate-400">Type</label>
-                                <select wire:model.live="fieldType"
-                                    class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
-                                    <option value="text">Text</option>
-                                    <option value="number">Number</option>
-                                    <option value="date">Date</option>
-                                    <option value="select">Select (Dropdown)</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        @if($fieldType === 'select')
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-black uppercase text-slate-400">Options (comma separated)</label>
-                                <input type="text" wire:model="fieldOptions" placeholder="e.g. VIP, Regular, New"
-                                    class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
-                            </div>
-                        @endif
-
-                        <div class="pt-2">
-                            <button wire:click="storeField"
-                                class="w-full px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold uppercase text-[10px] hover:scale-[1.02] transition-transform">
-                                {{ $fieldId ? 'Update Field' : 'Create Field' }}
-                            </button>
-                        </div>
-                        @if (session()->has('field_message'))
-                            <div class="text-xs font-bold text-wa-teal">{{ session('field_message') }}</div>
-                        @endif
+                @if($fieldType === 'select')
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Options (comma separated)</label>
+                        <input type="text" wire:model="fieldOptions" placeholder="e.g. VIP, Regular, New"
+                            class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
                     </div>
+                @endif
 
-                    <!-- Existing Fields -->
-                    <div class="space-y-4">
-                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Custom Fields</h3>
-                        <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            @forelse($customFields as $field)
-                                <div
-                                    class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $field->label }}</span>
-                                        <span class="text-[10px] font-bold text-slate-400 uppercase">{{ $field->type }}</span>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button wire:click="editField({{ $field->id }})"
-                                            class="text-slate-400 hover:text-wa-teal transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                            </svg>
-                                        </button>
-                                        <button wire:click="deleteField({{ $field->id }})"
-                                            class="text-slate-400 hover:text-rose-500 transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="text-center py-6 text-slate-400 text-xs italic">No custom fields defined.</div>
-                            @endforelse
+                <div class="pt-2">
+                    <x-app-button variant="primary" class="w-full py-2 text-[10px]" wire:click="storeField">
+                        {{ $fieldId ? 'Update Field' : 'Create Field' }}
+                    </x-app-button>
+                </div>
+                @if (session()->has('field_message'))
+                    <div class="text-xs font-bold text-wa-teal">{{ session('field_message') }}</div>
+                @endif
+            </div>
+
+            <!-- Existing Fields -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Custom Fields</h3>
+                <div class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                    @forelse($customFields as $field)
+                        <div
+                            class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                            <div class="flex flex-col">
+                                <span
+                                    class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $field->label }}</span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">{{ $field->type }}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button wire:click="editField({{ $field->id }})"
+                                    class="text-slate-400 hover:text-wa-teal transition-colors">
+                                    <x-icon name="edit" class="w-4 h-4" />
+                                </button>
+                                <button wire:click="deleteField({{ $field->id }})"
+                                    class="text-slate-400 hover:text-rose-500 transition-colors">
+                                    <x-icon name="trash" class="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    @empty
+                        <div class="text-center py-6 text-slate-400 text-xs italic">No custom fields defined.</div>
+                    @endforelse
                 </div>
             </div>
         </div>
-    @endif
+    </x-app-modal>
+
 
     <!-- Import Modal -->
-    @if($isImportModalOpen)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeImportModal"></div>
-            <div
-                class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div class="p-8 pb-0 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                        Import <span class="text-wa-teal">Contacts</span>
-                    </h2>
-                    <button wire:click="closeImportModal"
-                        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+    <x-app-modal wire:model="isImportModalOpen" maxWidth="5xl" :backdropClose="false">
+
+        <div class="p-8 pb-0">
+            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Import <span class="text-wa-teal">Contacts</span>
+            </h2>
+        </div>
+        <div class="p-8 space-y-6">
+            @if(!$importResult)
+                <!-- Step 1: Upload -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Upload CSV</h3>
+                        <button wire:click="downloadSampleCsv"
+                            class="text-xs font-bold text-wa-teal hover:underline flex items-center gap-1">
+                            <x-icon name="arrow-up-tray" class="w-3 h-3" />
+                            Download Sample
+                        </button>
+                    </div>
+                    <div
+                        class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative group">
+                        <label class="cursor-pointer block">
+                            <input type="file" wire:model="importFile" class="hidden" accept=".csv">
+                            <div class="text-slate-400 mb-2 group-hover:text-wa-teal transition-colors">
+                                <x-icon name="cloud-arrow-up" class="w-12 h-12 mx-auto" />
+                            </div>
+                            <span class="text-sm font-bold text-slate-700 dark:text-white block">
+                                {{ $importFile ? $importFile->getClientOriginalName() : 'Click to Upload CSV' }}
+                            </span>
+                            <span class="text-xs text-slate-400 block mt-1 uppercase tracking-widest font-black">Accepts CSV files only</span>
+                        </label>
+                    </div>
+                    @error('importFile') <span class="text-rose-500 text-xs font-bold">{{ $message }}</span> @enderror
                 </div>
-                <div class="p-8 space-y-6">
-                    @if(!$importResult)
-                        <!-- Step 1: Upload -->
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Upload CSV</h3>
-                                <button wire:click="downloadSampleCsv"
-                                    class="text-xs font-bold text-wa-teal hover:underline flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4 4m4-4v12" />
-                                    </svg>
-                                    Download Sample
-                                </button>
-                            </div>
-                            <div
-                                class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <label class="cursor-pointer block">
-                                    <input type="file" wire:model="importFile" class="hidden" accept=".csv">
-                                    <div class="text-slate-400 mb-2">
-                                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
+
+                <!-- Step 2: Map Columns -->
+                @if($importFile)
+                    <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Map Columns</h3>
+                        <div class="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 max-h-60 overflow-y-auto custom-scrollbar">
+                            @foreach($csvHeaders as $header)
+                                <div class="flex items-center gap-4 mb-3 last:mb-0">
+                                    <div class="w-1/3 text-[10px] font-black uppercase text-slate-500 truncate" title="{{ $header }}">
+                                        {{ $header }}
                                     </div>
-                                    <span class="text-sm font-bold text-slate-700 dark:text-white block">
-                                        {{ $importFile ? $importFile->getClientOriginalName() : 'Click to Upload CSV' }}
-                                    </span>
-                                    <span class="text-xs text-slate-400 block mt-1">Accepts CSV files only</span>
-                                </label>
-                            </div>
-                            @error('importFile') <span class="text-rose-500 text-xs font-bold">{{ $message }}</span> @enderror
+                                    <div class="text-slate-300">
+                                        <x-icon name="chevron-right" class="w-4 h-4" />
+                                    </div>
+                                    <div class="flex-1">
+                                        <select wire:model="columnMapping.{{ $header }}"
+                                            class="w-full px-4 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20 cursor-pointer">
+                                            <option value="">Do not import</option>
+                                            <option value="name">Full Name</option>
+                                            <option value="phone">WhatsApp Number</option>
+                                            <option value="email">Email</option>
+                                            <option value="language">Language</option>
+                                            <option value="category">Category</option>
+                                            <option value="tags">Tags (comma separated)</option>
+                                            <!-- Dynamic fields -->
+                                            @foreach(\App\Models\ContactField::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->get() as $f)
+                                                <option value="attr_{{ $f->key }}">{{ $f->label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
 
-                        <!-- Step 2: Map Columns -->
-                        @if($importFile)
-                            <div class="space-y-4">
-                                <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Map Columns</h3>
-                                <div class="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 max-h-60 overflow-y-auto">
-                                    @foreach($csvHeaders as $header)
-                                        <div class="flex items-center gap-4 mb-3 last:mb-0">
-                                            <div class="w-1/3 text-xs font-bold text-slate-500 truncate" title="{{ $header }}">
-                                                {{ $header }}
-                                            </div>
-                                            <div class="text-slate-300">→</div>
-                                            <div class="flex-1">
-                                                <select wire:model="columnMapping.{{ $header }}"
-                                                    class="w-full px-3 py-2 bg-white dark:bg-slate-700 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal/20">
-                                                    <option value="">Do not import</option>
-                                                    <option value="name">Full Name</option>
-                                                    <option value="phone_number">Phone Number</option>
-                                                    <option value="email">Email</option>
-                                                    <option value="language">Language</option>
-                                                    <option value="tags">Tags (Comma separated)</option>
-                                                    @foreach($customFields as $field)
-                                                        <option value="{{ $field->key }}">{{ $field->label }} (Custom)</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <button wire:click="importContacts"
-                                    class="w-full py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] transition-transform">
-                                    Start Import
-                                </button>
-                            </div>
-                        @endif
-                    @else
-                        <!-- Result -->
-                        <div class="text-center space-y-6">
-                            <div
-                                class="w-20 h-20 bg-wa-teal/10 rounded-full flex items-center justify-center mx-auto text-wa-teal">
-                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-black text-slate-900 dark:text-white">Import Complete!</h3>
-                                <div class="mt-2 text-sm font-medium text-slate-500">
-                                    Success: <span class="text-wa-teal font-bold">{{ $importResult['success_count'] }}</span>
-                                    @if(count($importResult['errors']) > 0)
-                                        | Errors: <span class="text-rose-500 font-bold">{{ count($importResult['errors']) }}</span>
-                                    @endif
-                                </div>
-                            </div>
-
+                        <div class="pt-2">
+                            <x-app-button variant="primary" class="w-full py-3" wire:click="import">
+                                <x-icon name="arrow-up-tray" class="w-4 h-4" />
+                                <span>Start Importing</span>
+                            </x-app-button>
+                        </div>
+                    </div>
+                @endif
+            @else
+                <!-- Result Step -->
+                <div class="text-center py-6 space-y-4">
+                    <div class="w-16 h-16 bg-wa-teal/10 text-wa-teal rounded-full flex items-center justify-center mx-auto">
+                        <x-icon name="plus" class="w-8 h-8" />
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase">Import Complete</h3>
+                        <div class="mt-2 text-sm font-medium text-slate-500 uppercase tracking-widest text-[10px]">
+                            Processed: <span class="text-wa-teal font-black">{{ $importResult['total'] }}</span>
+                            | Saved: <span class="text-wa-teal font-black">{{ $importResult['imported'] }}</span>
                             @if(count($importResult['errors']) > 0)
-                                <div class="bg-rose-50 dark:bg-rose-500/10 rounded-2xl p-4 text-left max-h-40 overflow-y-auto">
-                                    <h4 class="text-xs font-black text-rose-500 uppercase mb-2">Error Log</h4>
-                                    <ul class="space-y-1">
-                                        @foreach($importResult['errors'] as $error)
-                                            <li class="text-[10px] font-medium text-rose-500">• {{ $error }}</li>
-                                        @endforeach
-                                    </ul>
-                                </div>
+                                | Errors: <span class="text-rose-500 font-bold font-black">{{ count($importResult['errors']) }}</span>
                             @endif
+                        </div>
+                    </div>
 
-                            <button wire:click="closeImportModal"
-                                class="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl hover:scale-105 transition-transform">
-                                Close
-                            </button>
+                    @if(count($importResult['errors']) > 0)
+                        <div class="bg-rose-50 dark:bg-rose-500/10 rounded-2xl p-4 text-left max-h-40 overflow-y-auto custom-scrollbar">
+                            <h4 class="text-xs font-black text-rose-500 uppercase mb-2">Error Log</h4>
+                            <ul class="space-y-1">
+                                @foreach($importResult['errors'] as $error)
+                                    <li class="text-[10px] font-bold text-rose-500">• {{ $error }}</li>
+                                @endforeach
+                            </ul>
                         </div>
                     @endif
+
+                    <x-app-button variant="primary" class="px-12 py-3" wire:click="closeImportModal">
+                        Close Done
+                    </x-app-button>
                 </div>
-            </div>
+            @endif
         </div>
-    @endif
+    </x-app-modal>
+
+    <!-- End of Modals -->
 
 
+    <style>
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
 </div>

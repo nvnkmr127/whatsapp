@@ -12,20 +12,14 @@ class EventBusService
      */
     public function publish(string $stream, string $eventType, array $payload, ?int $teamId = null): ?string
     {
-        // Database Implementation (Essential for cPanel/Shared Hosting)
         try {
             $id = DB::table('broadcast_events')->insertGetId([
-                'team_id' => $teamId,
+                'team_id'    => $teamId,
                 'event_type' => $eventType,
-                'payload' => json_encode($payload),
-                'status' => 'pending',
+                'payload'    => json_encode($payload),
+                'status'     => 'pending',
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
-            Log::debug("EventBus: Successfully published to Database", [
-                'event_id' => $id,
-                'type' => $eventType,
-                'team_id' => $teamId
             ]);
             return (string) $id;
         } catch (\Exception $e) {
@@ -35,7 +29,36 @@ class EventBusService
     }
 
     /**
-     * Acknowledge a message (DB).
+     * Publish multiple events to the Database in a single batch.
+     */
+    public function publishBatch(string $stream, array $events): bool
+    {
+        if (empty($events)) {
+            return true;
+        }
+
+        try {
+            $data = array_map(function ($event) {
+                return [
+                    'team_id'    => $event['team_id'] ?? null,
+                    'event_type' => $event['event_type'],
+                    'payload'    => json_encode($event['payload']),
+                    'status'     => 'pending',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }, $events);
+
+            DB::table('broadcast_events')->insert($data);
+            return true;
+        } catch (\Exception $e) {
+            Log::error("EventBus: Failed to publish batch to Database: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Acknowledge messages (DB).
      */
     public function ack(string $stream, string $group, array $ids): void
     {
@@ -44,3 +67,4 @@ class EventBusService
             ->update(['status' => 'completed', 'updated_at' => now()]);
     }
 }
+

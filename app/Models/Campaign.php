@@ -19,16 +19,39 @@ class Campaign extends Model
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'total_contacts' => 'integer',
+        'sent_count' => 'integer',
+        'del_count' => 'integer',
+        'read_count' => 'integer',
     ];
 
     protected static function booted()
     {
         static::saving(function ($campaign) {
+            // Fix field name mapping
             if (empty($campaign->name) && !empty($campaign->campaign_name)) {
                 $campaign->name = $campaign->campaign_name;
             }
             if (empty($campaign->campaign_name) && !empty($campaign->name)) {
                 $campaign->campaign_name = $campaign->name;
+            }
+
+            // --- CAMPAIGN LIFECYCLE GUARDS (UC-SAFE-08) ---
+            if (!$campaign->isDirty('status')) {
+                return;
+            }
+
+            $oldStatus = $campaign->getOriginal('status');
+            $newStatus = $campaign->status;
+
+            // Terminal status protection
+            if (in_array($oldStatus, ['completed', 'failed']) && $newStatus !== $oldStatus) {
+                throw new \Exception("Cannot transition out of terminal campaign state: {$oldStatus}.");
+            }
+
+            // Progress preservation
+            if (in_array($oldStatus, ['sending', 'processing']) && in_array($newStatus, ['scheduled', 'draft'])) {
+                throw new \Exception("Cannot revert a campaign to {$newStatus} once sending has begun.");
             }
         });
     }

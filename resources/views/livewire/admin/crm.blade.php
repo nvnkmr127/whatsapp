@@ -312,14 +312,9 @@
             @endif
         </div>
 
-        {{-- Advanced Details Modal --}}
-        @if($selectedTeam)
-        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 lg:p-8">
-            {{-- Backdrop --}}
-            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeUser()"></div>
-            
-            {{-- Modal Content --}}
-            <div class="relative bg-white w-full max-w-5xl h-[85vh] rounded-[3rem] border border-slate-200 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+        {{-- Advanced Details Modal (Standardized) --}}
+        <x-app-modal wire:model="showTeamModal" maxWidth="5xl" :closeable="false">
+            <div class="relative bg-white dark:bg-slate-900 w-full rounded-[3rem] overflow-hidden flex flex-col h-[85vh]">
                 <div class="flex h-full">
                     {{-- Left Sidebar: Context --}}
                     <div class="w-80 bg-slate-50 border-r border-slate-100 p-8 flex flex-col justify-between">
@@ -725,9 +720,9 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
-        </div>
-        @endif
+        </x-app-modal>
 
             @if($teams->hasPages())
                 <div class="px-8 py-6 bg-slate-50 border-t border-slate-100">

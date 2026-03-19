@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class KnowledgeBaseGap extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $fillable = [
         'team_id',
         'query',
@@ -20,9 +22,4 @@ class KnowledgeBaseGap extends Model
         'search_metadata' => 'array',
         'ai_metadata' => 'array',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }

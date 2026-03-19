@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Team;
-use App\Models\Contact;
+use App\Models\Message;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,15 +19,21 @@ class SendMessageJob implements ShouldQueue
     public $teamId;
     public $phone;
     public $type;
-    public $content; // Message body or Array for template
+    public $content; 
     public $templateName;
     public $language;
     public $messageId;
+    public $traceId;
+    public $headerParams;
+    public $footerParams;
+
+    public $tries = 3;
+    public $backoff = [10, 30, 60];
 
     /**
      * Create a new job instance.
      */
-    public function __construct($teamId, $phone, $type, $content, $templateName = null, $language = 'en_US', $messageId = null)
+    public function __construct($teamId, $phone, $type, $content, $templateName = null, $language = 'en_US', $messageId = null, $traceId = null, $headerParams = [], $footerParams = [])
     {
         $this->onQueue('messages');
         $this->teamId = $teamId;
@@ -37,16 +43,23 @@ class SendMessageJob implements ShouldQueue
         $this->templateName = $templateName;
         $this->language = $language;
         $this->messageId = $messageId;
+        $this->traceId = $traceId;
+        $this->headerParams = $headerParams;
+        $this->footerParams = $footerParams;
     }
-
-    public $tries = 3;
-    public $backoff = [10, 30, 60];
 
     /**
      * Execute the job.
      */
     public function handle(WhatsAppService $waService): void
     {
+        // 1. Restore Trace Context
+        if ($this->traceId) {
+            \App\Services\TraceContext::set($this->traceId);
+        } else {
+            \App\Services\TraceContext::ensureTraceId();
+        }
+
         $team = Team::find($this->teamId);
         if (!$team) {
             Log::error("SendMessageJob: Team not found {$this->teamId}");
@@ -55,15 +68,16 @@ class SendMessageJob implements ShouldQueue
 
         $waService->setTeam($team);
 
-        $existingMessage = $this->messageId ? \App\Models\Message::find($this->messageId) : null;
-
-        // Best Effort Rate Limiting (No Redis)
-        // Limit to ~80 messages per minute per team (Safe Tier 1 approx)
-        // If we had Redis we'd do per second. With DB cache, per minute is safer to avoid hot keys.
-        $limiterKey = "waba_send:{$this->teamId}";
-        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($limiterKey, 4800)) { // 80 MPS * 60 = 4800/min theoretical max, but let's be conservative: 1000/min
-            // Actually, without Redis, high volume locking is bad. Let's just rely on Reactive Jitter mostly.
-            // But we can add a simple check to prevent egregious spikes.
+        // 1. Idempotency Check
+        // If messageId exists, check if it already has a provider ID (meaning it was already sent)
+        if ($this->messageId) {
+            $existingMessage = Message::find($this->messageId);
+            if ($existingMessage && !empty($existingMessage->whatsapp_message_id)) {
+                Log::info("SendMessageJob: Message {$this->messageId} already sent (idempotency triggered). Skipping.");
+                return;
+            }
+        } else {
+            $existingMessage = null;
         }
 
         try {
@@ -76,17 +90,17 @@ class SendMessageJob implements ShouldQueue
                     $this->phone,
                     $this->templateName,
                     $this->language,
-                    $this->content ?? [], // Body Params
-                    [], // Header
-                    [], // Footer
-                    null, // Campaign
+                    $this->content ?? [],
+                    $this->headerParams ?? [],
+                    $this->footerParams ?? [],
+                    null,
                     $existingMessage
                 );
             } elseif ($this->type === 'interactive') {
                 $buttons = $existingMessage ? ($existingMessage->metadata['buttons'] ?? []) : [];
                 $response = $waService->sendInteractiveButtons(
                     $this->phone,
-                    $this->content, // text body
+                    $this->content,
                     $buttons,
                     $existingMessage
                 );
@@ -94,70 +108,63 @@ class SendMessageJob implements ShouldQueue
                 $response = $waService->sendMedia(
                     $this->phone,
                     $this->type,
-                    $this->content, // URL
+                    $this->content,
                     $existingMessage->caption ?? null,
                     $existingMessage
                 );
             }
 
             if (!empty($response['error'])) {
-                $errorMsg = json_encode($response['error']);
-
-                // Policy Check: 24h window (code 131047 or similar)
                 $errorCode = $response['error']['code'] ?? null;
+                
+                // Permanent failures (Policy)
                 if (in_array($errorCode, [131047, 131051])) {
-                    Log::warning("SendMessageJob: Permanent policy failure for {$this->phone}. Code: {$errorCode}");
-                    // Do not throw, so it doesn't retry
+                    Log::warning("SendMessageJob: Policy failure for {$this->phone}. Code: {$errorCode}");
                     return;
                 }
 
+                // Rate limiting with jittered backoff
                 if ($errorCode == 131030) {
-                    // Jittered Backoff to prevent Thundering Herd
-                    // Base 60s + Random(5, 30s)
                     $backoff = 60 + mt_rand(5, 30);
                     Log::notice("SendMessageJob: Rate Limit hit. Backing off {$backoff}s.");
                     $this->release($backoff);
                     return;
                 }
 
-                throw new \Exception($errorMsg);
+                throw new \Exception(json_encode($response['error']));
             }
 
         } catch (\Exception $e) {
             Log::error("Failed to send message to {$this->phone}: " . $e->getMessage());
 
-            // Check for policy strings if code wasn't enough
             if (str_contains($e->getMessage(), 'Policy UC-03') || str_contains($e->getMessage(), '24-hour window')) {
-                Log::warning("SendMessageJob: Policy exception detected. Stopping retries.");
                 return;
             }
 
-
-            // Throw to trigger retry for transient issues
             throw $e;
         }
     }
+
     /**
      * Handle a job failure.
      */
     public function failed(\Throwable $exception): void
     {
         if ($this->messageId) {
-            $message = \App\Models\Message::find($this->messageId);
+            $message = Message::find($this->messageId);
             if ($message) {
-                // Determine if it was a policy failure or generic
-                // We truncate error message to fit DB column if restricted, but usually text is fine
-                $errorText = mb_strimwidth($exception->getMessage(), 0, 500, '...');
-
                 $message->update([
                     'status' => 'failed',
-                    'error_message' => $errorText
+                    'error_message' => mb_strimwidth($exception->getMessage(), 0, 500, '...')
                 ]);
 
-                // Broadcast update so UI sees red exclamation immediately
                 try {
                     \App\Events\MessageStatusUpdated::dispatch($message);
-                } catch (\Exception $e) { /* ignore broadcast fail */
+                } catch (\Exception $e) {
+                    Log::error("Failed to update message status after job failure: " . $e->getMessage(), [
+                        'message_id' => $this->messageId,
+                        'trace_id' => $this->traceId
+                    ]);
                 }
             }
         }
@@ -165,3 +172,4 @@ class SendMessageJob implements ShouldQueue
         Log::error("SendMessageJob completely failed for ID: {$this->messageId}. Error: " . $exception->getMessage());
     }
 }
+

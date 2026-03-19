@@ -16,8 +16,8 @@ class BroadcastSafetyValidator
         $errors = [];
 
         // 1. Check segment size limits
-        if ($segment->member_count > config('broadcast.max_recipients', 100000)) {
-            $errors[] = "Segment too large ({$segment->member_count} contacts). Max: 100,000";
+        if ($segment->member_count > config('broadcast.max_recipients')) {
+            $errors[] = "Segment too large ({$segment->member_count} contacts). Max: " . config('broadcast.max_recipients');
         }
 
         // 2. Check rate limits
@@ -25,7 +25,7 @@ class BroadcastSafetyValidator
             ->where('created_at', '>=', now()->subHour())
             ->sum('recipient_count');
 
-        $hourlyLimit = config('broadcast.hourly_limit', 10000);
+        $hourlyLimit = config('broadcast.hourly_limit');
         if ($recentBroadcasts + $segment->member_count > $hourlyLimit) {
             $errors[] = "Hourly rate limit exceeded. Used: {$recentBroadcasts}/{$hourlyLimit}";
         }

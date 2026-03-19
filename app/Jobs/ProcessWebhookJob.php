@@ -51,8 +51,6 @@ class ProcessWebhookJob implements ShouldQueue
      */
     public function handle(\App\Services\EventBusService $eventBus): void
     {
-        Log::debug("ProcessWebhookJob: Handle method called (Starting execution)");
-
         // Restore Trace Context
         if ($this->traceId) {
             \App\Services\TraceContext::set($this->traceId);
@@ -60,408 +58,70 @@ class ProcessWebhookJob implements ShouldQueue
             \App\Services\TraceContext::ensureTraceId();
         }
 
-        Log::info("ProcessWebhookJob (Stream Producer) started for Payload ID: {$this->payloadId} [Trace: " . \App\Services\TraceContext::getTraceId() . "]");
+        Log::info("ProcessWebhookJob (Producer) started for Payload ID: {$this->payloadId}");
         $payloadRecord = WebhookPayload::find($this->payloadId);
 
-        if (!$payloadRecord) {
-            Log::error("Webhook Payload not found: {$this->payloadId}");
-            return;
-        }
+        if (!$payloadRecord) return;
 
         $payloadRecord->update(['status' => 'processing']);
 
         try {
             $body = $payloadRecord->payload;
-
-            // Normalize payload
-            if (is_string($body)) {
-                $body = json_decode($body, true);
-            }
+            if (is_string($body)) $body = json_decode($body, true);
 
             if (empty($body['entry'][0]['changes'][0]['value'])) {
-                $payloadRecord->update(['status' => 'processed', 'error_message' => 'No changes found']);
+                $payloadRecord->update(['status' => 'processed']);
                 return;
             }
 
             $change = $body['entry'][0]['changes'][0]['value'];
             $metadata = $change['metadata'] ?? [];
             $phoneId = $metadata['phone_number_id'] ?? null;
-            $teamId = null;
+            $teamId = $this->resolveTeamId($body, $change, $phoneId);
 
-            // Helper to resolve and cache Team ID (only caches hits to avoid caching nulls during race conditions)
-            $resolveTeamId = function ($key, $column, $value) {
-                $tid = \Illuminate\Support\Facades\Cache::get($key);
-                if (!$tid) {
-                    $tid = Team::where($column, $value)->value('id');
-                    if ($tid) {
-                        \Illuminate\Support\Facades\Cache::put($key, $tid, 3600);
-                    }
+            if ($teamId && $this->isTeamUnderMaintenance($teamId, 'release', 60)) return;
+
+            if (!$teamId) {
+                // Handle retry for unresolved team
+                if ($this->attempts() < $this->tries) {
+                    $this->release($this->backoff[$this->attempts() - 1] ?? 60);
+                    return;
                 }
-                return $tid;
-            };
-
-            if ($phoneId) {
-                $teamId = $resolveTeamId("team_id_by_phone_id:{$phoneId}", 'whatsapp_phone_number_id', $phoneId);
-            }
-
-            // ─────────────────────────────────────────────────────────────
-            // MAINTENANCE GUARD: Release back to queue if team is under
-            // backup/restore maintenance. Webhook data is PRESERVED (not dropped).
-            // Will be re-processed after maintenance mode lifts.
-            // ─────────────────────────────────────────────────────────────
-            if ($teamId && $this->isTeamUnderMaintenance($teamId, 'release', 60)) {
+                $payloadRecord->update(['status' => 'failed', 'error_message' => 'Team ID resolution failed']);
                 return;
             }
 
-            // Fallback 1: Resolve via WABA ID at entry level (entry[0].id)
-            if (!$teamId) {
-                $wabaId = $body['entry'][0]['id'] ?? null;
-                if ($wabaId) {
-                    $teamId = $resolveTeamId("team_id_by_waba_id:{$wabaId}", 'whatsapp_business_account_id', $wabaId);
-                }
-            }
-
-            // Fallback 2: Resolve via WABA ID inside changes value (e.g., account_update events)
-            $discoveredWabaId = null;
-            if (!$teamId) {
-                $discoveredWabaId = $change['waba_id'] ?? $change['waba_info']['waba_id'] ?? null;
-                if ($discoveredWabaId) {
-                    $teamId = $resolveTeamId("team_id_by_waba_id:{$discoveredWabaId}", 'whatsapp_business_account_id', $discoveredWabaId);
-                }
-            }
-
-            Log::debug("WhatsApp Webhook: Resolution Check", [
-                'extracted_phone_id' => $phoneId,
-                'extracted_waba_id' => $body['entry'][0]['id'] ?? 'N/A',
-                'discovered_waba_id' => $discoveredWabaId ?? 'N/A',
-                'resolved_team_id' => $teamId
-            ]);
-
-            if (!$teamId) {
-                // Retry logic for race conditions (e.g., Embedded Signup where Team isn't updated yet)
-                $hasPotentialId = $phoneId || ($body['entry'][0]['id'] ?? null) || $discoveredWabaId;
-                
-                if ($hasPotentialId) {
-                    Log::warning("WhatsApp Webhook: Could not resolve Team ID (Attempt " . $this->attempts() . "). Retrying...", [
-                        'phone_id' => $phoneId,
-                        'entry_id' => $body['entry'][0]['id'] ?? 'N/A',
-                        'discovered_waba_id' => $discoveredWabaId ?? 'N/A'
-                    ]);
-
-                    if ($this->attempts() < $this->tries) {
-                        $delay = $this->backoff[$this->attempts() - 1] ?? 60;
-                        $this->release($delay);
-                        return;
-                    } else {
-                        Log::error("WhatsApp Webhook: Failed to resolve Team ID after " . $this->tries . " attempts.");
-                        $payloadRecord->update(['status' => 'failed', 'error_message' => 'Could not resolve Team ID after retries']);
-                        return;
-                    }
-                }
-
-                Log::warning("WhatsApp Webhook: Could not resolve Team ID and no identifiers found.");
-            }
-
-            // 1. Handle Messages (Inbound)
-            if (isset($change['messages']) && is_array($change['messages'])) {
-                foreach ($change['messages'] as $messageData) {
-                    $wamid = $messageData['id'] ?? null;
-
-                    // Deduplication Check
-                    if ($wamid && Message::where('whatsapp_message_id', $wamid)->exists()) {
-                        Log::info("Duplicate Message Ignored: {$wamid}");
-                        $payloadRecord->update(['status' => 'processed', 'error_message' => "Duplicate: {$wamid}"]);
-                        return;
-                    }
-
-                    // Construct standardized event
-                    $event = \App\Factories\EventFactory::makeInboundMessage($body);
-
-                    Log::debug("WhatsApp Webhook: Dispatching PersistMessageJob for Inbound Message", [
-                        'team_id' => $teamId,
-                        'message_id' => $wamid
-                    ]);
-
-                    // ⚡ Dispatch to messages queue for parallel processing
-                    \App\Jobs\PersistMessageJob::dispatch($event['payload'])
-                        ->onQueue('messages');
-
-                    // Still publish to EventBus for audit/fan-out
-                    $eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $teamId);
-
-                    Log::info("Handled Inbound Message (Direct Dispatch): {$wamid}");
-                }
-            }
-
-            // 2. Handle Status Updates
-            if (isset($change['statuses']) && is_array($change['statuses'])) {
-                foreach ($change['statuses'] as $statusData) {
-                    $wamid = $statusData['id'] ?? null;
-                    $newStatus = $statusData['status'] ?? null;
-
-                    // Optional: Deduplicate status updates if needed, but usually idempotent updates are fine.
-                    // We can check if the message is already in that status to save DB writes, but it's optimization, not critical reliability.
-
-                    $payload = [
-                        'provider_message_id' => $statusData['id'],
-                        'status' => $statusData['status'],
-                        'timestamp' => $statusData['timestamp'] ?? time(),
-                        'details' => $statusData
-                    ];
-
-                    Log::debug("WhatsApp Webhook: Dispatching UpdateMessageStatusJob for Status Update", [
-                        'message_id' => $wamid,
-                        'status' => $newStatus
-                    ]);
-
-                    // ⚡ Dispatch to messages queue for parallel processing
-                    \App\Jobs\UpdateMessageStatusJob::dispatch($payload)
-                        ->onQueue('messages');
-
-                    // Still publish to EventBus
-                    $eventBus->publish('whatsapp_events', 'message.status', $payload, $teamId);
-                }
-            }
-
-            // 3. Handle Template Status Updates
-            if (($change['field'] ?? '') === 'message_template_status_update') {
-                $tId = $change['message_template_id'] ?? null;
-                $newStatus = $change['event'] ?? null; // APPROVED, REJECTED, PAUSED, FLAGGED, DISABLED
-
-                if ($tId && $newStatus) {
-                    $tpl = \App\Models\WhatsappTemplate::where('whatsapp_template_id', $tId)->first();
-
-                    if ($tpl) {
-                        $tpl->update(['status' => $newStatus]);
-
-                        if ($newStatus === 'FLAGGED' || $newStatus === 'DISABLED') {
-                            Log::critical("Template {$tpl->name} ({$tId}) is {$newStatus}. Immediate attention required.");
-                            // Future: Dispatch alert notification
-                        } else {
-                            Log::info("Template {$tpl->name} status updated to {$newStatus}.");
-                        }
-                    } else {
-                        Log::warning("Received status update [{$newStatus}] for unknown Template ID: {$tId}. Sync may be required.");
-                    }
-                }
-            }
-
-            // 4. Handle Account Updates (and Quality Updates)
-            if (($change['field'] ?? '') === 'phone_number_quality_update') {
-                $status = $change['new_status'] ?? 'UNKNOWN'; // APPROVED, FLAGGED, RESTRICTED, UNKNOWN
-                $quality = $change['new_quality_score'] ?? 'UNKNOWN'; // GREEN, YELLOW, RED
-
-                Log::info("WhatsApp Quality Update: Status={$status}, Quality={$quality}", ['payload' => $change]);
-
-                // Circuit Breaker: Pause everything if FLAGGED or RESTRICTED or RED
-                if (in_array($status, ['FLAGGED', 'RESTRICTED']) || $quality === 'RED') {
-                    // Log Critical and Attempt Pause if we can resolve Team.
-                    Log::critical("CRITICAL: WhatsApp Account Risk! Status: {$status}. IMMEDIATE ACTION REQUIRED.");
-
-                    // Dispatch Risk Event
-                    \App\Events\WhatsAppAccountRisk::dispatch('QUALITY_UPDATE', $change, null); // TeamID null for now unless resolved
-                }
-            }
-
-            // 5. Handle Calls
-            if (isset($change['calls']) && is_array($change['calls'])) {
-                try {
-                    \Illuminate\Support\Facades\Log::channel('whatsapp')->info("RECEIVED CALL WEBHOOK. Team Resolved: " . ($teamId ?? 'NULL'));
-                } catch (\Exception $e) {
-                    // Silently fail
-                }
-
-                if ($teamId) {
-                    $team = Team::find($teamId);
-                    if ($team) {
-                        $callProcessor = new \App\Services\WhatsAppCallProcessor();
-                        $callProcessor->process($team, $change['calls']);
-                    }
-                } else {
-                    Log::warning("Received call event but couldn't resolve Team.", ['phone_id' => $phoneId]);
-                }
-            }
-
-            // 6. Handle Account Settings Updates (Call Settings)
-            if (($change['field'] ?? '') === 'account_settings_update') {
-                Log::info("WhatsApp Account Settings Update Received", ['payload' => $change]);
-
-                if ($teamId && $phoneId) {
-                    $team = Team::find($teamId);
-                    if ($team) {
-                        // Update call settings if calling-related changes
-                        $this->handleCallSettingsUpdate($team, $phoneId, $change);
-                    }
-                }
-
-                // Dispatch event for system to react
-                \App\Events\WhatsAppAccountUpdated::dispatch($change);
-            }
-
-            // 7. Handle Account Updates (Quality, Restrictions, etc.)
-            if (($change['field'] ?? '') === 'account_update') {
-                Log::info("WhatsApp Account Update Received", ['payload' => $change]);
-
-                if ($teamId && $phoneId) {
-                    $team = Team::find($teamId);
-                    if ($team) {
-                        // Handle call restrictions
-                        $this->handleCallRestrictions($team, $phoneId, $change);
-                    }
-                }
-
-                // Dispatch event for system to react
-                \App\Events\WhatsAppAccountUpdated::dispatch($change);
-            }
-
-            // 8. Handle Interactive Message Responses (Permission Grants)
-            if (isset($change['messages']) && is_array($change['messages'])) {
-                foreach ($change['messages'] as $messageData) {
-                    if (($messageData['type'] ?? '') === 'interactive') {
-                        $this->handleInteractiveResponse($messageData, $teamId);
-                    }
-                }
-            }
+            // Router Pattern: Delegate all event handling logic to the Router
+            $router = new \App\Core\Webhooks\WhatsAppEventRouter($eventBus, $teamId, $phoneId);
+            $router->route($change, $body);
 
             $payloadRecord->update(['status' => 'processed']);
 
         } catch (\Exception $e) {
             Log::error("Webhook Producer Failed: " . $e->getMessage());
-            // Do NOT update to 'failed' here if we want to retry!
-            // But if we throw, Laravel will handle the retry. 
-            // We should record the attempt error in the payload though? 
-            // Actually, if we throw, the job is released back to queue.
-            // We can update the status to 'retrying' or similar if we want, but 'processing' is fine until it finally fails.
-
-            // However, the catch block in original code swallowed the error (after logging) AND updated status to failed.
-            // This prevented retry.
-            // We MUST throw $e to trigger retry.
-            // And we probably shouldn't set checks to 'failed' yet unless final attempt.
-
-            // Let's update `error_message` but keep status 'processing' or 'pending' maybe?
-            $payloadRecord->update(['error_message' => $e->getMessage()]); // Keep trace
-
+            $payloadRecord->update(['error_message' => $e->getMessage()]);
             throw $e;
         }
     }
 
-    /**
-     * Handle call settings updates from webhook
-     */
-    protected function handleCallSettingsUpdate(Team $team, string $phoneId, array $change): void
+    protected function resolveTeamId(array $body, array $change, ?string $phoneId): ?int
     {
-        $settings = \App\Models\CallSettings::where('team_id', $team->id)
-            ->where('phone_number_id', $phoneId)
-            ->first();
+        $resolve = function ($col, $val) {
+            $key = "team_id_by_{$col}:{$val}";
+            return \Illuminate\Support\Facades\Cache::remember($key, 3600, function () use ($col, $val) {
+                return Team::where($col, $val)->value('id');
+            });
+        };
 
-        if (!$settings) {
-            return; // No local settings to update
-        }
+        if ($phoneId) return $resolve('whatsapp_phone_number_id', $phoneId);
+        
+        $entryId = $body['entry'][0]['id'] ?? null;
+        if ($entryId) return $resolve('whatsapp_business_account_id', $entryId);
 
-        // Update based on webhook data
-        if (isset($change['calling'])) {
-            $callingData = $change['calling'];
+        $wabaId = $change['waba_id'] ?? $change['waba_info']['waba_id'] ?? null;
+        if ($wabaId) return $resolve('whatsapp_business_account_id', $wabaId);
 
-            $updates = [];
-            if (isset($callingData['status'])) {
-                $updates['calling_enabled'] = strtoupper($callingData['status']) === 'ENABLED';
-            }
-            if (isset($callingData['call_icon_visibility'])) {
-                $updates['call_icon_visibility'] = strtoupper($callingData['call_icon_visibility']) === 'DEFAULT' ? 'show' : 'hide';
-            }
-            if (isset($callingData['callback_permission_status'])) {
-                $updates['callback_permission_enabled'] = strtoupper($callingData['callback_permission_status']) === 'ENABLED';
-            }
-
-            if (!empty($updates)) {
-                $settings->update($updates);
-                Log::info('Call settings updated from webhook', [
-                    'team_id' => $team->id,
-                    'phone_id' => $phoneId,
-                    'updates' => $updates,
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Handle call restrictions from webhook
-     */
-    protected function handleCallRestrictions(Team $team, string $phoneId, array $change): void
-    {
-        $settings = \App\Models\CallSettings::where('team_id', $team->id)
-            ->where('phone_number_id', $phoneId)
-            ->first();
-
-        if (!$settings) {
-            return;
-        }
-
-        // Check for enforcement actions
-        if (isset($change['enforcement_action'])) {
-            $action = $change['enforcement_action'];
-            $reason = $change['enforcement_reason'] ?? 'Unknown';
-
-            if ($action === 'CALLING_RESTRICTED' || $action === 'CALLING_DISABLED') {
-                $settings->applyRestriction($reason);
-
-                Log::critical('Call restriction applied', [
-                    'team_id' => $team->id,
-                    'phone_id' => $phoneId,
-                    'action' => $action,
-                    'reason' => $reason,
-                ]);
-
-                // Dispatch alert event
-                \App\Events\CallRestrictionApplied::dispatch($team, $settings, $reason);
-            }
-        }
-
-        // Check for low pickup rate or negative feedback
-        if (isset($change['call_quality_issue'])) {
-            $issue = $change['call_quality_issue'];
-
-            Log::warning('Call quality issue reported', [
-                'team_id' => $team->id,
-                'phone_id' => $phoneId,
-                'issue' => $issue,
-            ]);
-        }
-    }
-
-    /**
-     * Handle interactive message responses (e.g., permission grants)
-     */
-    protected function handleInteractiveResponse(array $messageData, ?int $teamId): void
-    {
-        if (!$teamId) {
-            return;
-        }
-
-        $buttonReply = $messageData['interactive']['button_reply'] ?? null;
-        if (!$buttonReply) {
-            return;
-        }
-
-        $payload = json_decode($buttonReply['payload'] ?? '{}', true);
-
-        if (($payload['action'] ?? '') === 'grant_call_permission') {
-            $permissionId = $payload['permission_id'] ?? null;
-
-            if ($permissionId) {
-                $permission = \App\Models\CallPermission::find($permissionId);
-
-                if ($permission && $permission->permission_status === 'requested') {
-                    $permissionService = new \App\Services\CallPermissionService();
-                    $permissionService->grantPermission($permission);
-
-                    Log::info('Call permission granted via interactive response', [
-                        'permission_id' => $permissionId,
-                        'contact_id' => $permission->contact_id,
-                    ]);
-                }
-            }
-        }
+        return null;
     }
 
     /**
@@ -469,11 +129,7 @@ class ProcessWebhookJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error("ProcessWebhookJob (Producer) FAILED for Payload ID {$this->payloadId}: " . $exception->getMessage(), [
-            'trace_id' => $this->traceId,
-            'exception' => $exception
-        ]);
-
+        Log::error("ProcessWebhookJob FAILED for Payload ID {$this->payloadId}");
         WebhookPayload::where('id', $this->payloadId)->update([
             'status' => 'failed',
             'error_message' => $exception->getMessage()

@@ -50,6 +50,7 @@ class WhatsappTemplate extends Model
     public function scopeSafeForSending($query)
     {
         return $query->where('status', 'APPROVED')
-            ->where('is_paused', false);
+            ->where('is_paused', false)
+            ->where('readiness_score', '>=', 70);
     }
 }

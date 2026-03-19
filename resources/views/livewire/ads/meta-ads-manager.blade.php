@@ -6,33 +6,25 @@
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <span class="text-wa-teal font-bold text-sm tracking-widest uppercase">Meta Ads</span>
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <x-icon name="chevron-right" class="w-4 h-4 text-gray-400" />
                     <span class="text-gray-400 text-sm font-medium">Ad Manager</span>
                 </div>
+
                 <h2 class="text-3xl font-black text-slate-900 tracking-tight">Ads Overview</h2>
             </div>
 
             <div class="flex items-center gap-3">
                 @if($selectedAdAccount)
-                    <a href="{{ route('ads.create', ['adAccountId' => $selectedAdAccount]) }}"
-                        class="bg-wa-teal hover:bg-wa-dark text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-wa-teal/20 transition-all flex items-center gap-2 group">
-                        <svg class="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
+                    <x-app-button variant="primary" href="{{ route('ads.create', ['adAccountId' => $selectedAdAccount]) }}" tag="a">
+                        <x-icon name="plus" class="w-5 h-5 group-hover:rotate-90 transition-transform" />
                         Create Ad
-                    </a>
+                    </x-app-button>
+
                 @endif
-                <button wire:click="$refresh"
-                    class="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-wa-teal hover:border-wa-teal/30 transition-all shadow-sm">
-                    <svg class="w-5 h-5 {{ $isLoading ? 'animate-spin' : '' }}" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                </button>
+                <x-app-button variant="secondary" wire:click="$refresh" class="p-2.5">
+                    <x-icon name="arrow-path" class="w-5 h-5 {{ $isLoading ? 'animate-spin' : '' }}" />
+                </x-app-button>
+
             </div>
         </div>
 
@@ -260,15 +252,17 @@
                                 <!-- Navigation & Date -->
                                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div class="flex items-center gap-1.5 p-1 bg-white border border-gray-200 rounded-2xl">
+                                        @if($viewLevel !== 'campaigns')
+                                            <x-app-button variant="ghost" wire:click="goBack" class="gap-2 text-sm font-black text-slate-900">
+                                                <x-icon name="arrow-left" class="w-4 h-4" />
+                                                Back to {{ $viewLevel === 'ads' ? 'Ad Groups' : 'Campaigns' }}
+                                            </x-app-button>
+                                        @endif
                                         <button wire:click="loadCampaigns"
                                             class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all {{ $viewLevel === 'campaigns' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50' }}">Campaigns</button>
 
                                         @if($selectedCampaign)
-                                            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 5l7 7-7 7" />
-                                            </svg>
+                                            <x-icon name="chevron-right" class="w-4 h-4 text-gray-300" />
                                             <button wire:click="viewAdSets('{{ $selectedCampaign['id'] }}')"
                                                 class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all {{ $viewLevel === 'adsets' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50' }}">
                                                 {{ Str::limit($selectedCampaign['name'], 20) }}
@@ -276,11 +270,7 @@
                                         @endif
 
                                         @if($selectedAdSet)
-                                            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 5l7 7-7 7" />
-                                            </svg>
+                                            <x-icon name="chevron-right" class="w-4 h-4 text-gray-300" />
                                             <span
                                                 class="px-4 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-900">Ads</span>
                                         @endif
@@ -303,11 +293,8 @@
                                     <div class="flex-1 relative">
                                         <div
                                             class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
+                                             <x-icon name="search" class="w-5 h-5" />
+                                         </div>
                                         <input type="text" wire:model.live.debounce.300ms="searchTerm"
                                             placeholder="Search names..."
                                             class="w-full bg-white border-gray-200 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-wa-teal/20 focus:border-wa-teal transition-all placeholder-slate-400">
@@ -323,11 +310,9 @@
 
                                         @if(!empty($selectedIds))
                                             <div class="flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
-                                                <button wire:click="bulkAction('resume')"
-                                                    class="bg-green-100 text-green-700 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-green-200 transition-colors">Start</button>
-                                                <button wire:click="bulkAction('pause')"
-                                                    class="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">Stop</button>
-                                            </div>
+                                                 <x-app-button variant="secondary" wire:click="bulkAction('resume')" class="bg-green-100 text-green-700 hover:bg-green-200">Start</x-app-button>
+                                                 <x-app-button variant="secondary" wire:click="bulkAction('pause')" class="bg-slate-100 text-slate-700 hover:bg-slate-200">Stop</x-app-button>
+                                             </div>
                                         @endif
                                     </div>
                                 </div>
@@ -404,19 +389,11 @@
                                                         {{ number_format($campaign['insights']['ctr'] ?? 0, 2) }}%</td>
                                                     <td class="px-6 py-5">
                                                         <div class="flex items-center gap-2">
-                                                            <button wire:click="viewAdSets('{{ $campaign['id'] }}')"
-                                                                class="p-2 text-slate-400 hover:text-wa-teal transition-colors"
-                                                                title="View Ad Groups">
-                                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
-                                                                    viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2"
-                                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                                </svg>
-                                                            </button>
+                                                            <x-app-button variant="ghost" wire:click="viewAdSets('{{ $campaign['id'] }}')" class="p-2" title="View Ad Groups">
+                                                                <x-icon name="eye" class="w-5 h-5" />
+                                                            </x-app-button>
                                                         </div>
+
                                                     </td>
                                                 </tr>
                                             @empty

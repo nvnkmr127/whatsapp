@@ -403,12 +403,10 @@
                 </div>
 
                 <!-- Phone Frame Appearance -->
-                <div class="relative mx-auto w-[320px] bg-[#0b141a] rounded-[3rem] p-3 shadow-2xl border-[8px] border-slate-900 overflow-hidden min-h-[580px]"
-                    style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; background-position: center;">
-
+                <x-whatsapp-phone bg="bg-wa-dark-bg" darkBg="dark:bg-wa-dark-bg" :pattern="true">
                     <div class="mt-8 space-y-3">
                         <div
-                            class="bg-white dark:bg-[#202c33] rounded-tr-2xl rounded-bl-2xl rounded-br-2xl p-2.5 shadow-md relative animate-in fade-in slide-in-from-left-4 duration-500">
+                            class="bg-white dark:bg-wa-dark-surface rounded-tr-2xl rounded-bl-2xl rounded-br-2xl p-2.5 shadow-md relative animate-in fade-in slide-in-from-left-4 duration-500">
                             <!-- Media Preview -->
                             <template x-if="previewUrl">
                                 <div
@@ -420,7 +418,7 @@
                                     <template x-if="inputType === 'DOCUMENT'">
                                         <div class="p-3 flex items-center gap-3">
                                             <div
-                                                class="w-10 h-10 bg-wa-teal rounded-lg flex items-center justify-center text-white">
+                                                class="w-10 h-10 bg-wa-brand rounded-lg flex items-center justify-center text-white">
                                                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                                     <path
                                                         d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
@@ -455,13 +453,13 @@
                         <template x-if="buttons.length > 0">
                             <div class="space-y-1 w-[90%]">
                                 <template x-for="btn in buttons">
-                                    <div class="bg-white/95 dark:bg-[#202c33]/95 backdrop-blur shadow-sm text-center text-wa-teal py-2.5 rounded-xl text-[13px] font-bold border-t border-slate-100 dark:border-slate-700/50"
+                                    <div class="bg-white/95 dark:bg-wa-dark-surface/95 backdrop-blur shadow-sm text-center text-wa-brand py-2.5 rounded-xl text-[13px] font-bold border-t border-slate-100 dark:border-slate-700/50"
                                         x-text="btn.text"></div>
                                 </template>
                             </div>
                         </template>
                     </div>
-                </div>
+                </x-whatsapp-phone>
 
                 <div class="mt-6 p-4 bg-slate-100 dark:bg-slate-800/50 rounded-2xl flex items-start gap-3">
                     <svg class="w-5 h-5 text-slate-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

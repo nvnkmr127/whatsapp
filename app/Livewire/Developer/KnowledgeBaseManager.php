@@ -6,6 +6,7 @@ use App\Models\KnowledgeBaseSource;
 use App\Services\KnowledgeBaseService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -255,6 +256,13 @@ class KnowledgeBaseManager extends Component
         $gap = \App\Models\KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
         $gap->update(['status' => 'ignored']);
         session()->flash('success', 'Gap ignored.');
+    }
+
+    #[Computed]
+    public function editingSource()
+    {
+        if (!$this->editingId) return null;
+        return KnowledgeBaseSource::where('team_id', Auth::user()->currentTeam->id)->find($this->editingId);
     }
 
     public function render()

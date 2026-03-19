@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class WorkflowLog extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'workflow_id',
@@ -34,10 +35,7 @@ class WorkflowLog extends Model
         return $this->belongsTo(Workflow::class);
     }
 
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function subject(): MorphTo
     {

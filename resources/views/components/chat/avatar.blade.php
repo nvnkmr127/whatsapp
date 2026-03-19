@@ -7,7 +7,7 @@
 
     @if($showStatus)
         <div @class([
-            'absolute bottom-0 right-0 border-2 border-white dark:border-[#111b21] rounded-full',
+            'absolute bottom-0 right-0 border-2 border-white dark:border-wa-dark-elevated rounded-full',
             'bg-emerald-500' => $isOnline,
             'bg-rose-500' => !$isOnline,
             'w-3 h-3' => $size >= 10,

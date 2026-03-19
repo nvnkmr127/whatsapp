@@ -24,19 +24,28 @@ class BroadcastService
     {
         Log::info("Launching Event-Driven Campaign {$campaign->id}");
 
-        // 0. Complete Billing & Plan Preflight Validation (BEFORE QUEUE DISPATCH)
-        // Ensure we check if the entire bulk batch payload will fit within remaining limits
         $expectedCount = $campaign->total_contacts ?? 0;
-        $messagesUsed = \App\Models\Message::where('team_id', $campaign->team_id)
-            ->where('direction', 'outbound')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
+        
+        if ($expectedCount === 0) {
+            $campaign->update(['status' => 'failed', 'error_message' => 'Campaign has no contacts.']);
+            return null;
+        }
 
-        // Calculate maximum potential cost (estimated for wallet check)
-        $costPerMessage = 0.05; // Typical Meta marketing fallback if unknown
-        if ($campaign->template && $campaign->template->category === 'MARKETING')
-            $costPerMessage = 0.10;
+        // 0. Complete Billing & Plan Preflight Validation (BEFORE QUEUE DISPATCH)
+        
+        // Cache the message count for 5 minutes (300s) to avoid expensive DB scans on huge message tables
+        $cacheKey = "team_msg_count_month:{$campaign->team_id}:" . now()->format('Y-m');
+        $messagesUsed = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($campaign) {
+            return \App\Models\Message::where('team_id', $campaign->team_id)
+                ->where('direction', 'outbound')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+        });
+
+        // Calculate maximum potential cost (using unified config pricing)
+        $category = $campaign->template ? strtolower($campaign->template->category) : 'marketing';
+        $costPerMessage = config("whatsapp.pricing.{$category}", 0.05); 
         $estimatedCost = $expectedCount * $costPerMessage;
 
         $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
@@ -51,6 +60,7 @@ class BroadcastService
             $campaign->update(['status' => 'failed', 'error_message' => $preflight['reason']]);
             throw new \Exception("Campaign launch aborted (PRE-QUEUE): {$preflight['reason']} [Code: {$preflight['code']}]");
         }
+
 
         // 0.1 WhatsApp Health Check (CRITICAL)
         $this->verifyHealth($campaign->team);

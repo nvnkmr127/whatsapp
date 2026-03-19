@@ -10,11 +10,9 @@
             <div class="space-y-2">
                 <div class="flex items-center gap-3">
                     <div class="p-3 bg-wa-teal/10 text-wa-teal rounded-2xl">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <x-icon name="clock" class="w-6 h-6" />
                     </div>
+
                     <div>
                         <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">System
                             Activity</h2>
@@ -46,10 +44,8 @@
                 <div class="relative group">
                     <div
                         class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-wa-teal transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <x-icon name="search" class="w-4 h-4" />
+
                     </div>
                     <input wire:model.live.debounce.300ms="search" type="text"
                         class="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-950 border-transparent focus:border-wa-teal focus:ring-wa-teal/10 rounded-2xl text-sm font-bold placeholder-slate-400 text-slate-700 dark:text-slate-200 transition-all"
@@ -150,11 +146,7 @@
                         <tr>
                             <td colspan="5" class="px-8 py-12 text-center">
                                 <div class="flex flex-col items-center gap-2 opacity-20">
-                                    <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                                    <x-icon name="clock" class="w-12 h-12 text-slate-400" />
                                     <p class="text-xs font-black uppercase tracking-widest text-slate-400">No events
                                         captured</p>
                                 </div>

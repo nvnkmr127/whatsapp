@@ -73,7 +73,8 @@ class ContactManager extends Component
         'language' => 'required|string|max:10',
         'opt_in_status' => 'required|in:opted_in,opted_out',
         'category_id' => 'nullable|exists:categories,id',
-        'selectedTags' => 'array',
+        'selectedTags' => 'nullable',
+
         'customAttributes' => 'array',
     ];
 
@@ -218,7 +219,9 @@ class ContactManager extends Component
             $contactService = new \App\Services\ContactService();
             $contact = $contactService->createOrUpdate($data);
 
-            $contact->tags()->sync($this->selectedTags);
+            $tagsToSync = is_array($this->selectedTags) ? $this->selectedTags : (empty($this->selectedTags) ? [] : [$this->selectedTags]);
+            $contact->tags()->sync($tagsToSync);
+
 
             audit(
                 $this->contactId ? 'contact.updated' : 'contact.created',
@@ -267,49 +270,12 @@ class ContactManager extends Component
         $this->resetValidation();
     }
 
-    // Tag Management
-    public $isTagModalOpen = false;
-    public $newTagName = '';
-    public $newTagColor = '#10B981'; // Default Green
-
+    // Tag Management (Now handled by child component)
     public function openTagModal()
     {
-        $this->isTagModalOpen = true;
-        $this->newTagName = '';
-        $this->newTagColor = '#10B981';
+        $this->dispatch('openTagManager')->to(TagManager::class);
     }
 
-    public function closeTagModal()
-    {
-        $this->isTagModalOpen = false;
-    }
-
-    public function createTag()
-    {
-        $this->validate([
-            'newTagName' => 'required|string|max:50',
-            'newTagColor' => 'required|string|regex:/^#[a-fA-F0-9]{6}$/',
-        ]);
-
-        ContactTag::create([
-            'team_id' => Auth::user()->currentTeam->id,
-            'name' => $this->newTagName,
-            'color' => $this->newTagColor,
-        ]);
-
-        $this->newTagName = '';
-        $this->newTagColor = '#10B981'; // Reset
-        session()->flash('tag_message', 'Tag created successfully.');
-    }
-
-    public function deleteTag($id)
-    {
-        $tag = ContactTag::where('team_id', Auth::user()->currentTeam->id)->find($id);
-        if ($tag) {
-            $tag->delete();
-            session()->flash('tag_message', 'Tag deleted successfully.');
-        }
-    }
 
     // Custom Fields Management
     public function openFieldModal()

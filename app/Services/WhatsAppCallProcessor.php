@@ -67,6 +67,35 @@ class WhatsAppCallProcessor
         // Find or create call record
         $call = WhatsAppCall::where('call_id', $callId)->first();
 
+        // --- CALL STATUS STICKINESS (UC-SAFE-07) ---
+        $callRanks = [
+            'initiated'   => 0,
+            'ringing'     => 1,
+            'in_progress' => 2,
+            'completed'   => 3, // Terminal
+            'failed'      => 3, // Terminal
+            'rejected'    => 3, // Terminal
+            'missed'      => 3, // Terminal
+        ];
+
+        if ($call) {
+            $currentRank = $callRanks[$call->status] ?? 0;
+            
+            // If new data suggests an event/status, check if it's a retrograde move
+            // Events roughly map to ranks: connect=rings, answered=in_progress, terminate=terminal
+            $newRank = $currentRank; // Default
+            $eventNormalized = strtolower($event ?? '');
+            
+            if ($eventNormalized === 'connect' || $eventNormalized === 'connected') $newRank = 1;
+            if ($eventNormalized === 'answered' || strtolower($status ?? '') === 'in_progress') $newRank = 2;
+            if ($eventNormalized === 'terminate' || in_array(strtolower($status ?? ''), ['completed', 'failed', 'rejected', 'missed'])) $newRank = 3;
+
+            if ($newRank < $currentRank && $currentRank >= 3) {
+                 Log::info("WhatsAppCallProcessor: Ignoring retrograde event '{$event}' for terminal call {$callId}");
+                 return;
+            }
+        }
+
         if (!$call) {
             // New call
             $call = WhatsAppCall::create([
@@ -297,7 +326,7 @@ class WhatsAppCallProcessor
 
                 // Dispatch timeout monitor delayed by configured timeout
                 \App\Jobs\MonitorCallTimeoutJob::dispatch($call->id)
-                    ->delay(now()->addSeconds($team->getCallRoutingConfig()['ring_timeout_seconds'] ?? 30));
+                    ->delay(now()->addSeconds($team->getCallRoutingConfig()['ring_timeout_seconds'] ?? config('whatsapp.calling.ring_timeout_seconds', 30)));
             }
         } catch (\Exception $e) {
             Log::error("Failed to ensure contact/conv/routing for call: " . $e->getMessage());

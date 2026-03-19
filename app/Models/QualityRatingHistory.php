@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class QualityRatingHistory extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $table = 'quality_rating_history';
 
@@ -22,9 +23,4 @@ class QualityRatingHistory extends Model
     protected $casts = [
         'metadata' => 'array',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }

@@ -257,10 +257,7 @@
         @endif
 
         {{-- Invoices History --}}
-        @php
-            $invoices = \App\Models\TeamInvoice::where('team_id', $team->id)->orderBy('created_at', 'desc')->take(5)->get();
-        @endphp
-        @if($invoices->count() > 0)
+        @if($this->invoices->count() > 0)
             <div class="bg-white dark:bg-slate-900 border border-slate-50 dark:border-slate-800 rounded-[2.5rem] shadow-xl overflow-hidden mb-8">
                 <div class="p-8 border-b border-slate-50 dark:border-slate-800">
                     <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Recent Invoices</h3>
@@ -276,7 +273,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
-                            @foreach($invoices as $invoice)
+                            @foreach($this->invoices as $invoice)
                                 <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                                     <td class="px-8 py-5 text-sm font-bold">{{ $invoice->invoice_number }}</td>
                                     <td class="px-8 py-5 text-xs font-medium text-slate-500">
@@ -363,158 +360,147 @@
         </div>
 
         {{-- Top-Up Modal --}}
-        @if($showTopUpModal)
-            <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeTopUpModal"></div>
+        <x-app-modal wire:model="showTopUpModal" maxWidth="md">
+            <div class="p-8 pb-0">
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Add <span
+                        class="text-wa-teal">Credits</span></h3>
+            </div>
+
+            <form wire:submit.prevent="topUp">
+                <div class="p-8 space-y-6">
+                    <div>
+                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Amount
+                            ({{ get_setting('currency_symbol', '$') }})</label>
+                        <input type="number" wire:model="topUpAmount" step="10" min="10" max="10000"
+                            class="w-full text-3xl font-black text-slate-900 dark:text-white bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-200 mb-4"
+                            placeholder="0">
+                        <div class="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-wa-teal w-1/2"></div>
+                        </div>
+                        @error('topUpAmount') <span
+                            class="text-rose-500 text-[10px] font-bold uppercase mt-2 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2">
+                        @foreach([10, 50, 100, 500] as $amount)
+                            <button type="button" wire:click="$set('topUpAmount', {{ $amount }})"
+                                class="py-2 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal hover:text-white text-slate-500 dark:text-slate-400 font-bold rounded-xl transition-all text-xs">
+                                {{ get_setting('currency_symbol', '$') }}{{ $amount }}
+                            </button>
+                        @endforeach
+                    </div>
+
+                    <div class="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl p-4 flex gap-3">
+                        <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="text-xs font-medium text-indigo-800 dark:text-indigo-200">
+                            Funds are added immediately to your wallet. You can use them for conversation charges.
+                        </p>
+                    </div>
+                </div>
 
                 <div
-                    class="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div class="p-8 pb-0">
-                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Add <span
-                                class="text-wa-teal">Credits</span></h3>
-                    </div>
-
-                    <form wire:submit.prevent="topUp">
-                        <div class="p-8 space-y-6">
-                            <div>
-                                 <label class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Amount
-                                    ({{ get_setting('currency_symbol', '$') }})</label>
-                                <input type="number" wire:model="topUpAmount" step="10" min="10" max="10000"
-                                    class="w-full text-3xl font-black text-slate-900 dark:text-white bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-200 mb-4"
-                                    placeholder="0">
-                                <div class="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                    <div class="h-full bg-wa-teal w-1/2"></div>
-                                </div>
-                                @error('topUpAmount') <span
-                                    class="text-rose-500 text-[10px] font-bold uppercase mt-2 block">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            <div class="grid grid-cols-4 gap-2">
-                                @foreach([10, 50, 100, 500] as $amount)
-                                    <button type="button" wire:click="$set('topUpAmount', {{ $amount }})"
-                                        class="py-2 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal hover:text-white text-slate-500 dark:text-slate-400 font-bold rounded-xl transition-all text-xs">
-                                         {{ get_setting('currency_symbol', '$') }}{{ $amount }}
-                                    </button>
-                                @endforeach
-                            </div>
-
-                            <div class="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl p-4 flex gap-3">
-                                <svg class="w-5 h-5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p class="text-xs font-medium text-indigo-800 dark:text-indigo-200">
-                                    Funds are added immediately to your wallet. You can use them for conversation charges.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div
-                            class="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-50 dark:border-slate-800 flex gap-3">
-                            <button type="button" wire:click="closeTopUpModal"
-                                class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:text-slate-600 transition-all border border-slate-100 dark:border-slate-700">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
-                                Pay & Add
-                            </button>
-                        </div>
-                    </form>
+                    class="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-50 dark:border-slate-800 flex gap-3">
+                    <button type="button" wire:click="closeTopUpModal"
+                        class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl hover:text-slate-600 transition-all border border-slate-100 dark:border-slate-700">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-[2] py-4 bg-wa-teal text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        Pay & Add
+                    </button>
                 </div>
-            </div>
-        @endif
+            </form>
+        </x-app-modal>
 
         {{-- Plan Change Impact Modal --}}
-        @if($showChangePlanModal && $planImpact)
-            <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showChangePlanModal', false)"></div>
-
-                <div class="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div class="p-8 border-b border-slate-50 dark:border-slate-800">
-                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Confirm <span class="text-wa-teal">Plan Change</span></h3>
-                    </div>
-
-                    <div class="p-8 space-y-8 max-h-[60vh] overflow-y-auto">
-                        {{-- Logic: Upgrade or Downgrade --}}
-                        <div class="p-6 rounded-3xl {{ $planImpact['type'] === 'upgrade' ? 'bg-indigo-50 dark:bg-indigo-900/10 text-indigo-900 dark:text-indigo-100' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-900 dark:text-amber-100' }}">
-                            <div class="flex items-center gap-4">
-                                <span class="text-2xl">
-                                    {{ $planImpact['type'] === 'upgrade' ? '🚀' : '📉' }}
-                                </span>
-                                <div>
-                                    <h4 class="font-black uppercase tracking-tight">Switching to {{ ucfirst($selectedPlan) }} Plan</h4>
-                                    <p class="text-xs font-bold opacity-80">This change will be applied immediately.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {{-- Gained Features --}}
-                            @if(count($planImpact['features_gained']) > 0)
-                                <div class="space-y-4">
-                                    <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Features You'll Gain</h5>
-                                    <ul class="space-y-2">
-                                        @foreach($planImpact['features_gained'] as $f)
-                                            <li class="flex items-center gap-2 text-xs font-bold text-wa-teal">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                {{ ucfirst(str_replace('_', ' ', $f)) }}
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
-
-                             {{-- Lost Features --}}
-                             @if(count($planImpact['features_lost']) > 0)
-                                <div class="space-y-4">
-                                    <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Features You'll Lose</h5>
-                                    <ul class="space-y-2">
-                                        @foreach($planImpact['features_lost'] as $f)
-                                            <li class="flex items-center gap-2 text-xs font-bold text-rose-500">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                {{ ucfirst(str_replace('_', ' ', $f)) }}
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
-                        </div>
-
-                        {{-- Resource Impact (Warnings) --}}
-                        @if(count($planImpact['resource_impact']) > 0)
-                            <div class="space-y-4">
-                                <h5 class="text-[10px] font-black uppercase tracking-widest text-rose-500">Resource Warnings</h5>
-                                @foreach($planImpact['resource_impact'] as $r)
-                                    <div class="p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800 rounded-2xl flex gap-3 items-start">
-                                        <svg class="w-5 h-5 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                        <p class="text-xs font-bold text-rose-800 dark:text-rose-200">{{ $r['message'] }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-
-                        @if($planImpact['type'] === 'downgrade')
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight text-center">
-                                Downgrades include a 7-day grace period for over-limit resources before suspension.
-                            </p>
-                        @endif
-                    </div>
-
-                    <div class="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-50 dark:border-slate-800 flex gap-3">
-                        <button type="button" wire:click="$set('showChangePlanModal', false)"
-                            class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl border border-slate-100 dark:border-slate-700 hover:text-slate-600 transition-all">
-                            Keep Current Plan
-                        </button>
-                        <button type="button" wire:click="confirmPlanChange"
-                            class="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
-                            Confirm Switch
-                        </button>
-                    </div>
+        <x-app-modal wire:model="showChangePlanModal" maxWidth="2xl">
+            @if($planImpact)
+                <div class="p-8 border-b border-slate-50 dark:border-slate-800">
+                    <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Confirm <span class="text-wa-teal">Plan Change</span></h3>
                 </div>
-            </div>
-        @endif
+
+                <div class="p-8 space-y-8 max-h-[60vh] overflow-y-auto">
+                    {{-- Logic: Upgrade or Downgrade --}}
+                    <div class="p-6 rounded-3xl {{ $planImpact['type'] === 'upgrade' ? 'bg-indigo-50 dark:bg-indigo-900/10 text-indigo-900 dark:text-indigo-100' : 'bg-amber-50 dark:bg-amber-900/10 text-amber-900 dark:text-amber-100' }}">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">
+                                {{ $planImpact['type'] === 'upgrade' ? '🚀' : '📉' }}
+                            </span>
+                            <div>
+                                <h4 class="font-black uppercase tracking-tight">Switching to {{ ucfirst($selectedPlan) }} Plan</h4>
+                                <p class="text-xs font-bold opacity-80">This change will be applied immediately.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {{-- Gained Features --}}
+                        @if(count($planImpact['features_gained']) > 0)
+                            <div class="space-y-4">
+                                <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Features You'll Gain</h5>
+                                <ul class="space-y-2">
+                                    @foreach($planImpact['features_gained'] as $f)
+                                        <li class="flex items-center gap-2 text-xs font-bold text-wa-teal">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            {{ ucfirst(str_replace('_', ' ', $f)) }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                            {{-- Lost Features --}}
+                            @if(count($planImpact['features_lost']) > 0)
+                            <div class="space-y-4">
+                                <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-400">Features You'll Lose</h5>
+                                <ul class="space-y-2">
+                                    @foreach($planImpact['features_lost'] as $f)
+                                        <li class="flex items-center gap-2 text-xs font-bold text-rose-500">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            {{ ucfirst(str_replace('_', ' ', $f)) }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Resource Impact (Warnings) --}}
+                    @if(count($planImpact['resource_impact']) > 0)
+                        <div class="space-y-4">
+                            <h5 class="text-[10px] font-black uppercase tracking-widest text-rose-500">Resource Warnings</h5>
+                            @foreach($planImpact['resource_impact'] as $r)
+                                <div class="p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800 rounded-2xl flex gap-3 items-start">
+                                    <svg class="w-5 h-5 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                    <p class="text-xs font-bold text-rose-800 dark:text-rose-200">{{ $r['message'] }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($planImpact['type'] === 'downgrade')
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight text-center">
+                            Downgrades include a 7-day grace period for over-limit resources before suspension.
+                        </p>
+                    @endif
+                </div>
+
+                <div class="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-50 dark:border-slate-800 flex gap-3">
+                    <button type="button" wire:click="$set('showChangePlanModal', false)"
+                        class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl border border-slate-100 dark:border-slate-700 hover:text-slate-600 transition-all">
+                        Keep Current Plan
+                    </button>
+                    <button type="button" wire:click="confirmPlanChange"
+                        class="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
+                        Confirm Switch
+                    </button>
+                </div>
+            @endif
+        </x-app-modal>
     </div>
 </div>

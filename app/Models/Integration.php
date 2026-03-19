@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Integration extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $fillable = [
         'team_id',
         'name',
@@ -22,9 +24,4 @@ class Integration extends Model
         'settings' => 'array',
         'last_synced_at' => 'datetime',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }

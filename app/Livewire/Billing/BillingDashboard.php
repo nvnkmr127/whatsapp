@@ -6,6 +6,8 @@ use App\Models\Plan;
 use App\Models\TeamWallet;
 use App\Models\TeamTransaction;
 use App\Services\BillingService;
+use App\Models\TeamInvoice;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -122,6 +124,16 @@ class BillingDashboard extends Component
 
         $this->closeTopUpModal();
         $this->loadData();
+    }
+
+    #[Computed]
+    public function invoices()
+    {
+        if (!$this->team) return collect();
+        return TeamInvoice::where('team_id', $this->team->id)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
     }
 
     public function render()

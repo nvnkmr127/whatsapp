@@ -21,12 +21,20 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
     public function __construct(
         public WebhookPayload $payload,
-        public array $actionConfig
+        public array $actionConfig,
+        public ?string $traceId = null
     ) {
     }
 
     public function handle(): void
     {
+        // 1. Restore Trace Context
+        if ($this->traceId) {
+            \App\Services\TraceContext::set($this->traceId);
+        } else {
+            \App\Services\TraceContext::ensureTraceId();
+        }
+
         $actionType = $this->actionConfig['type'] ?? null;
 
         try {

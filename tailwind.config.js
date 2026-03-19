@@ -19,15 +19,39 @@ export default {
             },
             colors: {
                 wa: {
-                    soft: '#f0fdfa',  // Very light teal for backgrounds
-                    brand: '#25D366', // Primary brand green
-                    light: '#dcf8c6', // Light green for bubbles
-                    green: '#25D366', // Primary brand green
-                    teal: '#128C7E',  // Dark teal for headers
-                    dark: '#075E54',  // Darker teal
-                    blue: '#34B7F1',  // Accents
-                    bg: '#ece5dd',    // Chat background
+                    DEFAULT: '#25D366',
+                    soft: '#f0fdfa',
+                    brand: '#25D366',
+                    light: '#dcf8c6',
+                    'bubble-out': '#dcf8c6',
+                    'bubble-in': '#ffffff',
+                    green: '#25D366',
+                    teal: '#128C7E',
+                    dark: '#075E54',
+                    blue: '#34B7F1',
+                    bg: '#ece5dd',
+                    'dark-bg': '#0b141a',
+                    'dark-surface': '#202c33',
+                    'dark-elevated': '#111b21',
+                    'chat-bg': '#e5ddd5',
+                    'surface': {
+                        50: '#f8fafc',
+                        100: '#f1f5f9',
+                        800: '#1e293b',
+                        900: '#0f172a',
+                    }
                 }
+            },
+            fontSize: {
+                'tiny': ['0.625rem', '0.75rem'],  // 10px
+                'micro': ['0.5rem', '0.625rem'],  // 8px
+                'nano': ['0.5625rem', '0.6875rem'], // 9px
+                'wa-caption': ['13px', '18px'],
+            },
+            borderRadius: {
+                'wa-mockup': '3rem',
+                'premium': '1.5rem',
+                'xl-premium': '2rem',
             }
         },
     },

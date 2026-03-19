@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Services\WhatsAppHealthMonitor;
+use App\Traits\StandardApiResponses;
 use Illuminate\Http\Request;
 
 class WhatsAppHealthController extends Controller
 {
+    use StandardApiResponses;
+
     public function __construct(
         protected WhatsAppHealthMonitor $healthMonitor
     ) {
@@ -21,23 +24,20 @@ class WhatsAppHealthController extends Controller
     {
         $health = $this->healthMonitor->checkHealth($team);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'overall_score' => $health['overall_score'],
-                'status' => $health['status'],
-                'dimensions' => [
-                    'token' => $health['token'],
-                    'phone' => $health['phone'],
-                    'quality' => $health['quality'],
-                    'messaging' => $health['messaging'],
-                ],
-                'alerts' => $health['alerts'],
-                'can_send_messages' => $this->healthMonitor->canSendMessages($team),
-                'blocking_issues' => $this->healthMonitor->getBlockingIssues($team),
-                'checked_at' => $health['checked_at'],
+        return $this->success([
+            'overall_score' => $health['overall_score'],
+            'status' => $health['status'],
+            'dimensions' => [
+                'token' => $health['token'],
+                'phone' => $health['phone'],
+                'quality' => $health['quality'],
+                'messaging' => $health['messaging'],
             ],
-        ]);
+            'alerts' => $health['alerts'] ?? [],
+            'can_send_messages' => $this->healthMonitor->canSendMessages($team),
+            'blocking_issues' => $this->healthMonitor->getBlockingIssues($team),
+            'checked_at' => $health['checked_at'],
+        ], 'WhatsApp health status retrieved.');
     }
 
     /**
@@ -45,17 +45,14 @@ class WhatsAppHealthController extends Controller
      */
     public function history(Team $team, Request $request)
     {
-        $days = $request->input('days', 7);
+        $days = (int) $request->input('days', 7);
 
         $snapshots = $team->healthSnapshots()
             ->where('snapshot_at', '>=', now()->subDays($days))
             ->orderBy('snapshot_at', 'desc')
             ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $snapshots,
-        ]);
+        return $this->success($snapshots, 'Health history retrieved.');
     }
 
     /**
@@ -65,10 +62,7 @@ class WhatsAppHealthController extends Controller
     {
         $alerts = $this->healthMonitor->getActiveAlerts($team);
 
-        return response()->json([
-            'success' => true,
-            'data' => $alerts,
-        ]);
+        return $this->success($alerts, 'Active health alerts retrieved.');
     }
 
     /**
@@ -79,9 +73,7 @@ class WhatsAppHealthController extends Controller
         $alert = $team->healthAlerts()->findOrFail($alertId);
         $alert->acknowledge(auth()->user());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Alert acknowledged',
-        ]);
+        return $this->success([], 'Alert acknowledged successfully.');
     }
 }
+

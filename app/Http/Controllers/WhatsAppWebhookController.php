@@ -21,7 +21,7 @@ class WhatsAppWebhookController extends Controller
 
         // Fallback to config if not set in database
         if (empty($verifyToken)) {
-            $verifyToken = config('services.whatsapp.verify_token');
+            $verifyToken = config('whatsapp.webhook_verify_token');
         }
 
         if (empty($verifyToken)) {
@@ -45,31 +45,28 @@ class WhatsAppWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        $startTime = microtime(true);
+        $data = $request->all();
+        $signature = $request->header('X-Hub-Signature-256');
+
         if (config('app.debug')) {
             try {
-                \Illuminate\Support\Facades\Log::channel('whatsapp')->info("RAW WEBHOOK RECEIVED", $request->all());
+                // Mask sensitive info for debug logs
+                $maskedData = $this->maskSensitiveData($data);
+                \Illuminate\Support\Facades\Log::channel('whatsapp')->debug("WhatsApp Webhook Received", $maskedData);
             } catch (\Exception $e) {
-                // Fallback to default logger if dedicated channel fails
                 Log::warning("Failed to write to whatsapp log channel: " . $e->getMessage());
             }
         }
 
-        Log::info("WhatsAppWebhookController: Webhook Received Raw", ['payload' => json_encode($request->all())]);
-
-        $data = $request->all();
-        $signature = $request->header('X-Hub-Signature-256');
-
         // Store Raw Payload
         try {
-            Log::debug("WhatsApp Webhook: Attempting to store payload", ['waba_id' => $data['entry'][0]['id'] ?? 'N/A']);
             $payloadRecord = \App\Models\WebhookPayload::create([
                 'payload' => $data,
                 'signature' => $signature,
                 'status' => 'pending',
                 'waba_id' => $data['entry'][0]['id'] ?? null,
             ]);
-
-            Log::debug("WhatsApp Webhook: Payload stored", ['payload_id' => $payloadRecord->id]);
 
             // Update Health Pulse for the team
             $wabaId = $data['entry'][0]['id'] ?? null;
@@ -83,14 +80,43 @@ class WhatsAppWebhookController extends Controller
             \App\Jobs\ProcessWebhookJob::dispatch($payloadRecord->id, $traceId)
                 ->onQueue('webhooks');
 
-            Log::debug("WhatsApp Webhook: ProcessWebhookJob dispatched", ['payload_id' => $payloadRecord->id, 'trace_id' => $traceId]);
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+            Log::info("WhatsApp Webhook Handled", [
+                'payload_id' => $payloadRecord->id, 
+                'trace_id' => $traceId,
+                'duration_ms' => $duration
+            ]);
 
         } catch (\Exception $e) {
-            Log::error("WhatsApp Webhook: Failed to store or dispatch: " . $e->getMessage());
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+            Log::error("WhatsApp Webhook: Failed to store or dispatch", [
+                'error' => $e->getMessage(),
+                'duration_ms' => $duration
+            ]);
             return response('Internal Error', 500);
         }
 
         return response('EVENT_RECEIVED', 200);
+    }
+
+    /**
+     * Mask sensitive fields in a payload.
+     */
+    protected function maskSensitiveData(array $data): array
+    {
+        $sensitiveKeys = ['phone', 'display_phone_number', 'wa_id', 'from', 'body', 'text', 'caption', 'name'];
+
+        array_walk_recursive($data, function (&$value, $key) use ($sensitiveKeys) {
+            if (in_array(strtolower($key), $sensitiveKeys) && is_string($value)) {
+                if (in_array($key, ['phone', 'wa_id', 'from'])) {
+                    $value = substr($value, 0, 4) . '****' . substr($value, -2);
+                } else {
+                    $value = '********';
+                }
+            }
+        });
+
+        return $data;
     }
 
 }

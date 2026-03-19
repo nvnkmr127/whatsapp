@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TenantBackup extends Model
 {
     use HasUuids;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -34,10 +35,7 @@ class TenantBackup extends Model
     /**
      * Get the team that owns the backup.
      */
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     /**
      * Model A: Tenant connects their own Drive.

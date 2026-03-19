@@ -72,13 +72,14 @@ class OutboundPreflightService
         }
 
         // ── 4. Usage Limit ──────────────────────────────────────────
-        if ($limitKey) {
+        // Only enforce limits if the action is FREE (cost = 0) or if explicitly capped.
+        if ($limitKey && $cost <= 0) {
             $limit = $e->limit($limitKey);
             if ($limit > 0 && $currentUsage >= $limit) {
                 return [
                     'allowed' => false,
                     'code' => 'ERR_QUOTA_EXCEEDED',
-                    'reason' => "Monthly quota of {$limit} for {$limitKey} has been reached.",
+                    'reason' => "Monthly quota of {$limit} for {$limitKey} has been reached. Please top-up your wallet to send more messages.",
                 ];
             }
         }

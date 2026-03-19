@@ -1,4 +1,4 @@
-<div class="flex-1 flex flex-col h-full relative bg-slate-200 dark:bg-[#0b141a] overflow-hidden ring-0 border-none outline-none"
+<div class="flex-1 flex flex-col h-full relative bg-slate-200 dark:bg-wa-dark-bg overflow-hidden ring-0 border-none outline-none"
     x-data="(() => {
         let data = chatWindow(
             $wire, 
@@ -18,12 +18,10 @@
         class="px-6 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-20 shrink-0">
         <div class="flex items-center gap-4">
             <!-- Mobile Back Button -->
-            <button @click="$dispatch('toggle-mobile-pane', 'list')"
-                class="lg:hidden p-2 -ml-2 text-slate-500 hover:text-wa-teal transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
+            <x-app-button variant="ghost" @click="$dispatch('toggle-mobile-pane', 'list')" class="lg:hidden p-2 -ml-2">
+                <x-icon name="chevron-left" class="w-6 h-6" />
+            </x-app-button>
+
 
             <!-- Avatar Section -->
             <div class="relative group">
@@ -53,12 +51,12 @@
                             <path
                                 d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                         </svg>
-                        <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                        <span class="text-tiny font-mono font-bold text-slate-500 dark:text-slate-400">
                             {{ $conversation?->contact?->phone_number }}
                         </span>
                     </div>
                     <span class="text-slate-300 dark:text-slate-700 font-bold">•</span>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span class="text-tiny font-black uppercase tracking-widest text-slate-400">
                         {{ $isSessionOpen ? 'Signal Open' : 'Signal Closed' }}
                     </span>
                 </div>
@@ -68,21 +66,17 @@
         <div class="flex items-center gap-1 sm:gap-3">
             <!-- Tags/Categories Dropdown -->
             <div class="relative" x-data="{ showTags: false }">
-                <button @click="showTags = !showTags"
-                    class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 hover:text-wa-teal hover:border-wa-teal/20 hover:scale-105 active:scale-95"
-                    title="Manage Tags">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
+                <x-app-button variant="secondary" @click="showTags = !showTags" class="hidden sm:flex items-center gap-2" title="Manage Tags">
+                    <x-icon name="tag" class="w-3.5 h-3.5" />
                     <span>Tags</span>
+
                     @php
                         $activeTags = $conversation?->metadata['tags'] ?? [];
                         $tagCount = count($activeTags);
                     @endphp
                     @if($tagCount > 0)
                         <span
-                            class="px-1.5 py-0.5 bg-wa-teal text-white rounded-full text-[8px] font-black">{{ $tagCount }}</span>
+                            class="px-1.5 py-0.5 bg-wa-teal text-white rounded-full text-micro font-black">{{ $tagCount }}</span>
                     @endif
                 </button>
 
@@ -90,7 +84,7 @@
                 <div x-show="showTags" @click.away="showTags = false" x-cloak x-transition
                     class="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 p-3 z-50 max-h-80 overflow-y-auto">
                     <div class="mb-3 pb-2 border-b border-slate-100 dark:border-slate-700">
-                        <h3 class="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                        <h3 class="text-tiny font-black text-slate-900 dark:text-white uppercase tracking-widest">
                             Conversation Tags</h3>
                     </div>
                     <div class="space-y-2">
@@ -116,7 +110,7 @@
                             </button>
                         @empty
                             <div class="py-4 text-center">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">No tags available</span>
+                                <span class="text-tiny font-bold text-slate-400 uppercase">No tags available</span>
                             </div>
                         @endforelse
                     </div>
@@ -126,7 +120,7 @@
             <!-- Transfer Conversation Dropdown -->
             <div class="relative" x-data="{ showTransfer: false }">
                 <button @click="showTransfer = !showTransfer"
-                    class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 hover:text-indigo-500 hover:border-indigo-200 hover:scale-105 active:scale-95"
+                    class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-tiny font-black uppercase tracking-widest transition-all border bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 hover:text-indigo-500 hover:border-indigo-200 hover:scale-105 active:scale-95"
                     title="Transfer Chat">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -139,7 +133,7 @@
                 <div x-show="showTransfer" @click.away="showTransfer = false" x-cloak x-transition
                     class="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 p-3 z-50 max-h-80 overflow-y-auto">
                     <div class="mb-3 pb-2 border-b border-slate-100 dark:border-slate-700">
-                        <h3 class="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                        <h3 class="text-tiny font-black text-slate-900 dark:text-white uppercase tracking-widest">
                             Transfer To Agent</h3>
                     </div>
                     <div class="space-y-1">
@@ -153,7 +147,7 @@
                                 <div class="flex-1 text-left">
                                     <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $agent->name }}
                                     </div>
-                                    <div class="text-[10px] font-medium text-slate-500">{{ $agent->email }}</div>
+                                    <div class="text-tiny font-medium text-slate-500">{{ $agent->email }}</div>
                                 </div>
                                 <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors"
                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,7 +157,7 @@
                             </button>
                         @empty
                             <div class="py-4 text-center">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase">No agents available</span>
+                                <span class="text-tiny font-bold text-slate-400 uppercase">No agents available</span>
                             </div>
                         @endforelse
                     </div>
@@ -172,7 +166,7 @@
 
             <!-- Bot Status Indicator/Toggle -->
             <button wire:click="toggleBot"
-                class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
+                class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-tiny font-black uppercase tracking-widest transition-all border
                        {{ $conversation?->contact?->is_bot_paused
     ? 'bg-amber-100/50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800'
     : 'bg-slate-50 border-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700' }} hover:scale-105 active:scale-95">
@@ -224,7 +218,7 @@
                             </div>
                             <div class="flex-1">
                                 <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Reopen Conversation</div>
-                                <div class="text-[10px] text-slate-500">Mark as active</div>
+                                <div class="text-tiny text-slate-500">Mark as active</div>
                             </div>
                         </button>
                     @else
@@ -238,7 +232,7 @@
                             </div>
                             <div class="flex-1">
                                 <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Close Conversation</div>
-                                <div class="text-[10px] text-slate-500">Mark as resolved</div>
+                                <div class="text-tiny text-slate-500">Mark as resolved</div>
                             </div>
                         </button>
                     @endif
@@ -256,7 +250,7 @@
                         </div>
                         <div class="flex-1">
                             <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Mark as Spam</div>
-                            <div class="text-[10px] text-slate-500">Flag conversation</div>
+                            <div class="text-tiny text-slate-500">Flag conversation</div>
                         </div>
                     </button>
 
@@ -271,7 +265,7 @@
                         </div>
                         <div class="flex-1">
                             <div class="text-xs font-bold text-rose-600">Block Contact</div>
-                            <div class="text-[10px] text-rose-500">Prevent future messages</div>
+                            <div class="text-tiny text-rose-500">Prevent future messages</div>
                         </div>
                     </button>
 
@@ -288,7 +282,7 @@
                         </div>
                         <div class="flex-1">
                             <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Export Chat</div>
-                            <div class="text-[10px] text-slate-500">Download as PDF</div>
+                            <div class="text-tiny text-slate-500">Download as PDF</div>
                         </div>
                     </button>
                 </div>
@@ -310,7 +304,7 @@
     <div class="absolute top-20 left-1/2 -translate-x-1/2 z-10 pointer-events-none transition-opacity duration-300"
         :class="scrollTop > 50 ? 'opacity-100' : 'opacity-0'">
         <span
-            class="bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+            class="bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm text-slate-500 dark:text-slate-400 text-tiny font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
             Today
         </span>
     </div>
@@ -408,7 +402,7 @@
                         <div class="absolute inset-0 w-3 h-3 rounded-full bg-white"></div>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-rose-100">Live Recording</span>
+                        <span class="text-nano font-black uppercase tracking-[0.2em] text-rose-100">Live Recording</span>
                         <span class="text-lg font-mono font-black tabular-nums" x-text="recordingTime">0:00</span>
                     </div>
                 </div>
@@ -422,7 +416,7 @@
                         </svg>
                     </button>
                     <button @click="stopRecording(true)"
-                        class="px-8 py-3 bg-white text-rose-600 rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all">
+                        class="px-8 py-3 bg-white text-rose-600 rounded-2xl text-tiny font-bold uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all">
                         Send Note
                     </button>
                 </div>
@@ -489,7 +483,7 @@
                 <div class="flex-1 relative group">
                     <template x-if="isNoteMode">
                         <div
-                            class="absolute -top-6 left-6 px-3 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest rounded-t-lg border-t border-x border-amber-200 dark:border-amber-800">
+                            class="absolute -top-6 left-6 px-3 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-400 text-nano font-black uppercase tracking-widest rounded-t-lg border-t border-x border-amber-200 dark:border-amber-800">
                             NOTE MODE
                         </div>
                     </template>
@@ -515,7 +509,7 @@
                                     class="w-full text-left px-4 py-3 hover:bg-wa-teal/5 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0 flex flex-col">
                                     <span class="text-xs font-bold text-slate-800 dark:text-slate-200"
                                         x-text="'/' + qr.code"></span>
-                                    <span class="text-[10px] text-slate-500 truncate" x-text="qr.text"></span>
+                                    <span class="text-tiny text-slate-500 truncate" x-text="qr.text"></span>
                                 </button>
                             </template>
                         </div>
@@ -556,12 +550,12 @@
                 </div>
                 <div>
                     <p class="text-xs font-black uppercase tracking-wide text-slate-900 dark:text-white">Session Expired</p>
-                    <p class="text-[10px] font-bold text-slate-500">Service window closed. Use a template.</p>
+                    <p class="text-tiny font-bold text-slate-500">Service window closed. Use a template.</p>
                 </div>
             </div>
 
             <button wire:click="openTemplateList"
-                class="px-5 py-2.5 bg-wa-teal hover:bg-wa-teal/90 text-white font-black uppercase tracking-widest text-[10px] rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                class="px-5 py-2.5 bg-wa-teal hover:bg-wa-teal/90 text-white font-black uppercase tracking-widest text-tiny rounded-xl shadow-lg shadow-wa-teal/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -570,24 +564,19 @@
         </div>
     @endif
 
-    <!-- Modals using x-modal component -->
+    <!-- Modals using x-app-modal component -->
 
     <!-- Template List Modal -->
-    <x-modal show="showTemplateListModal" maxWidth="xl">
+    <x-app-modal wire:model="showTemplateListModal" maxWidth="3xl" :backdropClose="false">
         <div class="p-8">
-            <div class="flex justify-between items-center mb-6">
+            <div class="mb-6">
                 <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Approved <span
                         class="text-wa-teal">Templates</span></h2>
-                <button wire:click="closeTemplateModals" class="text-slate-400 hover:text-slate-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
             </div>
 
             <input type="text" wire:model.live.debounce.300ms="templateSearch" placeholder="Search templates..."
                 class="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white font-bold mb-6">
+
 
             <div class="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                 @forelse($this->filtered_templates as $template)
@@ -599,7 +588,7 @@
                                     class="text-sm font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors">
                                     {{ $template->name }}
                                 </h3>
-                                <p class="text-[10px] font-bold text-slate-500 mt-1">{{ $template->category }} •
+                                <p class="text-tiny font-bold text-slate-500 mt-1">{{ $template->category }} •
                                     {{ $template->language }}
                                 </p>
                             </div>
@@ -612,19 +601,16 @@
                 @endforelse
             </div>
         </div>
-    </x-modal>
+    </x-app-modal>
+
 
     <!-- Interactive Buttons Modal -->
-    <x-modal show="showInteractiveButtonsModal" maxWidth="2xl">
+    <x-app-modal wire:model="showInteractiveButtonsModal" maxWidth="2xl" :backdropClose="false">
         <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Quick <span
                     class="text-wa-teal">Buttons</span></h2>
-            <button wire:click="$set('showInteractiveButtonsModal', false)" class="text-slate-400 hover:text-rose-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
         </div>
+
 
         <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="space-y-4">
@@ -633,7 +619,7 @@
                     placeholder="Enter your message..."></textarea>
 
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Buttons
+                    <label class="text-tiny font-black text-slate-400 uppercase">Buttons
                         ({{ count($interactiveButtons) }}/3)</label>
                     @foreach($interactiveButtons as $index => $btn)
                         <div class="flex gap-2">
@@ -657,7 +643,7 @@
             </div>
 
             <div class="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl flex items-center justify-center">
-                <div class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl overflow-hidden">
+                <div class="w-full max-w-[240px] bg-white dark:bg-wa-dark-surface rounded-2xl shadow-xl overflow-hidden">
                     <div class="p-3 border-b border-slate-50 dark:border-slate-800/50">
                         <p class="text-xs text-slate-700 dark:text-slate-200">{!! $this->previewButtonBody !!}</p>
                     </div>
@@ -681,28 +667,26 @@
                 class="px-8 py-3 bg-wa-teal text-white font-black uppercase text-xs rounded-xl hover:shadow-lg transition-all">Send
                 Buttons</button>
         </div>
-    </x-modal>
+    </x-app-modal>
+
     <!-- Template Preview Modal -->
-    <x-modal show="showTemplatePreviewModal" maxWidth="2xl">
+    <x-app-modal wire:model="showTemplatePreviewModal" maxWidth="2xl" :backdropClose="false">
         <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div class="flex flex-col">
-                <span class="text-[10px] font-black text-wa-teal uppercase tracking-[0.2em] mb-1">Personalize</span>
+                <span class="text-tiny font-black text-wa-teal uppercase tracking-[0.2em] mb-1">Personalize</span>
                 <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Template <span
                         class="text-wa-teal">Preview</span></h2>
             </div>
-            <button wire:click="closeTemplateModals" class="text-slate-400 hover:text-rose-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
         </div>
+
+
 
         <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div class="space-y-4">
                 @if(!empty($templateVariables))
                     <div class="space-y-4">
                         <label
-                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            class="text-tiny font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -711,7 +695,7 @@
                         </label>
                         @foreach($templateVariables as $key => $value)
                             <div class="space-y-2">
-                                <label class="text-[10px] font-bold text-slate-500 flex justify-between">
+                                <label class="text-tiny font-bold text-slate-500 flex justify-between">
                                     <span>PLACEHOLDER {{ $key }}</span>
                                 </label>
                                 <input type="text" wire:model.live="templateVariables.{{ $key }}"
@@ -735,10 +719,10 @@
             <div
                 class="bg-slate-50 dark:bg-slate-950 p-6 rounded-[2.5rem] flex items-center justify-center border border-slate-100 dark:border-slate-800">
                 <div
-                    class="w-full max-w-[240px] bg-white dark:bg-[#202c33] rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 relative">
+                    class="w-full max-w-[240px] bg-white dark:bg-wa-dark-surface rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 relative">
                     <!-- Preview Tag -->
                     <div
-                        class="absolute top-2 right-2 px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-[8px] font-black uppercase tracking-widest rounded-md">
+                        class="absolute top-2 right-2 px-1.5 py-0.5 bg-wa-teal/10 text-wa-teal text-micro font-black uppercase tracking-widest rounded-md">
                         Preview</div>
 
                     <div class="p-4 pt-8">
@@ -752,33 +736,24 @@
         </div>
 
         <div
-            class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-3xl">
-            <button wire:click="closeTemplateModals"
-                class="px-6 py-3 text-slate-500 font-bold uppercase text-xs hover:text-slate-700 transition-colors">Back</button>
-            <button wire:click="sendTemplateWithVariables"
-                class="px-8 py-3 bg-wa-teal text-white font-black uppercase text-xs rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+            class="px-8 py-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-[2.5rem]">
+            <x-app-button variant="ghost" wire:click="closeTemplateModals">Back</x-app-button>
+            <x-app-button variant="primary" wire:click="sendTemplateWithVariables">
                 <span>Send Template</span>
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-            </button>
+                <x-icon name="plus" class="w-3.5 h-3.5 group-hover:rotate-45" />
+            </x-app-button>
         </div>
-    </x-modal>
+    </x-app-modal>
+
 
 
     <!-- Lightbox Modal -->
-    <x-modal show="$store.chat.lightboxOpen" maxWidth="5xl" :closeable="true">
+    <x-app-modal wire:model="$store.chat.lightboxOpen" maxWidth="7xl">
         <div class="relative bg-black h-full min-h-[500px] flex items-center justify-center">
-            <button @click="$store.chat.lightboxOpen = false"
-                class="absolute top-4 right-4 text-white hover:text-slate-300">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
             <img :src="$store.chat.lightboxImage"
-                class="max-h-[80vh] max-w-[90vw] object-contain shadow-2xl rounded-lg">
+                class="max-h-[90vh] max-w-[95vw] object-contain shadow-2xl rounded-lg">
         </div>
-    </x-modal>
+    </x-app-modal>
+
 
 </div>

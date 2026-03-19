@@ -159,7 +159,8 @@ class WhatsappConfig extends Component
         // Let's stick to global for App ID if it's not in Team. 
         // But WABA, Token, PhoneID ARE in Team.
 
-        $this->wm_fb_app_id = get_setting('whatsapp_wm_fb_app_id');
+        // [FIXED] Prioritize Team-Specific App ID and Verify Token (White Label / Manual Connection)
+        $this->wm_fb_app_id = $team->whatsapp_app_id ?: get_setting('whatsapp_wm_fb_app_id');
         $this->wm_fb_app_secret = get_setting('whatsapp_wm_fb_app_secret');
 
         // [FIX Orphaned State]
@@ -171,8 +172,6 @@ class WhatsappConfig extends Component
             if ($updatedAt && $updatedAt->diffInMinutes(now()) > 5) {
                 Log::warning("Detected Orphaned Token for Team {$team->id}. Clearing to allow reconnection.");
                 $team->update(['whatsapp_access_token' => null]);
-                // $this->wm_access_token = null; // DO NOT EXPOSE TO FRONTEND
-                // Proceed as disconnected
             }
         }
 
@@ -195,7 +194,6 @@ class WhatsappConfig extends Component
         if ($team->whatsapp_connected) {
             $this->is_whatsmark_connected = true;
             $this->wm_business_account_id = $team->whatsapp_business_account_id;
-            // $this->wm_access_token = $team->whatsapp_access_token; // DO NOT EXPOSE TO FRONTEND
         } else {
             $this->is_whatsmark_connected = false;
             $this->wm_business_account_id = null;
@@ -207,10 +205,12 @@ class WhatsappConfig extends Component
 
         $this->is_webhook_connected = !empty($this->outbound_webhook_url);
 
-        $this->webhook_verify_token = get_setting('whatsapp_webhook_verify_token');
+        $this->webhook_verify_token = $team->whatsapp_verify_token ?: get_setting('whatsapp_webhook_verify_token');
         if (empty($this->webhook_verify_token)) {
             $this->webhook_verify_token = Str::random(16);
-            set_setting('whatsapp_webhook_verify_token', $this->webhook_verify_token);
+            if (!$team->whatsapp_verify_token) {
+                 set_setting('whatsapp_webhook_verify_token', $this->webhook_verify_token);
+            }
         }
 
         $this->wm_default_phone_number_id = $team->whatsapp_phone_number_id;
@@ -543,6 +543,8 @@ class WhatsappConfig extends Component
 
             $team->update([
                 'whatsapp_business_account_id' => $this->wm_business_account_id,
+                'whatsapp_app_id' => ($this->wm_fb_app_id !== get_setting('whatsapp_wm_fb_app_id')) ? $this->wm_fb_app_id : null,
+                'whatsapp_verify_token' => $this->webhook_verify_token,
                 'whatsapp_access_token' => $this->wm_access_token ?: $team->whatsapp_access_token,
                 'whatsapp_phone_number_id' => $phoneIdToSave,
                 'whatsapp_connected' => true,

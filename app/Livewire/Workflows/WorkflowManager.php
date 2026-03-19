@@ -9,6 +9,7 @@ use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Models\Workflow;
 use App\Models\WorkflowAction;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class WorkflowManager extends Component
@@ -325,6 +326,19 @@ class WorkflowManager extends Component
     {
         $this->showLogsModal = false;
         $this->workflowLogs = [];
+    }
+
+    #[Computed]
+    public function folders()
+    {
+        return Workflow::where(function ($q) {
+            $q->where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam?->id)
+                ->orWhereNull('team_id');
+        })
+            ->whereNotNull('folder')
+            ->where('folder', '!=', '')
+            ->pluck('folder')
+            ->unique();
     }
 
     public function render()

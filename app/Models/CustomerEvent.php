@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerEvent extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $fillable = [
         'team_id',
         'contact_id',
@@ -16,11 +18,6 @@ class CustomerEvent extends Model
     protected $casts = [
         'event_data' => 'array',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 
     public function contact()
     {

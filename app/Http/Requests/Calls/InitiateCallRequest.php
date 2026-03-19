@@ -15,6 +15,7 @@ class InitiateCallRequest extends FormRequest
     {
         return [
             'phone_number' => 'required|string|regex:/^\+?[0-9]{10,15}$/',
+            'sdp' => 'sometimes|string',
             'options' => 'sometimes|array',
             'options.force_new_conversation' => 'sometimes|boolean',
             'options.metadata' => 'sometimes|array',

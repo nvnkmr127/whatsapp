@@ -3,7 +3,10 @@
 namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
+use App\Services\ContactTimelineService;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Category;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class ContactDetails extends Component
@@ -24,8 +27,11 @@ class ContactDetails extends Component
         $this->loadData();
     }
 
-    public function loadData()
+    public function loadData(?ContactTimelineService $timelineService = null)
     {
+        // For Livewire lifecycle compatibility, we fall back to app() if not passed during first run
+        $timelineService = $timelineService ?? app(ContactTimelineService::class);
+
         $this->conversation = Conversation::with([
             'contact.tags',
             'contact.attributedMessages.attributedCampaign',
@@ -36,9 +42,9 @@ class ContactDetails extends Component
         if ($this->conversation) {
             $this->contact = $this->conversation->contact;
             if ($this->contact) {
-                $this->timeline = $this->contact->getTimeline(!Auth::user()?->is_super_admin);
-                $this->mediaVault = $this->contact->getMediaVault();
-                $this->heatmap = $this->contact->getInteractionHeatmap();
+                $this->timeline = $timelineService->getTimeline($this->contact, !Auth::user()?->is_super_admin);
+                $this->mediaVault = $timelineService->getMediaVault($this->contact);
+                $this->heatmap = $timelineService->getInteractionHeatmap($this->contact);
             } else {
                 $this->timeline = [];
                 $this->mediaVault = [];
@@ -117,6 +123,25 @@ class ContactDetails extends Component
         $metadata['tags'] = $tags;
         $this->conversation->update(['metadata' => $metadata]);
         $this->loadData();
+    }
+
+    #[Computed]
+    public function availableTags()
+    {
+        $conversationTags = $this->conversation?->metadata['tags'] ?? [];
+        return Category::where('team_id', auth()->user()->currentTeam->id)
+            ->whereIn('target_module', ['chat', 'all'])
+            ->where('is_active', true)
+            ->whereNotIn('id', $conversationTags)
+            ->get();
+    }
+
+    #[Computed]
+    public function activeTags()
+    {
+        $tagIds = $this->conversation?->metadata['tags'] ?? [];
+        if (empty($tagIds)) return collect();
+        return Category::whereIn('id', $tagIds)->get();
     }
 
     public function render()

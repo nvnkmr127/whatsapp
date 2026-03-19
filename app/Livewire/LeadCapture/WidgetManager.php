@@ -8,9 +8,16 @@ use App\Models\LeadCaptureWidget;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Str;
 
+use Livewire\Attributes\Computed;
+
 #[Title('Growth Tools')]
 class WidgetManager extends Component
 {
+    #[Computed]
+    public function selectedWidget()
+    {
+        return $this->codeWidgetId ? LeadCaptureWidget::find($this->codeWidgetId) : null;
+    }
     public $showCreateModal = false;
     public $showCodeModal = false;
     public $name, $prefilled_message, $button_text, $widget_color = '#25D366';

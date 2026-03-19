@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class WhatsAppHealthAlert extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $table = 'whatsapp_health_alerts';
 
@@ -33,10 +34,7 @@ class WhatsAppHealthAlert extends Model
         'resolved_at' => 'datetime',
     ];
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function acknowledgedByUser()
     {

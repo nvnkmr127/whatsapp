@@ -4,10 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\WhatsAppService;
+use App\Traits\StandardApiResponses;
 use Illuminate\Http\Request;
 
 class ExternalTemplateController extends Controller
 {
+    use StandardApiResponses;
+
+    public function __construct(
+        protected WhatsAppService $whatsappService
+    ) {
+    }
+
     /**
      * List all available WhatsApp templates for the authenticated team.
      * GET /api/v1/templates
@@ -17,32 +25,25 @@ class ExternalTemplateController extends Controller
         $team = $request->user()->currentTeam;
 
         if (!$team) {
-            return response()->json(['error' => 'No team context'], 400);
+            return $this->error('No team context selected.', 400);
         }
 
         try {
-            $whatsappService = new WhatsAppService();
-            $whatsappService->setTeam($team);
+            $this->whatsappService->setTeam($team);
+            $result = $this->whatsappService->getTemplates();
 
-            $result = $whatsappService->getTemplates();
-
-            if ($result['success']) {
-                return response()->json([
-                    'success' => true,
-                    'templates' => $result['data']['data'] ?? [],
-                ]);
+            if ($result['success'] ?? false) {
+                return $this->success(
+                    $result['data']['data'] ?? [],
+                    'Templates retrieved successfully.'
+                );
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch templates',
-            ], 500);
+            return $this->error($result['message'] ?? 'Failed to fetch templates', 500);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
+            return $this->error($e->getMessage(), 500);
         }
     }
 }
+

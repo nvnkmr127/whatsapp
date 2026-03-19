@@ -18,15 +18,26 @@ class AutomationService
     protected $handoff;
     protected $healthMonitor;
     protected $policyService;
-    protected const MAX_STEPS = 50;
+    protected $maxSteps;
+    protected $nodeHandlers = [];
 
     public function __construct(WhatsAppService $whatsapp, WhatsAppHealthMonitor $healthMonitor, PolicyService $policyService)
     {
         $this->whatsapp = $whatsapp;
         $this->whatsapp->isBot = true;
-        $this->handoff = new BotHandoffService();
+        // BotHandoffService is currently instantiated directly? No, it's assigned below.
         $this->healthMonitor = $healthMonitor;
         $this->policyService = $policyService;
+        $this->maxSteps = config('automation.max_steps', 50);
+        $this->handoff = new BotHandoffService();
+
+        // Initialize Node Handlers (Strategy Pattern)
+        $this->nodeHandlers = [
+            'text' => new \App\Core\Automations\NodeHandlers\MessageNodeHandler($whatsapp),
+            'message' => new \App\Core\Automations\NodeHandlers\MessageNodeHandler($whatsapp),
+            'question' => new \App\Core\Automations\NodeHandlers\QuestionNodeHandler($whatsapp),
+            'user_input' => new \App\Core\Automations\NodeHandlers\QuestionNodeHandler($whatsapp),
+        ];
     }
 
     public function setWhatsAppService(WhatsAppService $whatsapp)
@@ -279,7 +290,8 @@ class AutomationService
 
             // Health Check Enforcement
             $health = $this->healthMonitor->checkHealth($automation->team);
-            if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= 35) {
+            $healthThreshold = config('whatsapp.thresholds.health_quality_score', 35);
+            if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= $healthThreshold) {
                 Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).", ['health' => $health]);
                 return;
             }
@@ -442,7 +454,8 @@ class AutomationService
                 'status' => 'success'
             ]);
 
-            if ($nodeDelaySeconds <= 900) { // 15 min precision cutoff
+            $precision = config('automation.dispatch_precision_seconds', 900);
+        if ($nodeDelaySeconds <= $precision) { // precision cutoff
                 ExecuteAutomationNodeJob::dispatch($run->id, $node['id'])
                     ->onQueue('messages')
                     ->delay($resumeAt);
@@ -452,26 +465,20 @@ class AutomationService
 
         // 2. Main Node Logic
         Log::debug("AutomationRun #{$run->id}: Performing node work for {$node['id']} (type: {$node['type']})");
+        
+        // Use Node Strategy Handlers if available
+        $handlerKey = strtolower($node['type']);
+        if (isset($this->nodeHandlers[$handlerKey])) {
+            $result = $this->nodeHandlers[$handlerKey]->handle($run->contact, $run, $node);
+            
+            if (isset($result['state_update'])) {
+                $run->update(['state_data' => array_merge($run->state_data, $result['state_update'])]);
+            }
+            
+            return $result['status'] ?? 'continue';
+        }
+
         switch ($node['type']) {
-            case 'text':
-            case 'message':
-                // Policy Check: 24h Window
-                if (!$this->policyService->canSendFreeMessage($run->contact)) {
-                    $this->failRun($run, "Validation Failed: Cannot send text message outside 24-hour window.");
-                    return 'pause'; // Stop execution
-                }
-
-                $text = $node['data']['text'] ?? '';
-                $trackingMessage = $this->createAutomationTrackingMessage(
-                    $run,
-                    'text',
-                    $text,
-                    ['node_id' => $node['id'] ?? null, 'node_type' => $node['type']]
-                );
-
-                $this->whatsapp->sendText($run->contact->phone_number, $text, $trackingMessage);
-                return 'continue';
-
             case 'image':
             case 'video':
             case 'audio':
@@ -520,15 +527,6 @@ class AutomationService
                     );
                 }
                 return 'continue';
-
-            case 'interactive_button':
-            case 'interactive_list':
-            case 'user_input':
-            case 'question':
-                // Send the question and mark as waiting
-                $this->sendNodeMessage($run, $node);
-                $run->update(['status' => 'waiting_input']);
-                return 'wait';
 
             case 'delay':
                 $value = (int) ($node['data']['value'] ?? 0);
@@ -584,7 +582,7 @@ class AutomationService
 
     public function moveToNextNode(AutomationRun $run, $input = null)
     {
-        if ($run->step_count >= self::MAX_STEPS) {
+        if ($run->step_count >= $this->maxSteps) {
             $this->failRun($run, "Safe-guard limit reached: Max steps exceeded.");
             return;
         }
@@ -643,9 +641,9 @@ class AutomationService
      */
     public function resumeScheduledRuns()
     {
-        // 1. Recover crashed runs (status = executing but last_processed_at is too old)
+        $recoveryMinutes = config('automation.crash_recovery_minutes', 10);
         AutomationRun::where('status', 'executing')
-            ->where('last_processed_at', '<', now()->subMinutes(10))
+            ->where('last_processed_at', '<', now()->subMinutes($recoveryMinutes))
             ->update(['status' => 'active']);
 
         // 2. Pick up due pauses

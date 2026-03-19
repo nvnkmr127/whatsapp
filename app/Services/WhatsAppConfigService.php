@@ -19,9 +19,8 @@ class WhatsAppConfigService
         }
 
         return [
-            'app_id' => config('services.whatsapp.app_id'), // Global env
-            'verify_token' => config('services.whatsapp.verify_token'), // Global env
-
+            'app_id' => $team->whatsapp_app_id ?: config('whatsapp.app_id'), 
+            'verify_token' => $team->whatsapp_verify_token ?: config('whatsapp.webhook_verify_token'),
             'phone_number_id' => $team->whatsapp_phone_number_id,
             'business_account_id' => $team->whatsapp_business_account_id,
             'access_token' => $team->whatsapp_access_token, // Auto-decrypted
@@ -43,8 +42,9 @@ class WhatsAppConfigService
             return false;
         }
 
-        // Warn if expiring soon (7 days)
-        if ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->diffInDays() < 7) {
+        // Warn if expiring soon
+        $thresholdDays = config('whatsapp.thresholds.token_expiry_days', 7);
+        if ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->diffInDays() < $thresholdDays) {
             \Log::info("WhatsApp token expiring soon for team {$team->id}", [
                 'expires_at' => $team->whatsapp_token_expires_at,
                 'days_remaining' => $team->whatsapp_token_expires_at->diffInDays()
@@ -58,7 +58,7 @@ class WhatsAppConfigService
     }
 
     /**
-     * Check if token needs refresh (expires in less than 7 days)
+     * Check if token needs refresh
      */
     public function needsRefresh(Team $team): bool
     {
@@ -66,6 +66,7 @@ class WhatsAppConfigService
             return false;
         }
 
-        return $team->whatsapp_token_expires_at->diffInDays() < 7;
+        $thresholdDays = config('whatsapp.thresholds.token_expiry_days', 7);
+        return $team->whatsapp_token_expires_at->diffInDays() < $thresholdDays;
     }
 }

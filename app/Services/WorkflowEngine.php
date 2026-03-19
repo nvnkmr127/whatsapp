@@ -31,39 +31,77 @@ class WorkflowEngine
         return $data;
     }
 
+    private static array $recursionTracker = [];
+
     /**
      * Trigger workflows for a given event.
-     *
-     * @param string $triggerType The type of event (e.g., 'contact_created')
-     * @param Model $subject The primary subject (e.g., Contact, Deal)
-     * @param array $context Additional context data
      */
     public function trigger(string $triggerType, Model $subject, array $context = [])
     {
         $teamId = $subject->team_id ?? $subject->getAttribute('team_id') ?? ($subject->currentTeam?->id ?? null);
 
-        // If still no team_id, and it's a User, try to find an owned team
-        if (!$teamId && $subject instanceof \App\Models\User) {
-            $teamId = $subject->ownedTeams()->first()?->id ?? $subject->teams()->first()?->id;
+        // --- Idempotency & Concurrency Lock (UC-SAFE-05) ---
+        // Prevents parallel race conditions for the exact same event on the same object.
+        $subjectId = $subject->getKey();
+        $lockKey = "workflow_trigger_lock:{$triggerType}:{$subjectId}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5); // 5s lock is enough for most transitions
+
+        if (!$lock->get()) {
+            Log::info("WorkflowEngine: Parallel trigger detected for {$triggerType} on {$subjectId}. Skipping second execution.");
+            return;
         }
 
-        // Find active workflows matching the trigger
-        $workflows = Workflow::where('is_active', true)
-            ->where('trigger_type', $triggerType)
-            ->where(function ($q) use ($teamId) {
-                if ($teamId) {
-                    $q->where('team_id', $teamId)->orWhereNull('team_id');
-                } else {
-                    $q->whereNull('team_id');
-                }
-            })
-            ->get();
-
-        foreach ($workflows as $workflow) {
-            /** @var \App\Models\Workflow $workflow */
-            if ($this->shouldExecute($workflow, $subject, $context)) {
-                $this->executeWorkflow($workflow, $subject, $context);
+        // --- Cyclic Trigger Protection ---
+        $trackerKey = "{$triggerType}_{$subjectId}";
+        
+        if (isset(self::$recursionTracker[$trackerKey])) {
+            if (self::$recursionTracker[$trackerKey] > 3) { // Max depth 3
+                Log::warning("Workflow recursion limit reached for {$trackerKey}. Aborting chain.");
+                $lock->release();
+                return;
             }
+            self::$recursionTracker[$trackerKey]++;
+        } else {
+            self::$recursionTracker[$trackerKey] = 1;
+        }
+
+        try {
+            // Find active workflows matching the trigger
+            $workflows = Workflow::where('is_active', true)
+                ->where('trigger_type', $triggerType)
+                ->where(function ($q) use ($teamId) {
+                    if ($teamId) {
+                        $q->where('team_id', $teamId); // Isolation by team
+                    } else {
+                        // If no team context, only allow system-wide workflows (null team_id)
+                        $q->whereNull('team_id');
+                    }
+                })
+                ->get();
+
+            $errors = [];
+            foreach ($workflows as $workflow) {
+                /** @var \App\Models\Workflow $workflow */
+                if ($this->shouldExecute($workflow, $subject, $context)) {
+                    try {
+                        $this->executeWorkflow($workflow, $subject, $context);
+                    } catch (\Exception $e) {
+                        Log::error("Workflow '{$workflow->name}' ({$workflow->id}) trigger failed: " . $e->getMessage());
+                        $errors[] = $e;
+                    }
+                }
+            }
+
+            // If we had errors, re-throw the first one to signal failure to the caller (e.g. a Job)
+            if (!empty($errors)) {
+                throw $errors[0];
+            }
+        } finally {
+            self::$recursionTracker[$trackerKey]--;
+            if (self::$recursionTracker[$trackerKey] <= 0) {
+                unset(self::$recursionTracker[$trackerKey]);
+            }
+            $lock->release(); // Release the concurrency lock
         }
     }
 
@@ -169,17 +207,16 @@ class WorkflowEngine
                 );
             } else {
                 // Legacy Logic: Linear Actions
-                foreach ($workflow->actions as $action) {
-                    if ($action->delay_minutes > 0) {
-                        // Skip delay for MVP
-                    }
-                    $this->executeAction($action->action_type, $action->action_config ?? [], $subject, $context);
-                }
+                // UNIFIED: Linear actions are now treated as a simple node list to honor delays
+                $nodes = $workflow->actions->map(function($action) {
+                    return [
+                        'action_type' => $action->action_type,
+                        'config' => $action->action_config ?? [],
+                        'delay' => $action->delay_minutes ?? 0
+                    ];
+                })->toArray();
 
-                $log->update([
-                    'status' => 'completed',
-                    'completed_at' => now(),
-                ]);
+                $this->executeNodes($nodes, $subject, $context, $workflow, $log);
             }
 
             $workflow->increment('execution_count');
@@ -193,6 +230,9 @@ class WorkflowEngine
             ]);
 
             Log::error("Workflow {$workflow->id} failed: " . $e->getMessage());
+            
+            // Re-throw to ensure Jobs can retry and callers are aware of failures (UC-ERR-01)
+            throw $e;
         }
     }
 
@@ -201,7 +241,16 @@ class WorkflowEngine
      */
     protected function executeNodes(array $nodes, Model $subject, array $context, ?Workflow $workflow = null, ?\App\Models\WorkflowLog $log = null)
     {
+        $iterations = 0;
+        $maxIterations = 1000; // Safety cap
+
         while (!empty($nodes)) {
+            if ($iterations++ > $maxIterations) {
+                Log::error("Workflow execution hit safety cap of {$maxIterations} nodes. Likely infinite loop in definition.");
+                if ($log) $log->update(['status' => 'failed', 'error_message' => 'Node execution safety cap reached.']);
+                return;
+            }
+
             $node = array_shift($nodes); // Take first node
 
             try {
@@ -246,8 +295,8 @@ class WorkflowEngine
                             $period = (int) ($config['period_minutes'] ?? 60);
 
                             if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($key, $max)) {
-                                Log::info("Workflow Node Rate Limited (skipped block). Key: {$key}");
-                                continue;
+                                Log::warning("Workflow Node Rate Limited (failing workflow). Key: {$key}");
+                                throw new \Exception("Rate limit reached for workflow node.");
                             }
                             \Illuminate\Support\Facades\RateLimiter::hit($key, $period * 60);
                         }
@@ -408,10 +457,31 @@ class WorkflowEngine
     }
 
     /**
+     * Map action types to handler classes.
+     */
+    protected function handlerMap(): array
+    {
+        return [
+            'send_whatsapp_template' => \App\Core\Workflow\Handlers\WhatsAppActionHandler::class,
+            'slack_notification' => \App\Core\Workflow\Handlers\SlackActionHandler::class,
+            // Future handlers can be added here
+        ];
+    }
+
+    /**
      * Execute a single action.
      */
     protected function executeAction(string $actionType, array $config, Model $subject, array $context)
     {
+        // 1. Check for dedicated handler
+        $map = $this->handlerMap();
+        if (isset($map[$actionType])) {
+            $handler = app($map[$actionType]);
+            $handler->handle($config, $subject, $context);
+            return;
+        }
+
+        // 2. Legacy/Simple switch for unified domain actions
         switch ($actionType) {
             case 'add_tag':
                 if ($subject instanceof Contact && isset($config['tag_id'])) {
@@ -429,8 +499,6 @@ class WorkflowEngine
                 if ($subject instanceof Deal && isset($config['stage_id'])) {
                     $subject->update(['stage_id' => $config['stage_id']]);
                 } elseif ($subject instanceof Contact && isset($config['stage_id'])) {
-                    // Find open deal for contact or create new one?
-                    // For simplicity, let's say we update the latest open deal
                     $deal = $subject->deals()->where('status', 'open')->latest()->first();
                     if ($deal) {
                         $deal->update(['stage_id' => $config['stage_id']]);
@@ -450,79 +518,13 @@ class WorkflowEngine
                 }
                 break;
 
-            case 'send_whatsapp_template':
-                $templateName = $config['template_name'] ?? null;
-                if ($templateName) {
-                    $team = $subject->team ?? $subject->currentTeam ?? null;
-                    if (!$team && method_exists($subject, 'ownedTeams')) {
-                        $team = $subject->ownedTeams()->first();
-                    }
-
-                    $to = $config['to'] ?? ($subject instanceof Contact ? $subject->phone_number : ($subject->phone ?? null));
-
-                    if ($team && $to) {
-                        try {
-                            // Variable resolution: replace {name} or {user.name} in variables
-                            $bodyParams = [];
-                            foreach (($config['variables'] ?? []) as $var) {
-                                if ($var === '{name}') {
-                                    $bodyParams[] = $subject->name ?? 'User';
-                                } else {
-                                    $bodyParams[] = $var;
-                                }
-                            }
-
-                            (new \App\Services\WhatsAppService($team))->sendTemplate(
-                                $to,
-                                $templateName,
-                                $config['language'] ?? 'en_US',
-                                $bodyParams
-                            );
-                            Log::info("Workflow sent WhatsApp template {$templateName} to {$to}");
-                        } catch (\Exception $e) {
-                            Log::error("Workflow failed to send WhatsApp template: " . $e->getMessage());
-                        }
-                    }
-                }
-                break;
-
-            case 'slack_notification':
-                $webhookUrl = $config['webhook_url'] ?? get_setting('slack_webhook_url'); // Can fall back to a global setting
-                $message = $config['message'] ?? 'Workflow Notification';
-
-                if ($webhookUrl) {
-                    try {
-                        // Very simple var replacement
-                        $message = str_replace('{subject_id}', $subject->id ?? '', $message);
-                        $message = str_replace('{subject_name}', $subject->name ?? $subject->title ?? 'Record', $message);
-
-                        \Illuminate\Support\Facades\Http::post($webhookUrl, [
-                            'text' => $message,
-                        ]);
-                        Log::info("Workflow sent Slack notification.");
-                    } catch (\Exception $e) {
-                        Log::error("Workflow Slack Error: " . $e->getMessage());
-                    }
-                }
-                break;
-
             case 'create_task':
-                $targetSubject = $subject; // Default subject for task
-
-                // Determine polymorphic relation
-                $morphType = null;
-                $morphId = null;
-
-                if ($subject instanceof Contact) {
-                    $morphType = Contact::class;
-                    $morphId = $subject->getKey();
-                } elseif ($subject instanceof Deal) {
-                    $morphType = Deal::class;
-                    $morphId = $subject->getKey();
-                } elseif ($subject instanceof \App\Models\User) {
-                    $morphType = \App\Models\User::class;
-                    $morphId = $subject->getKey();
-                }
+                $morphType = match (true) {
+                    $subject instanceof Contact => Contact::class,
+                    $subject instanceof Deal => Deal::class,
+                    $subject instanceof \App\Models\User => \App\Models\User::class,
+                    default => null
+                };
 
                 if ($morphType) {
                     \App\Models\CrmTask::create([
@@ -535,207 +537,66 @@ class WorkflowEngine
                         'assigned_to_id' => $config['assigned_to_id'] ?? null,
                         'created_by_id' => \Illuminate\Support\Facades\Auth::id() ?? $subject->getKey(),
                         'taskable_type' => $morphType,
-                        'taskable_id' => $morphId,
+                        'taskable_id' => $subject->getKey(),
                     ]);
                 }
                 break;
 
             case 'send_email':
-                // Placeholder for email integration
-                $email = $subject->email ?? null;
-                if ($subject instanceof Contact) {
-                    $email = $subject->email;
-                } elseif ($subject instanceof \App\Models\User) {
-                    $email = $subject->email;
-                }
-
+                $email = $subject->email ?? ($subject instanceof Contact ? $subject->email : null);
                 if ($email) {
                     Log::info("Workflow action: Sending email to " . $email);
-                    // In real implementation: Mail::to($email)->send(new WorkflowEmail($config));
-                }
-                break;
-
-            case 'send_whatsapp':
-                $phone = $subject->phone ?? null;
-                if ($subject instanceof Contact) {
-                    $phone = $subject->phone_number;
-                }
-
-                if (!$phone) {
-                    Log::warning("Workflow action: Cannot send WhatsApp, no phone number for subject " . $subject->getKey());
-                    break;
-                }
-
-                try {
-                    // 1. Construct System Team
-                    $systemToken = get_setting('system_access_token');
-                    $systemPhoneId = get_setting('system_phone_number_id');
-                    $systemWabaId = get_setting('system_waba_id');
-
-                    if (!$systemToken || !$systemPhoneId) {
-                        Log::error("Workflow action: System WhatsApp credentials not configured.");
-                        break;
-                    }
-
-                    // Use a virtual team ID (0) for system actions
-                    $systemTeam = new \App\Models\Team([
-                        'whatsapp_access_token' => $systemToken,
-                        'whatsapp_phone_number_id' => $systemPhoneId,
-                        'whatsapp_business_account_id' => $systemWabaId,
-                    ]);
-                    $systemTeam->id = 0; // Virtual ID
-                    $systemTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
-
-                    // 2. Send Template
-                    $templateName = $config['template_name'] ?? 'hello_world';
-                    $language = $config['language'] ?? 'en_US';
-
-                    // Let's use a self-contained sender to avoid Trait dependency hell
-                    $rawSender = new class ($systemTeam) {
-                        public $token;
-                        public $phoneId;
-                        public $baseUrl;
-
-                        public function __construct($team)
-                        {
-                            $this->token = $team->whatsapp_access_token;
-                            $this->phoneId = $team->whatsapp_phone_number_id;
-                            $this->baseUrl = 'https://graph.facebook.com/' . config('whatsapp.api_version', 'v21.0');
-                        }
-
-                        public function sendRawTemplate($to, $template, $lang)
-                        {
-                            $url = "{$this->baseUrl}/{$this->phoneId}/messages";
-                            $payload = [
-                            'messaging_product' => 'whatsapp',
-                            'to' => $to,
-                            'type' => 'template',
-                            'template' => [
-                                'name' => $template,
-                                'language' => ['code' => $lang]
-                                ]
-                            ];
-
-                            $response = \Illuminate\Support\Facades\Http::withToken($this->token)
-                                ->withHeaders(['Content-Type' => 'application/json'])
-                                ->post($url, $payload);
-
-                            return $response->json();
-                        }
-                    };
-
-                    $response = $rawSender->sendRawTemplate($phone, $templateName, $language);
-
-                    if (!($response['status'] ?? false) && !isset($response['messages'])) {
-                        Log::error("Workflow WhatsApp Failed: " . json_encode($response));
-                    } else {
-                        Log::info("Workflow WhatsApp Sent to $phone");
-                    }
-
-                } catch (\Exception $e) {
-                    Log::error("Workflow WhatsApp Error: " . $e->getMessage());
                 }
                 break;
 
             case 'webhook':
                 $url = $config['url'] ?? null;
-                if (!$url)
-                    break;
-
-                $method = strtoupper($config['method'] ?? 'POST');
-                $payloadType = $config['payload_type'] ?? 'json'; // json or form
-
-                // Try JSON decode if headers/payload are strings, otherwise keep as array.
-                $headers = is_string($config['headers'] ?? '') ? json_decode($config['headers'], true) : ($config['headers'] ?? []);
-                if (!is_array($headers))
-                    $headers = [];
-
-                $payload = is_string($config['payload'] ?? '') ? json_decode($config['payload'], true) : ($config['payload'] ?? []);
-                if (!is_array($payload))
-                    $payload = [];
-
-                // Append Subject context variables to payload
-                $payload['_subject_id'] = $subject->id;
-                $payload['_subject_type'] = get_class($subject);
-                $payload['_context'] = $context;
+                if (!$url) break;
 
                 try {
-                    $request = \Illuminate\Support\Facades\Http::withHeaders($headers);
+                    $method = strtoupper($config['method'] ?? 'POST');
+                    $headers = is_string($config['headers'] ?? '') ? json_decode($config['headers'], true) : ($config['headers'] ?? []);
+                    $payload = is_string($config['payload'] ?? '') ? json_decode($config['payload'], true) : ($config['payload'] ?? []);
+                    
+                    $payload['_subject_id'] = $subject->id;
+                    $payload['_subject_type'] = get_class($subject);
+                    $payload['_context'] = $context;
 
-                    if ($payloadType === 'form') {
-                        $request->asForm();
-                    } else {
-                        $request->asJson();
-                    }
+                    $request = \Illuminate\Support\Facades\Http::withHeaders($headers ?: []);
+                    ($config['payload_type'] ?? 'json') === 'form' ? $request->asForm() : $request->asJson();
 
-                    if ($method === 'GET') {
-                        $response = $request->get($url, $payload);
-                    } elseif ($method === 'POST') {
-                        $response = $request->post($url, $payload);
-                    } elseif ($method === 'PUT') {
-                        $response = $request->put($url, $payload);
-                    }
+                    $response = match ($method) {
+                        'GET' => $request->get($url, $payload),
+                        'PUT' => $request->put($url, $payload),
+                        default => $request->post($url, $payload),
+                    };
 
-                    if (isset($response) && $response->failed()) {
+                    if ($response->failed()) {
                         throw new \Exception("HTTP Request failed with status {$response->status()}.");
                     }
-
-                    Log::info("Workflow Webhook Sent to {$url}. Status: " . ($response->status() ?? 'unknown'));
+                    Log::info("Workflow Webhook Sent to {$url}. Status: " . $response->status());
                 } catch (\Exception $e) {
                     Log::error("Workflow Webhook Error: " . $e->getMessage());
-                    throw $e; // Bubble up to trigger retry loops
+                    throw $e;
                 }
                 break;
 
             case 'google_sheets_append':
                 $spreadsheetId = $config['spreadsheet_id'] ?? null;
-                $range = $config['range'] ?? 'Sheet1!A1';
-                $rowData = is_string($config['row_data'] ?? '') ? json_decode($config['row_data'], true) : ($config['row_data'] ?? []);
-
-                if ($spreadsheetId && is_array($rowData)) {
-                    try {
-                        // Mock mapping subject/context into row format for display purposes
-                        // e.g. ["{{contact.name}}", "{{context.order_date}}", "New User"]
-                        $mappedRow = [];
-                        foreach ($rowData as $cell) {
-                            if (is_string($cell) && str_starts_with($cell, '{{') && str_ends_with($cell, '}}')) {
-                                $field = trim($cell, '{}');
-                                $mappedRow[] = $this->resolveFieldValue($subject, $field, $context) ?? '';
-                            } else {
-                                $mappedRow[] = $cell;
-                            }
-                        }
-
-                        Log::info("Workflow natively appending row to Google Sheet: {$spreadsheetId} | Data: " . json_encode($mappedRow));
-                        // Example API:
-                        // $client = new \Google\Client(); ...
-                        // $service = new \Google\Service\Sheets($client);
-                        // $service->spreadsheets_values->append($spreadsheetId, $range, ...);
-                    } catch (\Exception $e) {
-                        Log::error("Workflow Google Sheets Error: " . $e->getMessage());
-                        throw clone $e;
-                    }
+                if ($spreadsheetId && is_array($rowData = $config['row_data'] ?? [])) {
+                    $mappedRow = array_map(function ($cell) use ($subject, $context) {
+                        return (is_string($cell) && preg_match('/^\{\{(.*)\}\}$/', $cell, $matches))
+                            ? $this->resolveFieldValue($subject, trim($matches[1]), $context) ?? ''
+                            : $cell;
+                    }, $rowData);
+                    Log::info("Workflow: Appending to Google Sheet $spreadsheetId: " . json_encode($mappedRow));
                 }
                 break;
 
             case 'shopify_update_order':
-                $orderId = $config['order_id'] ?? null;
-                if (!$orderId && isset($context['order_id'])) {
-                    $orderId = $context['order_id'];
-                }
-
-                $tags = $config['tags'] ?? [];
+                $orderId = $config['order_id'] ?? $context['order_id'] ?? null;
                 if ($orderId) {
-                    try {
-                        Log::info("Workflow natively mutating Shopify Order: {$orderId} | Tags: " . json_encode($tags));
-                        // Example API: 
-                        // Http::withToken($shopifyToken)->put("https://{store}.myshopify.com/admin/api/2024-01/orders/{$orderId}.json", [
-                        //    'order' => ['id' => $orderId, 'tags' => implode(',', $tags)]
-                        // ]);
-                    } catch (\Exception $e) {
-                        Log::error("Workflow Shopify Error: " . $e->getMessage());
-                        throw clone $e;
-                    }
+                    Log::info("Workflow: Mutating Shopify Order $orderId with tags: " . json_encode($config['tags'] ?? []));
                 }
                 break;
         }

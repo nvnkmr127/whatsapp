@@ -16,7 +16,7 @@ class OptInValidator
         $result = new ValidationResult();
 
         // Check if opted out
-        if ($contact->opt_out_status === 'opted_out') {
+        if ($contact->opt_in_status === 'opted_out') {
             $result->addError(new ValidationError(
                 code: 'CONTACT_OPTED_OUT',
                 message: "Contact {$contact->phone} has opted out",
@@ -24,8 +24,7 @@ class OptInValidator
                 field: 'contact_id',
                 suggestion: 'Remove from campaign - contact has explicitly opted out',
                 metadata: [
-                    'opted_out_at' => $contact->opted_out_at?->toIso8601String(),
-                    'opt_out_reason' => $contact->opt_out_reason,
+                    'opted_out_at' => $contact->updated_at?->toIso8601String(),
                 ]
             ));
 
@@ -62,19 +61,8 @@ class OptInValidator
             }
         }
 
-        // Check marketing consent for marketing messages
-        if ($messageType === 'marketing' && !$contact->marketing_consent) {
-            $result->addError(new ValidationError(
-                code: 'NO_MARKETING_CONSENT',
-                message: 'Contact has not consented to marketing messages',
-                severity: 'error',
-                field: 'message_type',
-                suggestion: 'Use transactional template or obtain marketing consent first'
-            ));
-        }
-
         // Check if contact has any opt-in at all
-        if (!$contact->opt_in_status || $contact->opt_in_status === 'pending') {
+        if ($contact->opt_in_status !== 'opted_in') {
             $result->addError(new ValidationError(
                 code: 'NO_OPT_IN',
                 message: 'Contact has not opted in',

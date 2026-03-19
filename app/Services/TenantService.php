@@ -3,65 +3,77 @@
 namespace App\Services;
 
 use App\Models\Team;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\Plan;
+use App\Services\BillingService;
+use App\Services\OfferEligibilityService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class TenantService
 {
     /**
-     * Get the current tenant (Team) for the authenticated user.
+     * Create a new tenant (Team + Owner User).
      */
-    public function getTenant(): ?Team
+    public function create(array $data, ?User $creator = null)
     {
-        return Auth::user()?->currentTeam;
+        return DB::transaction(function () use ($data, $creator) {
+            // 1. Create Owner User
+            $user = User::create([
+                'name' => $data['owner_name'],
+                'email' => $data['owner_email'],
+                'password' => Hash::make($data['owner_password']),
+            ]);
+
+            // 2. Create Team
+            $team = Team::forceCreate([
+                'user_id' => $user->id,
+                'name' => $data['company_name'],
+                'personal_team' => false,
+                'subscription_plan' => $data['plan'],
+                'subscription_status' => 'active',
+                'subscription_ends_at' => now()->addMonth(),
+            ]);
+
+            // 3. Attach User to Team
+            $user->teams()->attach($team, ['role' => 'admin']);
+            $user->forceFill(['current_team_id' => $team->id])->save();
+
+            // 4. Handle Offers
+            $this->handleWelcomeOffer($team);
+
+            // 5. Audit & Logs
+            Log::info('Tenant created', [
+                'team_id' => $team->id,
+                'team_name' => $team->name,
+                'owner_email' => $user->email,
+                'plan' => $data['plan'],
+                'created_by' => $creator ? $creator->email : 'system',
+            ]);
+
+            return $team;
+        });
     }
 
     /**
-     * Get the Tenant ID.
+     * Handle initial welcome offer eligibility.
      */
-    public function getTenantId(): ?int
+    protected function handleWelcomeOffer(Team $team)
     {
-        return $this->getTenant()?->id;
-    }
+        $eligibilitySvc = app(OfferEligibilityService::class);
+        $offerApplied = $eligibilitySvc->isEligible($team);
 
-    /**
-     * Get the WABA (WhatsApp Business Account) ID for the current tenant.
-     */
-    public function getWabaId(): ?string
-    {
-        return $this->getTenant()?->whatsapp_business_account_id;
-    }
-
-    /**
-     * Get the Phone Number ID for the current tenant.
-     */
-    public function getPhoneNumberId(): ?string
-    {
-        return $this->getTenant()?->whatsapp_phone_number_id;
-    }
-
-    /**
-     * Get the WhatsApp Access Token.
-     */
-    public function getAccessToken(): ?string
-    {
-        return $this->getTenant()?->whatsapp_access_token;
-    }
-
-    /**
-     * Get the current user's role in the active tenant.
-     */
-    public function getUserRole(): ?string
-    {
-        // teamRole() returns a Role object, we want the key (string) usually, or null
-        $role = Auth::user()?->teamRole($this->getTenant());
-        return $role?->key;
-    }
-
-    /**
-     * Check if the tenant is connected to WhatsApp.
-     */
-    public function isConnected(): bool
-    {
-        return (bool) $this->getTenant()?->whatsapp_connected;
+        if ($offerApplied) {
+            $credit = (float) get_setting('offer_initial_credit', 5.00);
+            if ($credit > 0) {
+                app(BillingService::class)->deposit(
+                    $team,
+                    $credit,
+                    'Welcome Gift (Launch Offer)'
+                );
+            }
+            $eligibilitySvc->markClaimed($team);
+        }
     }
 }

@@ -1,0 +1,185 @@
+export default {
+    messages: [],
+    conversationId: null,
+    loading: false,
+    hasMore: true,
+    wire: null,
+
+    initMessages(wire, conversationId, teamId) {
+        Object.defineProperty(this, '_wire', {
+            value: wire,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        });
+        this.wire = wire;
+        this.conversationId = conversationId;
+        this.teamId = teamId;
+        this.messages = [];
+        this.hasMore = true;
+
+        if (!this._hasMsgListeners) {
+            window.addEventListener('messageSent', () => {
+                this.loadMessages(true);
+            });
+            this._hasMsgListeners = true;
+        }
+
+        setTimeout(() => {
+            this.loadMessages(true);
+        }, 100);
+    },
+
+    async loadMessages(isInitial = false) {
+        const wire = this._wire || this.wire;
+        if (!wire || this.loading || (!this.hasMore && !isInitial)) return;
+        this.loading = true;
+
+        try {
+            const offset = isInitial ? 0 : this.messages.length;
+            const newBatch = await wire.call('loadMessagesJson', offset, 50);
+
+            if (newBatch.length < 50) {
+                this.hasMore = false;
+            }
+
+            if (isInitial) {
+                this.messages = newBatch;
+                window.dispatchEvent(new CustomEvent('chat-initial-loaded'));
+            } else {
+                this.messages = [...newBatch, ...this.messages];
+            }
+        } catch (error) {
+            console.error('Failed to load messages', error);
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    async sendMessage(body) {
+        const tempId = 'temp_' + Date.now();
+        const optimisticMsg = {
+            id: tempId,
+            direction: 'outbound',
+            content: body,
+            type: 'text',
+            status: 'sending',
+            created_at: Math.floor(Date.now() / 1000),
+            pretty_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            is_outbound: true,
+            media_url: null
+        };
+
+        this.messages.push(optimisticMsg);
+        window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
+
+        try {
+            const wire = this._wire || this.wire;
+            const result = await wire.call('sendMessageJson', body, tempId);
+
+            if (result.status === 'error') {
+                throw new Error(result.message);
+            }
+
+            const index = this.messages.findIndex(m => m.id === tempId);
+            if (index !== -1) {
+                this.messages[index] = { ...this.messages[index], ...result };
+            }
+        } catch (e) {
+            console.error('Send failed', e);
+            const index = this.messages.findIndex(m => m.id === tempId);
+            if (index !== -1) {
+                this.messages[index].status = 'failed';
+                this.messages[index].error_message = e.message;
+            }
+        }
+    },
+
+    async retryMessage(id) {
+        const index = this.messages.findIndex(m => m.id === id);
+        if (index === -1) return;
+
+        const body = this.messages[index].content;
+        this.messages[index].status = 'sending';
+
+        try {
+            const wire = this._wire || this.wire;
+            const result = await wire.call('sendMessageJson', body, id);
+
+            if (result.status === 'error') {
+                throw new Error(result.message);
+            }
+
+            this.messages[index] = { ...this.messages[index], ...result };
+        } catch (e) {
+            console.error('Retry failed', e);
+            this.messages[index].status = 'failed';
+            this.messages[index].error_message = e.message;
+        }
+    },
+
+    receiveMessage(msg) {
+        if (this.messages.some(m => m.id === msg.id)) return;
+        this.messages.push(msg);
+        this.messages.sort((a, b) => a.created_at - b.created_at);
+        window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
+    },
+
+    getDateLabel(timestamp) {
+        const ts = typeof timestamp === 'number' ? timestamp * 1000 : Date.parse(timestamp);
+        if (isNaN(ts)) return '';
+
+        const date = new Date(ts);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        if (date.toDateString() === today.toDateString()) return 'Today';
+        if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+        return date.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' });
+    },
+
+    shouldShowDateDivider(index) {
+        if (index === 0) return true;
+        const current = this.messages[index];
+        const previous = this.messages[index - 1];
+
+        if (!current || !previous || !current.created_at || !previous.created_at) return false;
+
+        return this.getDateLabel(current.created_at) !== this.getDateLabel(previous.created_at);
+    },
+
+    async syncLatest() {
+        const wire = this._wire || this.wire;
+        if (!wire || !this.conversationId) return;
+
+        try {
+            const latestBatch = await wire.call('loadMessagesJson', 0, 20);
+
+            let addedCount = 0;
+            latestBatch.forEach(newMsg => {
+                const idx = this.messages.findIndex(m => m.id === newMsg.id);
+                if (idx === -1) {
+                    this.messages.push(newMsg);
+                    addedCount++;
+                } else {
+                    if (this.messages[idx].status !== newMsg.status) {
+                        this.messages[idx].status = newMsg.status;
+                    }
+                    if (newMsg.media_url && this.messages[idx].media_url !== newMsg.media_url) {
+                        this.messages[idx].media_url = newMsg.media_url;
+                        this.messages[idx].media_type = newMsg.media_type;
+                    }
+                }
+            });
+
+            if (addedCount > 0) {
+                this.messages.sort((a, b) => a.created_at - b.created_at);
+                window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
+            }
+        } catch (e) {
+            console.error('Sync failed', e);
+        }
+    }
+};

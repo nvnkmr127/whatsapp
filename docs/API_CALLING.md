@@ -22,7 +22,7 @@ Authorization: Bearer {your-api-token}
 
 Start an outbound call to a contact.
 
-**Endpoint**: `POST /api/calls/initiate`
+**Endpoint**: `POST /api/v1/calls/initiate`
 
 **Request Body**:
 ```json
@@ -60,7 +60,7 @@ Start an outbound call to a contact.
 
 Validate if a call can be initiated before attempting.
 
-**Endpoint**: `POST /api/calls/check-eligibility`
+**Endpoint**: `POST /api/v1/calls/check-eligibility`
 
 **Request Body**:
 ```json
@@ -109,7 +109,7 @@ Validate if a call can be initiated before attempting.
 
 Accept an incoming call.
 
-**Endpoint**: `POST /api/calls/{callId}/answer`
+**Endpoint**: `POST /api/v1/calls/{callId}/answer`
 
 **Success Response** (200):
 ```json
@@ -125,7 +125,7 @@ Accept an incoming call.
 
 Reject an incoming call.
 
-**Endpoint**: `POST /api/calls/{callId}/reject`
+**Endpoint**: `POST /api/v1/calls/{callId}/reject`
 
 **Success Response** (200):
 ```json
@@ -141,7 +141,7 @@ Reject an incoming call.
 
 Terminate an active call.
 
-**Endpoint**: `POST /api/calls/{callId}/end`
+**Endpoint**: `POST /api/v1/calls/{callId}/end`
 
 **Success Response** (200):
 ```json
@@ -157,7 +157,7 @@ Terminate an active call.
 
 Retrieve call logs with filtering and pagination.
 
-**Endpoint**: `GET /api/calls`
+**Endpoint**: `GET /api/v1/calls`
 
 **Query Parameters**:
 - `direction` (optional): `inbound` or `outbound`
@@ -210,7 +210,7 @@ Retrieve call logs with filtering and pagination.
 
 Retrieve detailed information about a specific call.
 
-**Endpoint**: `GET /api/calls/{callId}`
+**Endpoint**: `GET /api/v1/calls/{callId}`
 
 **Success Response** (200):
 ```json
@@ -247,7 +247,7 @@ Retrieve detailed information about a specific call.
 
 Retrieve call analytics and usage metrics.
 
-**Endpoint**: `GET /api/calls/statistics`
+**Endpoint**: `GET /api/v1/calls/statistics`
 
 **Query Parameters**:
 - `period` (optional): `today`, `week`, `month`, `year` (default: `month`)
@@ -283,7 +283,7 @@ Retrieve call analytics and usage metrics.
 
 Retrieve currently active calls.
 
-**Endpoint**: `GET /api/calls/active`
+**Endpoint**: `GET /api/v1/calls/active`
 
 **Success Response** (200):
 ```json
@@ -309,7 +309,7 @@ Retrieve currently active calls.
 
 Retrieve call history for a specific contact.
 
-**Endpoint**: `GET /api/calls/contacts/{contactId}/history`
+**Endpoint**: `GET /api/v1/calls/contacts/{contactId}/history`
 
 **Query Parameters**:
 - `limit` (optional): Number of calls to return (default: 50, max: 100)

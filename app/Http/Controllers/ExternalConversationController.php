@@ -54,6 +54,8 @@ class ExternalConversationController extends Controller
             'template_name' => 'required_if:type,template|string',
             'language' => 'required_if:type,template|string|size:5',
             'variables' => 'array',
+            'header_variables' => 'array',
+            'footer_variables' => 'array',
         ]);
 
         $team = $request->user()->currentTeam;
@@ -94,7 +96,9 @@ class ExternalConversationController extends Controller
             'metadata' => $request->type === 'template' ? [
                 'template_name' => $request->template_name,
                 'language' => $request->language ?? 'en_US',
-                'variables' => $request->variables ?? []
+                'variables' => $request->variables ?? [],
+                'header_variables' => $request->header_variables ?? [],
+                'footer_variables' => $request->footer_variables ?? [],
             ] : [],
         ]);
 
@@ -106,7 +110,10 @@ class ExternalConversationController extends Controller
             $request->type === 'text' ? $request->message : ($request->variables ?? []),
             $request->template_name ?? null,
             $request->language ?? 'en_US',
-            $message->id
+            $message->id,
+            null,
+            $request->header_variables ?? [],
+            $request->footer_variables ?? []
         );
 
         return response()->json([

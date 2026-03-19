@@ -403,8 +403,8 @@
                     </div>
                 </div>
 
-                <div class="relative h-[350px] w-full">
-                    <canvas id="messageChart"></canvas>
+                <div class="relative h-[350px] w-full" wire:ignore>
+                    <x-app-chart :data="$chartData" height="350px" />
                 </div>
             </div>
         </div>
@@ -515,93 +515,4 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('livewire:initialized', () => {
-            const ctx = document.getElementById('messageChart').getContext('2d');
-            const chartData = @json($chartData);
-            const isDark = document.documentElement.classList.contains('dark');
-
-            const gradientSent = ctx.createLinearGradient(0, 0, 0, 400);
-            gradientSent.addColorStop(0, 'rgba(34, 197, 94, 0.4)');
-            gradientSent.addColorStop(1, 'rgba(34, 197, 94, 0)');
-
-            const gradientReceived = ctx.createLinearGradient(0, 0, 0, 400);
-            gradientReceived.addColorStop(0, 'rgba(20, 184, 166, 0.4)');
-            gradientReceived.addColorStop(1, 'rgba(20, 184, 166, 0)');
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartData.labels,
-                    datasets: chartData.datasets.map((ds, index) => ({
-                        ...ds,
-                        borderColor: index === 0 ? '#22c55e' : '#14b8a6',
-                        backgroundColor: index === 0 ? gradientSent : gradientReceived,
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 4,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: index === 0 ? '#22c55e' : '#14b8a6',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 3,
-                    }))
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                display: true,
-                                color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                                drawBorder: false,
-                            },
-                            ticks: {
-                                font: { family: 'Inter', size: 10, weight: '700' },
-                                color: '#94a3b8',
-                                padding: 10,
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false,
-                            },
-                            ticks: {
-                                font: { family: 'Inter', size: 10, weight: '700' },
-                                color: '#94a3b8',
-                                padding: 10,
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false,
-                        },
-                        tooltip: {
-                            backgroundColor: isDark ? '#1e293b' : '#fff',
-                            titleColor: isDark ? '#f8fafc' : '#1e293b',
-                            bodyColor: isDark ? '#94a3b8' : '#64748b',
-                            titleFont: { size: 13, weight: '900', family: 'Inter' },
-                            bodyFont: { size: 12, weight: '700', family: 'Inter' },
-                            padding: 15,
-                            cornerRadius: 16,
-                            displayColors: true,
-                            boxWidth: 8,
-                            boxHeight: 8,
-                            boxPadding: 6,
-                            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-                            borderWidth: 1,
-                        }
-                    }
-                }
-            });
-        });
-    </script>
 </div>

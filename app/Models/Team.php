@@ -40,6 +40,8 @@ class Team extends JetstreamTeam
         'timezone',
         'whatsapp_phone_number_id',
         'whatsapp_business_account_id', // Removed for security - restoring for functionality
+        'whatsapp_app_id', // [NEW] Manual Connection
+        'whatsapp_verify_token', // [NEW] Manual Connection
         'facebook_business_id',
         'whatsapp_access_token', // Removed for security - restoring for functionality
         'outbound_webhook_url',
@@ -114,6 +116,7 @@ class Team extends JetstreamTeam
             'welcome_message_config' => 'array',
             'away_message_config' => 'array',
             'whatsapp_access_token' => 'encrypted',
+            'whatsapp_verify_token' => 'encrypted',
             'opt_in_keywords' => 'array',
             'opt_out_keywords' => 'array',
             'opt_in_message_enabled' => 'boolean',

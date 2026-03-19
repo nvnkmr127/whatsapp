@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class InboundWebhookController extends Controller
 {
+    use \App\Traits\StandardApiResponses;
+
     public function __construct(
         protected WebhookAuthService $authService,
         protected WebhookMappingService $mappingService
@@ -31,12 +33,12 @@ class InboundWebhookController extends Controller
         if (!$source) {
             Log::warning('Webhook source not found', ['slug' => $sourceSlug]);
             // Return slug in error to help user debug typos
-            return response()->json(['error' => "Webhook source not found for slug: {$sourceSlug}"], 404);
+            return $this->error("Webhook source not found for slug: {$sourceSlug}", 404, null, 'ERR_WEBHOOK_SOURCE_NOT_FOUND');
         }
 
         if (!$source->is_active) {
             Log::warning('Webhook source is inactive', ['slug' => $sourceSlug]);
-            return response()->json(['error' => 'Webhook source is inactive'], 403);
+            return $this->error('Webhook source is inactive', 403, null, 'ERR_WEBHOOK_SOURCE_INACTIVE');
         }
 
         // Increment received counter
@@ -51,11 +53,10 @@ class InboundWebhookController extends Controller
                 'url' => $request->fullUrl(),
                 'headers' => array_keys($request->headers->all()),
             ]);
-            return response()->json([
-                'error' => 'Authentication failed',
+            return $this->error('Authentication failed', 401, [
                 'required_auth' => $source->auth_method,
                 'tip' => 'Check your webhook source configuration for the correct credentials and headers.'
-            ], 401);
+            ], 'ERR_WEBHOOK_AUTH_FAILED');
         }
 
         // Get payload
@@ -109,11 +110,9 @@ class InboundWebhookController extends Controller
                 'status' => 'duplicate'
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Duplicate webhook recorded (already processed)',
+            return $this->success([
                 'duplicate_id' => $duplicate->id
-            ], 200);
+            ], 'Duplicate webhook recorded (already processed)');
         }
 
         Log::info('Inbound webhook received', [
@@ -142,11 +141,9 @@ class InboundWebhookController extends Controller
                 'waba_id' => $source->team->whatsapp_business_account_id ?? null,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Webhook skipped by filtering rules',
+            return $this->success([
                 'event_type' => $eventType,
-            ], 200);
+            ], 'Webhook skipped by filtering rules');
         }
 
         try {
@@ -203,7 +200,8 @@ class InboundWebhookController extends Controller
                     // Validate mapped data has required fields
                     if ($this->mappingService->validateMappedData($mappedData)) {
                         $delay = $source->process_delay > 0 ? now()->addMinutes($source->process_delay) : null;
-                        ProcessMappedWebhookJob::dispatch($webhookPayload, $actionConfig)->delay($delay);
+                        $traceId = \App\Services\TraceContext::getTraceId();
+                        ProcessMappedWebhookJob::dispatch($webhookPayload, $actionConfig, $traceId)->delay($delay);
                     } else {
                         Log::warning('Webhook mapped data validation failed', [
                             'source' => $source->name,
@@ -222,11 +220,9 @@ class InboundWebhookController extends Controller
                 $source->incrementProcessed();
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Webhook received and queued for processing',
+            return $this->success([
                 'event_type' => $eventType,
-            ], 200);
+            ], 'Webhook received and queued for processing');
 
         } catch (\Exception $e) {
             Log::error('Failed to process inbound webhook', [
@@ -235,10 +231,7 @@ class InboundWebhookController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to process webhook',
-            ], 500);
+            return $this->error('Failed to process webhook', 500, null, 'ERR_WEBHOOK_INTERNAL_ERROR');
         }
     }
 
@@ -251,7 +244,7 @@ class InboundWebhookController extends Controller
         $team = $request->user()->currentTeam;
 
         if (!$team) {
-            return response()->json(['error' => 'No team context'], 400);
+            return $this->error('No team context selected.', 401, null, 'ERR_AUTH_NO_TEAM');
         }
 
         // Log the incoming webhook

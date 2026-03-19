@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class WhatsAppHealthSnapshot extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $table = 'whatsapp_health_snapshots';
 
@@ -39,9 +40,4 @@ class WhatsAppHealthSnapshot extends Model
         'token_expires_at' => 'datetime',
         'snapshot_at' => 'datetime',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }

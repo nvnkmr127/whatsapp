@@ -11,9 +11,16 @@ use Illuminate\Support\Facades\Hash;
 
 class OTPService
 {
-    protected $ttl = 300; // 5 minutes
-    protected $maxAttempts = 5;
-    protected $maxRequestsPer24h = 10; // "Dead drop" threshold
+    protected $ttl;
+    protected $maxAttempts;
+    protected $maxRequestsPer24h;
+
+    public function __construct()
+    {
+        $this->ttl = config('otp.ttl', 300);
+        $this->maxAttempts = config('otp.max_attempts', 5);
+        $this->maxRequestsPer24h = config('otp.daily_request_limit_per_user', 10);
+    }
 
     protected function persistOtp(string $identifier, string $code, string $type, ?int $teamId = null): void
     {
@@ -250,8 +257,8 @@ class OTPService
      */
     protected function findSendingTeam(): ?Team
     {
-        $systemToken = env('WHATSAPP_SYSTEM_ACCESS_TOKEN');
-        $systemPhoneId = env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
+        $systemToken = config('whatsapp.system_access_token');
+        $systemPhoneId = config('whatsapp.system_phone_number_id');
 
         if ($systemToken && $systemPhoneId) {
             // Find the best real DB team that has approved OTP templates so that
@@ -291,8 +298,8 @@ class OTPService
                 // The real team_id is preserved so template/contact/billing resolve correctly.
                 $realTeam->whatsapp_access_token = $systemToken;
                 $realTeam->whatsapp_phone_number_id = $systemPhoneId;
-                if (env('WHATSAPP_SYSTEM_WABA_ID')) {
-                    $realTeam->whatsapp_business_account_id = env('WHATSAPP_SYSTEM_WABA_ID');
+                if (config('whatsapp.system_waba_id')) {
+                    $realTeam->whatsapp_business_account_id = config('whatsapp.system_waba_id');
                 }
                 $realTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
                 return $realTeam;
@@ -327,16 +334,35 @@ class OTPService
      */
     protected function findOtpTemplate(Team $team)
     {
-        // 1. Look for explicit AUTHENTICATION templates
+        $configName = config('otp.whatsapp_template_name', 'verification_code');
+
+        // 1. Look for explicit synced template by name from config
+        $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
+            ->where('name', $configName)
+            ->where('status', 'APPROVED')
+            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
+            ->orderByRaw("CASE WHEN language = ? THEN 0 WHEN language = 'en_US' THEN 1 WHEN language = 'en' THEN 2 ELSE 3 END", [app()->getLocale()])
+            ->first();
+
+        if ($tpl) {
+            if (!$tpl->whatsapp_template_id) {
+                Log::warning("Using seeded placeholder template '{$tpl->name}' for OTP. This may fail if not created in Meta.", ['team_id' => $team->id]);
+            }
+            return $tpl;
+        }
+
+        // 2. Look for any explicit AUTHENTICATION templates (synced preferred)
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('category', 'AUTHENTICATION')
             ->where('status', 'APPROVED')
+            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
+            ->orderByRaw("CASE WHEN language = ? THEN 0 WHEN language = 'en_US' THEN 1 WHEN language = 'en' THEN 2 ELSE 3 END", [app()->getLocale()])
             ->first();
 
         if ($tpl)
             return $tpl;
 
-        // 2. Look for templates with "otp" or "verification" in the name
+        // 3. Look for templates with "otp" or "verification" in the name
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('status', 'APPROVED')
             ->where(function ($q) {
@@ -344,16 +370,19 @@ class OTPService
                     ->orWhere('name', 'like', '%verification%')
                     ->orWhere('name', 'like', '%code%');
             })
-            ->orderByRaw("FIELD(name, 'verification_code', 'otp', 'verification', 'code') DESC")
+            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
+            ->orderByRaw("CASE WHEN language = ? THEN 0 WHEN language = 'en_US' THEN 1 WHEN language = 'en' THEN 2 ELSE 3 END", [app()->getLocale()])
+            ->orderByRaw("FIELD(name, '{$configName}', 'otp', 'verification', 'code') DESC")
             ->first();
 
         if ($tpl)
             return $tpl;
 
-        // 3. Last resort: Any approved UTILITY template (might be dangerous, but better than failing)
+        // 4. Last resort: Any approved UTILITY template (synced preferred)
         return \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('category', 'UTILITY')
             ->where('status', 'APPROVED')
+            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
             ->first();
     }
 
@@ -457,8 +486,8 @@ class OTPService
 
     protected function getOtpCredentialSource(Team $team): string
     {
-        $systemToken = (string) env('WHATSAPP_SYSTEM_ACCESS_TOKEN', '');
-        $systemPhoneId = (string) env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID', '');
+        $systemToken = (string) config('whatsapp.system_access_token', '');
+        $systemPhoneId = (string) config('whatsapp.system_phone_number_id', '');
 
         if (
             $systemToken !== ''

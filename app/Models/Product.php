@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $fillable = [
         'team_id',
         'category_id',
@@ -34,11 +36,6 @@ class Product extends Model
         'locked_fields' => 'array',
         'last_external_update_at' => 'datetime',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 
     public function category()
     {

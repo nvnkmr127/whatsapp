@@ -724,18 +724,16 @@ class MessageWindow extends Component
 
         try {
             ksort($this->templateVariables);
-            $parameters = array_values($this->templateVariables);
+            $bodyParams = array_values($this->templateVariables);
+            $headerParams = $this->templateMediaUrl ? [$this->templateMediaUrl] : [];
+            $footerParams = [];
 
-            if ($this->templateMediaUrl) {
-                array_unshift($parameters, $this->templateMediaUrl);
-            }
-
-            // 1. Pre-persist
+            // 1. Pre-persist for UI
             $richContent = "Template: {$this->selectedTemplate->name}";
             $bodyComp = collect($this->selectedTemplate->components)->firstWhere('type', 'BODY');
             if ($bodyComp) {
                 $text = $bodyComp['text'] ?? '';
-                foreach ($parameters as $index => $param) {
+                foreach ($bodyParams as $index => $param) {
                     $search = '{{' . ($index + 1) . '}}';
                     $text = str_replace($search, $param, $text);
                 }
@@ -753,19 +751,24 @@ class MessageWindow extends Component
                 'metadata' => [
                     'template_name' => $this->selectedTemplate->name,
                     'language' => $this->selectedTemplate->language ?? 'en_US',
-                    'variables' => $parameters
+                    'variables' => $bodyParams,
+                    'header_variables' => $headerParams,
+                    'footer_variables' => $footerParams,
                 ],
             ]);
 
-            // 2. Dispatch Job
+            // 2. Dispatch Job with segregated parameters
             \App\Jobs\SendMessageJob::dispatch(
                 Auth::user()->currentTeam->id,
                 $this->conversation->contact->phone_number,
                 'template',
-                $parameters,
+                $bodyParams,
                 $this->selectedTemplate->name,
                 $this->selectedTemplate->language ?? 'en_US',
-                $message->id
+                $message->id,
+                null, // traceId
+                $headerParams,
+                $footerParams
             );
 
             $this->dispatch('messageSent');

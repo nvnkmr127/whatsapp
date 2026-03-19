@@ -152,16 +152,8 @@ class CallOverlay extends Component
         $this->status = 'ringing';
         $this->direction = $event['direction'] ?? 'inbound';
 
-        // Resolve contact name
-        $this->contactName = $event['from'] ?? 'Unknown Caller';
-        if (isset($event['contact_id'])) {
-            $contact = Contact::find($event['contact_id']);
-            if ($contact) {
-                $this->contactName = $contact->name;
-            }
-        }
-
-        $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
+        $this->contactName = $event['contact_name'] ?? $event['from'] ?? 'Unknown';
+        $this->contactAvatar = $event['contact_avatar'] ?? "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
         $this->startTime = null;
 
         // Capture SDP from the event (could be a call offer or a re-negotiation offer)

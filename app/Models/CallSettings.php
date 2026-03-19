@@ -10,6 +10,7 @@ use Carbon\Carbon;
 class CallSettings extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -42,10 +43,7 @@ class CallSettings extends Model
     /**
      * Relationships
      */
-    public function team(): BelongsTo
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     /**
      * Check if current time is within configured business hours

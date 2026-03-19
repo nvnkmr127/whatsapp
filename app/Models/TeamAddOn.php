@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TeamAddOn extends Model
 {
+    use \App\Traits\HasTeam;
     protected $table = 'team_addons';
 
     protected $fillable = [
@@ -20,10 +21,7 @@ class TeamAddOn extends Model
         'expires_at' => 'datetime',
     ];
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     /**
      * Check if the add-on is currently active (not expired)

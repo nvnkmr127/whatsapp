@@ -24,18 +24,40 @@ return new class extends Migration {
     {
         // ── 1. Deduplicate existing rows before adding the constraint ──────────
         // Find the newest row per (team_id, type) and delete all older siblings.
-        DB::statement("
-            DELETE i FROM integrations i
-            INNER JOIN (
-                SELECT team_id, type, MAX(updated_at) AS max_updated
-                FROM   integrations
-                GROUP  BY team_id, type
-                HAVING COUNT(*) > 1
-            ) keeper
-              ON  i.team_id = keeper.team_id
-              AND i.type    = keeper.type
-              AND i.updated_at < keeper.max_updated
-        ");
+        if (DB::getDriverName() === 'sqlite') {
+            $duplicates = DB::table('integrations')
+                ->select('team_id', 'type')
+                ->groupBy('team_id', 'type')
+                ->havingRaw('COUNT(*) > 1')
+                ->get();
+
+            foreach ($duplicates as $dup) {
+                $latestId = DB::table('integrations')
+                    ->where('team_id', $dup->team_id)
+                    ->where('type', $dup->type)
+                    ->latest('updated_at')
+                    ->value('id');
+
+                DB::table('integrations')
+                    ->where('team_id', $dup->team_id)
+                    ->where('type', $dup->type)
+                    ->where('id', '!=', $latestId)
+                    ->delete();
+            }
+        } else {
+            DB::statement("
+                DELETE i FROM integrations i
+                INNER JOIN (
+                    SELECT team_id, type, MAX(updated_at) AS max_updated
+                    FROM   integrations
+                    GROUP  BY team_id, type
+                    HAVING COUNT(*) > 1
+                ) keeper
+                  ON  i.team_id = keeper.team_id
+                  AND i.type    = keeper.type
+                  AND i.updated_at < keeper.max_updated
+            ");
+        }
 
         // ── 2. Add the UNIQUE constraint ──────────────────────────────────────
         Schema::table('integrations', function (Blueprint $table) {

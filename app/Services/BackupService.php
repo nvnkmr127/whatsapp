@@ -48,13 +48,13 @@ class BackupService
     {
         $entitlement = $team->entitlement();
         if (!$entitlement->hasFeature('backups')) {
-            throw new Exception("The backup feature is not available for your team. Please upgrade.");
+            throw new \App\Exceptions\Backup\BackupException("The backup feature is not available for your team. Please upgrade.");
         }
 
         // 1. Check Max Backups Count
         if (!$entitlement->withinLimit('max_backups_per_team')) {
             $limit = $entitlement->limit('max_backups_per_team');
-            throw new Exception("Backup limit reached. You can only keep up to {$limit} backups. Please delete old backups to create a new one.");
+            throw new \App\Exceptions\Backup\BackupException("Backup limit reached. You can only keep up to {$limit} backups. Please delete old backups to create a new one.");
         }
 
         // 2. Check Max Storage Size
@@ -107,7 +107,7 @@ class BackupService
             $zipPath = "{$this->tempPath}/{$backupRecord->filename}";
             $zip = new ZipArchive();
             if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-                throw new Exception("Could not create ZIP file at {$zipPath}");
+                throw new \App\Exceptions\Backup\BackupException("Could not create ZIP file at {$zipPath}");
             }
 
             // 1. Export Database Data
@@ -199,7 +199,7 @@ class BackupService
 
                     if ($gdIntegration) {
                         if ($gdIntegration->status === 'error') {
-                            throw new Exception("Google Drive connection is inactive.");
+                            throw new \App\Exceptions\Backup\BackupException("Google Drive connection is inactive.");
                         }
 
                         $gdService = new GoogleDriveService($gdIntegration);
@@ -544,7 +544,7 @@ class BackupService
         }
 
         if ($decrypted === false) {
-            throw new Exception("Decryption failed. Invalid key or corrupted backup file.");
+            throw new \App\Exceptions\Backup\BackupException("Decryption failed. Invalid key or corrupted backup file.");
         }
 
         file_put_contents($outputPath, $decrypted);
@@ -584,7 +584,7 @@ class BackupService
     public function restoreTenant(Team $team, TenantBackup $backup)
     {
         if ($backup->team_id !== $team->id) {
-            throw new Exception("Backup does not belong to this team.");
+            throw new \App\Exceptions\Backup\RestoreException("Backup does not belong to this team.");
         }
 
         /** @var BackupLockService $lockService */
@@ -658,7 +658,7 @@ class BackupService
             if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php', 'text/plain'])) {
                 if (file_exists($filePath))
                     unlink($filePath);
-                throw new Exception("MALWARE RISK: The uploaded file has an invalid or malicious mime type ({$mime}).");
+                throw new \App\Exceptions\Backup\RestoreException("MALWARE RISK: The uploaded file has an invalid or malicious mime type ({$mime}).");
             }
 
             try {
@@ -712,7 +712,7 @@ class BackupService
             $innerSignature = $zip->getFromName('backup.signature');
             if (!$innerSignature || hash_hmac('sha256', $sql, config('app.key')) !== $innerSignature) {
                 $zip->close();
-                throw new Exception("MALWARE RISK: The internal backup signature is missing or invalid. Restoration aborted.");
+                throw new \App\Exceptions\Backup\RestoreException("MALWARE RISK: The internal backup signature is missing or invalid. Restoration aborted.");
             }
 
             // Clear existing tenant data (consent_registry is EXCLUDED)

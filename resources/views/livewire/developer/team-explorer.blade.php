@@ -95,9 +95,9 @@
     </div>
 
     <!-- Team Details Modal -->
-    <x-modal wire:model="showDetailsModal" maxWidth="4xl">
+    <x-app-modal wire:model="showDetailsModal" maxWidth="5xl" :backdropClose="false">
         @if($selectedTeam)
-            <div class="p-8 bg-white dark:bg-slate-900">
+            <div class="p-8 bg-white dark:bg-slate-900 border-none">
                 <div class="flex justify-between items-start mb-8 border-b border-slate-50 dark:border-slate-800 pb-8">
                     <div class="flex items-center gap-6">
                         <div
@@ -121,15 +121,9 @@
                             class="px-6 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl">
                             Impersonate Owner
                         </button>
-                        <button wire:click="closeDetails"
-                            class="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
                     </div>
                 </div>
+
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     @foreach($selectedTeam->stats as $key => $value)
@@ -199,5 +193,6 @@
                 </div>
             </div>
         @endif
-    </x-modal>
+    </x-app-modal>
+
 </div>

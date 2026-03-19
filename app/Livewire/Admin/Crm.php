@@ -28,6 +28,7 @@ class Crm extends Component
     public $stats = [];
     public $funnel = [];
     public $selectedTeamId = null;
+    public $showTeamModal = false;
 
     // ── CRM Activity & Tasks ───────────────────────────────────────────
     public $activityType = 'note';
@@ -107,12 +108,14 @@ class Crm extends Component
     public function showUser($teamId)
     {
         $this->selectedTeamId = $teamId;
+        $this->showTeamModal = true;
         $team = Team::find($teamId);
         $this->adminNote = $team->admin_notes ?? '';
     }
 
     public function closeUser()
     {
+        $this->showTeamModal = false;
         $this->selectedTeamId = null;
         $this->reset(['activityType', 'activityContent', 'activityOutcome', 'activityDuration', 'taskTitle', 'taskDescription', 'taskDueDate', 'taskPriority', 'taskAssignee']);
     }

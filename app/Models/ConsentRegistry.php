@@ -40,6 +40,7 @@ use RuntimeException;
 class ConsentRegistry extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $table = 'consent_registry';
 
@@ -102,10 +103,7 @@ class ConsentRegistry extends Model
     // RELATIONSHIPS
     // ──────────────────────────────────────────────────────────────────────────
 
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
+
 
     public function contact()
     {

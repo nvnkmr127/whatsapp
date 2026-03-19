@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Queue;
+use App\Services\TraceContext;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\EntitlementService::class);
         $this->app->singleton(\App\Services\TrialOverrideService::class);
         $this->app->singleton(\App\Services\OutboundPreflightService::class);
+        $this->app->singleton(\App\Core\WhatsApp\WhatsAppClient::class);
 
     }
 
@@ -25,6 +28,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── Trace ID Propagation: Inject into all Job Payloads ──
+        Queue::createPayloadUsing(function ($connection, $queue, $payload) {
+            $traceId = TraceContext::getTraceId();
+            if ($traceId) {
+                return ['trace_id' => $traceId];
+            }
+            return [];
+        });
+
+        // ── Trace Context Restoration for Workers ──
+        Queue::before(function (\Illuminate\Queue\Events\JobProcessing $event) {
+            $payload = $event->job->payload();
+            $traceId = $payload['trace_id'] ?? null;
+            
+            if ($traceId) {
+                TraceContext::set($traceId);
+            } else {
+                TraceContext::ensureTraceId();
+            }
+        });
+
         // ── Model Observers ─────────────────────────────────────────────
         \App\Models\Team::observe(\App\Observers\TeamObserver::class);
         \App\Models\User::observe(\App\Observers\UserObserver::class);
@@ -50,8 +74,14 @@ class AppServiceProvider extends ServiceProvider
             [
                 \App\Events\ContactLifecycleChanged::class,
                 \App\Events\ContactOptedOut::class,
+                \App\Events\ContactCreated::class,
             ],
             \App\Listeners\LogContactEvents::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\ContactCreated::class,
+            \App\Listeners\TriggerWorkflowsOnContactCreated::class
         );
 
         \Illuminate\Support\Facades\Event::listen(

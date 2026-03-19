@@ -53,8 +53,8 @@ class AiCommerceService
         }
 
         // Fetch Centralized Settings
-        $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? env('OPENAI_API_KEY');
-        $model = \App\Models\Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? 'gpt-4o';
+        $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? config('services.ai.openai.api_key');
+        $model = \App\Models\Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? config('services.ai.openai.default_model', 'gpt-4o');
         $persona = \App\Models\Setting::where('key', "ai_persona_{$teamId}")->value('value') ?? "You are a helpful shopping assistant for a store. Your goal is to help the user find products from the CATALOG provided below.";
 
         if (!$apiKey) {

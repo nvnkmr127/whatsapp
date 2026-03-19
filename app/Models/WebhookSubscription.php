@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WebhookSubscription extends Model
 {
+    use \App\Traits\HasTeam;
+
     protected $fillable = [
         'team_id',
         'name',
@@ -21,11 +23,6 @@ class WebhookSubscription extends Model
         'is_active' => 'boolean',
         'is_system' => 'boolean',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 
     public function deliveries()
     {

@@ -21,10 +21,10 @@ class AIProviderManager
         if ($team) {
             $teamId = $team->id;
             $provider = $providerName ?? get_setting("ai_provider_{$teamId}", 'openai');
-            $apiKey = get_setting("ai_{$provider}_api_key_{$teamId}") ?? env(strtoupper($provider) . '_API_KEY');
+            $apiKey = get_setting("ai_{$provider}_api_key_{$teamId}") ?? config("services.ai.{$provider}.api_key");
         } else {
             $provider = $providerName ?? 'openai';
-            $apiKey = env(strtoupper($provider) . '_API_KEY');
+            $apiKey = config("services.ai.{$provider}.api_key");
         }
 
         if (!$apiKey) {

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class WhatsAppSetupAudit extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $table = 'whatsapp_setup_audit';
 
@@ -26,11 +27,6 @@ class WhatsAppSetupAudit extends Model
         'changes' => 'array',
         'metadata' => 'array',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 
     public function user()
     {

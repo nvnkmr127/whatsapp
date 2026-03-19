@@ -4,10 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
+use App\Services\ConsentService;
+use App\Traits\StandardApiResponses;
+use App\Http\Requests\Api\StoreContactRequest;
 use Illuminate\Http\Request;
 
 class ExternalContactController extends Controller
 {
+    use StandardApiResponses;
+
+    public function __construct(
+        protected ConsentService $consentService
+    ) {
+    }
+
     /**
      * List all contacts for the authenticated team.
      * GET /api/v1/contacts
@@ -17,7 +27,7 @@ class ExternalContactController extends Controller
         $team = $request->user()->currentTeam;
 
         if (!$team) {
-            return response()->json(['error' => 'No team context'], 400);
+            return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
         $contacts = Contact::where('team_id', $team->id)
@@ -25,30 +35,19 @@ class ExternalContactController extends Controller
             ->latest()
             ->paginate(50);
 
-        return response()->json($contacts);
+        return $this->paginated($contacts, 'Contacts retrieved successfully.');
     }
 
     /**
      * Create or update a contact.
      * POST /api/v1/contacts
      */
-    public function store(Request $request)
+    public function store(StoreContactRequest $request)
     {
-        $request->validate([
-            'phone_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/'],
-            'name' => 'nullable|string',
-            'email' => 'nullable|email',
-            'custom_attributes' => 'nullable|array',
-            'opt_in' => 'nullable|boolean',
-            'opt_in_source' => 'nullable|string',
-            'opt_in_notes' => 'nullable|string',
-            'opt_in_proof_url' => 'nullable|url',
-        ]);
-
         $team = $request->user()->currentTeam;
 
         if (!$team) {
-            return response()->json(['error' => 'No team context'], 400);
+            return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
         $contact = Contact::updateOrCreate(
@@ -65,7 +64,7 @@ class ExternalContactController extends Controller
 
         // Opt-in if requested
         if ($request->boolean('opt_in')) {
-            (new \App\Services\ConsentService)->optIn(
+            $this->consentService->optIn(
                 $contact,
                 $request->input('opt_in_source', 'API'),
                 $request->input('opt_in_notes', 'Opt-in via API'),
@@ -73,9 +72,11 @@ class ExternalContactController extends Controller
             );
         }
 
-        return response()->json([
-            'success' => true,
-            'contact' => $contact->fresh(['tags']),
-        ], 201);
+        return $this->success(
+            $contact->fresh(['tags']),
+            'Contact created or updated successfully.',
+            201
+        );
     }
 }
+

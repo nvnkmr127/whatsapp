@@ -17,7 +17,7 @@
                 <p style="font-weight:900; font-size:14px; margin:0; line-height: 1;">
                     {{ $brand_name ?: ($name ?: 'Your Brand') }}</p>
                 <p style="font-size:10px; opacity:0.9; margin:0; display:flex; align-items:center; gap:3px;">
-                    <span style="width:6px; height:6px; background:#25D366; border-radius:50%;"></span>
+                    <span style="width:6px; height:6px; background:var(--wa-brand); border-radius:50%;"></span>
                     {{ $brand_subtitle ?: 'online' }}
                 </p>
             </div>

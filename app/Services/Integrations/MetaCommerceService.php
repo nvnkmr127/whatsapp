@@ -21,7 +21,8 @@ class MetaCommerceService
     {
         $this->integration = $integration;
         $this->healthService = app(IntegrationHealthService::class);
-        $this->baseUrl = 'https://graph.facebook.com/v21.0';
+        $apiVersion = config('whatsapp.api_version', 'v21.0');
+        $this->baseUrl = "https://graph.facebook.com/{$apiVersion}";
 
         $credentials = $integration->credentials;
         $this->accessToken = $credentials['access_token'] ?? '';

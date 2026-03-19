@@ -8,15 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class CannedMessage extends Model
 {
     use HasFactory;
+    use \App\Traits\HasTeam;
 
     protected $fillable = [
         'team_id',
         'shortcut',
         'content',
     ];
-
-    public function team()
-    {
-        return $this->belongsTo(Team::class);
-    }
 }
