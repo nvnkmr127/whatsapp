@@ -32,258 +32,207 @@
     </div>
 
     {{-- Stats Overview --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <!-- Total Sources -->
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-indigo-500">
-                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 01-2-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <!-- Total Activity -->
+        <div class="bg-indigo-600 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-500/20 group animate-in fade-in slide-in-from-top-4 duration-700">
+            <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <div class="relative z-10">
-                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Sources</h3>
-                <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($this->stats['total']) }}</div>
-                <p class="mt-4 text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{{ number_format($this->stats['active']) }} active currently</p>
-            </div>
-        </div>
-
-        <!-- Total Received -->
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-wa-teal">
-                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-            </div>
-            <div class="relative z-10">
-                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Payloads Received</h3>
-                <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($this->stats['total_received']) }}</div>
-                <p class="mt-4 text-[10px] font-bold text-wa-teal uppercase tracking-widest">Inbound messages</p>
-            </div>
-        </div>
-
-        <!-- Success Rate -->
-        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
-            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-emerald-500">
-                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-            </div>
-            <div class="relative z-10">
-                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Process Rate</h3>
-                <div class="text-3xl font-black text-slate-900 dark:text-white">{{ $this->stats['success_rate'] }}%</div>
-                <div class="mt-4 w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-500 rounded-full" style="width: {{ $this->stats['success_rate'] }}%"></div>
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Total Hits Processed</h3>
+                <div class="text-4xl font-black">{{ number_format($this->stats['total_received']) }}</div>
+                <div class="mt-4 flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-white/20 rounded text-[9px] font-black uppercase tracking-widest">{{ number_format($this->stats['active']) }} ACTIVE SOURCES</span>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Export Failed -->
-        <button wire:click="exportFailedWebhookReport" class="bg-gradient-to-br from-rose-500 to-rose-600 p-8 rounded-[2.5rem] shadow-xl shadow-rose-500/20 relative overflow-hidden group text-left hover:scale-[1.02] transition-transform">
-            <div class="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform text-white">
-                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+        <div class="bg-emerald-500 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-emerald-500/20 group animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
+            <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
             </div>
             <div class="relative z-10">
-                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 mb-2">Failure Audit</h3>
-                <div class="text-2xl font-black text-white italic">Download Now</div>
-                <p class="mt-4 text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Export Failed Payloads
-                </p>
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Global Success Rate</h3>
+                <div class="text-4xl font-black">{{ $this->stats['success_rate'] }}%</div>
+                <div class="mt-4 w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-white shadow-[0_0_10px_white]" style="width: {{ $this->stats['success_rate'] }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Failures -->
+        <button wire:click="exportFailedWebhookReport" class="bg-white dark:bg-slate-900 rounded-[2rem] p-8 text-slate-900 border-2 border-slate-100 dark:border-slate-800 relative overflow-hidden hover:border-rose-500/50 transition-all group text-left animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
+            <div class="absolute right-6 top-6 p-3 bg-rose-50 dark:bg-rose-500/10 text-rose-500 rounded-2xl group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div class="relative z-10">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    Failure Audit
+                </h3>
+                <div class="text-2xl font-black dark:text-white">Run Export</div>
+                <p class="mt-2 text-[10px] font-black text-rose-500 uppercase tracking-widest">Download Failed Payloads</p>
             </div>
         </button>
     </div>
 
-    {{-- Sources List Container --}}
-    <div
-        class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
-        {{-- Section Header with Filters --}}
-        <div class="px-8 py-8 border-b border-slate-50 dark:border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between bg-slate-50/50 dark:bg-slate-800/10 gap-6">
+    {{-- Sources Pipeline Header --}}
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 mt-12 bg-slate-50 dark:bg-slate-800/20 p-8 rounded-[3rem] border-2 border-slate-100 dark:border-slate-800/50">
+        <div class="flex items-center gap-5">
+            <div class="w-14 h-14 bg-white dark:bg-slate-900 rounded-[1.5rem] shadow-xl shadow-slate-200/50 dark:shadow-none flex items-center justify-center text-wa-teal border-t border-slate-50 dark:border-slate-800">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
             <div>
-                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Integration Pipeline</h3>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active nodes and delivery performance</p>
-            </div>
-
-            <div class="flex flex-col md:flex-row items-center gap-3">
-                <div class="relative group w-full md:w-64">
-                    <input wire:model.live.debounce.300ms="search" type="text"
-                        class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-wa-teal focus:border-transparent tracking-tight transition-all shadow-sm"
-                        placeholder="Search sources...">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
-
-                <div class="flex items-center gap-2 w-full md:w-auto">
-                    <select wire:model.live="platformFilter"
-                        class="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal transition-all shadow-sm cursor-pointer">
-                        <option value="">All Platforms</option>
-                        @foreach($platforms as $key => $preset)
-                            <option value="{{ $key }}">{{ $preset['name'] }}</option>
-                        @endforeach
-                    </select>
-
-                    <select wire:model.live="statusFilter"
-                        class="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal transition-all shadow-sm cursor-pointer">
-                        <option value="">All Status</option>
-                        <option value="1">Active</option>
-                        <option value="0">Paused</option>
-                    </select>
-
-                    <button wire:click="resetFilters"
-                        class="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none rounded-2xl text-slate-500 transition-all flex items-center justify-center">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    </button>
+                <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">Integration Pipeline</h2>
+                <div class="flex items-center gap-3 mt-1">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Status Monitor</span>
+                    <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+                    <span class="text-[10px] font-black text-wa-teal uppercase tracking-widest">{{ number_format($this->stats['active']) }} active Nodes</span>
                 </div>
             </div>
         </div>
+        
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="relative group">
+                <input wire:model.live.debounce.300ms="search" type="text"
+                    class="pl-12 pr-6 py-4 bg-white dark:bg-slate-900 border-none rounded-[2rem] text-xs font-black text-slate-700 dark:text-slate-200 placeholder-slate-300 focus:ring-4 focus:ring-wa-teal/10 transition-all shadow-xl shadow-slate-200/40 dark:shadow-none w-full md:w-80 uppercase tracking-widest"
+                    placeholder="Search PIPELINE...">
+                <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            
+            <div class="flex items-center p-1 bg-white dark:bg-slate-900 rounded-[2rem] shadow-xl shadow-slate-200/40 dark:shadow-none border border-slate-50 dark:border-slate-800">
+                <select wire:model.live="platformFilter" class="pl-4 pr-10 py-3 bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest focus:ring-0 cursor-pointer">
+                    <option value="">All Platforms</option>
+                    @foreach($platforms as $key => $preset)
+                        <option value="{{ $key }}">{{ $preset['name'] }}</option>
+                    @endforeach
+                </select>
+                <div class="w-px h-6 bg-slate-100 dark:bg-slate-800 mx-2"></div>
+                <button wire:click="resetFilters" class="p-4 bg-slate-50 dark:bg-slate-800 hover:bg-rose-500 hover:text-white rounded-[1.5rem] text-slate-400 transition-all group">
+                    <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <div id="sources-table" class="overflow-x-auto">
-            <div class="max-h-[40rem] overflow-y-auto custom-scrollbar">
-            <table class="w-full min-w-[1220px] text-left border-separate border-spacing-0">
-                <thead>
-                    <tr class="bg-slate-50/30 dark:bg-slate-800/5">
-                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Source Identity</th>
-                        @if(auth()->user()->isSuperAdmin())
-                            <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Team</th>
-                        @endif
-                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Endpoint URL</th>
-                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Status</th>
-                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Performance Metrics</th>
-                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 text-end">Control Center</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
-                    @forelse($sources as $source)
-                        <tr class="group hover:bg-slate-50/80 dark:hover:bg-indigo-500/[0.02] transition-colors">
-                            <td class="px-8 py-6">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                                        {{-- Dynamic icon based on platform --}}
-                                        @if($source->platform === 'shopify')
-                                            <svg class="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor"><path d="M19.1 12c0-3.9-3.2-7.1-7.1-7.1h-4v14.2h1.4v-4.3c.8.9 2.1 1.4 3.5 1.4 3.4 0 6.2-2.3 6.2-4.2zm-7.1 2.8c-1 0-1.8-.4-2.4-.9V10.1c.6-.5 1.4-.9 2.4-.9 2.1 0 3.8 1.4 3.8 2.8s-1.7 2.8-3.8 2.8z"/></svg>
-                                        @else
-                                            <svg class="w-5 h-5 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                        @endif
+        <div id="sources-grid" class="grid grid-cols-1 gap-4">
+            @forelse($sources as $source)
+                @php
+                    $latestPayload = \App\Models\WebhookPayload::where('webhook_source_id', $source->id)->latest()->first();
+                    $successRate = $source->total_received > 0 ? round(($source->total_processed / $source->total_received) * 100, 1) : 0;
+                @endphp
+                <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-6 shadow-xl shadow-slate-200/40 dark:shadow-none hover:border-wa-teal/30 transition-all group overflow-hidden relative">
+                    {{-- Status Indicator Bar --}}
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 {{ $source->is_active ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-slate-300' }}"></div>
+
+                    <div class="flex flex-col lg:flex-row lg:items-center gap-8">
+                        {{-- Identity & Endpoint --}}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center group-hover:bg-wa-teal group-hover:text-white transition-colors shrink-0">
+                                    @if($source->platform === 'shopify')
+                                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M19.1 12c0-3.9-3.2-7.1-7.1-7.1h-4v14.2h1.4v-4.3c.8.9 2.1 1.4 3.5 1.4 3.4 0 6.2-2.3 6.2-4.2zm-7.1 2.8c-1 0-1.8-.4-2.4-.9V10.1c.6-.5 1.4-.9 2.4-.9 2.1 0 3.8 1.4 3.8 2.8s-1.7 2.8-3.8 2.8z"/></svg>
+                                    @else
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    @endif
+                                </div>
+                                <div class="truncate">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h3 class="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{{ $source->name }}</h3>
+                                        <span class="px-2 py-0.5 bg-wa-teal/10 text-wa-teal text-[8px] font-black uppercase tracking-widest rounded">{{ $source->platform }}</span>
                                     </div>
-                                    <div>
-                                        <div class="text-[13px] font-black text-slate-900 dark:text-white leading-none mb-1.5">{{ $source->name }}</div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-[9px] text-wa-teal uppercase font-black tracking-widest px-1.5 py-0.5 bg-wa-teal/10 rounded">{{ $source->platform }}</span>
-                                            <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ID: #{{ str_pad($source->id, 4, '0', STR_PAD_LEFT) }}</span>
-                                        </div>
+                                    <div class="flex items-center gap-2">
+                                        <code class="text-[10px] font-mono text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded truncate">
+                                            {{ $source->getWebhookUrl() }}
+                                        </code>
+                                        <button onclick="navigator.clipboard.writeText('{{ $source->getWebhookUrl() }}')" class="p-1 text-slate-300 hover:text-wa-teal transition-colors">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </button>
                                     </div>
                                 </div>
-                            </td>
-                            @if(auth()->user()->isSuperAdmin())
-                                <td class="px-8 py-6">
-                                    <div class="inline-flex items-center px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-tight">
-                                        {{ $source->team?->name ?? 'SYSTEM' }}
+                            </div>
+                        </div>
+
+                        {{-- Performance & Last Payload --}}
+                        <div class="flex-1">
+                            <div class="grid grid-cols-2 gap-8 divide-x divide-slate-100 dark:divide-slate-800">
+                                <div>
+                                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Delivery Metrics</div>
+                                    <div class="flex items-end gap-2 mb-2">
+                                        <span class="text-xl font-black text-slate-900 dark:text-white">{{ number_format($source->total_received) }}</span>
+                                        <span class="text-[9px] font-black text-emerald-500 uppercase pb-1">{{ $successRate }}% OK</span>
                                     </div>
-                                </td>
-                            @endif
-                            <td class="px-8 py-6">
-                                <div class="flex items-center gap-2">
-                                    <code class="text-[10px] font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
-                                        {{ Str::limit($source->slug ?: $source->id, 15) }}
-                                    </code>
-                                    <button onclick="navigator.clipboard.writeText('{{ $source->getWebhookUrl() }}')" class="p-1 text-slate-300 hover:text-wa-teal transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                                    </button>
+                                    <div class="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="h-full bg-wa-teal" style="width: {{ $successRate }}%"></div>
+                                    </div>
                                 </div>
-                            </td>
-                            <td class="px-8 py-6">
-                                <button wire:click="toggleStatus({{ $source->id }})" class="relative inline-flex items-center cursor-pointer group/status">
-                                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 {{ $source->is_active ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
-                                        <span class="w-2 h-2 rounded-full {{ $source->is_active ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-400' }}"></span>
-                                        <span class="text-[10px] font-black uppercase tracking-widest">{{ $source->is_active ? 'Active' : 'Paused' }}</span>
-                                    </div>
-                                </button>
-                            </td>
-                            <td class="px-8 py-6">
-                                @php
-                                    $attempted = (int) ($source->msg_attempted_count ?? 0);
-                                    $sent = (int) ($source->msg_sent_count ?? 0);
-                                    $delivered = (int) ($source->msg_delivered_count ?? 0);
-                                    $read = (int) ($source->msg_read_count ?? 0);
-                                    $failed = (int) ($source->msg_failed_count ?? 0);
-                                    $deliveryRate = $sent > 0 ? round(($delivered / $sent) * 100, 1) : 0;
-                                    $readRate = $delivered > 0 ? round(($read / $delivered) * 100, 1) : 0;
-                                @endphp
-                                <div class="flex items-center gap-6">
-                                    <div class="flex -space-x-1.5">
-                                        <div class="w-2.5 h-8 bg-indigo-500/20 rounded-full overflow-hidden relative" title="Sent: {{ $sent }}">
-                                            <div class="absolute bottom-0 left-0 right-0 bg-indigo-500 transition-all duration-500" style="height: {{ $attempted > 0 ? ($sent/$attempted)*100 : 0 }}%"></div>
-                                        </div>
-                                        <div class="w-2.5 h-8 bg-emerald-500/20 rounded-full overflow-hidden relative" title="Read: {{ $read }}">
-                                            <div class="absolute bottom-0 left-0 right-0 bg-emerald-500 transition-all duration-500" style="height: {{ $attempted > 0 ? ($read/$attempted)*100 : 0 }}%"></div>
-                                        </div>
-                                        <div class="w-2.5 h-8 bg-rose-500/20 rounded-full overflow-hidden relative" title="Failed: {{ $failed }}">
-                                            <div class="absolute bottom-0 left-0 right-0 bg-rose-500 transition-all duration-500" style="height: {{ $attempted > 0 ? ($failed/$attempted)*100 : 0 }}%"></div>
-                                        </div>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <div class="text-[14px] font-black text-slate-900 dark:text-white leading-none">{{ number_format($attempted) }} <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Total Hits</span></div>
+                                <div class="pl-8">
+                                    <div class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Last Captured Payload</div>
+                                    @if($latestPayload)
                                         <div class="flex items-center gap-3">
-                                            <span class="text-[10px] font-black text-emerald-500">{{ $deliveryRate }}% <span class="text-[8px] opacity-70">DLVR</span></span>
-                                            <span class="text-[10px] font-black text-blue-500">{{ $readRate }}% <span class="text-[8px] opacity-70">READ</span></span>
+                                            <div class="p-1.5 {{ $latestPayload->status === 'processed' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500' }} rounded-lg dark:bg-slate-800">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            </div>
+                                            <div>
+                                                <div class="text-[10px] font-bold text-slate-700 dark:text-slate-300 break-all truncate max-w-[150px]">
+                                                    {{ $latestPayload->event_type ?: 'Inbound Hit' }}
+                                                </div>
+                                                <div class="text-[9px] font-medium text-slate-400">{{ $latestPayload->created_at->diffForHumans() }}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <button wire:click="openSourceReportModal({{ $source->id }})" class="p-2 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal hover:text-white rounded-xl text-slate-400 transition-all shadow-sm">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                                    </button>
+                                    @else
+                                        <span class="text-[9px] font-black text-slate-300 uppercase italic tracking-widest">Waiting for hits...</span>
+                                    @endif
                                 </div>
-                            </td>
-                            <td class="px-8 py-6 text-end">
-                                <div class="flex items-center justify-end gap-1 px-2 py-1 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] w-fit ml-auto border border-slate-100 dark:border-slate-800/50 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                                    <button wire:click="viewLogs({{ $source->id }})" class="p-2 text-slate-400 hover:text-orange-500 transition-all" title="Live Terminal">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    </button>
-                                    <button wire:click="duplicate({{ $source->id }})" class="p-2 text-slate-400 hover:text-indigo-500 transition-all" title="Clone Node">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
-                                    </button>
-                                    <button wire:click="edit({{ $source->id }})" class="p-2 text-slate-400 hover:text-wa-teal transition-all" title="Configure">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                    </button>
-                                    <button wire:click="delete({{ $source->id }})" wire:confirm="Permanent deletion: Are you sure?" class="p-2 text-slate-400 hover:text-rose-500 transition-all" title="Remove">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ auth()->user()->isSuperAdmin() ? 7 : 6 }}" class="px-8 py-20 text-center">
-                                <div class="flex flex-col items-center justify-center space-y-4">
-                                    <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
-                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-                                    </div>
-                                    <p class="text-sm font-black text-slate-400 uppercase tracking-widest">No active integrations found</p>
-                                    <button wire:click="openNewSource" class="text-xs font-black text-wa-teal hover:underline uppercase tracking-widest">Construct your first pipe</button>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            </div>
+                            </div>
+                        </div>
+
+                        {{-- Actions Hub --}}
+                        <div class="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
+                            <button wire:click="edit({{ $source->id }})" class="flex items-center gap-2 px-5 py-2.5 bg-wa-teal text-white rounded-[1.25rem] text-[10px] font-black uppercase tracking-widest hover:scale-[1.05] active:scale-95 transition-all shadow-lg shadow-wa-teal/20">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                Configure
+                            </button>
+                            <div class="flex items-center gap-1.5">
+                                <button wire:click="viewLogs({{ $source->id }})" class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-orange-500 hover:border-orange-500/30 rounded-2xl transition-all" title="Payload Monitor">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                </button>
+                                <button wire:click="openSourceReportModal({{ $source->id }})" class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-blue-500 hover:border-blue-500/30 rounded-2xl transition-all" title="Performance Report">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                </button>
+                                <button wire:click="duplicate({{ $source->id }})" class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-indigo-500 hover:border-indigo-500/30 rounded-2xl transition-all" title="Duplicate Node">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+                                </button>
+                                <button wire:click="toggleStatus({{ $source->id }})" class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-emerald-500 hover:border-emerald-500/30 rounded-2xl transition-all" title="Toggle Pipeline">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </button>
+                                <button wire:click="delete({{ $source->id }})" wire:confirm="Delete this connection forever?" class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-rose-500 hover:border-rose-500/30 rounded-2xl transition-all" title="Purge">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="text-center py-20 bg-slate-50 dark:bg-slate-800/20 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                    <div class="w-20 h-20 bg-white dark:bg-slate-950 rounded-[2.5rem] shadow-sm flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-10 h-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Build Your Pipeline</h3>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 mb-8">No active integrations discovered in your environment.</p>
+                    <button wire:click="openNewSource" class="px-8 py-4 bg-wa-teal text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-wa-teal/30 hover:scale-105 transition-all">+ Construct Node</button>
+                </div>
+            @endforelse
         </div>
+
         @if($sources->hasPages())
-            <div class="px-8 py-5 border-t border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                    Showing {{ $sources->firstItem() ?? 0 }}-{{ $sources->lastItem() ?? 0 }} of {{ $sources->total() }} sources
-                </div>
-                <div>
-                    {{ $sources->onEachSide(1)->links() }}
-                </div>
+            <div class="mt-8 flex justify-between items-center px-4">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Pipeline Span: {{ $sources->firstItem() }}-{{ $sources->lastItem() }} of {{ $sources->total() }}
+                </span>
+                {{ $sources->onEachSide(1)->links() }}
             </div>
         @endif
-        </div>
     </div>
 
     <x-dialog-modal wire:model.live="showWizardModal" maxWidth="5xl">
@@ -1039,57 +988,78 @@
 
 
 
-    {{-- Test Modal --}}
-    @if($showTestModal)
-        <div class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-            <div class="bg-white dark:bg-slate-900 rounded-[3rem] max-w-4xl w-full max-h-[90vh] flex flex-col shadow-3xl overflow-hidden border border-slate-100 dark:border-slate-800">
-                <div class="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-xl font-black text-slate-900 dark:text-white">🧪 Test Connection</h3>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Validate your field mappings manually</p>
-                    </div>
+    {{-- Diagnostic Test Modal --}}
+    <x-dialog-modal wire:model.live="showTestModal" maxWidth="3xl">
+        <x-slot name="title">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-fuchsia-100 dark:bg-fuchsia-500/10 text-fuchsia-600 rounded-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.283a2 2 0 01-1.186.128l-2.431-.486a2 2 0 00-1.038.111l-4.423 2.035a2 2 0 00-1.022 1.13v2.176a2 2 0 00.586 1.414l.006.006a2 2 0 001.414.586h15.414a2 2 0 002-2v-2.176a2 2 0 00-1.038-1.745l-4.423-2.035z"/></svg>
                 </div>
-
-                <div class="p-10 overflow-y-auto space-y-8 flex-1 custom-scrollbar">
-                    <div class="space-y-4">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sample Payload (JSON)</label>
-                        <textarea wire:model="testPayload" rows="10"
-                            class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-[2rem] py-4 px-6 font-mono text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-purple-500/30 transition-all shadow-inner"></textarea>
-                    </div>
-
-                    @if($testResult)
-                        <div class="animate-in slide-in-from-bottom-4 duration-500">
-                            @if(isset($testResult['error']))
-                                <div class="bg-rose-500 text-white rounded-[2rem] p-6 shadow-xl shadow-rose-500/20">
-                                    <h4 class="font-black uppercase tracking-tight mb-1">Configuration Error</h4>
-                                    <p class="text-xs font-bold opacity-80 uppercase tracking-widest">{{ $testResult['error'] }}</p>
-                                </div>
-                            @else
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="bg-emerald-500 text-white rounded-[2rem] p-6 shadow-xl shadow-emerald-500/20">
-                                        <h4 class="font-black uppercase tracking-tight mb-1">Mapping Success</h4>
-                                        <p class="text-[10px] font-bold opacity-80 uppercase tracking-widest">Payload matched successfully</p>
-                                    </div>
-                                    @if(isset($testResult['mapped_data']))
-                                        <div class="bg-slate-900 text-wa-teal rounded-[2rem] p-6 shadow-xl border border-slate-800">
-                                            <h5 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Resolved Data</h5>
-                                            <div class="overflow-x-auto overflow-y-auto max-h-60 custom-scrollbar">
-                                                <pre class="text-[10px] font-mono">{{ json_encode($testResult['mapped_data'], JSON_PRETTY_PRINT) }}</pre>
-                                            </div>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    @endif
-                </div>
-
-                <div class="px-10 py-8 bg-slate-50 dark:bg-slate-800/10 border-t border-slate-50 dark:border-slate-800 flex justify-end gap-4">
-                    <button wire:click="$set('showTestModal', false)" class="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest px-6">Close</button>
-                    <button wire:click="testWebhook" class="px-8 py-4 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal shadow-lg shadow-wa-teal/30 transition-all">Run Diagnostic</button>
+                <div>
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Diagnostic Pipeline</h3>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">Manual Validation Simulator</p>
                 </div>
             </div>
-        </div>
+        </x-slot>
+
+        <x-slot name="content">
+            <div class="space-y-6">
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Inbound JSON Stream</label>
+                    <textarea wire:model="testPayload" rows="12"
+                        class="w-full bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent rounded-[2rem] p-6 font-mono text-xs text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-wa-teal/30 transition-all shadow-inner custom-scrollbar"
+                        placeholder='{"event": "test", "data": {...}}'></textarea>
+                </div>
+
+                @if($testResult)
+                    <div class="animate-in slide-in-from-bottom-4 duration-500">
+                        @if(isset($testResult['error']))
+                            <div class="bg-rose-500 text-white rounded-[2rem] p-6 shadow-xl shadow-rose-500/20 flex items-start gap-4">
+                                <div class="p-2 bg-white/20 rounded-xl">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-black uppercase tracking-tight mb-1">Validation Failure</h4>
+                                    <p class="text-[10px] font-bold opacity-90 uppercase tracking-widest">{{ $testResult['error'] }}</p>
+                                </div>
+                            </div>
+                        @else
+                            <div class="space-y-6">
+                                <div class="bg-emerald-500 text-white rounded-[2rem] p-6 shadow-xl shadow-emerald-500/20 flex items-center gap-4">
+                                    <div class="p-2 bg-white/20 rounded-xl">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-black uppercase tracking-tight leading-none">Mapping Synchronized</h4>
+                                        <p class="text-[9px] font-black opacity-80 uppercase tracking-[0.1em] mt-1">Payload matches operational blueprint</p>
+                                    </div>
+                                </div>
+                                
+                                @if(isset($testResult['mapped_data']))
+                                    <div class="bg-slate-900 rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <span class="text-[9px] font-black uppercase tracking-[0.2em] text-wa-teal">Resolved Extraction Map</span>
+                                            <span class="px-2 py-0.5 bg-slate-800 text-slate-500 text-[8px] font-black rounded uppercase">Live Output</span>
+                                        </div>
+                                        <div class="bg-slate-800/50 rounded-2xl p-6 overflow-x-auto custom-scrollbar">
+                                            <pre class="text-[10px] font-mono text-emerald-400 leading-relaxed">{{ json_encode($testResult['mapped_data'], JSON_PRETTY_PRINT) }}</pre>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </x-slot>
+
+        <x-slot name="footer">
+            <div class="flex items-center justify-between w-full">
+                <button wire:click="$set('showTestModal', false)" class="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-[0.2em] transition-colors">Discard Test</button>
+                <button wire:click="testWebhook" class="px-8 py-4 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-wa-teal/30">Run Diagnostic Cycle</button>
+            </div>
+        </x-slot>
+    </x-dialog-modal>
     @endif
 
     {{-- Logs Monitor Modal --}}
