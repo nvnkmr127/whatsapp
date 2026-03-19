@@ -670,7 +670,30 @@ class AutomationService
         // Dispatch the jobs for the claimed runs
         $runs = AutomationRun::whereIn('id', $runIds)->get();
         foreach ($runs as $run) {
-            ExecuteAutomationNodeJob::dispatchSync($run->id, $run->state_data['current_node_id']);
+            try {
+                $nodeId = $run->state_data['current_node_id'] ?? null;
+                if (!$nodeId) {
+                    Log::warning("AutomationRun #{$run->id} skipped during resume: missing current_node_id in state_data.", [
+                        'state_data' => $run->state_data,
+                    ]);
+                    $run->update([
+                        'status' => 'failed',
+                        'resume_at' => null,
+                    ]);
+                    continue;
+                }
+
+                ExecuteAutomationNodeJob::dispatchSync($run->id, $nodeId);
+            } catch (\Throwable $e) {
+                Log::error("AutomationRun #{$run->id} failed during scheduled resume: {$e->getMessage()}", [
+                    'exception' => $e,
+                ]);
+
+                $run->update([
+                    'status' => 'failed',
+                    'resume_at' => null,
+                ]);
+            }
         }
     }
 

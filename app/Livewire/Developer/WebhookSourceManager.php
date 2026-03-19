@@ -25,10 +25,13 @@ class WebhookSourceManager extends Component
     public $is_active = true;
     public $editingId = null;
     public $search = '';
+    public $platformFilter = '';
+    public $statusFilter = '';
+    public $perPage = 10;
     public $exportDateRange = 30; // Days back to include in exports (7, 30, or 90)
     public $exportStatusFilter = 'all'; // Filter exports by message status: all, sent, delivered, read, failed
 
-    protected $queryString = ['search'];
+    protected $queryString = ['search', 'platformFilter', 'statusFilter'];
 
     // Wizard State - tracks the step-by-step configuration process
     public $currentStep = 1;
@@ -60,6 +63,13 @@ class WebhookSourceManager extends Component
     public $showTestModal = false;
     public $testingSourceId = null;
     public $testMessageResult = null;
+
+    // For source report modal
+    public $showSourceReportModal = false;
+    public $selectedSourceForReport = null;
+    public $sourceReportFromDate = '';
+    public $sourceReportToDate = '';
+    public $sourceReportPerPage = 20;
 
     protected $rules = [
         'name' => 'required|string|max:255',
@@ -523,6 +533,70 @@ class WebhookSourceManager extends Component
         $this->authorize('update', $source);
 
         $source->update(['is_active' => !$source->is_active]);
+    }
+
+    public function resetFilters()
+    {
+        $this->search = '';
+        $this->platformFilter = '';
+        $this->statusFilter = '';
+        $this->perPage = 10;
+        $this->resetPage();
+    }
+
+    public function openSourceReportModal($sourceId)
+    {
+        $team = auth()->user()->currentTeam;
+        $query = WebhookSource::query();
+        if ($team && !auth()->user()->isSuperAdmin()) {
+            $query->where('team_id', $team->id);
+        }
+        $this->selectedSourceForReport = $query->findOrFail($sourceId);
+        $this->sourceReportFromDate = '';
+        $this->sourceReportToDate = '';
+        $this->sourceReportPerPage = 20;
+        $this->showSourceReportModal = true;
+    }
+
+    public function closeSourceReportModal()
+    {
+        $this->showSourceReportModal = false;
+        $this->selectedSourceForReport = null;
+    }
+
+    public function getSourceReportStats()
+    {
+        if (!$this->selectedSourceForReport) {
+            return [
+                'targeted' => 0,
+                'sent' => 0,
+                'delivered' => 0,
+                'read' => 0,
+                'failed' => 0,
+                'total' => 0,
+            ];
+        }
+
+        $query = Message::query()
+            ->where('webhook_source_id', $this->selectedSourceForReport->id)
+            ->where('direction', 'outbound');
+
+        if ($this->sourceReportFromDate) {
+            $query->whereDate('sent_at', '>=', $this->sourceReportFromDate);
+        }
+
+        if ($this->sourceReportToDate) {
+            $query->whereDate('sent_at', '<=', $this->sourceReportToDate);
+        }
+
+        return [
+            'targeted' => (clone $query)->count(),
+            'sent' => (clone $query)->whereIn('status', ['sent', 'delivered', 'read'])->count(),
+            'delivered' => (clone $query)->whereIn('status', ['delivered', 'read'])->count(),
+            'read' => (clone $query)->where('status', 'read')->count(),
+            'failed' => (clone $query)->where('status', 'failed')->count(),
+            'total' => (clone $query)->count(),
+        ];
     }
 
     public function openTestModal($id)
@@ -1066,9 +1140,39 @@ class WebhookSourceManager extends Component
             });
         }
 
+        if ($this->platformFilter) {
+            $query->where('platform', $this->platformFilter);
+        }
+
+        if ($this->statusFilter !== '') {
+            $query->where('is_active', (bool) $this->statusFilter);
+        }
+
         $sources = $query->with(['payloads', 'team'])
+            ->withCount([
+                'messages as msg_attempted_count' => function ($q) {
+                    $q->where('direction', 'outbound')
+                        ->whereIn('status', ['sent', 'delivered', 'read', 'failed']);
+                },
+                'messages as msg_sent_count' => function ($q) {
+                    $q->where('direction', 'outbound')
+                        ->whereIn('status', ['sent', 'delivered', 'read']);
+                },
+                'messages as msg_delivered_count' => function ($q) {
+                    $q->where('direction', 'outbound')
+                        ->whereIn('status', ['delivered', 'read']);
+                },
+                'messages as msg_read_count' => function ($q) {
+                    $q->where('direction', 'outbound')
+                        ->where('status', 'read');
+                },
+                'messages as msg_failed_count' => function ($q) {
+                    $q->where('direction', 'outbound')
+                        ->where('status', 'failed');
+                },
+            ])
             ->latest()
-            ->paginate(10);
+            ->paginate((int) $this->perPage);
 
         $platforms = config('webhook-platforms');
 
@@ -1102,6 +1206,27 @@ class WebhookSourceManager extends Component
             }
         }
 
-        return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate'));
+        return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate'))
+            ->with('sourceReportStats', $this->getSourceReportStats());
+    }
+
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPlatformFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPerPage()
+    {
+        $this->resetPage();
     }
 }

@@ -85,7 +85,7 @@ class CallControls extends Component
 
         try {
             $team = auth()->user()->currentTeam;
-            $callService = new CallService($team);
+            $callService = app(CallService::class)->setTeam($team);
 
             $response = $callService->initiateCall($this->contact->phone_number);
 

@@ -3,25 +3,74 @@
 namespace App\Livewire\Analytics;
 
 use Livewire\Component;
+use Livewire\WithPagination;
 use App\Models\TeamTransaction;
 use App\Models\Message;
 use App\Models\Ticket;
 use App\Models\TeamWallet;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Title;
 
 #[Title('Analytics')]
 class AnalyticsDashboard extends Component
 {
+    use WithPagination;
+
     public $dateRange = 30; // days
     public $chartData = []; // Restored
     public $lastRefresh; // Restored
     public $metaAnalytics = [];
     public $walletId;
-    public $webhookDetailsLimit = 100;
     public $webhookStatusFilter = 'all';
+    public $webhookSearch = '';
+    public $webhookContactFilter = '';
+    public $webhookFromDate = '';
+    public $webhookToDate = '';
+    public $webhookPerPage = 15;
+    public $transactionsPerPage = 10;
 
     protected array $webhookStatuses = ['sent', 'delivered', 'read', 'failed'];
+
+    public function updatingDateRange()
+    {
+        $this->resetPage('webhookPage');
+        $this->resetPage('transactionsPage');
+    }
+
+    public function updatingWebhookStatusFilter()
+    {
+        $this->resetPage('webhookPage');
+    }
+
+    public function updatingWebhookSearch()
+    {
+        $this->resetPage('webhookPage');
+    }
+
+    public function updatingWebhookContactFilter()
+    {
+        $this->resetPage('webhookPage');
+    }
+
+    public function updatingWebhookFromDate()
+    {
+        $this->resetPage('webhookPage');
+    }
+
+    public function updatingWebhookToDate()
+    {
+        $this->resetPage('webhookPage');
+    }
+
+    public function updatingWebhookPerPage()
+    {
+        $this->resetPage('webhookPage');
+    }
+
+    public function updatingTransactionsPerPage()
+    {
+        $this->resetPage('transactionsPage');
+    }
 
     public function render()
     {
@@ -50,17 +99,21 @@ class AnalyticsDashboard extends Component
                     ->count(),
                 'qrScans' => \App\Models\LeadCaptureWidget::where('team_id', $teamId)->sum('scan_count'),
                 'qrConversions' => \App\Models\LeadCaptureWidget::where('team_id', $teamId)->sum('conversion_count'),
-                'transactions' => TeamTransaction::where('team_id', $teamId)
-                    ->latest()
-                    ->take(10)
-                    ->get(),
                 'lastUpdated' => Message::where('team_id', $teamId)->latest()->value('updated_at') ?? now(),
             ];
         });
 
-        $webhookReport = cache()->remember("{$cachePrefix}:webhook-report:{$this->dateRange}:{$this->webhookDetailsLimit}:{$this->webhookStatusFilter}", 60, function () use ($teamId) {
-            return $this->buildWebhookReport($teamId);
+        $webhookSummary = cache()->remember("{$cachePrefix}:webhook-summary:{$this->dateRange}", 60, function () use ($teamId) {
+            return $this->buildWebhookSummary($teamId);
         });
+
+        $transactions = TeamTransaction::query()
+            ->where('team_id', $teamId)
+            ->latest()
+            ->paginate((int) $this->transactionsPerPage, ['*'], 'transactionsPage');
+
+        $webhookDetails = $this->webhookDetailsQuery($teamId)
+            ->paginate((int) $this->webhookPerPage, ['*'], 'webhookPage');
 
         // 3. Official Meta Analytics (cached longer to avoid frequent API calls)
         $this->metaAnalytics = cache()->remember("{$cachePrefix}:meta:{$this->dateRange}", 300, function () use ($team) {
@@ -90,13 +143,13 @@ class AnalyticsDashboard extends Component
             'ticketsResolved' => $stats['ticketsResolved'],
             'qrScans' => $stats['qrScans'],
             'qrConversions' => $stats['qrConversions'],
-            'transactions' => $stats['transactions'],
+            'transactions' => $transactions,
             'metaAnalytics' => $this->metaAnalytics,
             'isScheduled' => \App\Models\ScheduledReport::where('user_id', auth()->id())
                 ->where('report_type', 'monthly_usage')->exists(),
             'lastUpdated' => $stats['lastUpdated'],
-            'webhookSummary' => $webhookReport['summary'],
-            'webhookDetails' => $webhookReport['details'],
+            'webhookSummary' => $webhookSummary,
+            'webhookDetails' => $webhookDetails,
         ]);
     }
 
@@ -186,10 +239,8 @@ class AnalyticsDashboard extends Component
     public function exportWebhookReport()
     {
         $teamId = auth()->user()->currentTeam->id;
-        $startDate = now()->subDays($this->dateRange);
-        $statusFilter = $this->normalizeWebhookStatusFilter();
 
-        return response()->streamDownload(function () use ($teamId, $startDate, $statusFilter) {
+        return response()->streamDownload(function () use ($teamId) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, [
                 'Created At',
@@ -206,15 +257,7 @@ class AnalyticsDashboard extends Component
                 'Message Content',
             ]);
 
-            Message::query()
-                ->with('contact:id,name,phone_number,email')
-                ->where('team_id', $teamId)
-                ->where('direction', 'outbound')
-                ->where('created_at', '>=', $startDate)
-                ->whereIn('status', ['sent', 'delivered', 'read', 'failed'])
-                ->when($statusFilter !== 'all', function ($query) use ($statusFilter) {
-                    $query->where('status', $statusFilter);
-                })
+            $this->webhookDetailsQuery($teamId, false)
                 ->orderByDesc('created_at')
                 ->chunk(500, function ($messages) use ($handle) {
                     foreach ($messages as $message) {
@@ -239,10 +282,9 @@ class AnalyticsDashboard extends Component
         }, 'webhook-message-report.csv');
     }
 
-    protected function buildWebhookReport(int $teamId): array
+    protected function buildWebhookSummary(int $teamId): array
     {
         $startDate = now()->subDays($this->dateRange);
-        $statusFilter = $this->normalizeWebhookStatusFilter();
 
         $summary = Message::query()
             ->where('team_id', $teamId)
@@ -266,27 +308,51 @@ class AnalyticsDashboard extends Component
         $deliveryRate = $attempted > 0 ? round(($deliveredOrRead / $attempted) * 100, 1) : 0;
         $readRate = $attempted > 0 ? round(($summaryValues['read'] / $attempted) * 100, 1) : 0;
 
-        $details = Message::query()
+        return array_merge($summaryValues, [
+            'attempted' => $attempted,
+            'delivery_rate' => $deliveryRate,
+            'read_rate' => $readRate,
+        ]);
+    }
+
+    protected function webhookDetailsQuery(int $teamId, bool $applySorting = true): Builder
+    {
+        $statusFilter = $this->normalizeWebhookStatusFilter();
+        $startDate = now()->subDays($this->dateRange)->startOfDay();
+
+        $query = Message::query()
             ->with('contact:id,name,phone_number,email')
             ->where('team_id', $teamId)
             ->where('direction', 'outbound')
-            ->where('created_at', '>=', $startDate)
             ->whereIn('status', $this->webhookStatuses)
             ->when($statusFilter !== 'all', function ($query) use ($statusFilter) {
                 $query->where('status', $statusFilter);
             })
-            ->latest()
-            ->limit($this->webhookDetailsLimit)
-            ->get();
+            ->where('created_at', '>=', $startDate)
+            ->when($this->webhookFromDate, function ($query) {
+                $query->whereDate('created_at', '>=', $this->webhookFromDate);
+            })
+            ->when($this->webhookToDate, function ($query) {
+                $query->whereDate('created_at', '<=', $this->webhookToDate);
+            })
+            ->when($this->webhookContactFilter, function ($query) {
+                $term = trim($this->webhookContactFilter);
+                $query->whereHas('contact', function ($contactQuery) use ($term) {
+                    $contactQuery->where('name', 'like', "%{$term}%")
+                        ->orWhere('phone_number', 'like', "%{$term}%")
+                        ->orWhere('email', 'like', "%{$term}%");
+                });
+            })
+            ->when($this->webhookSearch, function ($query) {
+                $term = trim($this->webhookSearch);
+                $query->where(function ($innerQuery) use ($term) {
+                    $innerQuery->where('whatsapp_message_id', 'like', "%{$term}%")
+                        ->orWhere('content', 'like', "%{$term}%")
+                        ->orWhere('error_message', 'like', "%{$term}%");
+                });
+            });
 
-        return [
-            'summary' => array_merge($summaryValues, [
-                'attempted' => $attempted,
-                'delivery_rate' => $deliveryRate,
-                'read_rate' => $readRate,
-            ]),
-            'details' => $details,
-        ];
+        return $applySorting ? $query->latest() : $query;
     }
 
     protected function normalizeWebhookStatusFilter(): string

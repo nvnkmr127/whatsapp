@@ -8,7 +8,13 @@ use Illuminate\Support\Facades\Log;
 
 trait WhatsApp
 {
+    public const ERROR_TOKEN_INVALID = 190;
+    public const ERROR_PASSWORD_CHANGED = 460;
+
+    protected static string $facebookAPI = 'https://graph.facebook.com/';
+
     protected ?\App\Core\WhatsApp\ManagementClient $mgmtClient = null;
+    protected bool $skipAppSecretProof = false;
 
     protected function mgmt(): \App\Core\WhatsApp\ManagementClient
     {
@@ -29,6 +35,22 @@ trait WhatsApp
     private function getAccountID(): string
     {
         return $this->team->whatsapp_business_account_id ?? auth()->user()->currentTeam->whatsapp_business_account_id ?? '';
+    }
+
+    protected function getApiVersion(): string
+    {
+        return config('whatsapp.api_version', 'v21.0');
+    }
+
+    protected static function getBaseUrl(): string
+    {
+        $version = config('whatsapp.api_version', 'v21.0');
+        return "https://graph.facebook.com/{$version}/";
+    }
+
+    protected function setSkipAppSecretProof(bool $skip): void
+    {
+        $this->skipAppSecretProof = $skip;
     }
 
     /**

@@ -14,7 +14,7 @@ class WhatsAppService
     protected $templates;
     protected $calls;
     protected $team;
-    protected $isBot = false;
+    public $isBot = false;
 
     public function __construct(?Team $team = null)
     {

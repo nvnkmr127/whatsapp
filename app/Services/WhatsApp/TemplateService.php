@@ -36,7 +36,8 @@ class TemplateService
         $wabaId = $this->team->whatsapp_business_account_id;
         if (!$wabaId) return ['success' => false, 'error' => 'WABA ID not found'];
 
-        $url = "{$wabaId}/message_templates?limit=100";
+        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $url = "{$baseUrl}/{$wabaId}/message_templates?limit=100";
         $response = $this->client->sendRequestFullUrl($url, 'get');
 
         if (!$response['success']) return $response;

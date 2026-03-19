@@ -13,10 +13,33 @@ class WebhookLogs extends Component
 
     public $search = '';
     public $filterStatus = '';
+    public $fromDate = '';
+    public $toDate = '';
+    public $perPage = 15;
     public $selectedPayload = null;
     public $showDetailsModal = false;
 
     public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFromDate()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingToDate()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPerPage()
     {
         $this->resetPage();
     }
@@ -44,6 +67,16 @@ class WebhookLogs extends Component
     {
         $this->showDetailsModal = false;
         $this->selectedPayload = null;
+    }
+
+    public function resetFilters()
+    {
+        $this->search = '';
+        $this->filterStatus = '';
+        $this->fromDate = '';
+        $this->toDate = '';
+        $this->perPage = 15;
+        $this->resetPage();
     }
 
     #[Layout('components.layouts.app')]
@@ -75,8 +108,16 @@ class WebhookLogs extends Component
             $query->where('status', $this->filterStatus);
         }
 
+        if ($this->fromDate) {
+            $query->whereDate('created_at', '>=', $this->fromDate);
+        }
+
+        if ($this->toDate) {
+            $query->whereDate('created_at', '<=', $this->toDate);
+        }
+
         return view('livewire.webhooks.webhook-logs', [
-            'logs' => $query->paginate(15)
+            'logs' => $query->paginate((int) $this->perPage)
         ]);
     }
 }

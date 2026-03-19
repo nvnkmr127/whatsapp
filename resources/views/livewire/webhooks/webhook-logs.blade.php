@@ -41,7 +41,7 @@
 
         <!-- Filter Bar -->
         <div class="p-8 border-b border-slate-50 dark:border-slate-800/50">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <!-- Search -->
                 <div class="relative group">
                     <div
@@ -66,12 +66,43 @@
                         <option value="pending">Pending</option>
                     </select>
                 </div>
+
+                <div class="relative">
+                    <input type="date" wire:model.live="fromDate"
+                        class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-950 border-transparent focus:border-wa-teal focus:ring-wa-teal/10 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 transition-all">
+                </div>
+
+                <div class="relative">
+                    <input type="date" wire:model.live="toDate"
+                        class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-950 border-transparent focus:border-wa-teal focus:ring-wa-teal/10 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 transition-all">
+                </div>
+
+                <div class="relative">
+                    <select wire:model.live="perPage"
+                        class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-950 border-transparent focus:border-wa-teal focus:ring-wa-teal/10 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+                        <option value="10">10 / page</option>
+                        <option value="15">15 / page</option>
+                        <option value="25">25 / page</option>
+                        <option value="50">50 / page</option>
+                    </select>
+                </div>
+
+                <div class="relative">
+                    <button wire:click="resetFilters"
+                        class="w-full px-4 py-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-transparent focus:border-wa-teal focus:ring-wa-teal/10 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Reset
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- Table -->
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <div class="max-h-[34rem] overflow-y-auto">
+            <table class="w-full min-w-[900px] text-left border-collapse">
                 <thead>
                     <tr class="border-b border-slate-50 dark:border-slate-800/50">
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Log ID
@@ -141,11 +172,17 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
 
         @if($logs->hasPages())
-            <div class="px-8 py-6 bg-slate-50/30 dark:bg-slate-800/20 border-t border-slate-50 dark:border-slate-800">
-                {{ $logs->links() }}
+            <div class="px-8 py-6 bg-slate-50/30 dark:bg-slate-800/20 border-t border-slate-50 dark:border-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    Showing {{ $logs->firstItem() ?? 0 }}-{{ $logs->lastItem() ?? 0 }} of {{ $logs->total() }} logs
+                </div>
+                <div>
+                    {{ $logs->onEachSide(1)->links() }}
+                </div>
             </div>
         @endif
     </div>

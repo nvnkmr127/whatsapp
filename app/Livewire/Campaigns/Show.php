@@ -6,6 +6,8 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Computed;
 use App\Models\Campaign;
+use App\Models\CampaignDetail;
+use App\Models\Message;
 
 class Show extends Component
 {
@@ -89,17 +91,20 @@ class Show extends Component
     {
         $campaign = $this->campaign;
 
-        // Use CampaignDetail for stats to be accurate across all states
-        // Note: Campaign model has cached counts (sent_count, etc) but let's be consistent or use them if accurate.
-        // For 'Total', CampaignDetail count is better than 'total_contacts' sometimes if calc was wrong.
-        // But let's trust the model cached counts for performance, 
-        // OR calculate fresh from Details since this is a "Report" page and accuracy matters more than 10ms.
+        // Source of truth for delivery metrics is Message status lifecycle.
+        $messageQuery = Message::query()
+            ->where('campaign_id', $campaign->id)
+            ->where('direction', 'outbound');
 
-        $total = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->count();
-        $sent = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->whereIn('status', ['sent', 'delivered', 'read'])->count();
-        $delivered = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->whereIn('status', ['delivered', 'read'])->count();
-        $read = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->where('status', 'read')->count();
-        $failed = \App\Models\CampaignDetail::where('campaign_id', $campaign->id)->where('status', 'failed')->count();
+        $messageCount = (clone $messageQuery)->count();
+        $sent = (clone $messageQuery)->whereIn('status', ['sent', 'delivered', 'read'])->count();
+        $delivered = (clone $messageQuery)->whereIn('status', ['delivered', 'read'])->count();
+        $read = (clone $messageQuery)->where('status', 'read')->count();
+        $failed = (clone $messageQuery)->where('status', 'failed')->count();
+
+        // Keep target size from campaign_details when available; fall back safely.
+        $targeted = CampaignDetail::where('campaign_id', $campaign->id)->count();
+        $total = max($targeted, $messageCount, (int) ($campaign->total_contacts ?? 0));
 
         return [
             'total' => $total,
@@ -115,9 +120,10 @@ class Show extends Component
     #[Layout('layouts.app')]
     public function render()
     {
-        // Use CampaignDetail instead of messages relation
-        $messages = \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
-            ->with(['contact']) // Eager load contact
+        $messages = Message::query()
+            ->where('campaign_id', $this->campaignId)
+            ->where('direction', 'outbound')
+            ->with(['contact:id,name,phone_number'])
             ->latest()
             ->paginate(20);
 

@@ -54,7 +54,7 @@ class CallAnalytics extends Component
             ]);
         }
 
-        $callService = new CallService($team);
+        $callService = app(CallService::class)->setTeam($team);
         $billingService = new BillingService();
 
         // Get call statistics

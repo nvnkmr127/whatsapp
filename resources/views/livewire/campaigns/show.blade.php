@@ -19,9 +19,15 @@
             <div
                 class="bg-white dark:bg-gray-800 px-8 py-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        Message Report <span class="text-indigo-600">#{{ $campaign->id }}</span>
-                    </h3>
+                    <div class="flex items-center gap-3 mb-2">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Message Report <span class="text-indigo-600">#{{ $campaign->id }}</span>
+                        </h3>
+                        <span class="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-200 dark:border-emerald-800">
+                            <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            Live Data
+                        </span>
+                    </div>
                     <div class="mt-1 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
                         <span class="font-medium text-gray-900 dark:text-gray-200">{{ $campaign->name }}</span>
                         <span class="text-gray-300">&bull;</span>
@@ -300,39 +306,41 @@
                             </thead>
                             <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
                                 @forelse($messages as $msg)
-                                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                                                <td class="px-8 py-4 text-sm text-gray-500 font-medium">{{ $loop->iteration }}</td>
-                                                                <td class="px-8 py-4">
-                                                                    <div class="flex flex-col">
-                                                                        <span
-                                                                            class="text-sm font-bold text-gray-900 dark:text-white">{{ $msg->contact->name ?? 'Unknown' }}</span>
-                                                                        <span
-                                                                            class="text-xs text-gray-400">{{ $msg->phone ?? $msg->contact?->phone_number ?? 'N/A' }}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="px-8 py-4">
-                                                                    <span
-                                                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                                        {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
-                                    ($msg->status == 'delivered' ? 'bg-blue-100 text-blue-800' :
-                                        ($msg->status == 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
-                                                                        {{ $msg->status }}
-                                                                    </span>
-                                                                </td>
-                                                                <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ $msg->created_at ? $msg->created_at->format('d M H:i') : '-' }}
-                                                                </td>
-                                                                <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ ($msg->status == 'delivered' || $msg->status == 'read') ? ($msg->updated_at ? $msg->updated_at->format('d M H:i') : '-') : '-' }}
-                                                                </td>
-                                                                <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
-                                                                    {{ ($msg->status == 'read') ? ($msg->updated_at ? $msg->updated_at->format('d M H:i') : '-') : '-' }}
-                                                                </td>
-                                                            </tr>
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                        <td class="px-8 py-4 text-sm text-gray-500 font-medium">
+                                            {{ (($messages->currentPage() - 1) * $messages->perPage()) + $loop->iteration }}
+                                        </td>
+                                        <td class="px-8 py-4">
+                                            <div class="flex flex-col">
+                                                <span
+                                                    class="text-sm font-bold text-gray-900 dark:text-white">{{ $msg->contact?->name ?? 'Unknown' }}</span>
+                                                <span
+                                                    class="text-xs text-gray-400">{{ $msg->contact?->phone_number ?? $msg->to ?? '-' }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-8 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                                                {{ $msg->status == 'read' ? 'bg-green-100 text-green-800' :
+                    ($msg->status == 'delivered' ? 'bg-blue-100 text-blue-800' :
+                        ($msg->status == 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
+                                                {{ $msg->status }}
+                                            </span>
+                                        </td>
+                                        <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
+                                            {{ $msg->sent_at ? $msg->sent_at->format('d M H:i') : '-' }}
+                                        </td>
+                                        <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
+                                            {{ $msg->delivered_at ? $msg->delivered_at->format('d M H:i') : '-' }}
+                                        </td>
+                                        <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
+                                            {{ $msg->read_at ? $msg->read_at->format('d M H:i') : '-' }}
+                                        </td>
+                                    </tr>
                                 @empty
                                     <tr>
                                         <td colspan="6" class="px-8 py-12 text-center text-gray-400 italic">No messages
-                                            found for this message.</td>
+                                            found for this campaign.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

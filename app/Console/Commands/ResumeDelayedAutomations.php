@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Services\AutomationService;
+use Illuminate\Support\Facades\Log;
 
 class ResumeDelayedAutomations extends Command
 {
@@ -24,10 +25,22 @@ class ResumeDelayedAutomations extends Command
     /**
      * Execute the console command.
      */
-    public function handle(AutomationService $service)
+    public function handle(AutomationService $service): int
     {
-        $this->info('Checking for due delayed automations...');
-        $service->resumeScheduledRuns();
-        $this->info('Processed.');
+        try {
+            $this->info('Checking for due delayed automations...');
+            $service->resumeScheduledRuns();
+            $this->info('Processed.');
+
+            return self::SUCCESS;
+        } catch (\Throwable $e) {
+            Log::error('automation:resume command failed', [
+                'error' => $e->getMessage(),
+                'exception' => $e,
+            ]);
+
+            $this->error('Automation resume failed. Check logs for details.');
+            return self::FAILURE;
+        }
     }
 }

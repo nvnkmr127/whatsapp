@@ -78,7 +78,7 @@
                         <span
                             class="px-1.5 py-0.5 bg-wa-teal text-white rounded-full text-micro font-black">{{ $tagCount }}</span>
                     @endif
-                </button>
+                </x-app-button>
 
                 <!-- Tags Dropdown Menu -->
                 <div x-show="showTags" @click.away="showTags = false" x-cloak x-transition

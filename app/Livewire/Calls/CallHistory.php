@@ -125,7 +125,7 @@ class CallHistory extends Component
         $calls = $query->paginate($this->perPage);
 
         // Get statistics
-        $callService = new CallService($team);
+        $callService = app(CallService::class)->setTeam($team);
         $statistics = $callService->getCallStatistics('month');
         $usageLimits = $callService->checkUsageLimits();
 

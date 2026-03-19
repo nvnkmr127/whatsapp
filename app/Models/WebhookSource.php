@@ -41,6 +41,11 @@ class WebhookSource extends Model
         return $this->hasMany(WebhookPayload::class);
     }
 
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
+
     // Helper Methods
     public function getAuthConfig($key = null, $default = null)
     {

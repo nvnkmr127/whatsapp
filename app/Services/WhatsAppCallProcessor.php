@@ -201,7 +201,7 @@ class WhatsAppCallProcessor
             }
 
             // Notify CallService to mark agent as busy
-            $callService = new CallService($call->team);
+            $callService = app(CallService::class)->setTeam($call->team);
             $callService->handleCallStarted($call);
 
             event(new CallAnswered($call->fresh()));
@@ -243,7 +243,7 @@ class WhatsAppCallProcessor
         }
 
         // Notify CallService to handle agent cooldown/availability
-        $callService = new CallService($call->team);
+        $callService = app(CallService::class)->setTeam($call->team);
         $callService->handleCallEnded($call);
 
         // Record terminal event for safeguards (missed/failed)

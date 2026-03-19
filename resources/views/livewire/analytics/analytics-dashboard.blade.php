@@ -183,7 +183,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-end gap-3">
                 <div class="flex items-center gap-2">
                     <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</label>
                     <select wire:model.live="webhookStatusFilter"
@@ -193,6 +193,41 @@
                         <option value="delivered">Delivered</option>
                         <option value="read">Read</option>
                         <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Contact</label>
+                    <input type="text" wire:model.live.debounce.300ms="webhookContactFilter" placeholder="Name, number, email"
+                        class="w-44 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Search</label>
+                    <input type="text" wire:model.live.debounce.300ms="webhookSearch" placeholder="Message ID or error"
+                        class="w-44 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">From</label>
+                    <input type="date" wire:model.live="webhookFromDate"
+                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">To</label>
+                    <input type="date" wire:model.live="webhookToDate"
+                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Rows</label>
+                    <select wire:model.live="webhookPerPage"
+                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
                     </select>
                 </div>
 
@@ -226,8 +261,10 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
-            <table class="w-full text-left">
+        <div class="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+            <div class="max-h-[30rem] overflow-y-auto">
+            <table class="w-full text-left min-w-[900px]">
                 <thead class="bg-slate-50 dark:bg-slate-800/40">
                     <tr>
                         <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Time</th>
@@ -278,6 +315,16 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
+            </div>
+            <div class="px-5 py-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    Showing {{ $webhookDetails->firstItem() ?? 0 }}-{{ $webhookDetails->lastItem() ?? 0 }} of {{ $webhookDetails->total() }} messages
+                </div>
+                <div>
+                    {{ $webhookDetails->onEachSide(1)->links() }}
+                </div>
+            </div>
         </div>
     </div>
 
@@ -420,13 +467,22 @@
         <!-- Billing History -->
         <div
             class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
-            <div class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+            <div class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between gap-3">
                 <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Billing <span
                         class="text-wa-teal">History</span></h3>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</div>
+                <div class="flex items-center gap-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Transactions</div>
+                    <select wire:model.live="transactionsPerPage"
+                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left">
+                <div class="max-h-[30rem] overflow-y-auto">
+                <table class="w-full text-left min-w-[700px]">
                     <thead>
                         <tr class="border-b border-slate-50 dark:border-slate-800/50">
                             <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Date
@@ -441,7 +497,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
-                        @foreach($transactions as $txn)
+                        @forelse($transactions as $txn)
                             <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                                 <td class="px-8 py-6">
                                     <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
@@ -473,9 +529,24 @@
                                     @endif
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-8 py-10 text-center text-sm font-semibold text-slate-400">
+                                    No transactions found.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
+                </div>
+            </div>
+            <div class="px-8 py-4 border-t border-slate-50 dark:border-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    Showing {{ $transactions->firstItem() ?? 0 }}-{{ $transactions->lastItem() ?? 0 }} of {{ $transactions->total() }} transactions
+                </div>
+                <div>
+                    {{ $transactions->onEachSide(1)->links() }}
+                </div>
             </div>
         </div>
 
