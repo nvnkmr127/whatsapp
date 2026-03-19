@@ -2,172 +2,210 @@
 
 
     {{-- Page Header --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-4">
         <div>
             <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-purple-100 text-wa-teal rounded-lg dark:bg-purple-500/10 dark:text-wa-teal">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2.5 bg-indigo-100 text-wa-teal rounded-2xl dark:bg-indigo-500/10 transition-colors shadow-sm">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                 </div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Incoming <span
-                        class="text-wa-teal dark:text-wa-teal">Messages</span></h1>
+                        class="text-wa-teal dark:wa-teal">Integrations</span></h1>
             </div>
-            <p class="text-slate-500 font-medium">Track messages received from external platforms - Monitor delivery status, view contact details</p>
+            <p class="text-slate-500 font-medium">Connect external platforms and automate your WhatsApp workflows.</p>
         </div>
         <div class="flex items-center gap-4">
-            <div class="hidden md:flex items-center gap-2">
-                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Range</label>
-                <select wire:model.live="exportDateRange"
-                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">
-                    <option value="7">7d</option>
-                    <option value="30">30d</option>
-                    <option value="90">90d</option>
-                </select>
-            </div>
-            <div class="hidden md:flex items-center gap-2">
-                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</label>
-                <select wire:model.live="exportStatusFilter"
-                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">
-                    <option value="all">All</option>
-                    <option value="sent">Sent</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="read">Read</option>
-                    <option value="failed">Failed</option>
-                </select>
-            </div>
-            <button wire:click="exportWebhookReport"
-                class="px-4 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download All Messages
-            </button>
-            <button wire:click="exportFailedWebhookReport"
-                class="px-4 py-3 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/30 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-100 dark:hover:bg-rose-950/30 transition-all shadow-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download Failed Messages
-            </button>
             <a href="{{ route('webhooks.logs') }}" 
-                class="px-6 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm flex items-center gap-2">
+                class="px-6 py-3.5 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Activity Log
+                Master Activity Log
             </a>
             <button wire:click="openNewSource"
-                class="px-6 py-3 bg-wa-teal text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-wa-teal/30 hover:scale-105 transition-all">
-                + New Source
+                class="px-8 py-3.5 bg-gradient-to-r from-wa-teal to-blue-600 text-white rounded-[1.25rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+                + Build New Integration
             </button>
         </div>
     </div>
 
-    {{-- Sources List --}}
+    {{-- Stats Overview --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Sources -->
+        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-indigo-500">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 01-2-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+            </div>
+            <div class="relative z-10">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Sources</h3>
+                <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($this->stats['total']) }}</div>
+                <p class="mt-4 text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{{ number_format($this->stats['active']) }} active currently</p>
+            </div>
+        </div>
+
+        <!-- Total Received -->
+        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-wa-teal">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+            </div>
+            <div class="relative z-10">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Payloads Received</h3>
+                <div class="text-3xl font-black text-slate-900 dark:text-white">{{ number_format($this->stats['total_received']) }}</div>
+                <p class="mt-4 text-[10px] font-bold text-wa-teal uppercase tracking-widest">Inbound messages</p>
+            </div>
+        </div>
+
+        <!-- Success Rate -->
+        <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform text-emerald-500">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+            </div>
+            <div class="relative z-10">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Process Rate</h3>
+                <div class="text-3xl font-black text-slate-900 dark:text-white">{{ $this->stats['success_rate'] }}%</div>
+                <div class="mt-4 w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 rounded-full" style="width: {{ $this->stats['success_rate'] }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Export Failed -->
+        <button wire:click="exportFailedWebhookReport" class="bg-gradient-to-br from-rose-500 to-rose-600 p-8 rounded-[2.5rem] shadow-xl shadow-rose-500/20 relative overflow-hidden group text-left hover:scale-[1.02] transition-transform">
+            <div class="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform text-white">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="relative z-10">
+                <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 mb-2">Failure Audit</h3>
+                <div class="text-2xl font-black text-white italic">Download Now</div>
+                <p class="mt-4 text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export Failed Payloads
+                </p>
+            </div>
+        </button>
+    </div>
+
     {{-- Sources List Container --}}
     <div
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
-        {{-- Section Header with Toggle --}}
-        <div
-            class="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/50 dark:bg-slate-800/10 gap-4">
+        {{-- Section Header with Filters --}}
+        <div class="px-8 py-8 border-b border-slate-50 dark:border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between bg-slate-50/50 dark:bg-slate-800/10 gap-6">
             <div>
-                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Incoming Message Sources</h3>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Track where messages are coming from</p>
+                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Integration Pipeline</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active nodes and delivery performance</p>
             </div>
 
-            <div class="w-full grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div class="relative group md:col-span-2">
+            <div class="flex flex-col md:flex-row items-center gap-3">
+                <div class="relative group w-full md:w-64">
                     <input wire:model.live.debounce.300ms="search" type="text"
-                        class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all"
-                        placeholder="Search sources or teams...">
+                        class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-wa-teal focus:border-transparent tracking-tight transition-all shadow-sm"
+                        placeholder="Search sources...">
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                 </div>
-                <select wire:model.live="platformFilter"
-                    class="w-full px-3 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all">
-                    <option value="">All Platforms</option>
-                    @foreach($platforms as $key => $preset)
-                        <option value="{{ $key }}">{{ $preset['name'] }}</option>
-                    @endforeach
-                </select>
-                <div class="grid grid-cols-3 gap-3">
+
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <select wire:model.live="platformFilter"
+                        class="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal transition-all shadow-sm cursor-pointer">
+                        <option value="">All Platforms</option>
+                        @foreach($platforms as $key => $preset)
+                            <option value="{{ $key }}">{{ $preset['name'] }}</option>
+                        @endforeach
+                    </select>
+
                     <select wire:model.live="statusFilter"
-                        class="w-full px-3 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all">
+                        class="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal transition-all shadow-sm cursor-pointer">
                         <option value="">All Status</option>
                         <option value="1">Active</option>
                         <option value="0">Paused</option>
                     </select>
-                    <select wire:model.live="perPage"
-                        class="w-full px-3 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all">
-                        <option value="10">10 / page</option>
-                        <option value="25">25 / page</option>
-                        <option value="50">50 / page</option>
-                    </select>
+
                     <button wire:click="resetFilters"
-                        class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all flex items-center justify-center gap-1">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none rounded-2xl text-slate-500 transition-all flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Reset
                     </button>
                 </div>
             </div>
         </div>
 
         <div id="sources-table" class="overflow-x-auto">
-            <div class="max-h-[34rem] overflow-y-auto">
-            <table class="w-full min-w-[1220px] text-left">
+            <div class="max-h-[40rem] overflow-y-auto custom-scrollbar">
+            <table class="w-full min-w-[1220px] text-left border-separate border-spacing-0">
                 <thead>
-                    <tr class="border-b border-slate-50 dark:border-slate-800/50">
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Source
-                        </th>
+                    <tr class="bg-slate-50/30 dark:bg-slate-800/5">
+                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Source Identity</th>
                         @if(auth()->user()->isSuperAdmin())
-                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Team</th>
+                            <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Team</th>
                         @endif
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">URL</th>
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status
-                        </th>
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Delivery Analytics
-                        </th>
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-end">
-                            Actions</th>
+                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Endpoint URL</th>
+                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Status</th>
+                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800">Performance Metrics</th>
+                        <th class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 text-end">Control Center</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
                     @forelse($sources as $source)
-                        <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                            <td class="px-8 py-4">
-                                <div class="text-xs font-black text-slate-900 dark:text-white">{{ $source->name }}</div>
-                                <span class="text-[10px] text-slate-400 uppercase font-black">{{ $source->platform }}</span>
+                        <tr class="group hover:bg-slate-50/80 dark:hover:bg-indigo-500/[0.02] transition-colors">
+                            <td class="px-8 py-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                        {{-- Dynamic icon based on platform --}}
+                                        @if($source->platform === 'shopify')
+                                            <svg class="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor"><path d="M19.1 12c0-3.9-3.2-7.1-7.1-7.1h-4v14.2h1.4v-4.3c.8.9 2.1 1.4 3.5 1.4 3.4 0 6.2-2.3 6.2-4.2zm-7.1 2.8c-1 0-1.8-.4-2.4-.9V10.1c.6-.5 1.4-.9 2.4-.9 2.1 0 3.8 1.4 3.8 2.8s-1.7 2.8-3.8 2.8z"/></svg>
+                                        @else
+                                            <svg class="w-5 h-5 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <div class="text-[13px] font-black text-slate-900 dark:text-white leading-none mb-1.5">{{ $source->name }}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] text-wa-teal uppercase font-black tracking-widest px-1.5 py-0.5 bg-wa-teal/10 rounded">{{ $source->platform }}</span>
+                                            <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ID: #{{ str_pad($source->id, 4, '0', STR_PAD_LEFT) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                             @if(auth()->user()->isSuperAdmin())
-                                <td class="px-8 py-4">
-                                    <div class="text-[10px] font-black text-indigo-500 uppercase tracking-tight">{{ $source->team?->name ?? 'SYSTEM' }}</div>
+                                <td class="px-8 py-6">
+                                    <div class="inline-flex items-center px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-tight">
+                                        {{ $source->team?->name ?? 'SYSTEM' }}
+                                    </div>
                                 </td>
                             @endif
-                            <td class="px-8 py-4">
-                                <code
-                                    class="text-[10px] font-mono text-wa-teal dark:text-wa-teal">{{ Str::limit($source->getWebhookUrl(), 30) }}</code>
+                            <td class="px-8 py-6">
+                                <div class="flex items-center gap-2">
+                                    <code class="text-[10px] font-mono text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
+                                        {{ Str::limit($source->slug ?: $source->id, 15) }}
+                                    </code>
+                                    <button onclick="navigator.clipboard.writeText('{{ $source->getWebhookUrl() }}')" class="p-1 text-slate-300 hover:text-wa-teal transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                    </button>
+                                </div>
                             </td>
-                            <td class="px-8 py-4">
-                                <button wire:click="toggleStatus({{ $source->id }})"
-                                    class="group/toggle flex items-center gap-2 focus:outline-none">
-                                    <span
-                                        class="w-2 h-2 rounded-full transition-all duration-300 {{ $source->is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-slate-300' }}"></span>
-                                    <span
-                                        class="text-[10px] font-black uppercase tracking-widest {{ $source->is_active ? 'text-emerald-500' : 'text-slate-400' }}">
-                                        {{ $source->is_active ? 'Active' : 'Paused' }}
-                                    </span>
+                            <td class="px-8 py-6">
+                                <button wire:click="toggleStatus({{ $source->id }})" class="relative inline-flex items-center cursor-pointer group/status">
+                                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 {{ $source->is_active ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
+                                        <span class="w-2 h-2 rounded-full {{ $source->is_active ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-400' }}"></span>
+                                        <span class="text-[10px] font-black uppercase tracking-widest">{{ $source->is_active ? 'Active' : 'Paused' }}</span>
+                                    </div>
                                 </button>
                             </td>
-                            <td class="px-8 py-4 min-w-[340px]">
+                            <td class="px-8 py-6">
                                 @php
                                     $attempted = (int) ($source->msg_attempted_count ?? 0);
                                     $sent = (int) ($source->msg_sent_count ?? 0);
@@ -176,119 +214,58 @@
                                     $failed = (int) ($source->msg_failed_count ?? 0);
                                     $deliveryRate = $sent > 0 ? round(($delivered / $sent) * 100, 1) : 0;
                                     $readRate = $delivered > 0 ? round(($read / $delivered) * 100, 1) : 0;
-                                    $sentPct = $attempted > 0 ? round(($sent / $attempted) * 100) : 0;
-                                    $deliveredPct = $attempted > 0 ? round(($delivered / $attempted) * 100) : 0;
-                                    $readPct = $attempted > 0 ? round(($read / $attempted) * 100) : 0;
                                 @endphp
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                                        <span class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Sent: {{ number_format($sent) }}</span>
-                                        <span class="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">Delivered: {{ number_format($delivered) }}</span>
-                                        <span class="px-2 py-1 rounded bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300">Read: {{ number_format($read) }}</span>
-                                        <span class="px-2 py-1 rounded bg-rose-100 dark:bg-rose-900/20 text-rose-600 dark:text-rose-300">Failed: {{ number_format($failed) }}</span>
+                                <div class="flex items-center gap-6">
+                                    <div class="flex -space-x-1.5">
+                                        <div class="w-2.5 h-8 bg-indigo-500/20 rounded-full overflow-hidden relative" title="Sent: {{ $sent }}">
+                                            <div class="absolute bottom-0 left-0 right-0 bg-indigo-500 transition-all duration-500" style="height: {{ $attempted > 0 ? ($sent/$attempted)*100 : 0 }}%"></div>
+                                        </div>
+                                        <div class="w-2.5 h-8 bg-emerald-500/20 rounded-full overflow-hidden relative" title="Read: {{ $read }}">
+                                            <div class="absolute bottom-0 left-0 right-0 bg-emerald-500 transition-all duration-500" style="height: {{ $attempted > 0 ? ($read/$attempted)*100 : 0 }}%"></div>
+                                        </div>
+                                        <div class="w-2.5 h-8 bg-rose-500/20 rounded-full overflow-hidden relative" title="Failed: {{ $failed }}">
+                                            <div class="absolute bottom-0 left-0 right-0 bg-rose-500 transition-all duration-500" style="height: {{ $attempted > 0 ? ($failed/$attempted)*100 : 0 }}%"></div>
+                                        </div>
                                     </div>
                                     <div class="space-y-1">
-                                        <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div class="h-full bg-slate-400" style="width: {{ $sentPct }}%"></div>
-                                        </div>
-                                        <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div class="h-full bg-blue-500" style="width: {{ $deliveredPct }}%"></div>
-                                        </div>
-                                        <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div class="h-full bg-emerald-500" style="width: {{ $readPct }}%"></div>
+                                        <div class="text-[14px] font-black text-slate-900 dark:text-white leading-none">{{ number_format($attempted) }} <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1">Total Hits</span></div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[10px] font-black text-emerald-500">{{ $deliveryRate }}% <span class="text-[8px] opacity-70">DLVR</span></span>
+                                            <span class="text-[10px] font-black text-blue-500">{{ $readRate }}% <span class="text-[8px] opacity-70">READ</span></span>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                        <span>Attempts: {{ number_format($attempted) }}</span>
-                                        <span>Delivery: {{ $deliveryRate }}%</span>
-                                        <span>Read: {{ $readRate }}%</span>
-                                    </div>
-                                    <button wire:click="openSourceReportModal({{ $source->id }})"
-                                        class="mt-2 w-full px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all">
-                                        View Full Report
+                                    <button wire:click="openSourceReportModal({{ $source->id }})" class="p-2 bg-slate-50 dark:bg-slate-800 hover:bg-wa-teal hover:text-white rounded-xl text-slate-400 transition-all shadow-sm">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                                     </button>
                                 </div>
                             </td>
-                            <td class="px-8 py-4 text-end">
-                                <div
-                                    class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button wire:click="viewLogs({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 rounded-xl transition-all"
-                                        title="Live Monitor">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
+                            <td class="px-8 py-6 text-end">
+                                <div class="flex items-center justify-end gap-1 px-2 py-1 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] w-fit ml-auto border border-slate-100 dark:border-slate-800/50 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                                    <button wire:click="viewLogs({{ $source->id }})" class="p-2 text-slate-400 hover:text-orange-500 transition-all" title="Live Terminal">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     </button>
-                                    <button wire:click="exportWebhookReportForSource({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-xl transition-all"
-                                        title="Export Source Report CSV">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
+                                    <button wire:click="duplicate({{ $source->id }})" class="p-2 text-slate-400 hover:text-indigo-500 transition-all" title="Clone Node">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
                                     </button>
-                                    <button wire:click="exportFailedWebhookReportForSource({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all"
-                                        title="Export Source Failed CSV">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
+                                    <button wire:click="edit({{ $source->id }})" class="p-2 text-slate-400 hover:text-wa-teal transition-all" title="Configure">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                     </button>
-                                    <button wire:click="duplicate({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-xl transition-all"
-                                        title="Duplicate Source">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                                        </svg>
-                                    </button>
-                                    @if($source->is_active)
-                                        <button wire:click="toggleStatus({{ $source->id }})"
-                                            class="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-xl transition-all"
-                                            title="Deactivate Source">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </button>
-                                    @else
-                                        <button wire:click="toggleStatus({{ $source->id }})"
-                                            class="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-xl transition-all"
-                                            title="Activate Source">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </button>
-                                    @endif
-                                    <button wire:click="edit({{ $source->id }})"
-                                        class="p-2 text-slate-400 hover:text-wa-teal hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-xl transition-all"
-                                        title="Edit Configuration">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                    </button>
-                                    <button wire:click="delete({{ $source->id }})"
-                                        wire:confirm="Permanent deletion: Are you sure?"
-                                        class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all"
-                                        title="Delete Source">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
+                                    <button wire:click="delete({{ $source->id }})" wire:confirm="Permanent deletion: Are you sure?" class="p-2 text-slate-400 hover:text-rose-500 transition-all" title="Remove">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->isSuperAdmin() ? 7 : 6 }}" class="px-8 py-10 text-center text-sm font-semibold text-slate-400">
-                                No webhook sources matched your filters.
+                            <td colspan="{{ auth()->user()->isSuperAdmin() ? 7 : 6 }}" class="px-8 py-20 text-center">
+                                <div class="flex flex-col items-center justify-center space-y-4">
+                                    <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                                    </div>
+                                    <p class="text-sm font-black text-slate-400 uppercase tracking-widest">No active integrations found</p>
+                                    <button wire:click="openNewSource" class="text-xs font-black text-wa-teal hover:underline uppercase tracking-widest">Construct your first pipe</button>
+                                </div>
                             </td>
                         </tr>
                     @endforelse

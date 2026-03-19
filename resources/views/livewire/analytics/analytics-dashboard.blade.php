@@ -399,151 +399,193 @@
     <!-- Webhook Delivery Report (Table) -->
     <div
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 sm:p-10 shadow-xl border border-slate-50 dark:border-slate-800 space-y-6">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    Message <span class="text-wa-teal">Delivery Report</span>
-                </h3>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    Sent message statuses for last {{ $this->dateRange }} days
-                </p>
-                <div class="mt-2 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
-                    <span class="px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                        Delivery Rate: {{ number_format($webhookSummary['delivery_rate'], 1) }}%
-                    </span>
-                    <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
-                        Read Rate: {{ number_format($webhookSummary['read_rate'], 1) }}%
-                    </span>
-                </div>
-            </div>
-
-            <div class="flex flex-wrap items-end gap-3">
-                <div class="flex items-center gap-2">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</label>
-                    <select wire:model.live="webhookStatusFilter"
-                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
-                        <option value="all">All</option>
-                        <option value="sent">Sent</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="read">Read</option>
-                        <option value="failed">Failed</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Contact</label>
-                    <input type="text" wire:model.live.debounce.300ms="webhookContactFilter" placeholder="Name, number, email"
-                        class="w-44 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400">
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Search</label>
-                    <input type="text" wire:model.live.debounce.300ms="webhookSearch" placeholder="Message ID or error"
-                        class="w-44 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400">
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">From</label>
-                    <input type="date" wire:model.live="webhookFromDate"
-                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">To</label>
-                    <input type="date" wire:model.live="webhookToDate"
-                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Rows</label>
-                    <select wire:model.live="webhookPerPage"
-                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200">
-                        <option value="10">10</option>
-                        <option value="15">15</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
-
-                <button wire:click="exportWebhookReport"
-                    class="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10">
+            <div class="flex items-start gap-5">
+                <div class="p-4 bg-wa-teal dark:bg-wa-teal/10 text-white dark:text-wa-teal rounded-[1.5rem] shadow-xl shadow-wa-teal/20 hidden sm:flex items-center justify-center shrink-0">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Download Delivery Report
-                </button>
+                </div>
+                <div>
+                    <h3 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-2">
+                        Message <span class="text-wa-teal">Delivery Report</span>
+                    </h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-wa-teal animate-pulse"></span>
+                        History tracking for last {{ $this->dateRange }} days
+                    </p>
+                    
+                    <div class="mt-4 flex items-center gap-3">
+                        <div class="bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 px-5 py-3 rounded-2xl group transition-all shrink-0">
+                            <div class="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1 group-hover:text-blue-500 transition-colors">Delivery Rate</div>
+                            <div class="text-xl font-black text-blue-600 dark:text-blue-400 leading-none">{{ number_format($webhookSummary['delivery_rate'], 1) }}%</div>
+                        </div>
+                        <div class="bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10 px-5 py-3 rounded-2xl group transition-all shrink-0">
+                            <div class="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1 group-hover:text-emerald-500 transition-colors">Read Rate</div>
+                            <div class="text-xl font-black text-emerald-600 dark:text-emerald-400 leading-none">{{ number_format($webhookSummary['read_rate'], 1) }}%</div>
+                        </div>
+                        <button wire:click="exportWebhookReport" 
+                            class="ml-2 flex flex-col items-center justify-center gap-1.5 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-95 transition-all">
+                            <div class="text-[8px] font-black uppercase tracking-[0.2em] opacity-70">Download</div>
+                            <div class="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                                REPT
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Redesigned Filter Toolbar -->
+            <div class="flex flex-col gap-4 w-full lg:w-auto">
+                <div class="bg-slate-50/50 dark:bg-slate-800/40 p-1.5 rounded-[2rem] border border-slate-100 dark:border-slate-800/60 flex flex-wrap items-center gap-2 shadow-sm">
+                    <!-- Status Dropdown -->
+                    <div class="relative group">
+                        <select wire:model.live="webhookStatusFilter"
+                            class="appearance-none pl-5 pr-12 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal transition-all cursor-pointer shadow-sm">
+                            <option value="all">Statuses: All</option>
+                            <option value="sent">Status: Sent</option>
+                            <option value="delivered">Status: Delivered</option>
+                            <option value="read">Status: Read</option>
+                            <option value="failed">Status: Failed</option>
+                        </select>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- Page Rows Dropdown -->
+                    <div class="relative group">
+                        <select wire:model.live="webhookPerPage"
+                            class="appearance-none pl-5 pr-12 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal transition-all cursor-pointer shadow-sm">
+                            <option value="10">10 Rows</option>
+                            <option value="15">15 Rows</option>
+                            <option value="25">25 Rows</option>
+                            <option value="50">50 Rows</option>
+                        </select>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- Date Inputs -->
+                    <div class="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] px-3 shadow-sm py-1">
+                        <div class="text-[9px] font-black text-slate-300 uppercase tracking-widest px-2">From</div>
+                        <input type="date" wire:model.live="webhookFromDate"
+                            class="bg-transparent border-none text-[11px] font-black p-2 text-slate-600 dark:text-slate-300 focus:ring-0 w-32">
+                        <div class="text-[9px] font-black text-slate-300 uppercase tracking-widest px-2">To</div>
+                        <input type="date" wire:model.live="webhookToDate"
+                            class="bg-transparent border-none text-[11px] font-black p-2 text-slate-600 dark:text-slate-300 focus:ring-0 w-32">
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-3">
+                    <div class="relative group flex-1 w-full">
+                        <input type="text" wire:model.live.debounce.300ms="webhookContactFilter" placeholder="Filter by name or contact..."
+                            class="w-full pl-12 pr-5 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal transition-all shadow-sm">
+                        <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </div>
+                    <div class="relative group flex-1 w-full">
+                        <input type="text" wire:model.live.debounce.300ms="webhookSearch" placeholder="Search message ID or error..."
+                            class="w-full pl-12 pr-5 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal transition-all shadow-sm">
+                        <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="rounded-2xl border border-slate-100 dark:border-slate-800 p-5 bg-slate-50/70 dark:bg-slate-800/30">
-                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Sent</p>
-                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['sent']) }}</p>
+        {{-- Quick Stats Grid --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="rounded-3xl border border-slate-100 dark:border-slate-800 p-6 bg-slate-50/50 dark:bg-slate-800/20 shadow-sm transition-all hover:shadow-md group">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-wa-teal transition-colors">Total Sent</p>
+                <p class="mt-3 text-3xl font-black text-slate-900 dark:text-white leading-none">{{ number_format($webhookSummary['sent']) }}</p>
             </div>
-            <div class="rounded-2xl border border-blue-100 dark:border-blue-900/30 p-5 bg-blue-50/70 dark:bg-blue-900/10">
-                <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Delivered</p>
-                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['delivered']) }}</p>
+            <div class="rounded-3xl border border-blue-50 dark:border-blue-900/20 p-6 bg-blue-50/30 dark:bg-blue-900/10 shadow-sm transition-all hover:shadow-md group">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 group-hover:text-blue-600 transition-colors">Delivered</p>
+                <p class="mt-3 text-3xl font-black text-slate-900 dark:text-white leading-none">{{ number_format($webhookSummary['delivered']) }}</p>
             </div>
-            <div class="rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-5 bg-emerald-50/70 dark:bg-emerald-900/10">
-                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Read</p>
-                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['read']) }}</p>
+            <div class="rounded-3xl border border-emerald-50 dark:border-emerald-900/20 p-6 bg-emerald-50/30 dark:bg-emerald-900/10 shadow-sm transition-all hover:shadow-md group">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 group-hover:text-emerald-600 transition-colors">Read</p>
+                <p class="mt-3 text-3xl font-black text-slate-900 dark:text-white leading-none">{{ number_format($webhookSummary['read']) }}</p>
             </div>
-            <div class="rounded-2xl border border-rose-100 dark:border-rose-900/30 p-5 bg-rose-50/70 dark:bg-rose-900/10">
-                <p class="text-[10px] font-black uppercase tracking-widest text-rose-500">Failed</p>
-                <p class="mt-2 text-2xl font-black text-slate-900 dark:text-white">{{ number_format($webhookSummary['failed']) }}</p>
+            <div class="rounded-3xl border border-rose-50 dark:border-rose-900/20 p-6 bg-rose-50/30 dark:bg-rose-900/10 shadow-sm transition-all hover:shadow-md group">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 group-hover:text-rose-600 transition-colors">Failed</p>
+                <p class="mt-3 text-3xl font-black text-slate-900 dark:text-white leading-none">{{ number_format($webhookSummary['failed']) }}</p>
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+        {{-- Log View --}}
+        <div class="rounded-[2.5rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
-            <div class="max-h-[30rem] overflow-y-auto">
-            <table class="w-full text-left min-w-[900px]">
-                <thead class="bg-slate-50 dark:bg-slate-800/40">
-                    <tr>
-                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Time</th>
-                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Contact</th>
-                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Number</th>
-                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
-                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Message ID</th>
-                        <th class="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Error</th>
+            <div class="max-h-[35rem] overflow-y-auto custom-scrollbar">
+            <table class="w-full text-left min-w-[950px] border-separate border-spacing-0">
+                <thead>
+                    <tr class="bg-slate-50/50 dark:bg-slate-800/40 backdrop-blur-md">
+                        <th class="sticky top-0 z-10 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">Time</th>
+                        <th class="sticky top-0 z-10 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">Contact Identity</th>
+                        <th class="sticky top-0 z-10 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800 text-center">Status</th>
+                        <th class="sticky top-0 z-10 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">Tracking Identity</th>
+                        <th class="sticky top-0 z-10 px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">Processing Logs</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/50">
                     @forelse($webhookDetails as $message)
-                        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors">
-                            <td class="px-5 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                {{ $message->created_at?->format('Y-m-d H:i') }}
+                        <tr class="group hover:bg-slate-50/80 dark:hover:bg-indigo-500/[0.02] transition-colors">
+                            <td class="px-8 py-5">
+                                <div class="text-[11px] font-black text-slate-900 dark:text-white leading-none mb-1">{{ $message->created_at?->format('H:i') }}</div>
+                                <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{{ $message->created_at?->format('d M, Y') }}</div>
                             </td>
-                            <td class="px-5 py-4 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                {{ $message->contact?->name ?: 'Unknown' }}
-                                @if($message->contact?->email)
-                                    <div class="text-[10px] text-slate-400">{{ $message->contact->email }}</div>
-                                @endif
+                            <td class="px-8 py-5">
+                                <div class="text-[13px] font-black text-slate-900 dark:text-white leading-none mb-1.5">{{ $message->contact?->name ?: 'Anonymous Client' }}</div>
+                                <div class="flex items-center gap-2">
+                                     <span class="text-[9px] text-wa-teal font-black uppercase tracking-widest px-1.5 py-0.5 bg-wa-teal/10 rounded">{{ $message->contact?->phone_number ?: 'No Number' }}</span>
+                                </div>
                             </td>
-                            <td class="px-5 py-4 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                {{ $message->contact?->phone_number ?: '-' }}
-                            </td>
-                            <td class="px-5 py-4">
-                                <span class="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded
-                                {{ $message->status === 'failed' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/20 dark:text-rose-300' : '' }}
-                                {{ $message->status === 'read' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300' : '' }}
-                                {{ $message->status === 'delivered' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : '' }}
-                                {{ $message->status === 'sent' ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' : '' }}">
+                            <td class="px-8 py-5 text-center">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm
+                                {{ $message->status === 'failed' ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20' : '' }}
+                                {{ $message->status === 'read' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20' : '' }}
+                                {{ $message->status === 'delivered' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20' : '' }}
+                                {{ $message->status === 'sent' ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50' : '' }}">
+                                   <span class="w-1.5 h-1.5 rounded-full {{ $message->status === 'failed' ? 'bg-rose-500' : ($message->status === 'read' ? 'bg-emerald-500' : ($message->status === 'delivered' ? 'bg-blue-500' : 'bg-slate-400')) }}"></span>
                                     {{ $message->status }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-[11px] font-mono text-slate-500 dark:text-slate-400 max-w-[240px] truncate">
-                                {{ $message->whatsapp_message_id ?: '-' }}
+                            <td class="px-8 py-5">
+                                <div class="flex items-center gap-2">
+                                    <code class="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-800 w-fit block max-w-[180px] truncate" title="{{ $message->whatsapp_message_id }}">
+                                        {{ $message->whatsapp_message_id ?: 'NO_ID_ASSIGNED' }}
+                                    </code>
+                                    @if($message->whatsapp_message_id)
+                                        <button onclick="navigator.clipboard.writeText('{{ $message->whatsapp_message_id }}')" class="p-1 text-slate-300 hover:text-wa-teal transition-colors opacity-0 group-hover:opacity-100">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
-                            <td class="px-5 py-4 text-xs text-rose-500 max-w-[260px] truncate">
-                                {{ $message->error_message ?: '-' }}
+                            <td class="px-8 py-5">
+                                @if($message->error_message)
+                                    <div class="flex items-start gap-2 max-w-[280px]">
+                                        <svg class="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span class="text-[11px] font-medium text-rose-600 dark:text-rose-400 leading-tight italic">{{ $message->error_message }}</span>
+                                    </div>
+                                @else
+                                    <div class="flex items-center gap-2 text-emerald-500/60 dark:text-emerald-500/40">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        <span class="text-[9px] font-black uppercase tracking-widest">Processed Successfully</span>
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-8 text-center text-sm font-semibold text-slate-400">
-                                No message activity for this period.
+                            <td colspan="5" class="px-8 py-20 text-center">
+                                <div class="flex flex-col items-center justify-center space-y-4">
+                                    <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                                    </div>
+                                    <p class="text-sm font-black text-slate-400 uppercase tracking-widest">No activity data available for this range</p>
+                                </div>
                             </td>
                         </tr>
                     @endforelse
@@ -551,9 +593,9 @@
             </table>
             </div>
             </div>
-            <div class="px-5 py-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                    Showing {{ $webhookDetails->firstItem() ?? 0 }}-{{ $webhookDetails->lastItem() ?? 0 }} of {{ $webhookDetails->total() }} messages
+            <div class="px-8 py-5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">
+                    Displaying results <span class="text-slate-900 dark:text-white">{{ $webhookDetails->firstItem() ?? 0 }}-{{ $webhookDetails->lastItem() ?? 0 }}</span> of <span class="text-slate-900 dark:text-white">{{ $webhookDetails->total() }}</span> messages
                 </div>
                 <div>
                     {{ $webhookDetails->onEachSide(1)->links() }}

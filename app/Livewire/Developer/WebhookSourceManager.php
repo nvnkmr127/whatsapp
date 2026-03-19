@@ -141,6 +141,29 @@ class WebhookSourceManager extends Component
         }
     }
 
+    #[Computed]
+    public function stats()
+    {
+        $user = auth()->user();
+        $team = $user->currentTeam;
+        $query = WebhookSource::query();
+
+        if ($team && !$user->isSuperAdmin()) {
+            $query->where('team_id', $team->id);
+        }
+
+        $all = $query->get();
+        $totalReceived = $all->sum('total_received');
+        $totalProcessed = $all->sum('total_processed');
+
+        return [
+            'total' => $all->count(),
+            'active' => $all->where('is_active', true)->count(),
+            'total_received' => $totalReceived,
+            'success_rate' => $totalReceived > 0 ? round(($totalProcessed / $totalReceived) * 100, 1) : 0,
+        ];
+    }
+
     public function startCapture()
     {
         if (!$this->editingId)

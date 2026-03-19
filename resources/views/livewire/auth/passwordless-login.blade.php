@@ -57,7 +57,73 @@
         </form>
     @else
         <!-- Verify OTP Step -->
-        <div>
+        <div x-data="{ 
+                length: 6,
+                otp: Array(6).fill(''),
+                verifying: false,
+                code: @entangle('code'),
+                init() {
+                    this.$watch('otp', value => {
+                        this.code = value.join('');
+                        if (value.every(v => v !== '') && value.join('').length === this.length && !this.verifying) {
+                            this.verifying = true;
+                            this.$nextTick(() => $wire.verifyOtp());
+                        }
+                        if (value.some(v => v === '')) {
+                            this.verifying = false;
+                        }
+                    });
+                },
+                handleInput(e, index) {
+                    const input = e.target;
+                    const val = input.value.replace(/[^0-9]/g, '');
+
+                    this.otp[index] = val;
+                    input.value = val;
+
+                    if (val && index < this.length - 1) {
+                        this.$nextTick(() => {
+                            const next = document.getElementById('otp-' + (index + 1));
+                            if (next) {
+                                next.focus();
+                                next.select();
+                            }
+                        });
+                    }
+                },
+                handleKeydown(e, index) {
+                    if (e.key === 'Backspace') {
+                        if (!this.otp[index] && index > 0) {
+                            const prev = document.getElementById('otp-' + (index - 1));
+                            if (prev) {
+                                prev.focus();
+                                prev.select();
+                            }
+                        }
+                        // Clear current index binding on backspace if exists
+                        if (this.otp[index]) {
+                            this.otp[index] = '';
+                        }
+                    }
+                },
+                handlePaste(e) {
+                    e.preventDefault();
+                    const paste = (e.clipboardData || window.clipboardData).getData('text');
+                    const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
+
+                    if (cleanPaste) {
+                        cleanPaste.split('').forEach((char, i) => {
+                            if (i < this.length) this.otp[i] = char;
+                        });
+
+                        this.$nextTick(() => {
+                            const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
+                            const dest = document.getElementById('otp-' + destIndex);
+                            if (dest) dest.focus();
+                        });
+                    }
+                }
+            }" x-init="init()">
             <!-- Success Message -->
             @if($message)
                 <div class="mb-6 p-4 bg-wa-teal/10 border border-wa-teal/20 rounded-2xl">
@@ -74,73 +140,7 @@
             @endif
 
             <!-- OTP Input -->
-            <div class="mb-10" x-data="{ 
-                                                            length: 6,
-                                                            otp: Array(6).fill(''),
-                                                            verifying: false,
-                                                            code: @entangle('code'),
-                                                            init() {
-                                                                this.$watch('otp', value => {
-                                                                    this.code = value.join('');
-                                                                    if (value.every(v => v !== '') && value.join('').length === this.length && !this.verifying) {
-                                                                        this.verifying = true;
-                                                                        this.$nextTick(() => $wire.verifyOtp());
-                                                                    }
-                                                                    if (value.some(v => v === '')) {
-                                                                        this.verifying = false;
-                                                                    }
-                                                                });
-                                                            },
-                                                            handleInput(e, index) {
-                                                                const input = e.target;
-                                                                const val = input.value.replace(/[^0-9]/g, '');
-
-                                                                this.otp[index] = val;
-                                                                input.value = val;
-
-                                                                if (val && index < this.length - 1) {
-                                                                    this.$nextTick(() => {
-                                                                        const next = document.getElementById('otp-' + (index + 1));
-                                                                        if (next) {
-                                                                            next.focus();
-                                                                            next.select();
-                                                                        }
-                                                                    });
-                                                                }
-                                                            },
-                                                            handleKeydown(e, index) {
-                                                                if (e.key === 'Backspace') {
-                                                                    if (!this.otp[index] && index > 0) {
-                                                                        const prev = document.getElementById('otp-' + (index - 1));
-                                                                        if (prev) {
-                                                                            prev.focus();
-                                                                            prev.select();
-                                                                        }
-                                                                    }
-                                                                    // Clear current index binding on backspace if exists
-                                                                    if (this.otp[index]) {
-                                                                        this.otp[index] = '';
-                                                                    }
-                                                                }
-                                                            },
-                                                            handlePaste(e) {
-                                                                e.preventDefault();
-                                                                const paste = (e.clipboardData || window.clipboardData).getData('text');
-                                                                const cleanPaste = paste.replace(/[^0-9]/g, '').slice(0, this.length);
-
-                                                                if (cleanPaste) {
-                                                                    cleanPaste.split('').forEach((char, i) => {
-                                                                        if (i < this.length) this.otp[i] = char;
-                                                                    });
-
-                                                                    this.$nextTick(() => {
-                                                                        const destIndex = Math.min(cleanPaste.length - 1, this.length - 1);
-                                                                        const dest = document.getElementById('otp-' + destIndex);
-                                                                        if (dest) dest.focus();
-                                                                    });
-                                                                }
-                                                            }
-                                                        }" x-init="init()">
+            <div class="mb-10">
                 <label class="text-xs font-black uppercase tracking-widest text-slate-400 block text-center mb-6">
                     Enter 6-Digit Verification Code
                 </label>
