@@ -97,6 +97,13 @@ class WebhookSourceManager extends Component
         $this->currentStep = 1;
         $this->isCapturing = false;
         $this->capturedPayload = null;
+        $this->showSourceReportModal = false;
+        $this->selectedSourceForReport = null;
+        $this->sourceReportFromDate = '';
+        $this->sourceReportToDate = '';
+        $this->sourceReportPerPage = 20;
+        $this->recentLogs = [];
+        $this->logsSourceStats = null;
     }
 
     public function nextStep()

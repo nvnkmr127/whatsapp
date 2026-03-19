@@ -9,6 +9,8 @@
         data.showTemplateListModal = @entangle('showTemplateListModal');
         data.showTemplatePreviewModal = @entangle('showTemplatePreviewModal');
         data.showInteractiveButtonsModal = @entangle('showInteractiveButtonsModal');
+        data.lightboxOpen = @entangle('lightboxOpen');
+        data.lightboxImage = @entangle('lightboxImage');
         data.quickReplies = @js($this->quickReplies);
         return data;
     })()">
@@ -748,9 +750,9 @@
 
 
     <!-- Lightbox Modal -->
-    <x-app-modal wire:model="$store.chat.lightboxOpen" maxWidth="7xl">
+    <x-app-modal wire:model="lightboxOpen" maxWidth="7xl">
         <div class="relative bg-black h-full min-h-[500px] flex items-center justify-center">
-            <img :src="$store.chat.lightboxImage"
+            <img :src="lightboxImage"
                 class="max-h-[90vh] max-w-[95vw] object-contain shadow-2xl rounded-lg">
         </div>
     </x-app-modal>

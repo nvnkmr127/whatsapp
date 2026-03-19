@@ -37,6 +37,10 @@ class MessageWindow extends Component
     public $buttonBody = '';
     public $interactiveButtons = []; // Array of titles
 
+    // Lightbox State
+    public $lightboxOpen = false;
+    public $lightboxImage = '';
+
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {

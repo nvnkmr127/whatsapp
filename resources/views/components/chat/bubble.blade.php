@@ -36,7 +36,7 @@
                     <template x-if="message.media_type && message.media_type.startsWith('image')">
                         <img :src="message.media_url"
                             class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm"
-                            @click="$store.chat.lightboxImage = message.media_url; $store.chat.lightboxOpen = true">
+                            @click="lightboxImage = message.media_url; lightboxOpen = true">
                     </template>
                     <template x-if="message.media_type && message.media_type.startsWith('video')">
                         <video :src="message.media_url" controls class="w-full max-h-80"></video>
