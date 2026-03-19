@@ -234,7 +234,10 @@ class OTPService
             $tpl = $this->findOtpTemplate($team);
 
             if (!$tpl) {
-                Log::error("No valid WhatsApp OTP template found for team {$team->id}. Please ensure a template named 'verification_code' or an AUTHENTICATION category template exists and is synced.");
+                Log::error("No synced WhatsApp OTP template found for team {$team->id}. Sync templates from Meta and ensure WHATSAPP_OTP_TEMPLATE_NAME matches an approved template + language in your WABA.", [
+                    'configured_template_name' => config('otp.whatsapp_template_name'),
+                    'app_locale' => app()->getLocale(),
+                ]);
                 return false;
             }
 
@@ -335,55 +338,92 @@ class OTPService
     protected function findOtpTemplate(Team $team)
     {
         $configName = config('otp.whatsapp_template_name', 'verification_code');
+        $allowUnsyncedFallback = (bool) config('otp.allow_unsynced_template_fallback', false);
+        $appLocale = app()->getLocale();
 
-        // 1. Look for explicit synced template by name from config
+        // Prefer exact locale, then en_US, then en.
+        $languageOrderSql = "CASE
+            WHEN language = ? THEN 0
+            WHEN language = 'en_US' THEN 1
+            WHEN language = 'en' THEN 2
+            ELSE 3
+        END";
+
+        // 1. Look for explicit synced template by name from config.
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('name', $configName)
             ->where('status', 'APPROVED')
-            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
-            ->orderByRaw("CASE WHEN language = ? THEN 0 WHEN language = 'en_US' THEN 1 WHEN language = 'en' THEN 2 ELSE 3 END", [app()->getLocale()])
+            ->whereNotNull('whatsapp_template_id')
+            ->orderByRaw($languageOrderSql, [$appLocale])
             ->first();
 
         if ($tpl) {
-            if (!$tpl->whatsapp_template_id) {
-                Log::warning("Using seeded placeholder template '{$tpl->name}' for OTP. This may fail if not created in Meta.", ['team_id' => $team->id]);
-            }
             return $tpl;
         }
 
-        // 2. Look for any explicit AUTHENTICATION templates (synced preferred)
+        // 2. Look for any synced AUTHENTICATION templates.
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('category', 'AUTHENTICATION')
             ->where('status', 'APPROVED')
-            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
-            ->orderByRaw("CASE WHEN language = ? THEN 0 WHEN language = 'en_US' THEN 1 WHEN language = 'en' THEN 2 ELSE 3 END", [app()->getLocale()])
+            ->whereNotNull('whatsapp_template_id')
+            ->orderByRaw($languageOrderSql, [$appLocale])
             ->first();
 
         if ($tpl)
             return $tpl;
 
-        // 3. Look for templates with "otp" or "verification" in the name
+        // 3. Look for synced templates with "otp"/"verification"/"code" in the name.
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('status', 'APPROVED')
+            ->whereNotNull('whatsapp_template_id')
             ->where(function ($q) {
                 $q->where('name', 'like', '%otp%')
                     ->orWhere('name', 'like', '%verification%')
                     ->orWhere('name', 'like', '%code%');
             })
-            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
-            ->orderByRaw("CASE WHEN language = ? THEN 0 WHEN language = 'en_US' THEN 1 WHEN language = 'en' THEN 2 ELSE 3 END", [app()->getLocale()])
-            ->orderByRaw("FIELD(name, '{$configName}', 'otp', 'verification', 'code') DESC")
+            ->orderByRaw($languageOrderSql, [$appLocale])
             ->first();
 
         if ($tpl)
             return $tpl;
 
-        // 4. Last resort: Any approved UTILITY template (synced preferred)
-        return \App\Models\WhatsappTemplate::where('team_id', $team->id)
+        // 4. Last resort: Any synced approved UTILITY template.
+        $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
             ->where('category', 'UTILITY')
             ->where('status', 'APPROVED')
-            ->orderByRaw('whatsapp_template_id IS NOT NULL DESC')
+            ->whereNotNull('whatsapp_template_id')
+            ->orderByRaw($languageOrderSql, [$appLocale])
             ->first();
+
+        if ($tpl) {
+            return $tpl;
+        }
+
+        // Optional, unsafe fallback for legacy environments with seeded placeholders.
+        if ($allowUnsyncedFallback) {
+            $fallback = \App\Models\WhatsappTemplate::where('team_id', $team->id)
+                ->where('status', 'APPROVED')
+                ->where(function ($q) use ($configName) {
+                    $q->where('name', $configName)
+                        ->orWhere('category', 'AUTHENTICATION')
+                        ->orWhere('name', 'like', '%otp%')
+                        ->orWhere('name', 'like', '%verification%')
+                        ->orWhere('name', 'like', '%code%');
+                })
+                ->orderByRaw($languageOrderSql, [$appLocale])
+                ->first();
+
+            if ($fallback) {
+                Log::warning('Using unsynced WhatsApp OTP template fallback. This may fail with Meta 132001.', [
+                    'team_id' => $team->id,
+                    'template_name' => $fallback->name,
+                    'template_language' => $fallback->language,
+                ]);
+                return $fallback;
+            }
+        }
+
+        return null;
     }
 
     /**

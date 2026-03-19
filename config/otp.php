@@ -24,5 +24,15 @@ return [
     | WhatsApp Template Configuration
     |--------------------------------------------------------------------------
     */
-    'whatsapp_template_name' => env('WHATSAPP_OTP_TEMPLATE_NAME', 'verification_code'),
+    'whatsapp_template_name' => env('WHATSAPP_OTP_TEMPLATE_NAME', 'verification'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unsafe Fallback (Not Recommended)
+    |--------------------------------------------------------------------------
+    | When false, OTP sending uses only synced templates that have a Meta
+    | template ID. This prevents runtime 404/132001 errors caused by local
+    | seeded placeholders that do not exist in Meta.
+    */
+    'allow_unsynced_template_fallback' => env('OTP_ALLOW_UNSYNCED_TEMPLATE_FALLBACK', false),
 ];
