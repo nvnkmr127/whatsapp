@@ -1256,7 +1256,12 @@ class WebhookSourceManager extends Component
         if ($this->selectedTemplateId) {
             $selectedTemplate = WhatsappTemplate::find($this->selectedTemplateId);
             if ($selectedTemplate && $selectedTemplate->components) {
-                foreach ($selectedTemplate->components as $component) {
+                $components = $selectedTemplate->components;
+                if (is_string($components)) {
+                    $components = json_decode($components, true) ?: [];
+                }
+
+                foreach ($components as $component) {
                     // Extract {{1}}, {{2}}, etc. from all components with text
                     if (isset($component['text'])) {
                         preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches);

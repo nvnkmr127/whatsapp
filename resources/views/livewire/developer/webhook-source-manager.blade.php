@@ -115,7 +115,8 @@
         </div>
     </div>
 
-        <div id="sources-grid" class="grid grid-cols-1 gap-4">
+    <div class="max-h-[650px] overflow-y-auto pr-6 custom-scrollbar pb-10">
+        <div id="sources-grid" class="grid grid-cols-1 gap-6">
             @forelse($sources as $source)
                 @php
                     $latestPayload = \App\Models\WebhookPayload::where('webhook_source_id', $source->id)->latest()->first();
@@ -224,6 +225,8 @@
                 </div>
             @endforelse
         </div>
+    </div>
+    </div>
 
         @if($sources->hasPages())
             <div class="mt-8 flex justify-between items-center px-4">
@@ -1060,7 +1063,6 @@
             </div>
         </x-slot>
     </x-dialog-modal>
-    @endif
 
     {{-- Logs Monitor Modal --}}
     <x-dialog-modal wire:model.live="showLogsModal" maxWidth="4xl">
@@ -1205,7 +1207,7 @@
                         <span class="font-medium text-gray-900 dark:text-gray-200">Platform: {{ $selectedSourceForReport?->platform ?? 'N/A' }}</span>
                     </div>
                 </div>
-                <button wire:click="closeSourceReportModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <button wire:click="closeSourceReportModal" wire:click.prevent="$set('showSourceReportModal', false)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -1300,7 +1302,7 @@
                         Extract Contacts
                     </button>
                 </div>
-                <x-secondary-button wire:click="closeSourceReportModal" class="!rounded-lg">
+                <x-secondary-button wire:click="closeSourceReportModal" wire:click.prevent="$set('showSourceReportModal', false)" class="!rounded-lg">
                     Close Report
                 </x-secondary-button>
             </div>
