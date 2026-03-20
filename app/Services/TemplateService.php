@@ -210,10 +210,7 @@ class TemplateService
     public function extractAllPlaceholders(WhatsappTemplate $template): array
     {
         $placeholders = [];
-        $components = $template->components ?? [];
-        if (is_string($components)) {
-            $components = json_decode($components, true) ?: [];
-        }
+        $components = $template->components;
 
         if (is_iterable($components)) {
             foreach ($components as $component) {
@@ -248,10 +245,8 @@ class TemplateService
         // Use new extraction logic for consistency
         $all = $this->extractAllPlaceholders($template);
 
-        if (is_string($components)) {
-            $components = json_decode($components, true) ?: [];
-        }
-
+        $components = $template->components;
+        
         if (is_iterable($components)) {
             foreach ($components as $component) {
                 // Text based placeholders in HEADER and BODY

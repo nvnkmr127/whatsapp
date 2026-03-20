@@ -28,17 +28,36 @@ class WhatsappTemplate extends Model
     }
 
     /**
+     * Ensure components is ALWAYS an array even if stored as a string or null.
+     */
+    public function getComponentsAttribute($value)
+    {
+        if (is_null($value)) {
+            return [];
+        }
+
+        // If it's already an array (due to casting)
+        if (is_array($value)) {
+            return $value;
+        }
+
+        // If it's a JSON string, decode it
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    /**
      * Get a concatenated string of all template components for preview/search.
      */
     public function getContentAttribute()
     {
         $content = [];
-        $components = $this->components ?? [];
+        $components = $this->components;
         
-        if (is_string($components)) {
-            $components = json_decode($components, true) ?: [];
-        }
-
         if (is_iterable($components)) {
             foreach ($components as $component) {
                 if (isset($component['text'])) {
