@@ -995,18 +995,30 @@ class WebhookSourceManager extends Component
         return $this->streamWebhookExport('failed');
     }
 
-    public function exportWebhookReportForSource(int $sourceId)
+    public function exportWebhookReportForSource(?int $sourceId = null)
     {
+        if (!$sourceId) {
+            $this->dispatch('notify', 'Please select a source before exporting.', 'error');
+            return null;
+        }
         return $this->streamWebhookExportForSource($sourceId, $this->normalizeExportStatusFilter());
     }
 
-    public function exportFailedWebhookReportForSource(int $sourceId)
+    public function exportFailedWebhookReportForSource(?int $sourceId = null)
     {
+        if (!$sourceId) {
+            $this->dispatch('notify', 'Please select a source before exporting.', 'error');
+            return null;
+        }
         return $this->streamWebhookExportForSource($sourceId, 'failed');
     }
 
-    public function exportDirectedSourceContacts(int $sourceId)
+    public function exportDirectedSourceContacts(?int $sourceId = null)
     {
+        if (!$sourceId) {
+            $this->dispatch('notify', 'Please select a source before exporting contacts.', 'error');
+            return null;
+        }
         $statusFilter = $this->normalizeExportStatusFilter();
         $source = WebhookSource::findOrFail($sourceId);
         

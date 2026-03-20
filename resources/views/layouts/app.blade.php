@@ -115,6 +115,14 @@
             console.error('[Global JS Error]', e.message, 'at', e.filename, 'line', e.lineno);
         });
 
+        window.addEventListener('unhandledrejection', function (e) {
+            const msg = String(e.reason?.message || e.reason || '');
+            if (msg.includes('showModal') && msg.includes('HTMLDialogElement')) {
+                console.warn('[Suppressed] Modal dialog promise race condition:', msg);
+                e.preventDefault();
+            }
+        });
+
         window.initTomSelect = function (selector, options = {}) {
             if (typeof TomSelect === 'undefined') {
                 console.warn('TomSelect is not loaded yet.');

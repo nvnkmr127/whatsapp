@@ -260,9 +260,10 @@
                         <!-- Health Panel -->
                         <div class="md:col-span-1 space-y-4">
                             <div class="bg-gray-50 p-4 rounded-xl text-center">
+                                @php $healthScore = data_get($healthData, 'score', 0); @endphp
                                 <div
-                                    class="text-3xl font-bold {{ $healthData['score'] > 80 ? 'text-green-600' : 'text-amber-600' }}">
-                                    {{ $healthData['score'] }}/100
+                                    class="text-3xl font-bold {{ $healthScore > 80 ? 'text-green-600' : 'text-amber-600' }}">
+                                    {{ $healthScore }}/100
                                 </div>
                                 <div class="text-xs text-gray-500 uppercase font-bold tracking-wider mt-1">Health Score
                                 </div>

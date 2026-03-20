@@ -29,7 +29,10 @@ class EcommerceIntegrations extends Component
     public $showSettingsModal = false;
     public $activeIntegration = null;
     public $syncSessions = [];
-    public $healthData = [];
+    public $healthData = [
+        'score' => 0,
+        'issues' => [],
+    ];
 
     // Settings Binding
     public $sync_scope = [
@@ -174,7 +177,11 @@ class EcommerceIntegrations extends Component
             ->get();
 
         $healthService = app(\App\Services\Integrations\IntegrationHealthService::class);
-        $this->healthData = $healthService->checkHealth($this->activeIntegration);
+        $healthData = $healthService->checkHealth($this->activeIntegration);
+        $this->healthData = array_merge([
+            'score' => 0,
+            'issues' => [],
+        ], is_array($healthData) ? $healthData : []);
 
         $this->showDiagnosticsModal = true;
     }

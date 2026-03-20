@@ -252,7 +252,7 @@
         @endif
     </div>
 
-    <x-dialog-modal wire:model.live="showWizardModal" maxWidth="5xl">
+    <x-dialog-modal wire:model="showWizardModal" maxWidth="5xl">
         <x-slot name="title">
             <div class="flex items-center justify-between">
                 <div>
@@ -1026,7 +1026,7 @@
 
 
     {{-- Diagnostic Test Modal --}}
-    <x-dialog-modal wire:model.live="showTestModal" maxWidth="3xl">
+    <x-dialog-modal wire:model="showTestModal" maxWidth="3xl">
         <x-slot name="title">
             <div class="flex items-center gap-4">
                 <div class="p-3 bg-fuchsia-100 dark:bg-fuchsia-500/10 text-fuchsia-600 rounded-2xl">
@@ -1099,7 +1099,7 @@
     </x-dialog-modal>
 
     {{-- Logs Monitor Modal --}}
-    <x-dialog-modal wire:model.live="showLogsModal" maxWidth="4xl">
+    <x-dialog-modal wire:model="showLogsModal" maxWidth="4xl">
         <x-slot name="title">
             <div class="flex items-center justify-between">
                 <div class="flex-1">
@@ -1230,7 +1230,7 @@
     </x-dialog-modal>
 
     {{-- Source Report Modal --}}
-    <x-dialog-modal wire:model.live="showSourceReportModal" maxWidth="5xl">
+    <x-dialog-modal wire:model="showSourceReportModal" maxWidth="5xl">
         <x-slot name="title">
             <div class="flex items-center justify-between">
                 <div>

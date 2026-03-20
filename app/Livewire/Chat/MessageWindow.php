@@ -23,6 +23,12 @@ class MessageWindow extends Component
     public $activeAgents = [];
     public $availableCategories = [];
 
+    // Legacy template preview modal state (still referenced by message-window view)
+    public $templateMediaUrl = '';
+    public $showTemplatePreviewModal = false;
+    public $selectedTemplate = null;
+    public $templateVariables = [];
+
     protected $listeners = [
         'refresh-tags' => 'loadConversation',
         'templateSelected' => 'handleTemplateSelected',
@@ -203,6 +209,128 @@ class MessageWindow extends Component
     public function handleAiSuggestionSelected($text)
     {
         $this->msgBody = $text;
+    }
+
+    public function closeTemplateModals()
+    {
+        $this->showTemplatePreviewModal = false;
+        $this->selectedTemplate = null;
+        $this->templateVariables = [];
+        $this->templateMediaUrl = '';
+    }
+
+    public function selectTemplate($templateId)
+    {
+        $template = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+            ->find($templateId);
+
+        if (!$template) {
+            return;
+        }
+
+        $this->selectedTemplateId = $template->id;
+        $this->selectedTemplate = $template;
+        $this->templateVariables = [];
+        $this->parseTemplateVariables();
+        $this->showTemplatePreviewModal = true;
+    }
+
+    public function sendTemplateWithVariables()
+    {
+        if (!$this->selectedTemplate) {
+            return;
+        }
+
+        $this->handleTemplateSelected([
+            'template_name' => $this->selectedTemplate->name,
+            'language' => $this->selectedTemplate->language ?? 'en_US',
+            'variables' => $this->templateVariables,
+        ]);
+
+        $this->closeTemplateModals();
+    }
+
+    public function parseTemplateVariables()
+    {
+        if (!$this->selectedTemplate) {
+            return;
+        }
+
+        $components = $this->selectedTemplate->components ?? [];
+        if (is_string($components)) {
+            $components = json_decode($components, true) ?: [];
+        }
+
+        $bodyText = '';
+        $header = null;
+
+        foreach ($components as $component) {
+            if (($component['type'] ?? '') === 'BODY') {
+                $bodyText = $component['text'] ?? '';
+            }
+            if (($component['type'] ?? '') === 'HEADER') {
+                $header = $component;
+            }
+        }
+
+        preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
+        if (!empty($matches[1])) {
+            foreach ($matches[1] as $num) {
+                $this->templateVariables[(string) $num] = $this->templateVariables[(string) $num] ?? '';
+            }
+        }
+
+        if (($header['format'] ?? '') === 'IMAGE' || ($header['format'] ?? '') === 'VIDEO' || ($header['format'] ?? '') === 'DOCUMENT') {
+            $this->templateVariables['header_media_url'] = $this->templateVariables['header_media_url'] ?? '';
+        }
+    }
+
+    public function getLivePreviewTextProperty()
+    {
+        $template = $this->selectedTemplate;
+        if (!$template && $this->selectedTemplateId) {
+            $template = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+                ->find($this->selectedTemplateId);
+        }
+
+        if (!$template) {
+            return e('Template preview unavailable.');
+        }
+
+        $components = $template->components ?? [];
+        if (is_string($components)) {
+            $components = json_decode($components, true) ?: [];
+        }
+
+        $bodyText = '';
+        foreach ($components as $component) {
+            if (($component['type'] ?? '') === 'BODY') {
+                $bodyText = $component['text'] ?? '';
+                break;
+            }
+        }
+
+        if ($bodyText === '') {
+            return e('No preview text available for this template.');
+        }
+
+        $text = e($bodyText);
+
+        foreach ($this->templateVariables as $key => $value) {
+            if ($key === 'header_media_url') {
+                continue;
+            }
+
+            $placeholder = '{{' . $key . '}}';
+            $replacement = $value !== '' ? e($value) : $placeholder;
+            $text = str_replace(e($placeholder), $replacement, $text);
+        }
+
+        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
+        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
+
+        return $text;
     }
 
     public function sendMessage()
