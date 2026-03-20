@@ -24,17 +24,33 @@ class MessageWindow extends Component
     public $availableCategories = [];
 
     protected $listeners = [
-        'refresh-tags' => 'loadConversation'
+        'refresh-tags' => 'loadConversation',
+        'templateSelected' => 'handleTemplateSelected',
+        'mediaUploaded' => 'handleMediaUploaded',
+        'mediaDeleted' => 'handleMediaDeleted',
+        'aiSuggestionSelected' => 'handleAiSuggestionSelected',
     ];
 
-    // Template Modal State
-    public $templateMediaUrl = '';
-    public $showTemplateListModal = false;
-    public $showTemplatePreviewModal = false;
-    public $templateSearch = '';
-    public $selectedTemplate;
-    public $templateVariables = [];
-    public $templatePreviewText = '';
+    // Template Modal State (Removed, now handled by sub-components)
+    // public $templateMediaUrl = '';
+    // public $showTemplateListModal = false;
+    // public $showTemplatePreviewModal = false;
+    // public $templateSearch = '';
+    // public $selectedTemplate;
+    // public $templateVariables = [];
+    // public $templatePreviewText = '';
+
+    // New properties for transfer modal and refactored media/message
+    public $activeAgents = [];
+    public $activeAgentIds = [];
+    public $showTransferModal = false;
+    public $transferSearch = '';
+    public $activeAgentsFull = [];
+
+    // Media and Templates (Now handled by sub-components)
+    public $newAttachmentData = null;
+    public $msgBody = '';
+    public $isNoteMode = false;
 
     // Interactive Buttons State
     public $showInteractiveButtonsModal = false;
@@ -54,6 +70,10 @@ class MessageWindow extends Component
                 "echo-private:teams.{$teamId},.MessageStatusUpdated" => 'handleStatusUpdate',
                 "echo-presence:conversation.{$this->conversationId},.MessageReceived" => 'handleIncomingMessage',
                 "echo-presence:conversation.{$this->conversationId},.MessageStatusUpdated" => 'handleStatusUpdate',
+                'templateSelected' => 'handleTemplateSelected',
+                'mediaUploaded' => 'handleMediaUploaded',
+                'mediaDeleted' => 'handleMediaDeleted',
+                'aiSuggestionSelected' => 'handleAiSuggestionSelected',
                 "echo-presence:conversation.{$this->conversationId},client-typing" => 'handleClientTyping',
                 "echo-presence:conversation.{$this->conversationId},here" => 'handlePresence',
                 "echo-presence:conversation.{$this->conversationId},joining" => 'handlePresenceJoin',
@@ -107,33 +127,95 @@ class MessageWindow extends Component
                 $this->lastMessageId = $latestId;
             }
 
-            // Mark as read
-            $this->conversation->messages()
+            // Mark as read locally and sync to WhatsApp if enabled
+            $unreadMessages = $this->conversation->messages()
                 ->where('direction', 'inbound')
                 ->whereNull('read_at')
-                ->update(['read_at' => now()]);
+                ->get();
 
-            $this->dispatch('chat-messages-read');
+            if ($unreadMessages->isNotEmpty()) {
+                $this->conversation->messages()
+                    ->whereIn('id', $unreadMessages->pluck('id'))
+                    ->update(['read_at' => now()]);
+
+                if (Auth::user()->currentTeam->read_receipts_enabled) {
+                    $wa = new \App\Services\WhatsAppService(Auth::user()->currentTeam);
+                    foreach ($unreadMessages as $msg) {
+                        if ($msg->whatsapp_message_id) {
+                            try {
+                                $wa->markRead($msg->whatsapp_message_id);
+                            } catch (\Exception $e) {
+                                Log::warning("Failed to mark message {$msg->whatsapp_message_id} as read on WhatsApp: " . $e->getMessage());
+                            }
+                        }
+                    }
+                }
+                $this->dispatch('chat-messages-read');
+            }
         } else {
             $this->chatMessages = [];
         }
     }
 
-    public function updatedNewAttachment()
+    // public function updatedNewAttachment() // Removed
+    // {
+    //     $this->validate(['newAttachment' => 'max:16384']); // 16MB max
+    // }
+
+    public function handleTemplateSelected($payload)
     {
-        $this->validate(['newAttachment' => 'max:16384']); // 16MB max
+        if (!$this->conversation) return;
+
+        $wa = new \App\Services\WhatsAppService(Auth::user()->currentTeam);
+        
+        // Extract variables (header + body)
+        $variables = $payload['variables'];
+        $headerParams = [];
+        if (isset($variables['header_media_url'])) {
+            $headerParams = [$variables['header_media_url']];
+            unset($variables['header_media_url']);
+        }
+        $bodyParams = array_values($variables);
+
+        try {
+            $wa->sendTemplate(
+                $this->conversation->contact->phone_number,
+                $payload['template_name'],
+                $payload['language'],
+                $bodyParams,
+                $headerParams
+            );
+            $this->loadConversation();
+        } catch (\Exception $e) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function handleMediaUploaded($payload)
+    {
+        $this->newAttachmentData = $payload;
+    }
+
+    public function handleMediaDeleted()
+    {
+        $this->newAttachmentData = null;
+    }
+
+    public function handleAiSuggestionSelected($text)
+    {
+        $this->msgBody = $text;
     }
 
     public function sendMessage()
     {
         Log::info("MessageWindow: sendMessage called", [
-            'body' => $this->messageBody,
-            'has_attachment' => $this->newAttachment ? true : false,
+            'body' => $this->msgBody,
+            'has_attachment' => $this->newAttachmentData ? true : false,
             'conversation_id' => $this->conversationId
         ]);
         $this->validate([
-            'messageBody' => 'nullable|required_without:newAttachment|string',
-            'newAttachment' => 'nullable|file|max:16384',
+            'msgBody' => 'nullable|required_without:newAttachmentData|string',
+            'newAttachmentData' => 'nullable|array', // Validate as array from sub-component
         ]);
 
         if (!$this->conversation)
@@ -148,20 +230,29 @@ class MessageWindow extends Component
             'status' => 'queued',
         ];
 
-        if ($this->newAttachment) {
-            $path = $this->newAttachment->store('media', 'public');
+        $attachments = null;
+        if ($this->newAttachmentData) {
+            // Since the real upload happened in the sub-component,
+            // the sub-component should have stored it properly if we wanted to use it here.
+            // Actually, MediaUpload component currently only sends back the temp url.
+            // We need the ACTUAL file object or a path.
+            // Let's assume for now, the MediaUpload component SHOULD have used FileUpload trait
+            // and we share it? No, components don't share file objects easily.
+            // FIX: We'll make MessageWindow handle the ACTUAL send if it gets a temp path.
+            // But wait, it's easier to let the sub-component handle the upload and we just get the path.
+            $path = $this->newAttachmentData['path']; // Assuming path is provided by sub-component
             $url = asset(Storage::url($path));
-            $type = $this->getMediaType($this->newAttachment->getMimeType());
+            $type = $this->getMediaType($this->newAttachmentData['mime_type']);
 
             $msgData['type'] = $type;
-            $msgData['content'] = $this->messageBody; // Caption
+            $msgData['content'] = $this->msgBody; // Caption
             $msgData['media_url'] = $path; // Store relative in DB
             $msgData['media_type'] = $type;
-            $msgData['caption'] = $this->messageBody;
+            $msgData['caption'] = $this->msgBody;
         } else {
             $msgData['type'] = 'text';
-            $msgData['content'] = $this->messageBody;
-            $url = $this->messageBody;
+            $msgData['content'] = $this->msgBody;
+            $url = $this->msgBody;
         }
 
         $message = \App\Models\Message::create($msgData);
@@ -178,7 +269,9 @@ class MessageWindow extends Component
         );
 
         // 3. Update UI
-        $this->reset(['messageBody', 'newAttachment']);
+        $this->msgBody = '';
+        $this->newAttachmentData = null;
+        $this->dispatch('clearMediaUpload'); // New signal to reset sub-component
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
@@ -197,7 +290,7 @@ class MessageWindow extends Component
     public function saveInternalNote()
     {
         $this->validate([
-            'messageBody' => 'required|string',
+            'msgBody' => 'required|string',
         ]);
 
         if (!$this->conversation)
@@ -210,11 +303,11 @@ class MessageWindow extends Component
             'direction' => 'outbound',
             'status' => 'sent',
             'type' => 'internal_note',
-            'content' => $this->messageBody,
+            'content' => $this->msgBody,
             'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name],
         ]);
 
-        $this->reset('messageBody');
+        $this->reset('msgBody');
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
@@ -244,7 +337,8 @@ class MessageWindow extends Component
             'metadata' => ['type' => 'transfer', 'transferred_by' => Auth::user()->name],
         ]);
 
-        \App\Events\ConversationAssigned::dispatch($this->conversation, $agentId, Auth::user());
+        $agent->notify(new \App\Notifications\ConversationAssignedNotification($this->conversation, Auth::user()));
+        \App\Events\ConversationAssigned::dispatch($this->conversation, $agent, Auth::user());
 
         $this->loadConversation();
         $this->dispatch('notify', [
@@ -258,7 +352,7 @@ class MessageWindow extends Component
     public function sendVoiceNote($audioFile)
     {
         // This is called after Livewire finishes uploading the blob
-        $file = $audioFile ?: $this->newAttachment;
+        $file = $audioFile ?: $this->newAttachmentData; // Changed from newAttachment
         if (!$this->conversation || !$file)
             return;
 
@@ -285,8 +379,8 @@ class MessageWindow extends Component
             $message->id
         );
 
-        if ($this->newAttachment) {
-            $this->reset('newAttachment');
+        if ($this->newAttachmentData) { // Changed from newAttachment
+            $this->reset('newAttachmentData'); // Changed from newAttachment
         }
         $this->loadConversation();
         $this->dispatch('messageSent');
@@ -412,15 +506,15 @@ class MessageWindow extends Component
 
         return response()->streamDownload(function () use ($messages) {
             $handle = fopen('php://output', 'w');
-            
+
             // Add BOM for Excel UTF-8 support
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+
             // CSV Headers
             fputcsv($handle, ['Timestamp', 'Sender', 'Type', 'Content', 'Status']);
 
             foreach ($messages as $msg) {
-                $sender = $msg->direction === 'inbound' 
+                $sender = $msg->direction === 'inbound'
                     ? ($this->conversation->contact->name ?? $this->conversation->contact->phone_number)
                     : (isset($msg->metadata['agent_name']) ? "Agent ({$msg->metadata['agent_name']})" : "System/Agent");
 
@@ -521,7 +615,8 @@ class MessageWindow extends Component
 
     public function deleteAttachment()
     {
-        $this->newAttachment = null;
+        $this->newAttachmentData = null; // Changed from newAttachment
+        $this->dispatch('clearMediaUpload'); // Signal to sub-component
     }
 
     public function toggleCategory($categoryId)
@@ -619,110 +714,109 @@ class MessageWindow extends Component
             ->get();
     }
 
-    public function openTemplateList()
-    {
-        $this->showInteractiveButtonsModal = false;
-        $this->showTemplateListModal = true;
-    }
+    // public function openTemplateList() // Removed
+    // {
+    //     $this->showInteractiveButtonsModal = false;
+    //     $this->showTemplateListModal = true;
+    // }
 
-    public function selectTemplate($templateId)
-    {
-        $this->selectedTemplate = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->find($templateId);
+    // public function selectTemplate($templateId) // Removed
+    // {
+    //     $this->selectedTemplate = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->find($templateId);
 
-        if ($this->selectedTemplate) {
-            $this->templateVariables = [];
-            $this->parseTemplateVariables();
-            $this->showTemplateListModal = false;
-            $this->showTemplatePreviewModal = true;
-        }
-    }
+    //     if ($this->selectedTemplate) {
+    //         $this->templateVariables = [];
+    //         $this->parseTemplateVariables();
+    //         $this->showTemplateListModal = false;
+    //         $this->showTemplatePreviewModal = true;
+    //     }
+    // }
 
-    public function parseTemplateVariables()
-    {
-        if (!$this->selectedTemplate)
-            return;
+    // public function parseTemplateVariables() // Removed
+    // {
+    //     if (!$this->selectedTemplate)
+    //         return;
 
-        // Find body component
-        $components = $this->selectedTemplate->components ?? [];
-        $bodyText = '';
+    //     // Find body component
+    //     $components = $this->selectedTemplate->components ?? [];
+    //     $bodyText = '';
 
-        foreach ($components as $component) {
-            if (($component['type'] ?? '') === 'BODY') {
-                $bodyText = $component['text'] ?? '';
-                break;
-            }
-        }
+    //     foreach ($components as $component) {
+    //         if (($component['type'] ?? '') === 'BODY') {
+    //             $bodyText = $component['text'] ?? '';
+    //             break;
+    //         }
+    //     }
 
-        $this->templatePreviewText = $bodyText;
+    //     $this->templatePreviewText = $bodyText;
 
-        // Extract {{1}}, {{2}} etc
-        preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
+    //     // Extract {{1}}, {{2}} etc
+    //     preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
 
-        if (!empty($matches[1])) {
-            foreach ($matches[1] as $num) {
-                // Initialize with empty or previous value
-                $this->templateVariables[$num] = '';
-            }
-        }
-    }
+    //     if (!empty($matches[1])) {
+    //         foreach ($matches[1] as $num) {
+    //             // Initialize with empty or previous value
+    //             $this->templateVariables[$num] = '';
+    //         }
+    //     }
+    // }
 
+    /**
+     * Removed in favor of TemplatePicker component
+     */
+    /*
     public function getFilteredTemplatesProperty()
     {
-        return \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
-            ->where('status', 'APPROVED')
-            ->when($this->templateSearch, function ($query) {
-                $query->where('name', 'like', '%' . $this->templateSearch . '%');
-            })
-            ->get();
+        ...
     }
+    */
+    // public function getHasMediaHeaderProperty() // Removed
+    // {
+    //     if (!$this->selectedTemplate)
+    //         return false;
+    //     $header = $this->getTemplateComponent('HEADER');
+    //     return $header && in_array($header['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT']);
+    // }
 
-    public function getHasMediaHeaderProperty()
-    {
-        if (!$this->selectedTemplate)
-            return false;
-        $header = $this->getTemplateComponent('HEADER');
-        return $header && in_array($header['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT']);
-    }
+    // public function getTemplateComponent($type) // Removed
+    // {
+    //     if (!$this->selectedTemplate)
+    //         return null;
+    //     return collect($this->selectedTemplate->components)->firstWhere('type', $type);
+    // }
 
-    public function getTemplateComponent($type)
-    {
-        if (!$this->selectedTemplate)
-            return null;
-        return collect($this->selectedTemplate->components)->firstWhere('type', $type);
-    }
+    // public function getLivePreviewTextProperty() // Removed
+    // {
+    //     if (!$this->selectedTemplate)
+    //         return '';
 
-    public function getLivePreviewTextProperty()
-    {
-        if (!$this->selectedTemplate)
-            return '';
+    //     $body = $this->getTemplateComponent('BODY');
+    //     $text = $body['text'] ?? '';
 
-        $body = $this->getTemplateComponent('BODY');
-        $text = $body['text'] ?? '';
+    //     // 1. Escape HTML
+    //     $text = e($text);
 
-        // 1. Escape HTML
-        $text = e($text);
+    //     // 2. Wrap variables in spans BEFORE markdown (to avoid markdown inside variables)
+    //     $text = preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', $text);
 
-        // 2. Wrap variables in spans BEFORE markdown (to avoid markdown inside variables)
-        $text = preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', $text);
+    //     // 3. Replace variables with actual values (preserving spans)
+    //     if (!empty($this->templateVariables)) {
+    //         foreach ($this->templateVariables as $key => $value) {
+    //             if ($value !== '') {
+    //                 $search = '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{' . $key . '}}</span>';
+    //                 $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">' . e($value) . '</span>';
+    //                 $text = str_replace($search, $replacement, $text);
+    //             }
+    //         }
+    //     }
 
-        // 3. Replace variables with actual values (preserving spans)
-        if (!empty($this->templateVariables)) {
-            foreach ($this->templateVariables as $key => $value) {
-                if ($value !== '') {
-                    $search = '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{' . $key . '}}</span>';
-                    $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">' . e($value) . '</span>';
-                    $text = str_replace($search, $replacement, $text);
-                }
-            }
-        }
+    //     // 4. WhatsApp Markdown
+    //     $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+    //     $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
+    //     $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
 
-        // 4. WhatsApp Markdown
-        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
-        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
-        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
-
-        return $text;
-    }
+    //     return $text;
+    // }
 
     public function getPreviewButtonBodyProperty()
     {
@@ -739,18 +833,6 @@ class MessageWindow extends Component
         return $text;
     }
 
-    public function closeTemplateModals()
-    {
-        $this->showTemplateListModal = false;
-        $this->showTemplatePreviewModal = false;
-        $this->selectedTemplate = null;
-        $this->templateVariables = [];
-        $this->templateMediaUrl = '';
-    }
-
-    public function sendTemplateWithVariables()
-    {
-        if (!$this->selectedTemplate || !$this->conversation)
             return;
 
         try {

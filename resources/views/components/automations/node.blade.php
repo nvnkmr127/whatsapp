@@ -48,6 +48,7 @@
                        'bg-cyan-500': node.type === 'user_input',
                        'bg-pink-500': ['webhook'].includes(node.type),
                        'bg-indigo-500': ['crm_sync'].includes(node.type),
+                       'bg-wa-teal': node.type === 'ab_split',
                    }"></span>
             <div class="flex flex-col">
                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide"
@@ -188,6 +189,19 @@
             </svg>
             <span x-text="node.data.model || 'GPT-4o'"></span>
         </div>
+
+        <!-- A/B Split Details -->
+        <template x-if="node.type === 'ab_split'">
+            <div class="flex flex-col gap-1 p-2 bg-wa-teal/5 dark:bg-wa-teal/10 rounded-xl border border-wa-teal/20">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black uppercase text-wa-teal tracking-widest">Split</span>
+                    <span class="text-[10px] font-black text-slate-700 dark:text-slate-200" x-text="(node.data.ratio || 50) + '% / ' + (100 - (node.data.ratio || 50)) + '%'"></span>
+                </div>
+                <div class="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full mt-1 overflow-hidden">
+                    <div class="h-full bg-wa-teal" :style="`width: ${node.data.ratio || 50}%`"></div>
+                </div>
+            </div>
+        </template>
     </div>
 
 

@@ -60,6 +60,32 @@ class RateLimitService
         return true;
     }
 
+    /**
+     * Check if a specific campaign can send a message based on its configured send_rate.
+     */
+    public function canSendCampaign(int $campaignId, ?int $sendRate): bool
+    {
+        if (!$sendRate || $sendRate <= 0) {
+            return true;
+        }
+
+        // messages per hour -> messages per second
+        $rpsLimit = max(0.1, $sendRate / 3600);
+        $key = "ratelimit:campaign:{$campaignId}:" . now()->timestamp;
+
+        $current = Cache::increment($key);
+        if ($current === 1) {
+            Cache::put($key, 1, 1); // 1s TTL
+        }
+
+        // If we exceed our RPS limit for this campaign, return false
+        if ($current > ceil($rpsLimit)) {
+            return false;
+        }
+
+        return true;
+    }
+
     protected function getTierDailyLimit(string $tier): int
     {
         return match ($tier) {
@@ -198,6 +224,19 @@ class RateLimitService
             $this->pauseTenant($teamId, 300); // 5 min auto-pause
             Cache::forget($key);
             Log::error("RateLimit: Auto-pause (Circuit Breaker) triggered for tenant {$teamId} due to high failure rate.");
+
+            // Notify team owner about the auto-pause
+            $team = \App\Models\Team::find($teamId);
+            if ($team && $team->owner) {
+                try {
+                    $team->owner->notify(new \App\Notifications\CampaignFailedNotification(
+                        (object)['id' => 0, 'name' => 'System Auto-Pause'], 
+                        "Your WhatsApp account is experiencing high failure rates and has been paused for 5 minutes to protect your quality rating."
+                    ));
+                } catch (\Exception $e) {
+                    Log::error("Failed to notify tenant pause: " . $e->getMessage());
+                }
+            }
         }
     }
 }

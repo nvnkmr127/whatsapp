@@ -85,6 +85,14 @@
                                                 d="M13 10V3L4 14h7v7l9-11h-7z" />
                                         </svg>
                                     </button>
+                                    <button wire:click="rotateSecret({{ $sub->id }})"
+                                        wire:confirm="Rotate signing secret? Use this ONLY if you're ready to update your listener. Existing secret will be invalidated immediately."
+                                        class="p-2 text-slate-400 hover:text-amber-500 transition-colors" title="Rotate Secret">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                        </svg>
+                                    </button>
                                     <button wire:click="edit({{ $sub->id }})"
                                         class="p-2 text-slate-400 hover:text-green-500 transition-colors" title="Edit">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

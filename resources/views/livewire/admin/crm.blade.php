@@ -314,6 +314,7 @@
 
         {{-- Advanced Details Modal (Standardized) --}}
         <x-app-modal wire:model="showTeamModal" maxWidth="5xl" :closeable="false">
+            @if($selectedTeam)
             <div class="relative bg-white dark:bg-slate-900 w-full rounded-[3rem] overflow-hidden flex flex-col h-[85vh]">
                 <div class="flex h-full">
                     {{-- Left Sidebar: Context --}}
@@ -721,7 +722,7 @@
                     </div>
                 </div>
                 </div>
-            </div>
+            @endif
         </x-app-modal>
 
             @if($teams->hasPages())

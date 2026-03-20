@@ -29,6 +29,11 @@ class BillingDashboard extends Component
     public $selectedPlan = null;
     public $planImpact = null;
     public $topUpAmount = 50;
+    public $searchTransaction = '';
+    public $transactionType = '';
+    public $showExtensionModal = false;
+    public $extensionDays = 14;
+    public $extensionReason = '';
 
     public function mount()
     {
@@ -132,8 +137,66 @@ class BillingDashboard extends Component
         if (!$this->team) return collect();
         return TeamInvoice::where('team_id', $this->team->id)
             ->orderBy('created_at', 'desc')
-            ->take(5)
             ->get();
+    }
+
+    public function downloadInvoice($invoiceId)
+    {
+        $this->authorize('view', $this->team);
+        
+        $invoice = TeamInvoice::where('team_id', $this->team->id)->findOrFail($invoiceId);
+        
+        return redirect()->route('invoices.download', $invoice->id);
+    }
+
+    public function openExtensionModal()
+    {
+        $this->showExtensionModal = true;
+    }
+
+    public function closeExtensionModal()
+    {
+        $this->showExtensionModal = false;
+        $this->extensionDays = 14;
+        $this->extensionReason = '';
+    }
+
+    public function submitExtensionRequest()
+    {
+        $this->validate([
+            'extensionDays' => 'required|integer|min:7|max:30',
+            'extensionReason' => 'required|string|min:10|max:500'
+        ]);
+
+        \App\Models\TrialExtensionRequest::create([
+            'team_id' => $this->team->id,
+            'user_id' => auth()->id(),
+            'days' => $this->extensionDays,
+            'reason' => $this->extensionReason,
+            'status' => 'pending'
+        ]);
+
+        session()->flash('message', "Trial extension request submitted successfully. Our team will review it shortly.");
+        $this->closeExtensionModal();
+    }
+
+    #[Computed]
+    public function upcomingBillingDate()
+    {
+        if (!$this->team) return null;
+        
+        // If on trial, next billing is trial end date (if they convert)
+        // If active, it's subscription_ends_at
+        return $this->team->subscription_ends_at ?? $this->team->trial_ends_at;
+    }
+
+    #[Computed]
+    public function hasPendingExtensionRequest()
+    {
+        if (!$this->team) return false;
+        return \App\Models\TrialExtensionRequest::where('team_id', $this->team->id)
+            ->where('status', 'pending')
+            ->exists();
     }
 
     public function render()
@@ -144,9 +207,18 @@ class BillingDashboard extends Component
             ]);
         }
 
-        $transactions = TeamTransaction::where('team_id', $this->team->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = TeamTransaction::where('team_id', $this->team->id)
+            ->orderBy('created_at', 'desc');
+
+        if (!empty($this->searchTransaction)) {
+            $query->where('description', 'like', '%' . $this->searchTransaction . '%');
+        }
+
+        if (!empty($this->transactionType)) {
+            $query->where('type', $this->transactionType);
+        }
+
+        $transactions = $query->paginate(10);
 
         return view('livewire.billing.billing-dashboard', [
             'transactions' => $transactions

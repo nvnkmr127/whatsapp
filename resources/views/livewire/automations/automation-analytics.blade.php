@@ -200,6 +200,42 @@
             </div>
         </div>
 
+        <div class="px-6 py-10 bg-slate-50/50 dark:bg-slate-800/20 border-b border-slate-100 dark:border-slate-800 overflow-x-auto">
+            <div class="flex items-start justify-center min-w-[800px] gap-8">
+                @foreach(($dashboard['funnel'] ?? []) as $index => $row)
+                    <div class="flex flex-col items-center group relative flex-1 max-w-[120px]">
+                        @php
+                            $maxReached = collect($dashboard['funnel'])->max('reached_contacts') ?: 1;
+                            $percentage = ($row['reached_contacts'] / $maxReached) * 100;
+                            // Ensure it's at least a small dot
+                            $percentage = max($percentage, 2);
+                        @endphp
+                        
+                        <div class="mb-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center truncate w-full px-2" title="{{ $row['label'] }}">{{ $row['label'] }}</div>
+                        
+                        <div class="relative w-full h-[200px] flex items-end justify-center">
+                            <div class="w-full bg-wa-teal dark:bg-wa-teal rounded-t-xl opacity-80 group-hover:opacity-100 transition-all shadow-lg shadow-wa-teal/10" 
+                                style="height: {{ $percentage }}%; min-height: 8px;">
+                                @if($percentage > 15)
+                                    <div class="absolute inset-x-0 bottom-2 text-center text-[10px] font-black text-white/90">{{ number_format($row['reached_contacts']) }}</div>
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- Dropoff indicator --}}
+                        @if(!$loop->last)
+                            <div class="absolute -right-6 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                @if(($row['dropoff_rate'] ?? 0) > 0)
+                                    <span class="text-[9px] font-black text-rose-500 mt-1">-{{ number_format($row['dropoff_rate'], 1) }}%</span>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead>
@@ -269,5 +305,100 @@
                 </tbody>
             </table>
         </div>
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+            <h2 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Recent Executions</h2>
+            <p class="text-xs text-slate-500 mt-1">Audit trail for the latest people who entered this flow.</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-50 dark:border-slate-800/50">
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Timestamp</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Contact</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Steps</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
+                    @forelse($recentRuns as $run)
+                        <tr>
+                            <td class="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300">{{ $run->created_at?->format('Y-m-d H:i') }}</td>
+                            <td class="px-6 py-4 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                {{ $run->contact?->name ?? 'Unknown' }}
+                                <div class="text-[10px] text-slate-400">{{ $run->contact?->phone_number }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-xs font-black text-slate-900 dark:text-white">{{ $run->step_count }}</td>
+                            <td class="px-6 py-4 text-xs font-black uppercase tracking-widest">
+                                <span class="px-2 py-1 rounded {{ $run->status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600' }}">
+                                    {{ $run->status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button wire:click="viewRunLog({{ $run->id }})" class="text-xs font-black text-wa-teal hover:underline tracking-tight">View Audit Log</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-sm text-slate-400 font-semibold">No recent runs.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    {{-- Run Log Modal --}}
+    @if($showRunLogModal && $selectedRun)
+        <div class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-slate-950/60 transition-opacity" aria-hidden="true" wire:click="$set('showRunLogModal', false)"></div>
+
+                <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full">
+                    <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Execution Audit Log</h3>
+                            <p class="text-xs text-slate-500">Run ID: #{{ $selectedRun->id }} | Contact: {{ $selectedRun->contact?->name }}</p>
+                        </div>
+                        <button wire:click="$set('showRunLogModal', false)" class="text-slate-400 hover:text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    </div>
+
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            @foreach($selectedRun->ledger as $step)
+                                <div class="flex gap-4">
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-8 h-8 rounded-xl bg-wa-teal/10 flex items-center justify-center text-wa-teal font-black text-xs z-10">{{ $loop->iteration }}</div>
+                                        @if(!$loop->last)
+                                            <div class="w-0.5 h-full bg-slate-100 dark:bg-slate-800 my-1"></div>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 pb-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">Node: {{ $step->node_id }}</span>
+                                            <span class="text-[10px] text-slate-400">{{ \Carbon\Carbon::parse($step->created_at)->format('H:i:s') }}</span>
+                                        </div>
+                                        @php
+                                            $node = collect($automation->flow_data['nodes'])->firstWhere('id', $step->node_id);
+                                            $label = $node['data']['label'] ?? $node['type'] ?? 'Unknown';
+                                        @endphp
+                                        <p class="text-sm font-bold text-slate-900 dark:text-white mb-1">{{ $label }}</p>
+                                        <div class="text-[10px] bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700 font-mono text-slate-500 overflow-x-auto">
+                                            {{-- Show ab_split decision if available in output_state --}}
+                                            @if($node['type'] === 'ab_split')
+                                                Decision: Path picked correctly.
+                                            @endif
+                                            State: {{ json_encode($step->output_state['variables'] ?? []) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

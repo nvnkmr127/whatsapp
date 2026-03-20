@@ -32,7 +32,9 @@ class Contact extends Model
         'opt_in_at' => 'datetime',
         'opt_in_expires_at' => 'datetime',
         'last_customer_message_at' => 'datetime',
-        'sla_breached_at' => 'datetime',
+        'is_bot_paused' => 'boolean',
+        'bot_paused_at' => 'datetime',
+        'bot_paused_until' => 'datetime',
         'has_pending_reply' => 'boolean',
     ];
 

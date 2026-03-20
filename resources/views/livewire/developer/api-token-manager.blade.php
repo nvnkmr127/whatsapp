@@ -59,6 +59,23 @@
                         <x-input-error for="name" />
                     </div>
 
+                    <div class="space-y-2">
+                        <x-label value="IP Whitelist (Optional)"
+                            class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
+                        <textarea wire:model="ipWhitelist"
+                            class="w-full !rounded-2xl border-2 border-slate-50 dark:border-slate-800 focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all bg-white dark:bg-slate-900 text-sm p-4 h-24"
+                            placeholder="e.g. 192.168.1.1, 10.0.0.1 (Comma separated)"></textarea>
+                        <x-input-error for="ipWhitelist" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <x-label value="Expiration Date (Optional)"
+                            class="uppercase text-[10px] tracking-widest font-black text-slate-400" />
+                        <x-input wire:model="expiresAt" type="date"
+                            class="w-full !rounded-2xl border-2 border-slate-50 dark:border-slate-800 focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all" />
+                        <x-input-error for="expiresAt" />
+                    </div>
+
                     <div class="space-y-4">
                         <x-label value="Abilities / Permissions"
                             class="uppercase text-[10px] tracking-widest font-black text-slate-400" />

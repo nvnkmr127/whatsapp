@@ -80,6 +80,39 @@ class AnthropicProvider implements AIProviderInterface
         }
     }
 
+    public function streamChat(array $messages, array $options = []): iterable
+    {
+        $result = $this->chat($messages, $options);
+        yield $result['content'] ?? '';
+    }
+
+    public function embed(string|array $text, array $options = []): array
+    {
+        Log::warning("Anthropic does not support embeddings.");
+        return [];
+    }
+
+    public function summarize(string $content, array $options = []): string
+    {
+        $messages = [
+            ['role' => 'user', 'content' => "Summarize this: {$content}"]
+        ];
+
+        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
+        return $response['content'] ?? '';
+    }
+
+    public function classify(string $content, array $categories, array $options = []): string
+    {
+        $categoriesStr = implode(', ', $categories);
+        $messages = [
+            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"]
+        ];
+
+        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
+        return trim($response['content'] ?? '');
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {
@@ -105,11 +138,9 @@ class AnthropicProvider implements AIProviderInterface
     public function getAvailableModels(): array
     {
         return [
-            'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Smartest)',
-            'claude-3-5-haiku-20241022' => 'Claude 3.5 Haiku (Fastest)',
-            'claude-3-opus-20240229' => 'Claude 3 Opus (Previous Gen)',
-            'claude-3-sonnet-20240229' => 'Claude 3 Sonnet (Balanced)',
-            'claude-3-haiku-20240307' => 'Claude 3 Haiku (Fast)',
+            'claude-4-6-opus' => 'Claude 4.6 Opus (Best Coding/Agentic)',
+            'claude-4-6-sonnet' => 'Claude 4.6 Sonnet (Highly Intelligent)',
+            'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Legacy)',
         ];
     }
 

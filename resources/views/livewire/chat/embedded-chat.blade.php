@@ -1,4 +1,23 @@
-<div class="flex flex-col h-full bg-wa-bg relative">
+<div class="flex flex-col h-full bg-wa-bg relative"
+    x-data="{
+        isTyping: false,
+        lastWhisper: 0,
+        currentConversationId: '{{ $conversation?->id }}',
+        whisperTyping() {
+            if (!this.currentConversationId) return;
+            let now = Date.now();
+            if (now - this.lastWhisper < 2000) return;
+            this.lastWhisper = now;
+            
+            if (window.Echo) {
+                window.Echo.join('conversation.' + this.currentConversationId)
+                    .whisper('typing', {
+                        id: 'customer',
+                        name: '{{ addslashes($conversation?->contact?->name ?? 'Customer') }}'
+                    });
+            }
+        }
+    }">
     <!-- Simplified Header -->
     <div class="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center shadow-sm z-10">
         <div class="flex items-center">
@@ -12,7 +31,7 @@
     </div>
 
     <!-- Messages Area (Reused Logic) -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="messages-container" x-data
+    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="messages-container"
         x-init="$el.scrollTop = $el.scrollHeight" @scroll-bottom.window="$el.scrollTop = $el.scrollHeight">
         @if($conversation)
             @foreach($conversation->messages as $message)
@@ -40,8 +59,8 @@
     <!-- Input Area -->
     @if(in_array('write', $permissions))
         <div class="p-2 bg-white border-t border-gray-200">
-            <form wire:submit.prevent="sendMessage" class="flex items-end space-x-2">
-                <input type="text" wire:model="messageBody"
+            <form wire:submit.prevent="sendMessage; isTyping = false" class="flex items-end space-x-2">
+                <input type="text" wire:model="messageBody" @keyup="whisperTyping"
                     class="flex-1 rounded-full border-gray-300 focus:border-green-500 focus:ring-green-500 text-sm py-2 px-4 bg-gray-50"
                     placeholder="Type a message...">
                 <button type="submit" class="p-2 bg-green-500 text-white rounded-full hover:bg-green-600">

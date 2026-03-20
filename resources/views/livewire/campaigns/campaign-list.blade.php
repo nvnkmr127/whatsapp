@@ -68,18 +68,24 @@
                 <div class="absolute top-6 right-6">
                     <span
                         class="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full 
-                                                        @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
-                                                        @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
-                                                        @elseif($campaign->status === 'processing') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
-                                                        @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
+                        @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
+                        @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
+                        @elseif($campaign->status === 'paused') bg-wa-orange/10 text-wa-orange border border-wa-orange/20
+                        @elseif($campaign->status === 'processing' || $campaign->status === 'sending') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
+                        @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
                         {{ $campaign->status }}
                     </span>
                 </div>
 
                 <div class="flex flex-col h-full">
                     <div class="mb-6">
-                        <div class="text-xs font-black text-wa-teal uppercase tracking-widest mb-1">
-                            {{ $campaign->template_name }}
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="text-xs font-black text-wa-teal uppercase tracking-widest">
+                                {{ $campaign->template_name }}
+                            </div>
+                            @if($campaign->campaign_type === 'drip')
+                                <span class="px-2 py-0.5 bg-orange-100 text-orange-600 text-[9px] font-black rounded-lg uppercase tracking-widest">Drip</span>
+                            @endif
                         </div>
                         <h3
                             class="text-xl font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors tracking-tight">
@@ -104,14 +110,33 @@
                             @if(in_array($campaign->status, ['processing', 'sending', 'queued']))
                                 <a href="{{ route('campaigns.live', $campaign->id) }}"
                                     class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-teal/20">
-                                    Live View
+                                    Live
                                 </a>
+                                <button wire:click="pause({{ $campaign->id }})"
+                                    class="px-4 py-2 bg-wa-orange text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-orange/20">
+                                    Pause
+                                </button>
+                            @endif
+
+                            @if($campaign->status === 'paused')
+                                <button wire:click="resume({{ $campaign->id }})"
+                                    class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-teal/20">
+                                    Resume
+                                </button>
                             @endif
 
                             <a href="{{ route('campaigns.show', $campaign->id) }}"
                                 class="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                 View Report
                             </a>
+
+                            <button wire:click="cloneCampaign({{ $campaign->id }})"
+                                class="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                </svg>
+                                Clone
+                            </button>
 
                             @if($campaign->status == 'completed' || $campaign->status == 'failed')
                                 <button wire:click="openRetargetModal({{ $campaign->id }})"

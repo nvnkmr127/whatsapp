@@ -14,7 +14,7 @@
                     Template <span class="text-wa-teal">Heatmap</span>
                 </h1>
             </div>
-            <p class="text-slate-500 font-medium">Identify the best time and day to send each template for maximum read rates.</p>
+            <p class="text-slate-500 font-medium">{{ __('Identify the best time and day to send each template for maximum read rates.') }}</p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -40,22 +40,22 @@
     <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-0">
         <a href="{{ route('analytics') }}"
             class="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-t-xl border border-transparent transition-all text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-            Overview
+            {{ __('Overview') }}
         </a>
         <a href="{{ route('analytics.events') }}"
             class="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-t-xl border border-transparent transition-all text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-            Events
+            {{ __('Events') }}
         </a>
         <a href="{{ route('analytics.explorer') }}"
             class="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-t-xl border border-transparent transition-all text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-            Explorer
+            {{ __('Explorer') }}
         </a>
         <span class="shrink-0 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-t-xl bg-white dark:bg-slate-900 border border-b-white dark:border-slate-700 dark:border-b-slate-900 -mb-px text-wa-teal">
-            Template Heatmap
+            {{ __('Template Heatmap') }}
         </span>
         <a href="{{ route('analytics.cohorts') }}"
             class="shrink-0 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-t-xl border border-transparent transition-all text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-            Cohort Analysis
+            {{ __('Cohort Analysis') }}
         </a>
     </div>
 
@@ -68,16 +68,16 @@
                         d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
                 </svg>
             </div>
-            <h3 class="text-base font-black text-slate-700 dark:text-slate-200">No template send data yet</h3>
+            <h3 class="text-base font-black text-slate-700 dark:text-slate-200">{{ __('No template send data yet') }}</h3>
             <p class="text-sm text-slate-400 mt-1 max-w-sm">
-                Send campaigns using approved templates. Heatmap data populates after the first sends within the last 90&nbsp;days.
+                {{ __('Send campaigns using approved templates. Heatmap data populates after the first sends within the last 90 days.') }}
             </p>
             <a href="{{ route('campaigns.index') }}"
                 class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-wa-teal text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow hover:opacity-90 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                New Campaign
+                {{ __('New Campaign') }}
             </a>
         </div>
 
@@ -89,12 +89,12 @@
             {{-- Card Header --}}
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 p-6 border-b border-slate-100 dark:border-slate-800">
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Template Performance Heatmap</p>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{{ __('Template Performance Heatmap') }}</p>
                     <h2 class="text-lg font-black text-slate-900 dark:text-white">
-                        {{ $heatmap['selected_template_name'] ?? 'Top Template' }}
+                        {{ $heatmap['selected_template_name'] ?? __('Top Template') }}
                     </h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Read rates by send hour &amp; weekday — last {{ $heatmap['window_days'] ?? 90 }} days
+                        {{ __('Read rates by send hour & weekday — last :days days', ['days' => $heatmap['window_days'] ?? 90]) }}
                     </p>
                 </div>
 
@@ -131,11 +131,11 @@
             @if(!empty($heatmap['is_low_sample']))
                 <div class="mx-6 mt-5 p-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 flex items-center justify-between gap-3">
                     <p class="text-xs font-semibold text-amber-700 dark:text-amber-200">
-                        Limited sample: {{ number_format($heatmap['sample_size'] ?? 0) }} sends.
-                        Add {{ number_format($heatmap['sample_gap'] ?? 0) }}+ more sends for stronger timing reliability.
+                        {{ __('Limited sample: :count sends.', ['count' => number_format($heatmap['sample_size'] ?? 0)]) }}
+                        {{ __('Add :gap+ more sends for stronger timing reliability.', ['gap' => number_format($heatmap['sample_gap'] ?? 0)]) }}
                     </p>
                     <span class="shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300">
-                        Low data confidence
+                        {{ __('Low data confidence') }}
                     </span>
                 </div>
             @endif
@@ -163,15 +163,19 @@
 
                             @foreach($row['cells'] as $cell)
                                 @php
-                                    $alpha = 0.08 + (($cell['intensity'] ?? 0) / 100) * 0.80;
-                                    $bg = 'background-color: rgba(13, 148, 136, ' . number_format($alpha, 2, '.', '') . ');';
-                                    $isBest = !empty($heatmap['best_slot'])
+                                    $hasData = ($cell['sent'] ?? 0) > 0;
+                                    $alpha = $hasData ? (0.08 + (($cell['intensity'] ?? 0) / 100) * 0.80) : 0;
+                                    $bg = $hasData 
+                                        ? 'background-color: rgba(13, 148, 136, ' . number_format($alpha, 2, '.', '') . ');'
+                                        : 'background-color: transparent;';
+                                    
+                                    $isBest = $hasData && !empty($heatmap['best_slot'])
                                         && $heatmap['best_slot']['day_label'] === $row['day_label']
                                         && $heatmap['best_slot']['hour_label']  === $cell['hour_label'];
                                 @endphp
-                                <div class="h-8 rounded-md transition-transform hover:scale-110 cursor-default {{ $isBest ? 'ring-2 ring-wa-teal ring-offset-1 dark:ring-offset-slate-900' : 'border border-white/40 dark:border-slate-700/40' }}"
+                                <div class="h-8 rounded-md transition-transform {{ $hasData ? 'hover:scale-110 cursor-default shadow-sm' : '' }} {{ $isBest ? 'ring-2 ring-wa-teal ring-offset-1 dark:ring-offset-slate-900 z-10' : ($hasData ? 'border border-white/20 dark:border-slate-800/40' : 'border border-slate-50 dark:border-slate-800/20') }}"
                                     style="{{ $bg }}"
-                                    title="{{ $row['day_label'] }} {{ $cell['hour_label'] }}: {{ number_format($cell['read_rate'], 1) }}% read ({{ $cell['read'] }}/{{ $cell['sent'] }})">
+                                    title="{{ $hasData ? ($row['day_label'] . ' ' . $cell['hour_label'] . ': ' . number_format($cell['read_rate'], 1) . '% ' . __('read') . ' (' . $cell['read'] . '/' . $cell['sent'] . ')') : __('No data') }}">
                                 </div>
                             @endforeach
                         </div>
@@ -190,14 +194,14 @@
                 @if(!empty($heatmap['best_slot']))
                     @php $bs = $heatmap['best_slot']; @endphp
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span>Best slot:</span>
+                        <span>{{ __('Best slot:') }}</span>
                         <span class="font-bold text-teal-600 dark:text-teal-300">{{ $bs['day_label'] }} {{ $bs['hour_label'] }}</span>
                         <span>({{ number_format($bs['read_rate'], 1) }}%)</span>
                         <span class="px-2 py-0.5 rounded-md text-[10px] font-bold
                             {{ $bs['confidence'] === 'High'   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
                                ($bs['confidence'] === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
                                'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200') }}">
-                            {{ $bs['confidence'] }} confidence
+                            {{ __($bs['confidence']) }} {{ __('confidence') }}
                         </span>
                     </div>
                 @endif

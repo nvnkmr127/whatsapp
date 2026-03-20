@@ -13,7 +13,10 @@ class AiSettings extends Component
     public $openai_api_key;
     public $anthropic_api_key;
     public $gemini_api_key;
+    public $deepseek_api_key;
     public $ai_model;
+    public $ai_fallback_provider;
+    public $ai_fallback_model;
     public $ai_persona;
     public $available_models = [];
 
@@ -37,6 +40,7 @@ class AiSettings extends Component
     public $show_stop = false;
     public $show_retry = false;
     public $show_fallback = false;
+    public $ai_auto_reply_enabled = false;
 
     public $presets = [
         'custom' => 'Write your own custom instructions.',
@@ -56,9 +60,14 @@ class AiSettings extends Component
         $this->openai_api_key = get_setting("ai_openai_api_key_$teamId");
         $this->anthropic_api_key = get_setting("ai_anthropic_api_key_$teamId");
         $this->gemini_api_key = get_setting("ai_gemini_api_key_$teamId");
+        $this->deepseek_api_key = get_setting("ai_deepseek_api_key_$teamId");
         
         $this->updateAvailableModels();
         $this->ai_model = get_setting("ai_model_$teamId");
+        
+        $this->ai_fallback_provider = get_setting("ai_fallback_provider_$teamId", 'openai');
+        $this->ai_fallback_model = get_setting("ai_fallback_model_$teamId");
+        
         $this->ai_persona = get_setting("ai_persona_$teamId", $this->presets['support']);
 
         $this->temperature = (float) get_setting("ai_temperature_$teamId", 0.7);
@@ -83,6 +92,8 @@ class AiSettings extends Component
         $this->available_kb_sources = \App\Models\KnowledgeBaseSource::where('team_id', $teamId)
             ->whereIn('status', [\App\Models\KnowledgeBaseSource::STATUS_READY, 'indexed'])
             ->get()->toArray();
+
+        $this->ai_auto_reply_enabled = (bool) Auth::user()->currentTeam->ai_auto_reply_enabled;
     }
 
     public function updatedAiProvider()
@@ -110,7 +121,7 @@ class AiSettings extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
         $this->validate([
-            'ai_provider' => 'required|string|in:openai,anthropic,gemini',
+            'ai_provider' => 'required|string|in:openai,anthropic,gemini,deepseek',
             'ai_model' => 'required|string',
             'ai_persona' => 'required|string',
             'temperature' => 'required|numeric|min:0|max:1',
@@ -123,7 +134,10 @@ class AiSettings extends Component
         set_setting("ai_openai_api_key_$teamId", $this->openai_api_key, 'ai_settings');
         set_setting("ai_anthropic_api_key_$teamId", $this->anthropic_api_key, 'ai_settings');
         set_setting("ai_gemini_api_key_$teamId", $this->gemini_api_key, 'ai_settings');
+        set_setting("ai_deepseek_api_key_$teamId", $this->deepseek_api_key, 'ai_settings');
         set_setting("ai_model_$teamId", $this->ai_model, 'ai_settings');
+        set_setting("ai_fallback_provider_$teamId", $this->ai_fallback_provider, 'ai_settings');
+        set_setting("ai_fallback_model_$teamId", $this->ai_fallback_model, 'ai_settings');
         set_setting("ai_persona_$teamId", $this->ai_persona, 'ai_settings');
 
         set_setting("ai_temperature_$teamId", $this->temperature, 'ai_settings');
@@ -145,6 +159,8 @@ class AiSettings extends Component
         set_setting("ai_kb_scope_$teamId", $this->kb_scope, 'ai_settings');
         set_setting("ai_kb_source_ids_$teamId", json_encode($this->kb_source_ids), 'ai_settings');
         set_setting("ai_kb_strict_$teamId", $this->kb_strict, 'ai_settings');
+
+        Auth::user()->currentTeam->update(['ai_auto_reply_enabled' => $this->ai_auto_reply_enabled]);
 
         $this->dispatch('saved');
         session()->flash('success', 'AI Settings updated successfully.');

@@ -17,6 +17,8 @@ class WebhookSource extends Model
         'action_config' => 'array',
         'process_delay' => 'integer',
         'is_active' => 'boolean',
+        'is_sandbox' => 'boolean',
+        'last_secret_rotated_at' => 'datetime',
     ];
 
     protected static function boot()

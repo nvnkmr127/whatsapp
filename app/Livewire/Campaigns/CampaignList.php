@@ -42,9 +42,38 @@ class CampaignList extends Component
         $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->current_team_id)->find($this->campaignIdToDelete);
         if ($campaign) {
             $campaign->delete();
-            $this->dispatch('notify', 'Campaign deleted successfully.');
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Campaign deleted successfully.'
+            ]);
         }
         $this->confirmingDeletion = false;
+    }
+
+    public function cloneCampaign($id)
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
+        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            $clone = $campaign->replicateAndReset();
+            $clone->save();
+
+            DB::commit();
+
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Campaign cloned successfully. You can now edit and send it.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Failed to clone campaign: ' . $e->getMessage()
+            ]);
+        }
     }
 
     // Retargeting
@@ -56,6 +85,30 @@ class CampaignList extends Component
     {
         $this->selectedCampaignId = $campaignId;
         $this->showRetargetModal = true;
+    }
+
+    public function pause($id)
+    {
+        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($id);
+        if (in_array($campaign->status, ['processing', 'sending', 'queued'])) {
+            $campaign->update(['status' => 'paused']);
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Campaign paused successfully.'
+            ]);
+        }
+    }
+
+    public function resume($id)
+    {
+        $campaign = Campaign::where('team_id', auth()->user()->current_team_id)->findOrFail($id);
+        if ($campaign->status === 'paused') {
+            $campaign->update(['status' => 'processing']);
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Campaign resumed successfully.'
+            ]);
+        }
     }
 
     public function retarget()

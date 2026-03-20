@@ -217,13 +217,24 @@ class ConsumeBroadcastEvents extends Command
             return; // Leave in PEL to retry later when unpaused
         }
 
-        // --- RATE LIMIT CHECK ---
+        // --- RATE LIMIT CHECK (Provider Level) ---
         if (!$this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
-            usleep(200000);
+            usleep(200000); // 200ms backoff
             if (!$this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
-                $this->warn("Rate limit reached for {$phoneNumber}, backing off event {$id}");
+                $this->warn("Rate limit reached for provider/number {$phoneNumber}, backing off event {$id}");
                 return;
             }
+        }
+
+        // --- CAMPAIGN THROTTLE CHECK (Send Rate) ---
+        $sendRate = $payload['meta']['send_rate'] ?? null;
+        if (!$this->rateLimitService->canSendCampaign((int) $campaignId, $sendRate)) {
+            // Keep in DB (pending) to retry later
+            // We need to revert the status from 'processing' to 'pending'
+            \Illuminate\Support\Facades\DB::table('broadcast_events')
+                ->where('id', $id)
+                ->update(['status' => 'pending', 'updated_at' => now()]);
+            return;
         }
 
         // --- IDEMPOTENCY CHECK ---

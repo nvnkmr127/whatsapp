@@ -40,27 +40,25 @@ class TemplateHeatmap extends Component
             $slot = $this->heatmap['best_slot'];
             $this->insights[] = [
                 'type' => 'info',
-                'message' => sprintf(
-                    '"%s" performs best on %s at %s with a %.1f%% read rate (%sx baseline, %s confidence).',
-                    $this->heatmap['selected_template_name'],
-                    $slot['day_label'],
-                    $slot['hour_label'],
-                    $slot['read_rate'],
-                    number_format($slot['multiplier'], 1),
-                    strtolower($slot['confidence'])
-                ),
+                'message' => __('":template" performs best on :day at :hour with a :rate% read rate (:multiplierx baseline, :confidence confidence).', [
+                    'template' => $this->heatmap['selected_template_name'],
+                    'day' => __($slot['day_label']),
+                    'hour' => $slot['hour_label'],
+                    'rate' => number_format($slot['read_rate'], 1),
+                    'multiplier' => number_format($slot['multiplier'], 1),
+                    'confidence' => strtolower(__($slot['confidence'])),
+                ]),
             ];
         }
 
         if (!empty($this->heatmap['is_low_sample']) && !empty($this->heatmap['selected_template_name'])) {
             $this->insights[] = [
                 'type' => 'warning',
-                'message' => sprintf(
-                    'Timing guidance for "%s" is based on only %d sends. Add %d+ more sends for stronger confidence.',
-                    $this->heatmap['selected_template_name'],
-                    (int) ($this->heatmap['sample_size'] ?? 0),
-                    (int) ($this->heatmap['sample_gap'] ?? 0)
-                ),
+                'message' => __('Timing guidance for ":template" is based on only :count sends. Add :gap+ more sends for stronger confidence.', [
+                    'template' => $this->heatmap['selected_template_name'],
+                    'count' => (int) ($this->heatmap['sample_size'] ?? 0),
+                    'gap' => (int) ($this->heatmap['sample_gap'] ?? 0)
+                ]),
             ];
         }
     }
@@ -76,74 +74,97 @@ class TemplateHeatmap extends Component
             ? "CAST(strftime('%H', {$sentTsExpr}) AS INTEGER)"
             : "HOUR({$sentTsExpr})";
 
-        $rows = Message::query()
-            ->join('campaigns', 'campaigns.id', '=', 'messages.campaign_id')
+        // Query including manual template sends by checking metadata
+        $query = Message::query()
+            ->leftJoin('campaigns', 'campaigns.id', '=', 'messages.campaign_id')
             ->where('messages.team_id', $teamId)
             ->where('messages.direction', 'outbound')
             ->where('messages.type', 'template')
-            ->whereNotNull('campaigns.template_id')
-            ->whereNotNull('messages.campaign_id')
-            ->whereRaw("{$sentTsExpr} >= ?", [Carbon::now()->subDays(90)])
-            ->selectRaw('campaigns.template_id')
+            ->whereRaw("{$sentTsExpr} >= ?", [Carbon::now()->subDays(90)]);
+
+        $metaNameExpr = $driver === 'sqlite'
+            ? 'JSON_EXTRACT(messages.metadata, "$.template_name")'
+            : 'JSON_UNQUOTE(JSON_EXTRACT(messages.metadata, "$.template_name"))';
+
+        $rawRows = $query
+            ->selectRaw("COALESCE(campaigns.template_id, 0) as campaign_template_id")
+            ->selectRaw("{$metaNameExpr} as meta_template_name")
             ->selectRaw("{$dayExpr} as day_index")
             ->selectRaw("{$hourExpr} as hour_index")
             ->selectRaw('COUNT(*) as sent_count')
             ->selectRaw("SUM(CASE WHEN messages.read_at IS NOT NULL OR messages.status = 'read' THEN 1 ELSE 0 END) as read_count")
-            ->groupBy('campaigns.template_id')
-            ->groupByRaw($dayExpr)
-            ->groupByRaw($hourExpr)
+            ->groupBy('campaign_template_id', 'meta_template_name', 'day_index', 'hour_index')
             ->get();
 
-        if ($rows->isEmpty()) {
+        if ($rawRows->isEmpty()) {
             return [];
         }
 
+        // Map names to IDs for manual messages
+        $allTemplates = WhatsappTemplate::where('team_id', $teamId)->pluck('id', 'name')->all();
+        
+        $processedRows = [];
         $templateTotals = [];
-        foreach ($rows as $row) {
-            $tid = (int) $row->template_id;
+
+        foreach ($rawRows as $row) {
+            $tid = (int) $row->campaign_template_id;
+            if ($tid === 0 && !empty($row->meta_template_name)) {
+                $tid = (int) ($allTemplates[$row->meta_template_name] ?? 0);
+            }
+
+            if ($tid === 0) continue; // Skip if we can't resolve template
+
+            $dayIdx = $this->normalizeWeekday((int) $row->day_index, $driver);
+            $hourIdx = (int) $row->hour_index;
+            $sent = (int) $row->sent_count;
+            $read = (int) $row->read_count;
+
+            $key = "{$tid}_{$dayIdx}_{$hourIdx}";
+            if (!isset($processedRows[$key])) {
+                $processedRows[$key] = [
+                    'template_id' => $tid,
+                    'day_index' => $dayIdx,
+                    'hour_index' => $hourIdx,
+                    'sent' => 0,
+                    'read' => 0
+                ];
+            }
+            $processedRows[$key]['sent'] += $sent;
+            $processedRows[$key]['read'] += $read;
+
             if (!isset($templateTotals[$tid])) {
                 $templateTotals[$tid] = ['sent' => 0, 'read' => 0];
             }
-            $templateTotals[$tid]['sent'] += (int) $row->sent_count;
-            $templateTotals[$tid]['read'] += (int) $row->read_count;
+            $templateTotals[$tid]['sent'] += $sent;
+            $templateTotals[$tid]['read'] += $read;
         }
 
         if (empty($templateTotals)) {
             return [];
         }
 
-        $availableIds = array_map('intval', array_keys($templateTotals));
-        $requestedId = is_numeric($selectedTemplateId) ? (int) $selectedTemplateId : null;
+        $availableIds = array_keys($templateTotals);
+        $selectedTemplateId = in_array((int)$selectedTemplateId, $availableIds) 
+            ? (int)$selectedTemplateId 
+            : (int)collect($templateTotals)->sortByDesc('sent')->keys()->first();
 
-        if ($requestedId && in_array($requestedId, $availableIds, true)) {
-            $selectedTemplateId = $requestedId;
-        } else {
-            $selectedTemplateId = (int) collect($templateTotals)->sortByDesc('sent')->keys()->first();
-        }
-
-        $templateNames = WhatsappTemplate::query()
-            ->whereIn('id', array_keys($templateTotals))
-            ->pluck('name', 'id')
-            ->map(fn($n) => trim((string) $n))
-            ->all();
+        $templateNames = WhatsappTemplate::whereIn('id', $availableIds)->pluck('name', 'id')->all();
 
         $templateOptions = collect($templateTotals)
-            ->map(function (array $totals, $tid) use ($templateNames) {
-                $tid = (int) $tid;
-                $sent = (int) ($totals['sent'] ?? 0);
-                $read = (int) ($totals['read'] ?? 0);
+            ->map(function ($totals, $tid) use ($templateNames) {
+                $sent = $totals['sent'];
                 return [
-                    'id' => $tid,
+                    'id' => (int)$tid,
                     'name' => $templateNames[$tid] ?? ('Template #' . $tid),
                     'sent' => $sent,
-                    'read_rate' => $sent > 0 ? round(($read / $sent) * 100, 1) : 0.0,
+                    'read_rate' => $sent > 0 ? round(($totals['read'] / $sent) * 100, 1) : 0,
                 ];
             })
             ->sortByDesc('sent')
             ->values()
             ->all();
 
-        $dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        $dayLabels = [__('Mon'), __('Tue'), __('Wed'), __('Thu'), __('Fri'), __('Sat'), __('Sun')];
         $matrix = [];
         for ($day = 0; $day < 7; $day++) {
             $matrix[$day] = [];
@@ -159,14 +180,14 @@ class TemplateHeatmap extends Component
             }
         }
 
-        foreach ($rows as $row) {
-            if ((int) $row->template_id !== $selectedTemplateId) {
+        foreach ($processedRows as $row) {
+            if ((int) $row['template_id'] !== $selectedTemplateId) {
                 continue;
             }
-            $dayIndex = $this->normalizeWeekday((int) $row->day_index, $driver);
-            $hourIndex = max(0, min(23, (int) $row->hour_index));
-            $sent = (int) $row->sent_count;
-            $read = (int) $row->read_count;
+            $dayIndex = (int) $row['day_index'];
+            $hourIndex = max(0, min(23, (int) $row['hour_index']));
+            $sent = (int) $row['sent'];
+            $read = (int) $row['read'];
             $matrix[$dayIndex][$hourIndex] = [
                 'hour' => $hourIndex,
                 'hour_label' => sprintf('%02d:00', $hourIndex),

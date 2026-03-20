@@ -21,6 +21,7 @@ class Wizard extends Component
 
     // Step 1: Details
     public $name;
+    public $campaignType = 'broadcast'; // 'broadcast' or 'drip'
     public $scheduled_at;
     public $scheduleMode = 'now'; // 'now' or 'later'
 
@@ -36,6 +37,10 @@ class Wizard extends Component
     public $headerMediaFile; // For IMAGE/VIDEO/DOCUMENT headers (Upload)
     public $headerMediaUrl; // For IMAGE/VIDEO/DOCUMENT headers (URL fallback)
     public $headerTextVar; // For TEXT header variable
+    
+    // Drip Specific
+    public $dripSteps = []; // [['template_id' => null, 'delay_minutes' => 0, 'variables' => [], 'template_name' => '', 'language' => 'en_US']]
+    public $currentDripStep = 0;
 
     // UI Helpers
     public $isUploading = false;
@@ -121,6 +126,48 @@ class Wizard extends Component
 
         $this->audienceCount = $query->count();
     }
+    public function addDripStep()
+    {
+        $this->dripSteps[] = [
+            'template_id' => null,
+            'template_name' => '',
+            'language' => 'en_US',
+            'delay_minutes' => 1440, // 1 day
+            'variables' => [],
+            'header_params' => [],
+        ];
+        $this->currentDripStep = count($this->dripSteps) - 1;
+    }
+
+    public function removeDripStep($index)
+    {
+        unset($this->dripSteps[$index]);
+        $this->dripSteps = array_values($this->dripSteps);
+        $this->currentDripStep = max(0, count($this->dripSteps) - 1);
+    }
+
+    public function selectDripStep($index)
+    {
+        $this->currentDripStep = $index;
+        
+        if ($index === 0) {
+            // Main Campaign Template
+            // (Props already in $this->selectedTemplateId etc.)
+            // But we might need to reset them if they were changed in a follow-up
+            return;
+        }
+
+        $step = $this->dripSteps[$index - 1];
+        $this->selectedTemplateId = $step['template_id'];
+        $this->templateVars = $step['variables'];
+    }
+
+    public function updatedTemplateVars($value, $key)
+    {
+        if ($this->campaignType === 'drip' && $this->currentDripStep > 0) {
+            $this->dripSteps[$this->currentDripStep - 1]['variables'] = $this->templateVars;
+        }
+    }
 
     public function updatedSelectedTemplateId($value)
     {
@@ -132,6 +179,12 @@ class Wizard extends Component
         if ($value) {
             $template = WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->find($value);
             if ($template) {
+                if ($this->campaignType === 'drip' && $this->currentDripStep > 0) {
+                    $this->dripSteps[$this->currentDripStep - 1]['template_id'] = $template->id;
+                    $this->dripSteps[$this->currentDripStep - 1]['template_name'] = $template->name;
+                    $this->dripSteps[$this->currentDripStep - 1]['language'] = $template->language;
+                }
+
                 // Initialize variables based on body params count
                 $bodyText = '';
                 foreach ($template->components ?? [] as $c) {
@@ -144,6 +197,10 @@ class Wizard extends Component
 
                 for ($i = 1; $i <= $paramCount; $i++) {
                     $this->templateVars[$i - 1] = '';
+                }
+
+                if ($this->campaignType === 'drip' && isset($this->dripSteps[$this->currentDripStep])) {
+                    $this->dripSteps[$this->currentDripStep]['variables'] = $this->templateVars;
                 }
             }
         }
@@ -189,10 +246,21 @@ class Wizard extends Component
             'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
             'name' => $this->name,
             'campaign_name' => $this->name,
+            'campaign_type' => $this->campaignType,
             'template_id' => $template->id,
             'template_name' => $template->name,
             'template_language' => $template->language,
             'template_variables' => $finalVars,
+            'steps' => $this->campaignType === 'drip' ? array_merge([
+                [
+                    'template_id' => $template->id,
+                    'template_name' => $template->name,
+                    'language' => $template->language,
+                    'variables' => $finalVars,
+                    'header_params' => $finalHeaderMedia ? [$finalHeaderMedia] : ($this->headerTextVar ? [$this->headerTextVar] : []),
+                    'delay_minutes' => 0
+                ]
+            ], $this->dripSteps) : null,
             'header_params' => $finalHeaderMedia ? [$finalHeaderMedia] : ($this->headerTextVar ? [$this->headerTextVar] : []),
             'audience_filters' => [
                 'type' => $this->audienceType,
@@ -209,7 +277,13 @@ class Wizard extends Component
         $seconds = now()->diffInSeconds($delay, false);
         $delaySeconds = $seconds > 0 ? $seconds : 0;
 
-        ProcessCampaignJob::dispatch($campaign->id)->delay($delaySeconds);
+        $criteria = [
+            'selection_type' => $this->audienceType,
+            'tags' => $this->selectedTags,
+            'ids' => $this->selectedContacts,
+        ];
+
+        \App\Jobs\PrepareCampaignJob::dispatch($campaign->id, $criteria)->delay($delaySeconds);
 
         session()->flash('success', 'Campaign Launched Successfully!');
         return redirect()->route('campaigns.index');

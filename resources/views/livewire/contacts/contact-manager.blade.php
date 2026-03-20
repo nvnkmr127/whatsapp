@@ -147,8 +147,13 @@
                                 <x-contact-health-widget :contact="$contact" />
                             </td>
                             <td class="px-8 py-6 text-right">
-                                <div
-                                    class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button wire:click="openMergeModal({{ $contact->id }})"
+                                            title="Merge contact"
+                                            class="p-2 text-slate-400 hover:text-indigo-500 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                        </svg>
+                                    </button>
                                     <button wire:click="edit({{ $contact->id }})"
                                         class="p-2 text-slate-400 hover:text-wa-teal dark:hover:text-wa-teal transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,17 +456,16 @@
                             Download Sample
                         </button>
                     </div>
-                    <div
-                        class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative group">
+                    <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative group">
                         <label class="cursor-pointer block">
-                            <input type="file" wire:model="importFile" class="hidden" accept=".csv">
+                            <input type="file" wire:model="importFile" class="hidden" accept=".csv,.xlsx,.xls,.ods">
                             <div class="text-slate-400 mb-2 group-hover:text-wa-teal transition-colors">
                                 <x-icon name="cloud-arrow-up" class="w-12 h-12 mx-auto" />
                             </div>
                             <span class="text-sm font-bold text-slate-700 dark:text-white block">
-                                {{ $importFile ? $importFile->getClientOriginalName() : 'Click to Upload CSV' }}
+                                {{ $importFile ? $importFile->getClientOriginalName() : 'Click to Upload Import Bundle' }}
                             </span>
-                            <span class="text-xs text-slate-400 block mt-1 uppercase tracking-widest font-black">Accepts CSV files only</span>
+                            <span class="text-xs text-slate-400 block mt-1 uppercase tracking-widest font-black">Accepts CSV, XLSX & XLS</span>
                         </label>
                     </div>
                     @error('importFile') <span class="text-rose-500 text-xs font-bold">{{ $message }}</span> @enderror
@@ -543,6 +547,93 @@
             @endif
         </div>
     </x-app-modal>
+
+
+    <!-- Merge Modal -->
+    <x-app-modal wire:model="isMergeModalOpen" maxWidth="4xl" :backdropClose="false">
+        <div class="p-8 pb-0">
+            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Merge <span class="text-indigo-500">Duplicate</span>
+            </h2>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
+                <!-- Source -->
+                @if($sourceContact)
+                <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-rose-500 mb-3 block">Merging (Will be deleted)</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center font-black">
+                            {{ substr($sourceContact->name, 0, 1) }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-black">{{ $sourceContact->name }}</p>
+                            <p class="text-[10px] text-slate-500">{{ $sourceContact->phone_number }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <div class="flex justify-center text-slate-300">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                </div>
+
+                <!-- Target -->
+                <div class="space-y-4">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-emerald-500 block">Into Primary (Will remain)</p>
+                    <select wire:model.live="targetContactId" class="w-full px-5 py-4 bg-white dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-emerald-500 transition-all">
+                        <option value="">Search Primary Contact...</option>
+                        @foreach($contacts as $c)
+                            @if($c->id != $sourceContactId)
+                                <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->phone_number }})</option>
+                            @endif
+                        @endforeach
+                    </select>
+
+                    @if($targetContact)
+                    <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center font-black">
+                            {{ substr($targetContact->name, 0, 1) }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-black">{{ $targetContact->name }}</p>
+                            <p class="text-[10px] text-slate-500">{{ $targetContact->phone_number }}</p>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            @if(session()->has('merge_error'))
+                <div class="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-bold uppercase tracking-widest border border-red-100 italic">
+                    {{ session('merge_error') }}
+                </div>
+            @endif
+
+            <ul class="space-y-2 py-4 px-6 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
+                <li class="text-[10px] font-bold text-amber-700 dark:text-amber-500 flex items-center gap-2">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Messages, Notes, and Deals from the source will be moved to the primary.
+                </li>
+                <li class="text-[10px] font-bold text-amber-700 dark:text-amber-500 flex items-center gap-2">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    The source contact record will be permanently erased after the merge.
+                </li>
+            </ul>
+        </div>
+
+        <div class="p-8 bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-4">
+            <x-app-button variant="ghost" class="w-full sm:flex-1 py-4 order-2 sm:order-1" wire:click="resetMergeState">Cancel</x-app-button>
+            <x-app-button variant="primary" class="w-full sm:flex-[2] py-4 order-1 sm:order-2" 
+                wire:click="merge" 
+                wire:loading.attr="disabled"
+                :disabled="!$targetContactId || isMerging">
+                <span wire:loading.remove wire:target="merge">Confirm Merge</span>
+                <span wire:loading wire:target="merge">Executing Merge...</span>
+            </x-app-button>
+        </div>
+    </x-app-modal>
+>
 
     <!-- End of Modals -->
 

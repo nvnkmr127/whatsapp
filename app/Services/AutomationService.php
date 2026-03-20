@@ -365,7 +365,7 @@ class AutomationService
             ]);
 
             // Dispatch first node
-            ExecuteAutomationNodeJob::dispatchSync($run->id, $startNodeId);
+            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
             Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
         } catch (\Exception $e) {
@@ -599,7 +599,19 @@ class AutomationService
         }
 
         $nextNodeId = null;
-        if ($input !== null) {
+        $currentNode = $this->getNodeById($flowData, $currentNodeId);
+
+        if ($currentNode && $currentNode['type'] === 'ab_split') {
+            $ratio = (int) ($currentNode['data']['ratio'] ?? 50);
+            $edgeArray = array_values($edges);
+            if (count($edgeArray) >= 2) {
+                $nextNodeId = (rand(1, 100) <= $ratio) ? $edgeArray[0]['target'] : $edgeArray[1]['target'];
+                Log::info("AutomationRun #{$run->id}: A/B Split decision made. Ratio: {$ratio}%. Chosen Node: {$nextNodeId}");
+            } else {
+                $nextNodeId = $edgeArray[0]['target'] ?? null;
+                Log::warning("AutomationRun #{$run->id}: A/B Split node has fewer than 2 edges. Defaulting to first edge.");
+            }
+        } elseif ($input !== null) {
             foreach ($edges as $edge) {
                 if (isset($edge['condition']) && strtolower(trim($input)) === strtolower(trim($edge['condition']))) {
                     $nextNodeId = $edge['target'];
@@ -628,7 +640,7 @@ class AutomationService
             Log::info("AutomationRun #{$run->id}: Dispatching SYNC job for next node: {$nextNodeId}");
             // Reset status to active so the next job can claim it
             $run->update(['status' => 'active', 'state_data' => $state]);
-            ExecuteAutomationNodeJob::dispatchSync($run->id, $nextNodeId);
+            ExecuteAutomationNodeJob::dispatch($run->id, $nextNodeId);
         } else {
             Log::info("AutomationRun #{$run->id}: Completed. No next node found.");
             $run->update(['status' => 'completed']);
@@ -683,7 +695,7 @@ class AutomationService
                     continue;
                 }
 
-                ExecuteAutomationNodeJob::dispatchSync($run->id, $nodeId);
+                ExecuteAutomationNodeJob::dispatch($run->id, $nodeId);
             } catch (\Throwable $e) {
                 Log::error("AutomationRun #{$run->id} failed during scheduled resume: {$e->getMessage()}", [
                     'exception' => $e,

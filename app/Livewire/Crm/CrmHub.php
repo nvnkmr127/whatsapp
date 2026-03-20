@@ -14,7 +14,7 @@ class CrmHub extends Component
 
     public function setTab($tab)
     {
-        if (in_array($tab, ['dashboard', 'contacts', 'deals', 'companies', 'onboarding', 'affiliates'])) {
+        if (in_array($tab, ['dashboard', 'contacts', 'deals', 'companies', 'segments', 'analytics', 'import'])) {
             $this->activeTab = $tab;
         }
     }

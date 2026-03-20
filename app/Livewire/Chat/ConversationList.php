@@ -15,7 +15,12 @@ class ConversationList extends Component
     public $filterReadStatus = 'all'; // all, unread, read
     public $filterOptIn = 'all'; // all, yes, no
     public $filterBlocked = 'all'; // all, yes, no
+    public $perPage = 25;
     public $availableCategories = [];
+    
+    // Thresholds
+    public $slaWarningMinutes = 60;
+    public $pendingWarningLimit = 5;
 
     public function getListeners()
     {
@@ -39,12 +44,40 @@ class ConversationList extends Component
         }
     }
 
+    public function formatTime($time)
+    {
+        if (!$time) return '';
+        
+        $now = now();
+        
+        if ($time->diffInHours($now) < 24) {
+            return $time->diffForHumans(['parts' => 1, 'short' => true]);
+        }
+        
+        if ($time->isYesterday()) {
+            return __('Yesterday');
+        }
+        
+        return $time->format('M d');
+    }
+
     public function resetFilters()
     {
         $this->filterReadStatus = 'all';
         $this->filterOptIn = 'all';
         $this->filterBlocked = 'all';
         $this->search = '';
+        $this->perPage = 25;
+    }
+
+    public function loadMore()
+    {
+        $this->perPage += 25;
+    }
+
+    public function updatedSearch()
+    {
+        $this->perPage = 25;
     }
 
     public function selectConversation($id)
@@ -68,10 +101,15 @@ class ConversationList extends Component
             ])
             ->where('team_id', Auth::user()->currentTeam->id)
             ->when($this->search, function ($query) {
-                $query->whereHas('contact', function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('phone_number', 'like', '%' . $this->search . '%')
-                        ->orWhere('custom_attributes', 'like', '%' . $this->search . '%');
+                $query->where(function ($q) {
+                    $q->whereHas('contact', function ($sub) {
+                        $sub->where('name', 'like', '%' . $this->search . '%')
+                            ->orWhere('phone_number', 'like', '%' . $this->search . '%')
+                            ->orWhere('custom_attributes', 'like', '%' . $this->search . '%');
+                    })
+                    ->orWhereHas('messages', function ($sub) {
+                        $sub->where('content', 'like', '%' . $this->search . '%');
+                    });
                 });
             })
             ->when($this->filterReadStatus !== 'all', function ($query) {
@@ -103,8 +141,9 @@ class ConversationList extends Component
                 }
             })
             ->orderByDesc('last_message_at')
-            ->take(50)
+            ->take($this->perPage)
             ->get();
+    }
     }
 
     public function getStatsProperty()
@@ -133,8 +172,8 @@ class ConversationList extends Component
             'active' => $active,
             'unassigned' => $unassigned,
             'sla_breaches' => $slaBreaches,
-            'avg_response' => '14m',
-            'resolution' => '92%',
+            'avg_response' => '-',
+            'resolution' => '-',
         ];
     }
 

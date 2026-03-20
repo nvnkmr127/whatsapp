@@ -158,6 +158,28 @@
             </div>
             <p class="text-sm text-slate-500 font-medium">Complete API reference and examples</p>
         </a>
+        <div
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="p-3 {{ auth()->user()->currentTeam->is_sandbox_mode ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-400' }} rounded-2xl group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.673.337a6 6 0 01-3.86.517l-2.388-.477a2 2 0 00-1.022.547l-1.162 1.162a2 2 0 00-.547 1.022l-.477 2.387a6 6 0 00.517 3.86l.337.673a6 6 0 01.517 3.86l-.477 2.388a2 2 0 00.547 1.022l1.162 1.162a2 2 0 001.022-.547l2.387-.477a6 6 0 003.86-.517l.673-.337a6 6 0 013.86-.517l2.388.477a2 2 0 001.022-.547l1.162-1.162a2 2 0 00.547-1.022l.477-2.387a6 6 0 00-.517-3.86l-.337-.673a6 6 0 01-.517-3.86l.477-2.388a2 2 0 00-.547-1.022l-1.162-1.162z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Sandbox Mode
+                    </h3>
+                </div>
+                <button wire:click="toggleSandboxMode"
+                    class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-wa-teal focus:ring-offset-2 {{ auth()->user()->currentTeam->is_sandbox_mode ? 'bg-orange-500' : 'bg-slate-200 dark:bg-slate-700' }}">
+                    <span
+                        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ auth()->user()->currentTeam->is_sandbox_mode ? 'translate-x-5' : 'translate-x-0' }}"></span>
+                </button>
+            </div>
+            <p class="text-sm text-slate-500 font-medium">Test API calls without real WhatsApp charges</p>
+        </div>
 
         @if(auth()->user()->isSuperAdmin())
             <a href="{{ route('developer.teams') }}"

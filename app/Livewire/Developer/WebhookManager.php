@@ -141,6 +141,23 @@ class WebhookManager extends Component
         $this->secret = bin2hex(random_bytes(32));
     }
 
+    public function rotateSecret($id)
+    {
+        $subscription = WebhookSubscription::findOrFail($id);
+        $this->authorize('update', $subscription);
+
+        $newSecret = bin2hex(random_bytes(32));
+        $subscription->update(['secret' => $newSecret]);
+
+        // If we are currently editing THIS subscription, update the model property too
+        if ($this->editingId == $id) {
+            $this->secret = $newSecret;
+        }
+
+        $this->dispatch('notify', 'Webhook signing secret rotated successfully.');
+        audit('webhook.secret_rotated', "Secret rotated for webhook: {$subscription->name} by " . auth()->user()->name);
+    }
+
     public function testWebhook($id)
     {
         $subscription = WebhookSubscription::findOrFail($id);

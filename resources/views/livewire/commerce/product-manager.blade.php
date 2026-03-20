@@ -26,6 +26,14 @@
                     placeholder="Search Products...">
             </div>
 
+            <button wire:click="syncAll"
+                class="flex items-center justify-center gap-2 px-6 py-3 bg-blue-500/10 text-blue-600 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-blue-500/20 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Sync All</span>
+            </button>
+
             <button wire:click="create"
                 class="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -170,9 +170,106 @@
                         <div class="h-full bg-rose-500 transition-all duration-1000"
                             style="width: {{ $metrics['total'] > 0 ? ($metrics['failed'] / $metrics['total']) * 100 : 0 }}%">
                         </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-xl border border-slate-100 dark:border-slate-800">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-wa-teal/10 text-wa-teal rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Activity Log</h3>
+                </div>
+                
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Speed</span>
+                    <span class="text-lg font-black text-wa-teal">{{ $this->speed }} <small class="text-[10px] text-slate-400">msg/min</small></span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-slate-50 dark:border-slate-800">
+                            <th class="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest uppercase">Contact</th>
+                            <th class="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest uppercase">Status</th>
+                            <th class="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest uppercase text-right">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                        @foreach($this->recentMessages as $msg)
+                            <tr class="group">
+                                <td class="py-3 text-slate-900 dark:text-white">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold">{{ $msg->contact->name ?? 'Unknown' }}</span>
+                                        <span class="text-[10px] font-bold text-slate-400 tracking-tight">{{ $msg->contact->phone_number }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3">
+                                    <span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md 
+                                        @if($msg->status === 'read') bg-amber-400/10 text-amber-500
+                                        @elseif($msg->status === 'delivered') bg-wa-blue/10 text-wa-blue
+                                        @elseif($msg->status === 'sent') bg-wa-teal/10 text-wa-teal
+                                        @elseif($msg->status === 'failed') bg-rose-500/10 text-rose-500
+                                        @else bg-slate-100 text-slate-400 @endif">
+                                        {{ $msg->status }}
+                                    </span>
+                                </td>
+                                <td class="py-3 text-right text-[10px] font-bold text-slate-400">
+                                    {{ $msg->updated_at->diffForHumans() }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Delivery Breakdown -->
+            <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-100 dark:border-slate-800">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 dark:border-slate-800 pb-4">Delivery Insights</h3>
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
+                            <span class="text-slate-500">Delivery Rate</span>
+                            <span class="text-slate-900 dark:text-white">{{ $metrics['sent'] > 0 ? round(($metrics['delivered'] / $metrics['sent']) * 100) : 0 }}%</span>
+                        </div>
+                        <div class="h-2 bg-slate-50 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-wa-blue" style="width: {{ $metrics['sent'] > 0 ? ($metrics['delivered'] / $metrics['sent']) * 100 : 0 }}%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2">
+                            <span class="text-slate-500">Read Rate</span>
+                            <span class="text-slate-900 dark:text-white">{{ $metrics['delivered'] > 0 ? round(($metrics['read'] / $metrics['delivered']) * 100) : 0 }}%</span>
+                        </div>
+                        <div class="h-2 bg-slate-50 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-amber-400" style="width: {{ $metrics['delivered'] > 0 ? ($metrics['read'] / $metrics['delivered']) * 100 : 0 }}%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Estimated Completion -->
+            @if($campaign->status === 'processing' && $this->speed > 0)
+                <div class="bg-slate-900 dark:bg-wa-teal rounded-[2rem] p-8 shadow-xl text-white dark:text-slate-900">
+                    <span class="text-[10px] font-black uppercase tracking-widest opacity-60">Estimated Completion</span>
+                    <div class="text-2xl font-black mt-1 tabular-nums">
+                        {{ now()->addMinutes(max(0, ($metrics['total'] - $metrics['sent']) / $this->speed))->format('H:i') }}
+                    </div>
+                    <p class="text-[10px] font-bold mt-2 opacity-80 uppercase tracking-wider">
+                        @ {{ $this->speed }} messages / minute
+                    </p>
+                </div>
+            @endif
         </div>
     </div>
 

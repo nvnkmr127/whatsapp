@@ -39,6 +39,9 @@ Route::post('/qr/{slug}/lead', [LeadCaptureWidgetController::class, 'lead'])->na
 Route::get('/growth-tools/config/{slug}', [LeadCaptureWidgetController::class, 'config'])->name('qr.config');
 Route::get('/growth-tools/click/{slug}', [LeadCaptureWidgetController::class, 'trackClick'])->name('qr.click');
 
+// Customer-facing Cart Checkout (Public with UUID)
+Route::get('/checkout/{uuid}', \App\Livewire\Commerce\CartCheckout::class)->name('commerce.checkout');
+
 Route::middleware([
     'auth:sanctum',
     'Laravel\Jetstream\Http\Middleware\AuthenticateSession',
@@ -200,6 +203,7 @@ Route::middleware([
 
     // Billing Dashboard
     Route::get('/billing', \App\Livewire\Billing\BillingDashboard::class)->name('billing');
+    Route::get('/billing/invoices/{invoice}', [\App\Http\Controllers\InvoiceController::class, 'download'])->name('invoices.download');
 
     Route::get('/activity', function () {
         return view('activity.index');

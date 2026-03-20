@@ -33,6 +33,10 @@ class AutomationAnalytics extends Component
     ];
 
     public Collection $messageDetails;
+    public Collection $recentRuns;
+    public ?int $selectedRunId = null;
+    public ?object $selectedRun = null;
+    public bool $showRunLogModal = false;
 
     public function mount(int $automationId, AutomationAnalyticsService $analytics): void
     {
@@ -45,7 +49,9 @@ class AutomationAnalytics extends Component
         $this->dashboard = $analytics->buildDashboard($this->automation);
         $this->currencySymbol = (string) get_setting('currency_symbol', '$');
         $this->messageDetails = collect();
+        $this->recentRuns = collect();
         $this->loadMessageReport();
+        $this->loadRecentRuns();
     }
 
     public function refreshData(AutomationAnalyticsService $analytics): void
@@ -238,6 +244,26 @@ class AutomationAnalytics extends Component
             ->latest()
             ->limit($this->messageDetailsLimit)
                 ->get();
+    }
+
+    protected function loadRecentRuns(): void
+    {
+        $this->recentRuns = \App\Models\AutomationRun::query()
+            ->with('contact:id,name,phone_number')
+            ->where('automation_id', $this->automation->id)
+            ->where('created_at', '>=', now()->subDays($this->dateRange))
+            ->latest()
+            ->limit(20)
+            ->get();
+    }
+
+    public function viewRunLog(int $runId): void
+    {
+        $this->selectedRunId = $runId;
+        $this->selectedRun = \App\Models\AutomationRun::query()
+            ->with(['ledger' => fn($q) => $q->orderBy('created_at')])
+            ->findOrFail($runId);
+        $this->showRunLogModal = true;
     }
 
     protected function normalizeMessageStatusFilter(): string

@@ -66,6 +66,12 @@ class SendCampaignMessageJob implements ShouldQueue
             return;
         }
 
+        // --- PAUSE CHECK ---
+        if ($campaign->status === 'paused') {
+            $this->release(60); // Check again in 60 seconds
+            return;
+        }
+
         // --- IDEMPOTENCY CHECK ---
         $lockKey = "campaign_send_lock:{$this->campaignId}:{$this->contactId}";
         if (!Cache::add($lockKey, true, 60)) {
@@ -225,6 +231,10 @@ class SendCampaignMessageJob implements ShouldQueue
                     'status' => $status,
                     'completed_at' => now(),
                 ]);
+
+                if ($status === 'completed_with_errors') {
+                    app(\App\Services\CampaignAlertService::class)->notifyFailure($campaign, "Campaign completed with " . $campaign->messages()->where('status', 'failed')->count() . " errors.");
+                }
 
                 Log::info("Campaign {$this->campaignId} marked as {$status}.");
 

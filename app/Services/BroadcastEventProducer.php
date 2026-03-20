@@ -20,6 +20,13 @@ class BroadcastEventProducer
             $events = [];
 
             foreach ($contacts as $contact) {
+                $tplName = $snapshot->template_name;
+                $tplLang = $snapshot->template_language;
+
+                if ($contact->variant === 'B' && ($snapshot->campaign->is_ab_test ?? false)) {
+                    $tplName = $snapshot->campaign->template_b_name ?? $tplName;
+                }
+
                 $events[] = [
                     'team_id' => $snapshot->campaign->team_id,
                     'event_type' => 'message.queued',
@@ -28,12 +35,14 @@ class BroadcastEventProducer
                         'snapshot_id' => $snapshot->id,
                         'contact_id' => $contact->contact_id,
                         'phone_number' => $contact->phone_number,
+                        'variant' => $contact->variant,
                         'meta' => array_merge($snapshot->meta ?? [], [
                             'team_id' => $snapshot->campaign->team_id,
+                            'send_rate' => $snapshot->campaign->send_rate,
                         ]),
                         'template' => [
-                            'name' => $snapshot->template_name,
-                            'language' => $snapshot->template_language,
+                            'name' => $tplName,
+                            'language' => $tplLang,
                             'variables' => $snapshot->template_variables,
                             'header_params' => $snapshot->header_params,
                             'footer_params' => $snapshot->footer_params,

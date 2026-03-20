@@ -184,6 +184,59 @@
                 </div>
             </div>
 
+            <!-- A/B Testing & Speed Control -->
+            <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8" x-data="{ is_ab_test: @entangle('is_ab_test') }">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Optimization & Speed</h2>
+                        <p class="text-sm text-slate-500 font-medium mt-1">Split testing and throughput control</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- A/B Toggle -->
+                    <div class="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-[2rem]">
+                        <div>
+                            <span class="block text-sm font-bold text-slate-900 dark:text-white">A/B Split Test</span>
+                            <span class="text-xs text-slate-500">Compare two templates to find the winner</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" x-model="is_ab_test" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-100 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-wa-teal"></div>
+                        </label>
+                    </div>
+
+                    <div x-show="is_ab_test" x-collapse class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border border-wa-teal/10 rounded-[2rem]">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase text-slate-400">Template B *</label>
+                            <select wire:model="template_b_id" class="w-full px-4 py-3 bg-white dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
+                                <option value="">-- Select Variant B --</option>
+                                @foreach($this->templates as $template)
+                                    <option value="{{ $template->id }}">{{ $template->template_name }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error for="template_b_id" />
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400">Split Ratio</label>
+                                <span class="text-[10px] font-black text-wa-teal">A: {{ $split_ratio }}% / B: {{ 100 - $split_ratio }}%</span>
+                            </div>
+                            <input type="range" wire:model.live="split_ratio" min="1" max="99" class="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-wa-teal">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase text-slate-400">Send Rate (Messages / Hour)</label>
+                            <input type="number" wire:model="send_rate" placeholder="e.g. 1000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-wa-teal/20 text-slate-900 dark:text-white">
+                            <p class="text-[10px] text-slate-400 italic">Leave empty for immediate delivery.</p>
+                            <x-input-error for="send_rate" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Variables & Media Section -->
             <div x-show="campaignsSelected" x-cloak
                 class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">

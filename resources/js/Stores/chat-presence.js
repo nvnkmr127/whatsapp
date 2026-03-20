@@ -2,6 +2,7 @@ export default {
     isTyping: false,
     typingUser: '',
     isCustomerTyping: false,
+    typingUsers: [], // Array of {id, name}
     activeUsers: [],
     connectionState: 'connected',
     lockedBy: null,
@@ -13,6 +14,9 @@ export default {
     initPresence(conversationId, teamId) {
         this.conversationId = conversationId;
         this.teamId = teamId;
+        this.typingUsers = [];
+        this.isTyping = false;
+        this.isCustomerTyping = false;
         
         setTimeout(() => {
             this.initEcho();
@@ -104,19 +108,50 @@ export default {
     },
 
     setTyping(id, name) {
+        if (id === this.myUserId) return;
+
+        // Clear existing timer if any
+        if (this._typingTimers && this._typingTimers[id]) {
+            clearTimeout(this._typingTimers[id]);
+        } else if (!this._typingTimers) {
+            this._typingTimers = {};
+        }
+
+        // Add to typingUsers if not already there
+        if (!this.typingUsers.find(u => u.id === id)) {
+            this.typingUsers.push({ id, name });
+        }
+
+        // Set flags
         if (id === 'customer') {
             this.isCustomerTyping = true;
-            if (this.customerTimer) clearTimeout(this.customerTimer);
-            this.customerTimer = setTimeout(() => this.isCustomerTyping = false, 3000);
-        } else if (id !== this.myUserId) {
+        } else {
             this.isTyping = true;
             this.typingUser = name;
-            if (this.typingTimer) clearTimeout(this.typingTimer);
-            this.typingTimer = setTimeout(() => this.isTyping = false, 3000);
+        }
 
-            if (!this.amIOwner()) {
-                this.setLockState(id, name);
+        // Auto-remove after 3 seconds
+        this._typingTimers[id] = setTimeout(() => {
+            this.typingUsers = this.typingUsers.filter(u => u.id !== id);
+            
+            if (id === 'customer') {
+                this.isCustomerTyping = false;
+            } else {
+                // If no more agents are typing, reset flags
+                const otherAgents = this.typingUsers.filter(u => u.id !== 'customer');
+                if (otherAgents.length === 0) {
+                    this.isTyping = false;
+                    this.typingUser = '';
+                } else {
+                    this.typingUser = otherAgents[0].name;
+                }
             }
+            delete this._typingTimers[id];
+        }, 3000);
+
+        // Lock management (if agent typing on conversation that isn't locked)
+        if (id !== 'customer' && !this.amIOwner()) {
+            this.setLockState(id, name);
         }
     },
 

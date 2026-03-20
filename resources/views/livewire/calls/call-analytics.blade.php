@@ -107,6 +107,22 @@
              </div>
         </div>
 
+        <!-- Call Quality Trends [NEW] -->
+        <div class="lg:col-span-3 bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden">
+             <div class="absolute top-0 right-0 w-64 h-64 bg-wa-teal/5 blur-3xl rounded-full -mr-32 -mt-32"></div>
+             <div class="relative">
+                <div class="flex items-center justify-between mb-10">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Quality & <span class="text-wa-teal">Latency</span> Intensity</h3>
+                        <p class="text-slate-500 font-medium">Aggregate MOS score and signal transmission delay metrics.</p>
+                    </div>
+                </div>
+                <div class="relative h-[320px] w-full -ml-4">
+                    <canvas id="qualityTrendsChart"></canvas>
+                </div>
+             </div>
+        </div>
+
         <!-- Outcome Mix -->
         <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-xl border border-slate-50 dark:border-slate-800 relative overflow-hidden flex flex-col">
             <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Outcome <span class="text-wa-teal">Index</span></h3>
@@ -183,9 +199,13 @@
             let costChart, outcomeChart;
 
             const currencySymbol = "{{ get_setting('currency_symbol', '$') }}";
+            const qualityCtx = document.getElementById('qualityTrendsChart').getContext('2d');
+            let qualityChart;
+
             function initCharts() {
                 const isDark = document.documentElement.classList.contains('dark');
                 const costData = @json($costBreakdown);
+                const qualityData = @json($qualityTrends);
                 
                 // Cost Velocity Chart
                 const gradient = costCtx.createLinearGradient(0, 0, 0, 300);
@@ -244,6 +264,57 @@
                                     label: (ctx) => `${currencySymbol}${ctx.raw.toFixed(2)}`
                                 }
                             }
+                        }
+                    }
+                });
+                
+                // Quality Metrics Chart
+                if (qualityChart) qualityChart.destroy();
+                qualityChart = new Chart(qualityCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: qualityData.map(d => d.date),
+                        datasets: [
+                            {
+                                label: 'Avg MOS Score',
+                                data: qualityData.map(d => d.avg_mos),
+                                backgroundColor: '#25D366',
+                                borderRadius: 8,
+                                yAxisID: 'y',
+                            },
+                            {
+                                label: 'Latency (ms)',
+                                data: qualityData.map(d => d.avg_latency),
+                                borderColor: '#34B7F1',
+                                borderDash: [5, 5],
+                                borderWidth: 2,
+                                type: 'line',
+                                pointRadius: 4,
+                                yAxisID: 'y1',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { 
+                                type: 'linear', position: 'left', min: 0, max: 5,
+                                grid: { display: false },
+                                ticks: { font: { family: 'Inter', size: 9, weight: '900' }, color: '#94a3b8' }
+                            },
+                            y1: { 
+                                type: 'linear', position: 'right', min: 0,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { font: { family: 'Inter', size: 9, weight: '700' }, color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { family: 'Inter', size: 9, weight: '900' }, color: '#94a3b8' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { weight: '900', size: 9 } } }
                         }
                     }
                 });

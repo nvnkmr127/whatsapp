@@ -23,6 +23,8 @@ class WebhookSourceManager extends Component
     public $transformation_rules = [];
     public $action_config = [];
     public $is_active = true;
+    public $is_sandbox = false;
+    public $ip_whitelist = '';
     public $editingId = null;
     public $search = '';
     public $platformFilter = '';
@@ -93,6 +95,8 @@ class WebhookSourceManager extends Component
         $this->transformation_rules = [];
         $this->action_config = [];
         $this->filtering_rules_ui = [['field' => '', 'operator' => 'equals', 'value' => '']];
+        $this->is_sandbox = false;
+        $this->ip_whitelist = '';
         $this->process_delay = 0;
         $this->currentStep = 1;
         $this->isCapturing = false;
@@ -260,11 +264,26 @@ class WebhookSourceManager extends Component
     public function generateApiKey()
     {
         $this->auth_config['key'] = Str::random(32);
+        $this->handleImmediateRotation();
     }
 
     public function generateSecret()
     {
         $this->auth_config['secret'] = bin2hex(random_bytes(32));
+        $this->handleImmediateRotation();
+    }
+
+    protected function handleImmediateRotation()
+    {
+        if ($this->editingId) {
+            $source = WebhookSource::find($this->editingId);
+            if ($source) {
+                $source->update([
+                    'auth_config' => $this->auth_config,
+                    'last_secret_rotated_at' => now()
+                ]);
+            }
+        }
     }
 
     public function addMappingField()
@@ -411,6 +430,8 @@ class WebhookSourceManager extends Component
             $this->action_config = is_array($source->action_config) ? $source->action_config : [];
             $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
             $this->is_active = (bool) $source->is_active;
+            $this->is_sandbox = (bool) $source->is_sandbox;
+            $this->ip_whitelist = $source->ip_whitelist ?: '';
             $this->process_delay = (int) $source->process_delay;
 
             // Load latest payload if available for context
@@ -508,6 +529,8 @@ class WebhookSourceManager extends Component
             'transformation_rules' => $this->transformation_rules,
             'action_config' => $actionConfig,
             'is_active' => $this->is_active,
+            'is_sandbox' => $this->is_sandbox,
+            'ip_whitelist' => $this->ip_whitelist,
             'filtering_rules' => $this->filtering_rules_ui,
             'process_delay' => $this->process_delay,
         ]);

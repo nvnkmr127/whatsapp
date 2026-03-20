@@ -69,10 +69,17 @@ class SendOrderLifecycleNotification implements ShouldQueue
             // Initialize service with team context
             $this->whatsappService->setTeam($team);
 
+            // 3. Resolve Template Language
+            $waTemplate = \App\Models\WhatsappTemplate::where('team_id', $team->id)
+                ->where('name', $templateName)
+                ->first();
+            
+            $language = $waTemplate->language ?? 'en_US';
+
             $this->whatsappService->sendTemplate(
                 $order->contact->phone_number,
                 $templateName,
-                'en_US', // Default, should effectively be order->contact->language ?? 'en_US'
+                $language, 
                 $bodyParams
             );
 

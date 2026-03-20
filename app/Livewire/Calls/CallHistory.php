@@ -128,11 +128,16 @@ class CallHistory extends Component
         $callService = app(CallService::class)->setTeam($team);
         $statistics = $callService->getCallStatistics('month');
         $usageLimits = $callService->checkUsageLimits();
+        
+        // Get safeguard status
+        $safeguardService = new \App\Services\CallSafeguardService();
+        $safeguardStatus = $safeguardService->getStatus($team);
 
         return view('livewire.calls.call-history', [
             'calls' => $calls,
             'statistics' => $statistics,
             'usageLimits' => $usageLimits,
+            'safeguardStatus' => $safeguardStatus,
             'period' => 'month',
         ]);
     }

@@ -60,6 +60,14 @@ class ContactManager extends Component
     public $fieldType = 'text';
     public $fieldOptions = ''; // Comma separated for editing
 
+    // Merge State
+    public $isMergeModalOpen = false;
+    public $sourceContactId;
+    public $targetContactId;
+    public $sourceContact;
+    public $targetContact;
+    public $isMerging = false;
+
     protected $queryString = [
         'search' => ['except' => ''],
         'filterTag' => ['except' => ''],
@@ -332,6 +340,64 @@ class ContactManager extends Component
         $this->resetFieldInput();
     }
 
+    // Merge Management
+    public function openMergeModal($sourceId)
+    {
+        $this->sourceContactId = $sourceId;
+        $this->sourceContact = Contact::findOrFail($sourceId);
+        $this->targetContactId = null;
+        $this->targetContact = null;
+        $this->isMergeModalOpen = true;
+    }
+
+    public function updatedTargetContactId($value)
+    {
+        if ($value) {
+            $this->targetContact = Contact::find($value);
+        } else {
+            $this->targetContact = null;
+        }
+    }
+
+    public function merge()
+    {
+        $this->validate([
+            'targetContactId' => 'required|exists:contacts,id|different:sourceContactId',
+        ], [
+            'targetContactId.different' => 'Cannot merge a contact into itself.'
+        ]);
+
+        $this->isMerging = true;
+
+        try {
+            $service = new \App\Services\ContactMergeService();
+            $source = Contact::findOrFail($this->sourceContactId);
+            $target = Contact::findOrFail($this->targetContactId);
+
+            $service->merge($target, $source, Auth::id());
+
+            $this->isMergeModalOpen = false;
+            $this->resetMergeState();
+            session()->flash('message', "{$source->name} successfully merged into {$target->name}.");
+            
+            // Redirect or refresh
+            return redirect()->route('contacts.index');
+
+        } catch (\Exception $e) {
+            session()->flash('merge_error', "Error merging contacts: " . $e->getMessage());
+        } finally {
+            $this->isMerging = false;
+        }
+    }
+
+    public function resetMergeState()
+    {
+        $this->sourceContactId = null;
+        $this->targetContactId = null;
+        $this->sourceContact = null;
+        $this->targetContact = null;
+    }
+
     private function resetFieldInput()
     {
         $this->fieldId = null;
@@ -358,12 +424,11 @@ class ContactManager extends Component
     public function updatedImportFile()
     {
         $this->validate([
-            'importFile' => 'required|mimes:csv,txt|max:10240',
+            'importFile' => 'required|mimes:csv,txt,xlsx,xls,ods|max:10240',
         ]);
 
-        $csv = \League\Csv\Reader::createFromPath($this->importFile->getRealPath(), 'r');
-        $csv->setHeaderOffset(0);
-        $this->csvHeaders = $csv->getHeader();
+        $service = new \App\Services\ContactImportService(Auth::user()->currentTeam);
+        $this->csvHeaders = $service->getHeaders($this->importFile->getRealPath());
 
         // Auto-map common fields
         foreach ($this->csvHeaders as $header) {
@@ -375,7 +440,7 @@ class ContactManager extends Component
         }
     }
 
-    public function importContacts()
+    public function import()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
         $this->validate([
@@ -386,13 +451,20 @@ class ContactManager extends Component
         $importService = new \App\Services\ContactImportService(Auth::user()->currentTeam);
         $result = $importService->import($this->importFile->getRealPath(), $this->columnMapping);
 
-        $this->importResult = $result;
+        $this->importResult = [
+            'total' => $result['success_count'] + count($result['errors']),
+            'imported' => $result['success_count'],
+            'errors' => $result['errors']
+        ];
 
         if ($result['success_count'] > 0) {
-            audit('contact.imported', "Imported {$result['success_count']} contacts from CSV.", null, null, ['result' => $result]);
+            audit('contact.imported', "Imported {$result['success_count']} contacts from file.", null, null, ['result' => $result]);
             session()->flash('import_message', "Imported {$result['success_count']} contacts successfully.");
         }
     }
+    
+    // Alias for the old method name if any other component called it
+    public function importContacts() { $this->import(); }
 
     public function export()
     {

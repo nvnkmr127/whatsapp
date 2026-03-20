@@ -23,4 +23,9 @@ class AutomationRun extends Model
     {
         return $this->belongsTo(Contact::class);
     }
+
+    public function ledger()
+    {
+        return $this->hasMany(AutomationStepLedger::class);
+    }
 }

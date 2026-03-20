@@ -24,6 +24,12 @@ class CampaignCreator extends Component
     public $scheduled_send_time;
     public $send_now = false;
 
+    // A/B Testing & Throttling
+    public $is_ab_test = false;
+    public $template_b_id;
+    public $split_ratio = 50;
+    public $send_rate;
+
     // Dynamic Inputs
     public $headerInputs = [];
     public $bodyInputs = [];
@@ -126,9 +132,11 @@ class CampaignCreator extends Component
     public function save()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
-        $this->validate([
             'campaign_name' => 'required|min:3',
             'template_id' => 'required',
+            'template_b_id' => 'required_if:is_ab_test,true',
+            'split_ratio' => 'integer|min:1|max:99',
+            'send_rate' => 'nullable|integer|min:1',
             'scheduled_send_time' => 'required_unless:send_now,true',
             'relation_type_dynamic' => 'required_without:isChecked', // Require specific contacts if "All" is not checked check logic
         ]);
@@ -184,12 +192,19 @@ class CampaignCreator extends Component
                 }
             }
 
+            $templateB = $this->is_ab_test ? WhatsappTemplate::where('team_id', auth()->user()->current_team_id)->findOrFail($this->template_b_id) : null;
+
             // Create Campaign
             $campaign = Campaign::create([
                 'team_id' => auth()->user()->current_team_id,
                 'name' => $this->campaign_name,
                 'template_id' => $template->template_id,
                 'template_name' => $template->template_name,
+                'is_ab_test' => $this->is_ab_test,
+                'template_b_id' => $templateB?->template_id,
+                'template_b_name' => $templateB?->template_name,
+                'split_ratio' => $this->split_ratio,
+                'send_rate' => $this->send_rate,
                 'scheduled_send_time' => $this->send_now ? now() : Carbon::parse($this->scheduled_send_time),
                 'status' => 'preparing', // Wait for background job
                 'header_params' => json_encode($this->headerInputs),

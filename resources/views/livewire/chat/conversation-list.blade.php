@@ -9,23 +9,22 @@
                         d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
             </div>
-            <h1 class="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">Inbox <span
-                    class="text-wa-teal">Center</span></h1>
+            <h1 class="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">{{ __('Inbox') }}</h1>
         </div>
         <div class="flex items-center gap-3">
             <div class="hidden sm:flex flex-col items-end border-r border-slate-100 dark:border-slate-800 pr-3 mr-1">
-                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">Open</span>
+                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Active') }}</span>
                 <span class="text-xs font-black text-wa-teal leading-none">{{ $stats['active'] }}</span>
             </div>
             <div class="hidden sm:flex flex-col items-end border-r border-slate-100 dark:border-slate-800 pr-3 mr-1">
-                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">Resp</span>
+                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Response') }}</span>
                 <span
                     class="text-xs font-black text-slate-800 dark:text-white leading-none">{{ $stats['avg_response'] }}</span>
             </div>
             <div class="hidden sm:flex flex-col items-end">
-                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">Pending</span>
+                <span class="text-[8px] font-black uppercase text-slate-400 leading-none mb-0.5">{{ __('Pending') }}</span>
                 <span
-                    class="text-xs font-black {{ $stats['unassigned'] > 5 ? 'text-rose-500' : 'text-slate-800 dark:text-white' }} leading-none">{{ $stats['unassigned'] }}</span>
+                    class="text-xs font-black {{ $stats['unassigned'] > $pendingWarningLimit ? 'text-rose-500' : 'text-slate-800 dark:text-white' }} leading-none">{{ $stats['unassigned'] }}</span>
             </div>
         </div>
     </div>
@@ -34,7 +33,7 @@
     <div class="px-6 py-4 space-y-3" x-data="{ showFilters: false }">
         <div class="flex gap-2">
             <div class="relative group flex-1">
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search conversations..."
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Search...') }}"
                     class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400 transition-all shadow-sm">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
@@ -60,43 +59,41 @@
             <div class="grid grid-cols-1 gap-3">
                 <!-- Read Status -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Message Status</label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Read Status') }}</label>
                     <select wire:model.live="filterReadStatus"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
-                        <option value="all">All Messages</option>
-                        <option value="unread">Unread</option>
-                        <option value="read">Read</option>
+                        <option value="all">{{ __('All') }}</option>
+                        <option value="unread">{{ __('Unread') }}</option>
+                        <option value="read">{{ __('Read') }}</option>
                     </select>
                 </div>
 
                 <!-- Opt-In -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Subscription
-                        Status</label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Subscription Status') }}</label>
                     <select wire:model.live="filterOptIn"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
-                        <option value="all">Any Status</option>
-                        <option value="yes">Subscribed (Opt-In)</option>
-                        <option value="no">Unsubscribed</option>
+                        <option value="all">{{ __('Any') }}</option>
+                        <option value="yes">{{ __('Subscribed') }}</option>
+                        <option value="no">{{ __('Unsubscribed') }}</option>
                     </select>
                 </div>
 
                 <!-- Blocked -->
                 <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contact
-                        Privacy</label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Contact Status') }}</label>
                     <select wire:model.live="filterBlocked"
                         class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
-                        <option value="all">All Lines</option>
-                        <option value="no">Active Only</option>
-                        <option value="yes">Blocked/Terminated</option>
+                        <option value="all">{{ __('All') }}</option>
+                        <option value="no">{{ __('Active') }}</option>
+                        <option value="yes">{{ __('Blocked') }}</option>
                     </select>
                 </div>
             </div>
 
             <button wire:click="resetFilters"
                 class="w-full py-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors">
-                Clear All Filters
+                {{ __('Clear Filters') }}
             </button>
         </div>
     </div>
@@ -131,7 +128,7 @@
                 $initials = substr($conversation->contact->name ?? '?', 0, 1);
                 $isActive = $activeConversationId == $conversation->id;
                 $isSlaBreached = $conversation->sla_due_at && $conversation->sla_due_at->isPast() && $conversation->status !== 'closed';
-                $isSlaWarning = $conversation->sla_due_at && $conversation->sla_due_at->diffInMinutes(now()) < 60 && !$isSlaBreached && $conversation->status !== 'closed';
+                $isSlaWarning = $conversation->sla_due_at && $conversation->sla_due_at->diffInMinutes(now()) < $slaWarningMinutes && !$isSlaBreached && $conversation->status !== 'closed';
                 $tags = $conversation->metadata['tags'] ?? [];
             @endphp
             <div wire:click="selectConversation({{ $conversation->id }}); mobilePane = 'messages'"
@@ -166,11 +163,31 @@
                             class="text-xs font-black {{ $isActive ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400' }} truncate tracking-tight uppercase group-hover:text-wa-teal transition-colors">
                             {{ $conversation->contact->name ?? $conversation->contact->phone_number }}
                         </h3>
-                        <span class="text-[9px] font-mono font-bold text-slate-400">
-                            {{ $conversation->last_message_at ? $conversation->last_message_at->format('H:i') : '' }}
-                        </span>
+                        <div class="flex flex-col items-end">
+                            <span class="text-[9px] font-mono font-bold text-slate-400">
+                                {{ $this->formatTime($conversation->last_message_at) }}
+                            </span>
+                            @if($conversation->sla_due_at && $conversation->status !== 'closed')
+                                <div x-data="{ 
+                                    dueAt: '{{ $conversation->sla_due_at->toIso8601String() }}',
+                                    countdown: '',
+                                    update() {
+                                        let diff = new Date(this.dueAt) - new Date();
+                                        if (diff < 0) { this.countdown = 'BREACH'; return; }
+                                        let h = Math.floor(diff / 3600000);
+                                        let m = Math.floor((diff % 3600000) / 60000);
+                                        this.countdown = (h > 0 ? h + 'h ' : '') + m + 'm';
+                                    },
+                                    init() { this.update(); setInterval(() => this.update(), 60000); }
+                                }" class="mt-0.5">
+                                    <span :class="countdown === 'BREACH' ? 'text-rose-500' : 'text-amber-500'" 
+                                          class="text-[8px] font-black uppercase tracking-tighter" x-text="countdown"></span>
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                    {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? '[MEDIA PACKET]', 35) : 'Initialize link...' }}
+                    <p class="text-tiny font-bold text-slate-500 dark:text-slate-400 truncate pr-4 leading-relaxed group-hover:text-slate-600 transition-colors">
+                    {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? __('Photo/Video'), 35) : __('Loading...') }}
                     </p>
                     @if(!empty($tags))
                         <div class="flex flex-wrap gap-1 mt-1">
@@ -208,8 +225,14 @@
                             d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
                 </div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Signals Intercepted</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ __('No conversations found') }}</p>
             </div>
         @endforelse
+
+        @if(count($conversations) >= $perPage)
+            <div x-intersect="$wire.loadMore()" class="flex justify-center p-4">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-wa-teal"></div>
+            </div>
+        @endif
     </div>
 </div>

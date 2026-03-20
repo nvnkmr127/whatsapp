@@ -58,7 +58,7 @@ class CohortAnalysis extends Component
                 ->leftJoin('orders', function ($join) use ($teamId) {
                     $join->on('orders.contact_id', '=', 'contacts.id')
                          ->where('orders.team_id', '=', $teamId)
-                         ->whereIn('orders.status', ['paid', 'shipped', 'completed']);
+                         ->whereIn('orders.status', ['paid', 'shipped', 'completed', 'sent']);
                 })
                 ->where('contacts.team_id', $teamId)
                 ->whereRaw('contacts.created_at >= ?', [$since])
@@ -71,7 +71,6 @@ class CohortAnalysis extends Component
                 ->orderBy('cohort_month', 'desc')
                 ->get();
         } else {
-            // conversations: contacts who started a follow-up conversation after first contact
             $rows = DB::table('contacts')
                 ->leftJoin('conversations', function ($join) use ($teamId) {
                     $join->on('conversations.contact_id', '=', 'contacts.id')
@@ -101,9 +100,11 @@ class CohortAnalysis extends Component
             $c60   = (int) $row->conv_60;
             $c90   = (int) $row->conv_90;
 
+            $date = Carbon::createFromFormat('Y-m', $row->cohort_month);
+
             return [
                 'cohort_month' => $row->cohort_month,
-                'cohort_label' => Carbon::createFromFormat('Y-m', $row->cohort_month)->format('M Y'),
+                'cohort_label' => $date->translatedFormat('M Y'),
                 'cohort_size'  => $size,
                 'windows'      => [
                     30 => ['converted' => $c30, 'rate' => $rate($c30), 'intensity' => 0],
@@ -129,9 +130,6 @@ class CohortAnalysis extends Component
         return $cohorts;
     }
 
-    // -----------------------------------------------------------------------
-    // Summary KPIs + trend
-    // -----------------------------------------------------------------------
     protected function buildSummary(): void
     {
         if (empty($this->cohorts)) {
@@ -167,6 +165,7 @@ class CohortAnalysis extends Component
                 'last_rate'  => $last['windows'][30]['rate'],
                 'diff'       => $diff,
                 'direction'  => $diff >= 0 ? 'up' : 'down',
+                'label'      => $diff >= 0 ? __('Improving Trend') : __('Declining Trend')
             ];
         } else {
             $this->trend = [];

@@ -76,7 +76,33 @@ class CommerceReadinessService
             ];
         }
 
-        // 6. Catalog Health
+        // 6. Meta Integration (Catalog Linkage)
+        $metaIntegration = Integration::where('team_id', $team->id)
+            ->where('type', 'meta_commerce')
+            ->where('status', 'active')
+            ->first();
+
+        $catalogLinked = $metaIntegration && 
+                         !empty($metaIntegration->credentials['catalog_id']) && 
+                         !empty($metaIntegration->credentials['access_token']);
+
+        $checks['catalog_linkage'] = [
+            'label' => 'Meta Catalog Linkage',
+            'status' => $catalogLinked,
+            'level' => 'critical',
+            'message' => 'Your Meta Catalog is not linked or credentials (Access Token/Catalog ID) are missing.'
+        ];
+
+        // 7. Policy Agreement
+        $policyAccepted = !empty($config['commerce_policy_accepted']);
+        $checks['meta_policy'] = [
+            'label' => 'Meta Policy Agreement',
+            'status' => $policyAccepted,
+            'level' => 'critical',
+            'message' => 'You must agree to Meta Commerce Policies to sell via WhatsApp.'
+        ];
+
+        // 8. Catalog Health
         $productCount = Product::where('team_id', $team->id)->count();
         $checks['catalog'] = [
             'label' => 'Product Catalog',

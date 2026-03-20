@@ -145,6 +145,22 @@ class ProductManager extends Component
         }
     }
 
+    public function syncAll()
+    {
+        $integration = Integration::where('team_id', Auth::user()->currentTeam->id)
+            ->where('type', 'meta_commerce')
+            ->where('status', 'active')
+            ->first();
+
+        if (!$integration) {
+            session()->flash('error', 'No active Meta Commerce integration found.');
+            return;
+        }
+
+        \App\Jobs\SyncProductsToMetaJob::dispatch($integration->id);
+        session()->flash('success', 'Bulk sync started in the background.');
+    }
+
     public function delete($id)
     {
         Product::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id)->delete();

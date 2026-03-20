@@ -89,6 +89,7 @@ class DealManager extends Component
             }
 
             $stage->deals = $query->orderByDesc('created_at')->get();
+            $stage->total_value = $stage->deals->sum('value');
         }
 
         return view('livewire.deals.deal-manager', [

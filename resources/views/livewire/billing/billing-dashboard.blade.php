@@ -57,6 +57,18 @@
                                     {{ now()->diffInDays($trialEndsAt) }} Days
                                 </div>
                                 <p class="text-[10px] font-bold text-slate-400">Valid until {{ $trialEndsAt->format('F d, Y') }}</p>
+                                
+                                <div class="mt-4">
+                                    @if($this->hasPendingExtensionRequest)
+                                        <span class="px-4 py-2 bg-white/10 text-white text-[10px] font-black uppercase tracking-widest rounded-xl opacity-50 cursor-not-allowed">
+                                            Request Pending
+                                        </span>
+                                    @else
+                                        <button wire:click="openExtensionModal" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-500/20">
+                                            Request Extension
+                                        </button>
+                                    @endif
+                                </div>
                             @else
                                 <div class="text-3xl font-black text-white leading-none mb-1">
                                     --
@@ -116,13 +128,14 @@
                         </div>
                     </div>
 
-                    @if($team->subscription_ends_at)
+                    @if($this->upcomingBillingDate)
                         <div class="pt-6 border-t border-slate-700/50 flex items-center justify-between">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Renews on
-                                {{ \Carbon\Carbon::parse($team->subscription_ends_at)->format('M d, Y') }}
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                {{ $isTrial ? 'Trial Ends' : 'Renews On' }} 
+                                {{ \Carbon\Carbon::parse($this->upcomingBillingDate)->format('M d, Y') }}
                             </p>
                             <span
-                                class="px-3 py-1 bg-wa-teal/20 text-wa-teal text-[10px] font-black uppercase tracking-widest rounded-lg">Active</span>
+                                class="px-3 py-1 bg-wa-teal/20 text-wa-teal text-[10px] font-black uppercase tracking-widest rounded-lg">{{ $isTrial ? 'Trial' : 'Active' }}</span>
                         </div>
                     @endif
                 </div>
@@ -281,7 +294,11 @@
                                     </td>
                                      <td class="px-8 py-5 text-right font-black">{{ get_setting('currency_symbol', '$') }}{{ number_format($invoice->total_amount, 2) }}</td>
                                     <td class="px-8 py-5 text-center">
-                                        <button class="text-[10px] font-black uppercase text-wa-teal hover:underline tracking-widest">Download PDF</button>
+                                        <button wire:click="downloadInvoice({{ $invoice->id }})" wire:loading.attr="disabled" class="text-[10px] font-black uppercase text-wa-teal hover:underline tracking-widest flex items-center gap-2 mx-auto disabled:opacity-50">
+                                            <span wire:loading.remove wire:target="downloadInvoice({{ $invoice->id }})">Download PDF</span>
+                                            <span wire:loading wire:target="downloadInvoice({{ $invoice->id }})">Preparing...</span>
+                                            <svg wire:loading.remove wire:target="downloadInvoice({{ $invoice->id }})" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach
@@ -294,9 +311,27 @@
         {{-- Transaction History --}}
         <div
             class="bg-white dark:bg-slate-900 border border-slate-50 dark:border-slate-800 rounded-[2.5rem] shadow-xl overflow-hidden">
-            <div class="p-8 border-b border-slate-50 dark:border-slate-800">
+            <div class="p-8 border-b border-slate-50 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Transaction
                     History</h3>
+                
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <input type="text" wire:model.live="searchTransaction" placeholder="Search description..." 
+                            class="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/50 w-full md:w-64">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    
+                    <select wire:model.live="transactionType" class="py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold focus:ring-2 focus:ring-wa-teal/50">
+                        <option value="">All Types</option>
+                        <option value="deposit">Deposit</option>
+                        <option value="usage_charge">Usage Charge</option>
+                        <option value="refund">Refund</option>
+                        <option value="plan_fee">Plan Fee</option>
+                    </select>
+                </div>
             </div>
 
             @if($transactions->count() > 0)
@@ -501,6 +536,48 @@
                     </button>
                 </div>
             @endif
+        {{-- Trial Extension Request Modal --}}
+        <x-app-modal wire:model="showExtensionModal" maxWidth="md">
+            <div class="p-8 pb-0">
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Request <span class="text-indigo-500">Trial Extension</span></h3>
+                <p class="text-xs font-bold text-slate-500 mt-2">Need more time to evaluate our platform? Let us know!</p>
+            </div>
+
+            <form wire:submit.prevent="submitExtensionRequest">
+                <div class="p-8 space-y-6">
+                    <div>
+                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Extension Duration</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            @foreach([7, 14, 30] as $days)
+                                <button type="button" wire:click="$set('extensionDays', {{ $days }})"
+                                    class="py-3 border-2 transition-all rounded-2xl flex flex-col items-center justify-center {{ $extensionDays == $days ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-700 dark:text-indigo-300' : 'border-slate-50 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400' }}">
+                                    <span class="text-lg font-black">{{ $days }}</span>
+                                    <span class="text-[8px] font-black uppercase tracking-widest">Days</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block">Reason for Extension</label>
+                        <textarea wire:model="extensionReason" rows="4" 
+                            class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500/50 placeholder:text-slate-400"
+                            placeholder="Tell us what you're still testing or what's missing for your decision..."></textarea>
+                        @error('extensionReason') <span class="text-rose-500 text-[10px] font-bold uppercase mt-2 block">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+
+                <div class="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-50 dark:border-slate-800 flex gap-3">
+                    <button type="button" wire:click="closeExtensionModal"
+                        class="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 font-black uppercase tracking-widest text-xs rounded-2xl border border-slate-100 dark:border-slate-700">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-[2] py-4 bg-indigo-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        Submit Request
+                    </button>
+                </div>
+            </form>
         </x-app-modal>
     </div>
 </div>

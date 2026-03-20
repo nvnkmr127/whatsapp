@@ -170,9 +170,22 @@ class AiCommerceService
             // A. Send Text Response first
             $this->whatsappService->sendText($contact->phone_number, $aiJson['reply_text']);
 
-            // B. If products matched, send them as Interactive List or Carousel
+            // B. If products matched, initialize cart and provide link
             if (!empty($aiJson['matched']) && !empty($aiJson['product_ids'])) {
                 $this->sendProductCards($contact, $products, $aiJson['product_ids']);
+                
+                // Technical: Pre-fill cart for the user if they were specifically looking for these
+                // This makes the 'Checkout' button actually useful immediately.
+                $this->prefillCart($contact, $aiJson['product_ids']);
+                
+                // C. Send Checkout Link
+                $cart = app(CartService::class)->getOrCreateCart($contact, $team);
+                $checkoutUrl = route('commerce.checkout', ['uuid' => $cart->uuid]);
+                
+                $this->whatsappService->sendText(
+                    $contact->phone_number, 
+                    "🛒 *Checkout Link:* {$checkoutUrl}\n\nI've prepared a cart with these items for you. Click above to complete your order!"
+                );
             }
 
             return true;
@@ -216,5 +229,22 @@ class AiCommerceService
         }
 
         $this->whatsappService->sendText($contact->phone_number, "To buy, simply reply with the product name or 'Add <Name>'!");
+    }
+
+    protected function prefillCart(Contact $contact, array $productIds)
+    {
+        try {
+            $cartService = app(CartService::class);
+            $cart = $cartService->getOrCreateCart($contact, $contact->team);
+            
+            foreach ($productIds as $id) {
+                $product = Product::find($id);
+                if ($product && $product->team_id === $contact->team_id) {
+                    $cartService->addItem($cart, $product, 1);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("AiCommerceService: Prefill failed: " . $e->getMessage());
+        }
     }
 }

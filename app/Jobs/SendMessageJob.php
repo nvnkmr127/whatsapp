@@ -68,6 +68,17 @@ class SendMessageJob implements ShouldQueue
 
         $waService->setTeam($team);
 
+        if ($team->is_sandbox_mode) {
+             Log::info("SendMessageJob: Team {$team->id} in SANDBOX mode. Skipping real WhatsApp call for {$this->phone}");
+             if ($this->messageId) {
+                 Message::where('id', $this->messageId)->update([
+                     'status' => 'sent',
+                     'whatsapp_message_id' => 'sandbox_' . \Illuminate\Support\Str::random(10)
+                 ]);
+             }
+             return;
+        }
+
         // 1. Idempotency Check
         // If messageId exists, check if it already has a provider ID (meaning it was already sent)
         if ($this->messageId) {

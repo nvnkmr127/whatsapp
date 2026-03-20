@@ -14,6 +14,7 @@ class AIProviderManager
         'openai' => OpenAIProvider::class,
         'anthropic' => AnthropicProvider::class,
         'gemini' => GeminiProvider::class,
+        'deepseek' => \App\Services\AI\Providers\DeepSeekProvider::class,
     ];
 
     public static function getProvider(?Team $team = null, ?string $providerName = null): ?AIProviderInterface
@@ -44,9 +45,10 @@ class AIProviderManager
     public static function getAvailableProviders(): array
     {
         return [
-            'openai' => 'OpenAI (GPT-4, GPT-3.5)',
-            'anthropic' => 'Anthropic Claude',
-            'gemini' => 'Google Gemini',
+            'openai' => 'OpenAI (GPT-4o, o1)',
+            'anthropic' => 'Anthropic Claude 3.5',
+            'gemini' => 'Google Gemini 1.5/2.0',
+            'deepseek' => 'DeepSeek AI',
         ];
     }
 
@@ -76,22 +78,102 @@ class AIProviderManager
 
     public static function chat(Team $team, array $messages, array $options = []): array
     {
-        $provider = self::getProvider($team);
+        return self::executeWithFallback($team, 'chat', [$messages, $options]);
+    }
+
+    public static function embed(Team $team, string|array $text, array $options = []): array
+    {
+        return self::executeWithFallback($team, 'embed', [$text, $options]);
+    }
+
+    public static function summarize(Team $team, string $content, array $options = []): string
+    {
+        $result = self::executeWithFallback($team, 'summarize', [$content, $options]);
+        return is_string($result) ? $result : ($result['content'] ?? '');
+    }
+
+    public static function classify(Team $team, string $content, array $categories, array $options = []): string
+    {
+        $result = self::executeWithFallback($team, 'classify', [$content, $categories, $options]);
+        return is_string($result) ? $result : ($result['content'] ?? '');
+    }
+
+    protected static function executeWithFallback(Team $team, string $method, array $args): mixed
+    {
+        $teamId = $team->id;
+        $primaryProviderName = get_setting("ai_provider_{$teamId}", 'openai');
+        
+        try {
+            return self::execute($team, $primaryProviderName, $method, $args);
+        } catch (\Exception $e) {
+            $fallbackProviderName = get_setting("ai_fallback_provider_{$teamId}");
+            
+            if ($fallbackProviderName && $fallbackProviderName !== $primaryProviderName) {
+                Log::warning("AI Primary Provider ({$primaryProviderName}) failed. Falling back to {$fallbackProviderName}. Error: " . $e->getMessage());
+                try {
+                    return self::execute($team, $fallbackProviderName, $method, $args);
+                } catch (\Exception $fe) {
+                    Log::error("AI Fallback Provider ({$fallbackProviderName}) also failed: " . $fe->getMessage());
+                }
+            }
+            
+            throw $e;
+        }
+    }
+
+    protected static function execute(Team $team, string $providerName, string $method, array $args): mixed
+    {
+        $provider = self::getProvider($team, $providerName);
         
         if (!$provider) {
-            return [
-                'success' => false,
-                'error' => 'No AI provider configured for this team',
-            ];
+            throw new \Exception("AI provider {$providerName} not configured correctly.");
         }
 
-        $teamId = $team->id;
-        $model = $options['model'] ?? get_setting("ai_model_{$teamId}", null);
-        $temperature = $options['temperature'] ?? (float) get_setting("ai_temperature_{$teamId}", 0.7);
+        // Apply team-specific model if not provided in args
+        if ($method === 'chat' || $method === 'streamChat') {
+            $options = $args[1] ?? [];
+            if (!isset($options['model'])) {
+                $options['model'] = get_setting("ai_model_{$team->id}");
+            }
+            $args[1] = $options;
+        }
 
-        $options['model'] = $model;
-        $options['temperature'] = $temperature;
+        $result = $provider->$method(...$args);
+        
+        // Log usage if successful and returns usage data
+        if (is_array($result) && isset($result['usage'])) {
+            self::logUsage($team, $providerName, $result, $method);
+        }
 
-        return $provider->chat($messages, $options);
+        return $result;
+    }
+
+    protected static function logUsage(Team $team, string $provider, array $result, string $type): void
+    {
+        try {
+            $usage = $result['usage'] ?? [];
+            $model = $result['model'] ?? 'unknown';
+            
+            // Normalize tokens
+            $promptTokens = $usage['prompt_tokens'] ?? $usage['promptTokenCount'] ?? $usage['input_tokens'] ?? 0;
+            $completionTokens = $usage['completion_tokens'] ?? $usage['candidatesTokenCount'] ?? $usage['output_tokens'] ?? 0;
+            $totalTokens = $usage['total_tokens'] ?? $usage['totalTokenCount'] ?? ($promptTokens + $completionTokens);
+
+            \App\Models\AiUsageLog::create([
+                'team_id' => $team->id,
+                'provider' => $provider,
+                'model' => $model,
+                'type' => $type,
+                'prompt_tokens' => $promptTokens,
+                'completion_tokens' => $completionTokens,
+                'total_tokens' => $totalTokens,
+                'metadata' => [
+                    'options' => $result['options'] ?? [],
+                    'request_id' => $result['raw_response']['id'] ?? null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to log AI usage: " . $e->getMessage());
+        }
     }
 }

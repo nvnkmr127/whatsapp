@@ -7,9 +7,11 @@ use App\Models\ContactField;
 use App\Models\ContactTag;
 use App\Models\Team;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use League\Csv\Reader;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ContactImportService
 {
@@ -23,31 +25,76 @@ class ContactImportService
     }
 
     /**
-     * Import contacts from CSV file.
+     * Get headers from file (CSV or Excel).
+     */
+    public function getHeaders(string $filePath): array
+    {
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        if (in_array($extension, ['csv', 'txt'])) {
+            $csv = Reader::createFromPath($filePath, 'r');
+            $csv->setHeaderOffset(0);
+            return $csv->getHeader();
+        }
+
+        // Excel Support
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+            $worksheet = $spreadsheet->getActiveSheet();
+            $highestColumn = $worksheet->getHighestColumn();
+            $headers = $worksheet->rangeToArray('A1:' . $highestColumn . '1', NULL, TRUE, FALSE);
+            return $headers[0] ?? [];
+        } catch (\Exception $e) {
+            Log::error("Failed to load Excel headers: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Import contacts from file.
      * 
-     * @param string $filePath Path to CSV file
-     * @param array $columnMapping Mapping of CSV columns to contact fields
+     * @param string $filePath Path to file
+     * @param array $columnMapping Mapping of columns to contact fields
      * @param array $options Import options including consent information
      * @return array Results with success count and errors
      */
     public function import(string $filePath, array $columnMapping, array $options = [])
     {
-        // $columnMapping = ['csv_header' => 'contact_field_key']
-        // internal fields: name, phone_number, email, tags
-        // custom fields: keys from contact_fields table
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $records = [];
 
-        // GDPR Compliance: Require consent source for all imports
-        $requireConsent = $options['require_consent'] ?? true;
-        $consentSource = $options['consent_source'] ?? null;
-        $consentProof = $options['consent_proof_url'] ?? null;
-
-        if ($requireConsent && !$consentSource) {
-            throw new \Exception("Consent source is required for contact import. Please provide 'consent_source' in options.");
+        if (in_array($extension, ['csv', 'txt'])) {
+            $csv = Reader::createFromPath($filePath, 'r');
+            $csv->setHeaderOffset(0);
+            $records = $csv->getRecords();
+        } else {
+            // Excel Support
+            try {
+                $spreadsheet = IOFactory::load($filePath);
+                $worksheet = $spreadsheet->getActiveSheet();
+                $data = $worksheet->toArray(null, true, true, true);
+                
+                $headers = array_shift($data);
+                foreach ($data as $row) {
+                    $record = [];
+                    foreach ($headers as $colLetter => $header) {
+                        if ($header) {
+                            $record[$header] = $row[$colLetter] ?? null;
+                        }
+                    }
+                    if (!empty(array_filter($record))) {
+                        $records[] = $record;
+                    }
+                }
+            } catch (\Exception $e) {
+                return ['success_count' => 0, 'errors' => ["Excel load error: " . $e->getMessage()]];
+            }
         }
 
-        $csv = Reader::createFromPath($filePath, 'r');
-        $csv->setHeaderOffset(0);
-        $records = $csv->getRecords();
+        // GDPR Compliance
+        $requireConsent = $options['require_consent'] ?? true;
+        $consentSource = $options['consent_source'] ?? 'FILE_IMPORT';
+        $consentProof = $options['consent_proof_url'] ?? null;
 
         $successCount = 0;
         $errors = [];
@@ -61,7 +108,7 @@ class ContactImportService
                     continue;
                 }
 
-                // Add consent information if not already in CSV
+                // Add consent information
                 if ($requireConsent && empty($contactData['opt_in_status'])) {
                     $contactData['opt_in_status'] = 'opted_in';
                     $contactData['opt_in_source'] = $consentSource;
@@ -70,14 +117,14 @@ class ContactImportService
 
                 $contact = $this->processContact($contactData);
 
-                // Log consent for audit trail
+                // Log consent
                 if ($contact->opt_in_status === 'opted_in') {
                     \App\Models\ConsentLog::create([
                         'team_id' => $this->team->id,
                         'contact_id' => $contact->id,
                         'action' => 'OPT_IN',
                         'source' => $consentSource,
-                        'notes' => "Imported from CSV: " . basename($filePath),
+                        'notes' => "Imported from " . strtoupper($extension) . ": " . basename($filePath),
                         'proof_url' => $consentProof,
                     ]);
                 }
@@ -108,12 +155,10 @@ class ContactImportService
                 continue;
 
             if ($targetField === 'tags') {
-                // Assume tags are comma separated
                 $data['tags'] = array_map('trim', explode(',', $value));
             } elseif (in_array($targetField, ['name', 'phone_number', 'email', 'language'])) {
                 $data[$targetField] = $value;
             } else {
-                // Custom Attribute
                 $data['custom_attributes'][$targetField] = $value;
             }
         }
@@ -123,14 +168,11 @@ class ContactImportService
 
     protected function processContact(array $data)
     {
-        // Extract tags and custom attributes
         $tags = $data['tags'] ?? [];
         unset($data['tags']);
 
-        // Create or Update Contact
         $contact = $this->contactService->createOrUpdate($data);
 
-        // Sync Tags
         if (!empty($tags)) {
             $this->contactService->addTags($contact, $tags);
         }

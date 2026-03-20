@@ -58,4 +58,37 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Options</label>
         {{-- [Simplified for brevity in this sub-comp creation; usually would have the full loop] --}}
     </div>
+
+    {{-- A/B Split Node --}}
+    <div class="space-y-6" x-show="selectedNode.type === 'ab_split'">
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+            <div class="flex items-center justify-between mb-4">
+                <label class="block text-xs font-black uppercase text-slate-400 tracking-widest">Traffic Split</label>
+                <div class="px-3 py-1 bg-wa-teal/10 text-wa-teal rounded-lg text-xs font-black" x-text="$wire.nodeRatio + '% / ' + (100 - $wire.nodeRatio) + '%'">50% / 50%</div>
+            </div>
+
+            <input type="range" wire:model.live="nodeRatio" min="1" max="99" step="1"
+                class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-wa-teal mb-4">
+            
+            <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                <div class="flex flex-col items-start gap-1">
+                    <span class="text-slate-900 dark:text-white">Path A</span>
+                    <span x-text="$wire.nodeRatio + '%'"></span>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-slate-900 dark:text-white">Path B</span>
+                    <span x-text="(100 - $wire.nodeRatio) + '%'"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+            <div class="flex gap-3">
+                <svg class="w-4 h-4 text-blue-500 mt-0.5 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p class="text-[11px] font-medium text-blue-700 dark:text-blue-300 leading-relaxed">
+                    Split testing allows you to compare two different message variations. Path A will take the percentage set above, while Path B receives the remainder.
+                </p>
+            </div>
+        </div>
+    </div>
 </div>

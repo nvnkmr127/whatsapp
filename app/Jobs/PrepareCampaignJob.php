@@ -55,23 +55,34 @@ class PrepareCampaignJob implements ShouldQueue
             $query = Contact::where('team_id', $campaign->team_id);
 
             // Filter logic
-            if (($this->criteria['selection_type'] ?? 'ids') === 'ids') {
-                if (!empty($this->criteria['ids'])) {
-                    $query->whereIn('id', $this->criteria['ids']);
-                }
+            if ($this->criteria['selection_type'] === 'tags' && !empty($this->criteria['tags'])) {
+                $query->whereHas('tags', function ($q) {
+                    $q->whereIn('contact_tags.id', $this->criteria['tags']);
+                });
+            } elseif (in_array($this->criteria['selection_type'], ['contacts', 'ids']) && !empty($this->criteria['ids'] ?? $this->criteria['contacts'] ?? [])) {
+                $ids = $this->criteria['ids'] ?? $this->criteria['contacts'] ?? [];
+                $query->whereIn('id', $ids);
             }
 
             // Chunking for performance
             $query->chunk(500, function ($contacts) use ($campaign) {
                 $details = [];
                 $timestamp = now();
+                $isAB = $campaign->is_ab_test;
+                $ratio = $campaign->split_ratio ?? 50;
+                
                 foreach ($contacts as $contact) {
+                    $variant = 'A';
+                    if ($isAB) {
+                        $variant = (rand(1, 100) <= $ratio) ? 'A' : 'B';
+                    }
+                    
                     $details[] = [
                         'campaign_id' => $campaign->id,
-                        'rel_id' => $contact->id,
-                        'rel_type' => 'contact',
-                        'phone' => $contact->phone,
+                        'contact_id' => $contact->id,
+                        'phone' => $contact->phone_number,
                         'status' => 'pending',
+                        'variant' => $variant,
                         'created_at' => $timestamp,
                         'updated_at' => $timestamp,
                     ];
@@ -81,10 +92,19 @@ class PrepareCampaignJob implements ShouldQueue
 
             // Update Counts
             $count = CampaignDetail::where('campaign_id', $campaign->id)->count();
+            $status = ($campaign->campaign_type === 'drip') ? 'processing' : 'scheduled';
+            
             $campaign->update([
                 'total_contacts' => $count,
-                'status' => 'scheduled' // Ready for scheduler
+                'status' => $status
             ]);
+
+            if ($campaign->campaign_type === 'drip') {
+                $details = CampaignDetail::where('campaign_id', $campaign->id)->get();
+                foreach ($details as $detail) {
+                    \App\Jobs\ProcessDripStepJob::dispatch($campaign->id, $detail->contact_id, 0); // Start Step 0
+                }
+            }
 
             Log::info("Campaign {$campaign->id} prepared with {$count} contacts.");
 

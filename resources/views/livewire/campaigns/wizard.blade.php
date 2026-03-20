@@ -54,6 +54,36 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     <div class="space-y-6">
                         <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Campaign Type</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button wire:click="$set('campaignType', 'broadcast')" 
+                                    class="p-6 rounded-3xl border-2 transition-all {{ $campaignType === 'broadcast' ? 'border-wa-teal bg-wa-teal/5 ring-4 ring-wa-teal/10' : 'border-slate-100 dark:border-slate-800' }}">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-wa-teal flex items-center justify-center text-white">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                                        </div>
+                                        <div class="text-left">
+                                            <p class="font-black text-slate-900 dark:text-white text-sm uppercase">Broadcast</p>
+                                            <p class="text-[10px] text-slate-500 font-medium">One-time blast</p>
+                                        </div>
+                                    </div>
+                                </button>
+                                <button wire:click="$set('campaignType', 'drip')" 
+                                    class="p-6 rounded-3xl border-2 transition-all {{ $campaignType === 'drip' ? 'border-orange-500 bg-orange-500/5 ring-4 ring-orange-500/10' : 'border-slate-100 dark:border-slate-800' }}">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        </div>
+                                        <div class="text-left">
+                                            <p class="font-black text-slate-900 dark:text-white text-sm uppercase">Drip</p>
+                                            <p class="text-[10px] text-slate-500 font-medium">Timed sequence</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Campaign
                                 Name</label>
                             <input type="text" wire:model="name"
@@ -276,11 +306,56 @@
                     <p class="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Select a template and fill in the details.</p>
                 </div>
 
+                @if($campaignType === 'drip')
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] p-6 border border-slate-100 dark:border-slate-800 mb-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Drip Sequence Steps</h4>
+                            <button wire:click="addDripStep" class="px-4 py-2 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all">
+                                + Add Step
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-4">
+                            <button wire:click="$set('currentDripStep', 0)" class="relative p-4 rounded-2xl border-2 transition-all {{ $currentDripStep === 0 ? 'border-wa-teal bg-white' : 'border-dashed border-slate-200' }}">
+                                <span class="text-[10px] font-black uppercase text-slate-400 block mb-1">Initial Step</span>
+                                <span class="text-xs font-bold text-slate-900">{{ $selectedTemplateId ? 'Template Selected' : 'No Template' }}</span>
+                                @if($currentDripStep === 0)
+                                    <div class="absolute -top-2 -right-2 w-5 h-5 bg-wa-teal rounded-full flex items-center justify-center text-white">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    </div>
+                                @endif
+                            </button>
+                            @foreach($dripSteps as $index => $s)
+                                <div class="flex items-center gap-2 animate-in slide-in-from-left-2">
+                                    <div class="w-8 h-px bg-slate-200"></div>
+                                    <button wire:click="selectDripStep({{ $index }})" class="relative p-4 rounded-2xl border-2 transition-all {{ $currentDripStep === $index ? 'border-orange-500 bg-white' : 'border-slate-100' }}">
+                                        <div class="flex items-center justify-between gap-4 mb-1">
+                                            <span class="text-[10px] font-black uppercase text-slate-400">Step {{ $index + 2 }}</span>
+                                            <svg wire:click.stop="removeDripStep({{ $index }})" class="w-3 h-3 text-slate-300 hover:text-red-500 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            <span class="text-[10px] font-bold text-slate-600 tracking-tight">{{ $s['delay_minutes'] }} min delay</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
                     {{-- Form Side --}}
                     <div class="space-y-8">
+                        @if($campaignType === 'drip' && $currentDripStep > 0)
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Delay from Previous Step (Minutes)</label>
+                                <input type="number" wire:model.live="dripSteps.{{ $currentDripStep - 1 }}.delay_minutes" 
+                                    class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 transition-all">
+                            </div>
+                        @endif
+
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Select Template</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 block">Select Template {{ $campaignType === 'drip' ? '(Step '.($currentDripStep+1).')' : '' }}</label>
                             <select wire:model.live="selectedTemplateId" 
                                 class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 transition-all cursor-pointer">
                                 <option value="">-- Choose a Template --</option>

@@ -64,6 +64,61 @@
         </div>
     @endif
 
+    <!-- Safeguard Status & Thresholds [NEW] -->
+    @if(isset($safeguardStatus))
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden relative group">
+                <div class="absolute -top-10 -right-10 w-24 h-24 bg-wa-blue opacity-5 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="relative">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Minutely Rate</h4>
+                        <span class="text-[10px] font-black {{ $safeguardStatus['rate_min']['percentage'] > 80 ? 'text-rose-500' : 'text-wa-blue' }} tabular-nums">
+                            {{ $safeguardStatus['rate_min']['used'] }}/{{ $safeguardStatus['rate_min']['limit'] }}
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full {{ $safeguardStatus['rate_min']['percentage'] > 80 ? 'bg-rose-500' : 'bg-wa-blue' }} transition-all duration-500" style="width: {{ $safeguardStatus['rate_min']['percentage'] }}%"></div>
+                    </div>
+                    <p class="mt-3 text-[9px] font-medium text-slate-500 uppercase tracking-widest">Calls within current minute window.</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden relative group">
+                <div class="absolute -top-10 -right-10 w-24 h-24 bg-purple-500 opacity-5 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="relative">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Hourly Throughput</h4>
+                        <span class="text-[10px] font-black {{ $safeguardStatus['rate_hour']['percentage'] > 80 ? 'text-rose-500' : 'text-purple-500' }} tabular-nums">
+                            {{ $safeguardStatus['rate_hour']['used'] }}/{{ $safeguardStatus['rate_hour']['limit'] }}
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full {{ $safeguardStatus['rate_hour']['percentage'] > 80 ? 'bg-rose-500' : 'bg-purple-500' }} transition-all duration-500" style="width: {{ $safeguardStatus['rate_hour']['percentage'] }}%"></div>
+                    </div>
+                    <p class="mt-3 text-[9px] font-medium text-slate-500 uppercase tracking-widest">Cumulative hourly orchestration.</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-{{ $safeguardStatus['is_suspended'] ? 'rose-500/20' : 'slate-100 dark:border-slate-800' }} shadow-xl overflow-hidden relative group">
+                <div class="absolute -top-10 -right-10 w-24 h-24 bg-rose-500 opacity-5 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                <div class="relative">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Survival Threshold</h4>
+                        <span class="text-[10px] font-black text-rose-500 tabular-nums">
+                            {{ $safeguardStatus['missed_calls']['count'] }}/{{ $safeguardStatus['missed_calls']['threshold'] }}
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full bg-rose-500 transition-all duration-500" style="width: {{ $safeguardStatus['missed_calls']['percentage'] }}%"></div>
+                    </div>
+                    <p class="mt-3 text-[9px] font-medium {{ $safeguardStatus['is_suspended'] ? 'text-rose-500' : 'text-slate-500' }} uppercase tracking-widest font-black">
+                        {{ $safeguardStatus['is_suspended'] ? 'SUSPENDED UNTIL ' . ($safeguardStatus['suspended_until'] ? $safeguardStatus['suspended_until']->format('H:i') : 'N/A') : 'Missed calls in last ' . $safeguardStatus['missed_calls']['window_minutes'] . 'm.' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Efficiency Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         @foreach([
@@ -206,6 +261,14 @@
                                     <div class="text-[10px] font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                                         {{ $call->formatted_duration }}
                                     </div>
+                                    @if($call->qualityMetric && $call->qualityMetric->network_quality_score)
+                                        <div class="flex items-center gap-1 mt-1">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <div class="w-1 h-3 rounded-full {{ $i <= $call->qualityMetric->network_quality_score ? ($call->qualityMetric->network_quality_score <= 2 ? 'bg-rose-500' : 'bg-wa-teal') : 'bg-slate-200 dark:bg-slate-800' }}"></div>
+                                            @endfor
+                                            <span class="text-[8px] font-black text-slate-400 ml-1 uppercase">MOS: {{ $call->qualityMetric->network_quality_score }}.0</span>
+                                        </div>
+                                    @endif
                                 </div>
                             </td>
                             <td class="px-8 py-6">
@@ -219,9 +282,19 @@
                             <td class="px-8 py-6 text-right">
                                 <div class="flex flex-col items-end gap-2 text-right">
                                     <div class="text-sm font-black text-wa-blue tracking-tighter">{{ $call->cost_formatted }}</div>
-                                    <button class="px-4 py-2 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-wa-teal hover:text-slate-900 transition-all shadow-lg">
-                                        Inspect Signal
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        @if($call->metadata['recording_url'] ?? false)
+                                            <button @click="$dispatch('play-recording', { url: '{{ $call->metadata['recording_url'] }}' })"
+                                                class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-wa-teal hover:text-slate-900 transition-all shadow-sm group/play">
+                                                <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        @endif
+                                        <button class="px-4 py-2 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-wa-teal hover:text-slate-900 transition-all shadow-lg">
+                                            Inspect Signal
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>

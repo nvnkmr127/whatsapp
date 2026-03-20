@@ -57,6 +57,7 @@ class CommerceSettings extends Component
     // Audit & Safety State
     public $has_orders = false;
     public $ai_assistant_enabled = false;
+    public $commerce_policy_accepted = false;
     public $show_confirmation = false;
     public $pending_action = null; // 'save_with_risk'
     public $risk_messages = [];
@@ -78,6 +79,7 @@ class CommerceSettings extends Component
         $this->cart_merge_strategy = $config['cart_merge_strategy'] ?? 'merge';
 
         $this->ai_assistant_enabled = $config['ai_assistant_enabled'] ?? false;
+        $this->commerce_policy_accepted = $config['commerce_policy_accepted'] ?? false;
 
         if (isset($config['templates'])) {
             $this->notifications = array_merge($this->notifications, $config['templates']);
@@ -223,6 +225,7 @@ class CommerceSettings extends Component
             'agent_notifications' => $this->agent_notifications,
             'lifecycle_notifications' => $this->lifecycle_notifications,
             'ai_assistant_enabled' => $this->ai_assistant_enabled,
+            'commerce_policy_accepted' => $this->commerce_policy_accepted,
             'templates' => $this->notifications
         ];
 

@@ -23,9 +23,9 @@ class CallSafeguardService
         }
 
         // 2. Check Rate Limits (Minutely)
-        $minLimit = $this->getConfig($team, 'rate_limit_minute', 5);
+        $minLimit = (int) $this->getConfig($team, 'rate_limit_minute', 5);
         $minKey = "call_rate_min_{$team->id}_" . now()->format('YmdHi');
-        $minCount = Cache::get($minKey, 0);
+        $minCount = (int) Cache::get($minKey, 0);
 
         if ($minCount >= $minLimit) {
             return [
@@ -36,9 +36,9 @@ class CallSafeguardService
         }
 
         // 3. Check Rate Limits (Hourly)
-        $hourLimit = $this->getConfig($team, 'rate_limit_hour', 60);
+        $hourLimit = (int) $this->getConfig($team, 'rate_limit_hour', 60);
         $hourKey = "call_rate_hour_{$team->id}_" . now()->format('YmdH');
-        $hourCount = Cache::get($hourKey, 0);
+        $hourCount = (int) Cache::get($hourKey, 0);
 
         if ($hourCount >= $hourLimit) {
             return [
@@ -49,6 +49,48 @@ class CallSafeguardService
         }
 
         return ['allowed' => true];
+    }
+
+    /**
+     * Get current safeguard status/usage for UI.
+     */
+    public function getStatus(Team $team): array
+    {
+        $minLimit = (int) $this->getConfig($team, 'rate_limit_minute', 5);
+        $minKey = "call_rate_min_{$team->id}_" . now()->format('YmdHi');
+        $minCount = (int) Cache::get($minKey, 0);
+
+        $hourLimit = (int) $this->getConfig($team, 'rate_limit_hour', 60);
+        $hourKey = "call_rate_hour_{$team->id}_" . now()->format('YmdH');
+        $hourCount = (int) Cache::get($hourKey, 0);
+
+        $missedWindow = (int) $this->getConfig($team, 'missed_call_window', 30);
+        $missedThreshold = (int) $this->getConfig($team, 'missed_call_threshold', 5);
+        $missedKey = "missed_calls_{$team->id}";
+        $missedEvents = Cache::get($missedKey, []);
+        $cutoff = now()->subMinutes($missedWindow)->timestamp;
+        $activeMissedEvents = array_filter($missedEvents, fn($t) => $t > $cutoff);
+
+        return [
+            'rate_min' => [
+                'used' => $minCount,
+                'limit' => $minLimit,
+                'percentage' => round(($minCount / max(1, $minLimit)) * 100, 1),
+            ],
+            'rate_hour' => [
+                'used' => $hourCount,
+                'limit' => $hourLimit,
+                'percentage' => round(($hourCount / max(1, $hourLimit)) * 100, 1),
+            ],
+            'missed_calls' => [
+                'count' => count($activeMissedEvents),
+                'threshold' => $missedThreshold,
+                'window_minutes' => $missedWindow,
+                'percentage' => round((count($activeMissedEvents) / max(1, $missedThreshold)) * 100, 1),
+            ],
+            'is_suspended' => $team->calling_suspended_until && $team->calling_suspended_until->isFuture(),
+            'suspended_until' => $team->calling_suspended_until,
+        ];
     }
 
     /**

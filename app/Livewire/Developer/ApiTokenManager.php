@@ -10,12 +10,16 @@ class ApiTokenManager extends Component
 {
     public $name = '';
     public $permissions = [];
+    public $ipWhitelist = '';
+    public $expiresAt = null;
     public $showTokenModal = false;
     public $plainTextToken = null;
 
     protected $rules = [
         'name' => 'required|string|max:255',
         'permissions' => 'array',
+        'ipWhitelist' => 'nullable|string',
+        'expiresAt' => 'nullable|date|after:today',
     ];
 
     public function mount()
@@ -27,12 +31,22 @@ class ApiTokenManager extends Component
     {
         $this->validate();
 
-        $token = auth()->user()->createToken($this->name, $this->permissions);
+        $expiry = $this->expiresAt ? \Carbon\Carbon::parse($this->expiresAt) : null;
+        $token = auth()->user()->createToken($this->name, $this->permissions, $expiry);
+
+        // Update the extra metadata (IP Whitelist)
+        $token->accessToken->update([
+            'ip_whitelist' => $this->ipWhitelist ? json_encode(array_map('trim', explode(',', $this->ipWhitelist))) : null,
+        ]);
 
         $this->plainTextToken = $token->plainTextToken;
         $this->showTokenModal = true;
+        
+        // Reset form
         $this->name = '';
         $this->permissions = Jetstream::$defaultPermissions;
+        $this->ipWhitelist = '';
+        $this->expiresAt = null;
 
         $this->dispatch('notify', 'API Token created successfully.');
     }

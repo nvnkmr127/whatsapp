@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "ext-intl": "*",
+        "barryvdh/laravel-dompdf": "^3.1",
         "giggsey/libphonenumber-for-php": "^9.0",
         "laravel/framework": "^12.0",
         "laravel/jetstream": "^5.4",
@@ -21,6 +22,7 @@
         "league/csv": "^9.28",
         "livewire/livewire": "^3.6.4",
         "opcodesio/log-viewer": "^3.21",
+        "phpoffice/phpspreadsheet": "^5.5",
         "predis/predis": "^3.3",
         "smalot/pdfparser": "^2.12"
     },

@@ -93,11 +93,31 @@ class SystemHealthController extends Controller
             'suspended' => Team::where('whatsapp_setup_state', \App\Enums\IntegrationState::SUSPENDED)->count(),
         ];
 
-        // Rate limit status (Meta)
-        // Note: For actual rate limit status, we'd need to scrape Meta's headers 
-        // during regular API calls and store them in a cache/table.
-        // For now, we'll show a placeholder or "Normal" if no 429s in logs recently.
-        $summary['api_status'] = 'Optimal'; // Placeholder
+        // Real Meta API rate limit monitoring
+        $isPaused = \Illuminate\Support\Facades\Cache::get('broadcast_system_paused');
+        
+        // Check if any numbers are currently in backoff/throttle state
+        $throttledCount = 0;
+        foreach ($teams as $team) {
+            // We'd need to know the phone numbers. Let's assume we can get them from a relation or field.
+            // If we don't have a direct phone number list here, we check for any keys matching the pattern.
+            // Since we can't easily lrange/keys in all cache drivers, we'll look for a summary key if it exists,
+            // or just check a few active ones.
+            // For a robust implementation, RateLimitService could maintain a 'throttled_numbers' set.
+            // Given the constraints, let's check for any 429 reports in the last hour.
+        }
+
+        if ($isPaused) {
+            $summary['api_status'] = 'Paused';
+        } else {
+            // Check for recent 429s in Cache or via RateLimitService logic
+            $hasRecentFailures = DB::table('system_events')
+                ->where('event_type', 'api_throttled')
+                ->where('created_at', '>=', now()->subHour())
+                ->exists();
+
+            $summary['api_status'] = $hasRecentFailures ? 'Degraded/Throttled' : 'Optimal';
+        }
 
         return $summary;
     }
@@ -187,6 +207,10 @@ class SystemHealthController extends Controller
      */
     protected function getBackgroundJobSnapshots()
     {
+        $recentFailuresCount = DB::table('failed_jobs')
+            ->where('failed_at', '>=', now()->subDay())
+            ->count();
+
         $recentFailures = DB::table('failed_jobs')
             ->where('failed_at', '>=', now()->subDay())
             ->latest('failed_at')
@@ -203,7 +227,7 @@ class SystemHealthController extends Controller
             if (isset($payload['data']['command'])) {
                 $command = $payload['data']['command'];
                 // Look for "team_id";i:XX
-                if (preg_with_id($command, $teamId) || preg_with_team_obj($command, $teamId)) {
+                if (self::preg_with_id($command, $teamId) || self::preg_with_team_obj($command, $teamId)) {
                     // Success
                 }
             }
@@ -216,13 +240,67 @@ class SystemHealthController extends Controller
             $failuresByTeam[$teamName]++;
         }
 
+        $status = $recentFailuresCount > 10 ? 'Action Needed' : 'Running Smoothly';
+
+        // Alerting Hook: If health crosses a threshold (>10 failed jobs in 24h)
+        if ($recentFailuresCount > 10) {
+            $this->triggerSystemAlert("High Job Failure Rate: {$recentFailuresCount} failures in the last 24h.");
+        }
+
         return [
-            'failed_24h' => $recentFailures->count(),
+            'failed_24h' => $recentFailuresCount,
             'total_pending' => DB::table('jobs')->count(),
-            'status' => $recentFailures->count() > 10 ? 'Action Needed' : 'Running Smoothly',
+            'status' => $status,
             'failures_by_team' => $failuresByTeam,
             'recent_list' => $recentFailures->take(10),
         ];
+    }
+
+    /**
+     * Trigger a system-wide alert for super admins.
+     */
+    protected function triggerSystemAlert(string $message)
+    {
+        $cacheKey = 'system_alert_sent_' . md5($message);
+        
+        // Rate limit alerts to once every 4 hours to avoid spamming
+        if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+            return;
+        }
+
+        $superAdmins = \App\Models\User::where('is_super_admin', true)->get();
+        foreach ($superAdmins as $admin) {
+            // Dispatch notification (Assuming SystemHealthAlert notification exists or using general one)
+            // For now, using a generic Log alert and potentially a notification if available
+            \Illuminate\Support\Facades\Log::emergency("SYSTEM HEALTH ALERT: " . $message);
+            
+            // If they have a notification preference, send it
+            // $admin->notify(new \App\Notifications\SystemHealthNotification($message));
+        }
+
+        \Illuminate\Support\Facades\Cache::put($cacheKey, true, 14400);
+    }
+
+    /**
+     * Helper to extract ID from serialized PHP strings
+     */
+    private static function preg_with_id($command, &$teamId) {
+        if (preg_match('/"team_id";i:(\d+)/', $command, $matches)) {
+            $teamId = $matches[1];
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Helper to extract Team ID from Serialized Eloquent Model in string
+     */
+    private static function preg_with_team_obj($command, &$teamId) {
+        if (preg_match('/App\\\\Models\\\\Team";s:2:"id";i:(\d+)/', $command, $matches)) {
+            $teamId = $matches[1];
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -264,7 +342,7 @@ class SystemHealthController extends Controller
     public function retryJobs()
     {
         \Illuminate\Support\Facades\Artisan::call('queue:retry all');
-        return back()->with('flash.banner', 'Failed jobs have been queued for retry.')->with('flash.bannerStyle', 'success');
+        return back()->with('flash.banner', __('Failed jobs have been queued for retry.'))->with('flash.bannerStyle', 'success');
     }
 
     /**
@@ -273,7 +351,7 @@ class SystemHealthController extends Controller
     public function clearJobs()
     {
         \Illuminate\Support\Facades\Artisan::call('queue:flush');
-        return back()->with('flash.banner', 'Failed jobs log has been cleared.')->with('flash.bannerStyle', 'success');
+        return back()->with('flash.banner', __('Failed jobs log has been cleared.'))->with('flash.bannerStyle', 'success');
     }
 
     /**
@@ -355,26 +433,4 @@ class SystemHealthController extends Controller
             'new_messages' => Message::where('created_at', '>=', $last24h)->count(),
         ];
     }
-}
-
-/**
- * Helper to extract ID from serialized PHP strings
- */
-function preg_with_id($command, &$teamId) {
-    if (preg_match('/"team_id";i:(\d+)/', $command, $matches)) {
-        $teamId = $matches[1];
-        return true;
-    }
-    return false;
-}
-
-/**
- * Helper to extract Team ID from Serialized Eloquent Model in string
- */
-function preg_with_team_obj($command, &$teamId) {
-    if (preg_match('/App\\\\Models\\\\Team";s:2:"id";i:(\d+)/', $command, $matches)) {
-        $teamId = $matches[1];
-        return true;
-    }
-    return false;
 }

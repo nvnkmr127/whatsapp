@@ -176,6 +176,13 @@ class AutomationValidationService
                     $this->addIssue($results, 'error', 'No agents are configured to receive tickets. Handover will fail.', $node['id']);
                 }
                 break;
+
+            case 'ab_split':
+                $outgoingCount = collect($automation->flow_data['edges'] ?? [])->where('source', $node['id'])->count();
+                if ($outgoingCount < 2) {
+                    $this->addIssue($results, 'error', 'A/B Split needs at least 2 outgoing paths (Path A and Path B).', $node['id']);
+                }
+                break;
         }
     }
 

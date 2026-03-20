@@ -66,6 +66,56 @@ class GeminiProvider implements AIProviderInterface
         }
     }
 
+    public function streamChat(array $messages, array $options = []): iterable
+    {
+        $result = $this->chat($messages, $options);
+        yield $result['content'] ?? '';
+    }
+
+    public function embed(string|array $text, array $options = []): array
+    {
+        try {
+            $model = $options['model'] ?? 'text-embedding-004';
+            $response = Http::timeout(20)
+                ->post("{$this->baseUrl}/models/{$model}:embedContent?key={$this->apiKey}", [
+                    'model' => "models/{$model}",
+                    'content' => [
+                        'parts' => [['text' => is_array($text) ? implode("\n", $text) : $text]]
+                    ]
+                ]);
+
+            if ($response->failed()) {
+                return [];
+            }
+
+            return $response->json('embedding.values') ?? [];
+        } catch (\Exception $e) {
+            Log::error("Gemini Embed Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function summarize(string $content, array $options = []): string
+    {
+        $messages = [
+            ['role' => 'user', 'content' => "Summarize this: {$content}"]
+        ];
+
+        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
+        return $response['content'] ?? '';
+    }
+
+    public function classify(string $content, array $categories, array $options = []): string
+    {
+        $categoriesStr = implode(', ', $categories);
+        $messages = [
+            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"]
+        ];
+
+        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
+        return trim($response['content'] ?? '');
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {
@@ -86,9 +136,10 @@ class GeminiProvider implements AIProviderInterface
     public function getAvailableModels(): array
     {
         return [
-            'gemini-1.5-pro' => 'Gemini 1.5 Pro (Smartest)',
-            'gemini-1.5-flash' => 'Gemini 1.5 Flash (Fastest)',
-            'gemini-1.0-pro' => 'Gemini 1.0 Pro (Previous Gen)',
+            'gemini-3.1-pro' => 'Gemini 3.1 Pro (Ultimate Reasoning)',
+            'gemini-3.1-flash' => 'Gemini 3.1 Flash (Fast & Capable)',
+            'gemini-3.1-flash-lite' => 'Gemini 3.1 Flash-Lite (Scalable)',
+            'gemini-1.5-pro' => 'Gemini 1.5 Pro (Legacy)',
         ];
     }
 

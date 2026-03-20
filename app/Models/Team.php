@@ -85,6 +85,8 @@ class Team extends JetstreamTeam
         'offer_excluded',
         'offer_converted_churned',
         'offer_snapshot', // Added
+        'read_receipts_enabled',
+        'is_sandbox_mode',
     ];
 
     /**
@@ -146,6 +148,7 @@ class Team extends JetstreamTeam
             'calling_safeguards' => 'array',
             'calling_suspended_until' => 'datetime',
             'whatsapp_settings' => 'array',
+            'is_sandbox_mode' => 'boolean',
             'last_webhook_received_at' => 'datetime',
         ];
     }

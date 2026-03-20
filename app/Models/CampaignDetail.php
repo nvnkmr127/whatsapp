@@ -8,6 +8,11 @@ class CampaignDetail extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'next_step_at' => 'datetime',
+        'current_step' => 'integer',
+    ];
+
     public function campaign()
     {
         return $this->belongsTo(Campaign::class);

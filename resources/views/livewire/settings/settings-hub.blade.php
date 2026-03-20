@@ -19,180 +19,52 @@
                         tools.</p>
                 </div>
             </div>
+
+            <!-- Search Bar -->
+            <div class="relative w-full md:w-96">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input wire:model.live.debounce.300ms="search" type="text" 
+                    placeholder="Search settings..." 
+                    class="block w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm">
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- WhatsApp Configuration -->
-            <a href="{{ route('teams.whatsapp_config') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-2xl text-green-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">WhatsApp API
-                    </h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Connect your Meta Business account, manage
-                    phone numbers, and profile.</p>
-            </a>
-
-            <!-- AI & Knowledge Base -->
-            <a href="{{ route('knowledge-base.index') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl text-blue-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
-                            </path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">AI Brain</h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Train your AI, manage knowledge base
-                    documents, and configure auto-replies.</p>
-            </a>
-
-            @if(Auth::user()->is_super_admin)
-                <!-- Onboarding Automation -->
-                <a href="{{ route('settings.onboarding-automation') }}"
+            @forelse($this->settingsCards as $card)
+                <a href="{{ route($card['route']) }}"
                     class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
                     <div class="flex items-center gap-4 mb-4">
-                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl text-indigo-600">
+                        <div class="p-3 bg-{{ $card['color'] }}-100 dark:bg-{{ $card['color'] }}-900/30 rounded-2xl text-{{ $card['color'] }}-600">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    d="{{ $card['icon'] }}"></path>
                             </svg>
                         </div>
-                        <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Lifecycle</h3>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+                            {{ $card['title'] }}
+                        </h3>
                     </div>
-                    <p class="text-sm text-slate-500 font-medium leading-relaxed">Map WhatsApp templates to onboarding
-                        stages and inactivity reminders.</p>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed">
+                        {{ $card['description'] }}
+                    </p>
                 </a>
-            @endif
-
-            <!-- Chat Routing -->
-            <a href="{{ route('settings.chat-routing') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl text-purple-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                        </svg>
+            @empty
+                <div class="col-span-full py-20 text-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <div class="text-slate-400 font-bold uppercase tracking-widest text-xs">No settings found matching "{{ $search }}"</div>
+                        <button wire:click="$set('search', '')" class="text-indigo-600 font-bold hover:underline">Clear search</button>
                     </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Chat Routing
-                    </h3>
                 </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Configure how chats are assigned to agents
-                    and teams.</p>
-            </a>
-
-            <!-- Canned Messages -->
-            <a href="{{ route('settings.canned-messages') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl text-amber-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-                            </path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Quick Replies
-                    </h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Manage canned responses for frequently
-                    asked questions.</p>
-            </a>
-
-            <!-- Categories & Tags -->
-            <a href="{{ route('settings.categories') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-rose-100 dark:bg-rose-900/30 rounded-2xl text-rose-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z">
-                            </path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Taxonomy</h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Manage contact categories, chat tags, and
-                    conversation labels.</p>
-            </a>
-
-            <!-- System Configuration -->
-            <a href="{{ route('settings.system') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
-                            </path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Environment
-                    </h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Global system settings, email
-                    configuration, and core preferences.</p>
-            </a>
-
-            <!-- Compliance & Logs -->
-            <a href="{{ route('compliance.index') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl text-orange-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                            </path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Security</h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Compliance registry, audit logs, and data
-                    security policies.</p>
-            </a>
-
-            <!-- Backups -->
-            <a href="{{ route('backups.index') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl text-cyan-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
-                            </path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Backups</h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">Manage system snapshots, automated
-                    backups, and data restoration.</p>
-            </a>
-
-            <!-- Developer tools -->
-            <a href="{{ route('developer.overview') }}"
-                class="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:scale-[1.02] transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                    <div class="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Dev Tools</h3>
-                </div>
-                <p class="text-sm text-slate-500 font-medium leading-relaxed">API Tokens, Webhook management, and
-                    technical documentation.</p>
-            </a>
+            @endforelse
         </div>
     </div>
 </div>

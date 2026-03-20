@@ -158,6 +158,50 @@
                         <span class="text-sm font-bold text-slate-700 dark:text-slate-300">Enable COD</span>
                     </label>
                 </div>
+
+                <!-- Meta Setup Section -->
+                <div class="pt-6 border-t border-slate-50 dark:border-slate-800/50 space-y-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-500/10 text-blue-500 rounded-xl">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.04c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm.01 18.25c-4.55 0-8.25-3.69-8.25-8.25s3.69-8.25 8.25-8.25 8.25 3.69 8.25 8.25-3.7 8.25-8.25 8.25zm.52-12.87l-1.07 1.07 3.32 3.32-3.32 3.32 1.07 1.07 4.39-4.39-4.39-4.39z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Meta <span class="text-blue-500">Commerce</span> Integration</h3>
+                    </div>
+
+                    <div class="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-[2rem] border border-blue-100 dark:border-blue-900/20">
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-black uppercase text-slate-500">Catalog Linkage</span>
+                                @if($readiness['checks']['catalog_linkage']['status'])
+                                    <span class="px-2 py-1 bg-wa-teal/10 text-wa-teal text-[10px] font-black rounded-lg">CALENDAR LINKED</span>
+                                @else
+                                    <span class="px-2 py-1 bg-rose-500/10 text-rose-500 text-[10px] font-black rounded-lg">NOT CONFIGURED</span>
+                                @endif
+                            </div>
+
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <x-checkbox wire:model="commerce_policy_accepted" class="mt-1 w-5 h-5 rounded-lg border-none bg-blue-200 dark:bg-blue-800 text-blue-600 focus:ring-blue-500/20" />
+                                <div class="space-y-1">
+                                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 transition-colors">I agree to Meta Commerce Policies</span>
+                                    <p class="text-[10px] text-slate-400 font-medium leading-relaxed">By checking this, you confirm your business complies with Meta's Commerce Policy for selling via WhatsApp Business API.</p>
+                                </div>
+                            </label>
+
+                            @if(!$readiness['checks']['catalog_linkage']['status'])
+                            <div class="mt-2 text-center">
+                                <a href="{{ route('settings.integrations') }}" class="inline-flex items-center text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest gap-1 border-b border-blue-200 group">
+                                    Manage Meta Integration
+                                    <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Cart Engine Configuration -->

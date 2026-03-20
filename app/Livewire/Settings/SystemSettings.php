@@ -23,13 +23,18 @@ class SystemSettings extends Component
     public $selectedCountry;
     public $language = 'en';
     public $metaPolicyInfo = '';
-
     public $countries = [
         'IN' => ['label' => 'India', 'country_code' => '+91', 'timezone' => 'Asia/Kolkata', 'currency' => 'INR', 'lang' => 'hi', 'policy' => 'India requires DLT/TRAI registration for templates. Category mixing is strictly prohibited.'],
         'AE' => ['label' => 'United Arab Emirates', 'country_code' => '+971', 'timezone' => 'Asia/Dubai', 'currency' => 'AED', 'lang' => 'ar', 'policy' => 'UAE requires official business registration and verified Meta Business Manager.'],
         'AU' => ['label' => 'Australia', 'country_code' => '+61', 'timezone' => 'Australia/Sydney', 'currency' => 'AUD', 'lang' => 'en', 'policy' => 'Australia Spam Act (2003) requires explicit opt-in and clear opt-out mechanisms.'],
         'IQ' => ['label' => 'Iraq', 'country_code' => '+964', 'timezone' => 'Asia/Baghdad', 'currency' => 'IQD', 'lang' => 'ar', 'policy' => 'Standard Meta commercial policies apply. Multilingual templates (Arabic/Kurdish) recommended.'],
         'US' => ['label' => 'United States', 'country_code' => '+1', 'timezone' => 'America/New_York', 'currency' => 'USD', 'lang' => 'en', 'policy' => 'USA requires strict adherence to TCPA/CTIA. STOP/UNSUBSCRIBE keywords are mandatory.'],
+        'UK' => ['label' => 'United Kingdom', 'country_code' => '+44', 'timezone' => 'Europe/London', 'currency' => 'GBP', 'lang' => 'en', 'policy' => 'UK requires GDPR compliance. Marketing messages must have a clear opt-out method.'],
+        'DE' => ['label' => 'European Union (DE)', 'country_code' => '+49', 'timezone' => 'Europe/Berlin', 'currency' => 'EUR', 'lang' => 'de', 'policy' => 'Strict GDPR compliance. Double opt-in is highly recommended for marketing.'],
+        'SA' => ['label' => 'Saudi Arabia', 'country_code' => '+966', 'timezone' => 'Asia/Riyadh', 'currency' => 'SAR', 'lang' => 'ar', 'policy' => 'CITC regulations apply. Content should be culturally sensitive and in Arabic.'],
+        'SG' => ['label' => 'Singapore', 'country_code' => '+65', 'timezone' => 'Asia/Singapore', 'currency' => 'SGD', 'lang' => 'en', 'policy' => 'PDPA compliance and DNC registry checks are mandatory for marketing.'],
+        'NG' => ['label' => 'Nigeria', 'country_code' => '+234', 'timezone' => 'Africa/Lagos', 'currency' => 'NGN', 'lang' => 'en', 'policy' => 'NCC guidelines apply. Ensure compliance with local messaging regulations.'],
+        'ES' => ['label' => 'Spain', 'country_code' => '+34', 'timezone' => 'Europe/Madrid', 'currency' => 'EUR', 'lang' => 'es', 'policy' => 'GDPR compliance. Marketing messages require explicit consent and easy opt-out.'],
     ];
 
     // Enhanced Settings
@@ -84,7 +89,7 @@ class SystemSettings extends Component
             'paginationLimit' => ['required', 'integer', 'min:5', 'max:100'],
             'supportEmail' => ['nullable', 'email'],
             'maintenanceMode' => ['boolean'],
-            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US'],
+            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US,UK,DE,SA,SG,NG,ES'],
             'language' => ['required', 'string', 'max:5'],
         ];
     }
@@ -173,7 +178,7 @@ class SystemSettings extends Component
             'paginationLimit' => ['required', 'integer', 'min:5', 'max:100'],
             'supportEmail' => ['nullable', 'email'],
             'maintenanceMode' => ['boolean'],
-            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US'],
+            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US,UK,DE,SA,SG,NG,ES'],
             'language' => ['required', 'string', 'max:5'],
             'systemWabaId' => ['nullable', 'string'],
             'systemPhoneNumberId' => ['nullable', 'string'],

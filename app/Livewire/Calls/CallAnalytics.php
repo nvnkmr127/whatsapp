@@ -92,12 +92,25 @@ class CallAnalytics extends Component
             ];
         });
 
+        // Get quality metrics trends
+        $qualityTrends = \App\Models\CallQualityMetric::selectRaw(
+            'AVG(network_quality_score) as avg_mos, AVG(answer_latency_ms) as avg_latency, DATE(created_at) as date'
+        )
+            ->whereHas('whatsappCall', function($q) use ($team) {
+                $q->where('team_id', $team->id);
+            })
+            ->whereBetween('created_at', $this->dateRange)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
         return view('livewire.calls.call-analytics', [
             'statistics' => $statistics,
             'billingStats' => $billingStats,
             'usageLimits' => $usageLimits,
             'costBreakdown' => $costBreakdown,
             'topContacts' => $topContacts,
+            'qualityTrends' => $qualityTrends,
         ]);
     }
 }

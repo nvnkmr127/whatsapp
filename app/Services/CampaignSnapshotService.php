@@ -17,25 +17,12 @@ class CampaignSnapshotService
     public function createSnapshot(Campaign $campaign): CampaignSnapshot
     {
         return DB::transaction(function () use ($campaign) {
-            // 1. Resolve Audience
-            $query = Contact::where('team_id', $campaign->team_id)
-                ->where('opt_in_status', 'opted_in');
-
-            $filters = $campaign->audience_filters ?? $campaign->segment_config ?? [];
-
-            if (!empty($filters['tags'])) {
-                $query->whereHas('tags', function ($q) use ($filters) {
-                    $q->whereIn('contact_tags.id', $filters['tags']);
-                });
-            } elseif (!empty($filters['contacts'])) {
-                $query->whereIn('id', $filters['contacts']);
-            } elseif (!empty($filters['all']) && $filters['all'] === true) {
-                // target all
-            } else {
-                if (empty($filters)) {
-                    $query->whereRaw('1=0');
-                }
-            }
+            // 1. Resolve Audience from CampaignDetail (source of truth)
+            $query = DB::table('campaign_details')
+                ->join('contacts', 'campaign_details.contact_id', '=', 'contacts.id')
+                ->where('campaign_details.campaign_id', $campaign->id)
+                ->where('contacts.opt_in_status', 'opted_in')
+                ->select('contacts.*', 'campaign_details.variant');
 
             $count = $query->count();
 
@@ -49,7 +36,7 @@ class CampaignSnapshotService
                 'footer_params' => $campaign->footer_params ?? [],
                 'audience_count' => $count,
                 'meta' => [
-                    'filters' => $filters,
+                    'filters' => $campaign->audience_filters ?? [],
                     'created_at' => now(),
                 ]
             ]);
@@ -62,6 +49,7 @@ class CampaignSnapshotService
                         'snapshot_id' => $snapshot->id,
                         'contact_id' => $contact->id,
                         'phone_number' => $contact->phone_number,
+                        'variant' => $contact->variant ?? 'A',
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];

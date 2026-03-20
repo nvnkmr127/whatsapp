@@ -53,6 +53,22 @@ class WhatsAppClient
      */
     public function sendRequestFullUrl(string $url, string $method, array $data = [], string $endpoint = 'unknown'): array
     {
+        // Sandbox Mode Interceptor
+        if ($this->team && $this->team->is_sandbox_mode) {
+            Log::info("WhatsApp API [SANDBOX] Intercepted [$method] to $endpoint", ['data' => $data]);
+            
+            return [
+                'success' => true,
+                'is_sandbox' => true,
+                'data' => [
+                    'messaging_product' => 'whatsapp',
+                    'contacts' => [['input' => $data['to'] ?? 'unknown', 'wa_id' => $data['to'] ?? 'unknown']],
+                    'messages' => [['id' => 'sandbox_' . bin2hex(random_bytes(16))]]
+                ],
+                'duration_ms' => 5.0
+            ];
+        }
+
         $client = Http::withToken($this->token)
             ->withHeaders(['Content-Type' => 'application/json'])
             ->timeout(20)

@@ -62,6 +62,56 @@ class OpenAIProvider implements AIProviderInterface
         }
     }
 
+    public function streamChat(array $messages, array $options = []): iterable
+    {
+        $result = $this->chat($messages, $options);
+        yield $result['content'] ?? '';
+    }
+
+    public function embed(string|array $text, array $options = []): array
+    {
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(20)
+                ->post("{$this->baseUrl}/embeddings", [
+                    'model' => $options['model'] ?? 'text-embedding-3-small',
+                    'input' => $text,
+                ]);
+
+            if ($response->failed()) {
+                return [];
+            }
+
+            return $response->json('data.0.embedding') ?? [];
+        } catch (\Exception $e) {
+            Log::error("OpenAI Embed Error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function summarize(string $content, array $options = []): string
+    {
+        $messages = [
+            ['role' => 'system', 'content' => 'Summarize this text concisely.'],
+            ['role' => 'user', 'content' => $content]
+        ];
+
+        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
+        return $response['content'] ?? '';
+    }
+
+    public function classify(string $content, array $categories, array $options = []): string
+    {
+        $categoriesStr = implode(', ', $categories);
+        $messages = [
+            ['role' => 'system', 'content' => "Classify into: {$categoriesStr}. Return only category name."],
+            ['role' => 'user', 'content' => $content]
+        ];
+
+        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
+        return trim($response['content'] ?? '');
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {
@@ -83,10 +133,13 @@ class OpenAIProvider implements AIProviderInterface
     public function getAvailableModels(): array
     {
         return [
-            'gpt-4o' => 'GPT-4o (Smartest)',
-            'gpt-4o-mini' => 'GPT-4o Mini (Faster)',
-            'gpt-4-turbo' => 'GPT-4 Turbo (Previous Gen)',
-            'gpt-3.5-turbo' => 'GPT-3.5 Turbo (Fastest/Cheapest)',
+            'gpt-5.4-pro' => 'GPT-5.4 Pro (Maximum Intelligence)',
+            'gpt-5.4' => 'GPT-5.4 (Balanced High-Performance)',
+            'gpt-5.4-thinking' => 'GPT-5.4 Thinking (Deep Reasoning)',
+            'gpt-5.4-mini' => 'GPT-5.4 Mini (Fast/Efficient)',
+            'gpt-5.4-nano' => 'GPT-5.4 Nano (Ultra-Fast/Mobile)',
+            'o1' => 'o1 (Classic Reasoning)',
+            'gpt-4o' => 'GPT-4o (Legacy Pro)',
         ];
     }
 

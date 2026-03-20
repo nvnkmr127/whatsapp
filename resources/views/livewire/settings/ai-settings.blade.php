@@ -33,6 +33,30 @@
         </div>
     </div>
 
+    <!-- Global Automation Toggle -->
+    <div class="bg-indigo-600 rounded-[2rem] p-8 text-white shadow-2xl shadow-indigo-600/20 overflow-hidden relative">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="flex items-center gap-6">
+                <div class="h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-black uppercase tracking-tight">AI Auto-Reply Terminal</h2>
+                    <p class="text-indigo-100 font-medium">When enabled, AI will automatically respond to incoming WhatsApp messages based on your rules.</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 bg-white/10 px-6 py-4 rounded-2xl backdrop-blur-md">
+                <span class="text-xs font-black uppercase tracking-widest">{{ $ai_auto_reply_enabled ? 'SYSTEM ACTIVE' : 'SYSTEM OFFLINE' }}</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" wire:model.live="ai_auto_reply_enabled" class="sr-only peer">
+                    <div class="w-14 h-7 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-[22px] after:w-[22px] after:transition-all peer-checked:bg-white/40"></div>
+                </label>
+            </div>
+        </div>
+        <div class="absolute -right-16 -bottom-16 w-64 h-64 bg-white/5 rounded-full blur-[80px]"></div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- 1. AI Personality & Instructions -->
         <div
@@ -83,9 +107,9 @@
             class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">AI Service
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ __('AI Service') }}
                     </h2>
-                    <p class="text-sm text-amber-500 font-bold uppercase tracking-wider mt-1">Connection</p>
+                    <p class="text-sm text-amber-500 font-bold uppercase tracking-wider mt-1">{{ __('Connection') }}</p>
                 </div>
                 <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl">
                     <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,28 +121,78 @@
 
             <div class="space-y-6">
                 <div>
-                    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">OpenAI API
-                        Key</label>
-                    <x-input wire:model="openai_api_key" type="password"
-                        class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-6 font-mono text-xs text-slate-900 dark:text-white"
-                        placeholder="sk-..." />
-                    <x-input-error for="openai_api_key" />
+                    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">{{ __('Selected Provider') }}</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        @foreach(\App\Services\AI\AIProviderManager::getAvailableProviders() as $id => $name)
+                        <button type="button" wire:click="$set('ai_provider', '{{ $id }}')"
+                            class="p-4 rounded-2xl border text-center transition-all flex flex-col items-center gap-2
+                            {{ $ai_provider === $id ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200' }}">
+                            <span class="text-[10px] font-black uppercase tracking-tight leading-tight">{{ explode(' ', $name)[0] }}</span>
+                        </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="animate-in fade-in slide-in-from-top-2 duration-300">
+                    @if($ai_provider === 'openai')
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">OpenAI API Key</label>
+                        <x-input wire:model="openai_api_key" type="password" class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-6 font-mono text-xs text-slate-900 dark:text-white" placeholder="sk-..." />
+                        <x-input-error for="openai_api_key" />
+                    @elseif($ai_provider === 'anthropic')
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Anthropic API Key</label>
+                        <x-input wire:model="anthropic_api_key" type="password" class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-6 font-mono text-xs text-slate-900 dark:text-white" placeholder="sk-ant-..." />
+                        <x-input-error for="anthropic_api_key" />
+                    @elseif($ai_provider === 'gemini')
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Google Gemini API Key</label>
+                        <x-input wire:model="gemini_api_key" type="password" class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-6 font-mono text-xs text-slate-900 dark:text-white" placeholder="AIza..." />
+                        <x-input-error for="gemini_api_key" />
+                    @elseif($ai_provider === 'deepseek')
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">DeepSeek API Key</label>
+                        <x-input wire:model="deepseek_api_key" type="password" class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-4 px-6 font-mono text-xs text-slate-900 dark:text-white" placeholder="sk-..." />
+                        <x-input-error for="deepseek_api_key" />
+                    @endif
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">AI
-                            Model</label>
-                        <select wire:model="openai_model"
+                        <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">{{ __('Primary Model') }}</label>
+                        <select wire:model="ai_model"
                             class="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white">
-                            <option value="gpt-4o">gpt-4o</option>
-                            <option value="gpt-4-turbo">gpt-4 Turbo</option>
-                            <option value="gpt-3.5-turbo">gpt-3.5 Turbo</option>
+                            @foreach($available_models as $id => $label)
+                                <option value="{{ $id }}">{{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
+
+                    <div class="col-span-full pt-6 border-t border-slate-50 dark:border-slate-800">
+                        <label class="text-[10px] font-black uppercase text-rose-500 mb-2 block tracking-widest">Safe Mode: Fallback Provider</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <select wire:model.live="ai_fallback_provider"
+                                class="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/20 text-slate-900 dark:text-white">
+                                <option value="">No Fallback</option>
+                                @foreach(\App\Services\AI\AIProviderManager::getAvailableProviders() as $id => $name)
+                                    @continue($id === $ai_provider)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            
+                            <select wire:model="ai_fallback_model"
+                                class="w-full px-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-rose-500/20 text-slate-900 dark:text-white"
+                                @if(!$ai_fallback_provider) disabled @endif>
+                                <option value="">Select Fallback Model...</option>
+                                @if($ai_fallback_provider)
+                                    @foreach(\App\Services\AI\AIProviderManager::getModelsForProvider($ai_fallback_provider) as $id => $label)
+                                        <option value="{{ $id }}">{{ $label }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                        </div>
+                        <p class="mt-2 text-[9px] text-slate-400 font-bold uppercase tracking-widest italic">Used automatically if primary service fails.</p>
+                    </div>
+
                     <div>
                         <label
-                            class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Creativity</label>
+                            class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">{{ __('Creativity') }}</label>
                         <div class="flex items-center gap-4 px-4 py-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl">
                             <input type="range" wire:model.live="temperature" min="0" max="1" step="0.1"
                                 class="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-wa-teal">
@@ -130,8 +204,7 @@
 
                 <div class="pt-6 border-t border-slate-50 dark:border-slate-800">
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Try Again on
-                            Error</label>
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">{{ __('Try Again on Error') }}</label>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" wire:model.live="show_retry" class="sr-only peer">
                             <div
@@ -142,9 +215,9 @@
                     @if($show_retry)
                         <select wire:model="retry_attempts"
                             class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs font-bold text-slate-900 dark:text-white mt-4">
-                            <option value="1">1 Retry Attempt</option>
-                            <option value="2">2 Retry Attempts</option>
-                            <option value="3">3 Retry Attempts</option>
+                            <option value="1">1 {{ __('Retry Attempt') }}</option>
+                            <option value="2">2 {{ __('Retry Attempts') }}</option>
+                            <option value="3">3 {{ __('Retry Attempts') }}</option>
                         </select>
                     @endif
                 </div>
