@@ -627,13 +627,12 @@
             <x-app-button variant="primary" class="w-full sm:flex-[2] py-4 order-1 sm:order-2" 
                 wire:click="merge" 
                 wire:loading.attr="disabled"
-                :disabled="!$targetContactId || isMerging">
+                :disabled="!$targetContactId || $isMerging">
                 <span wire:loading.remove wire:target="merge">Confirm Merge</span>
                 <span wire:loading wire:target="merge">Executing Merge...</span>
             </x-app-button>
         </div>
     </x-app-modal>
->
 
     <!-- End of Modals -->
 

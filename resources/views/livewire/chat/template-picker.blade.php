@@ -65,7 +65,7 @@
                             @foreach($templateVariables as $key => $value)
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        {{ str_starts_with($key, 'header') ? __('Header Asset URL') : __('Variable') . " {{ $key }}" }}
+                                        {{ str_starts_with($key, 'header') ? __('Header Asset URL') : __('Variable') . ' ' . $key }}
                                     </label>
                                     <input type="text" wire:model.live="templateVariables.{{ $key }}"
                                         placeholder="{{ str_starts_with($key, 'header') ? 'https://...' : __('Variable value') }}"

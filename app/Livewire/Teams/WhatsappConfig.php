@@ -566,9 +566,9 @@ class WhatsappConfig extends Component
             // 1. Automate Webhook Subscription (Links App to WABA)
             Log::debug("WhatsApp Setup: Subscribing to webhooks");
             $subResult = $this->subscribeToWebhooks($this->wm_business_account_id, $token);
-            if (!$subResult['status']) {
+            if (!(bool)($subResult['status'] ?? $subResult['success'] ?? false)) {
                 // Critical failure - if we can't subscribe, we shouldn't connect
-                throw new \Exception("Webhook Subscription Failed: " . $subResult['message']);
+                throw new \Exception("Webhook Subscription Failed: " . ($subResult['message'] ?? $subResult['error'] ?? 'Unknown error'));
             }
 
             // 2. Try to sync Templates (Functional check)
@@ -749,11 +749,11 @@ class WhatsappConfig extends Component
 
         $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
 
-        if ($result['status']) {
+        if ((bool)($result['status'] ?? $result['success'] ?? false)) {
             $this->dispatch('notify', 'Webhook subscribed successfully!');
             $this->refreshHealth();
         } else {
-            $this->dispatch('notify', 'Webhook subscription failed: ' . $result['message']);
+            $this->dispatch('notify', 'Webhook subscription failed: ' . ($result['message'] ?? $result['error'] ?? 'Unknown error'));
         }
     }
 

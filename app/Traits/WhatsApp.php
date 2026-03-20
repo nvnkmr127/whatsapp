@@ -256,7 +256,17 @@ trait WhatsApp
      */
     public function subscribeToWebhooks(string $wabaId, string $token): array
     {
-        return $this->mgmt()->subscribeToWebhooks($wabaId, $token);
+        $result = $this->mgmt()->subscribeToWebhooks($wabaId, $token);
+
+        // Normalize response shape for legacy callers expecting status/message.
+        if (array_key_exists('status', $result)) {
+            return $result;
+        }
+
+        return [
+            'status' => (bool) ($result['success'] ?? false),
+            'message' => $result['error'] ?? 'OK',
+        ];
     }
 
     public function debugToken(string $token): array

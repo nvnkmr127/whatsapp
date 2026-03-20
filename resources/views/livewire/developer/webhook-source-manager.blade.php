@@ -241,7 +241,6 @@
             @endforelse
         </div>
     </div>
-    </div>
 
         @if($sources->hasPages())
             <div class="mt-8 flex justify-between items-center px-4">
@@ -1242,7 +1241,7 @@
                         <span class="font-medium text-gray-900 dark:text-gray-200">Platform: {{ $selectedSourceForReport?->platform ?? 'N/A' }}</span>
                     </div>
                 </div>
-                <button wire:click="closeSourceReportModal" wire:click.prevent="$set('showSourceReportModal', false)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <button wire:click="closeSourceReportModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -1337,7 +1336,7 @@
                         Extract Contacts
                     </button>
                 </div>
-                <x-secondary-button wire:click="closeSourceReportModal" wire:click.prevent="$set('showSourceReportModal', false)" class="!rounded-lg">
+                <x-secondary-button wire:click="closeSourceReportModal" class="!rounded-lg">
                     Close Report
                 </x-secondary-button>
             </div>

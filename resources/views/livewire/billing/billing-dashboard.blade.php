@@ -536,6 +536,7 @@
                     </button>
                 </div>
             @endif
+        </x-app-modal>
         {{-- Trial Extension Request Modal --}}
         <x-app-modal wire:model="showExtensionModal" maxWidth="md">
             <div class="p-8 pb-0">
