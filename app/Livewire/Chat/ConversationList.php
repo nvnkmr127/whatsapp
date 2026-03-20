@@ -144,7 +144,6 @@ class ConversationList extends Component
             ->take($this->perPage)
             ->get();
     }
-    }
 
     public function getStatsProperty()
     {
