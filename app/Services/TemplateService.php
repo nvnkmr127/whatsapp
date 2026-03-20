@@ -211,19 +211,24 @@ class TemplateService
     {
         $placeholders = [];
         $components = $template->components ?? [];
+        if (is_string($components)) {
+            $components = json_decode($components, true) ?: [];
+        }
 
-        foreach ($components as $component) {
-            if (isset($component['text'])) {
-                $found = $this->extractVariables($component['text']);
-                $placeholders = array_merge($placeholders, $found);
-            }
+        if (is_iterable($components)) {
+            foreach ($components as $component) {
+                if (isset($component['text'])) {
+                    $found = $this->extractVariables($component['text']);
+                    $placeholders = array_merge($placeholders, $found);
+                }
 
-            // Button dynamic URLs
-            if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
-                foreach ($component['buttons'] as $button) {
-                    if (($button['type'] ?? '') === 'URL' && isset($button['url'])) {
-                        $found = $this->extractVariables($button['url']);
-                        $placeholders = array_merge($placeholders, $found);
+                // Button dynamic URLs
+                if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
+                    foreach ($component['buttons'] as $button) {
+                        if (($button['type'] ?? '') === 'URL' && isset($button['url'])) {
+                            $found = $this->extractVariables($button['url']);
+                            $placeholders = array_merge($placeholders, $found);
+                        }
                     }
                 }
             }
@@ -243,39 +248,30 @@ class TemplateService
         // Use new extraction logic for consistency
         $all = $this->extractAllPlaceholders($template);
 
-        // Filter out non-numeric (though extraction only finds {{d+}})
-        // But wait, countPlaceholders logic in legacy also counted MEDIA headers as 1.
-        // My extraction logic above assumes text-based {{n}}.
-        // We need to keep legacy counting for Media Headers which don't have {{1}} in text but take up a param slot in API call?
-        // Actually, API splits header_parameters from body_parameters. 
-        // validationVariables ($variables) passed to this func is usually ALL variables merged.
+        if (is_string($components)) {
+            $components = json_decode($components, true) ?: [];
+        }
 
-        // Re-implement legacy counting more accurately or preserve it?
-        // The previous implementation had specific logic for header types.
-
-        // Let's preserve the exact logic of the previous implementation but clean it up if possible.
-        // Or actually, let's keep the existing implementation for safety as it was just fixed/audited.
-        // I will revert this specific method replacement and only append the new methods.
-        // Ah, I am replacing the whole block.
-
-        foreach ($components as $component) {
-            // Text based placeholders in HEADER and BODY
-            if (in_array($component['type'], ['BODY', 'HEADER']) && isset($component['text'])) {
-                if (preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches)) {
-                    $count += count($matches[0]);
+        if (is_iterable($components)) {
+            foreach ($components as $component) {
+                // Text based placeholders in HEADER and BODY
+                if (in_array($component['type'], ['BODY', 'HEADER']) && isset($component['text'])) {
+                    if (preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches)) {
+                        $count += count($matches[0]);
+                    }
                 }
-            }
 
-            // Media based placeholders in HEADER
-            if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                $count++;
-            }
+                // Media based placeholders in HEADER
+                if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+                    $count++;
+                }
 
-            // Dynamic URL placeholders in BUTTONS
-            if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
-                foreach ($component['buttons'] as $button) {
-                    if (($button['type'] ?? '') === 'URL' && isset($button['url']) && str_contains($button['url'], '{{1}}')) {
-                        $count++;
+                // Dynamic URL placeholders in BUTTONS
+                if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
+                    foreach ($component['buttons'] as $button) {
+                        if (($button['type'] ?? '') === 'URL' && isset($button['url']) && str_contains($button['url'], '{{1}}')) {
+                            $count++;
+                        }
                     }
                 }
             }

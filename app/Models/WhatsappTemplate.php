@@ -34,10 +34,16 @@ class WhatsappTemplate extends Model
     {
         $content = [];
         $components = $this->components ?? [];
+        
+        if (is_string($components)) {
+            $components = json_decode($components, true) ?: [];
+        }
 
-        foreach ($components as $component) {
-            if (isset($component['text'])) {
-                $content[] = $component['text'];
+        if (is_iterable($components)) {
+            foreach ($components as $component) {
+                if (isset($component['text'])) {
+                    $content[] = $component['text'];
+                }
             }
         }
 

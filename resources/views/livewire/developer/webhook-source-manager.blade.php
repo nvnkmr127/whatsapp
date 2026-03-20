@@ -421,9 +421,9 @@
                                                 Webhook URL</h5>
                                             <div class="flex flex-col md:flex-row items-center gap-3">
                                                 <code
-                                                    class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
+                                                    class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ $this->currentSource?->getWebhookUrl() }}</code>
                                                 <button
-                                                    onclick="navigator.clipboard.writeText('{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}')"
+                                                    onclick="navigator.clipboard.writeText('{{ $this->currentSource?->getWebhookUrl() }}')"
                                                     class="bg-white text-wa-teal px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg shadow-black/10">Copy
                                                     URL</button>
                                             </div>
@@ -497,7 +497,7 @@
                                 <div class="flex items-center justify-between gap-4">
                                     <div class="flex-1">
                                         <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Webhook URL</p>
-                                        <code class="text-xs font-mono text-white break-all select-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
+                                        <code class="text-xs font-mono text-white break-all select-all">{{ $this->currentSource?->getWebhookUrl() }}</code>
                                     </div>
                                     <span class="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-lg border border-emerald-500/20 shrink-0">Ready</span>
                                 </div>
