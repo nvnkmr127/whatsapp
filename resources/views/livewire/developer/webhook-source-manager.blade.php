@@ -183,6 +183,7 @@
                         <div class="flex items-center gap-2 lg:ml-auto">
                             <!-- Main Configuration -->
                             <button wire:click="edit({{ $source->id }})" 
+                                x-on:click="console.log('CONFIGURE: Triggering edit for source:', {{ $source->id }})"
                                 class="flex items-center gap-2 px-6 py-3 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-wa-teal/20 transition-all border border-wa-teal/10">
                                 <x-icon name="cog" class="w-3.5 h-3.5" />
                                 <span>{{ __('Configure') }}</span>
@@ -1369,3 +1370,25 @@
         </x-slot>
     </x-dialog-modal>
 </div>
+@push('scripts')
+<script>
+    document.addEventListener('livewire:initialized', () => {
+        console.log('WebhookSourceManager initialized');
+        
+        Livewire.on('notify', (event) => {
+            console.log('NOTIFICATION:', event);
+        });
+        
+        Livewire.on('debug-log', (event) => {
+            console.log('BACKEND_DEBUG:', event);
+        });
+    });
+
+    // Global debug helper
+    window.webhookDebug = {
+        getState: function() {
+            return Livewire.getByName('developer.webhook-source-manager')[0].get('editingId');
+        }
+    };
+</script>
+@endpush

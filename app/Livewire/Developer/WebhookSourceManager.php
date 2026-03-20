@@ -422,7 +422,7 @@ class WebhookSourceManager extends Component
 
     public function openNewSource()
     {
-        \Illuminate\Support\Facades\Log::info("Opening new source wizard");
+        $this->addDebugInfo("OPENING_NEW_SOURCE: Resetting state to creation mode");
         $this->cancelEdit();
         $this->showWizardModal = true;
         $this->showLogsModal = false;
@@ -1360,6 +1360,14 @@ class WebhookSourceManager extends Component
                 }
                 sort($templateParams);
             }
+        }
+
+        if ($this->debugMode) {
+            $this->addDebugInfo("RENDERING: State check", [
+                'editingId' => $this->editingId,
+                'currentStep' => $this->currentStep,
+                'showWizard' => $this->showWizardModal
+            ]);
         }
 
         return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate'))
