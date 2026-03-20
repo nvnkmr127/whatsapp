@@ -126,7 +126,7 @@
                     $latestPayload = \App\Models\WebhookPayload::where('webhook_source_id', $source->id)->latest()->first();
                     $successRate = $source->total_received > 0 ? round(($source->total_processed / $source->total_received) * 100, 1) : 0;
                 @endphp
-                <div class="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 hover:shadow-xl transition-all duration-300">
+                <div wire:key="source-row-{{ $source->id }}" class="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 hover:shadow-xl transition-all duration-300">
                     <div class="flex flex-col lg:flex-row lg:items-center gap-6">
                         
                         <!-- Client Branding & URL -->
@@ -276,7 +276,27 @@
         </x-slot>
 
         <x-slot name="content">
-            <div class="max-h-[70vh] min-h-[500px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-2">
+            <div wire:key="wizard-content-{{ $editingId ?: 'new' }}" class="max-h-[70vh] min-h-[500px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-2 relative">
+                {{-- Loading Overlay --}}
+                <div wire:loading wire:target="edit" class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-[2px] z-[100] flex items-center justify-center">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="w-12 h-12 border-4 border-wa-teal border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Loading Configuration...</p>
+                    </div>
+                </div>
+
+                {{-- Status Debugger --}}
+                @if($debugMode)
+                    <div class="px-8 py-2 bg-orange-50 dark:bg-orange-900/10 border-b border-orange-100 dark:border-orange-900/20 flex items-center justify-between">
+                        <div class="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-orange-600">
+                            <span>MODE: {{ $editingId ? 'EDIT ('.$editingId.')' : 'NEW' }}</span>
+                            <span>NAME: {{ $name ?: 'N/A' }}</span>
+                            <span>PLATFORM: {{ $platform }}</span>
+                            <span>STEP: {{ $currentStep }}</span>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Wizard Progress Header --}}
                 <div class="mb-10">
                     <div class="flex items-center justify-between max-w-4xl mx-auto">

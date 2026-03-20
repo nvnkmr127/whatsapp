@@ -251,11 +251,17 @@ class WebhookSourceManager extends Component
 
     public function updatedPlatform($platform)
     {
+        // Don't overwrite existing configuration if we are currently editing a record
+        // This avoids hydration loops and loss of custom data when the modal opens
+        if ($this->editingId) {
+            return;
+        }
+
         $this->platform = $platform;
         $preset = config("webhook-platforms.{$platform}");
 
         if ($preset) {
-            $this->auth_method = $preset['auth_method'];
+            $this->auth_method = $preset['auth_method'] ?? 'api_key';
             $this->auth_config = $preset['auth_config'] ?? [];
 
             // Set sample mappings if available
@@ -436,75 +442,63 @@ class WebhookSourceManager extends Component
     public function edit($id)
     {
         try {
-            // 1. Reset all wizard state first to prevent bleed-over from previous sessions
-            $this->reset(['name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'capturedPayload', 'currentStep', 'selectedEventType', 'selectedTemplateId']);
-            $this->initializeDefaults();
-
-            $this->addDebugInfo("Triggering edit for source ID: {$id}");
+            // 1. Initial Cleanup (BEFORE loading model to avoid state bleed)
+            $this->addDebugInfo("LOADING_SOURCE: ID $id");
+            $this->closeModals(); // Closes other modals
+            $this->initializeDefaults(); // Sets currentStep=1, clears most lists
+            
+            // 2. Fetch Model
             $source = WebhookSource::findOrFail($id);
             $this->authorize('update', $source);
 
-            $this->editingId = $id;
-            $this->name = $source->name;
-            $this->platform = $source->platform;
-            $this->auth_method = $source->auth_method;
-            $this->auth_config = $source->getAuthConfig() ?: $this->auth_config;
+            // 3. Selective Reset (Avoid clearing editingId)
+            $this->editingId = (int) $id;
+
+            // 4. Hydrate Core Properties
+            $this->name = (string) $source->name;
+            $this->platform = (string) $source->platform;
+            $this->auth_method = (string) ($source->auth_method ?: 'api_key');
+            $this->is_active = (bool) $source->is_active;
+            $this->is_sandbox = (bool) $source->is_sandbox;
+            $this->ip_whitelist = (string) ($source->ip_whitelist ?: '');
+            $this->process_delay = (int) $source->process_delay;
+
+            // 5. Hydrate JSON Properties
+            $this->auth_config = $source->getAuthConfig() ?: [];
             $this->field_mappings = is_array($source->field_mappings) ? $source->field_mappings : [];
             $this->transformation_rules = is_array($source->transformation_rules) ? $source->transformation_rules : [];
             $this->action_config = is_array($source->action_config) ? $source->action_config : [];
-            $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
-            $this->is_active = (bool) $source->is_active;
-            $this->is_sandbox = (bool) $source->is_sandbox;
-            $this->ip_whitelist = $source->ip_whitelist ?: '';
-            $this->process_delay = (int) $source->process_delay;
-
-            // Load latest payload if available for context
-            $latest = \App\Models\WebhookPayload::where('webhook_source_id', $id)->latest()->first();
-            if ($latest) {
-                $this->capturedPayload = $latest->payload;
-            }
-
-            // Sync Mapping State
+            
+            // Sync Mapping State (Handles flattening legacy mappings)
             if (!empty($this->field_mappings)) {
-                // If mappings are flat (legacy), wrap them
                 if (!Arr::isAssoc($this->field_mappings) || !is_array(reset($this->field_mappings))) {
                     $this->field_mappings = ['custom' => $this->field_mappings];
                 }
-
                 $this->selectedEventType = array_key_first($this->field_mappings);
-                $currentMappings = $this->field_mappings[$this->selectedEventType] ?? [];
-
-                // Pull phone number to top level for UI binding (wire:model="field_mappings.phone_number")
-                if (isset($currentMappings['phone_number'])) {
-                    $this->field_mappings['phone_number'] = $currentMappings['phone_number'];
-                }
             }
 
-            // Sync Action State
-            $this->actionType = $this->action_config['type'] ?? 'send_template';
-            $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
-            $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
-            $this->otpLength = $this->action_config['otp_length'] ?? 6;
-
-            // Sanitize and Map Parameters
+            // Pull parameters for UI
             $rawParamMapping = $this->action_config['parameter_mapping'] ?? [];
-            $sanitizedParams = [];
+            $sanitized = [];
             foreach ($rawParamMapping as $pos => $val) {
-                $sanitizedParams[$pos] = is_array($val) ? ($val[0] ?? '') : (string) $val;
+                $sanitized[$pos] = is_array($val) ? ($val[0] ?? '') : (string) $val;
             }
-            $this->templateParameters = $sanitizedParams;
+            $this->templateParameters = $sanitized;
 
-            // Finalizing
+            // 6. UI Finalization
             $this->currentStep = 1;
             $this->loadMappingContext();
             $this->showWizardModal = true;
-            $this->showLogsModal = false;
-            $this->showTestModal = false;
             
-            \Illuminate\Support\Facades\Log::info("Wizard modal successfully populated for ID: {$id}");
+            $this->addDebugInfo("EDIT_READY: Source ID $id loaded into Wizard", [
+                'name' => $this->name,
+                'platform' => $this->platform
+            ]);
+
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Critical error in WebhookSourceManager@edit: " . $e->getMessage());
-            $this->dispatch('notify', 'Unable to load connection details.', 'error');
+            \Illuminate\Support\Facades\Log::error("Failed to load source for edit: " . $e->getMessage());
+            $this->addDebugInfo("EDIT_FAILED: ID $id", ['error' => $e->getMessage()]);
+            $this->dispatch('notify', 'Failed to load source: ' . $e->getMessage(), 'error');
         }
     }
 
@@ -587,6 +581,14 @@ class WebhookSourceManager extends Component
             $this->addDebugInfo("Error saving source", ['error' => $e->getMessage()]);
             $this->dispatch('notify', 'Error saving integration: ' . $e->getMessage(), 'error');
         }
+    }
+
+    public function closeModals()
+    {
+        $this->showWizardModal = false;
+        $this->showLogsModal = false;
+        $this->showTestModal = false;
+        $this->showSourceReportModal = false;
     }
 
     public function cancelEdit()

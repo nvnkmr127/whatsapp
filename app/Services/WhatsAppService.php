@@ -606,6 +606,7 @@ class WhatsAppService
                 }
             }
         }
+    }
 
 
 
