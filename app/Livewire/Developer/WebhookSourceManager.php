@@ -23,29 +23,7 @@ class WebhookSourceManager extends Component
     public $transformation_rules = [];
     public $action_config = [];
     public $is_active = true;
-    public $is_sandbox = false;
-    public $ip_whitelist = '';
     public $editingId = null;
-    public $debugMode = false;
-    public $debugLog = [];
-
-    public function toggleDebug()
-    {
-        $this->debugMode = !$this->debugMode;
-        $this->addDebugInfo('Debug mode ' . ($this->debugMode ? 'enabled' : 'disabled'));
-    }
-
-    protected function addDebugInfo($message, $data = null)
-    {
-        $entry = [
-            'time' => now()->format('H:i:s'),
-            'message' => $message,
-            'data' => $data
-        ];
-        array_unshift($this->debugLog, $entry);
-        $this->debugLog = array_slice($this->debugLog, 0, 10);
-        \Illuminate\Support\Facades\Log::info("WebhookDebug: {$message}", $data ?: []);
-    }
     public $search = '';
     public $platformFilter = '';
     public $statusFilter = '';
@@ -115,19 +93,10 @@ class WebhookSourceManager extends Component
         $this->transformation_rules = [];
         $this->action_config = [];
         $this->filtering_rules_ui = [['field' => '', 'operator' => 'equals', 'value' => '']];
-        $this->is_sandbox = false;
-        $this->ip_whitelist = '';
         $this->process_delay = 0;
         $this->currentStep = 1;
         $this->isCapturing = false;
         $this->capturedPayload = null;
-        $this->showSourceReportModal = false;
-        $this->selectedSourceForReport = null;
-        $this->sourceReportFromDate = '';
-        $this->sourceReportToDate = '';
-        $this->sourceReportPerPage = 20;
-        $this->recentLogs = [];
-        $this->logsSourceStats = null;
     }
 
     public function nextStep()
@@ -163,33 +132,6 @@ class WebhookSourceManager extends Component
                 $this->loadMappingContext();
             }
         }
-    }
-
-    #[Computed]
-    public function stats()
-    {
-        $user = auth()->user();
-        $team = $user->currentTeam;
-        
-        $sourceQuery = WebhookSource::query();
-        $payloadQuery = \App\Models\WebhookPayload::query();
-
-        if ($team && !$user->isSuperAdmin()) {
-            $sourceQuery->where('team_id', $team->id);
-            $payloadQuery->where('team_id', $team->id);
-        }
-
-        $allSources = $sourceQuery->get();
-        $totalReceived = $payloadQuery->count();
-        $totalProcessed = $payloadQuery->where('status', 'processed')->count();
-        $successRate = $totalReceived > 0 ? round(($totalProcessed / $totalReceived) * 100, 1) : 0;
-
-        return [
-            'total' => $allSources->count(),
-            'active' => $allSources->where('is_active', true)->count(),
-            'total_received' => $totalReceived,
-            'success_rate' => $successRate,
-        ];
     }
 
     public function startCapture()
@@ -251,17 +193,11 @@ class WebhookSourceManager extends Component
 
     public function updatedPlatform($platform)
     {
-        // Don't overwrite existing configuration if we are currently editing a record
-        // This avoids hydration loops and loss of custom data when the modal opens
-        if ($this->editingId) {
-            return;
-        }
-
         $this->platform = $platform;
         $preset = config("webhook-platforms.{$platform}");
 
         if ($preset) {
-            $this->auth_method = $preset['auth_method'] ?? 'api_key';
+            $this->auth_method = $preset['auth_method'];
             $this->auth_config = $preset['auth_config'] ?? [];
 
             // Set sample mappings if available
@@ -294,26 +230,11 @@ class WebhookSourceManager extends Component
     public function generateApiKey()
     {
         $this->auth_config['key'] = Str::random(32);
-        $this->handleImmediateRotation();
     }
 
     public function generateSecret()
     {
         $this->auth_config['secret'] = bin2hex(random_bytes(32));
-        $this->handleImmediateRotation();
-    }
-
-    protected function handleImmediateRotation()
-    {
-        if ($this->editingId) {
-            $source = WebhookSource::find($this->editingId);
-            if ($source) {
-                $source->update([
-                    'auth_config' => $this->auth_config,
-                    'last_secret_rotated_at' => now()
-                ]);
-            }
-        }
     }
 
     public function addMappingField()
@@ -389,7 +310,7 @@ class WebhookSourceManager extends Component
 
         return $source->payloads()
             ->latest()
-            ->limit(20)
+            ->limit(5)
             ->get()
             ->map(function ($payload) {
                 return [
@@ -428,7 +349,7 @@ class WebhookSourceManager extends Component
 
     public function openNewSource()
     {
-        $this->addDebugInfo("OPENING_NEW_SOURCE: Resetting state to creation mode");
+        \Illuminate\Support\Facades\Log::info("Opening new source wizard");
         $this->cancelEdit();
         $this->showWizardModal = true;
         $this->showLogsModal = false;
@@ -442,153 +363,133 @@ class WebhookSourceManager extends Component
     public function edit($id)
     {
         try {
-            // 1. Initial Cleanup (BEFORE loading model to avoid state bleed)
-            $this->addDebugInfo("LOADING_SOURCE: ID $id");
-            $this->closeModals(); // Closes other modals
-            $this->initializeDefaults(); // Sets currentStep=1, clears most lists
-            
-            // 2. Fetch Model
+            \Illuminate\Support\Facades\Log::info("Triggering edit for source ID: {$id}");
             $source = WebhookSource::findOrFail($id);
             $this->authorize('update', $source);
 
-            // 3. Selective Reset (Avoid clearing editingId)
-            $this->editingId = (int) $id;
+            $this->editingId = $id;
+            $this->name = $source->name;
+            $this->platform = $source->platform;
+            $this->auth_method = $source->auth_method;
+            $this->auth_config = $source->getAuthConfig();
+            $this->field_mappings = $source->field_mappings ?? [];
+            $this->transformation_rules = $source->transformation_rules ?? [];
+            $this->action_config = $source->action_config ?? [];
+            $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
+            $this->is_active = $source->is_active;
 
-            // 4. Hydrate Core Properties
-            $this->name = (string) $source->name;
-            $this->platform = (string) $source->platform;
-            $this->auth_method = (string) ($source->auth_method ?: 'api_key');
-            $this->is_active = (bool) $source->is_active;
-            $this->is_sandbox = (bool) $source->is_sandbox;
-            $this->ip_whitelist = (string) ($source->ip_whitelist ?: '');
-            $this->process_delay = (int) $source->process_delay;
+            // Load latest payload if available for context
+            $latest = \App\Models\WebhookPayload::where('webhook_source_id', $id)->latest()->first();
+            if ($latest) {
+                $this->capturedPayload = $latest->payload;
+            }
 
-            // 5. Hydrate JSON Properties
-            $this->auth_config = $source->getAuthConfig() ?: [];
-            $this->field_mappings = is_array($source->field_mappings) ? $source->field_mappings : [];
-            $this->transformation_rules = is_array($source->transformation_rules) ? $source->transformation_rules : [];
-            $this->action_config = is_array($source->action_config) ? $source->action_config : [];
-            
-            // Sync Mapping State (Handles flattening legacy mappings)
+            // Set selected event type and pull mappings to top level for UI
             if (!empty($this->field_mappings)) {
-                if (!Arr::isAssoc($this->field_mappings) || !is_array(reset($this->field_mappings))) {
-                    $this->field_mappings = ['custom' => $this->field_mappings];
-                }
                 $this->selectedEventType = array_key_first($this->field_mappings);
+                $currentMappings = $this->field_mappings[$this->selectedEventType] ?? [];
+
+                // Populate templateParameters if empty in action_config but present in field_mappings
+                if (empty($this->templateParameters)) {
+                    foreach ($currentMappings as $key => $path) {
+                        if (str_starts_with($key, 'param_')) {
+                            $pos = substr($key, 6);
+                            $this->templateParameters[$pos] = $path;
+                        }
+                    }
+                }
+
+                // Pull phone number to top level so wire:model="field_mappings.phone_number" works
+                if (isset($currentMappings['phone_number'])) {
+                    $this->field_mappings['phone_number'] = $currentMappings['phone_number'];
+                }
             }
 
-            // Pull parameters for UI
-            $rawParamMapping = $this->action_config['parameter_mapping'] ?? [];
+            // Extract action type and template parameters
+            $this->actionType = $this->action_config['type'] ?? 'send_template';
+            $this->selectedTemplateId = $this->action_config['template_id'] ?? null;
+
+            // Sanitize parameter_mapping to handle malformed data (arrays instead of strings)
+            $paramMapping = $this->action_config['parameter_mapping'] ?? [];
             $sanitized = [];
-            foreach ($rawParamMapping as $pos => $val) {
-                $sanitized[$pos] = is_array($val) ? ($val[0] ?? '') : (string) $val;
+            foreach ($paramMapping as $key => $value) {
+                if (is_array($value)) {
+                    // Extract first element if it's an array (malformed data from earlier version)
+                    $sanitized[$key] = is_string($value[0] ?? null) ? $value[0] : '';
+                } else {
+                    $sanitized[$key] = (string) $value;
+                }
             }
-            $this->templateParameters = $sanitized;
 
-            // 6. UI Finalization
-            $this->currentStep = 1;
+            $this->templateParameters = !empty($sanitized) ? $sanitized : $this->templateParameters;
+            $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
+            $this->otpLength = $this->action_config['otp_length'] ?? 6;
+
+            $this->currentStep = 1; // Start at step 1 when editing
             $this->loadMappingContext();
             $this->showWizardModal = true;
-            
-            $this->addDebugInfo("EDIT_READY: Source ID $id loaded into Wizard", [
-                'name' => $this->name,
-                'platform' => $this->platform
-            ]);
-
+            $this->showLogsModal = false;
+            $this->showTestModal = false;
+            \Illuminate\Support\Facades\Log::info("Wizard modal shown for ID: {$id}. State: active.");
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to load source for edit: " . $e->getMessage());
-            $this->addDebugInfo("EDIT_FAILED: ID $id", ['error' => $e->getMessage()]);
-            $this->dispatch('notify', 'Failed to load source: ' . $e->getMessage(), 'error');
+            \Illuminate\Support\Facades\Log::error("Error in WebhookSourceManager@edit: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
+            $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
         }
     }
 
     public function update()
     {
-        // 1. Wizard Progression
         if ($this->currentStep < 4) {
-            $this->addDebugInfo("Transitioning to step " . ($this->currentStep + 1));
             $this->nextStep();
             return;
         }
 
-        // 2. Final Validation
         $this->validate();
 
-        try {
-            // 3. Resolve Target Model
-            $source = $this->editingId 
-                ? WebhookSource::findOrFail($this->editingId) 
-                : new WebhookSource(['team_id' => auth()->user()->current_team_id]);
+        $source = WebhookSource::findOrFail($this->editingId);
+        $this->authorize('update', $source);
 
-            if ($this->editingId) {
-                $this->authorize('update', $source);
+        $actionConfig = $this->buildActionConfig();
+
+        // Build field mappings (nested by event type as required by the processing engine)
+        $fieldMappings = [];
+        $eventType = $this->selectedEventType ?: 'custom';
+        $currentEventMappings = [];
+
+        // 1. Add variable mappings
+        foreach ($this->templateParameters as $position => $fieldPath) {
+            if ($fieldPath) {
+                $currentEventMappings["param_{$position}"] = $fieldPath;
             }
-
-            // 4. Build Configurations
-            $actionConfig = $this->buildActionConfig();
-            
-            // Build nested field mappings for the processing engine
-            $fieldMappings = [];
-            $eventType = $this->selectedEventType ?: 'custom';
-            $currentEventMappings = [];
-
-            // Add variable mappings param_1, param_2...
-            foreach ($this->templateParameters as $position => $fieldPath) {
-                if ($fieldPath) {
-                    $currentEventMappings["param_{$position}"] = $fieldPath;
-                }
-            }
-
-            // Add phone number mapping
-            if (isset($this->field_mappings['phone_number']) && $this->field_mappings['phone_number']) {
-                $currentEventMappings['phone_number'] = $this->field_mappings['phone_number'];
-            }
-
-            if (!empty($currentEventMappings)) {
-                $fieldMappings[$eventType] = $currentEventMappings;
-            }
-
-            // 5. Persist
-            $data = [
-                'name' => $this->name,
-                'platform' => $this->platform,
-                'auth_method' => $this->auth_method,
-                'auth_config' => $this->auth_config,
-                'field_mappings' => !empty($fieldMappings) ? $fieldMappings : $this->field_mappings,
-                'transformation_rules' => $this->transformation_rules,
-                'action_config' => $actionConfig,
-                'is_active' => $this->is_active ?? true,
-                'is_sandbox' => $this->is_sandbox ?? false,
-                'ip_whitelist' => $this->ip_whitelist,
-                'filtering_rules' => $this->filtering_rules_ui,
-                'process_delay' => $this->process_delay ?? 0,
-            ];
-
-            if ($this->editingId) {
-                $source->update($data);
-            } else {
-                $source->fill($data)->save();
-            }
-
-            // 6. Finalizing
-            $this->addDebugInfo("Webhook source saved successfully", ['id' => $source->id]);
-            $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
-            $this->initializeDefaults();
-            $this->dispatch('notify', 'Webhook source saved successfully.');
-            
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to save webhook source: " . $e->getMessage());
-            $this->addDebugInfo("Error saving source", ['error' => $e->getMessage()]);
-            $this->dispatch('notify', 'Error saving integration: ' . $e->getMessage(), 'error');
         }
-    }
 
-    public function closeModals()
-    {
-        $this->showWizardModal = false;
-        $this->showLogsModal = false;
-        $this->showTestModal = false;
-        $this->showSourceReportModal = false;
+        // 2. Add phone number mapping (from flattened UI state)
+        if (isset($this->field_mappings['phone_number']) && $this->field_mappings['phone_number']) {
+            $currentEventMappings['phone_number'] = $this->field_mappings['phone_number'];
+        }
+
+        // 3. Nest under event type if we have any mappings
+        if (!empty($currentEventMappings)) {
+            $fieldMappings[$eventType] = $currentEventMappings;
+        }
+
+        $source->update([
+            'name' => $this->name,
+            'platform' => $this->platform,
+            'auth_method' => $this->auth_method,
+            'auth_config' => $this->auth_config,
+            'field_mappings' => $fieldMappings ?: $this->field_mappings,
+            'transformation_rules' => $this->transformation_rules,
+            'action_config' => $actionConfig,
+            'is_active' => $this->is_active,
+            'filtering_rules' => $this->filtering_rules_ui,
+            'process_delay' => $this->process_delay,
+        ]);
+
+        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
+        $this->initializeDefaults();
+        $this->dispatch('notify', 'Webhook source saved successfully.');
     }
 
     public function cancelEdit()
@@ -676,27 +577,25 @@ class WebhookSourceManager extends Component
             ];
         }
 
-        $stats = Message::query()
+        $query = Message::query()
             ->where('webhook_source_id', $this->selectedSourceForReport->id)
-            ->where('direction', 'outbound')
-            ->when($this->sourceReportFromDate, fn($q) => $q->whereDate('sent_at', '>=', $this->sourceReportFromDate))
-            ->when($this->sourceReportToDate, fn($q) => $q->whereDate('sent_at', '<=', $this->sourceReportToDate))
-            ->selectRaw("
-                COUNT(*) as total,
-                COUNT(CASE WHEN status IN ('sent', 'delivered', 'read') THEN 1 END) as sent,
-                COUNT(CASE WHEN status IN ('delivered', 'read') THEN 1 END) as delivered,
-                COUNT(CASE WHEN status = 'read' THEN 1 END) as read_count,
-                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed
-            ")
-            ->first();
+            ->where('direction', 'outbound');
+
+        if ($this->sourceReportFromDate) {
+            $query->whereDate('sent_at', '>=', $this->sourceReportFromDate);
+        }
+
+        if ($this->sourceReportToDate) {
+            $query->whereDate('sent_at', '<=', $this->sourceReportToDate);
+        }
 
         return [
-            'targeted' => (int) ($stats->total ?? 0),
-            'sent' => (int) ($stats->sent ?? 0),
-            'delivered' => (int) ($stats->delivered ?? 0),
-            'read' => (int) ($stats->read_count ?? 0),
-            'failed' => (int) ($stats->failed ?? 0),
-            'total' => (int) ($stats->total ?? 0),
+            'targeted' => (clone $query)->count(),
+            'sent' => (clone $query)->whereIn('status', ['sent', 'delivered', 'read'])->count(),
+            'delivered' => (clone $query)->whereIn('status', ['delivered', 'read'])->count(),
+            'read' => (clone $query)->where('status', 'read')->count(),
+            'failed' => (clone $query)->where('status', 'failed')->count(),
+            'total' => (clone $query)->count(),
         ];
     }
 
@@ -864,19 +763,14 @@ class WebhookSourceManager extends Component
 
             $source = WebhookSource::find($this->logsSourceId);
             if ($source) {
-                // Get real-time stats for this specific source from actual payloads
-                $received = \App\Models\WebhookPayload::where('webhook_source_id', $this->logsSourceId)->count();
-                $processed = \App\Models\WebhookPayload::where('webhook_source_id', $this->logsSourceId)->where('status', 'processed')->count();
-                $failed = \App\Models\WebhookPayload::where('webhook_source_id', $this->logsSourceId)->where('status', 'failed')->count();
-                $rate = $received > 0 ? round(($processed / $received) * 100, 1) : 0;
-
                 $this->logsSourceStats = [
-                    'received' => $received,
-                    'processed' => $processed,
-                    'failed' => $failed,
-                    'rate' => $rate,
+                    'received' => (int) $source->total_received,
+                    'processed' => (int) $source->total_processed,
+                    'failed' => (int) $source->total_failed,
+                    'rate' => $source->getSuccessRate(),
                     'name' => $source->name
                 ];
+                \Illuminate\Support\Facades\Log::info("Stats updated: ", $this->logsSourceStats);
 
                 // Force Livewire to update the view
                 $this->dispatch('stats-loaded');
@@ -884,7 +778,7 @@ class WebhookSourceManager extends Component
                 \Illuminate\Support\Facades\Log::warning("Source not found during refreshLogs for ID: {$this->logsSourceId}");
             }
 
-            $this->dispatch('notify', 'Logs refreshed.');
+            $this->dispatch('notify', 'Logs and analytics refreshed.');
         } else {
             \Illuminate\Support\Facades\Log::warning("refreshLogs called without logsSourceId");
         }
@@ -894,26 +788,6 @@ class WebhookSourceManager extends Component
     {
         $this->loadMappingContext();
         $this->dispatch('notify', 'Mapping context refreshed from latest data.');
-    }
-    public function recalculateSourceStats($id)
-    {
-        $this->addDebugInfo("Recalculating source stats", ['id' => $id]);
-        $source = WebhookSource::findOrFail($id);
-        
-        $received = \App\Models\WebhookPayload::where('webhook_source_id', $id)->count();
-        $processed = \App\Models\WebhookPayload::where('webhook_source_id', $id)->where('status', 'processed')->count();
-        $failed = \App\Models\WebhookPayload::where('webhook_source_id', $id)->where('status', 'failed')->count();
-        
-        $source->update([
-            'total_received' => $received,
-            'total_processed' => $processed,
-            'total_failed' => $failed
-        ]);
-        
-        $this->logsSourceId = $id;
-        $this->refreshLogs();
-        $this->addDebugInfo("Stats synchronized with database");
-        $this->dispatch('notify', 'Integration stats synchronized with actual record counts.');
     }
 
     protected function loadMappingContext()
@@ -1071,66 +945,14 @@ class WebhookSourceManager extends Component
         return $this->streamWebhookExport('failed');
     }
 
-    public function exportWebhookReportForSource(?int $sourceId = null)
+    public function exportWebhookReportForSource(int $sourceId)
     {
-        if (!$sourceId) {
-            $this->dispatch('notify', 'Please select a source before exporting.', 'error');
-            return null;
-        }
         return $this->streamWebhookExportForSource($sourceId, $this->normalizeExportStatusFilter());
     }
 
-    public function exportFailedWebhookReportForSource(?int $sourceId = null)
+    public function exportFailedWebhookReportForSource(int $sourceId)
     {
-        if (!$sourceId) {
-            $this->dispatch('notify', 'Please select a source before exporting.', 'error');
-            return null;
-        }
         return $this->streamWebhookExportForSource($sourceId, 'failed');
-    }
-
-    public function exportDirectedSourceContacts(?int $sourceId = null)
-    {
-        if (!$sourceId) {
-            $this->dispatch('notify', 'Please select a source before exporting contacts.', 'error');
-            return null;
-        }
-        $statusFilter = $this->normalizeExportStatusFilter();
-        $source = WebhookSource::findOrFail($sourceId);
-        
-        return response()->streamDownload(function () use ($source, $statusFilter) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Contact Name', 'Phone Number', 'Email', 'Last Status', 'Last Activity']);
-
-            $query = Message::where('webhook_source_id', $source->id)
-                ->where('direction', 'outbound');
-
-            if ($statusFilter !== 'all') {
-                $query->where('status', $statusFilter);
-            }
-
-            $contactIds = $query->distinct()->pluck('contact_id')->filter()->toArray();
-
-            if (!empty($contactIds)) {
-                \App\Models\Contact::whereIn('id', $contactIds)->chunk(500, function ($contacts) use ($handle, $source) {
-                    foreach ($contacts as $contact) {
-                        $lastMsg = Message::where('contact_id', $contact->id)
-                            ->where('webhook_source_id', $source->id)
-                            ->latest()
-                            ->first();
-
-                        fputcsv($handle, [
-                            $contact->name,
-                            $contact->phone_number,
-                            $contact->email,
-                            optional($lastMsg)->status ?? 'N/A',
-                            optional($contact->updated_at)->format('Y-m-d H:i:s')
-                        ]);
-                    }
-                });
-            }
-            fclose($handle);
-        }, "source-{$sourceId}-contacts.csv");
     }
 
     protected function streamWebhookExport(string $statusFilter)
@@ -1367,12 +1189,7 @@ class WebhookSourceManager extends Component
         if ($this->selectedTemplateId) {
             $selectedTemplate = WhatsappTemplate::find($this->selectedTemplateId);
             if ($selectedTemplate && $selectedTemplate->components) {
-                $components = $selectedTemplate->components;
-                if (is_string($components)) {
-                    $components = json_decode($components, true) ?: [];
-                }
-
-                foreach ($components as $component) {
+                foreach ($selectedTemplate->components as $component) {
                     // Extract {{1}}, {{2}}, etc. from all components with text
                     if (isset($component['text'])) {
                         preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches);
@@ -1387,14 +1204,6 @@ class WebhookSourceManager extends Component
                 }
                 sort($templateParams);
             }
-        }
-
-        if ($this->debugMode) {
-            $this->addDebugInfo("RENDERING: State check", [
-                'editingId' => $this->editingId,
-                'currentStep' => $this->currentStep,
-                'showWizard' => $this->showWizardModal
-            ]);
         }
 
         return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate'))
