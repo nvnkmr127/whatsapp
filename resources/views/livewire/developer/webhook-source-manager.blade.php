@@ -79,51 +79,20 @@
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Track where messages are coming from</p>
             </div>
 
-            <div class="w-full grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div class="relative group md:col-span-2">
-                    <input wire:model.live.debounce.300ms="search" type="text"
-                        class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all"
-                        placeholder="Search sources or teams...">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
-                <select wire:model.live="platformFilter"
-                    class="w-full px-3 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all">
-                    <option value="">All Platforms</option>
-                    @foreach($platforms as $key => $preset)
-                        <option value="{{ $key }}">{{ $preset['name'] }}</option>
-                    @endforeach
-                </select>
-                <div class="grid grid-cols-3 gap-3">
-                    <select wire:model.live="statusFilter"
-                        class="w-full px-3 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all">
-                        <option value="">All Status</option>
-                        <option value="1">Active</option>
-                        <option value="0">Paused</option>
-                    </select>
-                    <select wire:model.live="perPage"
-                        class="w-full px-3 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all">
-                        <option value="10">10 / page</option>
-                        <option value="25">25 / page</option>
-                        <option value="50">50 / page</option>
-                    </select>
-                    <button wire:click="resetFilters"
-                        class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all flex items-center justify-center gap-1">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Reset
-                    </button>
-                </div>
+            <div class="relative group max-w-sm w-full">
+                <input wire:model.live.debounce.300ms="search" type="text"
+                    class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-[11px] font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-wa-teal tracking-tight transition-all"
+                    placeholder="Search sources or teams...">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
             </div>
         </div>
 
         <div id="sources-table" class="overflow-x-auto">
-            <div class="max-h-[34rem] overflow-y-auto">
-            <table class="w-full min-w-[1220px] text-left">
+            <table class="w-full text-left">
                 <thead>
                     <tr class="border-b border-slate-50 dark:border-slate-800/50">
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Source
@@ -134,15 +103,13 @@
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">URL</th>
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status
                         </th>
-                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Delivery Analytics
-                        </th>
                         <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-end">
                             Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
-                    @forelse($sources as $source)
-                        <tr wire:key="source-row-{{ $source->id }}" class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                    @foreach($sources as $source)
+                        <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                             <td class="px-8 py-4">
                                 <div class="text-xs font-black text-slate-900 dark:text-white">{{ $source->name }}</div>
                                 <span class="text-[10px] text-slate-400 uppercase font-black">{{ $source->platform }}</span>
@@ -166,48 +133,6 @@
                                         {{ $source->is_active ? 'Active' : 'Paused' }}
                                     </span>
                                 </button>
-                            </td>
-                            <td class="px-8 py-4 min-w-[340px]">
-                                @php
-                                    $attempted = (int) ($source->msg_attempted_count ?? 0);
-                                    $sent = (int) ($source->msg_sent_count ?? 0);
-                                    $delivered = (int) ($source->msg_delivered_count ?? 0);
-                                    $read = (int) ($source->msg_read_count ?? 0);
-                                    $failed = (int) ($source->msg_failed_count ?? 0);
-                                    $deliveryRate = $sent > 0 ? round(($delivered / $sent) * 100, 1) : 0;
-                                    $readRate = $delivered > 0 ? round(($read / $delivered) * 100, 1) : 0;
-                                    $sentPct = $attempted > 0 ? round(($sent / $attempted) * 100) : 0;
-                                    $deliveredPct = $attempted > 0 ? round(($delivered / $attempted) * 100) : 0;
-                                    $readPct = $attempted > 0 ? round(($read / $attempted) * 100) : 0;
-                                @endphp
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                                        <span class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Sent: {{ number_format($sent) }}</span>
-                                        <span class="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">Delivered: {{ number_format($delivered) }}</span>
-                                        <span class="px-2 py-1 rounded bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-300">Read: {{ number_format($read) }}</span>
-                                        <span class="px-2 py-1 rounded bg-rose-100 dark:bg-rose-900/20 text-rose-600 dark:text-rose-300">Failed: {{ number_format($failed) }}</span>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div class="h-full bg-slate-400" style="width: {{ $sentPct }}%"></div>
-                                        </div>
-                                        <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div class="h-full bg-blue-500" style="width: {{ $deliveredPct }}%"></div>
-                                        </div>
-                                        <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div class="h-full bg-emerald-500" style="width: {{ $readPct }}%"></div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                        <span>Attempts: {{ number_format($attempted) }}</span>
-                                        <span>Delivery: {{ $deliveryRate }}%</span>
-                                        <span>Read: {{ $readRate }}%</span>
-                                    </div>
-                                    <button wire:click="openSourceReportModal({{ $source->id }})"
-                                        class="mt-2 w-full px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all">
-                                        View Full Report
-                                    </button>
-                                </div>
                             </td>
                             <td class="px-8 py-4 text-end">
                                 <div
@@ -285,27 +210,9 @@
                                 </div>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ auth()->user()->isSuperAdmin() ? 7 : 6 }}" class="px-8 py-10 text-center text-sm font-semibold text-slate-400">
-                                No webhook sources matched your filters.
-                            </td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
             </table>
-            </div>
-        </div>
-        @if($sources->hasPages())
-            <div class="px-8 py-5 border-t border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                    Showing {{ $sources->firstItem() ?? 0 }}-{{ $sources->lastItem() ?? 0 }} of {{ $sources->total() }} sources
-                </div>
-                <div>
-                    {{ $sources->onEachSide(1)->links() }}
-                </div>
-            </div>
-        @endif
         </div>
     </div>
 
@@ -514,9 +421,9 @@
                                                 Webhook URL</h5>
                                             <div class="flex flex-col md:flex-row items-center gap-3">
                                                 <code
-                                                    class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ $this->currentSource?->getWebhookUrl() }}</code>
+                                                    class="text-sm font-mono bg-black/20 py-2 px-4 rounded-xl flex-1 text-center md:text-left break-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
                                                 <button
-                                                    onclick="navigator.clipboard.writeText('{{ $this->currentSource?->getWebhookUrl() }}')"
+                                                    onclick="navigator.clipboard.writeText('{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}')"
                                                     class="bg-white text-wa-teal px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg shadow-black/10">Copy
                                                     URL</button>
                                             </div>
@@ -590,7 +497,7 @@
                                 <div class="flex items-center justify-between gap-4">
                                     <div class="flex-1">
                                         <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-1">Webhook URL</p>
-                                        <code class="text-xs font-mono text-white break-all select-all">{{ $this->currentSource?->getWebhookUrl() }}</code>
+                                        <code class="text-xs font-mono text-white break-all select-all">{{ \App\Models\WebhookSource::find($editingId)?->getWebhookUrl() }}</code>
                                     </div>
                                     <span class="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase rounded-lg border border-emerald-500/20 shrink-0">Ready</span>
                                 </div>
@@ -1246,108 +1153,6 @@
         <x-slot name="footer">
             <x-secondary-button wire:click="$set('showLogsModal', false)" class="!rounded-2xl !px-8">
                 Close Monitor
-            </x-secondary-button>
-        </x-slot>
-    </x-dialog-modal>
-
-    {{-- Source Report Modal --}}
-    <x-dialog-modal wire:model.live="showSourceReportModal" maxWidth="5xl">
-        <x-slot name="title">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        Delivery Report <span class="text-indigo-600">{{ $selectedSourceForReport?->name ?? 'N/A' }}</span>
-                    </h3>
-                    <div class="mt-1 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                        <span class="font-medium text-gray-900 dark:text-gray-200">Platform: {{ $selectedSourceForReport?->platform ?? 'N/A' }}</span>
-                    </div>
-                </div>
-                <button wire:click="closeSourceReportModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-        </x-slot>
-
-        <x-slot name="content">
-            <!-- Filter Controls -->
-            <div class="mb-6 flex gap-4 flex-col md:flex-row">
-                <div class="flex-1">
-                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">From Date</label>
-                    <input type="date" wire:model.live="sourceReportFromDate" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-                </div>
-                <div class="flex-1">
-                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">To Date</label>
-                    <input type="date" wire:model.live="sourceReportToDate" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" />
-                </div>
-                <div class="flex-1">
-                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">Per Page</label>
-                    <select wire:model.live="sourceReportPerPage" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                @php
-                    $stats = $sourceReportStats ?? [];
-                @endphp
-                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
-                    <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Targeted</div>
-                    <div class="text-2xl font-black text-gray-900 dark:text-white mt-1">{{ number_format($stats['targeted'] ?? 0) }}</div>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
-                    <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Sent</div>
-                    <div class="text-2xl font-black text-gray-900 dark:text-white mt-1">{{ number_format($stats['sent'] ?? 0) }}</div>
-                </div>
-                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center border border-blue-100 dark:border-blue-800">
-                    <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Delivered</div>
-                    <div class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{{ number_format($stats['delivered'] ?? 0) }}</div>
-                </div>
-                <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-4 text-center border border-emerald-100 dark:border-emerald-800">
-                    <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Read</div>
-                    <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{{ number_format($stats['read'] ?? 0) }}</div>
-                </div>
-                <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg p-4 text-center border border-rose-100 dark:border-rose-800">
-                    <div class="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest">Failed</div>
-                    <div class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{{ number_format($stats['failed'] ?? 0) }}</div>
-                </div>
-            </div>
-
-            <!-- Rates -->
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg p-6">
-                    <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Delivery Rate</div>
-                    @php
-                        $deliveryRate = ($stats['sent'] ?? 0) > 0 ? round(($stats['delivered'] ?? 0) / $stats['sent'] * 100, 1) : 0;
-                    @endphp
-                    <div class="text-3xl font-black text-indigo-600">{{ $deliveryRate }}%</div>
-                    <div class="mt-2 bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                        <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ min($deliveryRate, 100) }}%"></div>
-                    </div>
-                </div>
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg p-6">
-                    <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Read Rate</div>
-                    @php
-                        $readRate = ($stats['delivered'] ?? 0) > 0 ? round(($stats['read'] ?? 0) / $stats['delivered'] * 100, 1) : 0;
-                    @endphp
-                    <div class="text-3xl font-black text-emerald-600">{{ $readRate }}%</div>
-                    <div class="mt-2 bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                        <div class="bg-emerald-600 h-2 rounded-full" style="width: {{ min($readRate, 100) }}%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400">Report showing analytics for webhook source delivery performance.</p>
-        </x-slot>
-
-        <x-slot name="footer">
-            <x-secondary-button wire:click="closeSourceReportModal" class="!rounded-lg">
-                Close Report
             </x-secondary-button>
         </x-slot>
     </x-dialog-modal>
