@@ -26,6 +26,26 @@ class WebhookSourceManager extends Component
     public $is_sandbox = false;
     public $ip_whitelist = '';
     public $editingId = null;
+    public $debugMode = false;
+    public $debugLog = [];
+
+    public function toggleDebug()
+    {
+        $this->debugMode = !$this->debugMode;
+        $this->addDebugInfo('Debug mode ' . ($this->debugMode ? 'enabled' : 'disabled'));
+    }
+
+    protected function addDebugInfo($message, $data = null)
+    {
+        $entry = [
+            'time' => now()->format('H:i:s'),
+            'message' => $message,
+            'data' => $data
+        ];
+        array_unshift($this->debugLog, $entry);
+        $this->debugLog = array_slice($this->debugLog, 0, 10);
+        \Illuminate\Support\Facades\Log::info("WebhookDebug: {$message}", $data ?: []);
+    }
     public $search = '';
     public $platformFilter = '';
     public $statusFilter = '';
@@ -420,7 +440,7 @@ class WebhookSourceManager extends Component
             $this->reset(['name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'capturedPayload', 'currentStep', 'selectedEventType', 'selectedTemplateId']);
             $this->initializeDefaults();
 
-            \Illuminate\Support\Facades\Log::info("Triggering edit for source ID: {$id}");
+            $this->addDebugInfo("Triggering edit for source ID: {$id}");
             $source = WebhookSource::findOrFail($id);
             $this->authorize('update', $source);
 
@@ -817,14 +837,19 @@ class WebhookSourceManager extends Component
 
             $source = WebhookSource::find($this->logsSourceId);
             if ($source) {
+                // Get real-time stats for this specific source from actual payloads
+                $received = \App\Models\WebhookPayload::where('webhook_source_id', $this->logsSourceId)->count();
+                $processed = \App\Models\WebhookPayload::where('webhook_source_id', $this->logsSourceId)->where('status', 'processed')->count();
+                $failed = \App\Models\WebhookPayload::where('webhook_source_id', $this->logsSourceId)->where('status', 'failed')->count();
+                $rate = $received > 0 ? round(($processed / $received) * 100, 1) : 0;
+
                 $this->logsSourceStats = [
-                    'received' => (int) $source->total_received,
-                    'processed' => (int) $source->total_processed,
-                    'failed' => (int) $source->total_failed,
-                    'rate' => $source->getSuccessRate(),
+                    'received' => $received,
+                    'processed' => $processed,
+                    'failed' => $failed,
+                    'rate' => $rate,
                     'name' => $source->name
                 ];
-                \Illuminate\Support\Facades\Log::info("Stats updated: ", $this->logsSourceStats);
 
                 // Force Livewire to update the view
                 $this->dispatch('stats-loaded');
@@ -832,7 +857,7 @@ class WebhookSourceManager extends Component
                 \Illuminate\Support\Facades\Log::warning("Source not found during refreshLogs for ID: {$this->logsSourceId}");
             }
 
-            $this->dispatch('notify', 'Logs and analytics refreshed.');
+            $this->dispatch('notify', 'Logs refreshed.');
         } else {
             \Illuminate\Support\Facades\Log::warning("refreshLogs called without logsSourceId");
         }
@@ -842,6 +867,26 @@ class WebhookSourceManager extends Component
     {
         $this->loadMappingContext();
         $this->dispatch('notify', 'Mapping context refreshed from latest data.');
+    }
+    public function recalculateSourceStats($id)
+    {
+        $this->addDebugInfo("Recalculating source stats", ['id' => $id]);
+        $source = WebhookSource::findOrFail($id);
+        
+        $received = \App\Models\WebhookPayload::where('webhook_source_id', $id)->count();
+        $processed = \App\Models\WebhookPayload::where('webhook_source_id', $id)->where('status', 'processed')->count();
+        $failed = \App\Models\WebhookPayload::where('webhook_source_id', $id)->where('status', 'failed')->count();
+        
+        $source->update([
+            'total_received' => $received,
+            'total_processed' => $processed,
+            'total_failed' => $failed
+        ]);
+        
+        $this->logsSourceId = $id;
+        $this->refreshLogs();
+        $this->addDebugInfo("Stats synchronized with database");
+        $this->dispatch('notify', 'Integration stats synchronized with actual record counts.');
     }
 
     protected function loadMappingContext()
