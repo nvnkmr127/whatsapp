@@ -78,7 +78,7 @@ class TemplateValidator
                     ];
                 }
 
-                if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
+                if ($component['type'] === 'BUTTONS' && !empty($component['buttons']) && is_array($component['buttons'])) {
                     foreach ($component['buttons'] as $btn) {
                         if (!in_array($btn['type'] ?? '', ['OTP', 'COPY_CODE'])) {
                             $score -= 20;
@@ -124,7 +124,7 @@ class TemplateValidator
                 }
             }
 
-            if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
+            if ($component['type'] === 'BUTTONS' && !empty($component['buttons']) && is_array($component['buttons'])) {
                 foreach ($component['buttons'] as $btn) {
                     if (($btn['type'] ?? '') === 'URL' && isset($btn['url']) && str_contains($btn['url'], '{{')) {
                         if (!str_contains($btn['url'], '{{1}}')) {

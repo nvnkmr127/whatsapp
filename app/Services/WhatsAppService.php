@@ -585,9 +585,10 @@ class WhatsAppService
         // Automatically inject the OTP code into the button component if it's a COPY_CODE button
         if ($tpl && !empty($bodyParams)) {
             $tplComponents = $tpl->components ?? [];
-            foreach ($tplComponents as $component) {
-                if (($component['type'] === 'BUTTONS') && !empty($component['buttons'])) {
-                    foreach ($component['buttons'] as $idx => $btn) {
+            if (is_array($tplComponents)) {
+                foreach ($tplComponents as $component) {
+                    if ($component['type'] === 'BUTTONS' && !empty($component['buttons']) && is_array($component['buttons'])) {
+                        foreach ($component['buttons'] as $idx => $btn) {
                         if (($btn['type'] ?? '') === 'COPY_CODE') {
                             $components[] = [
                                 'type' => 'button',

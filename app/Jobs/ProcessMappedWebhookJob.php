@@ -109,7 +109,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Build template parameters
         $parameters = [];
         // Map configured parameters from action config to mapped keys in payload
-        if (!empty($parameterMapping)) {
+        if (!empty($parameterMapping) && is_array($parameterMapping)) {
             foreach ($parameterMapping as $position => $mappedKey) {
                 // Handle case where mappedKey might be an array (malformed config)
                 if (is_array($mappedKey)) {

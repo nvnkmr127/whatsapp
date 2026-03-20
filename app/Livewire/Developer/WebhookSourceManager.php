@@ -510,58 +510,83 @@ class WebhookSourceManager extends Component
 
     public function update()
     {
-        if (!$this->editingId && $this->currentStep < 4) {
+        // 1. Wizard Progression
+        if ($this->currentStep < 4) {
+            $this->addDebugInfo("Transitioning to step " . ($this->currentStep + 1));
             $this->nextStep();
             return;
         }
 
+        // 2. Final Validation
         $this->validate();
 
-        $source = WebhookSource::findOrFail($this->editingId);
-        $this->authorize('update', $source);
+        try {
+            // 3. Resolve Target Model
+            $source = $this->editingId 
+                ? WebhookSource::findOrFail($this->editingId) 
+                : new WebhookSource(['team_id' => auth()->user()->current_team_id]);
 
-        $actionConfig = $this->buildActionConfig();
-
-        // Build field mappings (nested by event type as required by the processing engine)
-        $fieldMappings = [];
-        $eventType = $this->selectedEventType ?: 'custom';
-        $currentEventMappings = [];
-
-        // 1. Add variable mappings
-        foreach ($this->templateParameters as $position => $fieldPath) {
-            if ($fieldPath) {
-                $currentEventMappings["param_{$position}"] = $fieldPath;
+            if ($this->editingId) {
+                $this->authorize('update', $source);
             }
+
+            // 4. Build Configurations
+            $actionConfig = $this->buildActionConfig();
+            
+            // Build nested field mappings for the processing engine
+            $fieldMappings = [];
+            $eventType = $this->selectedEventType ?: 'custom';
+            $currentEventMappings = [];
+
+            // Add variable mappings param_1, param_2...
+            foreach ($this->templateParameters as $position => $fieldPath) {
+                if ($fieldPath) {
+                    $currentEventMappings["param_{$position}"] = $fieldPath;
+                }
+            }
+
+            // Add phone number mapping
+            if (isset($this->field_mappings['phone_number']) && $this->field_mappings['phone_number']) {
+                $currentEventMappings['phone_number'] = $this->field_mappings['phone_number'];
+            }
+
+            if (!empty($currentEventMappings)) {
+                $fieldMappings[$eventType] = $currentEventMappings;
+            }
+
+            // 5. Persist
+            $data = [
+                'name' => $this->name,
+                'platform' => $this->platform,
+                'auth_method' => $this->auth_method,
+                'auth_config' => $this->auth_config,
+                'field_mappings' => !empty($fieldMappings) ? $fieldMappings : $this->field_mappings,
+                'transformation_rules' => $this->transformation_rules,
+                'action_config' => $actionConfig,
+                'is_active' => $this->is_active ?? true,
+                'is_sandbox' => $this->is_sandbox ?? false,
+                'ip_whitelist' => $this->ip_whitelist,
+                'filtering_rules' => $this->filtering_rules_ui,
+                'process_delay' => $this->process_delay ?? 0,
+            ];
+
+            if ($this->editingId) {
+                $source->update($data);
+            } else {
+                $source->fill($data)->save();
+            }
+
+            // 6. Finalizing
+            $this->addDebugInfo("Webhook source saved successfully", ['id' => $source->id]);
+            $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
+            $this->initializeDefaults();
+            $this->dispatch('notify', 'Webhook source saved successfully.');
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to save webhook source: " . $e->getMessage());
+            $this->addDebugInfo("Error saving source", ['error' => $e->getMessage()]);
+            $this->dispatch('notify', 'Error saving integration: ' . $e->getMessage(), 'error');
         }
-
-        // 2. Add phone number mapping (from flattened UI state)
-        if (isset($this->field_mappings['phone_number']) && $this->field_mappings['phone_number']) {
-            $currentEventMappings['phone_number'] = $this->field_mappings['phone_number'];
-        }
-
-        // 3. Nest under event type if we have any mappings
-        if (!empty($currentEventMappings)) {
-            $fieldMappings[$eventType] = $currentEventMappings;
-        }
-
-        $source->update([
-            'name' => $this->name,
-            'platform' => $this->platform,
-            'auth_method' => $this->auth_method,
-            'auth_config' => $this->auth_config,
-            'field_mappings' => $fieldMappings ?: $this->field_mappings,
-            'transformation_rules' => $this->transformation_rules,
-            'action_config' => $actionConfig,
-            'is_active' => $this->is_active,
-            'is_sandbox' => $this->is_sandbox,
-            'ip_whitelist' => $this->ip_whitelist,
-            'filtering_rules' => $this->filtering_rules_ui,
-            'process_delay' => $this->process_delay,
-        ]);
-
-        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
-        $this->initializeDefaults();
-        $this->dispatch('notify', 'Webhook source saved successfully.');
     }
 
     public function cancelEdit()
