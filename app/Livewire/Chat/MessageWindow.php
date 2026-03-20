@@ -41,7 +41,6 @@ class MessageWindow extends Component
     // public $templatePreviewText = '';
 
     // New properties for transfer modal and refactored media/message
-    public $activeAgents = [];
     public $activeAgentIds = [];
     public $showTransferModal = false;
     public $transferSearch = '';
@@ -831,67 +830,6 @@ class MessageWindow extends Component
         $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
 
         return $text;
-    }
-
-            return;
-
-        try {
-            ksort($this->templateVariables);
-            $bodyParams = array_values($this->templateVariables);
-            $headerParams = $this->templateMediaUrl ? [$this->templateMediaUrl] : [];
-            $footerParams = [];
-
-            // 1. Pre-persist for UI
-            $richContent = "Template: {$this->selectedTemplate->name}";
-            $bodyComp = collect($this->selectedTemplate->components)->firstWhere('type', 'BODY');
-            if ($bodyComp) {
-                $text = $bodyComp['text'] ?? '';
-                foreach ($bodyParams as $index => $param) {
-                    $search = '{{' . ($index + 1) . '}}';
-                    $text = str_replace($search, $param, $text);
-                }
-                $richContent = $text;
-            }
-
-            $message = \App\Models\Message::create([
-                'team_id' => Auth::user()->currentTeam->id,
-                'contact_id' => $this->conversation->contact_id,
-                'conversation_id' => $this->conversation->id,
-                'type' => 'template',
-                'direction' => 'outbound',
-                'status' => 'queued',
-                'content' => $richContent,
-                'metadata' => [
-                    'template_name' => $this->selectedTemplate->name,
-                    'language' => $this->selectedTemplate->language ?? 'en_US',
-                    'variables' => $bodyParams,
-                    'header_variables' => $headerParams,
-                    'footer_variables' => $footerParams,
-                ],
-            ]);
-
-            // 2. Dispatch Job with segregated parameters
-            \App\Jobs\SendMessageJob::dispatch(
-                Auth::user()->currentTeam->id,
-                $this->conversation->contact->phone_number,
-                'template',
-                $bodyParams,
-                $this->selectedTemplate->name,
-                $this->selectedTemplate->language ?? 'en_US',
-                $message->id,
-                null, // traceId
-                $headerParams,
-                $footerParams
-            );
-
-            $this->dispatch('messageSent');
-            $this->loadConversation();
-            $this->closeTemplateModals();
-            session()->flash('success', 'Template queued for sending.');
-
-        } catch (\Exception $e) {
-            session()->flash('error', $e->getMessage());
-        }
     }
 
     // Deprecated or simplified direct send (kept for compatibility if needed, but UI will use modal now)

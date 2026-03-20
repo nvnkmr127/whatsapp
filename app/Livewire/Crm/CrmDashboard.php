@@ -9,6 +9,7 @@ use App\Models\CrmActivity;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CrmDashboard extends Component
 {
@@ -43,8 +44,18 @@ class CrmDashboard extends Component
             ->limit(5)
             ->get();
 
-        $this->recentActivities = CrmActivity::where('team_id', $teamId)
-            ->with(['user', 'relatedTo'])
+        $activitiesQuery = CrmActivity::query()
+            ->with(['user', 'relatedTo']);
+
+        if (Schema::hasColumn('crm_activities', 'team_id')) {
+            $activitiesQuery->where('team_id', $teamId);
+        } else {
+            $activitiesQuery->whereHas('user', function ($query) use ($teamId) {
+                $query->where('current_team_id', $teamId);
+            });
+        }
+
+        $this->recentActivities = $activitiesQuery
             ->latest()
             ->limit(10)
             ->get();

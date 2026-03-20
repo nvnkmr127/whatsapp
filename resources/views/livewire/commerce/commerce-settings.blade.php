@@ -191,7 +191,7 @@
 
                             @if(!$readiness['checks']['catalog_linkage']['status'])
                             <div class="mt-2 text-center">
-                                <a href="{{ route('settings.integrations') }}" class="inline-flex items-center text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest gap-1 border-b border-blue-200 group">
+                                <a href="{{ route('integrations.ecommerce') }}" class="inline-flex items-center text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest gap-1 border-b border-blue-200 group">
                                     Manage Meta Integration
                                     <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
