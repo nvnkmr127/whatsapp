@@ -74,7 +74,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
             $templateId = reset($templateId); // Handle case where ID came as array
         }
 
-        $parameterMapping = $this->actionConfig['parameter_mapping'] ?? [];
+        $parameterMapping = $this->normalizeMapping($this->actionConfig['parameter_mapping'] ?? []);
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
 
         if (!$templateId) {
@@ -215,7 +215,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
             $templateId = reset($templateId);
         }
 
-        $parameterMapping = $this->actionConfig['parameter_mapping'] ?? [];
+        $parameterMapping = $this->normalizeMapping($this->actionConfig['parameter_mapping'] ?? []);
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
         $otpParamIndex = $this->actionConfig['otp_param_index'] ?? 1;
         $otpLength = $this->actionConfig['otp_length'] ?? 6;
@@ -347,7 +347,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
-        $variables = $this->actionConfig['variables'] ?? [];
+        $variables = $this->normalizeMapping($this->actionConfig['variables'] ?? []);
 
         if (!$automationId) {
             throw new \Exception('Automation ID not configured');
@@ -436,11 +436,57 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
     protected function executeMultipleActions(): void
     {
-        $actions = $this->actionConfig['actions'] ?? [];
+        $actions = $this->normalizeActions($this->actionConfig['actions'] ?? []);
 
         foreach ($actions as $action) {
             $job = new ProcessMappedWebhookJob($this->payload, $action);
             $job->handle();
         }
+    }
+
+    /**
+     * Normalize action config mappings to arrays.
+     */
+    protected function normalizeMapping(mixed $mapping): array
+    {
+        if (is_array($mapping)) {
+            return $mapping;
+        }
+
+        if (is_string($mapping)) {
+            $decoded = json_decode($mapping, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+
+            // Backward-compatible fallback: treat single mapping string as first parameter.
+            $trimmed = trim($mapping);
+            return $trimmed !== '' ? [1 => $trimmed] : [];
+        }
+
+        if ($mapping instanceof \Traversable) {
+            return iterator_to_array($mapping);
+        }
+
+        return [];
+    }
+
+    /**
+     * Normalize nested multiple-action config.
+     */
+    protected function normalizeActions(mixed $actions): array
+    {
+        if (is_array($actions)) {
+            return $actions;
+        }
+
+        if (is_string($actions)) {
+            $decoded = json_decode($actions, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return [];
     }
 }

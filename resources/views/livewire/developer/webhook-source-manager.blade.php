@@ -122,110 +122,74 @@
                     $latestPayload = \App\Models\WebhookPayload::where('webhook_source_id', $source->id)->latest()->first();
                     $successRate = $source->total_received > 0 ? round(($source->total_processed / $source->total_received) * 100, 1) : 0;
                 @endphp
-                <div class="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] p-5 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-300">
+                <div class="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 hover:shadow-xl transition-all duration-300">
                     <div class="flex flex-col lg:flex-row lg:items-center gap-6">
                         
-                        <!-- Left: Platform Identity -->
-                        <div class="flex items-center gap-4 min-w-[280px]">
-                            <div class="relative">
-                                <div class="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-wa-teal group-hover:bg-wa-teal group-hover:text-white transition-all duration-500 shadow-inner">
-                                    @if($source->platform === 'shopify')
-                                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M19.1 12c0-3.9-3.2-7.1-7.1-7.1h-4v14.2h1.4v-4.3c.8.9 2.1 1.4 3.5 1.4 3.4 0 6.2-2.3 6.2-4.2zm-7.1 2.8c-1 0-1.8-.4-2.4-.9V10.1c.6-.5 1.4-.9 2.4-.9 2.1 0 3.8 1.4 3.8 2.8s-1.7 2.8-3.8 2.8z"/></svg>
-                                    @else
-                                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    @endif
-                                </div>
-                                <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 {{ $source->is_active ? 'bg-emerald-500' : 'bg-slate-300' }}"></div>
+                        <!-- Client Branding & URL -->
+                        <div class="flex items-center gap-4 min-w-[320px]">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-wa-teal border border-slate-100 dark:border-slate-700">
+                                @if($source->platform === 'shopify')
+                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M19.1 12c0-3.9-3.2-7.1-7.1-7.1h-4v14.2h1.4v-4.3c.8.9 2.1 1.4 3.5 1.4 3.4 0 6.2-2.3 6.2-4.2zm-7.1 2.8c-1 0-1.8-.4-2.4-.9V10.1c.6-.5 1.4-.9 2.4-.9 2.1 0 3.8 1.4 3.8 2.8s-1.7 2.8-3.8 2.8z"/></svg>
+                                @else
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                @endif
                             </div>
                             <div class="truncate">
-                                <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate mb-0.5">{{ $source->name }}</h3>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest bg-wa-teal/10 px-2 py-0.5 rounded">{{ $source->platform }}</span>
-                                    @if($source->is_sandbox)
-                                        <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Sandbox</span>
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white truncate flex items-center gap-2">
+                                    {{ $source->name }}
+                                    @if(!$source->is_active)
+                                        <span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[8px] uppercase tracking-widest rounded-full">Inactive</span>
                                     @endif
-                                    <button onclick="navigator.clipboard.writeText('{{ $source->getWebhookUrl() }}')" class="flex items-center gap-1 text-[10px] font-mono text-slate-400 hover:text-wa-teal transition-colors truncate max-w-[150px]">
+                                </h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-bold text-wa-teal uppercase tracking-widest">{{ $source->platform }}</span>
+                                    <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                    <button onclick="navigator.clipboard.writeText('{{ $source->getWebhookUrl() }}')" class="text-[10px] font-mono text-slate-400 hover:text-wa-teal transition-colors flex items-center gap-1">
                                         <x-icon name="link" class="w-3 h-3" />
-                                        <span class="truncate">{{ basename($source->getWebhookUrl()) }}</span>
+                                        Copy Endpoint
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Mid: Stats & Health -->
-                        <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-6">
-                            <!-- Hits Area -->
-                            <div class="flex flex-col justify-center">
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{{ __('Hits Processed') }}</span>
-                                <div class="flex items-baseline gap-1.5">
-                                    <span class="text-lg font-black text-slate-900 dark:text-white">{{ number_format($source->total_received) }}</span>
-                                    <span class="text-[10px] font-bold text-emerald-500">↑</span>
-                                </div>
-                            </div>
-
-                            <!-- Success rate -->
-                            <div class="flex flex-col justify-center">
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{{ __('Health Score') }}</span>
+                        <!-- Main Stats -->
+                        <div class="flex-1 flex items-center gap-8">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Success Rate') }}</span>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-lg font-black {{ $successRate > 95 ? 'text-emerald-500' : ($successRate > 80 ? 'text-amber-500' : 'text-rose-500') }}">{{ $successRate }}%</span>
-                                    <div class="flex-1 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden max-w-[60px] hidden sm:block">
+                                    <span class="text-lg font-black {{ $successRate > 90 ? 'text-emerald-500' : ($successRate > 70 ? 'text-amber-500' : 'text-rose-500') }}">{{ $successRate }}%</span>
+                                    <div class="w-12 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden hidden sm:block">
                                         <div class="h-full bg-current" style="width: {{ $successRate }}%"></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Last Activity -->
-                            <div class="hidden sm:flex flex-col justify-center">
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{{ __('Last Action') }}</span>
-                                @if($latestPayload)
-                                    <span class="text-tiny font-bold text-slate-700 dark:text-slate-300">{{ $latestPayload->created_at->diffForHumans() }}</span>
-                                @else
-                                    <span class="text-tiny font-bold text-slate-300 italic">{{ __('Never') }}</span>
-                                @endif
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Total Events') }}</span>
+                                <span class="text-lg font-black text-slate-900 dark:text-white">{{ number_format($source->total_received) }}</span>
+                            </div>
+
+                            <div class="hidden md:flex flex-col">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Last Active') }}</span>
+                                <span class="text-xs font-bold text-slate-600 dark:text-slate-400">{{ $latestPayload ? $latestPayload->created_at->diffForHumans() : 'Never' }}</span>
                             </div>
                         </div>
 
-                        <!-- Right: Action Icons -->
-                        <div class="flex items-center gap-2 lg:ml-auto">
-                            <!-- Main Configuration -->
-                            <button wire:click="edit({{ $source->id }})" 
-                                class="flex items-center gap-2 px-5 py-2.5 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:shadow-lg hover:shadow-wa-teal/20 transition-all">
-                                <x-icon name="cog" class="w-3.5 h-3.5" />
-                                <span>{{ __('Configure') }}</span>
+                        <!-- Actions -->
+                        <div class="flex items-center gap-2">
+                            <button wire:click="edit({{ $source->id }})" class="p-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-wa-teal hover:text-white rounded-2xl transition-all" title="Edit Source">
+                                <x-icon name="pencil-alt" class="w-4 h-4" />
                             </button>
-
-                            <div class="flex items-center border-l border-slate-100 dark:border-slate-800 ml-2 pl-2 gap-1.5">
-                                <!-- Insight/Logs -->
-                                <button wire:click="viewLogs({{ $source->id }})" 
-                                    class="p-2.5 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all" title="{{ __('View Payloads') }}">
-                                    <x-icon name="desktop-computer" class="w-4 h-4" />
-                                </button>
-
-                                <!-- Report -->
-                                <button wire:click="openSourceReportModal({{ $source->id }})" 
-                                    class="p-2.5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/5 rounded-xl transition-all" title="{{ __('Performance Report') }}">
-                                    <x-icon name="chart-bar" class="w-4 h-4" />
-                                </button>
-
-                                <!-- Duplicate -->
-                                <button wire:click="duplicate({{ $source->id }})" 
-                                    class="p-2.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/5 rounded-xl transition-all" title="{{ __('Clone Node') }}">
-                                    <x-icon name="duplicate" class="w-4 h-4" />
-                                </button>
-
-                                <!-- Toggle -->
-                                <button wire:click="toggleStatus({{ $source->id }})" 
-                                    class="p-2.5 {{ $source->is_active ? 'text-emerald-500' : 'text-slate-400' }} hover:bg-emerald-500/5 rounded-xl transition-all" title="{{ $source->is_active ? __('Pause Pipeline') : __('Resume Pipeline') }}">
-                                    <x-icon name="{{ $source->is_active ? 'pause' : 'play' }}" class="w-4 h-4" />
-                                </button>
-
-                                <!-- Delete -->
-                                <button wire:click="delete({{ $source->id }})" 
-                                    wire:confirm="{{ __('Permanently delete this integration?') }}"
-                                    class="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 rounded-xl transition-all" title="{{ __('Delete') }}">
-                                    <x-icon name="trash" class="w-4 h-4" />
-                                </button>
-                            </div>
+                            <button wire:click="viewLogs({{ $source->id }})" class="p-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-orange-500 hover:text-white rounded-2xl transition-all" title="View Payload History">
+                                <x-icon name="collection" class="w-4 h-4" />
+                            </button>
+                            <button wire:click="toggleStatus({{ $source->id }})" class="p-3 bg-slate-50 dark:bg-slate-800 {{ $source->is_active ? 'text-emerald-500' : 'text-slate-400' }} hover:scale-105 transition-all rounded-2xl" title="{{ $source->is_active ? 'Pause' : 'Activate' }}">
+                                <x-icon name="{{ $source->is_active ? 'pause' : 'play' }}" class="w-4 h-4" />
+                            </button>
+                            <div class="w-px h-8 bg-slate-100 dark:bg-slate-800 mx-2"></div>
+                            <button wire:click="delete({{ $source->id }})" wire:confirm="Delete this source?" class="p-3 text-slate-300 hover:text-rose-500 transition-all" title="Delete">
+                                <x-icon name="trash" class="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1006,17 +970,25 @@
                     <button wire:click="cancelEdit" type="button" class="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-widest transition-colors px-4">Cancel</button>
                 </div>
 
-                <div class="flex items-center gap-4">
+                    @if($editingId)
+                        <button wire:click="update" type="button" class="group px-8 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/30 flex items-center gap-2">
+                            Save Changes
+                            <x-icon name="check" class="w-3.5 h-3.5" />
+                        </button>
+                    @endif
+
                     @if($currentStep < 4)
                         <button wire:click="nextStep" type="button" class="group px-8 py-3 bg-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal transition-all shadow-xl shadow-wa-teal/30 flex items-center gap-2">
-                            Next
+                            Next Step
                             <svg class="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </button>
                     @else
-                        <button wire:click="update" type="button" class="group px-10 py-3 bg-gradient-to-r from-wa-teal to-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-wa-teal/40 flex items-center gap-2">
-                            Complete Setup
-                            <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        </button>
+                        @if(!$editingId)
+                            <button wire:click="update" type="button" class="group px-10 py-3 bg-gradient-to-r from-wa-teal to-wa-teal text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-wa-teal/40 flex items-center gap-2">
+                                Complete Setup
+                                <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            </button>
+                        @endif
                     @endif
                 </div>
             </div>

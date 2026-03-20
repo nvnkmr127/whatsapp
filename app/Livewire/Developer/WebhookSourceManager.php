@@ -150,21 +150,25 @@ class WebhookSourceManager extends Component
     {
         $user = auth()->user();
         $team = $user->currentTeam;
-        $query = WebhookSource::query();
+        
+        $sourceQuery = WebhookSource::query();
+        $payloadQuery = \App\Models\WebhookPayload::query();
 
         if ($team && !$user->isSuperAdmin()) {
-            $query->where('team_id', $team->id);
+            $sourceQuery->where('team_id', $team->id);
+            $payloadQuery->where('team_id', $team->id);
         }
 
-        $all = $query->get();
-        $totalReceived = $all->sum('total_received');
-        $totalProcessed = $all->sum('total_processed');
+        $allSources = $sourceQuery->get();
+        $totalReceived = $payloadQuery->count();
+        $totalProcessed = $payloadQuery->where('status', 'processed')->count();
+        $successRate = $totalReceived > 0 ? round(($totalProcessed / $totalReceived) * 100, 1) : 0;
 
         return [
-            'total' => $all->count(),
-            'active' => $all->where('is_active', true)->count(),
+            'total' => $allSources->count(),
+            'active' => $allSources->where('is_active', true)->count(),
             'total_received' => $totalReceived,
-            'success_rate' => $totalReceived > 0 ? round(($totalProcessed / $totalReceived) * 100, 1) : 0,
+            'success_rate' => $successRate,
         ];
     }
 
@@ -359,7 +363,7 @@ class WebhookSourceManager extends Component
 
         return $source->payloads()
             ->latest()
-            ->limit(5)
+            ->limit(20)
             ->get()
             ->map(function ($payload) {
                 return [
@@ -486,7 +490,7 @@ class WebhookSourceManager extends Component
 
     public function update()
     {
-        if ($this->currentStep < 4) {
+        if (!$this->editingId && $this->currentStep < 4) {
             $this->nextStep();
             return;
         }
