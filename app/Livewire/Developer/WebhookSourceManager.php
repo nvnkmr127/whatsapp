@@ -9,7 +9,6 @@ use App\Services\WebhookAuthService;
 use App\Services\WebhookMappingService;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -1029,13 +1028,6 @@ class WebhookSourceManager extends Component
 
 
 
-    #[Computed]
-    public function currentSource()
-    {
-        if (!$this->editingId) return null;
-        return WebhookSource::find($this->editingId);
-    }
-
     public function render()
     {
         \Illuminate\Support\Facades\Log::info("Rendering WebhookSourceManager. Wizards: " . ($this->showWizardModal ? 'YES' : 'NO') . " | Logs: " . ($this->showLogsModal ? 'YES' : 'NO'));
@@ -1084,14 +1076,8 @@ class WebhookSourceManager extends Component
         $selectedTemplate = null;
         if ($this->selectedTemplateId) {
             $selectedTemplate = WhatsappTemplate::find($this->selectedTemplateId);
-            
-            $components = $selectedTemplate->components ?? [];
-            if (is_string($components)) {
-                $components = json_decode($components, true) ?: [];
-            }
-            
-            if ($selectedTemplate && is_iterable($components)) {
-                foreach ($components as $component) {
+            if ($selectedTemplate && $selectedTemplate->components) {
+                foreach ($selectedTemplate->components as $component) {
                     // Extract {{1}}, {{2}}, etc. from all components with text
                     if (isset($component['text'])) {
                         preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches);
