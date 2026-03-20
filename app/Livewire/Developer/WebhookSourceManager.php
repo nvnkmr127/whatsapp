@@ -363,6 +363,9 @@ class WebhookSourceManager extends Component
     public function edit($id)
     {
         try {
+            $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
+            $this->initializeDefaults();
+            
             \Illuminate\Support\Facades\Log::info("Triggering edit for source ID: {$id}");
             $source = WebhookSource::findOrFail($id);
             $this->authorize('update', $source);

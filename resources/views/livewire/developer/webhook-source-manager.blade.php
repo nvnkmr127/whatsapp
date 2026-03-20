@@ -142,7 +142,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-800/30">
                     @forelse($sources as $source)
-                        <tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                        <tr wire:key="source-row-{{ $source->id }}" class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                             <td class="px-8 py-4">
                                 <div class="text-xs font-black text-slate-900 dark:text-white">{{ $source->name }}</div>
                                 <span class="text-[10px] text-slate-400 uppercase font-black">{{ $source->platform }}</span>
