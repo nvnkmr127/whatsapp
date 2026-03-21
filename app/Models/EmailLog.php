@@ -15,6 +15,7 @@ class EmailLog extends Model
         'status',
         'smtp_config_id',
         'provider_name',
+        'message_id',
         'failure_reason',
         'failure_type',
         'metadata',

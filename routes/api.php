@@ -116,3 +116,6 @@ Route::post('/webhooks/custom/orders', [\App\Http\Controllers\Webhooks\CustomSit
 // Meta Commerce Webhooks
 Route::get('/webhooks/meta/commerce', [\App\Http\Controllers\Webhooks\MetaCommerceWebhookController::class, 'verify']);
 Route::post('/webhooks/meta/commerce', [\App\Http\Controllers\Webhooks\MetaCommerceWebhookController::class, 'handle']);
+
+// Email Provider Webhooks
+Route::post('/webhooks/email/{provider}', [\App\Http\Controllers\Webhooks\Email\EmailWebhookController::class, 'handle']);

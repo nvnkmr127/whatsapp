@@ -3,164 +3,114 @@
 namespace App\Services\Email;
 
 use App\Enums\EmailUseCase;
+use App\Services\Email\Contracts\EmailPayload;
+use App\Services\Email\Contracts\EmailResult;
+use Exception;
 use Illuminate\Contracts\Mail\Mailable;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class EmailDispatcher
 {
-    protected $healthService;
-
-    public function __construct(SmtpHealthService $healthService)
-    {
-        $this->healthService = $healthService;
-    }
+    /**
+     * @param EmailProviderManager $manager
+     */
+    public function __construct(
+        protected EmailProviderManager $manager
+    ) {}
 
     /**
-     * Send an email using the appropriate mailer based on use case.
+     * Send an email using the multi-driver architecture.
      */
     public function send($to, EmailUseCase $useCase, Mailable $mailable, ?int $templateId = null): void
     {
+        // 1. Extract content and subject from Mailable
         $subject = 'System Email';
+        $html = '';
+        $text = null;
+
         try {
+            $html = (string) $mailable->render();
+
             $reflection = new \ReflectionClass($mailable);
             if ($reflection->hasProperty('subject')) {
                 $prop = $reflection->getProperty('subject');
                 $prop->setAccessible(true);
                 $subject = $prop->getValue($mailable) ?: 'System Email';
             }
-        } catch (\Exception $e) {
-            // Fallback
-        }
+            
+            // Text content handling if available
+            if (property_exists($mailable, 'textContent') && !empty($mailable->textContent)) {
+                $text = $mailable->textContent;
+            }
 
-        // 1. Get ordered list of active providers
-        try {
-            if (\App\Models\SmtpConfig::count() === 0) {
-                $this->sendLegacy($to, $useCase, $mailable);
-                $this->logSuccess($to, $useCase, 'legacy', null, $subject, $templateId);
-                return;
+            // Extract headers if available (Laravel 10+ headers() method or custom property)
+            $headers = [];
+            if (method_exists($mailable, 'headers')) {
+                $mailableHeaders = $mailable->headers();
+                if (property_exists($mailableHeaders, 'text')) {
+                    $headers = $mailableHeaders->text;
+                }
+            } elseif (property_exists($mailable, 'headersArray')) {
+                $headers = $mailable->headersArray;
             }
         } catch (\Exception $e) {
-            $this->sendLegacy($to, $useCase, $mailable);
-            $this->logSuccess($to, $useCase, 'legacy_error_recovery', null, $subject, $templateId);
-            return;
+            Log::warning("EmailDispatcher Content Extraction: " . $e->getMessage());
         }
 
-        $configs = \App\Models\SmtpConfig::where('is_active', true)
-            ->whereJsonContains('use_case', $useCase->value)
-            ->where('health_status', '!=', 'failing')
-            ->orderBy('priority')
-            ->get();
+        // 2. Build Payload
+        $payload = new EmailPayload(
+            to: is_array($to) ? (implode(',', array_keys($to)) ?: implode(',', $to)) : $to,
+            subject: $subject,
+            html: $html,
+            text: $text,
+            useCase: $useCase,
+            metadata: ['template_id' => $templateId],
+            headers: $headers
+        );
 
-        if ($configs->isEmpty()) {
-            $configs = \App\Models\SmtpConfig::where('is_active', true)
-                ->where('health_status', '!=', 'failing')
-                ->orderBy('priority')
-                ->get();
+        // 3. Delegate to Manager (Resolved Driver Architecture)
+        $result = $this->manager->send($payload);
 
-            if ($configs->isEmpty()) {
-                $this->sendLegacy($to, $useCase, $mailable);
-                $this->logSuccess($to, $useCase, 'legacy_fallback', null, $subject, $templateId);
-                return;
-            }
-        }
+        // 4. Log Result
+        $this->logResult($to, $useCase, $result, $subject, $templateId);
 
-        $lastException = null;
-        $sent = false;
-
-        foreach ($configs as $config) {
-            try {
-                $mailerName = 'dynamic_smtp_' . $config->id;
-                $this->configureDynamicMailer($mailerName, $config);
-
-                Mail::mailer($mailerName)->to($to)->send($mailable);
-
-                $this->healthService->reportSuccess($config);
-                $this->logSuccess($to, $useCase, $config->name, $config->id, $subject, $templateId);
-                $sent = true;
-                break;
-
-            } catch (\Exception $e) {
-                $lastException = $e;
-                $this->healthService->reportFailure($config);
-                $this->logFailure($to, $useCase, $config->name, $config->id, $subject, $e, $templateId);
-            }
-        }
-
-        if (!$sent) {
-            throw $lastException ?? new \Exception("All SMTP providers failed.");
+        // 5. Fail loud if the final driver (including fallback) failed
+        if (!$result->success) {
+            throw new Exception("Final Email Delivery Failure ({$result->providerName}): " . $result->error);
         }
     }
 
-    protected function logSuccess($to, $useCase, $provider, $configId, $subject, $templateId): void
+    /**
+     * Store result in EmailLog.
+     */
+    protected function logResult($to, EmailUseCase $useCase, EmailResult $result, string $subject, ?int $templateId): void
     {
         try {
-            \App\Models\EmailLog::create([
+            $data = [
                 'recipient' => is_array($to) ? json_encode($to) : $to,
                 'use_case' => $useCase,
                 'template_id' => $templateId,
                 'subject' => $subject,
-                'status' => 'sent',
-                'smtp_config_id' => $configId,
-                'provider_name' => $provider,
-                'sent_at' => now(),
-            ]);
+                'status' => $result->success ? 'sent' : 'failed',
+                'provider_name' => $result->providerName,
+                'message_id' => $result->messageId,
+                'metadata' => [
+                    'message_id' => $result->messageId,
+                    'error' => $result->error
+                ],
+            ];
+
+            if ($result->success) {
+                $data['sent_at'] = now();
+            } else {
+                $data['failed_at'] = now();
+                $data['failure_reason'] = $result->error;
+                $data['failure_type'] = 'provider_error';
+            }
+
+            \App\Models\EmailLog::create($data);
         } catch (\Exception $e) {
-            Log::error("Failed to write EmailLog: " . $e->getMessage());
-        }
-    }
-
-    protected function logFailure($to, $useCase, $provider, $configId, $subject, \Exception $e, $templateId): void
-    {
-        try {
-            $error = $e->getMessage();
-            $type = 'smtp_error';
-            if (str_contains($error, 'Connection could not be established'))
-                $type = 'network';
-            if (str_contains($error, 'Authentication failed'))
-                $type = 'authentication';
-
-            \App\Models\EmailLog::create([
-                'recipient' => is_array($to) ? json_encode($to) : $to,
-                'use_case' => $useCase,
-                'template_id' => $templateId,
-                'subject' => $subject,
-                'status' => 'failed',
-                'failure_reason' => $error,
-                'failure_type' => $type,
-                'smtp_config_id' => $configId,
-                'provider_name' => $provider,
-                'failed_at' => now(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Failed to write EmailLog: " . $e->getMessage());
-        }
-    }
-
-    protected function sendLegacy($to, EmailUseCase $useCase, Mailable $mailable): void
-    {
-        $mailer = $useCase->getMailer();
-        Mail::mailer($mailer)->to($to)->send($mailable);
-    }
-
-    protected function configureDynamicMailer(string $name, \App\Models\SmtpConfig $config): void
-    {
-        config([
-            "mail.mailers.{$name}" => [
-                'transport' => 'smtp',
-                'host' => $config->host,
-                'port' => $config->port,
-                'username' => $config->username,
-                'password' => $config->password,
-                'encryption' => $config->encryption,
-                'timeout' => 30,
-                'local_domain' => config('mail.mailers.smtp.local_domain'),
-            ]
-        ]);
-
-        if (!empty($config->from_address)) {
-            config(["mail.from.address" => $config->from_address]);
-            config(["mail.from.name" => $config->from_name]);
+            Log::error("Failed to write EmailLog via EmailDispatcher: " . $e->getMessage());
         }
     }
 }

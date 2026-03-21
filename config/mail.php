@@ -16,6 +16,15 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    'provider' => env('EMAIL_PROVIDER', 'smtp'),
+
+    'routing' => [
+        'marketing' => env('EMAIL_PROVIDER_MARKETING', null),
+        'alert' => env('EMAIL_PROVIDER_ALERT', null),
+        'notification' => env('EMAIL_PROVIDER_NOTIFICATION', null),
+        'invoice' => env('EMAIL_PROVIDER_INVOICE', null),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations

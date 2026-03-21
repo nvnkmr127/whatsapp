@@ -35,18 +35,19 @@ class CentralEmailService
     /**
      * Send a system email with raw content.
      */
-    public function sendSystemEmail(string $to, string $subject, string $html, string $text): void
+    public function sendSystemEmail(string $to, string $subject, string $html, string $text, EmailUseCase $useCase = EmailUseCase::ALERT, array $headers = []): void
     {
         try {
-            $mailable = new DynamicSystemMail($subject, $html, $text);
+            $mailable = new DynamicSystemMail($subject, $html, $text, $headers);
 
-            // Dispatch via failover engine using ALERT use case
-            \App\Jobs\Email\SendSystemEmailJob::dispatch($to, EmailUseCase::ALERT, $mailable, null);
+            // Dispatch via failover engine using the specified use case
+            \App\Jobs\Email\SendSystemEmailJob::dispatch($to, $useCase, $mailable, null);
 
         } catch (\Exception $e) {
             Log::error("CentralEmailService: Failed to queue raw system email", [
                 'to' => $to,
                 'subject' => $subject,
+                'useCase' => $useCase->value,
                 'error' => $e->getMessage()
             ]);
             throw $e;
@@ -63,8 +64,14 @@ class CentralEmailService
             $rendered = $this->templateService->render($slug, $data);
             $template = EmailTemplate::where('slug', $slug)->first();
 
-            // 2. Dispatch
-            $this->sendSystemEmail($to, $rendered['subject'], $rendered['html'], $rendered['text']);
+            // 2. Handle specific headers (e.g. List-Unsubscribe for Marketing)
+            $headers = [];
+            if ($useCase === EmailUseCase::MARKETING && isset($data['unsubscribe_url'])) {
+                $headers['List-Unsubscribe'] = "<{$data['unsubscribe_url']}>";
+            }
+
+            // 3. Dispatch
+            $this->sendSystemEmail($to, $rendered['subject'], $rendered['html'], $rendered['text'], $useCase, $headers);
 
         } catch (\Exception $e) {
             Log::error("CentralEmailService: Failed to queue templated email", [

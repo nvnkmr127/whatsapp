@@ -15,11 +15,14 @@ return [
     */
 
     'postmark' => [
-        'key' => env('POSTMARK_API_KEY'),
+        'token' => env('POSTMARK_TOKEN'),
     ],
 
     'resend' => [
-        'key' => env('RESEND_API_KEY'),
+        'api_key' => env('RESEND_API_KEY'),
+        'from_address' => env('RESEND_FROM_ADDRESS', env('MAIL_FROM_ADDRESS')),
+        'from_name' => env('RESEND_FROM_NAME', env('MAIL_FROM_NAME', 'WatXio')),
+        'webhook_secret' => env('RESEND_WEBHOOK_SECRET'),
     ],
 
     'ses' => [

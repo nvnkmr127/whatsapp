@@ -21,6 +21,27 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\OutboundPreflightService::class);
         $this->app->singleton(\App\Core\WhatsApp\WhatsAppClient::class);
 
+        // ── Email Provisioning Manager ──
+        $this->app->singleton(\App\Services\Email\EmailProviderManager::class, function ($app) {
+            $drivers = [
+                'smtp' => new \App\Services\Email\Drivers\SmtpDriver($app->make(\App\Services\Email\SmtpHealthService::class)),
+            ];
+
+            $resendKey = config('services.resend.api_key');
+            if ($resendKey) {
+                $drivers['resend'] = new \App\Services\Email\Drivers\ResendDriver(
+                    $resendKey,
+                    config('services.resend.from_address'),
+                    config('services.resend.from_name')
+                );
+            }
+
+            return new \App\Services\Email\EmailProviderManager($drivers);
+        });
+
+        // Update EmailDispatcher injection to match new single-dependency signature
+        $this->app->singleton(\App\Services\Email\EmailDispatcher::class);
+
     }
 
     /**

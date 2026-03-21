@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 class DynamicSystemMail extends Mailable
@@ -15,7 +16,8 @@ class DynamicSystemMail extends Mailable
     public function __construct(
         public string $subjectString,
         public string $htmlContent,
-        public ?string $textContent = null
+        public ?string $textContent = null,
+        public array $headersArray = []
     ) {
     }
 
@@ -38,6 +40,13 @@ class DynamicSystemMail extends Mailable
         }
 
         return $content;
+    }
+
+    public function headers(): Headers
+    {
+        return new Headers(
+            text: $this->headersArray
+        );
     }
 
     public function attachments(): array
