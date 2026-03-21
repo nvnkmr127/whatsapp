@@ -111,7 +111,7 @@ class SmtpDriver implements EmailProviderContract
             "mail.mailers.{$name}" => [
                 'transport' => 'smtp',
                 'host' => $config->host,
-                'port' => $config->port,
+                'port' => (int) $config->port,
                 'username' => $config->username,
                 'password' => $config->password,
                 'encryption' => $config->encryption,
