@@ -48,7 +48,10 @@ Schedule::command('broadcast:consume --seconds=55')
 // Compliance Audits
 Schedule::command('whatsapp:audit-compliance')->weekly()->sundays()->at('04:00');
 
-// CRM Automation
+// CRM Automation (Advanced Triggers T5 & T6)
+Schedule::command('automations:check-inactivity')->everyFiveMinutes();
+Schedule::command('automations:check-birthdays')->dailyAt('09:00');
+
 Schedule::job(new \App\Jobs\CheckOnboardingInactivityJob)->everyTenMinutes();
 
 

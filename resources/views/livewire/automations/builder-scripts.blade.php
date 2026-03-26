@@ -166,7 +166,14 @@
 
                         const midX = (startX + endX) / 2;
                         const midY = (startY + endY) / 2;
-                        let text = edge.condition || (source.type === 'condition' ? 'Else' : (source.type.includes('interactive') ? 'Selection' : 'Next'));
+                        // Determine label: prefer matching rule label from source condition node
+                        let text = edge.condition;
+                        if (!text) {
+                            if (source.type === 'condition' || source.type === 'split_by_condition') text = 'Else';
+                            else if (source.type === 'ab_split') text = 'Variant';
+                            else if (source.type === 'interactive_button' || source.type === 'interactive_list') text = 'Selection';
+                            else text = 'Next';
+                        }
                         this.ctx.font = 'bold 11px Inter, sans-serif';
                         const width = this.ctx.measureText(text).width + 16;
                         this.ctx.fillStyle = (this.selectedEdgeIndex === index) ? '#25D366' : '#ffffff';
@@ -254,7 +261,51 @@
                     this.$wire.addEdge(this.connectSourceId, targetId);
                 }
                 this.drawing = false;
+            },
+
+            zoomToFit() {
+                if (!this.nodesArray.length) return;
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                this.nodesArray.forEach(n => {
+                    minX = Math.min(minX, n.x);
+                    minY = Math.min(minY, n.y);
+                    maxX = Math.max(maxX, n.x);
+                    maxY = Math.max(maxY, n.y);
+                });
+                const container = document.getElementById('canvas-container');
+                const cw = container.clientWidth, ch = container.clientHeight;
+                const flowW = (maxX - minX) + 300, flowH = (maxY - minY) + 150;
+                this.scale = Math.min(Math.max(0.4, Math.min(cw / flowW, ch / flowH)), 1);
+                this.panX = (cw / 2) - (minX + flowW / 2) * this.scale;
+                this.panY = (ch / 2) - (minY + flowH / 2) * this.scale;
+            },
+
+            handleKeyboard(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                if (e.key === 'Backspace' || e.key === 'Delete') {
+                    if (this.selectedId) this.deleteNode(this.selectedId);
+                    else if (this.selectedEdgeIndex !== null) {
+                        this.$wire.deleteEdge(this.selectedEdgeIndex);
+                        this.selectedEdgeIndex = null;
+                    }
+                }
+                if (e.key === 'Escape') { this.deselectAll(); }
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 's') { e.preventDefault(); this.$wire.save(); }
+                    if (e.key === 'p') { e.preventDefault(); this.$wire.publish(); }
+                    if (e.key === 'z') { e.preventDefault(); this.$wire.undo?.(); }
+                    if (e.key === 'd' && this.selectedId) {
+                        e.preventDefault();
+                        this.$wire.duplicateNode(this.selectedId);
+                    }
+                }
+                if (e.key === 'f' || e.key === 'F') this.zoomToFit();
             }
         }))
+    });
+
+    window.addEventListener('keydown', (e) => {
+        const flow = Alpine.find(document.querySelector('[x-data="flowBuilder"]'));
+        if (flow) flow.handleKeyboard(e);
     });
 </script>

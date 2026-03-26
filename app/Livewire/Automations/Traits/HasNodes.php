@@ -153,17 +153,120 @@ trait HasNodes
                 $data['ratio'] = 50;
                 $data['label'] = 'A/B Split Test';
                 break;
+            case 'send_email':
+                $data['template_name'] = '';
+                $data['subject'] = 'Hello';
+                $data['body'] = '';
+                break;
+            case 'create_deal':
+                $data['pipeline_id'] = '';
+                $data['title'] = 'New Deal';
+                break;
+            case 'assign_to_agent':
+                $data['user_id'] = 'round_robin';
+                break;
+            case 'create_crm_task':
+                $data['title'] = 'New Task';
+                $data['due_days'] = 1;
+                $data['priority'] = 'medium';
+                break;
+            case 'set_variable':
+                $data['key'] = '';
+                $data['operation'] = 'set';
+                $data['value'] = '';
+                break;
+            case 'loop_over_items':
+                $data['items_path'] = '';
+                break;
+            case 'split_by_condition':
+                $data['rules'] = [['variable' => '', 'operator' => 'eq', 'value' => '']];
+                break;
+            case 'wait_until':
+                $data['value'] = 5;
+                $data['time_unit'] = 'minutes';
+                break;
+            case 'rate_limit_gate':
+                $data['window_hours'] = 24;
+                break;
+            case 'sub_flow':
+                $data['target_flow_id'] = '';
+                break;
+            case 'tag_contact':
+                $data['action'] = 'add';
+                $data['tag'] = '';
+                break;
+            case 'handover':
+                $data['label'] = 'Human Handoff';
+                break;
+            case 'google_sheets':
+                $data['spreadsheet_id'] = '';
+                $data['sheet_name'] = 'Sheet1';
+                $data['action'] = 'append_row';
+                $data['mapping'] = [];
+                break;
+            case 'stop_flow':
+                $data['label'] = 'End Flow';
+                break;
+            case 'note':
+                $data['label'] = '📌 Note';
+                $data['content'] = 'Add a note here...';
+                $data['color'] = 'yellow';
+                break;
+            case 'wait_for_event':
+                $data['label'] = 'Wait for Event';
+                $data['event_type'] = 'keyword';
+                $data['event_value'] = '';
+                $data['timeout_hours'] = 24;
+                $data['timeout_action'] = 'continue';
+                break;
+            case 'retry':
+                $data['label'] = 'Retry on Failure';
+                $data['max_retries'] = 3;
+                $data['retry_delay_minutes'] = 5;
+                $data['target_node_type'] = 'webhook';
+                break;
+            case 'payment':
+                $data['label'] = 'Collect Payment';
+                $data['provider'] = 'razorpay';
+                $data['amount_variable'] = '';
+                $data['currency'] = 'INR';
+                $data['description'] = 'Payment';
+                $data['save_to'] = 'payment_status';
+                break;
+            case 'update_contact':
+                $data['label'] = 'Update Contact Field';
+                $data['field'] = 'name';
+                $data['value'] = '';
+                break;
+            case 'tag_contact':
+                $data['label'] = 'Tag / Untag Contact';
+                $data['action'] = 'add';
+                $data['tag'] = '';
+                break;
+            case 'catalog_message':
+                $data['label'] = 'Product Catalog';
+                $data['catalog_id'] = '';
+                $data['product_retailer_ids'] = [];
+                $data['header_text'] = 'Check out our products';
+                $data['body_text'] = 'Browse and select the products you need.';
+                $data['footer_text'] = '';
+                $data['send_type'] = 'multi_product'; // or 'single_product'
+                $data['section_title'] = 'Our Products';
+                break;
         }
 
+        $newId = uniqid('node-');
         $this->nodes[] = [
-            'id' => $id,
+            'id'   => $newId,
             'type' => $type,
-            'x' => 100 + count($this->nodes) * 20,
-            'y' => 100 + count($this->nodes) * 20,
+            'x'    => 150 + (count($this->nodes) % 5) * 350,
+            'y'    => 100 + intdiv(count($this->nodes), 5) * 200,
             'data' => $data
         ];
         $this->nodes = array_values($this->nodes);
+        $this->pushHistory();
         $this->runValidation();
+        $this->selectNode($newId);
     }
 
     public function updateNodePosition($id, $x, $y)
@@ -184,11 +287,14 @@ trait HasNodes
         }
         $this->edges[] = ['source' => $source, 'target' => $target, 'condition' => ''];
         $this->edges = array_values($this->edges);
+        $this->pushHistory();
         $this->runValidation();
     }
 
     public function deleteNode($id)
     {
+        if (($node = collect($this->nodes)->firstWhere('id', $id)) && ($node['type'] ?? '') === 'trigger') return;
+        $this->pushHistory();
         $this->nodes = collect($this->nodes)->filter(fn($n) => $n['id'] !== $id)->values()->toArray();
         $this->edges = collect($this->edges)->filter(fn($e) => $e['source'] !== $id && $e['target'] !== $id)->values()->toArray();
         if ($this->selectedNodeId === $id) {
@@ -199,24 +305,28 @@ trait HasNodes
 
     public function deleteEdge($index)
     {
+        $this->pushHistory();
         unset($this->edges[$index]);
         $this->edges = array_values($this->edges);
         $this->runValidation();
     }
 
-    public function duplicateNode()
+    public function duplicateNode($id = null)
     {
-        if (!$this->selectedNodeId) return;
+        $nodeId = $id ?? $this->selectedNodeId;
+        if (!$nodeId) return;
 
-        $node = collect($this->nodes)->firstWhere('id', $this->selectedNodeId);
-        if (!$node) return;
+        $node = collect($this->nodes)->firstWhere('id', $nodeId);
+        if (!$node || ($node['type'] ?? '') === 'trigger') return;
 
         $newNode = $node;
-        $newNode['id'] = uniqid();
-        $newNode['x'] += 50;
-        $newNode['y'] += 50;
-        
+        $newNode['id'] = uniqid('node-');
+        $newNode['x'] += 60;
+        $newNode['y'] += 60;
+        $newNode['data']['label'] = ($newNode['data']['label'] ?? '') . ' (Copy)';
+
         $this->nodes[] = $newNode;
+        $this->pushHistory();
         $this->selectNode($newNode['id']);
         $this->runValidation();
     }

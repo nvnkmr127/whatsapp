@@ -130,12 +130,27 @@ class UpdateMessageStatusJob implements ShouldQueue
 
         $message->update($updateData);
 
+        // T11: Automation Trigger for campaign message read
+        if ($status === 'read' && $message->campaign_id && $message->contact) {
+            try {
+                if (class_exists(\App\Services\AutomationService::class)) {
+                    app(\App\Services\AutomationService::class)->checkSpecialTriggers($message->contact, 'campaign_message_read', [
+                        'campaign_id' => $message->campaign_id,
+                        'message_id' => $message->id,
+                        'template_id' => $message->template_id
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::debug("T11 Trigger failed (Ignored): " . $e->getMessage());
+            }
+        }
+
         // Broadcast the update for UI
         \App\Events\MessageStatusUpdated::dispatch($message);
 
         // Update Campaign Stats if applicable
         if ($message->campaign_id) {
-            $this->updateCampaignStats($message, $oldStatus, $newStatus);
+            $this->updateCampaignStats($message, $oldStatus, $newRank);
         }
     }
 

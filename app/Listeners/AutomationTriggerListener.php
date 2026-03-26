@@ -58,7 +58,7 @@ class AutomationTriggerListener implements ShouldQueue
             }
 
             // 2. Check active flow
-            if ($automationService->handleReply($contact, $content)) {
+            if ($automationService->handleReply($contact, $content, $message)) {
                 Log::info("AutomationTriggerListener: Handled as reply for contact {$contact->id}");
                 return;
             }

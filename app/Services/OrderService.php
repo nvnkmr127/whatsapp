@@ -99,6 +99,19 @@ class OrderService
         // Log Event
         $this->logEvent($order, $status, array_merge($context, ['previous_status' => $oldStatus]));
 
+        // Advanced Automation Engine Trigger (T8. order_status_changed)
+        try {
+            if (class_exists(\App\Services\AutomationService::class)) {
+                $automationService = app(\App\Services\AutomationService::class);
+                $automationService->checkSpecialTriggers($order->contact, 'order_status_changed', [
+                    'order_id' => $order->order_id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $status
+                ]);
+            }
+        } catch (\Exception $e) {
+        }
+
         return $order;
     }
 

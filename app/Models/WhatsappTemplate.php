@@ -16,6 +16,7 @@ class WhatsappTemplate extends Model
         'validation_results' => 'array',
         'readiness_score' => 'integer',
         'is_paused' => 'boolean',
+        'is_paused_by_meta' => 'boolean',
         'variable_config' => 'array',
         'total_sent' => 'integer',
         'total_read' => 'integer',

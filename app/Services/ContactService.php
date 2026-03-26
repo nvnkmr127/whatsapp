@@ -203,6 +203,12 @@ class ContactService
                 if (class_exists(AutomationService::class)) {
                     $automationService = app(AutomationService::class);
                     $automationService->checkSpecialTriggers($contact, 'tag_assigned');
+
+                    // NEW: Fire tag_added trigger type with resolved tag names
+                    $tagNames = ContactTag::whereIn('id', $ids)->pluck('name')->toArray();
+                    foreach ($tagNames as $tagName) {
+                        $automationService->checkTagAddedTriggers($contact, $tagName, 'agent');
+                    }
                 }
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());
@@ -221,6 +227,7 @@ class ContactService
             }
         }
     }
+
 
     /**
      * Helper to get a custom attribute.

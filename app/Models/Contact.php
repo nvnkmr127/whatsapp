@@ -139,4 +139,9 @@ class Contact extends Model
         return $this->morphMany(WorkflowLog::class, 'subject');
     }
 
+    public function automationRuns()
+    {
+        return $this->hasMany(AutomationRun::class);
+    }
+
 }

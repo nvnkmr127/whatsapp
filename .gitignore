@@ -22,6 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/routes/local.php
+
 
 # Laravel specific
 /bootstrap/cache/*

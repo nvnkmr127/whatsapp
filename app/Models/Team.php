@@ -178,6 +178,41 @@ class Team extends JetstreamTeam
         return $now->between($start, $end);
     }
 
+    /**
+     * Calculate the next timestamp when business hours open.
+     */
+    public function getNextOpeningTime()
+    {
+        if (empty($this->business_hours))
+            return now();
+
+        $timezone = $this->timezone ?? 'UTC';
+        $date = \Carbon\Carbon::now($timezone);
+        
+        // Loop up to 7 days to find the next opening
+        for ($i = 0; $i < 7; $i++) {
+            $dayVal = strtolower($date->format('D'));
+            $config = $this->business_hours[$dayVal] ?? null;
+
+            if ($config && is_array($config) && count($config) === 2) {
+                $start = \Carbon\Carbon::createFromTimeString($config[0], $timezone)->setDateFrom($date);
+                
+                // If it's today and we haven't reached the start time yet
+                if ($i === 0 && $date->lessThan($start)) {
+                    return $start->setTimezone('UTC');
+                }
+                
+                // If it's a future day
+                if ($i > 0) {
+                    return $start->setTimezone('UTC');
+                }
+            }
+            $date->addDay()->startOfDay();
+        }
+
+        return now();
+    }
+
     public function contacts()
     {
         return $this->hasMany(Contact::class);

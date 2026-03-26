@@ -47,11 +47,13 @@ class TemplateService
             WhatsappTemplate::updateOrCreate(
                 ['team_id' => $this->team->id, 'whatsapp_template_id' => $tpl['id']],
                 [
-                    'name' => $tpl['name'],
-                    'status' => $tpl['status'],
-                    'category' => $tpl['category'],
-                    'language' => $tpl['language'],
-                    'components' => json_encode($tpl['components']),
+                    'name' => $tpl['name'] ?? '',
+                    'status' => $tpl['status'] ?? 'PENDING',
+                    'category' => $tpl['category'] ?? 'UTILITY',
+                    'language' => $tpl['language'] ?? 'en_US',
+                    'components' => json_encode($tpl['components'] ?? []),
+                    'quality_rating' => $tpl['quality_rating'] ?? 'UNKNOWN',
+                    'is_paused_by_meta' => $tpl['is_paused_by_meta'] ?? false,
                     'last_synced_at' => now()
                 ]
             );

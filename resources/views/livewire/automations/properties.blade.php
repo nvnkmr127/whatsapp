@@ -13,7 +13,7 @@
         {{-- Flow Settings / Version History (Shown when nothing is selected) --}}
         <div x-show="!selectedId && selectedEdgeIndex === null" class="space-y-8">
             <div class="space-y-4">
-                <h4 class="text-xs font-black uppercase text-slate-400 tracking-widest">Active Status</h4>
+                <h4 class="text-xs font-black uppercase text-slate-400 tracking-widest">Flow Status</h4>
                 <div class="p-4 rounded-2xl border flex items-center justify-between"
                      :class="$wire.isActivatable && $wire.automationId ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-800/30' : 'bg-slate-50 border-slate-100 dark:bg-slate-800/30'">
                      <div class="flex items-center gap-3">
@@ -21,6 +21,20 @@
                          <span class="text-sm font-bold text-slate-700 dark:text-slate-200" x-text="$wire.automationId ? 'Status: Live' : 'Status: Draft'"></span>
                      </div>
                      <span class="text-[10px] font-black px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">v{{ $version }}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs font-black text-slate-700 dark:text-white" x-text="nodes.length"></span>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Nodes</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs font-black text-slate-700 dark:text-white" x-text="edges.length"></span>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Edges</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                         <span class="text-xs font-black" :class="validationIssues.filter(i=>i.level==='error').length ? 'text-rose-500' : 'text-emerald-500'" x-text="validationIssues.filter(i=>i.level==='error').length || '✓'"></span>
+                         <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Errors</p>
+                    </div>
                 </div>
             </div>
 
@@ -116,20 +130,27 @@
                          @include('livewire.automations.action-form')
                     </div>
 
-                    <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
-                         <button wire:click="duplicateNode" class="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                             Duplicate Node
+                    <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                         <button @click="$wire.duplicateNode(selectedId)" class="flex-1 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 5.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+                             Duplicate
+                         </button>
+                         <button @click="deleteNode(selectedId)" class="py-2 px-3 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 text-rose-500 rounded-xl font-bold flex items-center justify-center transition-colors">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                          </button>
                     </div>
                 </div>
             </template>
         </div>
 
-        <div x-show="selectedEdgeIndex !== null">
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Condition Label</label>
+        <div x-show="selectedEdgeIndex !== null" class="space-y-4">
+            <div class="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 rounded-xl">
+                <p class="text-[10px] font-bold text-amber-700 dark:text-amber-300">Set the condition label on this path. It must match a branch label defined in the condition node rules.</p>
+            </div>
+            <label class="block text-xs font-bold text-slate-500 uppercase">Condition Label</label>
             <input type="text" wire:model.blur="edgeCondition" wire:change="updateEdgeData"
                    class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal"
-                   placeholder="e.g. Yes, No, > 100">
+                   placeholder="e.g. yes, Branch 1, > 100">
         </div>
     </div>
 </div>

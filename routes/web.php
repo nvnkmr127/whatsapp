@@ -254,6 +254,19 @@ Route::middleware([
     Route::delete('/identities/{identity}', [\App\Http\Controllers\UserIdentityController::class, 'destroy'])->name('identities.destroy');
 
 });
+// Link Redirect
+Route::get('/l/{code}', [App\Http\Controllers\ShortLinkController::class, 'redirect'])->name('short-link.redirect');
+
 
 // Embed Routes (Publicly accessible but Token protected internally)
 Route::get('/embed/chat', [\App\Http\Controllers\EmbedController::class, 'show'])->name('embed.chat');
+
+/**
+ * Local Development Routes
+ * -------------------------------------------------------------------------
+ * These routes are ONLY loaded if the routes/local.php file exists.
+ * This file is git-ignored and intended for local testing tools.
+ */
+if (file_exists(__DIR__ . '/local.php')) {
+    require __DIR__ . '/local.php';
+}

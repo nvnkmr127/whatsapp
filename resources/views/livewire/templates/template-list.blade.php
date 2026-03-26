@@ -14,7 +14,7 @@
             </div>
             <p class="text-slate-500 font-medium">Manage and sync your WhatsApp message templates.</p>
         </div>
-        <div class="flex flex-col sm:flex-row items-center gap-3">
+        <div class="flex flex-row items-center gap-3 flex-wrap">
             <div class="hidden lg:flex items-center gap-6 mr-6 border-r border-slate-100 dark:border-slate-800 pr-6">
                 <div>
                     <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Assets</div>
@@ -31,7 +31,7 @@
             </div>
 
              <button wire:click="syncTemplates" wire:loading.attr="disabled"
-                class="flex items-center justify-center gap-2 px-8 py-3 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800">
+                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-800">
                 <svg wire:loading.remove wire:target="syncTemplates" class="w-4 h-4" fill="none"
                     stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -49,7 +49,7 @@
 
             @if(auth()->user()->hasPlanFeature('analytics'))
             <a href="{{ route('analytics.templates') }}"
-                class="flex items-center justify-center gap-2 px-8 py-3 bg-white dark:bg-slate-800 text-wa-teal font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-teal-50 dark:hover:bg-slate-700 transition-all border border-teal-200 dark:border-teal-800">
+                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 text-wa-teal font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-teal-50 dark:hover:bg-slate-700 transition-all border border-teal-200 dark:border-teal-800">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
@@ -58,7 +58,7 @@
             </a>
             @endif
 
-            <button wire:click="openCreateModal" class="flex items-center justify-center gap-2 px-8 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
+            <button wire:click="openCreateModal" class="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-slate-900/10 dark:shadow-wa-teal/20 hover:scale-[1.02] active:scale-95 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
                 </svg>
@@ -71,10 +71,11 @@
     <div
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden">
         <div
-            class="p-8 border-b border-slate-50 dark:border-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="relative group w-full sm:w-96">
+            class="p-6 border-b border-slate-50 dark:border-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {{-- Search --}}
+            <div class="relative group flex-1 max-w-sm">
                 <input wire:model.live.debounce.300ms="search" type="text"
-                    class="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium"
+                    class="w-full pl-12 pr-6 py-3.5 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all font-medium text-sm"
                     placeholder="Search templates...">
                 <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-wa-teal transition-colors"
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,8 +83,35 @@
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
-            <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Records:
-                {{ $templates->total() }}
+
+            {{-- Filters --}}
+            <div class="flex items-center gap-2 flex-wrap">
+                <select wire:model.live="filterStatus"
+                    class="px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-black text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 transition-all cursor-pointer uppercase tracking-widest">
+                    <option value="">All Statuses</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="PAUSED">Paused</option>
+                </select>
+                <select wire:model.live="filterCategory"
+                    class="px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-xs font-black text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 transition-all cursor-pointer uppercase tracking-widest">
+                    <option value="">All Categories</option>
+                    <option value="MARKETING">Marketing</option>
+                    <option value="UTILITY">Utility</option>
+                    <option value="AUTHENTICATION">Authentication</option>
+                </select>
+
+                @if($filterStatus || $filterCategory || $search)
+                    <button wire:click="$set('filterStatus', ''); $set('filterCategory', ''); $set('search', '');"
+                        class="px-3 py-2.5 text-[10px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest transition-colors">
+                        Clear
+                    </button>
+                @endif
+
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-2 border-l border-slate-100 dark:border-slate-800">
+                    {{ $templates->total() }} results
+                </div>
             </div>
         </div>
 
@@ -159,6 +187,11 @@
                                         <div class="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                                             WARN
+                                        </div>
+                                    @elseif($health === 'CRITICAL')
+                                        <div class="px-3 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-rose-200 flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            CRITICAL
                                         </div>
                                     @else
                                         <div class="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-rose-100 flex items-center gap-1">

@@ -12,7 +12,7 @@ use Livewire\Attributes\Title;
 #[Title('Automations')]
 class AutomationList extends Component
 {
-    use WithPagination;
+    use WithPagination, \App\Livewire\Automations\Traits\HasTemplates;
 
     public $search = '';
     public $confirmingDeletion = false;

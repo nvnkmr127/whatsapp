@@ -82,24 +82,46 @@ class Deal extends Model
                 if (class_exists(\App\Services\WorkflowEngine::class)) {
                     app(\App\Services\WorkflowEngine::class)->trigger('deal_created', $deal, ['source' => 'system']);
                 }
+                
+                // Advanced Automation Engine
+                if (class_exists(\App\Services\AutomationService::class)) {
+                    app(\App\Services\AutomationService::class)->checkDealTriggers($deal, 'deal_created');
+                }
             } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Deal Created Trigger Failed: ' . $e->getMessage());
             }
         });
 
         static::updated(function ($deal) {
             try {
+                $hasAutomationEngine = class_exists(\App\Services\AutomationService::class);
+                $automationService = $hasAutomationEngine ? app(\App\Services\AutomationService::class) : null;
+
                 if (class_exists(\App\Services\WorkflowEngine::class)) {
                     if ($deal->wasChanged('stage_id')) {
                         app(\App\Services\WorkflowEngine::class)->trigger('deal_stage_changed', $deal, [
                             'old_stage' => $deal->getOriginal('stage_id'),
                             'new_stage' => $deal->stage_id
                         ]);
+                        
+                        if ($automationService) {
+                            $automationService->checkDealTriggers($deal, 'deal_stage_changed', [
+                                'old_stage_id' => $deal->getOriginal('stage_id'),
+                                'new_stage_id' => $deal->stage_id
+                            ]);
+                        }
                     }
+                    
                     if ($deal->wasChanged('status') && $deal->status === 'won') {
                         app(\App\Services\WorkflowEngine::class)->trigger('deal_won', $deal, ['value' => $deal->value]);
+                        
+                        if ($automationService) {
+                            $automationService->checkDealTriggers($deal, 'deal_won', ['value' => $deal->value]);
+                        }
                     }
                 }
             } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Deal Updated Trigger Failed: ' . $e->getMessage());
             }
         });
     }

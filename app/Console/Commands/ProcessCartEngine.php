@@ -64,6 +64,16 @@ class ProcessCartEngine extends Command
 
             foreach ($abandonedCarts as $cart) {
                 $this->sendReminder($cart);
+                
+                // Advanced Automation Engine Trigger (T7. cart_abandoned)
+                try {
+                    $automationService = app(\App\Services\AutomationService::class);
+                    $automationService->checkSpecialTriggers($cart->contact, 'cart_abandoned', [
+                        'cart_uuid' => $cart->uuid,
+                        'total_amount' => $cart->total_amount
+                    ]);
+                } catch (\Exception $e) {
+                }
             }
         }
 

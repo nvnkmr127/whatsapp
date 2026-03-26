@@ -33,6 +33,13 @@ class ContactObserver
         ]);
 
         Log::info("Contact created", ['contact_id' => $contact->id]);
+
+        // T1: Automation Trigger for contact creation
+        try {
+            app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'contact_created');
+        } catch (\Exception $e) {
+            Log::error("Automation [contact_created] Trigger Failed: " . $e->getMessage());
+        }
     }
 
     /**
@@ -59,6 +66,39 @@ class ContactObserver
         // Broadcast update event for real-time UI updates
         if (!empty($changes)) {
             event(new \App\Events\ContactUpdated($contact, $changes));
+            
+            // Automation Trigger for custom fields (T2)
+            if ($contact->wasChanged('custom_attributes')) {
+                try {
+                    $original = $contact->getOriginal('custom_attributes') ?? [];
+                    $current = $contact->custom_attributes ?? [];
+                    $diff = array_diff_assoc($current, $original);
+                    
+                    foreach ($diff as $key => $value) {
+                        app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'contact_field_updated', [
+                            'field_name' => $key,
+                            'new_value' => $value,
+                            'old_value' => $original[$key] ?? null,
+                            $key => $value // For direct variable matching
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Automation [contact_field_updated] Trigger Failed: " . $e->getMessage());
+                }
+            }
+
+            // Also check for core field changes
+            $coreFields = ['name', 'email', 'phone_number', 'lifecycle_state'];
+            foreach ($coreFields as $field) {
+                if ($contact->wasChanged($field)) {
+                    app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'contact_field_updated', [
+                        'field_name' => $field,
+                        'new_value' => $contact->{$field},
+                        'old_value' => $contact->getOriginal($field),
+                        $field => $contact->{$field}
+                    ]);
+                }
+            }
         }
 
         // Invalidate cache

@@ -494,6 +494,173 @@ class WhatsAppService
             throw $e;
         }
     }
+    
+    /**
+     * Send a Location Request message.
+     */
+    public function sendLocationRequest($to, $text, $existingMessage = null)
+    {
+        $contact = $this->getOrCreateContact($to);
+        $this->verifyReadyToSend();
+
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        $msg = $existingMessage ?: \App\Models\Message::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'type' => 'interactive',
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'content' => $text,
+            'metadata' => ['type' => 'location_request', 'is_bot' => $this->isBot],
+        ]);
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'location_request_message',
+                'body' => ['text' => $text],
+                'action' => ['name' => 'send_location']
+            ]
+        ];
+
+        try {
+            $response = $this->client->sendRequest('messages', $payload);
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
+                \App\Events\MessageSent::dispatch($msg);
+            } else {
+                $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
+            }
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Send a Contact (vCard) message.
+     */
+    public function sendContact($to, array $contactData, $existingMessage = null)
+    {
+        $contact = $this->getOrCreateContact($to);
+        $this->verifyReadyToSend();
+
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        $msg = $existingMessage ?: \App\Models\Message::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'type' => 'contact',
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'metadata' => ['contact_data' => $contactData, 'is_bot' => $this->isBot],
+        ]);
+
+        // Format according to WhatsApp API: 
+        // https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#contacts-object
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'contacts',
+            'contacts' => [$contactData]
+        ];
+
+        try {
+            $response = $this->client->sendRequest('messages', $payload);
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
+                \App\Events\MessageSent::dispatch($msg);
+            } else {
+                $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
+            }
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Send a Carousel message.
+     */
+    public function sendCarousel($to, array $cards, $existingMessage = null)
+    {
+        $contact = $this->getOrCreateContact($to);
+        $this->verifyReadyToSend();
+
+        $conversationService = new \App\Services\ConversationService();
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        $msg = $existingMessage ?: \App\Models\Message::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'type' => 'interactive',
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'metadata' => ['type' => 'carousel', 'cards' => $cards, 'is_bot' => $this->isBot],
+        ]);
+
+        // Process cards to ensure they match Meta's expected format
+        $formattedCards = array_map(function($card) {
+            return [
+                'header' => $card['header'] ?? null,
+                'body' => ['text' => $card['body'] ?? ''],
+                'footer' => isset($card['footer']) ? ['text' => $card['footer']] : null,
+                'action' => [
+                    'buttons' => array_map(function($btn) {
+                        return [
+                            'type' => 'reply',
+                            'reply' => ['id' => (string)$btn['id'], 'title' => $btn['title']]
+                        ];
+                    }, $card['buttons'] ?? [])
+                ]
+            ];
+        }, $cards);
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'carousel',
+                'action' => [
+                    'cards' => $formattedCards
+                ]
+            ]
+        ];
+
+        try {
+            $response = $this->client->sendRequest('messages', $payload);
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
+                \App\Events\MessageSent::dispatch($msg);
+            } else {
+                $msg->update(['status' => 'failed', 'error_message' => json_encode($response['error'])]);
+            }
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
     public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null, $existingMessage = null)
     {
         // Fetch Template first to understand structure
@@ -517,6 +684,15 @@ class WhatsAppService
         if (!$tpl) {
             Log::error("Template not found for team {$this->team->id}", ['name' => $templateName, 'lang' => $language]);
             return ['success' => false, 'error' => 'Template not found in local database. Please sync templates.'];
+        }
+
+        // --- REPUTATION PROTECTION (Feature 7) ---
+        if ($tpl->quality_rating === 'RED' || $tpl->is_paused_by_meta) {
+            Log::warning("Blocked sendTemplate due to RED quality or Meta Pause: {$tpl->name}", ['quality' => $tpl->quality_rating, 'paused' => $tpl->is_paused_by_meta]);
+            return [
+                'success' => false,
+                'error' => "Template quality is too low (RED) or it was paused by Meta. Sending blocked to protect account reputation."
+            ];
         }
 
         // Readiness Pre-flight check (Rules UC-04, UC-05)
@@ -689,6 +865,15 @@ class WhatsAppService
                 return ['success' => false, 'error' => "Message blocked by cooldown rules ({$templateModel->category})."];
             }
         }
+
+        // --- DEEP-LINK ANALYTICS (Feature 4) ---
+        // Track URLs in all dynamic parameters for attribution
+        $linkTracker = new \App\Services\LinkTrackerService();
+        $campaignModel = $campaignId ? \App\Models\Campaign::find($campaignId) : null;
+        
+        $bodyParams = collect($bodyParams)->map(fn($p) => is_string($p) ? $linkTracker->trackUrls($p, $this->team, $contact, $campaignModel) : $p)->toArray();
+        $headerParams = collect($headerParams)->map(fn($p) => is_string($p) ? $linkTracker->trackUrls($p, $this->team, $contact, $campaignModel) : $p)->toArray();
+        $footerParams = collect($footerParams)->map(fn($p) => is_string($p) ? $linkTracker->trackUrls($p, $this->team, $contact, $campaignModel) : $p)->toArray();
 
         // --- SANITIZATION ---
         $tplService = new \App\Services\TemplateService();

@@ -44,19 +44,25 @@
 
     <div x-data="{ sidebarOpen: false }" class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <x-layouts.sidebar />
+        @if(!isset($fullscreen) || !$fullscreen)
+            <x-layouts.sidebar />
+        @endif
 
         <!-- Content Area -->
         <div class="flex flex-col flex-1 overflow-hidden bg-slate-50 dark:bg-slate-950">
             <!-- Top Header -->
-            <x-layouts.header :header="$header ?? null" />
+            @if(!isset($fullscreen) || !$fullscreen)
+                <x-layouts.header :header="$header ?? null" />
+            @endif
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto">
+            <main class="flex-1 overflow-x-hidden {{ (isset($fullscreen) && $fullscreen) ? 'overflow-y-hidden h-full' : 'overflow-y-auto' }}">
                 <!-- Subscription Banner -->
-                @include('components.subscription-banner')
+                @if(!isset($fullscreen) || !$fullscreen)
+                    @include('components.subscription-banner')
+                @endif
 
-                <div class="px-8 py-8">
+                <div class="{{ (isset($fullscreen) && $fullscreen) ? 'h-full w-full' : 'px-8 py-8' }}">
                     {{ $slot }}
                 </div>
             </main>

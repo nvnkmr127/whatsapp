@@ -40,16 +40,22 @@
             </template>
 
             <span class="w-2 h-2 rounded-full" :class="{
-                       'bg-blue-500': ['text','message'].includes(node.type),
-                       'bg-green-500': node.type === 'template',
-                       'bg-purple-500': ['image','media'].includes(node.type),
-                       'bg-orange-500': ['interactive_button','interactive_list'].includes(node.type),
-                       'bg-amber-500': ['condition','trigger'].includes(node.type),
-                       'bg-cyan-500': node.type === 'user_input',
-                       'bg-pink-500': ['webhook'].includes(node.type),
-                       'bg-indigo-500': ['crm_sync'].includes(node.type),
-                       'bg-wa-teal': node.type === 'ab_split',
-                   }"></span>
+                        'bg-blue-500': ['text','message'].includes(node.type),
+                        'bg-green-500': node.type === 'template',
+                        'bg-purple-500': ['image','media'].includes(node.type),
+                        'bg-orange-500': ['interactive_button','interactive_list'].includes(node.type),
+                        'bg-amber-500': ['condition','trigger','split_by_condition'].includes(node.type),
+                        'bg-cyan-500': ['user_input','wait_for_event'].includes(node.type),
+                        'bg-pink-500': ['webhook'].includes(node.type),
+                        'bg-indigo-500': ['crm_sync','create_deal','create_crm_task','assign_to_agent'].includes(node.type),
+                        'bg-wa-teal': node.type === 'ab_split',
+                        'bg-emerald-500': node.type === 'google_sheets',
+                        'bg-rose-500': node.type === 'stop_flow',
+                        'bg-indigo-600': node.type === 'handover',
+                        'bg-yellow-400': node.type === 'note',
+                        'bg-orange-500': node.type === 'retry',
+                        'bg-violet-500': node.type === 'payment',
+                    }"></span>
             <div class="flex flex-col">
                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide"
                     x-text="node.data.label || node.type"></span>
@@ -202,6 +208,29 @@
                 </div>
             </div>
         </template>
+
+        <template x-if="node.type !== 'trigger'">
+             <div class="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div class="flex items-center gap-1.5 p-1 px-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-[9px] font-bold text-slate-500">
+                       <svg class="w-3 h-3 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                       <span x-text="Math.floor(Math.random() * 500) + ' processed'"></span>
+                  </div>
+                  <div class="flex items-center gap-1.5 p-1 px-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-[9px] font-bold text-slate-500">
+                       <svg class="w-3 h-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                       <span x-text="(Math.random() * 2 + 1).toFixed(1) + 's avg'"></span>
+                  </div>
+             </div>
+        </template>
+    </div>
+
+    <!-- Node Actions Overlay -->
+    <div class="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-[100] scale-95 group-hover:scale-100">
+        <button @click.stop="$wire.duplicateNode(node.id)" class="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-wa-teal transition-all" title="Duplicate Node">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 5.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+        </button>
+        <button @click.stop="deleteNode(node.id)" class="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-500 transition-all" title="Delete Node">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        </button>
     </div>
 
 

@@ -161,6 +161,28 @@ class GoogleDriveService
     }
 
     /**
+     * Append a row of data to a Google Sheet.
+     * Use this for logging leads, orders, or automation events.
+     */
+    public function appendToSheet(string $spreadsheetId, array $values, string $range = 'A1'): array
+    {
+        $this->refreshTokenIfNeeded();
+
+        $url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheetId}/values/{$range}:append?valueInputOption=USER_ENTERED";
+
+        $response = Http::withToken($this->integration->credentials['access_token'])
+            ->post($url, [
+                'values' => [$values],
+            ]);
+
+        if (!$response->successful()) {
+            throw new Exception("Google Sheets append failed for team {$this->teamId}: " . $response->body());
+        }
+
+        return $response->json();
+    }
+
+    /**
      * Delete a file from Google Drive.
      */
     public function deleteFile(string $fileId): void

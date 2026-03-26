@@ -76,6 +76,27 @@ class ResendWebhookHandler
                 ]);
                 break;
                 
+            case 'email.opened':
+                $log->update(['status' => 'opened', 'opened_at' => now()]);
+                // T10.1: Automation Trigger
+                $contact = \App\Models\Contact::where('email', $log->recipient)->first();
+                if ($contact) {
+                    app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'email_opened', ['template_id' => $log->template_id]);
+                }
+                break;
+
+            case 'email.clicked':
+                $log->update(['status' => 'clicked', 'clicked_at' => now()]);
+                // T10.2: Automation Trigger
+                $contact = \App\Models\Contact::where('email', $log->recipient)->first();
+                if ($contact) {
+                    app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'email_link_clicked', [
+                        'template_id' => $log->template_id, 
+                        'url' => $data['click']['url'] ?? ''
+                    ]);
+                }
+                break;
+                
             default:
                 Log::info("Resend Webhook: Unhandled event type [{$type}] for message_id [{$emailId}]");
                 break;

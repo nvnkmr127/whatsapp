@@ -220,6 +220,23 @@ class InboundWebhookController extends Controller
                 $source->incrementProcessed();
             }
 
+            // T12: Automation Trigger for webhook payload received
+            try {
+                $contactPhone = $mappedData['phone_number'] ?? $payload['customer']['phone'] ?? $payload['phone'] ?? null;
+                if ($contactPhone) {
+                    $contact = \App\Models\Contact::where('phone_number', $contactPhone)->first();
+                    if ($contact) {
+                        app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'webhook_payload_received', array_merge([
+                            'source_id' => $source->id,
+                            'source_slug' => $source->slug,
+                            'event_type' => $eventType,
+                        ], $mappedData ?? [], $payload ?? []));
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::debug("T12 Trigger failed (Ignored): " . $e->getMessage());
+            }
+
             return $this->success([
                 'event_type' => $eventType,
             ], 'Webhook received and queued for processing');

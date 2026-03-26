@@ -81,6 +81,57 @@ class EmailDispatcher
     }
 
     /**
+     * Send an email using a registered EmailTemplate slug.
+     */
+    public function dispatchByTemplate(string $to, string $templateSlug, array $data = []): void
+    {
+        $template = \App\Models\EmailTemplate::where('slug', $templateSlug)->first();
+        if (!$template) {
+            throw new Exception("Email template with slug '$templateSlug' not found.");
+        }
+
+        $subject = $template->subject;
+        $html = $template->content_html;
+        $text = $template->content_text ?: null;
+
+        // Simple variable replacement logic
+        // We'll use a standardized approach for all dynamic content later, 
+        // but for now, we'll do basic replacement.
+        $replace = [];
+        foreach ($data as $key => $value) {
+            if (is_scalar($value)) {
+                $replace["{{$key}}"] = $value;
+            }
+        }
+        
+        // Add common objects if present
+        if (isset($data['contact'])) {
+            $contact = $data['contact'];
+            $replace['{name}'] = $contact->name ?? 'there';
+            $replace['{first_name}'] = explode(' ', $contact->name ?? '')[0];
+            $replace['{phone_number}'] = $contact->phone_number;
+            $replace['{email}'] = $contact->email ?? '';
+        }
+
+        // Add extra variables from data['variables'] if present
+        if (isset($data['variables']) && is_array($data['variables'])) {
+            foreach ($data['variables'] as $k => $v) {
+                 if (is_scalar($v)) {
+                     $replace["{{$k}}"] = $v;
+                 }
+            }
+        }
+
+        $subject = strtr($subject, $replace);
+        $html = strtr($html, $replace);
+        if ($text) $text = strtr($text, $replace);
+
+        $mailable = new \App\Mail\DynamicSystemMail($subject, $html, $text);
+        
+        $this->send($to, $template->type, $mailable, $template->id);
+    }
+
+    /**
      * Store result in EmailLog.
      */
     protected function logResult($to, EmailUseCase $useCase, EmailResult $result, string $subject, ?int $templateId): void

@@ -14,6 +14,8 @@ class TemplateList extends Component
     use \Livewire\WithFileUploads;
 
     public $search = '';
+    public $filterStatus = '';
+    public $filterCategory = '';
     public $syncing = false;
     public $showCreateModal = false;
     public $showViewModal = false;
@@ -141,11 +143,10 @@ class TemplateList extends Component
         $this->name = str_replace(' ', '_', strtolower($value));
     }
 
-    // Reset pagination when searching
-    public function updatedSearch()
-    {
-        $this->resetPage();
-    }
+    // Reset pagination when searching or filtering
+    public function updatedSearch()       { $this->resetPage(); }
+    public function updatedFilterStatus()  { $this->resetPage(); }
+    public function updatedFilterCategory(){ $this->resetPage(); }
 
     public function updatedCategory($value)
     {
@@ -187,6 +188,8 @@ class TemplateList extends Component
                             'status' => $remote['status'],
                             'whatsapp_template_id' => $remote['id'] ?? null,
                             'components' => $remote['components'] ?? [],
+                            'quality_rating' => $remote['quality_rating'] ?? 'UNKNOWN',
+                            'is_paused_by_meta' => $remote['is_paused_by_meta'] ?? false,
                         ]
                     );
                     $syncedNames[] = $remote['name'];
@@ -648,27 +651,23 @@ class TemplateList extends Component
 
     public function getHealthStatus($template)
     {
-        // Simple optimization: If REJECTED/FLAGGED, it's CRITICAL.
+        // 1. Meta-driven status (New Reputation feature 7)
+        if ($template->quality_rating === 'RED' || $template->is_paused_by_meta)
+            return 'CRITICAL';
+        if ($template->quality_rating === 'YELLOW')
+            return 'WARNING';
+
+        // 2. Lifecycle Status
         if (in_array($template->status, ['REJECTED', 'FLAGGED', 'DISABLED']))
             return 'CRITICAL';
         if ($template->is_paused)
             return 'WARNING';
 
-        // OPTIMIZATION: Use stored score if available (populated by Sync or Create)
-        // If readiness_score exists and is > 0, trust it.
-        // If validation_results is not null, trust it.
-        if ($template->readiness_score !== null && $template->readiness_score < 100) {
-            // If score < 100, checking severity of stored errors is faster than re-running regex
-            $errors = $template->validation_results ?? [];
-            foreach ($errors as $err) {
-                if (($err['severity'] ?? '') === 'error')
-                    return 'HIGH_RISK';
-            }
-            return 'WARNING';
+        // 3. Readiness Score (Internal linting)
+        if ($template->readiness_score !== null && $template->readiness_score < 70) {
+            return 'HIGH_RISK';
         }
 
-        // If no stored data (legacy), fallback to live calculation?
-        // Or assume safe if approved.
         return 'SAFE';
     }
 
@@ -682,6 +681,18 @@ class TemplateList extends Component
                 $q->where('name', 'like', '%' . $this->search . '%')
                     ->orWhere('category', 'like', '%' . $this->search . '%');
             });
+        }
+
+        if ($this->filterStatus) {
+            if ($this->filterStatus === 'PAUSED') {
+                $query->where('is_paused', true);
+            } else {
+                $query->where('status', $this->filterStatus)->where('is_paused', false);
+            }
+        }
+
+        if ($this->filterCategory) {
+            $query->where('category', $this->filterCategory);
         }
 
         $templates = $query->latest()->paginate(10);

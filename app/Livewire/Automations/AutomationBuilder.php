@@ -14,10 +14,13 @@ use App\Livewire\Automations\Traits\HasNodes;
 use App\Livewire\Automations\Traits\HasValidation;
 use App\Livewire\Automations\Traits\HasNodeEditing;
 use App\Livewire\Automations\Traits\HasPersistence;
+use App\Livewire\Automations\Traits\HasHistory;
+use App\Livewire\Automations\Traits\HasTestMode;
+use App\Livewire\Automations\Traits\HasTemplates;
 
 class AutomationBuilder extends Component
 {
-    use WithFileUploads, HasNodes, HasValidation, HasNodeEditing, HasPersistence;
+    use WithFileUploads, HasNodes, HasValidation, HasNodeEditing, HasPersistence, HasHistory, HasTestMode, HasTemplates;
 
     public $automationId;
     public $name;
@@ -84,6 +87,11 @@ class AutomationBuilder extends Component
     public $availableFlows = [];
     public $uploadFile;
     public $availableKnowledgeBaseSources = [];
+    public $availableCampaigns = [];
+    public $availableUsers = [];
+    public $availablePipelines = [];
+    public $availableWorkflows = [];
+    public $availableEmailTemplates = [];
     public $nodeUseKb = false;
     public $nodeKbScope = 'all';
     public $nodeKbSourceIds = [];
@@ -167,6 +175,11 @@ class AutomationBuilder extends Component
         $this->availableKnowledgeBaseSources = \App\Models\KnowledgeBaseSource::where('team_id', $team->id)
             ->whereIn('status', [\App\Models\KnowledgeBaseSource::STATUS_READY, 'indexed'])
             ->get()->toArray();
+        $this->availableCampaigns = \App\Models\Campaign::where('team_id', $team->id)->get()->toArray();
+        $this->availableUsers = $team->users()->get()->toArray();
+        $this->availablePipelines = \App\Models\Pipeline::where('team_id', $team->id)->with('stages')->get()->toArray();
+        $this->availableWorkflows = \App\Models\Automation::where('team_id', $team->id)->where('is_active', true)->get()->toArray();
+        $this->availableEmailTemplates = \App\Models\EmailTemplate::all()->toArray();
 
         if ($automationId) {
             $automation = Automation::where('team_id', $team->id)->findOrFail($automationId);
@@ -183,8 +196,17 @@ class AutomationBuilder extends Component
             $this->publishLog = $automation->publish_log ?? [];
             $this->triggerKeywordsString = implode(', ', $this->triggerConfig['keywords'] ?? []);
         } else {
-            $this->nodes = [['id' => 'Start', 'type' => 'trigger', 'x' => 50, 'y' => 50, 'data' => ['label' => 'Start']]];
-            $this->name = 'Untitled Automation ' . date('Y-m-d H:i');
+            $tplKey = request()->query('template');
+            $tpl = $tplKey ? \App\Services\Automations\TemplateLibrary::getAll()[$tplKey] ?? null : null;
+
+            if ($tpl) {
+                $this->nodes = $tpl['nodes'];
+                $this->edges = $tpl['edges'];
+                $this->name = $tpl['name'] . ' ' . date('Y-m-d H:i');
+            } else {
+                $this->nodes = [['id' => 'Start', 'type' => 'trigger', 'x' => 50, 'y' => 50, 'data' => ['label' => 'Start']]];
+                $this->name = 'Untitled Automation ' . date('Y-m-d H:i');
+            }
         }
 
         $this->updateNodeData();
@@ -205,8 +227,95 @@ class AutomationBuilder extends Component
     }
 
     #[Layout('components.layouts.app')]
+    public function addCard()
+    {
+        $this->nodeCards[] = ['image_url' => '', 'title' => '', 'sub_title' => '', 'buttons' => []];
+        $this->updateNodeData();
+    }
+
+    public function removeCard($index)
+    {
+        unset($this->nodeCards[$index]);
+        $this->nodeCards = array_values($this->nodeCards);
+        $this->updateNodeData();
+    }
+
+    public function addOption()
+    {
+        $this->nodeOptions[] = ['id' => uniqid('opt-'), 'label' => 'New Option'];
+        $this->updateNodeData();
+    }
+
+    public function removeOption($index)
+    {
+        unset($this->nodeOptions[$index]);
+        $this->nodeOptions = array_values($this->nodeOptions);
+        $this->updateNodeData();
+    }
+
+    public function addRule()
+    {
+        $idx = $this->getNodeIndex($this->selectedNodeId);
+        if ($idx === null) return;
+        $rules = $this->nodes[$idx]['data']['rules'] ?? [];
+        $rules[] = ['variable' => '', 'operator' => 'eq', 'value' => '', 'label' => 'Rule ' . (count($rules) + 1)];
+        $this->nodes[$idx]['data']['rules'] = $rules;
+        $this->nodeOptions = $rules;
+        $this->updateNodeData();
+    }
+
+    public function removeRule($index)
+    {
+        $idx = $this->getNodeIndex($this->selectedNodeId);
+        if ($idx === null) return;
+        $rules = $this->nodes[$idx]['data']['rules'] ?? [];
+        unset($rules[$index]);
+        $rules = array_values($rules);
+        $this->nodes[$idx]['data']['rules'] = $rules;
+        $this->nodeOptions = $rules;
+        $this->updateNodeData();
+    }
+
+    protected function getNodeIndex($nodeId): ?int
+    {
+        foreach ($this->nodes as $i => $node) {
+            if ($node['id'] === $nodeId) return $i;
+        }
+        return null;
+    }
+
+    public function addSubTrigger()
+    {
+        $this->triggerConfig['triggers'][] = ['type' => 'keyword', 'keywords' => []];
+        $this->updateNodeData();
+    }
+
+    public function removeSubTrigger($index)
+    {
+        unset($this->triggerConfig['triggers'][$index]);
+        $this->triggerConfig['triggers'] = array_values($this->triggerConfig['triggers']);
+        $this->updateNodeData();
+    }
+
+    public function duplicateNode($id)
+    {
+        $node = collect($this->nodes)->firstWhere('id', $id);
+        if (!$node || ($node['type'] ?? '') === 'trigger') return;
+
+        $newNode = $node;
+        $newNode['id'] = uniqid('node-');
+        $newNode['x'] += 50;
+        $newNode['y'] += 50;
+        $newNode['data']['label'] = ($newNode['data']['label'] ?? '') . ' (Copy)';
+        
+        $this->nodes[] = $newNode;
+        $this->updateNodeData();
+        $this->selectNode($newNode['id']);
+    }
+
     public function render()
     {
-        return view('livewire.automations.automation-builder');
+        return view('livewire.automations.automation-builder')
+            ->layout('components.layouts.app', ['fullscreen' => true]);
     }
 }

@@ -33,4 +33,9 @@ class Automation extends Model
     {
         return (new \App\Services\AutomationValidationService())->validate($this);
     }
+
+    public function runs()
+    {
+        return $this->hasMany(AutomationRun::class);
+    }
 }

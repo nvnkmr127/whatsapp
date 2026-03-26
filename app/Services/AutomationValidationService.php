@@ -66,7 +66,7 @@ class AutomationValidationService
             $this->validateNode($node, $automation->team_id, $results);
 
             // 4. Edge Connectivity Check for this node
-            $isTerminalNode = in_array($node['type'], ['handover', 'stop']);
+            $isTerminalNode = in_array($node['type'], ['handover', 'stop', 'stop_flow']);
             $hasOutgoingEdges = collect($edges)->contains('source', $node['id']);
 
             if (!$isTerminalNode && !$hasOutgoingEdges && $node['type'] !== 'trigger') {
@@ -177,8 +177,51 @@ class AutomationValidationService
                 }
                 break;
 
+            case 'user_input':
+                if (empty($data['variable'])) {
+                    $this->addIssue($results, 'error', 'Missing Variable Name. Where should we save the user response?', $node['id'], 'nodeSaveTo');
+                }
+                break;
+
+            case 'send_email':
+                if (empty($data['template_name']) && empty($data['body'])) {
+                    $this->addIssue($results, 'error', 'Email has no content.', $node['id'], 'nodeLabel');
+                }
+                break;
+
+            case 'create_deal':
+                if (empty($data['pipeline_id'])) {
+                    $this->addIssue($results, 'error', 'No Deal Pipeline selected.', $node['id'], 'nodeProvider');
+                }
+                break;
+
+            case 'create_crm_task':
+                if (empty($data['title'])) {
+                    $this->addIssue($results, 'warning', 'Task title is empty.', $node['id'], 'nodeLabel');
+                }
+                break;
+
+            case 'google_sheets':
+                if (empty($data['spreadsheet_id'])) {
+                    $this->addIssue($results, 'error', 'Spreadsheet ID/URL is required.', $node['id'], 'nodeUrl');
+                }
+                break;
+
+            case 'sub_flow':
+                if (empty($data['target_flow_id'])) {
+                    $this->addIssue($results, 'error', 'No target automation selected.', $node['id'], 'nodeProvider');
+                }
+                break;
+
+            case 'split_by_condition':
+                $rules = $data['rules'] ?? [];
+                if (empty($rules)) {
+                    $this->addIssue($results, 'error', 'At least one condition rule is required.', $node['id']);
+                }
+                break;
+
             case 'ab_split':
-                $outgoingCount = collect($automation->flow_data['edges'] ?? [])->where('source', $node['id'])->count();
+                $outgoingCount = collect($flow['edges'] ?? [])->where('source', $node['id'])->count();
                 if ($outgoingCount < 2) {
                     $this->addIssue($results, 'error', 'A/B Split needs at least 2 outgoing paths (Path A and Path B).', $node['id']);
                 }

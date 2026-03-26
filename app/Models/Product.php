@@ -113,4 +113,31 @@ class Product extends Model
         $readinessService = app(\App\Services\CommerceReadinessService::class);
         return $readinessService->applyShoppableScope($query, $this->team);
     }
+
+    protected static function booted()
+    {
+        static::updated(function ($product) {
+            if ($product->wasChanged('stock_quantity') && $product->manage_stock && (int)$product->stock_quantity <= 5) {
+                try {
+                    // T9. low_stock trigger
+                    // Usually fires for the Store Owner or Admins of the team
+                    $admins = $product->team->users()->where('role', 'admin')->get();
+                    if ($admins->isEmpty()) $admins = [$product->team->owner];
+
+                    foreach ($admins as $admin) {
+                        if ($admin && $admin->contact) {
+                            app(\App\Services\AutomationService::class)->checkSpecialTriggers($admin->contact, 'low_stock', [
+                                'product_id' => $product->id,
+                                'product_name' => $product->name,
+                                'stock_quantity' => $product->stock_quantity,
+                                'retailer_id' => $product->retailer_id
+                            ]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Automation [low_stock] Trigger Failed: " . $e->getMessage());
+                }
+            }
+        });
+    }
 }
