@@ -315,13 +315,19 @@ class AutomationBuilder extends Component
 
     public function updated($property)
     {
-        // 1. Logic from HasNodeEditing trait
+        // 1. Logic for trigger keywords string sync
+        if ($property === 'triggerKeywordsString') {
+            $this->triggerConfig['keywords'] = array_filter(array_map('trim', explode(',', $this->triggerKeywordsString)));
+            $this->updateNodeData();
+        }
+
+        // 2. Logic from HasNodeEditing trait
         if (str_starts_with($property, 'node') || str_starts_with($property, 'triggerConfig')) {
             $this->updateNodeData();
         }
         $this->runValidation();
 
-        // 2. Dirty Tracking
+        // 3. Dirty Tracking
         $uiState = ['selectedNodeId', 'selectedEdgeIndex', 'isDirty', 'debugLogs', 'validationIssues', 'showPublishModal', 'showErrorModal', 'publishNote'];
         if (!in_array($property, $uiState)) {
             $this->isDirty = true;
