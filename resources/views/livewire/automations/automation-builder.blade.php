@@ -1,6 +1,6 @@
 <div id="automation-builder-wrapper" class="h-full">
     <div class="h-full flex flex-col bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100"
-        x-data="flowBuilder">
+        x-data="flowBuilder" @keydown.window="handleKeyboard($event)">
 
         @include('livewire.automations.builder-scripts')
 

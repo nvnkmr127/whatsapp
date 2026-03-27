@@ -305,8 +305,4 @@
         }))
     });
 
-    window.addEventListener('keydown', (e) => {
-        const flow = Alpine.find(document.querySelector('[x-data="flowBuilder"]'));
-        if (flow) flow.handleKeyboard(e);
-    });
 </script>

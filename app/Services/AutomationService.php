@@ -51,13 +51,15 @@ class AutomationService
      */
     public function checkTriggers(Contact $contact, $messageContent)
     {
-        Log::debug("Automation CheckTriggers: Starting for contact {$contact->id}", [
+        Log::info("Automation CheckTriggers: Starting for contact {$contact->id}", [
             'content' => $messageContent,
             'should_process' => $this->handoff->shouldProcess($contact)
         ]);
 
-        if (!$this->handoff->shouldProcess($contact))
+        if (!$this->handoff->shouldProcess($contact)) {
+            Log::info("Automation CheckTriggers: Processing skipped (Bot Handoff enabled for contact {$contact->id})");
             return false;
+        }
 
         $messageContent = mb_strtolower(trim($messageContent));
         $automations = Automation::where('team_id', $contact->team_id)
@@ -65,7 +67,7 @@ class AutomationService
             ->whereIn('trigger_type', ['keyword', 'multi'])
             ->get();
 
-        Log::debug("Automation CheckTriggers: Found " . $automations->count() . " active keyword automations for team {$contact->team_id}");
+        Log::info("Automation CheckTriggers: Found " . $automations->count() . " active keyword automations for team {$contact->team_id}");
 
         foreach ($automations as $automation) {
             /** @var Automation $automation */
@@ -75,7 +77,7 @@ class AutomationService
 
             foreach ($keywords as $keyword) {
                 if ($this->matchKeyword($keyword, $messageContent, $isRegex)) {
-                    Log::debug("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword '$keyword'");
+                    Log::info("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword '$keyword'");
                     $this->start($automation, $contact);
                     return true;
                 }
@@ -464,7 +466,7 @@ class AutomationService
 
         try {
             if (!$lock->get()) {
-                Log::debug("Automation Start: Failed to acquire lock for contact {$contact->id}");
+                Log::info("Automation Start: Skipped for contact {$contact->id} - Another process is already starting a flow (Locked).");
                 return;
             }
 
@@ -509,10 +511,7 @@ class AutomationService
                 ->whereIn('status', ['active', 'waiting_input', 'paused'])
                 ->update(['status' => 'interrupted']);
 
-            Log::debug("Automation #{$automation->id} starting for contact {$contact->id}", [
-                'start_node' => $startNodeId,
-                'run_id' => $run->id ?? 'pending'
-            ]);
+            Log::info("Automation #{$automation->id} starting run for contact {$contact->id}");
 
             $run = AutomationRun::create([
                 'automation_id' => $automation->id,
@@ -541,7 +540,7 @@ class AutomationService
                 }
             }
 
-            Log::debug("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
+            Log::info("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
 
             // Track Funnel Event
             \App\Models\CustomerEvent::create([

@@ -76,7 +76,7 @@ class AutomationTriggerListener implements ShouldQueue
             if ($automationService->checkTriggers($contact, $content)) {
                 Log::info("AutomationTriggerListener: Trigger matched for contact {$contact->id}");
             } else {
-                Log::debug("AutomationTriggerListener: No trigger match for contact {$contact->id}");
+                Log::info("AutomationTriggerListener: No trigger match for contact {$contact->id} (Content: '$content')");
             }
 
         } catch (\Exception $e) {
