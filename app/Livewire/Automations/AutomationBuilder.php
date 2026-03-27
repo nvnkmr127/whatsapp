@@ -313,8 +313,22 @@ class AutomationBuilder extends Component
         $this->selectNode($newNode['id']);
     }
 
-    public function render()
+    public function updated($property)
     {
+        // 1. Logic from HasNodeEditing trait
+        if (str_starts_with($property, 'node') || str_starts_with($property, 'triggerConfig')) {
+            $this->updateNodeData();
+        }
+        $this->runValidation();
+
+        // 2. Dirty Tracking
+        $uiState = ['selectedNodeId', 'selectedEdgeIndex', 'isDirty', 'debugLogs', 'validationIssues', 'showPublishModal', 'showErrorModal', 'publishNote'];
+        if (!in_array($property, $uiState)) {
+            $this->isDirty = true;
+        }
+    }
+
+    public function render() {
         return view('livewire.automations.automation-builder')
             ->layout('components.layouts.app', ['fullscreen' => true]);
     }

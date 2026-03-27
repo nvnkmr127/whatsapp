@@ -16,6 +16,7 @@
             debugLogs: @entangle('debugLogs'),
             validationIssues: @entangle('validationIssues'),
             stepMetadata: @entangle('stepMetadata'),
+            isDirty: @entangle('isDirty'),
 
             get nodesArray() {
                 return Array.isArray(this.nodes) ? this.nodes : Object.values(this.nodes || {});

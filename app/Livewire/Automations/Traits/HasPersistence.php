@@ -66,10 +66,12 @@ trait HasPersistence
             if ($this->automationId) {
                 $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
                 $automation->update($data);
+                $this->isDirty = false;
                 session()->flash('success', $shouldActivate ? 'Automation published successfully!' : 'Draft saved successfully!');
             } else {
                 $automation = Automation::create($data);
                 $this->automationId = $automation->id;
+                $this->isDirty = false;
                 session()->flash('success', $shouldActivate ? 'Automation created and published!' : 'Draft created successfully!');
                 return redirect()->route('automations.builder', $automation->id);
             }
