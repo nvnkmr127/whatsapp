@@ -45,37 +45,43 @@ class AutomationTriggerListener
             $automationService = app(AutomationService::class);
             $handoffService = new \App\Services\BotHandoffService();
 
+            Log::info("Automation Listener DEBUG: Starting processing for contact #{$contact->id} with content '{$content}'");
+
             // 1. Global Handoff Keywords
             $handoffKeywords = ['human', 'agent', 'person', 'representative', 'help', 'support', 'talk to someone'];
             $cleanContent = strtolower(trim($content));
             foreach ($handoffKeywords as $kw) {
                 if ($cleanContent === $kw) {
+                    Log::info("Automation Listener DEBUG: Global handoff keyword matched: '{$kw}'");
                     $handoffService->pause($contact, 'keyword_trigger');
                     (new \App\Services\AssignmentService())->assign($contact);
                     return;
                 }
             }
 
-            // 2. Check active flow
+            // 2. Check active flow (reply handling)
+            Log::info("Automation Listener DEBUG: Checking if message is a reply to an active flow...");
             if ($automationService->handleReply($contact, $content, $message)) {
-                Log::info("AutomationTriggerListener: Handled as reply for contact {$contact->id}");
+                Log::info("Automation Listener DEBUG: Message handled as a reply for contact #{$contact->id}");
                 return;
             }
 
             // 3. Check Referral Trigger
             $metadata = $message->metadata ?? [];
             if (isset($metadata['referral'])) {
+                Log::info("Automation Listener DEBUG: Referral data detected. Checking referral triggers...");
                 if ($automationService->checkReferralTriggers($contact, $metadata['referral'])) {
-                    Log::info("AutomationTriggerListener: Referral trigger matched for contact {$contact->id}");
+                    Log::info("Automation Listener DEBUG: Referral trigger matched for contact #{$contact->id}");
                     return;
                 }
             }
 
-            // 4. Check triggers
+            // 4. Check new keyword triggers
+            Log::info("Automation Listener DEBUG: No active flow reply. Checking for new keyword triggers...");
             if ($automationService->checkTriggers($contact, $content)) {
-                Log::info("AutomationTriggerListener: Trigger matched for contact {$contact->id}");
+                Log::info("Automation Listener DEBUG: New trigger matched and started for contact #{$contact->id}");
             } else {
-                Log::info("AutomationTriggerListener: No trigger match for contact {$contact->id} (Content: '$content')");
+                Log::info("Automation Listener DEBUG: [Final] No triggers matched for contact #{$contact->id} (Content: '$content')");
             }
 
         } catch (\Exception $e) {

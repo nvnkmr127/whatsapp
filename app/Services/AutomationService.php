@@ -51,33 +51,43 @@ class AutomationService
      */
     public function checkTriggers(Contact $contact, $messageContent)
     {
-        Log::info("Automation CheckTriggers: Starting for contact {$contact->id}", [
+        Log::info("Automation DEBUG: Starting CheckTriggers for contact #{$contact->id}", [
             'content' => $messageContent,
-            'should_process' => $this->handoff->shouldProcess($contact)
+            'team_id' => $contact->team_id,
         ]);
 
         if (!$this->handoff->shouldProcess($contact)) {
-            Log::info("Automation CheckTriggers: Processing skipped (Bot Handoff enabled for contact {$contact->id})");
+            Log::info("Automation DEBUG: Processing skipped (Bot Handoff enabled for contact #{$contact->id})");
             return false;
         }
 
         $messageContent = mb_strtolower(trim($messageContent));
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
-            ->whereIn('trigger_type', ['keyword', 'multi'])
             ->get();
 
-        Log::info("Automation CheckTriggers: Found " . $automations->count() . " active keyword automations for team {$contact->team_id}");
+        Log::info("Automation DEBUG: Found " . $automations->count() . " active automations for team #{$contact->team_id}");
 
         foreach ($automations as $automation) {
+            Log::info("Automation DEBUG: Evaluating automation #{$automation->id} ('{$automation->name}')", [
+                'type' => $automation->trigger_type,
+            ]);
+
+            if (!in_array($automation->trigger_type, ['keyword', 'multi'])) {
+                Log::debug("Automation DEBUG: Skipping automation #{$automation->id} - not a keyword/multi trigger type.");
+                continue;
+            }
+
             /** @var Automation $automation */
             $config = $automation->trigger_config ?? [];
             $keywords = $config['keywords'] ?? [];
             $isRegex = $config['is_regex'] ?? false;
 
+            Log::info("Automation DEBUG: Checking keywords for automation #{$automation->id}: " . json_encode($keywords));
+
             foreach ($keywords as $keyword) {
                 if ($this->matchKeyword($keyword, $messageContent, $isRegex)) {
-                    Log::info("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword '$keyword'");
+                    Log::info("Automation DEBUG: MATCH FOUND! Automation #{$automation->id} matched on keyword '$keyword'");
                     $this->start($automation, $contact);
                     return true;
                 }
@@ -86,19 +96,28 @@ class AutomationService
             // Handle Multi-Trigger keyword matching
             if ($automation->trigger_type === 'multi') {
                 $subTriggers = $automation->trigger_config['triggers'] ?? [];
+                Log::info("Automation DEBUG: Checking multi-triggers for automation #{$automation->id} (" . count($subTriggers) . " sub-triggers)");
+
                 foreach ($subTriggers as $st) {
                     if (($st['type'] ?? '') === 'keyword') {
                         $skisRegex = $st['is_regex'] ?? false;
-                        foreach ($st['keywords'] ?? [] as $sk) {
+                        $skis = $st['keywords'] ?? [];
+                        Log::info("Automation DEBUG: Evaluating multi-trigger keywords: " . json_encode($skis));
+                        foreach ($skis as $sk) {
                             if ($this->matchKeyword($sk, $messageContent, $skisRegex)) {
+                                Log::info("Automation DEBUG: MATCH FOUND! Automation #{$automation->id} (multi) matched on keyword '$sk'");
                                 $this->start($automation, $contact);
                                 return true;
                             }
                         }
+                    } else {
+                        Log::debug("Automation DEBUG: Skipping sub-trigger of type '" . ($st['type'] ?? 'unknown') . "'");
                     }
                 }
             }
         }
+
+        Log::info("Automation DEBUG: No active keyword/multi triggers matched for contact #{$contact->id} and content '$messageContent'");
         return false;
     }
 
