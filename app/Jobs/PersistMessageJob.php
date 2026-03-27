@@ -69,11 +69,18 @@ class PersistMessageJob implements ShouldQueue
             return;
         }
 
-        // Idempotency: Double check DB
-        if (Message::where('whatsapp_message_id', $data['provider_id'])->exists()) {
-            Log::info("PersistMessageJob: Duplicate message ignored: " . $data['provider_id']);
-            return;
-        }
+        $lock = \Illuminate\Support\Facades\Cache::lock("persist_message_{$data['provider_id']}", 10);
+        try {
+            if (!$lock->get()) {
+                Log::info("PersistMessageJob: Lock already held for message: " . $data['provider_id']);
+                return;
+            }
+
+            // 1. Idempotency: Double check DB
+            if (Message::where('whatsapp_message_id', $data['provider_id'])->exists()) {
+                Log::info("PersistMessageJob: Duplicate message ignored: " . $data['provider_id']);
+                return;
+            }
 
         // 1. Contact Management (thread-safe)
         $phone = \App\Helpers\PhoneNumberHelper::normalize($data['from_phone']);
@@ -206,13 +213,16 @@ class PersistMessageJob implements ShouldQueue
         // REMOVED: HandleIncomingWorkflowJob::dispatchSync($message->id, $team->id);
         // Reason: Redundant. MessageReceived event triggers AutomationTriggerListener.
 
-        // Broadcast Real-time Event
-        try {
-            \App\Events\MessageReceived::dispatch($message);
-            Log::info("PersistMessageJob: MessageReceived event dispatched for Message ID: {$message->id}");
-        } catch (\Exception $e) {
-            Log::error("PersistMessageJob: Failed to dispatch MessageReceived event: " . $e->getMessage());
-            // Do not fail the job, as persistence was successful
+            // Broadcast Real-time Event
+            try {
+                \App\Events\MessageReceived::dispatch($message);
+                Log::info("PersistMessageJob: MessageReceived event dispatched for Message ID: {$message->id}");
+            } catch (\Exception $e) {
+                Log::error("PersistMessageJob: Failed to dispatch MessageReceived event: " . $e->getMessage());
+                // Do not fail the job, as persistence was successful
+            }
+        } finally {
+            $lock->release();
         }
     }
 

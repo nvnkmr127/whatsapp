@@ -117,10 +117,12 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\MessageReceived::class,
-            [
-                \App\Listeners\AutomationTriggerListener::class,
-                \App\Listeners\AiCommerceListener::class,
-            ]
+            \App\Listeners\AutomationTriggerListener::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\MessageReceived::class,
+            \App\Listeners\AiCommerceListener::class
         );
 
         \Illuminate\Support\Facades\Event::listen(
