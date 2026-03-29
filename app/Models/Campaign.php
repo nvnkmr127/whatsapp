@@ -19,6 +19,7 @@ class Campaign extends Model
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'retry_config' => 'array',
         'total_contacts' => 'integer',
         'sent_count' => 'integer',
         'del_count' => 'integer',

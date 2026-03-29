@@ -302,6 +302,9 @@
                                     <th
                                         class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">
                                         Opened At</th>
+                                    <th
+                                        class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">
+                                        Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -336,7 +339,52 @@
                                         <td class="px-8 py-4 text-xs text-gray-500 font-medium font-mono">
                                             {{ $msg->read_at ? $msg->read_at->format('d M H:i') : '-' }}
                                         </td>
+                                        <td class="px-8 py-4 text-right whitespace-nowrap">
+                                            @if($msg->status === 'failed')
+                                                <button wire:click="replayMessage({{ $msg->id }})" 
+                                                        class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal hover:text-white transition-all">
+                                                    Replay
+                                                </button>
+                                            @endif
+                                        </td>
                                     </tr>
+
+                                    @if($msg->status === 'failed' || $msg->retry_count > 0 || $msg->next_retry_at)
+                                        <tr class="bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+                                            <td colspan="7" class="px-8 py-4">
+                                                <div class="flex flex-wrap items-center gap-6">
+                                                    @if($msg->retry_count > 0)
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-[9px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-lg">Retries: {{ $msg->retry_count }}</span>
+                                                        </div>
+                                                    @endif
+
+                                                    @if($msg->next_retry_at)
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                                                            <span class="text-[9px] font-black text-blue-500 uppercase tracking-widest">Next Attempt: {{ $msg->next_retry_at->diffForHumans() }}</span>
+                                                        </div>
+                                                    @endif
+
+                                                    @if($msg->error_message)
+                                                        <div x-data="{ showTrace: false }" class="flex-1 min-w-[200px]">
+                                                            <div class="flex items-center gap-3">
+                                                                <span class="text-[9px] font-bold text-rose-600 dark:text-rose-400 truncate max-w-md">{{ $msg->error_message }}</span>
+                                                                @if($msg->last_error)
+                                                                    <button @click="showTrace = !showTrace" class="text-[9px] font-black text-slate-400 hover:text-wa-teal uppercase tracking-widest underline underline-offset-4 decoration-2">
+                                                                        <span x-text="showTrace ? 'Hide log' : 'Show Error Stack'"></span>
+                                                                    </button>
+                                                                @endif
+                                                            </div>
+                                                            <div x-show="showTrace" x-cloak class="mt-4 animate-in slide-in-from-top-2 duration-300">
+                                                                <pre class="bg-slate-900 text-[10px] text-rose-400 p-4 rounded-2xl overflow-x-auto custom-scrollbar border border-slate-800 max-h-40">{{ $msg->last_error }}</pre>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endif
                                 @empty
                                     <tr>
                                         <td colspan="6" class="px-8 py-12 text-center text-gray-400 italic">No messages

@@ -24,6 +24,7 @@ class SendCampaignMessageJob implements ShouldQueue
 
     protected $campaignId;
     protected $contactId;
+    protected $traceId;
 
     /**
      * The number of times the job may be attempted.
@@ -35,10 +36,11 @@ class SendCampaignMessageJob implements ShouldQueue
      */
     public $backoff = [60, 300, 600, 1200, 3600];
 
-    public function __construct($campaignId, $contactId)
+    public function __construct($campaignId, $contactId, $traceId = null)
     {
         $this->campaignId = $campaignId;
         $this->contactId = $contactId;
+        $this->traceId = $traceId ?? \App\Services\TraceContext::getTraceId();
     }
 
     /**
@@ -55,6 +57,9 @@ class SendCampaignMessageJob implements ShouldQueue
 
     public function handle(): void
     {
+        \App\Services\TraceContext::set($this->traceId);
+        \App\Services\TraceContext::ensureTraceId();
+
         if ($this->batch()?->cancelled()) {
             return;
         }
@@ -163,28 +168,24 @@ class SendCampaignMessageJob implements ShouldQueue
             }
 
         } catch (\Throwable $e) {
+            $source = $campaign; // In this context, source is the campaign
+            $retryConfig = $campaign->retry_config ?? [];
+            $retryEnabled = $retryConfig['enabled'] ?? false;
+            $maxRetries = (int) ($retryConfig['max_retries'] ?? 3);
+
             Log::error("Campaign {$this->campaignId} Send Failed to Contact {$this->contactId}: " . $e->getMessage());
 
-            // Mark as failed in DB if message exists
+            // Get or create message record
             $msg = Message::where('campaign_id', $this->campaignId)
                 ->where('contact_id', $this->contactId)
-                ->where('status', 'queued') // Only update if still queued
                 ->first();
 
-            if ($msg) {
-                $msg->update([
-                    'status' => 'failed',
-                    'error_message' => substr($e->getMessage(), 0, 255),
-                    'metadata' => array_merge($msg->metadata ?? [], ['last_error' => $e->getMessage()])
-                ]);
-            } else {
-                // If message record doesn't exist (e.g. failed before creation), create it as failed
-                // so it appears in stats
+            if (!$msg) {
                 try {
                     $conversationService = new ConversationService();
                     $conversation = $conversationService->ensureActiveConversation($contact);
 
-                    Message::create([
+                    $msg = Message::create([
                         'team_id' => $campaign->team_id,
                         'contact_id' => $contact->id,
                         'conversation_id' => $conversation->id,
@@ -193,22 +194,70 @@ class SendCampaignMessageJob implements ShouldQueue
                         'direction' => 'outbound',
                         'status' => 'failed',
                         'content' => "Template: {$campaign->template_name}",
-                        'error_message' => substr($e->getMessage(), 0, 255),
-                        'metadata' => ['last_error' => $e->getMessage()]
                     ]);
                 } catch (\Exception $createEx) {
                     Log::error("Failed to create error message record: " . $createEx->getMessage());
                 }
             }
 
-            // Decide if we should retry
-            if ($this->shouldRetry($e)) {
-                // Report failure to RateLimitService for adaptive throttling if it looks like a rate limit error
-                if (str_contains(strtolower($e->getMessage()), 'rate limit') || str_contains($e->getMessage(), '429')) {
-                    (new RateLimitService())->reportCriticalFailure($campaign->team_id, $contact->phone_number);
+            $currentRetryCount = (int) ($msg->retry_count ?? 0);
+
+            // Handle Retries
+            if ($retryEnabled && $currentRetryCount < $maxRetries && $this->shouldRetry($e)) {
+                $newRetryCount = $currentRetryCount + 1;
+                $interval = (int) ($retryConfig['retry_interval'] ?? 60);
+                $strategy = $retryConfig['retry_strategy'] ?? 'exponential';
+
+                // Calculate delay
+                $delaySeconds = ($strategy === 'exponential') 
+                    ? $interval * pow(2, $currentRetryCount) 
+                    : $interval;
+                
+                $nextRetryAt = now()->addSeconds($delaySeconds);
+
+                if ($msg) {
+                    $msg->update([
+                        'status' => 'failed',
+                        'error_message' => substr($e->getMessage(), 0, 255),
+                        'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                        'retry_count' => $newRetryCount,
+                        'next_retry_at' => $nextRetryAt,
+                    ]);
                 }
-                throw $e;
+
+                // Re-dispatch if batch is NOT cancelled
+                if (!$this->batch()?->cancelled()) {
+                    self::dispatch($this->campaignId, $this->contactId, $this->traceId)
+                        ->delay($nextRetryAt);
+
+                    Log::info("Campaign message rescheduled for retry", [
+                        'campaign_id' => $this->campaignId,
+                        'contact_id' => $this->contactId,
+                        'retry_count' => $newRetryCount,
+                        'next_retry_at' => $nextRetryAt->toDateTimeString()
+                    ]);
+                }
+            } else {
+                // Final failure
+                if ($msg) {
+                    $msg->update([
+                        'status' => 'failed',
+                        'error_message' => substr($e->getMessage(), 0, 255),
+                        'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                        'next_retry_at' => null,
+                    ]);
+                }
             }
+
+            // Report failure to RateLimitService for adaptive throttling if it looks like a rate limit error
+            if (str_contains(strtolower($e->getMessage()), 'rate limit') || str_contains($e->getMessage(), '429')) {
+                (new RateLimitService())->reportCriticalFailure($campaign->team_id, $contact->phone_number);
+            }
+
+            // Do NOT throw if we handled it ourselves via rescheduling, 
+            // unless we want the queue to also see it as an attempt (but we use custom retry_count)
+            // If the job is in a batch, failing it might fail the whole batch depending on logic.
+            // Our logic in updateCampaignProgress uses counts from the messages table.
         } finally {
             Cache::forget($lockKey);
             $this->updateCampaignProgress();

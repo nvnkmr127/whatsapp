@@ -902,19 +902,75 @@
                             {{-- Process Delay --}}
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                     <div class="flex items-center gap-3 mb-4">
+                                         <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center">
+                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                         </div>
+                                         <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Process Delay</h5>
+                                     </div>
+                                     <div class="space-y-4">
+                                         <div class="flex items-center gap-4">
+                                             <input type="number" wire:model="process_delay" class="w-24 bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-4 font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20" />
+                                             <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Seconds</span>
+                                         </div>
+                                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Wait before sending the message (max 3600s)</p>
+                                     </div>
+                                 </div>
+
+                                 {{-- Failed Event Replay --}}
+                                 <div class="bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 shadow-xl border border-slate-800 col-span-full">
+                                     <div class="flex items-center justify-between mb-8">
+                                         <div class="flex items-center gap-4">
+                                             <div class="w-12 h-12 rounded-2xl bg-wa-teal/10 text-wa-teal flex items-center justify-center border border-wa-teal/20">
+                                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                 </svg>
+                                             </div>
+                                             <div>
+                                                 <h5 class="text-white font-black uppercase tracking-tight">Failed Event Replay</h5>
+                                                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Automatically retry processing if an error occurs</p>
+                                             </div>
+                                         </div>
+                                         <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                                            <span class="text-[10px] font-black uppercase tracking-widest {{ $retry_enabled ? 'text-wa-teal' : 'text-slate-500' }}">
+                                                {{ $retry_enabled ? 'Enabled' : 'Disabled' }}
+                                            </span>
+                                            <button wire:click="$toggle('retry_enabled')" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {{ $retry_enabled ? 'bg-wa-teal' : 'bg-slate-700' }}">
+                                                <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $retry_enabled ? 'translate-x-4' : 'translate-x-0' }}"></span>
+                                            </button>
+                                         </div>
+                                     </div>
+
+                                     @if($retry_enabled)
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-500">
+                                            <div class="space-y-3">
+                                                <x-label value="Max Retries" class="text-slate-500 !text-[10px] !font-black !uppercase !tracking-widest" />
+                                                <select wire:model="max_retries" class="w-full bg-black/40 border-2 border-white/5 rounded-2xl py-3 px-4 font-black text-xs text-white focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all shadow-inner">
+                                                    <option value="1">1 Attempt</option>
+                                                    <option value="3">3 Attempts</option>
+                                                    <option value="5">5 Attempts</option>
+                                                    <option value="10">10 Attempts</option>
+                                                </select>
+                                            </div>
+                                            <div class="space-y-3">
+                                                <x-label value="Base Interval" class="text-slate-500 !text-[10px] !font-black !uppercase !tracking-widest" />
+                                                <select wire:model="retry_interval" class="w-full bg-black/40 border-2 border-white/5 rounded-2xl py-3 px-4 font-black text-xs text-white focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all shadow-inner">
+                                                    <option value="30">30 Seconds</option>
+                                                    <option value="60">1 Minute</option>
+                                                    <option value="300">5 Minutes</option>
+                                                    <option value="1800">30 Minutes</option>
+                                                    <option value="3600">1 Hour</option>
+                                                </select>
+                                            </div>
+                                            <div class="space-y-3">
+                                                <x-label value="Retry Strategy" class="text-slate-500 !text-[10px] !font-black !uppercase !tracking-widest" />
+                                                <select wire:model="retry_strategy" class="w-full bg-black/40 border-2 border-white/5 rounded-2xl py-3 px-4 font-black text-xs text-white focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all shadow-inner">
+                                                    <option value="linear">Linear (Fixed Interval)</option>
+                                                    <option value="exponential">Exponential Backoff</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Process Delay</h5>
-                                    </div>
-                                    <div class="space-y-4">
-                                        <div class="flex items-center gap-4">
-                                            <input type="number" wire:model="process_delay" class="w-24 bg-slate-50 dark:bg-slate-800 border-none rounded-xl py-3 px-4 font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20" />
-                                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Seconds</span>
-                                        </div>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Wait before sending the message (max 3600s)</p>
-                                    </div>
+                                     @endif
                                 </div>
 
                                 <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm">
@@ -1117,14 +1173,44 @@
                                 <span class="px-3 py-1 {{ $statusColor }} text-[10px] font-black uppercase rounded-lg border">
                                     {{ $log['status'] }}
                                 </span>
+                                @if($log['status'] !== 'processed')
+                                    <button wire:click="replayPayload({{ $log['id'] }})" 
+                                            class="p-1 px-3 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-100 dark:border-indigo-800 text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal hover:text-white transition-all">
+                                        Replay Event
+                                    </button>
+                                @endif
+                                @if(($log['retry_count'] ?? 0) > 0)
+                                    <span class="px-3 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-black uppercase rounded-lg">
+                                        {{ $log['retry_count'] }} Retries
+                                    </span>
+                                @endif
+                                @if($log['next_retry_at'])
+                                    <span class="px-3 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[10px] font-black uppercase rounded-lg animate-pulse">
+                                        Next Retry {{ $log['next_retry_at'] }}
+                                    </span>
+                                @endif
                             </div>
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ $log['created_at'] }}</span>
                         </div>
 
                         @if($log['error_message'])
-                            <div class="mb-4 p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/20 rounded-xl">
-                                <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Error Details</p>
-                                <p class="text-xs font-mono text-rose-600 dark:text-rose-400 break-words">{{ $log['error_message'] }}</p>
+                            <div x-data="{ showTrace: false }" class="mb-4">
+                                <div class="p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/20 rounded-xl relative group">
+                                    <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">Error Message</p>
+                                    <p class="text-xs font-mono text-rose-600 dark:text-rose-400 break-words">{{ $log['error_message'] }}</p>
+                                    
+                                    @if($log['last_error'])
+                                        <button @click="showTrace = !showTrace" 
+                                                class="absolute top-4 right-4 text-[9px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest underline decoration-2 underline-offset-4">
+                                            <span x-text="showTrace ? 'Hide Trace' : 'Show Full Log'"></span>
+                                        </button>
+                                        
+                                        <div x-show="showTrace" x-cloak class="mt-4 p-4 bg-black/80 rounded-xl border border-white/5 animate-in slide-in-from-top-2 duration-300">
+                                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Stack Trace / Full Error</p>
+                                            <pre class="text-[9px] font-mono text-rose-400/80 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">{{ $log['last_error'] }}</pre>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         @endif
 

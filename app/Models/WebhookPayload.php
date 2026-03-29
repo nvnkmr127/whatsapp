@@ -15,6 +15,7 @@ class WebhookPayload extends Model
     protected $casts = [
         'payload' => 'array',
         'mapped_data' => 'array',
+        'next_retry_at' => 'datetime',
     ];
 
     public function source()

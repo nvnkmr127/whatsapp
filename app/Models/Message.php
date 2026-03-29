@@ -16,6 +16,7 @@ class Message extends Model
         'sent_at' => 'datetime',
         'delivered_at' => 'datetime',
         'read_at' => 'datetime',
+        'next_retry_at' => 'datetime',
     ];
 
     protected $appends = ['pretty_time'];

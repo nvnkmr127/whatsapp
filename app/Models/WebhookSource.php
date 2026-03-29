@@ -15,6 +15,7 @@ class WebhookSource extends Model
         'transformation_rules' => 'array',
         'filtering_rules' => 'array',
         'action_config' => 'array',
+        'retry_config' => 'array',
         'process_delay' => 'integer',
         'is_active' => 'boolean',
         'is_sandbox' => 'boolean',

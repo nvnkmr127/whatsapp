@@ -23,20 +23,25 @@ class ProcessDripStepJob implements ShouldQueue
     protected $campaignId;
     protected $contactId;
     protected $stepIndex;
+    protected $traceId;
 
     public $tries = 3;
     public $backoff = [60, 300, 600];
 
-    public function __construct($campaignId, $contactId, $stepIndex = 0)
+    public function __construct($campaignId, $contactId, $stepIndex = 0, $traceId = null)
     {
         $this->campaignId = $campaignId;
         $this->contactId = $contactId;
         $this->stepIndex = $stepIndex;
+        $this->traceId = $traceId ?? \App\Services\TraceContext::getTraceId();
         $this->onQueue('campaigns');
     }
 
     public function handle(): void
     {
+        \App\Services\TraceContext::set($this->traceId);
+        \App\Services\TraceContext::ensureTraceId();
+
         $campaign = Campaign::find($this->campaignId);
         $contact = Contact::find($this->contactId);
         $detail = CampaignDetail::where('campaign_id', $this->campaignId)
@@ -99,7 +104,9 @@ class ProcessDripStepJob implements ShouldQueue
 
                     $detail->update(['next_step_at' => $nextRun]);
 
-                    self::dispatch($this->campaignId, $this->contactId, $nextIndex)
+                    $detail->update(['next_step_at' => $nextRun]);
+
+                    self::dispatch($this->campaignId, $this->contactId, $nextIndex, $this->traceId)
                         ->delay($nextRun);
                 } else {
                     $detail->update(['status' => 'completed']);
@@ -111,9 +118,57 @@ class ProcessDripStepJob implements ShouldQueue
             }
 
         } catch (\Throwable $e) {
+            $retryConfig = $campaign->retry_config ?? [];
+            $retryEnabled = $retryConfig['enabled'] ?? false;
+            $maxRetries = (int) ($retryConfig['max_retries'] ?? 3);
+            $currentRetryCount = (int) ($detail->retry_count ?? 0);
+
             Log::error("Drip Campaign {$this->campaignId} Step {$this->stepIndex} Failed for Contact {$this->contactId}: " . $e->getMessage());
-            $detail->update(['status' => 'failed']);
-            throw $e;
+
+            if ($retryEnabled && $currentRetryCount < $maxRetries && $this->shouldRetry($e)) {
+                $newRetryCount = $currentRetryCount + 1;
+                $interval = (int) ($retryConfig['retry_interval'] ?? 60);
+                $strategy = $retryConfig['retry_strategy'] ?? 'exponential';
+
+                $delaySeconds = ($strategy === 'exponential') 
+                    ? $interval * pow(2, $currentRetryCount) 
+                    : $interval;
+                
+                $nextRetryAt = now()->addSeconds($delaySeconds);
+
+                $detail->update([
+                    'status' => 'failed',
+                    'retry_count' => $newRetryCount,
+                    'last_retry_at' => $nextRetryAt,
+                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                ]);
+
+                // Reschedule for retry
+                self::dispatch($this->campaignId, $this->contactId, $this->stepIndex, $this->traceId)
+                    ->delay($nextRetryAt);
+
+                Log::info("Drip step rescheduled for retry", [
+                    'campaign_id' => $this->campaignId,
+                    'contact_id' => $this->contactId,
+                    'step' => $this->stepIndex,
+                    'retry_count' => $newRetryCount
+                ]);
+            } else {
+                $detail->update([
+                    'status' => 'failed',
+                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                ]);
+            }
         }
+    }
+
+    protected function shouldRetry(\Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+        $permanentErrors = ['template not found', 'blocked by policy', 'marketing requires opt-in', 'invalid parameter'];
+        foreach ($permanentErrors as $error) {
+            if (str_contains($message, $error)) return false;
+        }
+        return true;
     }
 }

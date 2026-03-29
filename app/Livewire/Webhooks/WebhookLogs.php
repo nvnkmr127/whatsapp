@@ -120,4 +120,38 @@ class WebhookLogs extends Component
             'logs' => $query->paginate((int) $this->perPage)
         ]);
     }
+
+    public function replayPayload($payloadId)
+    {
+        try {
+            $payload = WebhookPayload::findOrFail($payloadId);
+            $source = $payload->source;
+
+            if (!$source) {
+                session()->flash('error', 'Source not found for this payload.');
+                return;
+            }
+
+            $actionConfig = $source->getActionConfig();
+            if (empty($actionConfig)) {
+                session()->flash('error', 'No action configured for this source.');
+                return;
+            }
+
+            // Reset status for replay
+            $payload->update([
+                'status' => 'pending',
+                'error_message' => null,
+                'retry_count' => 0,
+                'next_retry_at' => null
+            ]);
+
+            \App\Jobs\ProcessMappedWebhookJob::dispatch($payload, $actionConfig, \App\Services\TraceContext::getTraceId());
+
+            session()->flash('success', 'Webhook re-queued for processing.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Manual Replay Error: " . $e->getMessage());
+            session()->flash('error', 'Replay failed: ' . $e->getMessage());
+        }
+    }
 }

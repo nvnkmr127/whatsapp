@@ -48,22 +48,74 @@ class ProcessMappedWebhookJob implements ShouldQueue
                 default => Log::warning('Unknown webhook action type', ['type' => $actionType]),
             };
 
-            $this->payload->update(['status' => 'processed']);
+            $this->payload->update([
+                'status' => 'processed',
+                'error_message' => null,
+                'next_retry_at' => null
+            ]);
             $this->payload->source?->incrementProcessed();
         } catch (\Exception $e) {
+            $source = $this->payload->source;
+            $retryConfig = $source?->retry_config ?? [];
+            $retryEnabled = $retryConfig['enabled'] ?? false;
+            $maxRetries = (int) ($retryConfig['max_retries'] ?? 3);
+            $currentRetryCount = (int) ($this->payload->retry_count ?? 0);
+
             Log::error('Failed to process webhook action', [
                 'action_type' => $actionType,
                 'error' => $e->getMessage(),
                 'payload_id' => $this->payload->id,
+                'retry_count' => $currentRetryCount,
+                'retry_enabled' => $retryEnabled
             ]);
 
-            $this->payload->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-            $this->payload->source?->incrementFailed();
+            // Handle Retries
+            if ($retryEnabled && $currentRetryCount < $maxRetries) {
+                $newRetryCount = $currentRetryCount + 1;
+                $interval = (int) ($retryConfig['retry_interval'] ?? 60);
+                $strategy = $retryConfig['retry_strategy'] ?? 'exponential';
 
-            throw $e;
+                // Calculate delay
+                $delaySeconds = ($strategy === 'exponential') 
+                    ? $interval * pow(2, $currentRetryCount) // 0->1x, 1->2x, 2->4x, 3->8x...
+                    : $interval;
+                
+                $nextRetryAt = now()->addSeconds($delaySeconds);
+
+                $this->payload->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                    'retry_count' => $newRetryCount,
+                    'next_retry_at' => $nextRetryAt,
+                ]);
+
+                // Re-dispatch with delay
+                self::dispatch($this->payload, $this->actionConfig, $this->traceId)
+                    ->delay($nextRetryAt);
+
+                Log::info("Webhook job rescheduled for retry", [
+                    'payload_id' => $this->payload->id,
+                    'retry_count' => $newRetryCount,
+                    'next_retry_at' => $nextRetryAt->toDateTimeString()
+                ]);
+            } else {
+                // Final failure
+                $this->payload->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                    'next_retry_at' => null,
+                ]);
+                
+                if ($source) {
+                    $source->incrementFailed();
+                }
+            }
+
+            // Still throw if no more retries to let the queue manager know if it's NOT a custom retry
+            // But if we ARE handling retries manually, we might not want it to fail in the queue immediately?
+            // Actually, re-dispatching manually is cleaner for visibility in our `webhook_payloads` table.
         }
     }
 

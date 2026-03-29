@@ -42,6 +42,12 @@ class WebhookSourceManager extends Component
     public $filtering_rules_ui = [];
     public $process_delay = 0;
 
+    // Retry configuration
+    public $retry_enabled = false;
+    public $max_retries = 3;
+    public $retry_interval = 60; // seconds
+    public $retry_strategy = 'exponential';
+
     // For field mapping builder
     public $selectedEventType = '';
     public $mappingFields = [];
@@ -87,6 +93,12 @@ class WebhookSourceManager extends Component
         $this->currentStep = 1;
         $this->isCapturing = false;
         $this->capturedPayload = null;
+        
+        // Reset retry defaults
+        $this->retry_enabled = false;
+        $this->max_retries = 3;
+        $this->retry_interval = 60;
+        $this->retry_strategy = 'exponential';
     }
 
     public function nextStep()
@@ -309,6 +321,9 @@ class WebhookSourceManager extends Component
                     'payload' => $payload->payload,
                     'status' => $payload->status,
                     'error_message' => $payload->error_message,
+                    'last_error' => $payload->last_error,
+                    'retry_count' => $payload->retry_count,
+                    'next_retry_at' => $payload->next_retry_at ? $payload->next_retry_at->diffForHumans() : null,
                     'mapped_data' => $payload->mapped_data,
                     'created_at' => $payload->created_at ? $payload->created_at->diffForHumans() : 'Unknown',
                 ];
@@ -367,6 +382,14 @@ class WebhookSourceManager extends Component
             $this->action_config = $source->action_config ?? [];
             $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
             $this->is_active = $source->is_active;
+            $this->process_delay = $source->process_delay;
+
+            // Load retry configuration
+            $retryConfig = $source->retry_config ?? [];
+            $this->retry_enabled = $retryConfig['enabled'] ?? false;
+            $this->max_retries = $retryConfig['max_retries'] ?? 3;
+            $this->retry_interval = $retryConfig['retry_interval'] ?? 60;
+            $this->retry_strategy = $retryConfig['retry_strategy'] ?? 'exponential';
 
             // Load latest payload if available for context
             $latest = \App\Models\WebhookPayload::where('webhook_source_id', $id)->latest()->first();
@@ -475,6 +498,12 @@ class WebhookSourceManager extends Component
             'is_active' => $this->is_active,
             'filtering_rules' => $this->filtering_rules_ui,
             'process_delay' => $this->process_delay,
+            'retry_config' => [
+                'enabled' => (bool) $this->retry_enabled,
+                'max_retries' => (int) $this->max_retries,
+                'retry_interval' => (int) $this->retry_interval,
+                'retry_strategy' => $this->retry_strategy,
+            ],
         ]);
 
         $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
@@ -1034,6 +1063,40 @@ class WebhookSourceManager extends Component
     {
         if (!$this->editingId) return null;
         return WebhookSource::find($this->editingId);
+    }
+
+    public function replayPayload($payloadId)
+    {
+        try {
+            $payload = \App\Models\WebhookPayload::findOrFail($payloadId);
+            $source = $payload->source;
+
+            if (!$source) {
+                throw new \Exception("Source not found for payload.");
+            }
+
+            $actionConfig = $source->getActionConfig();
+            if (empty($actionConfig)) {
+                throw new \Exception("No action configured for this source.");
+            }
+
+            // Reset status for replay
+            $payload->update([
+                'status' => 'pending',
+                'error_message' => null,
+                'retry_count' => 0,
+                'next_retry_at' => null
+            ]);
+
+            $traceId = \App\Services\TraceContext::getTraceId();
+            \App\Jobs\ProcessMappedWebhookJob::dispatch($payload, $actionConfig, $traceId);
+
+            $this->dispatch('notify', 'Webhook payload re-queued for processing.');
+            $this->refreshLogs();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error replaying payload {$payloadId}: " . $e->getMessage());
+            $this->dispatch('notify', 'Replay failed: ' . $e->getMessage(), 'error');
+        }
     }
 
     public function render()

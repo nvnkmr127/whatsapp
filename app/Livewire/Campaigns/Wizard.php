@@ -41,6 +41,12 @@ class Wizard extends Component
     // Drip Specific
     public $dripSteps = []; // [['template_id' => null, 'delay_minutes' => 0, 'variables' => [], 'template_name' => '', 'language' => 'en_US']]
     public $currentDripStep = 0;
+    
+    // Step 1: Retry Configuration
+    public $retry_enabled = false;
+    public $max_retries = 3;
+    public $retry_interval = 60; // seconds
+    public $retry_strategy = 'exponential';
 
     // UI Helpers
     public $isUploading = false;
@@ -65,6 +71,12 @@ class Wizard extends Component
             $this->selectedContacts = session('retarget_ids', request('retarget_ids'));
             $this->calculateAudience();
         }
+
+        // Initialize retry defaults
+        $this->retry_enabled = false;
+        $this->max_retries = 3;
+        $this->retry_interval = 60;
+        $this->retry_strategy = 'exponential';
     }
 
     #[Computed]
@@ -270,7 +282,13 @@ class Wizard extends Component
             ],
             'scheduled_at' => $this->scheduled_at,
             'status' => 'scheduled',
-            'filename' => $finalHeaderMedia // Store file path for reference
+            'filename' => $finalHeaderMedia, // Store file path for reference
+            'retry_config' => [
+                'enabled' => (bool) $this->retry_enabled,
+                'max_retries' => (int) $this->max_retries,
+                'retry_interval' => (int) $this->retry_interval,
+                'retry_strategy' => $this->retry_strategy,
+            ],
         ]);
 
         $delay = Carbon::parse($this->scheduled_at);

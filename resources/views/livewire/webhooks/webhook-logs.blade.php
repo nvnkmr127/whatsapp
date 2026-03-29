@@ -151,6 +151,12 @@
                                 </div>
                             </td>
                             <td class="px-8 py-6 text-right">
+                                @if($log->status !== 'processed')
+                                    <button wire:click="replayPayload({{ $log->id }})" 
+                                            class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-wa-teal hover:text-white transition-all mr-2">
+                                        Replay
+                                    </button>
+                                @endif
                                 <button wire:click="viewDetails({{ $log->id }})"
                                     class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-wa-teal hover:text-white text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
                                     Inspect
@@ -230,13 +236,45 @@
                     </div>
                 </div>
 
+                @if(($selectedPayload?->retry_count ?? 0) > 0 || $selectedPayload?->next_retry_at)
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/20">
+                            <label class="text-[10px] font-black text-amber-500 uppercase tracking-widest block mb-1">Retry Count</label>
+                            <span class="text-sm font-black text-amber-600 dark:text-amber-400">
+                                {{ $selectedPayload->retry_count }} Attempts
+                            </span>
+                        </div>
+                        @if($selectedPayload?->next_retry_at)
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/20">
+                            <label class="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1">Scheduled for</label>
+                            <span class="text-sm font-black text-blue-600 dark:text-blue-400">
+                                {{ $selectedPayload->next_retry_at->diffForHumans() }}
+                            </span>
+                        </div>
+                        @endif
+                    </div>
+                @endif
+
                 @if($selectedPayload?->error_message)
-                    <div
-                        class="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-900/50">
-                        <label class="text-[10px] font-black text-rose-500 uppercase tracking-widest block mb-1">Processing
-                            Error</label>
-                        <p class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ $selectedPayload->error_message }}
-                        </p>
+                    <div x-data="{ showTrace: false }" class="space-y-4">
+                        <div class="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-900/50">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] font-black text-rose-500 uppercase tracking-widest">Processing Error</label>
+                                @if($selectedPayload?->last_error)
+                                    <button @click="showTrace = !showTrace" class="text-[9px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest underline underline-offset-4">
+                                        <span x-text="showTrace ? 'Hide Trace' : 'Show Full Log'"></span>
+                                    </button>
+                                @endif
+                            </div>
+                            <p class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ $selectedPayload->error_message }}</p>
+                        </div>
+
+                        <div x-show="showTrace" x-cloak class="animate-in slide-in-from-top-2 duration-300">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Full Stack Trace</label>
+                            <div class="bg-[#0D1117] rounded-2xl p-6 border border-slate-800">
+                                <pre class="text-[9px] font-mono text-rose-400/80 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">{{ $selectedPayload->last_error }}</pre>
+                            </div>
+                        </div>
                     </div>
                 @endif
 

@@ -131,4 +131,34 @@ class Show extends Component
             'messages' => $messages
         ]);
     }
+
+    public function replayMessage($messageId)
+    {
+        try {
+            $message = Message::findOrFail($messageId);
+            $campaign = $message->campaign;
+
+            if (!$campaign) {
+                session()->flash('error', 'Campaign not found for this message.');
+                return;
+            }
+
+            // Reset message status
+            $message->update([
+                'status' => 'queued',
+                'error_message' => null,
+                'last_error' => null,
+                'retry_count' => 0,
+                'next_retry_at' => null
+            ]);
+
+            // Re-dispatch the job
+            \App\Jobs\SendCampaignMessageJob::dispatch($campaign->id, $message->contact_id);
+
+            session()->flash('success', 'Message re-queued for delivery.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Manual Campaign Replay Error: " . $e->getMessage());
+            session()->flash('error', 'Replay failed: ' . $e->getMessage());
+        }
+    }
 }

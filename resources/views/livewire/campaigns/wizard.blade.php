@@ -153,14 +153,80 @@
                             </div>
                         </div>
 
-                        @if ($scheduleMode === 'later')
-                            <div class="animate-in fade-in slide-in-from-top-2 duration-300">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Send Time</label>
-                                <input type="datetime-local" wire:model="scheduled_at"
-                                    class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal transition-all">
-                                <x-input-error for="scheduled_at" class="mt-2" />
-                            </div>
-                        @endif
+                                @if ($scheduleMode === 'later')
+                                    <div class="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Send Time</label>
+                                        <input type="datetime-local" wire:model="scheduled_at"
+                                            class="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-wa-teal transition-all">
+                                        <x-input-error for="scheduled_at" class="mt-2" />
+                                    </div>
+                                @endif
+
+                                {{-- Advanced Settings: Failover & Retries --}}
+                                <div x-data="{ open: false }" class="pt-6">
+                                    <button @click="open = !open" type="button" class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-wa-teal transition-colors">
+                                        <svg class="w-4 h-4 transition-transform duration-300" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
+                                        Advanced Settings: Failover & Retries
+                                    </button>
+
+                                    <div x-show="open" x-cloak x-transition class="mt-8 space-y-8 animate-in slide-in-from-top-4 duration-500">
+                                        <div class="bg-slate-900 dark:bg-slate-950 rounded-[2rem] p-8 shadow-xl border border-slate-800">
+                                            <div class="flex items-center justify-between mb-8">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 rounded-2xl bg-wa-teal/10 text-wa-teal flex items-center justify-center border border-wa-teal/20">
+                                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h5 class="text-white font-black uppercase tracking-tight">Delivery Failover</h5>
+                                                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Automatic retry if message dispatch fails</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                                                    <span class="text-[10px] font-black uppercase tracking-widest {{ $retry_enabled ? 'text-wa-teal' : 'text-slate-500' }}">
+                                                        {{ $retry_enabled ? 'Enabled' : 'Disabled' }}
+                                                    </span>
+                                                    <button wire:click="$toggle('retry_enabled')" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {{ $retry_enabled ? 'bg-wa-teal' : 'bg-slate-700' }}">
+                                                        <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $retry_enabled ? 'translate-x-4' : 'translate-x-0' }}"></span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            @if($retry_enabled)
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-4 duration-500">
+                                                    <div class="space-y-3">
+                                                        <label class="text-slate-500 text-[10px] font-black uppercase tracking-widest">Max Attempts</label>
+                                                        <select wire:model="max_retries" class="w-full bg-black/40 border-2 border-white/5 rounded-2xl py-3 px-4 font-black text-xs text-white focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all shadow-inner">
+                                                            <option value="1">1 Effort</option>
+                                                            <option value="3">3 Efforts</option>
+                                                            <option value="5">5 Efforts</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="space-y-3">
+                                                        <label class="text-slate-500 text-[10px] font-black uppercase tracking-widest">Initial Delay</label>
+                                                        <select wire:model="retry_interval" class="w-full bg-black/40 border-2 border-white/5 rounded-2xl py-3 px-4 font-black text-xs text-white focus:border-wa-teal/30 focus:ring-4 focus:ring-wa-teal/10 transition-all shadow-inner">
+                                                            <option value="60">1 Minute</option>
+                                                            <option value="300">5 Minutes</option>
+                                                            <option value="1800">30 Minutes</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="space-y-3 col-span-full">
+                                                        <label class="text-slate-500 text-[10px] font-black uppercase tracking-widest">Retry Strategy</label>
+                                                        <div class="grid grid-cols-2 gap-4">
+                                                            <button wire:click="$set('retry_strategy', 'linear')" class="px-6 py-3 rounded-xl border-2 transition-all font-black text-[10px] uppercase tracking-widest {{ $retry_strategy === 'linear' ? 'border-wa-teal text-wa-teal bg-wa-teal/10' : 'border-white/5 text-slate-500' }}">
+                                                                Linear (Fixed)
+                                                            </button>
+                                                            <button wire:click="$set('retry_strategy', 'exponential')" class="px-6 py-3 rounded-xl border-2 transition-all font-black text-[10px] uppercase tracking-widest {{ $retry_strategy === 'exponential' ? 'border-wa-teal text-wa-teal bg-wa-teal/10' : 'border-white/5 text-slate-500' }}">
+                                                                Exponential
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
                     </div>
 
                     <div class="hidden lg:flex items-center justify-center">
