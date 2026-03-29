@@ -36,6 +36,14 @@ class WhatsAppClient
     }
 
     /**
+     * Get the base URL configured for the WhatsApp API.
+     */
+    public function getBaseUrl(): string
+    {
+        return $this->baseUrl;
+    }
+
+    /**
      * Send a request to the WhatsApp API using a relative endpoint.
      */
     public function sendRequest(string $endpoint, array $data = [], string $method = 'post'): array

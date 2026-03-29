@@ -1017,7 +1017,7 @@ class WhatsAppService
         }
 
         $appId = config('whatsapp.app_id');
-        $baseUrl = $baseUrl;
+        $baseUrl = $this->client->getBaseUrl();
         $url = "{$baseUrl}/{$wabaId}/message_templates";
         $allItems = [];
 
@@ -1052,7 +1052,7 @@ class WhatsAppService
         if (!$wabaId) {
             throw new \Exception("WABA ID is not configured.");
         }
-        $baseUrl = $baseUrl;
+        $baseUrl = $this->client->getBaseUrl();
         $url = "{$baseUrl}/{$wabaId}/message_templates";
         return $this->client->sendRequestFullUrl($url, 'post', $data);
     }
@@ -1098,7 +1098,7 @@ class WhatsAppService
         if (!$wabaId) {
             throw new \Exception("WABA ID is not configured.");
         }
-        $baseUrl = $baseUrl;
+        $baseUrl = $this->client->getBaseUrl();
         $url = "{$baseUrl}/{$wabaId}/message_templates";
         return $this->client->sendRequestFullUrl($url, 'delete', ['name' => $name]);
     }
@@ -2041,7 +2041,7 @@ class WhatsAppService
         ];
 
         // URL: https://graph.facebook.com/<API_VERSION>/<WABA_ID>
-        $baseUrl = $baseUrl;
+        $baseUrl = $this->client->getBaseUrl();
         $url = "{$baseUrl}/{$wabaId}";
 
         return $this->client->sendRequestFullUrl($url, 'get', $queryParams, 'analytics');
