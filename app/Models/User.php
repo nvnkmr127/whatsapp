@@ -241,4 +241,25 @@ class User extends Authenticatable
     {
         return $this->hasOne(OnboardingStatus::class);
     }
+
+    public function fcmTokens()
+    {
+        return $this->hasMany(UserFcmToken::class);
+    }
+
+    /**
+     * Send a push notification to this user.
+     */
+    public function notifyViaPush(string $title, string $body, array $data = [])
+    {
+        return app(\App\Services\FcmService::class)->sendToUser($this, $title, $body, $data);
+    }
+
+    /**
+     * Check if the user is currently "active" in a specific chat.
+     */
+    public function isActiveInConversation(int $conversationId): bool
+    {
+        return \Illuminate\Support\Facades\Cache::has("user_presence:{$this->id}:conv:{$conversationId}");
+    }
 }

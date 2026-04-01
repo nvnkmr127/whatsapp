@@ -65,6 +65,58 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     // Product Customization
     Route::post('/products/{product}/lock', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'lockField']);
 
+    // Mobile Core
+    Route::prefix('mobile')->group(function () {
+        // FCM Tokens
+        Route::post('/fcm/register', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
+        Route::post('/fcm/remove', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'destroy']);
+
+        // Presence (Active Chat State)
+        Route::post('/presence/heartbeat', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'heartbeat']);
+        Route::post('/presence/leave', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'leave']);
+
+        // Inbox Management
+        Route::get('/conversations', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'index']);
+        Route::get('/conversations/{conversation}', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'show']);
+        Route::post('/conversations/{conversation}/read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
+        Route::post('/conversations/{conversation}/assign', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'assign']);
+        Route::post('/conversations/{conversation}/close', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'close']);
+
+        // Chat Management
+        Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'index']);
+        Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'store']);
+        Route::delete('/messages/{message}', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'destroy']);
+        Route::post('/messages/{message}/forward', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'forward']);
+        Route::post('/messages/{message}/star', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'toggleStar']);
+        Route::post('/messages/{message}/react', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'react']);
+        Route::get('/templates', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'getTemplates']);
+        Route::post('/conversations/{conversation}/send-template', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'sendTemplate']);
+
+        // Internal Notes
+        Route::get('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getNotes']);
+        Route::post('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'storeNote']);
+
+        // Canned Messages
+        Route::get('/canned-messages', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getCannedMessages']);
+
+        // Media Uploads
+        Route::post('/media/upload', [\App\Http\Controllers\Api\Mobile\MediaController::class, 'upload']);
+
+        // Contacts
+        Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
+        Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
+        Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);
+        Route::post('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'update']);
+        Route::post('/contacts/{contact}/toggle-tag', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
+
+        // Analytics
+        Route::get('/analytics/dashboard', [\App\Http\Controllers\Api\Mobile\AnalyticsController::class, 'dashboard']);
+
+        // Campaigns / Broadcasting
+        Route::get('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'index']);
+        Route::post('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'store']);
+    });
+
     // WhatsApp Calling API
     Route::prefix('calls')->group(function () {
         Route::post('/initiate', [\App\Http\Controllers\Api\CallController::class, 'initiate']);

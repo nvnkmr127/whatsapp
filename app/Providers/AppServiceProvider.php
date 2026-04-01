@@ -122,6 +122,11 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\MessageReceived::class,
+            \App\Listeners\SendPushNotificationListener::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\MessageReceived::class,
             \App\Listeners\AiCommerceListener::class
         );
 

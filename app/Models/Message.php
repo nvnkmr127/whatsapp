@@ -17,6 +17,7 @@ class Message extends Model
         'delivered_at' => 'datetime',
         'read_at' => 'datetime',
         'next_retry_at' => 'datetime',
+        'is_starred' => 'boolean',
     ];
 
     protected $appends = ['pretty_time'];
