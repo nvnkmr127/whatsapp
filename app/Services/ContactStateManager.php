@@ -230,6 +230,10 @@ class ContactStateManager
             'days_since_last_message' => $contact->last_interaction_at
                 ? (int) abs(now()->diffInDays($contact->last_interaction_at, false))
                 : null,
+            'consent_age_days' => $contact->opt_in_at
+                ? (int) abs(now()->diffInDays($contact->opt_in_at, false))
+                : null,
+            'is_consent_expired' => !$contact->hasValidConsent(),
         ]);
     }
 

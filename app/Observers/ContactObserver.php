@@ -59,7 +59,7 @@ class ContactObserver
 
         // Update consent age
         if ($contact->wasChanged('opt_in_at') && $contact->opt_in_at) {
-            $contact->consent_age_days = now()->diffInDays($contact->opt_in_at);
+            $contact->consent_age_days = (int) abs(now()->diffInDays($contact->opt_in_at, false));
             $contact->saveQuietly(); // Prevent infinite loop
         }
 

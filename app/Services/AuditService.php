@@ -40,11 +40,48 @@ class AuditService
             'user_id' => $userId,
             'team_id' => $teamId,
             'event_type' => $event,
-            'identifier' => is_string($identifier) ? $identifier : json_encode($identifier),
+            'identifier' => is_string($identifier) ? self::sanitizeUtf8($identifier) : self::jsonEncodeSafe($identifier),
             'provider' => $provider,
             'ip_address' => Request::ip(),
             'user_agent' => Request::userAgent(),
-            'metadata' => $metadata,
+            'metadata' => self::sanitizeMetadata($metadata),
         ]);
+    }
+
+    /**
+     * Ensure metadata array is safe for JSON encoding.
+     */
+    private static function sanitizeMetadata(array $metadata): array
+    {
+        return array_map(function ($value) {
+            if (is_array($value)) {
+                return self::sanitizeMetadata($value);
+            }
+            if (is_string($value)) {
+                return self::sanitizeUtf8($value);
+            }
+            return $value;
+        }, $metadata);
+    }
+
+    /**
+     * Sanitize a string to be valid UTF-8.
+     */
+    private static function sanitizeUtf8(string $string): string
+    {
+        if (mb_check_encoding($string, 'UTF-8')) {
+            return $string;
+        }
+
+        // Convert common encodings or fallback to stripping invalid characters
+        return mb_convert_encoding($string, 'UTF-8', 'UTF-8');
+    }
+
+    /**
+     * Safe JSON encode that handles malformed characters.
+     */
+    private static function jsonEncodeSafe($data): string
+    {
+        return (string) json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE);
     }
 }
