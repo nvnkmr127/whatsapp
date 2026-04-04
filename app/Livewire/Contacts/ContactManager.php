@@ -8,6 +8,8 @@ use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Url;
+use Livewire\Attributes\Locked;
 
 class ContactManager extends Component
 {
@@ -51,7 +53,9 @@ class ContactManager extends Component
     public $importFile;
     public $csvHeaders = [];
     public $columnMapping = []; // csv_header => system_field
+    #[Locked]
     public $importResult = null;
+    #[Locked]
     public $importPreview = null;
     public $isDuplicateModalOpen = false;
     public $importDuplicateStrategy = 'update';
@@ -70,7 +74,9 @@ class ContactManager extends Component
     public $isMergeModalOpen = false;
     public $sourceContactId;
     public $targetContactId;
+    #[Locked]
     public $sourceContact;
+    #[Locked]
     public $targetContact;
     public $isMerging = false;
 
@@ -136,6 +142,7 @@ class ContactManager extends Component
 
     // View Modal State
     public $isViewModalOpen = false;
+    #[Locked]
     public $viewingContact = null;
 
     public function viewContact($id)
@@ -467,7 +474,20 @@ class ContactManager extends Component
 
         try {
             if (!$this->importPreview) {
-                $this->importPreview = $importService->previewImport($this->importFile->getRealPath(), $this->columnMapping);
+                $preview = $importService->previewImport($this->importFile->getRealPath(), $this->columnMapping);
+                
+                // Limit preview duplicates to prevent hitting post_max_size on next request
+                if (count($preview['duplicates_existing'] ?? []) > 100) {
+                    $preview['duplicates_existing_count'] = count($preview['duplicates_existing']);
+                    $preview['duplicates_existing'] = array_slice($preview['duplicates_existing'], 0, 100);
+                }
+                
+                if (count($preview['duplicates_in_file'] ?? []) > 100) {
+                    $preview['duplicates_in_file_count'] = count($preview['duplicates_in_file']);
+                    $preview['duplicates_in_file'] = array_slice($preview['duplicates_in_file'], 0, 100);
+                }
+
+                $this->importPreview = $preview;
             }
 
             $hasDuplicates = !empty($this->importPreview['duplicates_existing'] ?? []) || !empty($this->importPreview['duplicates_in_file'] ?? []);
@@ -491,12 +511,16 @@ class ContactManager extends Component
             'created' => $result['created_count'] ?? null,
             'updated' => $result['updated_count'] ?? null,
             'skipped' => $result['skipped_count'] ?? null,
-            'errors' => $result['errors']
+            'errors' => array_slice($result['errors'], 0, 100), // Limit error list
+            'error_count' => count($result['errors'])
         ];
 
         if ($result['success_count'] > 0) {
             audit('contact.imported', "Imported {$result['success_count']} contacts from file.", null, null, ['result' => $result]);
             session()->flash('import_message', "Imported {$result['success_count']} contacts successfully.");
+            // Reset state to avoid issues
+            $this->importFile = null;
+            $this->importPreview = null;
         }
     }
 

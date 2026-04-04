@@ -15,7 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\AssignCorrelationId::class);
 
-        $middleware->web(append: [
+        $middleware->web(prepend: [
+            \App\Http\Middleware\LogLivewireUpdateFailures::class,
+        ], append: [
             \App\Http\Middleware\CheckSystemMaintenanceMode::class,
             \App\Http\Middleware\SetUserTimezone::class,
             \App\Http\Middleware\CheckReferral::class,

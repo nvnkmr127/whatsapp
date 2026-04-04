@@ -28,9 +28,6 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Styles -->
-    @livewireStyles
-
     <!-- Third Party CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.css">
@@ -95,8 +92,6 @@
 
     @stack('modals')
 
-    @livewireScripts
-
     <!-- Third Party Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.min.js"></script>
@@ -120,6 +115,19 @@
             if (msg.includes('showModal') && msg.includes('HTMLDialogElement')) {
                 console.warn('[Suppressed] Modal dialog promise race condition:', msg);
                 e.preventDefault();
+                return;
+            }
+            if ((msg.includes('not valid JSON') || msg.includes('is not valid JSON')) && msg.includes('undefined')) {
+                const key = '__lw_snapshot_reload_at';
+                const last = Number(sessionStorage.getItem(key) || '0');
+                const now = Date.now();
+                if (!last || now - last > 5000) {
+                    sessionStorage.setItem(key, String(now));
+                    console.error('[Livewire] Snapshot JSON parse error (likely 419 or session loss), reloading page...', msg);
+                    e.preventDefault();
+                    window.location.reload();
+                    return;
+                }
             }
         });
 
