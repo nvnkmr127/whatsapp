@@ -52,6 +52,12 @@ class ContactManager extends Component
     public $csvHeaders = [];
     public $columnMapping = []; // csv_header => system_field
     public $importResult = null;
+    public $importPreview = null;
+    public $isDuplicateModalOpen = false;
+    public $importDuplicateStrategy = 'update';
+    public $importDuplicateTagStrategy = 'add';
+    public $isImporting = false;
+    public $importDuplicatesConfirmed = false;
 
     // Custom Fields State
     public $isFieldModalOpen = false;
@@ -411,9 +417,15 @@ class ContactManager extends Component
     {
         $this->isImportModalOpen = true;
         $this->importResult = null;
+        $this->importPreview = null;
+        $this->isDuplicateModalOpen = false;
+        $this->importDuplicateStrategy = 'update';
+        $this->importDuplicateTagStrategy = 'add';
+        $this->importDuplicatesConfirmed = false;
         $this->importFile = null;
         $this->csvHeaders = [];
         $this->columnMapping = [];
+        $this->isImporting = false;
     }
 
     public function closeImportModal()
@@ -438,6 +450,8 @@ class ContactManager extends Component
                 $this->columnMapping[$header] = $target;
             }
         }
+
+        $this->importPreview = null;
     }
 
     public function import()
@@ -449,11 +463,34 @@ class ContactManager extends Component
         ]);
 
         $importService = new \App\Services\ContactImportService(Auth::user()->currentTeam);
-        $result = $importService->import($this->importFile->getRealPath(), $this->columnMapping);
+        $this->isImporting = true;
+
+        try {
+            if (!$this->importPreview) {
+                $this->importPreview = $importService->previewImport($this->importFile->getRealPath(), $this->columnMapping);
+            }
+
+            $hasDuplicates = !empty($this->importPreview['duplicates_existing'] ?? []) || !empty($this->importPreview['duplicates_in_file'] ?? []);
+
+            if ($hasDuplicates && !$this->importDuplicatesConfirmed) {
+                $this->isDuplicateModalOpen = true;
+                return;
+            }
+
+            $result = $importService->import($this->importFile->getRealPath(), $this->columnMapping, [
+                'on_duplicate' => $this->importDuplicateStrategy,
+                'on_duplicate_tag' => $this->importDuplicateTagStrategy,
+            ]);
+        } finally {
+            $this->isImporting = false;
+        }
 
         $this->importResult = [
-            'total' => $result['success_count'] + count($result['errors']),
+            'total' => $result['success_count'] + ($result['skipped_count'] ?? 0) + count($result['errors']),
             'imported' => $result['success_count'],
+            'created' => $result['created_count'] ?? null,
+            'updated' => $result['updated_count'] ?? null,
+            'skipped' => $result['skipped_count'] ?? null,
             'errors' => $result['errors']
         ];
 
@@ -461,6 +498,20 @@ class ContactManager extends Component
             audit('contact.imported', "Imported {$result['success_count']} contacts from file.", null, null, ['result' => $result]);
             session()->flash('import_message', "Imported {$result['success_count']} contacts successfully.");
         }
+    }
+
+    public function confirmImportAfterDuplicates()
+    {
+        $this->isDuplicateModalOpen = false;
+        $this->importDuplicatesConfirmed = true;
+        $this->import();
+        $this->importDuplicatesConfirmed = false;
+    }
+
+    public function cancelImportAfterDuplicates()
+    {
+        $this->isDuplicateModalOpen = false;
+        $this->importDuplicatesConfirmed = false;
     }
     
     // Alias for the old method name if any other component called it

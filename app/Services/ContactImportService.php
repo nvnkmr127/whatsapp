@@ -3,14 +3,10 @@
 namespace App\Services;
 
 use App\Models\Contact;
-use App\Models\ContactField;
-use App\Models\ContactTag;
+use App\Models\Category;
 use App\Models\Team;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use League\Csv\Reader;
-use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ContactImportService
@@ -30,6 +26,15 @@ class ContactImportService
     public function getHeaders(string $filePath): array
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        if ($extension === '') {
+            $header = @file_get_contents($filePath, false, null, 0, 4);
+            if ($header !== false && str_starts_with($header, 'PK')) {
+                $extension = 'xlsx';
+            } else {
+                $extension = 'csv';
+            }
+        }
 
         if (in_array($extension, ['csv', 'txt'])) {
             $csv = Reader::createFromPath($filePath, 'r');
@@ -62,6 +67,17 @@ class ContactImportService
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         $records = [];
+        $onDuplicate = $options['on_duplicate'] ?? 'update';
+        $onDuplicateTag = $options['on_duplicate_tag'] ?? 'add';
+
+        if ($extension === '') {
+            $header = @file_get_contents($filePath, false, null, 0, 4);
+            if ($header !== false && str_starts_with($header, 'PK')) {
+                $extension = 'xlsx';
+            } else {
+                $extension = 'csv';
+            }
+        }
 
         if (in_array($extension, ['csv', 'txt'])) {
             $csv = Reader::createFromPath($filePath, 'r');
@@ -97,7 +113,48 @@ class ContactImportService
         $consentProof = $options['consent_proof_url'] ?? null;
 
         $successCount = 0;
+        $createdCount = 0;
+        $updatedCount = 0;
+        $skippedCount = 0;
         $errors = [];
+        $existingPhones = [];
+        $seenPhones = [];
+
+        if ($onDuplicate === 'skip') {
+            $phonesToCheck = [];
+
+            foreach ($records as $index => $record) {
+                $contactData = $this->mapRecordToContactData($record, $columnMapping);
+                if (empty($contactData['phone_number'])) {
+                    continue;
+                }
+
+                try {
+                    $phonesToCheck[] = \App\Helpers\PhoneNumberHelper::normalize((string) $contactData['phone_number']);
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+
+            $phonesToCheck = array_values(array_unique($phonesToCheck));
+            if (!empty($phonesToCheck)) {
+                foreach (array_chunk($phonesToCheck, 1000) as $chunk) {
+                    $existing = Contact::where('team_id', $this->team->id)
+                        ->whereIn('phone_number', $chunk)
+                        ->pluck('phone_number')
+                        ->toArray();
+                    foreach ($existing as $phone) {
+                        $existingPhones[$phone] = true;
+                    }
+                }
+            }
+
+            if (in_array($extension, ['csv', 'txt'])) {
+                $csv = Reader::createFromPath($filePath, 'r');
+                $csv->setHeaderOffset(0);
+                $records = $csv->getRecords();
+            }
+        }
 
         foreach ($records as $index => $record) {
             try {
@@ -108,6 +165,21 @@ class ContactImportService
                     continue;
                 }
 
+                $contactData['phone_number'] = \App\Helpers\PhoneNumberHelper::normalize((string) $contactData['phone_number']);
+
+                if ($onDuplicate === 'skip') {
+                    if (isset($seenPhones[$contactData['phone_number']])) {
+                        $skippedCount++;
+                        continue;
+                    }
+                    $seenPhones[$contactData['phone_number']] = true;
+
+                    if (isset($existingPhones[$contactData['phone_number']])) {
+                        $skippedCount++;
+                        continue;
+                    }
+                }
+
                 // Add consent information
                 if ($requireConsent && empty($contactData['opt_in_status'])) {
                     $contactData['opt_in_status'] = 'opted_in';
@@ -115,7 +187,17 @@ class ContactImportService
                     $contactData['opt_in_at'] = now();
                 }
 
-                $contact = $this->processContact($contactData);
+                $existingContact = null;
+                if ($onDuplicate === 'update') {
+                    $existingContact = Contact::where('team_id', $this->team->id)
+                        ->where('phone_number', $contactData['phone_number'])
+                        ->first();
+                }
+
+                $contact = $this->processContact($contactData, [
+                    'is_duplicate_existing' => (bool) $existingContact,
+                    'on_duplicate_tag' => $onDuplicateTag,
+                ]);
 
                 // Log consent
                 if ($contact->opt_in_status === 'opted_in') {
@@ -130,6 +212,11 @@ class ContactImportService
                 }
 
                 $successCount++;
+                if ($existingContact) {
+                    $updatedCount++;
+                } else {
+                    $createdCount++;
+                }
             } catch (\Exception $e) {
                 $errors[] = "Row " . ($index + 1) . ": " . $e->getMessage();
             }
@@ -137,7 +224,149 @@ class ContactImportService
 
         return [
             'success_count' => $successCount,
+            'created_count' => $createdCount,
+            'updated_count' => $updatedCount,
+            'skipped_count' => $skippedCount,
             'errors' => $errors,
+        ];
+    }
+
+    public function previewImport(string $filePath, array $columnMapping): array
+    {
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $records = [];
+
+        if ($extension === '') {
+            $header = @file_get_contents($filePath, false, null, 0, 4);
+            if ($header !== false && str_starts_with($header, 'PK')) {
+                $extension = 'xlsx';
+            } else {
+                $extension = 'csv';
+            }
+        }
+
+        if (in_array($extension, ['csv', 'txt'])) {
+            $csv = Reader::createFromPath($filePath, 'r');
+            $csv->setHeaderOffset(0);
+            $records = $csv->getRecords();
+        } else {
+            try {
+                $spreadsheet = IOFactory::load($filePath);
+                $worksheet = $spreadsheet->getActiveSheet();
+                $data = $worksheet->toArray(null, true, true, true);
+                $headers = array_shift($data);
+                foreach ($data as $row) {
+                    $record = [];
+                    foreach ($headers as $colLetter => $header) {
+                        if ($header) {
+                            $record[$header] = $row[$colLetter] ?? null;
+                        }
+                    }
+                    if (!empty(array_filter($record))) {
+                        $records[] = $record;
+                    }
+                }
+            } catch (\Exception $e) {
+                return [
+                    'total_rows' => 0,
+                    'valid_rows' => 0,
+                    'errors' => ["Excel load error: " . $e->getMessage()],
+                    'duplicates_existing' => [],
+                    'duplicates_in_file' => [],
+                ];
+            }
+        }
+
+        $errors = [];
+        $rows = [];
+        $phones = [];
+        $rowsByPhone = [];
+
+        foreach ($records as $index => $record) {
+            try {
+                $contactData = $this->mapRecordToContactData($record, $columnMapping);
+                $rowNo = $index + 1;
+
+                if (empty($contactData['phone_number'])) {
+                    $errors[] = "Row {$rowNo}: Phone number is required.";
+                    continue;
+                }
+
+                $normalized = \App\Helpers\PhoneNumberHelper::normalize((string) $contactData['phone_number']);
+                $phones[] = $normalized;
+
+                $incomingTags = $contactData['tags'] ?? [];
+                if (!is_array($incomingTags)) {
+                    $incomingTags = [];
+                }
+                $incomingTags = array_values(array_filter(array_map('trim', $incomingTags), fn ($t) => $t !== ''));
+
+                $rows[] = [
+                    'row' => $rowNo,
+                    'name' => (string) ($contactData['name'] ?? ''),
+                    'phone_number' => $normalized,
+                    'email' => (string) ($contactData['email'] ?? ''),
+                    'tags' => $incomingTags,
+                ];
+
+                if (!isset($rowsByPhone[$normalized])) {
+                    $rowsByPhone[$normalized] = [];
+                }
+                $rowsByPhone[$normalized][] = $rowNo;
+            } catch (\Exception $e) {
+                $errors[] = "Row " . ($index + 1) . ": " . $e->getMessage();
+            }
+        }
+
+        $phones = array_values(array_unique($phones));
+        $existingByPhone = [];
+        if (!empty($phones)) {
+            foreach (array_chunk($phones, 1000) as $chunk) {
+                $existing = Contact::where('team_id', $this->team->id)
+                    ->whereIn('phone_number', $chunk)
+                    ->with(['tags:id,name'])
+                    ->get(['id', 'name', 'phone_number']);
+                foreach ($existing as $c) {
+                    $existingByPhone[$c->phone_number] = [
+                        'id' => $c->id,
+                        'name' => (string) $c->name,
+                        'phone_number' => (string) $c->phone_number,
+                        'tags' => $c->tags->pluck('name')->toArray(),
+                    ];
+                }
+            }
+        }
+
+        $duplicatesExisting = [];
+        foreach ($rows as $r) {
+            if (isset($existingByPhone[$r['phone_number']])) {
+                $duplicatesExisting[] = [
+                    'row' => $r['row'],
+                    'phone_number' => $r['phone_number'],
+                    'incoming_name' => $r['name'],
+                    'incoming_email' => $r['email'],
+                    'incoming_tags' => $r['tags'],
+                    'existing' => $existingByPhone[$r['phone_number']],
+                ];
+            }
+        }
+
+        $duplicatesInFile = [];
+        foreach ($rowsByPhone as $phone => $rowNumbers) {
+            if (count($rowNumbers) > 1) {
+                $duplicatesInFile[] = [
+                    'phone_number' => $phone,
+                    'rows' => $rowNumbers,
+                ];
+            }
+        }
+
+        return [
+            'total_rows' => count($rows) + count($errors),
+            'valid_rows' => count($rows),
+            'errors' => $errors,
+            'duplicates_existing' => $duplicatesExisting,
+            'duplicates_in_file' => $duplicatesInFile,
         ];
     }
 
@@ -154,10 +383,21 @@ class ContactImportService
             if (empty($value))
                 continue;
 
+            $targetField = (string) $targetField;
+
             if ($targetField === 'tags') {
                 $data['tags'] = array_map('trim', explode(',', $value));
+            } elseif ($targetField === 'phone') {
+                $data['phone_number'] = $value;
+            } elseif ($targetField === 'category') {
+                $data['category_name'] = $value;
             } elseif (in_array($targetField, ['name', 'phone_number', 'email', 'language'])) {
                 $data[$targetField] = $value;
+            } elseif (str_starts_with($targetField, 'attr_')) {
+                $key = substr($targetField, 5);
+                if ($key !== '') {
+                    $data['custom_attributes'][$key] = $value;
+                }
             } else {
                 $data['custom_attributes'][$targetField] = $value;
             }
@@ -166,15 +406,48 @@ class ContactImportService
         return $data;
     }
 
-    protected function processContact(array $data)
+    protected function processContact(array $data, array $options = [])
     {
         $tags = $data['tags'] ?? [];
         unset($data['tags']);
 
+        if (!empty($data['category_name'])) {
+            $categoryName = trim((string) $data['category_name']);
+            if ($categoryName !== '') {
+                $category = Category::firstOrCreate(
+                    [
+                        'team_id' => $this->team->id,
+                        'target_module' => 'contacts',
+                        'name' => $categoryName,
+                    ],
+                    [
+                        'description' => null,
+                        'color' => '#0ea5e9',
+                        'icon' => 'fas fa-tag',
+                        'is_active' => true,
+                    ]
+                );
+                $data['category_id'] = $category->id;
+            }
+            unset($data['category_name']);
+        }
+
         $contact = $this->contactService->createOrUpdate($data);
 
         if (!empty($tags)) {
-            $this->contactService->addTags($contact, $tags);
+            $onDuplicateTag = $options['on_duplicate_tag'] ?? 'add';
+            $isDuplicateExisting = (bool) ($options['is_duplicate_existing'] ?? false);
+
+            if ($isDuplicateExisting) {
+                if ($onDuplicateTag === 'replace') {
+                    $this->contactService->syncTags($contact, $tags);
+                } elseif ($onDuplicateTag === 'keep') {
+                } else {
+                    $this->contactService->addTags($contact, $tags);
+                }
+            } else {
+                $this->contactService->syncTags($contact, $tags);
+            }
         }
 
         return $contact;

@@ -125,16 +125,22 @@
                             <td class="px-8 py-6">
                                 <div class="flex flex-wrap gap-2">
                                     @if($contact->category)
+                                        @php
+                                            $categoryColor = $contact->category->color ?: '#64748b';
+                                        @endphp
                                         <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
-                                              style="background-color: {{ $contact->category->color }}20; color: {{ $contact->category->color }}; border-color: {{ $contact->category->color }}40">
+                                              style="background-color: {{ $categoryColor }}20; color: {{ $categoryColor }}; border-color: {{ $categoryColor }}40">
                                             <i class="{{ $contact->category->icon }} mr-1"></i>
                                             {{ $contact->category->name }}
                                         </span>
                                     @endif
                                     @foreach($contact->tags as $tag)
+                                        @php
+                                            $tagColor = $tag->color ?: '#64748b';
+                                        @endphp
                                         <span
                                             class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
-                                            style="background-color: {{ $tag->color }}10; color: {{ $tag->color }}; border-color: {{ $tag->color }}30">
+                                            style="background-color: {{ $tagColor }}10; color: {{ $tagColor }}; border-color: {{ $tagColor }}30">
                                             {{ $tag->name }}
                                         </span>
                                     @endforeach
@@ -467,6 +473,9 @@
                             </span>
                             <span class="text-xs text-slate-400 block mt-1 uppercase tracking-widest font-black">Accepts CSV, XLSX & XLS</span>
                         </label>
+                        <div wire:loading wire:target="importFile" class="absolute inset-0 rounded-2xl bg-white/70 dark:bg-slate-900/70 backdrop-blur flex items-center justify-center">
+                            <div class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Uploading...</div>
+                        </div>
                     </div>
                     @error('importFile') <span class="text-rose-500 text-xs font-bold">{{ $message }}</span> @enderror
                 </div>
@@ -505,9 +514,10 @@
                         </div>
 
                         <div class="pt-2">
-                            <x-app-button variant="primary" class="w-full py-3" wire:click="import">
+                            <x-app-button variant="primary" class="w-full py-3" wire:click="import" wire:loading.attr="disabled" :disabled="$isImporting">
                                 <x-icon name="arrow-up-tray" class="w-4 h-4" />
-                                <span>Start Importing</span>
+                                <span wire:loading.remove wire:target="import">Start Importing</span>
+                                <span wire:loading wire:target="import">Processing...</span>
                             </x-app-button>
                         </div>
                     </div>
@@ -523,6 +533,15 @@
                         <div class="mt-2 text-sm font-medium text-slate-500 uppercase tracking-widest text-[10px]">
                             Processed: <span class="text-wa-teal font-black">{{ $importResult['total'] }}</span>
                             | Saved: <span class="text-wa-teal font-black">{{ $importResult['imported'] }}</span>
+                            @if(!is_null($importResult['created'] ?? null))
+                                | New: <span class="text-wa-teal font-black">{{ $importResult['created'] }}</span>
+                            @endif
+                            @if(!is_null($importResult['updated'] ?? null))
+                                | Updated: <span class="text-wa-teal font-black">{{ $importResult['updated'] }}</span>
+                            @endif
+                            @if(!is_null($importResult['skipped'] ?? null) && ($importResult['skipped'] ?? 0) > 0)
+                                | Skipped: <span class="text-slate-700 dark:text-slate-200 font-black">{{ $importResult['skipped'] }}</span>
+                            @endif
                             @if(count($importResult['errors']) > 0)
                                 | Errors: <span class="text-rose-500 font-bold font-black">{{ count($importResult['errors']) }}</span>
                             @endif
@@ -545,6 +564,98 @@
                     </x-app-button>
                 </div>
             @endif
+        </div>
+    </x-app-modal>
+
+    <x-app-modal wire:model="isDuplicateModalOpen" maxWidth="4xl" :backdropClose="false">
+        <div class="p-8 pb-0">
+            <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Duplicate <span class="text-rose-500">Contacts</span>
+            </h2>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/20">
+                <div class="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-500">We found duplicates in your import file.</div>
+                <div class="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    Existing duplicates: <span class="font-black">{{ count($importPreview['duplicates_existing'] ?? []) }}</span>
+                    | In-file duplicates: <span class="font-black">{{ count($importPreview['duplicates_in_file'] ?? []) }}</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">When a duplicate is found</div>
+                <select wire:model="importDuplicateStrategy" class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white">
+                    <option value="update">Update existing contact</option>
+                    <option value="skip">Skip duplicate rows</option>
+                </select>
+            </div>
+
+            @if($importDuplicateStrategy === 'update')
+                <div class="space-y-2">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Existing contact tags</div>
+                    <select wire:model="importDuplicateTagStrategy" class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white">
+                        <option value="add">Add imported tags</option>
+                        <option value="replace">Replace with imported tags</option>
+                        <option value="keep">Keep existing tags</option>
+                    </select>
+                </div>
+            @endif
+
+            @if(!empty($importPreview['duplicates_existing'] ?? []))
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 max-h-64 overflow-y-auto custom-scrollbar">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Duplicates in your account</div>
+                    <div class="space-y-2">
+                        @foreach(array_slice($importPreview['duplicates_existing'], 0, 50) as $dup)
+                            <div class="flex items-center justify-between gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40">
+                                <div class="min-w-0">
+                                    <div class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">{{ $dup['incoming_name'] ?: 'No name' }}</div>
+                                    <div class="text-[10px] font-bold text-slate-500 truncate">{{ $dup['existing']['phone_number'] }}</div>
+                                    @if(!empty($dup['incoming_tags'] ?? []))
+                                        <div class="text-[10px] font-bold text-slate-400 truncate">Incoming tags: {{ implode(', ', $dup['incoming_tags']) }}</div>
+                                    @endif
+                                    @if(!empty($dup['existing']['tags'] ?? []))
+                                        <div class="text-[10px] font-bold text-slate-400 truncate">Existing tags: {{ implode(', ', $dup['existing']['tags']) }}</div>
+                                    @endif
+                                    <div class="text-[10px] font-bold text-slate-400">Row {{ $dup['row'] }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Existing</div>
+                                    <div class="text-xs font-black text-slate-800 dark:text-slate-100">{{ $dup['existing']['name'] ?: 'No name' }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @if(count($importPreview['duplicates_existing']) > 50)
+                        <div class="mt-3 text-[10px] font-bold text-slate-400">Showing first 50 items.</div>
+                    @endif
+                </div>
+            @endif
+
+            @if(!empty($importPreview['duplicates_in_file'] ?? []))
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 max-h-64 overflow-y-auto custom-scrollbar">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Duplicates inside the file</div>
+                    <div class="space-y-2">
+                        @foreach(array_slice($importPreview['duplicates_in_file'], 0, 50) as $dup)
+                            <div class="flex items-center justify-between gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40">
+                                <div class="min-w-0">
+                                    <div class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">{{ $dup['phone_number'] }}</div>
+                                    <div class="text-[10px] font-bold text-slate-500">Rows {{ implode(', ', $dup['rows']) }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @if(count($importPreview['duplicates_in_file']) > 50)
+                        <div class="mt-3 text-[10px] font-bold text-slate-400">Showing first 50 items.</div>
+                    @endif
+                </div>
+            @endif
+        </div>
+        <div class="p-8 bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-4">
+            <x-app-button variant="ghost" class="w-full sm:flex-1 py-4 order-2 sm:order-1" wire:click="cancelImportAfterDuplicates">Cancel</x-app-button>
+            <x-app-button variant="primary" class="w-full sm:flex-[2] py-4 order-1 sm:order-2" wire:click="confirmImportAfterDuplicates" wire:loading.attr="disabled" :disabled="$isImporting">
+                <span wire:loading.remove wire:target="confirmImportAfterDuplicates">Continue Import</span>
+                <span wire:loading wire:target="confirmImportAfterDuplicates">Processing...</span>
+            </x-app-button>
         </div>
     </x-app-modal>
 
