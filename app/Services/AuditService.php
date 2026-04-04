@@ -28,7 +28,7 @@ class AuditService
 
         if ($identifier instanceof Model) {
             $teamId = $teamId ?? $identifier->team_id ?? null;
-            $identifier = $identifier->email ?? $identifier->phone ?? $identifier->name ?? (string) $identifier;
+            $identifier = $identifier->email ?? $identifier->phone_number ?? $identifier->phone ?? $identifier->name ?? (string) $identifier;
         }
 
         // Final fallback for team_id from session
