@@ -22,7 +22,7 @@ class LinkTrackerService
             $url = $matches[0];
 
             // Avoid tracking internal domain or already shortened links
-            $internal = parse_url(config('app.url'), PHP_HOST);
+            $internal = parse_url(config('app.url'), PHP_URL_HOST);
             if (Str::contains($url, $internal)) {
                 return $url;
             }

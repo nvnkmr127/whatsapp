@@ -120,15 +120,14 @@ class ContactImportService
         $existingPhones = [];
         $seenPhones = [];
 
+        // Final check for existing phones if we need to skip them
         if ($onDuplicate === 'skip') {
             $phonesToCheck = [];
-
             foreach ($records as $index => $record) {
                 $contactData = $this->mapRecordToContactData($record, $columnMapping);
                 if (empty($contactData['phone_number'])) {
                     continue;
                 }
-
                 try {
                     $phonesToCheck[] = \App\Helpers\PhoneNumberHelper::normalize((string) $contactData['phone_number']);
                 } catch (\Exception $e) {
@@ -148,33 +147,55 @@ class ContactImportService
                     }
                 }
             }
+        }
 
-            if (in_array($extension, ['csv', 'txt'])) {
-                $csv = Reader::createFromPath($filePath, 'r');
-                $csv->setHeaderOffset(0);
-                $records = $csv->getRecords();
-            }
+        // IMPORTANT: Reset the records iterator for CSV files before the main loop
+        // because the duplicate check above might have consumed it.
+        if (in_array($extension, ['csv', 'txt'])) {
+            $csv = Reader::createFromPath($filePath, 'r');
+            $csv->setHeaderOffset(0);
+            $records = $csv->getRecords();
         }
 
         foreach ($records as $index => $record) {
             try {
+                \Illuminate\Support\Facades\Log::info("Importing Row " . ($index + 1), [
+                    'team_id' => $this->team->id,
+                    'raw_record' => $record,
+                ]);
+
                 $contactData = $this->mapRecordToContactData($record, $columnMapping);
 
                 if (empty($contactData['phone_number'])) {
+                    \Illuminate\Support\Facades\Log::warning("Skipping Row " . ($index + 1) . ": No phone number found", [
+                        'mapped_data' => $contactData,
+                    ]);
                     $errors[] = "Row " . ($index + 1) . ": Phone number is required.";
                     continue;
                 }
 
-                $contactData['phone_number'] = \App\Helpers\PhoneNumberHelper::normalize((string) $contactData['phone_number']);
+                $originalPhone = (string) $contactData['phone_number'];
+                $contactData['phone_number'] = \App\Helpers\PhoneNumberHelper::normalize($originalPhone);
+                
+                \Illuminate\Support\Facades\Log::debug("Normalized Phone", [
+                    'original' => $originalPhone,
+                    'normalized' => $contactData['phone_number'],
+                ]);
 
                 if ($onDuplicate === 'skip') {
                     if (isset($seenPhones[$contactData['phone_number']])) {
+                        \Illuminate\Support\Facades\Log::info("Row " . ($index + 1) . ": Skipping duplicate in file", [
+                            'phone' => $contactData['phone_number'],
+                        ]);
                         $skippedCount++;
                         continue;
                     }
                     $seenPhones[$contactData['phone_number']] = true;
 
                     if (isset($existingPhones[$contactData['phone_number']])) {
+                        \Illuminate\Support\Facades\Log::info("Row " . ($index + 1) . ": Skipping existing contact", [
+                            'phone' => $contactData['phone_number'],
+                        ]);
                         $skippedCount++;
                         continue;
                     }
@@ -193,6 +214,11 @@ class ContactImportService
                         ->where('phone_number', $contactData['phone_number'])
                         ->first();
                 }
+
+                \Illuminate\Support\Facades\Log::info("Processing Contact for Row " . ($index + 1), [
+                    'is_update' => (bool)$existingContact,
+                    'contact_data' => $contactData,
+                ]);
 
                 $contact = $this->processContact($contactData, [
                     'is_duplicate_existing' => (bool) $existingContact,
@@ -217,7 +243,16 @@ class ContactImportService
                 } else {
                     $createdCount++;
                 }
+                
+                \Illuminate\Support\Facades\Log::info("Successfully processed Row " . ($index + 1), [
+                    'contact_id' => $contact->id,
+                ]);
             } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed Row " . ($index + 1), [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'row_data' => $record ?? null,
+                ]);
                 $errors[] = "Row " . ($index + 1) . ": " . $e->getMessage();
             }
         }
@@ -340,13 +375,14 @@ class ContactImportService
         $duplicatesExisting = [];
         foreach ($rows as $r) {
             if (isset($existingByPhone[$r['phone_number']])) {
+                $existing = $existingByPhone[$r['phone_number']];
                 $duplicatesExisting[] = [
                     'row' => $r['row'],
                     'phone_number' => $r['phone_number'],
                     'incoming_name' => $r['name'],
                     'incoming_email' => $r['email'],
-                    'incoming_tags' => $r['tags'],
-                    'existing' => $existingByPhone[$r['phone_number']],
+                    'incoming_tags' => !empty($r['tags']) ? $r['tags'] : null,
+                    'existing' => $existing,
                 ];
             }
         }
