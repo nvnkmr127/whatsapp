@@ -322,7 +322,7 @@ class CallOverlay extends Component
                 ->where('team_id', $team->id)
                 ->first();
                 
-            if ($call && in_array($call->status, ['completed', 'failed', 'canceled', 'rejected'])) {
+            if ($call && ! $call->isActive()) {
                 Log::info('CallOverlay: Attempted to answer a call that is already ended', ['status' => $call->status]);
                 $this->status = 'ended';
                 $this->dispatch('call-stopped');
@@ -351,9 +351,8 @@ class CallOverlay extends Component
                 Log::error('CallOverlay: Meta refused answer', ['message' => $errorMessage]);
             }
         } catch (\Exception $e) {
-            Log::error('CallOverlay: Answer Exception', ['error' => $e->getMessage()]);
-            
             if (str_contains($e->getMessage(), 'not in a valid state')) {
+                Log::info('CallOverlay: Answer attempted on ended call', ['error' => $e->getMessage()]);
                 $this->status = 'ended';
                 $this->dispatch('call-stopped');
                 $this->dispatch('notify', ['type' => 'info', 'message' => 'The call has already ended.']);
@@ -361,6 +360,7 @@ class CallOverlay extends Component
                 return;
             }
             
+            Log::error('CallOverlay: Answer Exception', ['error' => $e->getMessage()]);
             $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }

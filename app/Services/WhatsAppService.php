@@ -1647,7 +1647,7 @@ class WhatsAppService
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
-        if (! in_array($call->status, ['initiated', 'ringing', 'in_progress'])) {
+        if (! $call->isActive()) {
             throw new \Exception("Call is not in a valid state to answer. Current status: {$call->status}");
         }
 
@@ -1816,7 +1816,7 @@ class WhatsAppService
             ->where('team_id', $this->team->id)
             ->firstOrFail();
 
-        if (! in_array($call->status, ['initiated', 'ringing', 'in_progress'])) {
+        if (! $call->isActive()) {
             throw new \Exception("Call is not in a valid state to pre-accept. Current status: {$call->status}");
         }
 
