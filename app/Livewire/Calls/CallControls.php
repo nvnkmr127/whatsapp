@@ -102,7 +102,12 @@ class CallControls extends Component
                 $this->dispatch('call-error', ['message' => $response['error'] ?? 'Failed to initiate call']);
             }
         } catch (\Exception $e) {
-            $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                $this->activeCall = null;
+                $this->dispatch('call-error', ['message' => 'The call has already ended.']);
+            } else {
+                $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            }
         } finally {
             $this->isInitiating = false;
         }
@@ -126,7 +131,12 @@ class CallControls extends Component
                 $this->dispatch('call-answered', ['message' => 'Call answered']);
             }
         } catch (\Exception $e) {
-            $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                $this->activeCall = null;
+                $this->dispatch('call-error', ['message' => 'The call has already ended.']);
+            } else {
+                $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            }
         }
     }
 
@@ -147,7 +157,12 @@ class CallControls extends Component
                 $this->dispatch('call-rejected', ['message' => 'Call rejected']);
             }
         } catch (\Exception $e) {
-            $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                $this->activeCall = null;
+                $this->dispatch('call-error', ['message' => 'The call has already ended.']);
+            } else {
+                $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            }
         }
     }
 
@@ -168,7 +183,12 @@ class CallControls extends Component
                 $this->dispatch('call-ended', ['message' => 'Call ended']);
             }
         } catch (\Exception $e) {
-            $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                $this->activeCall = null;
+                $this->dispatch('call-error', ['message' => 'The call has already ended.']);
+            } else {
+                $this->dispatch('call-error', ['message' => $e->getMessage()]);
+            }
         }
     }
 

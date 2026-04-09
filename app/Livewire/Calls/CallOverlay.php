@@ -321,6 +321,16 @@ class CallOverlay extends Component
             $call = \App\Models\WhatsAppCall::where('call_id', $this->callId)
                 ->where('team_id', $team->id)
                 ->first();
+                
+            if ($call && in_array($call->status, ['completed', 'failed', 'canceled', 'rejected'])) {
+                Log::info('CallOverlay: Attempted to answer a call that is already ended', ['status' => $call->status]);
+                $this->status = 'ended';
+                $this->dispatch('call-stopped');
+                $this->dispatch('notify', ['type' => 'info', 'message' => 'The call has already ended.']);
+                $this->dispatch('auto-hide-overlay');
+                return;
+            }
+            
             $phoneNumberId = $call ? ($call->metadata['phone_number_id'] ?? null) : null;
 
             if ($session) {
@@ -342,6 +352,15 @@ class CallOverlay extends Component
             }
         } catch (\Exception $e) {
             Log::error('CallOverlay: Answer Exception', ['error' => $e->getMessage()]);
+            
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                $this->status = 'ended';
+                $this->dispatch('call-stopped');
+                $this->dispatch('notify', ['type' => 'info', 'message' => 'The call has already ended.']);
+                $this->dispatch('auto-hide-overlay');
+                return;
+            }
+            
             $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
@@ -395,6 +414,15 @@ class CallOverlay extends Component
             if (! $team) {
                 return;
             }
+            $call = \App\Models\WhatsAppCall::where('call_id', $this->callId)
+                ->where('team_id', $team->id)
+                ->first();
+
+            if ($call && in_array($call->status, ['completed', 'failed', 'canceled', 'rejected'])) {
+                $this->resetOverlay();
+                return;
+            }
+
             $whatsappService = new \App\Services\WhatsAppService($team);
             $response = $whatsappService->rejectCall($this->callId);
 
@@ -402,7 +430,9 @@ class CallOverlay extends Component
                 $this->resetOverlay();
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+            if (!str_contains($e->getMessage(), 'not in a valid state')) {
+                $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
+            }
             $this->resetOverlay();
         }
     }

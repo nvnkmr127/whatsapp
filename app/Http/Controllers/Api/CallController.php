@@ -141,6 +141,9 @@ class CallController extends Controller
 
             return $this->success($response, 'Call answered successfully.');
         } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                return $this->error('The call has already ended or is not in a valid state.', 400, null, 'ERR_INVALID_STATE');
+            }
             return $this->error($e->getMessage(), 500, null, 'ERR_SERVER_ERROR');
         }
     }
@@ -162,6 +165,9 @@ class CallController extends Controller
 
             return $this->success($response, 'Call rejected successfully.');
         } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                return $this->error('The call has already ended or is not in a valid state.', 400, null, 'ERR_INVALID_STATE');
+            }
             return $this->error($e->getMessage(), 500, null, 'ERR_SERVER_ERROR');
         }
     }
@@ -183,6 +189,9 @@ class CallController extends Controller
 
             return $this->success($response, 'Call ended successfully.');
         } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'not in a valid state')) {
+                return $this->error('The call has already ended or is not in a valid state.', 400, null, 'ERR_INVALID_STATE');
+            }
             return $this->error($e->getMessage(), 500, null, 'ERR_SERVER_ERROR');
         }
     }
