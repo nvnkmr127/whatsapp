@@ -34,7 +34,7 @@ class WebhookSubscription extends Model
      */
     public function isSubscribedTo(string $event): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 

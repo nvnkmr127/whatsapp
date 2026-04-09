@@ -5,14 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (!Schema::hasTable('contact_tag_pivot')) {
+        if (! Schema::hasTable('contact_tag_pivot')) {
             return;
         }
 
-        if (!Schema::hasColumn('contact_tag_pivot', 'id')) {
+        if (! Schema::hasColumn('contact_tag_pivot', 'id')) {
             return;
         }
 
@@ -29,7 +30,7 @@ return new class extends Migration {
 
     public function down(): void
     {
-        if (!Schema::hasTable('contact_tag_pivot')) {
+        if (! Schema::hasTable('contact_tag_pivot')) {
             return;
         }
 
@@ -42,4 +43,3 @@ return new class extends Migration {
         });
     }
 };
-

@@ -22,7 +22,7 @@ class CallRejected implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        return new PrivateChannel('teams.' . $this->call->team_id);
+        return new PrivateChannel('teams.'.$this->call->team_id);
     }
 
     public function broadcastAs()

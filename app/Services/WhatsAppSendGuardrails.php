@@ -19,15 +19,14 @@ class WhatsAppSendGuardrails
         protected OptInValidator $optInValidator,
         protected QualityProtectionValidator $qualityValidator,
         protected RateLimitValidator $rateLimitValidator,
-    ) {
-    }
+    ) {}
 
     /**
      * Validate entire campaign before sending
      */
     public function validateCampaign(Campaign $campaign): ValidationResult
     {
-        $result = new ValidationResult();
+        $result = new ValidationResult;
 
         // Layer 1: Template validation
         if ($campaign->template) {
@@ -91,7 +90,7 @@ class WhatsAppSendGuardrails
         array $parameters = [],
         string $messageType = 'transactional'
     ): ValidationResult {
-        $result = new ValidationResult();
+        $result = new ValidationResult;
 
         // Template validation
         $templateResult = $this->templateValidator->validate($template, $parameters);
@@ -153,7 +152,7 @@ class WhatsAppSendGuardrails
 
         // Check token validity
         if (
-            !$team->whatsapp_access_token ||
+            ! $team->whatsapp_access_token ||
             ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->isPast())
         ) {
             return false;
@@ -161,7 +160,7 @@ class WhatsAppSendGuardrails
 
         // Check rate limit
         $rateLimitResult = $this->rateLimitValidator->validate($team, 1);
-        if (!$rateLimitResult->isValid()) {
+        if (! $rateLimitResult->isValid()) {
             return false;
         }
 
@@ -179,14 +178,14 @@ class WhatsAppSendGuardrails
             $issues[] = 'Quality rating is RED';
         }
 
-        if (!$team->whatsapp_access_token) {
+        if (! $team->whatsapp_access_token) {
             $issues[] = 'No access token configured';
         } elseif ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->isPast()) {
             $issues[] = 'Access token expired';
         }
 
         $rateLimitResult = $this->rateLimitValidator->validate($team, 1);
-        if (!$rateLimitResult->isValid()) {
+        if (! $rateLimitResult->isValid()) {
             $issues[] = $rateLimitResult->getBlockingReason();
         }
 

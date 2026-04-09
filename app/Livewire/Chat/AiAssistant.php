@@ -10,8 +10,11 @@ use Livewire\Component;
 class AiAssistant extends Component
 {
     public $conversationId;
+
     public $suggestions = [];
+
     public $isGenerating = false;
+
     public $showAiModal = false;
 
     protected $listeners = [
@@ -24,7 +27,9 @@ class AiAssistant extends Component
             $this->conversationId = $conversationId;
         }
 
-        if (!$this->conversationId) return;
+        if (! $this->conversationId) {
+            return;
+        }
 
         $this->showAiModal = true;
         $this->isGenerating = true;
@@ -39,7 +44,7 @@ class AiAssistant extends Component
                 ->reverse();
 
             $promptMessages = [
-                ['role' => 'system', 'content' => "You are a helpful customer support assistant for a business named " . Auth::user()->currentTeam->name . ". Provide 3 short, professional, and helpful reply suggestions based on the last messages. Output MUST be a JSON array of 3 strings."],
+                ['role' => 'system', 'content' => 'You are a helpful customer support assistant for a business named '.Auth::user()->currentTeam->name.'. Provide 3 short, professional, and helpful reply suggestions based on the last messages. Output MUST be a JSON array of 3 strings.'],
             ];
 
             foreach ($messages as $msg) {
@@ -61,7 +66,7 @@ class AiAssistant extends Component
             }
 
         } catch (\Exception $e) {
-            \Log::error("AI Assistant Error: " . $e->getMessage());
+            \Log::error('AI Assistant Error: '.$e->getMessage());
             $this->suggestions = ["Sorry, I couldn't generate suggestions right now."];
         }
 

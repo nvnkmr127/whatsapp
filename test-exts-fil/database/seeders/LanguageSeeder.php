@@ -16,9 +16,9 @@ class LanguageSeeder extends Seeder
 
         if (! $exists) {
             DB::table('languages')->insert([
-                'name'       => 'English',
-                'code'       => 'en',
-                'status'     => 1,
+                'name' => 'English',
+                'code' => 'en',
+                'status' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

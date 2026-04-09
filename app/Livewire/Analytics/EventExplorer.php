@@ -11,15 +11,22 @@ class EventExplorer extends Component
     use WithPagination;
 
     public $search = '';
+
     public $filterModule = '';
+
     public $filterCategory = '';
+
     public $filterTraceId = '';
+
     public $showNoise = false; // By default only show Business/Signal
+
     public $filterEntityId = '';
 
     // For drill-down modal
     public $selectedEvent = null;
+
     public $traceEvents = [];
+
     public $showTraceModal = false;
 
     protected $queryString = [
@@ -43,14 +50,14 @@ class EventExplorer extends Component
             ->latest('occurred_at');
 
         // Noise Filter (Default: Show only Signals)
-        if (!$this->showNoise && !$this->filterCategory && !$this->filterTraceId && !$this->search) {
+        if (! $this->showNoise && ! $this->filterCategory && ! $this->filterTraceId && ! $this->search) {
             $query->where('is_signal', true);
         }
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('event_type', 'like', '%' . $this->search . '%')
-                    ->orWhere('payload', 'like', '%' . $this->search . '%')
+                $q->where('event_type', 'like', '%'.$this->search.'%')
+                    ->orWhere('payload', 'like', '%'.$this->search.'%')
                     ->orWhere('trace_id', $this->search);
             });
         }

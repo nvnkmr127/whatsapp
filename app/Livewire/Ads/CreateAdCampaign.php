@@ -2,14 +2,12 @@
 
 namespace App\Livewire\Ads;
 
-use App\Models\Integration;
 use App\Models\Automation;
-use App\Services\Integrations\MetaMarketingService;
+use App\Models\Integration;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Livewire\Attributes\Layout;
 
 class CreateAdCampaign extends Component
 {
@@ -17,25 +15,31 @@ class CreateAdCampaign extends Component
 
     #[Layout('layouts.app')]
     public $adAccountId;
+
     public $integrationId;
 
     // Wizard Steps
     public $currentStep = 1;
+
     public $steps = [
         1 => 'Campaign Info',
         2 => 'Who & When',
         3 => 'Ad Design',
-        4 => 'Review'
+        4 => 'Review',
     ];
 
     // Form Data - Campaign
     public $campaignName;
+
     public $objective = 'OUTCOME_TRAFFIC';
+
     public $budgetType = 'DAILY'; // DAILY, LIFETIME
+
     public $dailyBudget = 10;
 
     // Form Data - Targeting
     public $selectedCountries = ['US'];
+
     public $countries = [
         ['code' => 'US', 'name' => 'United States'],
         ['code' => 'GB', 'name' => 'United Kingdom'],
@@ -53,25 +57,36 @@ class CreateAdCampaign extends Component
         ['code' => 'ZA', 'name' => 'South Africa'],
         ['code' => 'AE', 'name' => 'United Arab Emirates'],
     ];
+
     public $countrySearch = '';
+
     public $ageMin = 18;
+
     public $ageMax = 65;
+
     public $gender = 'ALL'; // ALL, MALE, FEMALE
 
     // Creative
     public $mediaType = 'IMAGE'; // IMAGE, VIDEO
+
     public $adImage;
+
     public $adVideo;
-    public $primaryText = "Chat with us on WhatsApp for exclusive deals!";
-    public $headline = "Talk to an Expert";
+
+    public $primaryText = 'Chat with us on WhatsApp for exclusive deals!';
+
+    public $headline = 'Talk to an Expert';
+
     public $callToAction = 'WHATSAPP_MESSAGE';
 
     // Automation Link
     public $selectedAutomationId;
+
     public $automations = [];
 
     // UI Status
     public $isLaunching = false;
+
     public $audienceReach = 0;
 
     public function mount($adAccountId = null)
@@ -90,13 +105,13 @@ class CreateAdCampaign extends Component
             ->where('is_active', true)
             ->get();
 
-        $this->campaignName = "WhatsApp Campaign " . date('Y-m-d');
+        $this->campaignName = 'WhatsApp Campaign '.date('Y-m-d');
         $this->updateAudienceReach();
     }
 
     public function addCountry($code)
     {
-        if (!in_array($code, $this->selectedCountries)) {
+        if (! in_array($code, $this->selectedCountries)) {
             $this->selectedCountries[] = $code;
         }
         $this->updateAudienceReach();
@@ -111,8 +126,9 @@ class CreateAdCampaign extends Component
     public function updateAudienceReach()
     {
         $base = count($this->selectedCountries) * 2500000;
-        if ($base === 0)
+        if ($base === 0) {
             $base = 1000000;
+        }
         $ageFactor = ($this->ageMax - $this->ageMin) / 47;
         $genderFactor = ($this->gender === 'ALL') ? 1.0 : 0.5;
         $this->audienceReach = round($base * $ageFactor * $genderFactor);
@@ -122,10 +138,12 @@ class CreateAdCampaign extends Component
     {
         $this->updateAudienceReach();
     }
+
     public function updatedAgeMax()
     {
         $this->updateAudienceReach();
     }
+
     public function updatedGender()
     {
         $this->updateAudienceReach();
@@ -147,7 +165,7 @@ class CreateAdCampaign extends Component
         if ($step === 1) {
             $this->validate([
                 'campaignName' => 'required|string|min:3',
-                'objective' => 'required'
+                'objective' => 'required',
             ]);
         } elseif ($step === 2) {
             $this->validate([
@@ -158,7 +176,7 @@ class CreateAdCampaign extends Component
             $rules = [
                 'primaryText' => 'required|string',
                 'headline' => 'required|string',
-                'selectedAutomationId' => 'required|exists:automations,id'
+                'selectedAutomationId' => 'required|exists:automations,id',
             ];
 
             if ($this->mediaType === 'IMAGE') {
@@ -180,9 +198,10 @@ class CreateAdCampaign extends Component
             sleep(3);
 
             session()->flash('message', 'Ad started successfully! It will show up in your manager soon.');
+
             return redirect()->route('ads.manager');
         } catch (\Exception $e) {
-            session()->flash('error', 'Could not start: ' . $e->getMessage());
+            session()->flash('error', 'Could not start: '.$e->getMessage());
         } finally {
             $this->isLaunching = false;
         }

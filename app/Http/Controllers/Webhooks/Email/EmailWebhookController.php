@@ -20,7 +20,7 @@ class EmailWebhookController extends Controller
      */
     public function handle(Request $request, string $provider)
     {
-        if (!isset($this->handlers[$provider])) {
+        if (! isset($this->handlers[$provider])) {
             throw new NotFoundHttpException("Email webhook handler for provider [{$provider}] not found.");
         }
 

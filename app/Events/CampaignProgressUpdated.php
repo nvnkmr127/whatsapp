@@ -3,9 +3,7 @@
 namespace App\Events;
 
 use App\Models\Campaign;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -16,7 +14,9 @@ class CampaignProgressUpdated implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $campaignId;
+
     public $status;
+
     public $metrics;
 
     public function __construct(Campaign $campaign)

@@ -22,6 +22,6 @@ class ConversationOpened implements ShouldBroadcast
 
     public function broadcastOn(): Channel
     {
-        return new PrivateChannel('teams.' . $this->conversation->team_id);
+        return new PrivateChannel('teams.'.$this->conversation->team_id);
     }
 }

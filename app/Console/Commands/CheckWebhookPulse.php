@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 class CheckWebhookPulse extends Command
 {
     protected $signature = 'whatsapp:check-pulse {--hours=6 : Window of inactivity to flag}';
+
     protected $description = 'Verify that connected WhatsApp accounts are still receiving webhooks';
 
     public function handle()
@@ -29,7 +30,7 @@ class CheckWebhookPulse extends Command
                         ->orderBy('created_at', 'desc')
                         ->first();
 
-                    if (!$lastWebhook || $lastWebhook->created_at->diffInHours() >= $hours) {
+                    if (! $lastWebhook || $lastWebhook->created_at->diffInHours() >= $hours) {
                         $this->warn("Team {$team->id} ({$team->name}) has not received a webhook in {$hours}+ hours.");
 
                         // Notify owner
@@ -40,7 +41,7 @@ class CheckWebhookPulse extends Command
                                 "Your WhatsApp connection may be interrupted. We haven't received any events (messages or status updates) from Meta in the last {$hours} hours."
                             ));
                         } catch (\Exception $e) {
-                            Log::error("Failed to notify pulse alert for team {$team->id}: " . $e->getMessage());
+                            Log::error("Failed to notify pulse alert for team {$team->id}: ".$e->getMessage());
                         }
 
                         $teamsSilent++;

@@ -11,9 +11,9 @@ class Translator extends BaseTranslator
     /**
      * Get the translation for the given key.
      *
-     * @param  string       $key
+     * @param  string  $key
      * @param  string|null  $locale
-     * @param  bool         $fallback
+     * @param  bool  $fallback
      * @return string|array
      */
     public function get($key, array $replace = [], $locale = null, $fallback = true)
@@ -76,9 +76,9 @@ class Translator extends BaseTranslator
     /**
      * Determine if a translation exists for a given locale.
      *
-     * @param  string      $key
-     * @param  string|null $locale
-     * @param  bool        $fallback
+     * @param  string  $key
+     * @param  string|null  $locale
+     * @param  bool  $fallback
      * @return bool
      */
     public function has($key, $locale = null, $fallback = true)
@@ -99,7 +99,7 @@ class Translator extends BaseTranslator
     /**
      * Set the default locale.
      *
-     * @param  string $locale
+     * @param  string  $locale
      * @return void
      */
     public function setLocale($locale)

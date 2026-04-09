@@ -2,17 +2,21 @@
 
 namespace App\Livewire\Developer;
 
-use Livewire\Component;
 use Laravel\Jetstream\Jetstream;
-use Illuminate\Support\Facades\Validator;
+use Livewire\Component;
 
 class ApiTokenManager extends Component
 {
     public $name = '';
+
     public $permissions = [];
+
     public $ipWhitelist = '';
+
     public $expiresAt = null;
+
     public $showTokenModal = false;
+
     public $plainTextToken = null;
 
     protected $rules = [
@@ -41,7 +45,7 @@ class ApiTokenManager extends Component
 
         $this->plainTextToken = $token->plainTextToken;
         $this->showTokenModal = true;
-        
+
         // Reset form
         $this->name = '';
         $this->permissions = Jetstream::$defaultPermissions;

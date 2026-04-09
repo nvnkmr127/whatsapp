@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Contact;
 use App\Models\Team;
 use App\Models\TeamWallet;
-use App\Models\User;
-use App\Models\Contact;
 use App\Services\BillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class BillingConcurrencyTest extends TestCase
@@ -18,14 +16,18 @@ class BillingConcurrencyTest extends TestCase
     public function test_concurrent_billing_requests_do_not_exceed_balance()
     {
         // Setup
-        $team = Team::factory()->create(['name' => 'Billing Test Team']);
+        \App\Models\Plan::create(['name' => 'basic', 'message_limit' => 1000, 'monthly_price' => 10, 'features' => []]);
+        $team = Team::factory()->create(['name' => 'Billing Test Team', 'subscription_plan' => 'basic']);
         $wallet = TeamWallet::create(['team_id' => $team->id, 'balance' => 0.15]); // Enough for 1 marketing msg (0.10) but not 2
 
         $contact1 = Contact::factory()->create(['team_id' => $team->id]);
         $contact2 = Contact::factory()->create(['team_id' => $team->id]);
 
-        $service = new BillingService();
+        $service = new BillingService;
         $category = 'marketing'; // Cost 0.10
+
+        // Ensure full access is disabled
+        config(['app.full_access_all' => false]);
 
         // 1. First deduction (Contact 1)
         $result1 = $service->recordConversationUsage($team, $contact1->id, $category, 'wamid_1');
@@ -36,7 +38,7 @@ class BillingConcurrencyTest extends TestCase
         $this->assertTrue($result1, 'First charge should succeed');
         $this->assertFalse($result2, 'Second charge should fail due to insufficient funds');
 
-        $wallet->refresh();
+        $wallet = TeamWallet::find($wallet->id);
         $this->assertEqualsWithDelta(0.05, $wallet->balance, 0.0001, 'Balance should be 0.05');
     }
 }

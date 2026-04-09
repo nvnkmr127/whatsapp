@@ -14,7 +14,7 @@ class ListWhatsAppTemplates extends Command
     public function handle(): int
     {
         try {
-            $accountId   = get_setting('whatsapp.wm_business_account_id');
+            $accountId = get_setting('whatsapp.wm_business_account_id');
             $accessToken = get_setting('whatsapp.wm_access_token');
 
             $response = Http::get("https://graph.facebook.com/v18.0/{$accountId}/message_templates", [
@@ -39,7 +39,7 @@ class ListWhatsAppTemplates extends Command
                 $rows[] = [
                     $template['name'],
                     $template['language'] ?? 'N/A',
-                    $template['status']   ?? 'N/A',
+                    $template['status'] ?? 'N/A',
                     $template['category'] ?? 'N/A',
                 ];
             }
@@ -50,11 +50,11 @@ class ListWhatsAppTemplates extends Command
             );
 
             $this->newLine();
-            $this->info('Total templates: ' . count($templates));
+            $this->info('Total templates: '.count($templates));
 
             return self::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('Error: ' . $e->getMessage());
+            $this->error('Error: '.$e->getMessage());
 
             return self::FAILURE;
         }

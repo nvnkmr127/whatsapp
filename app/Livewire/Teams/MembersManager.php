@@ -74,7 +74,7 @@ class MembersManager extends TeamMemberManager
     {
         $this->team = $team ?: \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
-        if (!\Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
             abort(403);
         }
 
@@ -96,7 +96,6 @@ class MembersManager extends TeamMemberManager
     /**
      * Create a new user and add them to the team.
      *
-     * @param  \App\Actions\Custom\CreateUserAndAddToTeam  $creator
      * @return void
      */
     public function createUser(CreateUserAndAddToTeam $creator)
@@ -137,14 +136,14 @@ class MembersManager extends TeamMemberManager
     {
         $users = $this->team->users()
             ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%');
+                $query->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('email', 'like', '%'.$this->search.'%');
             })
             ->orderBy('name')
             ->paginate(10);
 
         return view('teams.members', [
-            'users' => $users
+            'users' => $users,
         ]);
     }
 }

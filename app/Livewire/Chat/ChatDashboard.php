@@ -3,8 +3,8 @@
 namespace App\Livewire\Chat;
 
 use Livewire\Attributes\On;
-use Livewire\Component;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Team Inbox')]
 class ChatDashboard extends Component

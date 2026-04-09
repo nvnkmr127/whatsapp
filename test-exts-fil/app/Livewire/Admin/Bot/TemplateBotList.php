@@ -26,7 +26,7 @@ class TemplateBotList extends Component
 
     public function confirmDelete($templatebotId)
     {
-        $this->templatebotId      = $templatebotId;
+        $this->templatebotId = $templatebotId;
         $this->confirmingDeletion = true;
     }
 

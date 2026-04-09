@@ -63,7 +63,7 @@ final class SourceTable extends PowerGridComponent
 
     public function actions(Source $source)
     {
-        $user    = auth()->user();
+        $user = auth()->user();
         $actions = [];
 
         if ($user->can('source.edit') || $user->is_admin == 1) {

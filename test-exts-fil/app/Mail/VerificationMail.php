@@ -41,12 +41,12 @@ class VerificationMail extends Mailable
      */
     public function __construct($gretting, $actionUrl, $actionText, $slug, $userId = null, $contactId = null)
     {
-        $this->gretting   = $gretting;
-        $this->actionUrl  = $actionUrl;
+        $this->gretting = $gretting;
+        $this->actionUrl = $actionUrl;
         $this->actionText = $actionText;
-        $this->userId     = $userId;
-        $this->contactId  = $contactId;
-        $this->template   = mailTemplate($slug);
+        $this->userId = $userId;
+        $this->contactId = $contactId;
+        $this->template = mailTemplate($slug);
 
         $this->subject = $this->parseContent($this->template->merge_fields_groups, $this->template->subject, ['userId' => $userId, 'contactId' => $contactId]);
 
@@ -81,11 +81,11 @@ class VerificationMail extends Mailable
         return new Content(
             view: 'components.mail',
             with: [
-                'title'      => $this->template->subject,
-                'body'       => $this->body,
-                'actionUrl'  => $this->actionUrl,
+                'title' => $this->template->subject,
+                'body' => $this->body,
+                'actionUrl' => $this->actionUrl,
                 'actionText' => $this->actionText,
-                'greeting'   => $this->gretting,
+                'greeting' => $this->gretting,
             ]
         );
     }

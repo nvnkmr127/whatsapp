@@ -24,7 +24,7 @@ class InboundMessageTest extends TestCase
         ]);
 
         $payload = [
-            'provider_id' => 'wamid.test.' . uniqid(),
+            'provider_id' => 'wamid.test.'.uniqid(),
             'to_phone_id' => '123456789',
             'waba_id' => '987654321',
             'from_phone' => '15550000000',
@@ -33,8 +33,8 @@ class InboundMessageTest extends TestCase
             'type' => 'text',
             'content' => [
                 'type' => 'text',
-                'text' => ['body' => 'Hello World']
-            ]
+                'text' => ['body' => 'Hello World'],
+            ],
         ];
 
         // 2. Expect Event (but don't fail if broadcast fails in reality, here we mock it)
@@ -47,13 +47,13 @@ class InboundMessageTest extends TestCase
         $job->handle();
 
         // 4. Assertions
-        
+
         // Check Contact
         $contact = Contact::first();
         $this->assertNotNull($contact);
         $this->assertEquals($team->id, $contact->team_id);
         // Note: Phone number might be normalized (e.g. + added), so we check normalized or loose
-        // $this->assertEquals('+9115550000000', $contact->phone_number); 
+        // $this->assertEquals('+9115550000000', $contact->phone_number);
 
         // Check Conversation
         $conversation = Conversation::where('contact_id', $contact->id)->first();

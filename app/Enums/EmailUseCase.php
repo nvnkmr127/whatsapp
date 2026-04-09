@@ -15,7 +15,7 @@ enum EmailUseCase: string
         return match ($this) {
             self::OTP, self::ALERT, self::INVOICE => 'transactional',
             self::MARKETING => 'marketing',
-            default => 'default',
+            default => config('mail.default'),
         };
     }
 }

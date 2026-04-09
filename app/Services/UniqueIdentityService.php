@@ -95,14 +95,14 @@ class UniqueIdentityService
         $passed = true;
 
         foreach ($checks as $check) {
-            if (!$check->pass) {
+            if (! $check->pass) {
                 $passed = false;
                 $denialReason = $check->message;
                 break;
             }
         }
 
-        if (!$passed) {
+        if (! $passed) {
             Log::warning('UniqueIdentityService: signup blocked', [
                 'email' => $email,
                 'ip' => $ip,
@@ -114,7 +114,7 @@ class UniqueIdentityService
             'passed' => $passed,
             'denial_reason' => $denialReason,
             'checks' => array_map(
-                fn($c) => ['pass' => $c->pass, 'message' => $c->message],
+                fn ($c) => ['pass' => $c->pass, 'message' => $c->message],
                 $checks
             ),
         ];
@@ -201,6 +201,7 @@ class UniqueIdentityService
                 'team_id' => $team->id,
                 'waba_id' => $wabaId,
             ]);
+
             return (object) ['passed' => false, 'denial_reason' => $msg];
         }
 
@@ -216,6 +217,7 @@ class UniqueIdentityService
                 'team_id' => $team->id,
                 'phone_number_id' => $phoneNumberId,
             ]);
+
             return (object) ['passed' => false, 'denial_reason' => $msg];
         }
 
@@ -238,7 +240,7 @@ class UniqueIdentityService
             ->exists();
 
         return $exists
-            ? $this->fail("This WhatsApp Business Account (WABA) is already registered to another team.")
+            ? $this->fail('This WhatsApp Business Account (WABA) is already registered to another team.')
             : $this->ok('WABA ID is unique.');
     }
 
@@ -257,7 +259,7 @@ class UniqueIdentityService
             ->exists();
 
         return $exists
-            ? $this->fail("This WhatsApp Phone Number ID is already connected to another team.")
+            ? $this->fail('This WhatsApp Phone Number ID is already connected to another team.')
             : $this->ok('Phone Number ID is unique.');
     }
 
@@ -270,7 +272,7 @@ class UniqueIdentityService
         $exists = User::where('email', strtolower(trim($email)))->exists();
 
         return $exists
-            ? $this->fail("An account with this email address already exists.")
+            ? $this->fail('An account with this email address already exists.')
             : $this->ok('Email address is unique.');
     }
 
@@ -290,7 +292,7 @@ class UniqueIdentityService
 
         // Free/disposable domains are never limited (everyone uses @gmail.com)
         if ($this->isPublicDomain($domain)) {
-            return $this->ok("Public email domain – domain uniqueness check skipped.");
+            return $this->ok('Public email domain – domain uniqueness check skipped.');
         }
 
         return $this->ok("Domain '{$domain}' uniqueness check skipped.");
@@ -310,13 +312,13 @@ class UniqueIdentityService
 
         // Hard-blocked card?
         if (IdentityFingerprint::isHardBlocked(IdentityFingerprint::TYPE_PAYMENT_METHOD, $fingerprint)) {
-            return $this->fail("This payment method has been blocked from creating new accounts.");
+            return $this->fail('This payment method has been blocked from creating new accounts.');
         }
 
         $count = IdentityFingerprint::countTeams(IdentityFingerprint::TYPE_PAYMENT_METHOD, $fingerprint);
 
         if ($count >= 1) {
-            return $this->fail("This payment method is already associated with an existing account.");
+            return $this->fail('This payment method is already associated with an existing account.');
         }
 
         return $this->ok('Payment method fingerprint is unique.');
@@ -332,16 +334,17 @@ class UniqueIdentityService
 
         // Hard-blocked IP?
         if (IdentityFingerprint::isHardBlocked(IdentityFingerprint::TYPE_SIGNUP_IP, $fingerprint)) {
-            return $this->fail("Signups from your network have been blocked.");
+            return $this->fail('Signups from your network have been blocked.');
         }
 
         // Rate limiter – hourly bucket
         $hourlyKey = "signup_ip_hourly:{$fingerprint}";
         if (RateLimiter::tooManyAttempts($hourlyKey, self::IP_HOURLY_LIMIT)) {
             $wait = RateLimiter::availableIn($hourlyKey);
+
             return $this->fail(
-                "Too many account registrations from your IP address. Please try again in " .
-                ceil($wait / 60) . " minute(s)."
+                'Too many account registrations from your IP address. Please try again in '.
+                ceil($wait / 60).' minute(s).'
             );
         }
 
@@ -349,8 +352,8 @@ class UniqueIdentityService
         $dailyKey = "signup_ip_daily:{$fingerprint}";
         if (RateLimiter::tooManyAttempts($dailyKey, self::IP_DAILY_LIMIT)) {
             return $this->fail(
-                "Your IP address has reached the maximum daily signup limit (" .
-                self::IP_DAILY_LIMIT . " accounts per 24 hours)."
+                'Your IP address has reached the maximum daily signup limit ('.
+                self::IP_DAILY_LIMIT.' accounts per 24 hours).'
             );
         }
 

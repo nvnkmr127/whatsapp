@@ -23,16 +23,18 @@ class BackfillOfferCredit extends Command
 
         if ($credit <= 0) {
             $this->warn('offer_initial_credit is 0. Nothing to backfill.');
+
             return self::SUCCESS;
         }
 
         $teams = Team::query()
-            ->when($teamId, fn($query) => $query->where('id', $teamId))
+            ->when($teamId, fn ($query) => $query->where('id', $teamId))
             ->whereNotNull('offer_claimed_at')
             ->get();
 
         if ($teams->isEmpty()) {
             $this->warn($teamId ? "No claimed-offer team found for ID {$teamId}." : 'No claimed-offer teams found.');
+
             return self::SUCCESS;
         }
 
@@ -48,12 +50,14 @@ class BackfillOfferCredit extends Command
             if ($hasWelcomeCredit) {
                 $skipped++;
                 $this->line("Skipping team {$team->id}: welcome credit transaction already exists.");
+
                 continue;
             }
 
             if ($dryRun) {
                 $this->warn("Would backfill {$credit} to team {$team->id} ({$team->name}).");
                 $repaired++;
+
                 continue;
             }
 

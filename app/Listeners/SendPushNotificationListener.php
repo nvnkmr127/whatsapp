@@ -5,7 +5,6 @@ namespace App\Listeners;
 use App\Events\MessageReceived;
 use App\Services\FcmService;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 
 class SendPushNotificationListener implements ShouldQueue
@@ -13,9 +12,7 @@ class SendPushNotificationListener implements ShouldQueue
     /**
      * Create the event listener.
      */
-    public function __construct(protected FcmService $fcmService)
-    {
-    }
+    public function __construct(protected FcmService $fcmService) {}
 
     /**
      * Handle the event.
@@ -23,14 +20,16 @@ class SendPushNotificationListener implements ShouldQueue
     public function handle(MessageReceived $event): void
     {
         $message = $event->message;
-        
+
         // Skip outbound messages (already handled by Sent event if needed)
         if ($message->direction !== 'inbound') {
             return;
         }
 
         $team = $message->team;
-        if (!$team) return;
+        if (! $team) {
+            return;
+        }
 
         // Get all users in the team (owner + members)
         $users = $team->allUsers();
@@ -44,10 +43,11 @@ class SendPushNotificationListener implements ShouldQueue
             // Skip if user is actively viewing this specific conversation (Web or App)
             if ($user->isActiveInConversation($message->conversation_id)) {
                 Log::debug("Push skipped for User {$user->id}: Active in conversation {$message->conversation_id}");
+
                 continue;
             }
-            
-            $title = "New Message from " . ($message->contact->name ?? $message->contact->phone ?? "Unknown");
+
+            $title = 'New Message from '.($message->contact->name ?? $message->contact->phone ?? 'Unknown');
             $body = $message->content ?: ($message->type === 'image' ? '📷 Image' : '📎 Attachment');
 
             $this->fcmService->sendToUser($user, $title, $body, [
@@ -58,7 +58,7 @@ class SendPushNotificationListener implements ShouldQueue
                 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
             ]);
         }
-        
+
         Log::info("Push Notification dispatched for message {$message->id}");
     }
 }

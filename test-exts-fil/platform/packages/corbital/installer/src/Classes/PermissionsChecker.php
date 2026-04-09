@@ -15,10 +15,10 @@ class PermissionsChecker
     public function __construct(?array $folders = null)
     {
         $this->folders = $folders ?? config('installer.permissions', [
-            'storage/app'       => '0755',
+            'storage/app' => '0755',
             'storage/framework' => '0755',
-            'storage/logs'      => '0755',
-            'bootstrap/cache'   => '0755',
+            'storage/logs' => '0755',
+            'bootstrap/cache' => '0755',
         ]);
     }
 
@@ -27,7 +27,7 @@ class PermissionsChecker
      */
     public function check(): array
     {
-        $results   = [];
+        $results = [];
         $hasErrors = false;
 
         foreach ($this->folders as $folder => $permission) {
@@ -41,9 +41,9 @@ class PermissionsChecker
             $isWritable = $exists ? is_writable($fullPath) : false;
 
             $results[] = [
-                'folder'     => $folder,
+                'folder' => $folder,
                 'permission' => $permission,
-                'exists'     => $exists,
+                'exists' => $exists,
                 'isWritable' => $isWritable,
             ];
 
@@ -53,7 +53,7 @@ class PermissionsChecker
         }
 
         return [
-            'items'  => $results,
+            'items' => $results,
             'errors' => $hasErrors,
         ];
     }
@@ -77,7 +77,7 @@ class PermissionsChecker
      */
     public function getFixSuggestions(): array
     {
-        $user     = $this->getCurrentProcessUser();
+        $user = $this->getCurrentProcessUser();
         $basePath = base_path();
 
         return [

@@ -3,7 +3,6 @@
 namespace App\Events;
 
 use App\Models\WhatsAppCall;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -23,7 +22,7 @@ class CallAnswered implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        return new PrivateChannel('teams.' . $this->call->team_id);
+        return new PrivateChannel('teams.'.$this->call->team_id);
     }
 
     public function broadcastAs()

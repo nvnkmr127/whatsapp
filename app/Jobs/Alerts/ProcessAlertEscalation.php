@@ -19,8 +19,7 @@ class ProcessAlertEscalation implements ShouldQueue
     public function __construct(
         protected AlertLog $log,
         protected int $level = 2
-    ) {
-    }
+    ) {}
 
     public function handle(
         CentralEmailService $emailService,
@@ -37,7 +36,7 @@ class ProcessAlertEscalation implements ShouldQueue
         // 2. Find the current level in the path
         $currentPath = collect($path)->firstWhere('level', $this->level);
 
-        if (!$currentPath) {
+        if (! $currentPath) {
             return;
         }
 
@@ -49,7 +48,7 @@ class ProcessAlertEscalation implements ShouldQueue
             foreach ($recipients as $recipient) {
                 $emailService->sendSystemEmail(
                     $recipient,
-                    "[ESCALATION LEVEL {$this->level}] " . ($this->log->payload['subject'] ?? $rule->name),
+                    "[ESCALATION LEVEL {$this->level}] ".($this->log->payload['subject'] ?? $rule->name),
                     "This is an escalated alert for rule: {$rule->name}. Initial trigger: {$this->log->triggered_at}",
                     "Alert Escalation: {$rule->name}"
                 );
@@ -66,7 +65,7 @@ class ProcessAlertEscalation implements ShouldQueue
             }
 
         } catch (\Exception $e) {
-            Log::error("Escalation failed for AlertLog #{$this->log->id} at level {$this->level}: " . $e->getMessage());
+            Log::error("Escalation failed for AlertLog #{$this->log->id} at level {$this->level}: ".$e->getMessage());
         }
     }
 }

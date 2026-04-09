@@ -24,16 +24,16 @@ class DatabaseBackupCommand extends Command
             return 0;
         }
 
-        $now        = Carbon::now();
+        $now = Carbon::now();
         $backupTime = Carbon::createFromFormat('H:i', $settings->backup_time);
         $lastBackup = $settings->last_backup_at ? Carbon::parse($settings->last_backup_at) : null;
 
         // Check if it's time to run the backup based on frequency
         $shouldBackup = match ($settings->backup_frequency) {
-            'daily'   => ! $lastBackup || $lastBackup->diffInDays($now)   >= 1,
-            'weekly'  => ! $lastBackup || $lastBackup->diffInWeeks($now)  >= 1,
+            'daily' => ! $lastBackup || $lastBackup->diffInDays($now) >= 1,
+            'weekly' => ! $lastBackup || $lastBackup->diffInWeeks($now) >= 1,
             'monthly' => ! $lastBackup || $lastBackup->diffInMonths($now) >= 1,
-            default   => false,
+            default => false,
         };
 
         if ($shouldBackup && $now->format('H:i') === $settings->backup_time) {

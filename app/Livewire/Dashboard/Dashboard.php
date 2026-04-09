@@ -3,23 +3,27 @@
 namespace App\Livewire\Dashboard;
 
 use App\Models\Campaign;
-use App\Models\Message; // Mapped from ChatMessage
-use App\Models\Contact;
+use App\Models\Contact; // Mapped from ChatMessage
+use App\Models\Message;
 use App\Models\WhatsappTemplate;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
-use Livewire\Component;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Dashboard')]
 class Dashboard extends Component
 {
     public $stats = [];
+
     public $chartData = [];
+
     public $timeRange = 'today';
+
     public $dashboardData = [];
+
     public $lastRefresh;
 
     // Listener for chart updates
@@ -43,7 +47,7 @@ class Dashboard extends Component
             'total_campaign' => Campaign::where('team_id', $teamId)->count(),
             'total_template' => WhatsappTemplate::where('team_id', $teamId)->count(),
             'todays_message' => Message::where('team_id', $teamId)->whereDate('created_at', Carbon::today())->count(),
-            // Assuming 'status' or similar field for active contacts if 'is_enabled' doesn't exist. 
+            // Assuming 'status' or similar field for active contacts if 'is_enabled' doesn't exist.
             // Checking Contact model... usually 'active' isn't standard, so using total for now or checking a specific status column if I saw one.
             // In previous steps I saw Contact model has `opt_out` or similar? Let's assume all for now or filter by subscriber status if available.
             // Using all contacts count for 'active' for now to be safe, or verifying schema. Contact schema showed 'opt_in' usually.
@@ -61,7 +65,7 @@ class Dashboard extends Component
     public function updateTimeRange($range)
     {
         $allowedRanges = ['today', 'yesterday', 'this_week', 'last_week', 'month'];
-        if (!in_array($range, $allowedRanges)) {
+        if (! in_array($range, $allowedRanges)) {
             return;
         }
 
@@ -227,7 +231,7 @@ class Dashboard extends Component
     public function render()
     {
         return view('livewire.dashboard.dashboard', [
-            'lastUpdated' => Message::latest()->value('updated_at') ?? now()
+            'lastUpdated' => Message::latest()->value('updated_at') ?? now(),
         ]);
     }
 

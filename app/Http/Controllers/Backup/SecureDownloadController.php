@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Backup;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\TenantBackup;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Exception;
 
 /**
  * SecureDownloadController
@@ -37,8 +37,7 @@ class SecureDownloadController extends Controller
      * Route: GET /backups/{id}/download/stream
      * Middleware: auth:sanctum, signed (validates temporarySignedRoute token)
      *
-     * @param Request $request
-     * @param string  $id        The TenantBackup UUID or ID
+     * @param  string  $id  The TenantBackup UUID or ID
      * @return \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\RedirectResponse
      */
     public function stream(Request $request, $id)
@@ -62,7 +61,7 @@ class SecureDownloadController extends Controller
         $user = auth()->user();
         $currentTeamId = $user->currentTeam?->id;
 
-        if ($currentTeamId !== $backup->team_id && !$user->is_super_admin) {
+        if ($currentTeamId !== $backup->team_id && ! $user->is_super_admin) {
             $this->auditLog(
                 $backup->team_id,
                 'backup.download_rejected',
@@ -80,7 +79,7 @@ class SecureDownloadController extends Controller
         // 3. Build storage path from DB record — NEVER from user-supplied input
         $storagePath = "backups/{$backup->path}{$backup->filename}";
 
-        if (!Storage::disk('local')->exists($storagePath)) {
+        if (! Storage::disk('local')->exists($storagePath)) {
             abort(404, 'Backup file no longer exists on server.');
         }
 
@@ -97,7 +96,7 @@ class SecureDownloadController extends Controller
         return response()->streamDownload(function () use ($storagePath) {
             // Stream in 1MB chunks to keep memory usage bounded for large backups
             $stream = Storage::disk('local')->readStream($storagePath);
-            while (!feof($stream)) {
+            while (! feof($stream)) {
                 echo fread($stream, 1024 * 1024);
                 flush();
             }
@@ -130,7 +129,7 @@ class SecureDownloadController extends Controller
                 ]),
             ]);
         } catch (Exception $e) {
-            \Log::error("Backup download audit log failed: " . $e->getMessage());
+            \Log::error('Backup download audit log failed: '.$e->getMessage());
         }
     }
 }

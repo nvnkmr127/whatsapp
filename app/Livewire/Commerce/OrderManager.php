@@ -3,19 +3,21 @@
 namespace App\Livewire\Commerce;
 
 use App\Models\Order;
-use Livewire\Component;
-use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 class OrderManager extends Component
 {
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = '';
 
     public $viewingOrder = null;
+
     public $showDetailsModal = false;
 
     // Status Update
@@ -43,22 +45,22 @@ class OrderManager extends Component
 
     public function updateStatus()
     {
-        if (!$this->viewingOrder) {
+        if (! $this->viewingOrder) {
             return;
         }
 
         $this->viewingOrder->update([
-            'status' => $this->newStatus
+            'status' => $this->newStatus,
         ]);
 
         // Trigger WhatsApp Notification if enabled
         if ($this->viewingOrder->team->hasFeature('commerce_notifications')) {
-             // Dispatch job to handle notification asynchronously
-             \App\Jobs\SendOrderLifecycleNotification::dispatch($this->viewingOrder);
+            // Dispatch job to handle notification asynchronously
+            \App\Jobs\SendOrderLifecycleNotification::dispatch($this->viewingOrder);
         }
 
         $this->viewingOrder = $this->viewingOrder->fresh();
-        session()->flash('flash.banner', 'Order status updated to ' . ucfirst($this->newStatus));
+        session()->flash('flash.banner', 'Order status updated to '.ucfirst($this->newStatus));
         session()->flash('flash.bannerStyle', 'success');
     }
 
@@ -95,10 +97,10 @@ class OrderManager extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('order_id', 'like', '%' . $this->search . '%')
+                $q->where('order_id', 'like', '%'.$this->search.'%')
                     ->orWhereHas('contact', function ($c) {
-                        $c->where('name', 'like', '%' . $this->search . '%')
-                            ->orWhere('phone_number', 'like', '%' . $this->search . '%');
+                        $c->where('name', 'like', '%'.$this->search.'%')
+                            ->orWhere('phone_number', 'like', '%'.$this->search.'%');
                     });
             });
         }
@@ -110,7 +112,7 @@ class OrderManager extends Component
         $orders = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return view('livewire.commerce.order-manager', [
-            'orders' => $orders
+            'orders' => $orders,
         ]);
     }
 }

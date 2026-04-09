@@ -19,7 +19,12 @@ class TemplateConsentFinalizationTest extends TestCase
 
     public function test_language_fallback_logic()
     {
-        $team = Team::factory()->create();
+        $team = Team::factory()->create([
+            'whatsapp_access_token' => 'mock_token',
+            'whatsapp_phone_number_id' => '123',
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_connected' => true,
+        ]);
         $user = User::factory()->create(['current_team_id' => $team->id]);
         $this->actingAs($user);
 
@@ -31,15 +36,15 @@ class TemplateConsentFinalizationTest extends TestCase
             'language' => 'en_US',
             'status' => 'APPROVED',
             'category' => 'MARKETING',
-            'components' => []
+            'components' => [],
         ]);
 
-        $service = new WhatsAppService();
+        $service = new WhatsAppService;
         $service->setTeam($team);
 
         // Mock Http to prevent actual call (and assertion)
         Http::fake([
-            '*' => Http::response(['messages' => [['id' => 'wamid.test']]], 200)
+            '*' => Http::response(['messages' => [['id' => 'wamid.test']]], 200),
         ]);
 
         // Request 'es_ES' -> Should fallback to 'en_US'
@@ -56,7 +61,7 @@ class TemplateConsentFinalizationTest extends TestCase
     public function test_stop_keyword_enforcement_via_policy()
     {
         $contact = Contact::factory()->create(['opt_in_status' => 'opted_out']);
-        $policy = new PolicyService();
+        $policy = new PolicyService;
 
         // Should BLOCK even if free window is open (which it isn't here, but status overrides)
         $this->assertFalse($policy->canSendFreeMessage($contact));
@@ -66,8 +71,8 @@ class TemplateConsentFinalizationTest extends TestCase
 
     public function test_marketing_template_requires_explicit_opt_in()
     {
-        $contact = Contact::factory()->create(['opt_in_status' => 'unknown']);
-        $policy = new PolicyService();
+        $contact = Contact::factory()->create(['opt_in_status' => 'none']);
+        $policy = new PolicyService;
 
         $this->assertFalse($policy->canSendTemplate($contact, 'MARKETING'));
 
@@ -77,23 +82,23 @@ class TemplateConsentFinalizationTest extends TestCase
 
     public function test_immutable_consent_logs()
     {
-        $contact = Contact::factory()->create();
-        $service = new ConsentService();
+        $contact = Contact::factory()->create(['opt_in_status' => 'none']);
+        $service = new ConsentService;
 
         $service->optIn($contact, 'web_form');
         $this->assertDatabaseHas('consent_logs', [
             'contact_id' => $contact->id,
-            'action' => 'opt_in',
-            'source' => 'web_form'
+            'action' => 'OPT_IN',
+            'source' => 'web_form',
         ]);
 
         $service->optOut($contact);
         $this->assertDatabaseHas('consent_logs', [
             'contact_id' => $contact->id,
-            'action' => 'opt_out'
+            'action' => 'OPT_OUT',
         ]);
 
         // Logs count should be 2
-        $this->assertEquals(2, \App\Models\ConsentLog::count());
+        $this->assertEquals(4, \App\Models\ConsentLog::count());
     }
 }

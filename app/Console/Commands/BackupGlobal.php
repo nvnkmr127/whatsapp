@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\BackupService;
+use Illuminate\Console\Command;
 
 class BackupGlobal extends Command
 {
@@ -26,13 +26,14 @@ class BackupGlobal extends Command
      */
     public function handle(BackupService $backupService)
     {
-        $this->info("Starting global system backup...");
+        $this->info('Starting global system backup...');
 
         try {
             $backupName = $backupService->backupGlobal();
             $this->info("Successfully created global backup: {$backupName}");
         } catch (\Exception $e) {
-            $this->error("Global backup failed: " . $e->getMessage());
+            $this->error('Global backup failed: '.$e->getMessage());
+
             return 1;
         }
 

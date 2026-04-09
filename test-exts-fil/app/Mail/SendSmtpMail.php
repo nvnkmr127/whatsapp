@@ -33,7 +33,7 @@ class SendSmtpMail extends Mailable
 
             $template = mailTemplate($templateTitle);
 
-            $user   = $content['user']   ?? null;
+            $user = $content['user'] ?? null;
             $groups = $content['groups'] ?? t('other_group');
 
             $content['subject'] = app(MergeFields::class)->parseTemplates(
@@ -50,17 +50,17 @@ class SendSmtpMail extends Mailable
         } else {
 
             $content['subject'] = $content['subject'] ?? t('default_subject');
-            $content['body']    = $content['body']    ?? t('default_body_content');
+            $content['body'] = $content['body'] ?? t('default_body_content');
         }
 
         return $this->subject($content['subject'])
             ->view('components.mail', [
-                'title'      => $content['subject'],
-                'body'       => $content['body'],
-                'user'       => $content['user']        ?? null,
-                'actionUrl'  => $content['action_url']  ?? null,
+                'title' => $content['subject'],
+                'body' => $content['body'],
+                'user' => $content['user'] ?? null,
+                'actionUrl' => $content['action_url'] ?? null,
                 'actionText' => $content['action_text'] ?? null,
-                'greeting'   => $content['greeting']    ?? t('hello') . ' ' . ($content['user']->name ?? t('there')) . ',',
+                'greeting' => $content['greeting'] ?? t('hello').' '.($content['user']->name ?? t('there')).',',
             ]);
     }
 }

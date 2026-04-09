@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Contact;
-use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Crypt;
 
 class EmbedTokenService
 {

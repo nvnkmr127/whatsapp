@@ -28,10 +28,10 @@ class PusherService
 
         try {
             // Get settings with appropriate fallbacks
-            $appKey    = get_setting('pusher.app_key');
+            $appKey = get_setting('pusher.app_key');
             $appSecret = get_setting('pusher.app_secret');
-            $appId     = get_setting('pusher.app_id');
-            $cluster   = get_setting('pusher.cluster', 'mt1');
+            $appId = get_setting('pusher.app_id');
+            $cluster = get_setting('pusher.cluster', 'mt1');
 
             // Validate required settings
             if (empty($appKey) || empty($appSecret) || empty($appId) || empty($cluster)) {
@@ -46,14 +46,14 @@ class PusherService
                 $appSecret,
                 $appId,
                 [
-                    'cluster'   => $cluster,
-                    'useTLS'    => true,
-                    'host'      => "api-{$cluster}.pusher.com", // Explicitly set the host
-                    'port'      => 443,
-                    'scheme'    => 'https',
+                    'cluster' => $cluster,
+                    'useTLS' => true,
+                    'host' => "api-{$cluster}.pusher.com", // Explicitly set the host
+                    'port' => 443,
+                    'scheme' => 'https',
                     'encrypted' => true,
-                    'timeout'   => 30,
-                    'debug'     => config('app.debug', false),
+                    'timeout' => 30,
+                    'debug' => config('app.debug', false),
                 ]
             );
 
@@ -85,7 +85,7 @@ class PusherService
                 $this->initializePusher();
             }
 
-            return ['status' => false, 'message' => 'Pusher trigger failed: ' . $e->getMessage()];
+            return ['status' => false, 'message' => 'Pusher trigger failed: '.$e->getMessage()];
         }
     }
 
@@ -160,7 +160,7 @@ class PusherService
     {
         if (! $this->isPusherReady()) {
             return [
-                'status'  => false,
+                'status' => false,
                 'message' => 'Pusher not initialized - please check your Pusher configuration',
             ];
         }
@@ -170,13 +170,13 @@ class PusherService
 
             if (isset($result['status']) && $result['status'] === 200) {
                 return [
-                    'status'  => true,
+                    'status' => true,
                     'message' => 'Pusher connection test successful!',
                 ];
             }
 
             return [
-                'status'  => false,
+                'status' => false,
                 'message' => 'Pusher connection test failed',
                 'details' => $result,
             ];
@@ -184,14 +184,14 @@ class PusherService
             // If the error indicates missing or invalid configuration, provide a clearer message
             if (strpos($e->getMessage(), 'Unable to parse URI') !== false) {
                 return [
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Pusher connection failed: Invalid configuration. Please check your Pusher key, secret, app ID, and cluster settings.',
                 ];
             }
 
             return [
-                'status'  => false,
-                'message' => 'Pusher test connection failed: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Pusher test connection failed: '.$e->getMessage(),
             ];
         }
     }

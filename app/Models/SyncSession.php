@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
-
-use \App\Traits\HasTeam;
 
 class SyncSession extends Model
 {
@@ -20,14 +19,14 @@ class SyncSession extends Model
         'started_at',
         'completed_at',
         'error_summary',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [
         'error_summary' => 'array',
         'metadata' => 'array',
         'started_at' => 'datetime',
-        'completed_at' => 'datetime'
+        'completed_at' => 'datetime',
     ];
 
     public function integration()

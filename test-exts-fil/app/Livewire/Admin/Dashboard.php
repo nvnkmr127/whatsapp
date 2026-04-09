@@ -27,12 +27,12 @@ class Dashboard extends Component
     {
         // Fetch all counts in a single query for each model
         $totalCounts = [
-            'total_message'   => ChatMessage::count(),
-            'total_contact'   => Contact::count(),
-            'total_campaign'  => Campaign::count(),
-            'total_template'  => WhatsappTemplate::count(),
-            'todays_message'  => ChatMessage::whereDate('time_sent', Carbon::today())->count(),
-            'contact_active'  => Contact::where('is_enabled', 1)->count(),
+            'total_message' => ChatMessage::count(),
+            'total_contact' => Contact::count(),
+            'total_campaign' => Campaign::count(),
+            'total_template' => WhatsappTemplate::count(),
+            'todays_message' => ChatMessage::whereDate('time_sent', Carbon::today())->count(),
+            'contact_active' => Contact::where('is_enabled', 1)->count(),
             'active_campaign' => Campaign::where('is_sent', 0)->count(),
             'active_template' => WhatsappTemplate::where('status', 'APPROVED')->count(),
         ];
@@ -52,40 +52,40 @@ class Dashboard extends Component
     {
         $this->stats = [
             [
-                'id'           => 1,
-                'header'       => 'Messages',
+                'id' => 1,
+                'header' => 'Messages',
                 'header_value' => $counts['total_message'],
-                'title'        => 'Messages Today',
-                'value'        => $counts['todays_message'],
-                'icon'         => 'message-circle',
-                'color'        => 'blue',
+                'title' => 'Messages Today',
+                'value' => $counts['todays_message'],
+                'icon' => 'message-circle',
+                'color' => 'blue',
             ],
             [
-                'id'           => 2,
-                'header'       => 'Contacts',
+                'id' => 2,
+                'header' => 'Contacts',
                 'header_value' => $counts['total_contact'],
-                'title'        => 'Active Contacts',
-                'value'        => $counts['contact_active'],
-                'icon'         => 'users',
-                'color'        => 'purple',
+                'title' => 'Active Contacts',
+                'value' => $counts['contact_active'],
+                'icon' => 'users',
+                'color' => 'purple',
             ],
             [
-                'id'           => 3,
-                'header'       => 'Campaigns',
+                'id' => 3,
+                'header' => 'Campaigns',
                 'header_value' => $counts['total_campaign'],
-                'title'        => 'Active Campaigns',
-                'value'        => $counts['active_campaign'],
-                'icon'         => 'megaphone',
-                'color'        => 'green',
+                'title' => 'Active Campaigns',
+                'value' => $counts['active_campaign'],
+                'icon' => 'megaphone',
+                'color' => 'green',
             ],
             [
-                'id'           => 4,
-                'header'       => 'Templates',
+                'id' => 4,
+                'header' => 'Templates',
                 'header_value' => $counts['total_template'],
-                'title'        => 'Active Templates',
-                'value'        => $counts['active_template'],
-                'icon'         => 'file-text',
-                'color'        => 'orange',
+                'title' => 'Active Templates',
+                'value' => $counts['active_template'],
+                'icon' => 'file-text',
+                'color' => 'orange',
             ],
         ];
     }
@@ -95,9 +95,9 @@ class Dashboard extends Component
     {
         $this->systemStatus = [
             'whatsapp_connected' => true,
-            'api_status'         => 'active',
-            'queue_size'         => 5,
-            'daily_api_calls'    => 1250,
+            'api_status' => 'active',
+            'queue_size' => 5,
+            'daily_api_calls' => 1250,
         ];
     }
 
@@ -152,31 +152,31 @@ class Dashboard extends Component
     // Extract date range configuration
     protected function getDateRangeConfig(Carbon $now): array
     {
-        $startDate   = $now->copy()->startOfDay();
-        $endDate     = $now->copy()->endOfDay();
+        $startDate = $now->copy()->startOfDay();
+        $endDate = $now->copy()->endOfDay();
         $mysqlFormat = '%H';
         $displayType = 'hours';
 
         switch ($this->timeRange) {
             case 'yesterday':
                 $startDate = $now->copy()->subDay()->startOfDay();
-                $endDate   = $now->copy()->subDay()->endOfDay();
+                $endDate = $now->copy()->subDay()->endOfDay();
                 break;
             case 'this_week':
-                $startDate   = $now->copy()->startOfWeek();
-                $endDate     = $now->copy()->endOfWeek();
+                $startDate = $now->copy()->startOfWeek();
+                $endDate = $now->copy()->endOfWeek();
                 $mysqlFormat = '%w';
                 $displayType = 'days';
                 break;
             case 'last_week':
-                $startDate   = $now->copy()->subWeek()->startOfWeek();
-                $endDate     = $now->copy()->subWeek()->endOfWeek();
+                $startDate = $now->copy()->subWeek()->startOfWeek();
+                $endDate = $now->copy()->subWeek()->endOfWeek();
                 $mysqlFormat = '%w';
                 $displayType = 'days';
                 break;
             case 'month':
-                $startDate   = $now->copy()->startOfMonth();
-                $endDate     = $now->copy()->endOfMonth();
+                $startDate = $now->copy()->startOfMonth();
+                $endDate = $now->copy()->endOfMonth();
                 $mysqlFormat = '%d';
                 $displayType = 'days';
                 break;
@@ -203,9 +203,9 @@ class Dashboard extends Component
     // Generate periods and labels
     protected function generatePeriodsAndLabels(Carbon $startDate, Carbon $endDate, string $displayType): array
     {
-        $periods       = [];
+        $periods = [];
         $displayLabels = [];
-        $current       = $startDate->copy();
+        $current = $startDate->copy();
 
         while ($current <= $endDate) {
             $periodKey = $displayType === 'hours'
@@ -246,7 +246,7 @@ class Dashboard extends Component
                 'Chart data prepared',
                 'info',
                 [
-                    'chartData'   => $this->chartData,
+                    'chartData' => $this->chartData,
                     'rawMessages' => $whatsappMessages,
                 ]
             );

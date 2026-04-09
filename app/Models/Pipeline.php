@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pipeline extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -26,8 +25,6 @@ class Pipeline extends Model
         'is_active' => 'boolean',
         'position' => 'integer',
     ];
-
-
 
     public function stages(): HasMany
     {
@@ -61,6 +58,7 @@ class Pipeline extends Model
             return 0;
         }
         $won = $this->deals()->where('status', 'won')->count();
+
         return round(($won / $total) * 100, 2);
     }
 

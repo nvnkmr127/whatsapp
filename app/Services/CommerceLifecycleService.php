@@ -61,14 +61,14 @@ class CommerceLifecycleService
         $currentStatus = $order->status ?? 'created';
         $transitions = $this->getTransitions();
 
-        if (!isset($transitions[$currentStatus])) {
+        if (! isset($transitions[$currentStatus])) {
             return ['allowed' => false, 'message' => "Current state [{$currentStatus}] is not tracked in the lifecycle."];
         }
 
         $config = $transitions[$currentStatus];
 
         // 1. Check if the transition is logically allowed
-        if (!in_array($newStatus, $config['can_move_to'])) {
+        if (! in_array($newStatus, $config['can_move_to'])) {
             return ['allowed' => false, 'message' => "Forbidden transition: Cannot move order from [{$currentStatus}] to [{$newStatus}]."];
         }
 
@@ -78,7 +78,7 @@ class CommerceLifecycleService
 
         $userRole = $user->teamRole($order->team)->key ?? 'viewer';
 
-        if (!$this->hasSufficientRole($userRole, $requiredRole)) {
+        if (! $this->hasSufficientRole($userRole, $requiredRole)) {
             return ['allowed' => false, 'message' => "Insufficient permissions: Required role [{$requiredRole}], you are [{$userRole}]."];
         }
 
@@ -103,8 +103,9 @@ class CommerceLifecycleService
         $config = $team->commerce_config['lifecycle_notifications'] ?? [];
 
         // If not explicitly configured, use default from transition table
-        if (!isset($config[$status])) {
+        if (! isset($config[$status])) {
             $transitions = $this->getTransitions();
+
             return $transitions[$status]['triggers_message'] ?? false;
         }
 

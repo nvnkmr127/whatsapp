@@ -31,7 +31,7 @@ class NotificationsController extends Controller
         foreach ($groupedNotifications as $date => $items) {
             foreach ($items as $notification) {
                 $notification->time_ago = $this->getTimeAgo($notification->created_at);
-                $notification->icon     = $this->getNotificationIcon($notification->type);
+                $notification->icon = $this->getNotificationIcon($notification->type);
             }
         }
 
@@ -61,7 +61,7 @@ class NotificationsController extends Controller
         $notification->markAsRead();
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => t('notification_marked_as_read'),
         ]);
     }
@@ -74,7 +74,7 @@ class NotificationsController extends Controller
         auth()->user()->unreadNotifications->markAsRead();
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => t('all_notification_marked_as_read'),
         ]);
     }
@@ -88,7 +88,7 @@ class NotificationsController extends Controller
         $notification->delete();
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => t('notification_delete_successfully'),
         ]);
     }
@@ -101,7 +101,7 @@ class NotificationsController extends Controller
         auth()->user()->notifications()->delete();
 
         return response()->json([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => t('all_notification_cleared'),
         ]);
     }
@@ -112,7 +112,7 @@ class NotificationsController extends Controller
     private function getTimeAgo($date)
     {
         $date = Carbon::parse($date);
-        $now  = Carbon::now();
+        $now = Carbon::now();
         $diff = $date->diffInSeconds($now);
 
         if ($diff < 60) {
@@ -120,15 +120,15 @@ class NotificationsController extends Controller
         } elseif ($diff < 3600) {
             $minutes = floor($diff / 60);
 
-            return $minutes . t('min_ago');
+            return $minutes.t('min_ago');
         } elseif ($diff < 86400) {
             $hours = floor($diff / 3600);
 
-            return $hours . t('hours_ago');
+            return $hours.t('hours_ago');
         } else {
             $days = floor($diff / 86400);
 
-            return $days . t('days_ago');
+            return $days.t('days_ago');
         }
     }
 
@@ -140,10 +140,10 @@ class NotificationsController extends Controller
         return match ($type) {
             'comment' => 'mgc_message_3_line',
             'message' => 'mgc_message_1_line',
-            'alert'   => 'mgc_alert_line',
+            'alert' => 'mgc_alert_line',
             'success' => 'mgc_check_circle_line',
-            'error'   => 'mgc_close_circle_line',
-            default   => 'mgc_notification_line',
+            'error' => 'mgc_close_circle_line',
+            default => 'mgc_notification_line',
         };
     }
 
@@ -158,13 +158,13 @@ class NotificationsController extends Controller
             ->get()
             ->map(function ($notification) {
                 return [
-                    'id'      => $notification->id,
-                    'title'   => 'Datacorp',
+                    'id' => $notification->id,
+                    'title' => 'Datacorp',
                     'message' => $notification->data['message'] ?? '',
-                    'time'    => $this->getTimeAgo($notification->created_at),
-                    'icon'    => $this->getNotificationIcon($notification->type),
-                    'read'    => ! is_null($notification->read_at),
-                    'group'   => $this->getDateGroup($notification->created_at),
+                    'time' => $this->getTimeAgo($notification->created_at),
+                    'icon' => $this->getNotificationIcon($notification->type),
+                    'read' => ! is_null($notification->read_at),
+                    'group' => $this->getDateGroup($notification->created_at),
                 ];
             });
 

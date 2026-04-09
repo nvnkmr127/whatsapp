@@ -42,7 +42,7 @@ class ResendDriver implements EmailProviderContract
             // Task 3.5: Marketing headers for Gmail's one-click unsubscribe
             if ($payload->useCase === EmailUseCase::MARKETING && isset($payload->headers['List-Unsubscribe'])) {
                 $data['headers'] = [
-                    'List-Unsubscribe' => $payload->headers['List-Unsubscribe']
+                    'List-Unsubscribe' => $payload->headers['List-Unsubscribe'],
                 ];
             }
 
@@ -62,7 +62,7 @@ class ResendDriver implements EmailProviderContract
         return in_array($useCase, [
             EmailUseCase::MARKETING,
             EmailUseCase::ALERT,
-            EmailUseCase::NOTIFICATION
+            EmailUseCase::NOTIFICATION,
         ]);
     }
 
@@ -73,10 +73,11 @@ class ResendDriver implements EmailProviderContract
 
     public function isHealthy(): bool
     {
-        return Cache::remember('resend_health', 300, function() {
+        return Cache::remember('resend_health', 300, function () {
             try {
                 // Listing domains or API keys as a lightweight check
                 $this->client->emails->list(['limit' => 1]);
+
                 return true;
             } catch (\Exception $e) {
                 return false;

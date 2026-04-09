@@ -2,23 +2,28 @@
 
 namespace App\Services;
 
+use App\Jobs\ExecuteAutomationNodeJob;
 use App\Models\Automation;
-use App\Models\Message;
 use App\Models\AutomationRun;
 use App\Models\AutomationStepLedger;
 use App\Models\Contact;
-use App\Jobs\ExecuteAutomationNodeJob;
-use Illuminate\Support\Facades\Log;
+use App\Models\Message;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AutomationService
 {
     protected $whatsapp;
+
     protected $handoff;
+
     protected $healthMonitor;
+
     protected $policyService;
+
     protected $maxSteps;
+
     protected $nodeHandlers = [];
 
     public function __construct(WhatsAppService $whatsapp, WhatsAppHealthMonitor $healthMonitor, PolicyService $policyService)
@@ -29,7 +34,7 @@ class AutomationService
         $this->healthMonitor = $healthMonitor;
         $this->policyService = $policyService;
         $this->maxSteps = config('automation.max_steps', 50);
-        $this->handoff = new BotHandoffService();
+        $this->handoff = new BotHandoffService;
 
         // Initialize Node Handlers (Strategy Pattern)
         $this->nodeHandlers = [
@@ -51,8 +56,9 @@ class AutomationService
      */
     public function checkTriggers(Contact $contact, $messageContent)
     {
-        if (!$this->handoff->shouldProcess($contact)) {
+        if (! $this->handoff->shouldProcess($contact)) {
             Log::info("Automation CheckTriggers: Processing skipped (Bot Handoff enabled for contact {$contact->id})");
+
             return false;
         }
 
@@ -72,6 +78,7 @@ class AutomationService
                 if ($this->matchKeyword($keyword, $messageContent, $isRegex)) {
                     Log::info("Automation CheckTriggers: Match found for automation #{$automation->id} on keyword '$keyword'");
                     $this->start($automation, $contact);
+
                     return true;
                 }
             }
@@ -85,6 +92,7 @@ class AutomationService
                         foreach ($st['keywords'] ?? [] as $sk) {
                             if ($this->matchKeyword($sk, $messageContent, $skisRegex)) {
                                 $this->start($automation, $contact);
+
                                 return true;
                             }
                         }
@@ -92,57 +100,62 @@ class AutomationService
                 }
             }
         }
+
         return false;
     }
 
     protected function matchKeyword($keyword, $content, $isRegex): bool
     {
         $trimmedKeyword = trim($keyword);
-        if ($trimmedKeyword === "") return false;
+        if ($trimmedKeyword === '') {
+            return false;
+        }
 
         if ($isRegex) {
             try {
                 $pattern = $trimmedKeyword;
-                if (!str_starts_with($pattern, '/') || !str_ends_with($pattern, '/')) {
-                    $pattern = '/' . str_replace('/', '\/', $pattern) . '/i';
+                if (! str_starts_with($pattern, '/') || ! str_ends_with($pattern, '/')) {
+                    $pattern = '/'.str_replace('/', '\/', $pattern).'/i';
                 }
-                return (bool)preg_match($pattern, $content);
+
+                return (bool) preg_match($pattern, $content);
             } catch (\Exception $e) {
                 return false;
             }
         }
+
         return str_contains($content, mb_strtolower($trimmedKeyword));
     }
 
     public function checkSpecialTriggers(Contact $contact, $type, array $variables = [])
     {
         Log::debug("Automation CheckSpecialTriggers: Type {$type} for contact {$contact->id}", [
-            'variables' => $variables
+            'variables' => $variables,
         ]);
 
-        if (!$this->handoff->shouldProcess($contact))
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
+        }
 
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
-            ->where(function($q) use ($type) {
+            ->where(function ($q) use ($type) {
                 $q->where('trigger_type', $type)->orWhere('trigger_type', 'multi');
             })
             ->get();
 
         foreach ($automations as $automation) {
             /** @var Automation $automation */
-            
             $matched = ($automation->trigger_type === $type);
-            
-            if (!$matched && $automation->trigger_type === 'multi') {
+
+            if (! $matched && $automation->trigger_type === 'multi') {
                 $subTriggers = $automation->trigger_config['triggers'] ?? [];
                 foreach ($subTriggers as $st) {
                     if (($st['type'] ?? '') === $type) {
                         // Check sub-trigger specific conditions if any
                         if ($type === 'contact_field_updated') {
                             $targetField = $st['field_name'] ?? null;
-                            if ($targetField && !array_key_exists($targetField, $variables)) {
+                            if ($targetField && ! array_key_exists($targetField, $variables)) {
                                 continue;
                             }
                         }
@@ -153,7 +166,7 @@ class AutomationService
                                 $vKey = $c['key'] ?? '';
                                 $vOp = $c['operator'] ?? 'eq';
                                 $vVal = $c['value'] ?? '';
-                                if (!$this->evaluateOperator($variables[$vKey] ?? null, $vOp, $vVal)) {
+                                if (! $this->evaluateOperator($variables[$vKey] ?? null, $vOp, $vVal)) {
                                     continue 2; // Matched trigger type but failed specific payload condition
                                 }
                             }
@@ -164,13 +177,16 @@ class AutomationService
                 }
             }
 
-            if (!$matched) continue;
+            if (! $matched) {
+                continue;
+            }
 
             // Trigger specific pre-flight checks or filtering
             if ($type === 'order_received') {
                 $readinessService = app(\App\Services\CommerceReadinessService::class);
-                if (!$readinessService->canPerformAction($contact->team, 'automation')) {
+                if (! $readinessService->canPerformAction($contact->team, 'automation')) {
                     Log::warning("Automation trigger [order_received] blocked for team {$contact->team->id} due to commerce readiness failure.");
+
                     return false;
                 }
             }
@@ -184,8 +200,10 @@ class AutomationService
             }
 
             $this->start($automation, $contact, $variables);
+
             return true;
         }
+
         return false;
     }
 
@@ -195,11 +213,11 @@ class AutomationService
     public function checkDealTriggers(\App\Models\Deal $deal, string $type, array $context = [])
     {
         $contact = $deal->contact;
-        if (!$contact) {
+        if (! $contact) {
             return false;
         }
 
-        if (!$this->handoff->shouldProcess($contact)) {
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
         }
 
@@ -215,7 +233,7 @@ class AutomationService
             // Stage filter for deal_stage_changed
             if ($type === 'deal_stage_changed') {
                 $targetStageId = $config['stage_id'] ?? null;
-                if ($targetStageId && (int)$deal->stage_id !== (int)$targetStageId) {
+                if ($targetStageId && (int) $deal->stage_id !== (int) $targetStageId) {
                     continue;
                 }
             }
@@ -230,8 +248,10 @@ class AutomationService
             ], $context);
 
             $this->start($automation, $contact, $variables);
+
             return true;
         }
+
         return false;
     }
 
@@ -241,7 +261,7 @@ class AutomationService
      */
     public function checkTagAddedTriggers(Contact $contact, string $tagName, string $source = 'any'): bool
     {
-        if (!$this->handoff->shouldProcess($contact)) {
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
         }
 
@@ -271,13 +291,16 @@ class AutomationService
                     ->exists();
                 if ($alreadyRan) {
                     Log::debug("Automation#{$automation->id} skipped (deduplicate): contact {$contact->id} already ran this flow.");
+
                     continue;
                 }
             }
 
             $this->start($automation, $contact, ['trigger_tag' => $tagName, 'trigger_source' => $source]);
+
             return true;
         }
+
         return false;
     }
 
@@ -287,7 +310,7 @@ class AutomationService
      */
     public function checkFormSubmittedTriggers(Contact $contact, array $formData = []): bool
     {
-        if (!$this->handoff->shouldProcess($contact)) {
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
         }
 
@@ -299,11 +322,11 @@ class AutomationService
             ->get();
 
         foreach ($automations as $automation) {
-            $config      = $automation->trigger_config ?? [];
+            $config = $automation->trigger_config ?? [];
             $targetSource = trim($config['form_source'] ?? '');
 
             // If a source label is configured, it must match
-            if (!empty($targetSource) && strtolower($targetSource) !== strtolower($formSource)) {
+            if (! empty($targetSource) && strtolower($targetSource) !== strtolower($formSource)) {
                 continue;
             }
 
@@ -316,15 +339,18 @@ class AutomationService
             }
 
             $this->start($automation, $contact, $variables);
+
             return true;
         }
+
         return false;
     }
 
     public function checkTemplateTriggers(Contact $contact, $buttonText)
     {
-        if (!$this->handoff->shouldProcess($contact))
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
+        }
 
         $buttonText = strtolower(trim($buttonText));
         $automations = Automation::where('team_id', $contact->team_id)
@@ -337,24 +363,28 @@ class AutomationService
             $config = $automation->trigger_config ?? [];
             $matchText = strtolower(trim($config['button_text'] ?? ''));
 
-            if ($buttonText === $matchText && !empty($matchText)) {
+            if ($buttonText === $matchText && ! empty($matchText)) {
                 $this->start($automation, $contact);
+
                 return true;
             }
         }
+
         return false;
     }
 
     public function checkFlowTriggers(Contact $contact, $message)
     {
-        if (!$this->handoff->shouldProcess($contact))
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
+        }
 
         // Metadata is cast to array in the Message model
         $metadata = $message->metadata ?? [];
         $interactive = $metadata['interactive'] ?? [];
-        if (($interactive['type'] ?? '') !== 'nfm_reply')
+        if (($interactive['type'] ?? '') !== 'nfm_reply') {
             return false;
+        }
 
         $responseJson = json_decode($interactive['nfm_reply']['response_json'] ?? '{}', true);
         $flowToken = $responseJson['flow_token'] ?? null;
@@ -374,16 +404,19 @@ class AutomationService
                 // We'll leave that for a more advanced "Start" implementation,
                 // but at least we trigger it.
                 $this->start($automation, $contact);
+
                 return true;
             }
         }
+
         return false;
     }
 
     public function checkStatusTriggers(Contact $contact, $templateName, $status)
     {
-        if ($status !== 'delivered')
+        if ($status !== 'delivered') {
             return false;
+        }
 
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
@@ -395,16 +428,19 @@ class AutomationService
             $config = $automation->trigger_config ?? [];
             if (($config['template_name'] ?? null) === $templateName) {
                 $this->start($automation, $contact);
+
                 return true;
             }
         }
+
         return false;
     }
 
     public function checkReferralTriggers(Contact $contact, $referralData)
     {
-        if (!$this->handoff->shouldProcess($contact))
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
+        }
 
         $automations = Automation::where('team_id', $contact->team_id)
             ->where('is_active', true)
@@ -423,13 +459,13 @@ class AutomationService
 
             // 2. Headline Match (Partial)
             $targetHeadline = $config['headline'] ?? null;
-            if ($targetHeadline && !str_contains(strtolower($referralData['headline'] ?? ''), strtolower($targetHeadline))) {
+            if ($targetHeadline && ! str_contains(strtolower($referralData['headline'] ?? ''), strtolower($targetHeadline))) {
                 continue;
             }
 
             // 3. Source URL Match (Partial)
             $targetUrl = $config['source_url'] ?? null;
-            if ($targetUrl && !str_contains(strtolower($referralData['source_url'] ?? ''), strtolower($targetUrl))) {
+            if ($targetUrl && ! str_contains(strtolower($referralData['source_url'] ?? ''), strtolower($targetUrl))) {
                 continue;
             }
 
@@ -440,8 +476,10 @@ class AutomationService
                 }
             }
             $this->start($automation, $contact, $variables);
+
             return true;
         }
+
         return false;
     }
 
@@ -458,19 +496,22 @@ class AutomationService
         $lock = Cache::lock("automation_start_{$contact->id}", 10);
 
         try {
-            if (!$lock->get()) {
+            if (! $lock->get()) {
                 Log::info("Automation Start: Skipped for contact {$contact->id} - Another process is already starting a flow (Locked).");
+
                 return;
             }
 
             // 0. Billing Enforcement
-            if (!$automation->team->canAccess('automations')) {
+            if (! $automation->team->canAccess('automations')) {
                 Log::warning("Automation #{$automation->id} skipped: Feature [automations] not accessible for team {$automation->team_id}.");
+
                 return;
             }
 
-            if (!$automation->team->canAccess('send_message')) {
+            if (! $automation->team->canAccess('send_message')) {
                 Log::warning("Automation #{$automation->id} skipped: Message limit reached for team {$automation->team_id}.");
+
                 return;
             }
 
@@ -479,6 +520,7 @@ class AutomationService
             $healthThreshold = config('whatsapp.thresholds.health_quality_score', 35);
             if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= $healthThreshold) {
                 Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).", ['health' => $health]);
+
                 return;
             }
 
@@ -486,16 +528,18 @@ class AutomationService
 
             // Preflight Check
             $validation = $automation->validate();
-            if (!$validation['is_activatable']) {
-                Log::error("Attempted to start invalid automation #{$automation->id}: " . json_encode($validation['issues']));
+            if (! $validation['is_activatable']) {
+                Log::error("Attempted to start invalid automation #{$automation->id}: ".json_encode($validation['issues']));
+
                 return;
             }
 
             $flowData = $automation->flow_data;
             $startNodeId = $this->findStartNode($flowData);
 
-            if (!$startNodeId) {
+            if (! $startNodeId) {
                 Log::error("Automation {$automation->id} has no start node.");
+
                 return;
             }
 
@@ -513,18 +557,18 @@ class AutomationService
                 'version' => 1,
                 'step_count' => 0,
                 'state_data' => ['current_node_id' => $startNodeId, 'variables' => $initialVariables],
-                'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']]
+                'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']],
             ]);
 
             // Process Trigger Tags
             $triggerConfig = $automation->trigger_config ?? [];
-            if (!empty($triggerConfig['add_tags'])) {
+            if (! empty($triggerConfig['add_tags'])) {
                 foreach ($triggerConfig['add_tags'] as $tagName) {
                     $tag = \App\Models\ContactTag::firstOrCreate(['team_id' => $automation->team_id, 'name' => $tagName]);
                     $contact->tags()->syncWithoutDetaching([$tag->id]);
                 }
             }
-            if (!empty($triggerConfig['remove_tags'])) {
+            if (! empty($triggerConfig['remove_tags'])) {
                 foreach ($triggerConfig['remove_tags'] as $tagName) {
                     $tag = \App\Models\ContactTag::where('team_id', $automation->team_id)->where('name', $tagName)->first();
                     if ($tag) {
@@ -543,8 +587,8 @@ class AutomationService
                 'event_data' => [
                     'automation_id' => $automation->id,
                     'automation_name' => $automation->name,
-                    'attributed_campaign_id' => \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$contact->phone_number}")
-                ]
+                    'attributed_campaign_id' => \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$contact->phone_number}"),
+                ],
             ]);
 
             // Dispatch first node
@@ -552,8 +596,8 @@ class AutomationService
             Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
         } catch (\Exception $e) {
-            Log::error("Automation #{$automation->id} start FAILED for contact {$contact->id}: " . $e->getMessage(), [
-                'exception' => $e
+            Log::error("Automation #{$automation->id} start FAILED for contact {$contact->id}: ".$e->getMessage(), [
+                'exception' => $e,
             ]);
         } finally {
             $lock->release();
@@ -569,9 +613,10 @@ class AutomationService
         $flowData = $run->automation->flow_data;
         $node = $this->getNodeById($flowData, $nodeId);
 
-        if (!$node) {
+        if (! $node) {
             Log::warning("AutomationRun #{$run->id}: Node {$nodeId} not found in flow data. Completing run.");
             $run->update(['status' => 'completed']);
+
             return;
         }
 
@@ -582,6 +627,7 @@ class AutomationService
         if ($run->step_count > 50) {
             Log::error("AutomationRun #{$run->id}: Max step count (50) exceeded. Suspected infinite loop. Aborting.");
             $run->update(['status' => 'failed', 'error_message' => 'Recursion limit exceeded']);
+
             return;
         }
 
@@ -601,7 +647,7 @@ class AutomationService
                     'automation_run_id' => $run->id,
                     'node_id' => $nodeId,
                     'status' => 'success',
-                    'output_state' => $run->state_data
+                    'output_state' => $run->state_data,
                 ]
             );
 
@@ -616,8 +662,8 @@ class AutomationService
 
         } catch (\Exception $e) {
             // S4: Error / Fallback Path Handling
-            Log::error("AutomationRun #{$run->id}: Node {$nodeId} execution error: " . $e->getMessage());
-            
+            Log::error("AutomationRun #{$run->id}: Node {$nodeId} execution error: ".$e->getMessage());
+
             $state = $run->state_data;
             $state['error_message'] = $e->getMessage();
             $state['last_error_node'] = $nodeId;
@@ -647,7 +693,7 @@ class AutomationService
         $waitLedgerKey = "{$run->id}_{$node['id']}_wait";
         $hasWaited = AutomationStepLedger::where('execution_key', $waitLedgerKey)->exists();
 
-        if ($nodeDelaySeconds > 0 && !$hasWaited) {
+        if ($nodeDelaySeconds > 0 && ! $hasWaited) {
             $resumeAt = now()->addSeconds($nodeDelaySeconds);
             $run->update(['status' => 'paused', 'resume_at' => $resumeAt]);
 
@@ -655,15 +701,16 @@ class AutomationService
                 'execution_key' => $waitLedgerKey,
                 'automation_run_id' => $run->id,
                 'node_id' => $node['id'],
-                'status' => 'success'
+                'status' => 'success',
             ]);
 
             $precision = config('automation.dispatch_precision_seconds', 900);
-        if ($nodeDelaySeconds <= $precision) { // precision cutoff
+            if ($nodeDelaySeconds <= $precision) { // precision cutoff
                 ExecuteAutomationNodeJob::dispatch($run->id, $node['id'])
                     ->onQueue('messages')
                     ->delay($resumeAt);
             }
+
             return 'pause';
         }
 
@@ -681,6 +728,7 @@ class AutomationService
                     ['node_id' => $node['id'] ?? null, 'node_type' => $node['type']]
                 );
                 $this->whatsapp->sendText($run->contact->phone_number, $text, $trackingMessage);
+
                 return 'continue';
 
             case 'interactive_button':
@@ -707,7 +755,7 @@ class AutomationService
                             $rows[] = [
                                 'id' => $r['id'],
                                 'title' => $this->resolveVariable($run, $r['title']),
-                                'description' => $this->resolveVariable($run, $r['description'] ?? '')
+                                'description' => $this->resolveVariable($run, $r['description'] ?? ''),
                             ];
                         }
                         $sections[] = ['title' => $this->resolveVariable($run, $s['title'] ?? 'Options'), 'rows' => $rows];
@@ -720,6 +768,7 @@ class AutomationService
                     );
                     $this->whatsapp->sendInteractiveList($run->contact->phone_number, $text, $buttonText, $sections, $trackingMessage);
                 }
+
                 return 'wait';
 
             case 'user_input':
@@ -732,6 +781,7 @@ class AutomationService
                 );
                 $this->whatsapp->sendText($run->contact->phone_number, $text, $trackingMessage);
                 $run->update(['status' => 'waiting_input']);
+
                 return 'wait';
 
             case 'send_flow':
@@ -752,13 +802,14 @@ class AutomationService
                     );
                     $run->update(['status' => 'waiting_input']);
                 }
+
                 return 'wait';
 
             case 'crm_sync':
                 $provider = $node['data']['provider'] ?? 'internal';
                 $action = $node['data']['action'] ?? 'update_lead';
                 Log::info("AutomationRun #{$run->id}: Syncing with {$provider} ({$action})");
-                
+
                 if ($provider === 'internal') {
                     // Perform internal sync logic (e.g., ensure contact is marked as lead)
                     $run->contact->update(['type' => 'lead']);
@@ -766,10 +817,10 @@ class AutomationService
                         \App\Models\Deal::firstOrCreate([
                             'contact_id' => $run->contact->id,
                             'team_id' => $run->contact->team_id,
-                            'status' => 'open'
+                            'status' => 'open',
                         ], [
-                            'title' => 'Deal from Automation: ' . ($run->automation->name ?? 'Default'),
-                            'stage_id' => $node['data']['stage_id'] ?? null
+                            'title' => 'Deal from Automation: '.($run->automation->name ?? 'Default'),
+                            'stage_id' => $node['data']['stage_id'] ?? null,
                         ]);
                     }
                 }
@@ -779,9 +830,10 @@ class AutomationService
                         'provider' => $provider,
                         'action' => $action,
                         'automation_id' => $run->automation_id,
-                        'run_id' => $run->id
+                        'run_id' => $run->id,
                     ], $run->state_data['variables'] ?? []));
                 }
+
                 return 'continue';
 
             case 'image':
@@ -808,6 +860,7 @@ class AutomationService
 
                     $this->whatsapp->sendMedia($run->contact->phone_number, $node['type'], $url, $node['data']['caption'] ?? '', $trackingMessage);
                 }
+
                 return 'continue';
 
             case 'template':
@@ -831,6 +884,7 @@ class AutomationService
                         $trackingMessage
                     );
                 }
+
                 return 'continue';
 
                 if ($seconds > 0) {
@@ -842,22 +896,24 @@ class AutomationService
                             ->onQueue('messages')
                             ->delay($resumeAt);
                     }
+
                     return 'pause';
                 }
+
                 return 'continue';
 
             case 'condition':
             case 'split_by_condition':
                 $branches = $node['data']['branches'] ?? [];
                 $result = 'default';
-                
+
                 if (empty($branches)) {
                     // Legacy single-condition support
                     $variable = $node['data']['variable'] ?? '';
                     $operator = $node['data']['operator'] ?? 'eq';
                     $value = $this->resolveVariable($run, $node['data']['value'] ?? '');
                     $actual = $run->state_data['variables'][$variable] ?? $run->contact->{$variable} ?? null;
-                    
+
                     if ($this->evaluateOperator($actual, $operator, $value)) {
                         $result = 'true';
                     } else {
@@ -881,6 +937,7 @@ class AutomationService
                 $state = $run->state_data;
                 $state['condition_result'] = $result;
                 $run->update(['state_data' => $state]);
+
                 return 'continue';
 
             case 'send_email':
@@ -890,28 +947,30 @@ class AutomationService
                     app(\App\Services\Email\EmailDispatcher::class)->dispatchByTemplate($to, $templateSlug, [
                         'contact' => $run->contact,
                         'run' => $run,
-                        'variables' => $run->state_data['variables'] ?? []
+                        'variables' => $run->state_data['variables'] ?? [],
                     ]);
                 }
+
                 return 'continue';
 
             case 'send_internal_notification':
                 $agentId = $node['data']['agent_id'] ?? null;
                 $message = $this->resolveVariable($run, $node['data']['message'] ?? 'Notification from Automation');
                 $channel = $node['data']['channel'] ?? 'whatsapp';
-                
+
                 if ($agentId) {
                     $agent = \App\Models\User::find($agentId);
                     if ($agent) {
                         if ($channel === 'whatsapp' && $agent->phone_number) {
-                            $this->whatsapp->sendText($agent->phone_number, "[Internal Alert] " . $message);
+                            $this->whatsapp->sendText($agent->phone_number, '[Internal Alert] '.$message);
                         } elseif ($channel === 'email' && $agent->email) {
-                            \Illuminate\Support\Facades\Mail::raw($message, function($m) use ($agent) {
+                            \Illuminate\Support\Facades\Mail::raw($message, function ($m) use ($agent) {
                                 $m->to($agent->email)->subject('Automation Alert');
                             });
                         }
                     }
                 }
+
                 return 'continue';
 
             case 'subscribe_to_campaign':
@@ -923,17 +982,19 @@ class AutomationService
                         Log::info("AutomationRun #{$run->id}: Subscribed contact to campaign {$campaignId}");
                     }
                 }
+
                 return 'continue';
 
             case 'location_request':
                 $text = $this->resolveVariable($run, $node['data']['text'] ?? 'Please share your location');
                 $this->whatsapp->sendLocationRequest($run->contact->phone_number, $text);
                 $run->update(['status' => 'waiting_input']);
+
                 return 'wait';
 
             case 'contact':
                 $contacts = $node['data']['contacts'] ?? [];
-                if (!empty($contacts)) {
+                if (! empty($contacts)) {
                     // Resolve variables in contact fields if necessary
                     $formattedContact = $contacts[0];
                     if (isset($formattedContact['name']['formatted_name'])) {
@@ -941,36 +1002,39 @@ class AutomationService
                     }
                     $this->whatsapp->sendContact($run->contact->phone_number, $formattedContact);
                 }
+
                 return 'continue';
 
             case 'carousel':
                 $cards = $node['data']['cards'] ?? [];
-                if (!empty($cards)) {
+                if (! empty($cards)) {
                     // Resolve variables in card text
-                    $resolvedCards = array_map(function($card) use ($run) {
+                    $resolvedCards = array_map(function ($card) use ($run) {
                         $card['body'] = $this->resolveVariable($run, $card['body'] ?? '');
                         if (isset($card['footer'])) {
                             $card['footer'] = $this->resolveVariable($run, $card['footer']);
                         }
+
                         return $card;
                     }, $cards);
 
                     $this->whatsapp->sendCarousel($run->contact->phone_number, $resolvedCards);
                     $run->update(['status' => 'waiting_input']);
                 }
+
                 return 'wait';
 
             case 'catalog_message':
-                $catalogId   = $node['data']['catalog_id'] ?? null;
-                $sendType    = $node['data']['send_type'] ?? 'multi_product';
-                $productIds  = array_map('trim', explode(',', $this->resolveVariable($run, $node['data']['product_retailer_ids'] ?? '')));
-                $productIds  = array_filter($productIds);
-                $headerText  = $this->resolveVariable($run, $node['data']['header_text'] ?? '');
-                $bodyText    = $this->resolveVariable($run, $node['data']['body_text'] ?? '');
-                $footerText  = $this->resolveVariable($run, $node['data']['footer_text'] ?? '');
+                $catalogId = $node['data']['catalog_id'] ?? null;
+                $sendType = $node['data']['send_type'] ?? 'multi_product';
+                $productIds = array_map('trim', explode(',', $this->resolveVariable($run, $node['data']['product_retailer_ids'] ?? '')));
+                $productIds = array_filter($productIds);
+                $headerText = $this->resolveVariable($run, $node['data']['header_text'] ?? '');
+                $bodyText = $this->resolveVariable($run, $node['data']['body_text'] ?? '');
+                $footerText = $this->resolveVariable($run, $node['data']['footer_text'] ?? '');
                 $sectionTitle = $this->resolveVariable($run, $node['data']['section_title'] ?? 'Products');
 
-                if ($catalogId && !empty($productIds)) {
+                if ($catalogId && ! empty($productIds)) {
                     if ($sendType === 'single_product') {
                         $this->whatsapp->sendSingleProduct(
                             $run->contact->phone_number,
@@ -982,7 +1046,7 @@ class AutomationService
                     } else {
                         $sections = [[
                             'title' => $sectionTitle,
-                            'product_items' => array_map(fn($id) => ['product_retailer_id' => $id], $productIds),
+                            'product_items' => array_map(fn ($id) => ['product_retailer_id' => $id], $productIds),
                         ]];
                         $this->whatsapp->sendMultiProduct(
                             $run->contact->phone_number,
@@ -997,15 +1061,18 @@ class AutomationService
                 } else {
                     Log::warning("AutomationRun #{$run->id}: catalog_message skipped — missing catalog_id or product IDs.");
                 }
+
                 return 'continue';
 
             case 'openai':
                 $this->handleOpenAiNode($run, $node);
+
                 return 'continue';
 
             case 'api_request':
             case 'webhook':
                 $this->handleApiNode($run, $node);
+
                 return 'continue';
 
             case 'handover':
@@ -1014,17 +1081,20 @@ class AutomationService
                     (new AssignmentService)->assign($run->contact);
                 }
                 $run->update(['status' => 'completed']);
+
                 return 'pause'; // Terminates naturally
 
             case 'loop_over_items':
                 $varName = $node['data']['variable'] ?? '';
                 $items = $run->state_data['variables'][$varName] ?? [];
-                if (!is_array($items)) $items = [];
-                
+                if (! is_array($items)) {
+                    $items = [];
+                }
+
                 $state = $run->state_data;
                 $loopKey = "loop_idx_{$node['id']}";
                 $currentIndex = $state[$loopKey] ?? 0;
-                
+
                 if ($currentIndex < count($items)) {
                     $itemVarName = $node['data']['item_variable'] ?? 'item';
                     $state['variables'][$itemVarName] = $items[$currentIndex];
@@ -1034,8 +1104,9 @@ class AutomationService
                     unset($state[$loopKey]);
                     $state['loop_result'] = 'completed';
                 }
-                
+
                 $run->update(['state_data' => $state]);
+
                 return 'continue';
 
             case 'sub_flow':
@@ -1044,18 +1115,20 @@ class AutomationService
                     $subAutomation = Automation::find($subAutomationId);
                     if ($subAutomation) {
                         $state = $run->state_data;
-                        // Push current state to a stack if we want nested returns, 
+                        // Push current state to a stack if we want nested returns,
                         // for now we just jump to the sub-flow's start node
                         $startNodeId = $this->findStartNode($subAutomation->flow_data);
                         if ($startNodeId) {
                             $state['current_node_id'] = $startNodeId;
-                            // We might need to handle the return path later, 
+                            // We might need to handle the return path later,
                             // but for N12 simple inline execution is fine.
                             $run->update(['state_data' => $state]);
+
                             return 'continue';
                         }
                     }
                 }
+
                 return 'continue';
 
             case 'wait_until':
@@ -1063,7 +1136,7 @@ class AutomationService
                 $resumeAt = null;
 
                 if ($mode === 'business_hours') {
-                    if (!$run->automation->team->isWithinBusinessHours()) {
+                    if (! $run->automation->team->isWithinBusinessHours()) {
                         $resumeAt = $run->automation->team->getNextOpeningTime();
                     }
                 } elseif ($mode === 'specific_time') {
@@ -1077,8 +1150,10 @@ class AutomationService
 
                 if ($resumeAt) {
                     $run->update(['status' => 'paused', 'resume_at' => $resumeAt]);
+
                     return 'pause';
                 }
+
                 return 'continue';
 
             case 'set_variable':
@@ -1090,25 +1165,26 @@ class AutomationService
                 if ($key) {
                     switch ($operation) {
                         case 'increment':
-                            $vars[$key] = ((int)($vars[$key] ?? 0)) + ((int)$value);
+                            $vars[$key] = ((int) ($vars[$key] ?? 0)) + ((int) $value);
                             break;
                         case 'decrement':
-                            $vars[$key] = ((int)($vars[$key] ?? 0)) - ((int)$value);
+                            $vars[$key] = ((int) ($vars[$key] ?? 0)) - ((int) $value);
                             break;
                         case 'append':
-                            $vars[$key] = ($vars[$key] ?? '') . $value;
+                            $vars[$key] = ($vars[$key] ?? '').$value;
                             break;
                         default:
                             $vars[$key] = $value;
                     }
                     $run->update(['state_data' => array_merge($run->state_data, ['variables' => $vars])]);
                 }
+
                 return 'continue';
 
             case 'rate_limit_gate':
-                $max = (int)($node['data']['max_executions'] ?? 1);
+                $max = (int) ($node['data']['max_executions'] ?? 1);
                 $period = $node['data']['period'] ?? '24_hours';
-                $minutes = match($period) {
+                $minutes = match ($period) {
                     '1_hour' => 60,
                     '24_hours' => 1440,
                     '7_days' => 10080,
@@ -1117,7 +1193,7 @@ class AutomationService
 
                 $ledgerCount = \App\Models\AutomationStepLedger::where('node_id', $node['id'])
                     ->where('automation_run_id', '!=', $run->id)
-                    ->whereHas('run', fn($q) => $q->where('contact_id', $run->contact_id))
+                    ->whereHas('run', fn ($q) => $q->where('contact_id', $run->contact_id))
                     ->where('created_at', '>=', now()->subMinutes($minutes))
                     ->count();
 
@@ -1130,6 +1206,7 @@ class AutomationService
                     $state['gate_result'] = 'allowed';
                     $run->update(['state_data' => $state]);
                 }
+
                 return 'continue';
 
             case 'google_sheets':
@@ -1142,23 +1219,25 @@ class AutomationService
                         ->first();
                     if ($integration) {
                         $service = new \App\Services\Integrations\GoogleDriveService($integration);
-                        $resolvedValues = array_map(fn($v) => $this->resolveVariable($run, (string)$v), $values);
+                        $resolvedValues = array_map(fn ($v) => $this->resolveVariable($run, (string) $v), $values);
                         try {
                             $service->appendToSheet($spreadsheetId, $resolvedValues);
                         } catch (\Exception $e) {
-                            Log::error("AutomationRun #{$run->id}: Google Sheets Append Failed: " . $e->getMessage());
+                            Log::error("AutomationRun #{$run->id}: Google Sheets Append Failed: ".$e->getMessage());
                             $state = $run->state_data;
                             $state['api_result'] = 'error';
                             $run->update(['state_data' => $state]);
                         }
                     }
                 }
+
                 return 'continue';
 
             case 'tag_contact':
             case 'remove_tag':
             case 'create_ticket':
                 $this->handleUtilityNode($run, $node);
+
                 return 'continue';
 
             case 'update_contact':
@@ -1169,7 +1248,7 @@ class AutomationService
                     if (in_array($field, ['name', 'email', 'phone_number'])) {
                         $contact->update([$field => $value]);
                     } else {
-                        // Support custom fields via updateOrCreate on ContactField relationship if it exists, 
+                        // Support custom fields via updateOrCreate on ContactField relationship if it exists,
                         // or just update custom_attributes on Contact.
                         // Based on ContactService, it uses custom_attributes.
                         $attributes = $contact->custom_attributes ?? [];
@@ -1177,6 +1256,7 @@ class AutomationService
                         $contact->update(['custom_attributes' => $attributes]);
                     }
                 }
+
                 return 'continue';
 
             case 'create_deal':
@@ -1189,6 +1269,7 @@ class AutomationService
                     'value' => $node['data']['value'] ?? 0,
                     'status' => 'open',
                 ]);
+
                 return 'continue';
 
             case 'create_crm_task':
@@ -1202,6 +1283,7 @@ class AutomationService
                     'related_to_id' => $run->contact->id,
                     'status' => 'pending',
                 ]);
+
                 return 'continue';
 
             case 'assign_agent':
@@ -1217,10 +1299,12 @@ class AutomationService
                         app(AssignmentService::class)->assign($contact);
                     }
                 }
+
                 return 'continue';
 
             case 'stop_flow':
                 $run->update(['status' => 'completed']);
+
                 return 'pause'; // terminates naturally
 
             case 'trigger':
@@ -1234,18 +1318,20 @@ class AutomationService
     public function moveToNextNode(AutomationRun $run, $input = null)
     {
         if ($run->step_count >= $this->maxSteps) {
-            $this->failRun($run, "Safe-guard limit reached: Max steps exceeded.");
+            $this->failRun($run, 'Safe-guard limit reached: Max steps exceeded.');
+
             return;
         }
 
         $flowData = $run->automation->flow_data;
         $currentNodeId = $run->state_data['current_node_id'];
-        $edges = array_filter($flowData['edges'], fn($e) => $e['source'] === $currentNodeId);
+        $edges = array_filter($flowData['edges'], fn ($e) => $e['source'] === $currentNodeId);
 
-        Log::info("AutomationRun #{$run->id}: Moving from node {$currentNodeId}. Found " . count($edges) . " edges.");
+        Log::info("AutomationRun #{$run->id}: Moving from node {$currentNodeId}. Found ".count($edges).' edges.');
 
         if (empty($edges)) {
             $run->update(['status' => 'completed']);
+
             return;
         }
 
@@ -1303,7 +1389,7 @@ class AutomationService
             }
         }
 
-        if (!$nextNodeId) {
+        if (! $nextNodeId) {
             foreach ($edges as $edge) {
                 if (empty($edge['condition'])) {
                     $nextNodeId = $edge['target'];
@@ -1359,7 +1445,7 @@ class AutomationService
             ->update([
                 'status' => 'active',
                 'resume_at' => null,
-                'last_processed_at' => now()
+                'last_processed_at' => now(),
             ]);
 
         // Dispatch the jobs for the claimed runs
@@ -1367,7 +1453,7 @@ class AutomationService
         foreach ($runs as $run) {
             try {
                 $nodeId = $run->state_data['current_node_id'] ?? null;
-                if (!$nodeId) {
+                if (! $nodeId) {
                     Log::warning("AutomationRun #{$run->id} skipped during resume: missing current_node_id in state_data.", [
                         'state_data' => $run->state_data,
                     ]);
@@ -1375,6 +1461,7 @@ class AutomationService
                         'status' => 'failed',
                         'resume_at' => null,
                     ]);
+
                     continue;
                 }
 
@@ -1395,10 +1482,10 @@ class AutomationService
     /**
      * Handles user replies to waiting sessions.
      */
-    public function handleReply(Contact $contact, $messageContent, \App\Models\Message $receivedMsg = null)
+    public function handleReply(Contact $contact, $messageContent, ?\App\Models\Message $receivedMsg = null)
     {
         // 1. Check for Handoff status
-        if (!$this->handoff->shouldProcess($contact)) {
+        if (! $this->handoff->shouldProcess($contact)) {
             return false;
         }
 
@@ -1406,12 +1493,13 @@ class AutomationService
             ->where('status', 'waiting_input')
             ->first();
 
-        if (!$run) {
+        if (! $run) {
             // Check for paused runs to cancel
             $pausedRun = AutomationRun::where('contact_id', $contact->id)->where('status', 'paused')->first();
             if ($pausedRun) {
                 $pausedRun->update(['status' => 'interrupted', 'resume_at' => null]);
             }
+
             return false;
         }
 
@@ -1421,8 +1509,9 @@ class AutomationService
         $currentNodeId = $run->state_data['current_node_id'];
         $currentNode = $this->getNodeById($flowData, $currentNodeId);
 
-        if (!$currentNode) {
+        if (! $currentNode) {
             Log::warning("AutomationRun #{$run->id}: Current node {$currentNodeId} not found in handleReply.");
+
             return false;
         }
 
@@ -1433,7 +1522,7 @@ class AutomationService
         $interactive = $metadata['interactive'] ?? [];
         if (($interactive['type'] ?? '') === 'nfm_reply') {
             $responseJson = json_decode($interactive['nfm_reply']['response_json'] ?? '{}', true);
-            
+
             // Save full JSON if a 'variable' is specified on the node
             if (isset($currentNode['data']['variable'])) {
                 $vars[$currentNode['data']['variable']] = $responseJson;
@@ -1446,15 +1535,14 @@ class AutomationService
 
             // Identify the completion token or input to match next nodes
             $input = $responseJson['flow_token'] ?? $messageContent;
-        } 
+        }
         // SPECIAL CASE: Interactive Button or List Reply
         elseif (isset($interactive['button_reply']['id']) || isset($interactive['list_reply']['id'])) {
             $input = $interactive['button_reply']['id'] ?? $interactive['list_reply']['id'];
             if (isset($currentNode['data']['variable'])) {
                 $vars[$currentNode['data']['variable']] = $input;
             }
-        }
-        else {
+        } else {
             // Standard Text Reply
             if (isset($currentNode['data']['variable'])) {
                 $vars[$currentNode['data']['variable']] = $messageContent;
@@ -1463,7 +1551,7 @@ class AutomationService
 
         $run->update([
             'status' => 'active',
-            'state_data' => array_merge($run->state_data, ['variables' => $vars])
+            'state_data' => array_merge($run->state_data, ['variables' => $vars]),
         ]);
 
         $this->moveToNextNode($run, $input);
@@ -1475,17 +1563,18 @@ class AutomationService
 
     protected function handleOpenAiNode(AutomationRun $run, array $node)
     {
-        if (!$run->automation->team->canAccess('ai')) {
-            throw new \Exception("AI feature not available on your current plan.");
+        if (! $run->automation->team->canAccess('ai')) {
+            throw new \Exception('AI feature not available on your current plan.');
         }
 
         $teamId = $run->automation->team_id;
         $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_$teamId")->value('value');
-        if (!$apiKey)
-            throw new \Exception("OpenAI API Key missing");
+        if (! $apiKey) {
+            throw new \Exception('OpenAI API Key missing');
+        }
 
         $useKb = $node['data']['use_knowledge_base'] ?? false;
-        $context = "";
+        $context = '';
 
         if ($useKb) {
             $kbService = app(KnowledgeBaseService::class);
@@ -1494,15 +1583,15 @@ class AutomationService
 
             if ($kbScope === 'selected' && empty($scopedSourceIds)) {
                 Log::warning("OpenAI Node configured with 'selected' scope but no sources provided for team $teamId");
-                throw new \Exception("Knowledge Base scope is restricted but no sources are selected.");
+                throw new \Exception('Knowledge Base scope is restricted but no sources are selected.');
             }
 
             $sourceIdsToUse = ($kbScope === 'selected') ? $scopedSourceIds : null;
 
-            if (!$kbService->isReady($teamId, $sourceIdsToUse)) {
+            if (! $kbService->isReady($teamId, $sourceIdsToUse)) {
                 // Blocking AI usage when KB is not ready
                 Log::warning("OpenAI Node blocked: Knowledge Base scope is not ready for team $teamId");
-                throw new \Exception("The selected Knowledge Base sources are not ready for use.");
+                throw new \Exception('The selected Knowledge Base sources are not ready for use.');
             }
 
             $context = $kbService->searchContext($teamId, $run->state_data['variables']['last_message'] ?? $node['data']['prompt'], $sourceIdsToUse);
@@ -1510,7 +1599,7 @@ class AutomationService
 
         $prompt = $node['data']['prompt'] ?? '';
         foreach ($run->state_data['variables'] as $k => $v) {
-            $prompt = str_replace('{{' . $k . '}}', (string) $v, $prompt);
+            $prompt = str_replace('{{'.$k.'}}', (string) $v, $prompt);
         }
 
         if ($context) {
@@ -1524,15 +1613,15 @@ STRICT GROUNDING RULES:
 3. DO NOT speculate or use outside knowledge.
 4. CITATIONS: At the end of your response, list the sources used as '[Source: Name]'.
 ";
-                $prompt = "--- SYSTEM INSTRUCTIONS ---\n" . $groundingRules . "\n\n--- BUSINESS CONTEXT ---\n" . $context . "\n\n--- USER QUESTION ---\n" . $prompt;
+                $prompt = "--- SYSTEM INSTRUCTIONS ---\n".$groundingRules."\n\n--- BUSINESS CONTEXT ---\n".$context."\n\n--- USER QUESTION ---\n".$prompt;
             } else {
-                $prompt = "--- BUSINESS CONTEXT (USE FOR GUIDANCE) ---\n" . $context . "\n\n--- USER QUESTION ---\n" . $prompt;
+                $prompt = "--- BUSINESS CONTEXT (USE FOR GUIDANCE) ---\n".$context."\n\n--- USER QUESTION ---\n".$prompt;
             }
         }
 
         $response = \Illuminate\Support\Facades\Http::withToken($apiKey)->post('https://api.openai.com/v1/chat/completions', [
             'model' => 'gpt-4o',
-            'messages' => [['role' => 'user', 'content' => $prompt]]
+            'messages' => [['role' => 'user', 'content' => $prompt]],
         ]);
 
         if ($response->successful()) {
@@ -1557,7 +1646,7 @@ STRICT GROUNDING RULES:
                 'action' => 'ai_interaction',
                 'description' => "AI Node executed in Automation #{$run->automation_id}",
                 'subject_type' => get_class($run),
-                'subject_id' => $run->id
+                'subject_id' => $run->id,
             ]);
         }
     }
@@ -1570,7 +1659,7 @@ STRICT GROUNDING RULES:
         $body = $this->resolveVariable($run, $node['data']['json_body'] ?? '');
 
         $request = \Illuminate\Support\Facades\Http::timeout(15);
-        
+
         foreach ($headers as $key => $value) {
             $request->withHeader($key, $this->resolveVariable($run, $value));
         }
@@ -1620,19 +1709,21 @@ STRICT GROUNDING RULES:
     protected function handleNodeTagging(AutomationRun $run, array $node)
     {
         $tagToAssign = $node['data']['tag'] ?? null;
-        if (!$tagToAssign)
+        if (! $tagToAssign) {
             return;
+        }
 
         $state = $run->state_data;
         $previousTag = $state['current_stage_tag'] ?? null;
 
-        if ($previousTag === $tagToAssign)
+        if ($previousTag === $tagToAssign) {
             return;
+        }
 
         $teamId = $run->automation->team_id;
         $contact = $run->contact;
 
-        DB::transaction(function () use ($run, $tagToAssign, $previousTag, &$state, $teamId, $contact) {
+        DB::transaction(function () use ($tagToAssign, $previousTag, &$state, $teamId, $contact) {
             // 1. Remove previous stage tag if it belongs to this flow run tracking
             if ($previousTag) {
                 $pTag = \App\Models\ContactTag::where('team_id', $teamId)->where('name', $previousTag)->first();
@@ -1644,7 +1735,7 @@ STRICT GROUNDING RULES:
             // 2. Assign new tag
             $tag = \App\Models\ContactTag::firstOrCreate([
                 'team_id' => $teamId,
-                'name' => $tagToAssign
+                'name' => $tagToAssign,
             ]);
 
             $contact->tags()->syncWithoutDetaching([$tag->id]);
@@ -1724,69 +1815,77 @@ STRICT GROUNDING RULES:
 
     protected function findStartNode($flowData)
     {
-        if (!isset($flowData['nodes']) || !is_array($flowData['nodes'])) {
+        if (! isset($flowData['nodes']) || ! is_array($flowData['nodes'])) {
             return null;
         }
 
         foreach ($flowData['nodes'] as $n) {
-            if (($n['type'] ?? '') === 'trigger')
+            if (($n['type'] ?? '') === 'trigger') {
                 return $n['id'];
+            }
         }
+
         return null;
     }
 
     protected function getNodeById($flowData, $id)
     {
-        if (!isset($flowData['nodes']) || !is_array($flowData['nodes'])) {
+        if (! isset($flowData['nodes']) || ! is_array($flowData['nodes'])) {
             return null;
         }
 
         foreach ($flowData['nodes'] as $n) {
-            if (($n['id'] ?? '') === $id)
+            if (($n['id'] ?? '') === $id) {
                 return $n;
+            }
         }
+
         return null;
     }
 
     protected function hasErrorEdge(AutomationRun $run, $nodeId): bool
     {
         $flowData = $run->automation->flow_data;
-        $edges = array_filter($flowData['edges'] ?? [], fn($e) => $e['source'] === $nodeId);
+        $edges = array_filter($flowData['edges'] ?? [], fn ($e) => $e['source'] === $nodeId);
         foreach ($edges as $edge) {
             if (($edge['condition'] ?? '') === 'error') {
                 return true;
             }
         }
+
         return false;
     }
 
     protected function evaluateOperator($actual, $operator, $value): bool
     {
-        $strActual = strtolower((string)$actual);
-        $strValue  = strtolower((string)$value);
+        $strActual = strtolower((string) $actual);
+        $strValue = strtolower((string) $value);
+
         return match ($operator) {
-            'eq'           => (string)$actual === (string)$value,
-            'neq'          => (string)$actual !== (string)$value,
-            'gt'           => (float)$actual > (float)$value,
-            'gte'          => (float)$actual >= (float)$value,
-            'lt'           => (float)$actual < (float)$value,
-            'lte'          => (float)$actual <= (float)$value,
-            'contains'     => str_contains($strActual, $strValue),
-            'not_contains' => !str_contains($strActual, $strValue),
-            'starts_with'  => str_starts_with($strActual, $strValue),
-            'ends_with'    => str_ends_with($strActual, $strValue),
+            'eq' => (string) $actual === (string) $value,
+            'neq' => (string) $actual !== (string) $value,
+            'gt' => (float) $actual > (float) $value,
+            'gte' => (float) $actual >= (float) $value,
+            'lt' => (float) $actual < (float) $value,
+            'lte' => (float) $actual <= (float) $value,
+            'contains' => str_contains($strActual, $strValue),
+            'not_contains' => ! str_contains($strActual, $strValue),
+            'starts_with' => str_starts_with($strActual, $strValue),
+            'ends_with' => str_ends_with($strActual, $strValue),
             'is_empty',
-            'empty'        => empty($actual),
+            'empty' => empty($actual),
             'is_not_empty',
-            'not_empty'    => !empty($actual),
-            'regex'        => (bool) @preg_match('/' . $value . '/i', (string)$actual),
-            default        => false,
+            'not_empty' => ! empty($actual),
+            'regex' => (bool) @preg_match('/'.$value.'/i', (string) $actual),
+            default => false,
         };
     }
 
     protected function resolveVariable(AutomationRun $run, string $template): string
     {
-        if (!$template) return "";
+        if (! $template) {
+            return '';
+        }
 
         $vars = $run->state_data['variables'] ?? [];
         $contact = $run->contact;
@@ -1813,13 +1912,15 @@ STRICT GROUNDING RULES:
             $key = $m[1];
             if (str_starts_with($key, 'global.')) {
                 $gkey = str_replace('global.', '', $key);
+
                 return $globalVars[$gkey] ?? $m[0];
             }
             $val = $all[$key] ?? $m[0];
             if (is_array($val) || is_object($val)) {
                 return json_encode($val);
             }
-            return (string)$val;
+
+            return (string) $val;
         }, $template);
     }
 }

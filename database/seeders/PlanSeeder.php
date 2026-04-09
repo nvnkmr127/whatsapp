@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Plan;
+use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
 {
@@ -31,7 +31,7 @@ class PlanSeeder extends Seeder
                     'webhooks' => false,
                     'backups' => false,
                     'cloud_backups' => false,
-                ])
+                ]),
             ],
             [
                 'name' => 'pro',
@@ -54,7 +54,7 @@ class PlanSeeder extends Seeder
                     'webhooks' => true,
                     'backups' => true,
                     'cloud_backups' => true,
-                ])
+                ]),
             ],
             [
                 'name' => 'enterprise',
@@ -77,7 +77,7 @@ class PlanSeeder extends Seeder
                     'webhooks' => true,
                     'backups' => true,
                     'cloud_backups' => true,
-                ])
+                ]),
             ],
         ];
 

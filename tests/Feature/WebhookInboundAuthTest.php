@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Team;
-use App\Models\User;
 use App\Models\WebhookSource;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -30,17 +29,18 @@ class WebhookInboundAuthTest extends TestCase
         // 1. Test without header (401)
         $response = $this->postJson("/api/v1/webhooks/inbound/{$source->slug}", ['test' => 'data']);
         $response->assertStatus(401);
-        $response->assertJsonFragment(['error' => 'Authentication failed']);
+        $response->assertJsonFragment(['message' => 'Authentication failed']);
 
         // 2. Test with wrong header (401)
         $response = $this->postJson("/api/v1/webhooks/inbound/{$source->slug}", ['test' => 'data'], [
-            'X-API-Key' => 'wrong-key'
+            'X-API-Key' => 'wrong-key',
         ]);
         $response->assertStatus(401);
+        $response->assertJsonFragment(['message' => 'Authentication failed']);
 
         // 3. Test with correct header (200)
         $response = $this->postJson("/api/v1/webhooks/inbound/{$source->slug}", ['test' => 'data'], [
-            'X-API-Key' => $apiKey
+            'X-API-Key' => $apiKey,
         ]);
         $response->assertStatus(200);
         $response->assertJsonFragment(['success' => true]);
@@ -48,8 +48,8 @@ class WebhookInboundAuthTest extends TestCase
 
     public function test_webhook_auth_handles_string_config_gracefully()
     {
-        $service = new \App\Services\WebhookAuthService();
-        $request = new \Illuminate\Http\Request();
+        $service = new \App\Services\WebhookAuthService;
+        $request = new \Illuminate\Http\Request;
 
         // This used to throw TypeError, now it should handle string/JSON or fallback to empty array
         $result = $service->verify($request, 'api_key', '{"key":"secret"}');

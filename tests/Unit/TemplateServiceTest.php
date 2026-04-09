@@ -22,11 +22,11 @@ class TemplateServiceTest extends TestCase
             'category' => 'UTILITY',
             'status' => 'APPROVED',
             'components' => [
-                ['type' => 'BODY', 'text' => 'Hello {{1}}, welcome to {{2}}']
-            ]
+                ['type' => 'BODY', 'text' => 'Hello {{1}}, welcome to {{2}}'],
+            ],
         ]);
 
-        $service = new TemplateService();
+        $service = new TemplateService;
         $this->assertTrue($service->validateVariables($template, ['John', 'Our App']));
     }
 
@@ -40,11 +40,11 @@ class TemplateServiceTest extends TestCase
             'category' => 'UTILITY',
             'status' => 'APPROVED',
             'components' => [
-                ['type' => 'BODY', 'text' => 'Hello {{1}}']
-            ]
+                ['type' => 'BODY', 'text' => 'Hello {{1}}'],
+            ],
         ]);
 
-        $service = new TemplateService();
+        $service = new TemplateService;
         $this->assertFalse($service->validateVariables($template, [])); // Missing var
         $this->assertFalse($service->validateVariables($template, ['John', 'Extra'])); // Too many vars
     }

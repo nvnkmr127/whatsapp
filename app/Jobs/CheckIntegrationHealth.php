@@ -20,7 +20,7 @@ class CheckIntegrationHealth implements ShouldQueue
      */
     public function handle(IntegrationHealthService $healthService): void
     {
-        Log::info("Starting global integration health check...");
+        Log::info('Starting global integration health check...');
 
         $integrations = Integration::where('status', '!=', 'inactive')->get();
 
@@ -33,7 +33,7 @@ class CheckIntegrationHealth implements ShouldQueue
                     // Trigger notifications if needed
                 }
             } catch (\Exception $e) {
-                Log::error("Failed to check health for integration {$integration->id}: " . $e->getMessage());
+                Log::error("Failed to check health for integration {$integration->id}: ".$e->getMessage());
             }
         }
     }

@@ -11,8 +11,7 @@ class ValidationError
         public ?string $field = null,
         public ?string $suggestion = null,
         public array $metadata = []
-    ) {
-    }
+    ) {}
 
     public function toArray(): array
     {

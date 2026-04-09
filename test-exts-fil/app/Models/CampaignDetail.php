@@ -7,17 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @property int                             $id
- * @property int                             $campaign_id
- * @property int|null                        $rel_id
- * @property string                          $rel_type
- * @property string|null                     $header_message
- * @property string|null                     $body_message
- * @property string|null                     $footer_message
- * @property int|null                        $status
- * @property string|null                     $response_message
- * @property string|null                     $whatsapp_id
- * @property string|null                     $message_status
+ * @property int $id
+ * @property int $campaign_id
+ * @property int|null $rel_id
+ * @property string $rel_type
+ * @property string|null $header_message
+ * @property string|null $body_message
+ * @property string|null $footer_message
+ * @property int|null $status
+ * @property string|null $response_message
+ * @property string|null $whatsapp_id
+ * @property string|null $message_status
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Campaign $campaign

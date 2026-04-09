@@ -2,26 +2,29 @@
 
 namespace App\Livewire\Workflows;
 
-use App\Models\Contact;
 use App\Models\ContactTag;
-use App\Models\Deal;
 use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Models\Workflow;
-use App\Models\WorkflowAction;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class WorkflowManager extends Component
 {
     public $workflows = [];
+
     public $activeWorkflowId;
+
     public $activeWorkflow;
 
     public $name = 'New Workflow';
+
     public $description;
+
     public $isActive = true;
+
     public $triggerType = 'contact_created';
+
     public $triggerConfig = [];
 
     public $actions = [];
@@ -29,11 +32,15 @@ class WorkflowManager extends Component
     public $showCreateModal = false;
 
     public $search = '';
+
     public $filterFolder = '';
+
     public $folder = '';
+
     public $tagsText = '';
 
     public $showImportModal = false;
+
     public $importJson = '';
 
     public function mount()
@@ -63,7 +70,7 @@ class WorkflowManager extends Component
             ->latest();
 
         if (trim($this->search)) {
-            $query->where('name', 'like', '%' . trim($this->search) . '%');
+            $query->where('name', 'like', '%'.trim($this->search).'%');
         }
 
         if (trim($this->filterFolder)) {
@@ -85,7 +92,7 @@ class WorkflowManager extends Component
     {
         $workflow = Workflow::with('actions')->find($id);
 
-        if (!$workflow || $workflow->team_id !== \Illuminate\Support\Facades\Auth::user()->currentTeam?->id) {
+        if (! $workflow || $workflow->team_id !== \Illuminate\Support\Facades\Auth::user()->currentTeam?->id) {
             return;
         }
 
@@ -100,7 +107,7 @@ class WorkflowManager extends Component
         $this->tagsText = implode(', ', $workflow->tags ?? []);
 
         // Load Definition (New) or Convert Actions (Legacy)
-        if (!empty($workflow->definition)) {
+        if (! empty($workflow->definition)) {
             $this->actions = $workflow->definition;
         } else {
             $this->actions = $workflow->actions->map(function ($action) {
@@ -176,7 +183,7 @@ class WorkflowManager extends Component
 
         if ($workflow && $workflow->team_id === \Illuminate\Support\Facades\Auth::user()->currentTeam?->id) {
             $newWorkflow = $workflow->replicate();
-            $newWorkflow->name = $workflow->name . ' (Copy)';
+            $newWorkflow->name = $workflow->name.' (Copy)';
             $newWorkflow->is_active = false;
             $newWorkflow->execution_count = 0;
             $newWorkflow->last_executed_at = null;
@@ -205,7 +212,7 @@ class WorkflowManager extends Component
 
             return response()->streamDownload(function () use ($data) {
                 echo json_encode($data, JSON_PRETTY_PRINT);
-            }, \Illuminate\Support\Str::slug($workflow->name) . '-export.json');
+            }, \Illuminate\Support\Str::slug($workflow->name).'-export.json');
         }
     }
 
@@ -224,7 +231,7 @@ class WorkflowManager extends Component
 
             Workflow::create([
                 'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam?->id,
-                'name' => ($data['name'] ?? 'Imported Workflow') . ' (Imported)',
+                'name' => ($data['name'] ?? 'Imported Workflow').' (Imported)',
                 'description' => $data['description'] ?? '',
                 'is_active' => false,
                 'trigger_type' => $data['trigger_type'] ?? 'contact_created',
@@ -238,7 +245,7 @@ class WorkflowManager extends Component
             $this->loadWorkflows();
             $this->dispatch('notify', type: 'success', message: 'Workflow imported successfully!');
         } catch (\Exception $e) {
-            $this->addError('importJson', 'Invalid JSON syntax structure provided. ' . $e->getMessage());
+            $this->addError('importJson', 'Invalid JSON syntax structure provided. '.$e->getMessage());
         }
     }
 
@@ -259,8 +266,8 @@ class WorkflowManager extends Component
             'config' => [
                 'match_type' => 'all', // 'all' (AND), 'any' (OR)
                 'conditions' => [
-                    ['field' => '', 'operator' => '=', 'value' => '']
-                ]
+                    ['field' => '', 'operator' => '=', 'value' => ''],
+                ],
             ],
             'true_nodes' => [],
             'false_nodes' => [],
@@ -302,13 +309,15 @@ class WorkflowManager extends Component
     }
 
     public $showLogsModal = false;
+
     public $workflowLogs = [];
+
     public $activeLogWorkflowName = '';
 
     public function viewLogs($id)
     {
         $workflow = Workflow::find($id);
-        if (!$workflow || $workflow->team_id !== \Illuminate\Support\Facades\Auth::user()->currentTeam?->id) {
+        if (! $workflow || $workflow->team_id !== \Illuminate\Support\Facades\Auth::user()->currentTeam?->id) {
             return;
         }
 

@@ -3,10 +3,9 @@
 namespace App\Livewire\Admin;
 
 use App\Services\OfferSettingsService;
-use Illuminate\Support\Collection;
-use Livewire\Component;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Livewire\Component;
 
 /**
  * OfferSettings – Super Admin Livewire component
@@ -67,7 +66,7 @@ class OfferSettings extends Component
     {
         Gate::authorize('manage-settings');
 
-        if (!Auth::user()->isSuperAdmin()) {
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -128,6 +127,7 @@ class OfferSettings extends Component
             if ($key === 'offer_included_features') {
                 $rules['includedFeatures'] = 'nullable|array';
                 $rules['includedFeatures.*'] = 'string';
+
                 continue;
             }
             $rules["settings.{$key}"] = match ($entry['type']) {
@@ -148,6 +148,7 @@ class OfferSettings extends Component
 
             if ($key === 'offer_included_features') {
                 set_setting($key, json_encode($this->includedFeatures), 'system');
+
                 continue;
             }
 
@@ -177,18 +178,19 @@ class OfferSettings extends Component
         // ── 5. Flush EntitlementService cache when live-runtime keys changed ───
         // Forces re-evaluation on the NEXT request; does not touch any team's
         // stored data — only the in-request resolution cache is cleared.
-        if (!empty(array_intersect(array_keys($changes), $liveRuntimeKeys))) {
+        if (! empty(array_intersect(array_keys($changes), $liveRuntimeKeys))) {
             app(\App\Services\EntitlementService::class)->flush();
         }
 
         // ── 6. Audit log ───────────────────────────────────────────────────────
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             \App\Services\OfferAuditService::logSettingsChanged(Auth::user(), $changes);
         }
 
         // ── 7. Precise impact flash ────────────────────────────────────────────
         if (empty($changes)) {
             session()->flash('message', 'No changes detected — settings unchanged.');
+
             return;
         }
 
@@ -197,20 +199,20 @@ class OfferSettings extends Component
         $globalKeys = array_diff(array_keys($changes), $newSignupsOnlyKeys, $liveRuntimeKeys);
 
         $impactLines = [];
-        if (!empty($signupKeys)) {
-            $impactLines[] = '⏳ ' . implode(', ', $signupKeys)
-                . ' — new signups only. Existing tenants\' trial dates and wallet credit are NOT affected.';
+        if (! empty($signupKeys)) {
+            $impactLines[] = '⏳ '.implode(', ', $signupKeys)
+                .' — new signups only. Existing tenants\' trial dates and wallet credit are NOT affected.';
         }
-        if (!empty($runtimeKeys)) {
-            $impactLines[] = '⚡ ' . implode(', ', $runtimeKeys)
-                . ' — live effect on all current trial teams. Past usage data is unchanged.';
+        if (! empty($runtimeKeys)) {
+            $impactLines[] = '⚡ '.implode(', ', $runtimeKeys)
+                .' — live effect on all current trial teams. Past usage data is unchanged.';
         }
-        if (!empty($globalKeys)) {
-            $impactLines[] = '🌐 ' . implode(', ', $globalKeys)
-                . ' — global toggle, takes effect immediately for all teams.';
+        if (! empty($globalKeys)) {
+            $impactLines[] = '🌐 '.implode(', ', $globalKeys)
+                .' — global toggle, takes effect immediately for all teams.';
         }
 
-        session()->flash('message', count($changes) . ' change(s) saved successfully.');
+        session()->flash('message', count($changes).' change(s) saved successfully.');
         session()->flash('impact_lines', $impactLines);
     }
 
@@ -225,7 +227,7 @@ class OfferSettings extends Component
 
         $this->schemaGroups = $svc->schema()
             ->groupBy('group')
-            ->map(fn($items) => $items->values()->toArray())
+            ->map(fn ($items) => $items->values()->toArray())
             ->toArray();
 
         return view('livewire.admin.offer-settings');
@@ -245,6 +247,7 @@ class OfferSettings extends Component
 
             if ($key === 'offer_included_features') {
                 $this->includedFeatures = (array) $entry['current'];
+
                 continue;
             }
 

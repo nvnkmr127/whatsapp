@@ -2,18 +2,19 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         // Modify enum to include FLAGGED
-        // Note: DB::statement is necessary for direct enum modification on some DBs, 
-        // but for Laravel consistency we might need raw SQL or doctrine dbal. 
+        // Note: DB::statement is necessary for direct enum modification on some DBs,
+        // but for Laravel consistency we might need raw SQL or doctrine dbal.
         // Since we are on MySQL/Postgres usually, using change() with enum requires careful handling.
         // Easiest is raw SQL for MySQL.
 

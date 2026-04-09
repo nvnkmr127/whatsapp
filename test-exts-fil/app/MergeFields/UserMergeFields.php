@@ -26,15 +26,15 @@ class UserMergeFields
         return [
             [
                 'name' => 'First Name',
-                'key'  => '{first_name}',
+                'key' => '{first_name}',
             ],
             [
                 'name' => 'Last Name',
-                'key'  => '{last_name}',
+                'key' => '{last_name}',
             ],
             [
                 'name' => 'User Email',
-                'key'  => '{user_email}',
+                'key' => '{user_email}',
             ],
         ];
     }
@@ -49,7 +49,7 @@ class UserMergeFields
 
         return [
             '{first_name}' => $user->firstname,
-            '{last_name}'  => $user->lastname,
+            '{last_name}' => $user->lastname,
             '{user_email}' => $user->email,
         ];
     }

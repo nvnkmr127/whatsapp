@@ -7,23 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property int                             $id
- * @property string                          $name
- * @property string                          $rel_type
- * @property string|null                     $template_id
+ * @property int $id
+ * @property string $name
+ * @property string $rel_type
+ * @property string|null $template_id
  * @property \Illuminate\Support\Carbon|null $scheduled_send_time
- * @property bool                            $send_now
- * @property array<array-key, mixed>|null    $header_params
- * @property array<array-key, mixed>|null    $body_params
- * @property array<array-key, mixed>|null    $footer_params
- * @property bool                            $pause_campaign
- * @property bool                            $select_all
- * @property bool                            $is_sent
- * @property int|null                        $sending_count
+ * @property bool $send_now
+ * @property array<array-key, mixed>|null $header_params
+ * @property array<array-key, mixed>|null $body_params
+ * @property array<array-key, mixed>|null $footer_params
+ * @property bool $pause_campaign
+ * @property bool $select_all
+ * @property bool $is_sent
+ * @property int|null $sending_count
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property string|null                     $filename
- * @property array<array-key, mixed>|null    $rel_data
+ * @property string|null $filename
+ * @property array<array-key, mixed>|null $rel_data
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CampaignDetail> $details
  * @property-read int|null $details_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CampaignDetail> $failedMessages
@@ -77,14 +77,14 @@ class Campaign extends Model
 
     protected $casts = [
         'scheduled_send_time' => 'datetime',
-        'header_params'       => 'array',
-        'body_params'         => 'array',
-        'footer_params'       => 'array',
-        'rel_data'            => 'array',
-        'send_now'            => 'boolean',
-        'pause_campaign'      => 'boolean',
-        'select_all'          => 'boolean',
-        'is_sent'             => 'boolean',
+        'header_params' => 'array',
+        'body_params' => 'array',
+        'footer_params' => 'array',
+        'rel_data' => 'array',
+        'send_now' => 'boolean',
+        'pause_campaign' => 'boolean',
+        'select_all' => 'boolean',
+        'is_sent' => 'boolean',
     ];
 
     public function details(): HasMany

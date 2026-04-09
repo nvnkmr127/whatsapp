@@ -2,13 +2,11 @@
 
 namespace App\Livewire\LeadCapture;
 
-use Livewire\Component;
-
 use App\Models\LeadCaptureWidget;
-use Livewire\Attributes\Title;
 use Illuminate\Support\Str;
-
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Growth Tools')]
 class WidgetManager extends Component
@@ -18,22 +16,68 @@ class WidgetManager extends Component
     {
         return $this->codeWidgetId ? LeadCaptureWidget::find($this->codeWidgetId) : null;
     }
+
     public $showCreateModal = false;
+
     public $showCodeModal = false;
-    public $name, $prefilled_message, $button_text, $widget_color = '#25D366';
-    public $collect_name = false, $collect_email = false;
+
+    public $name;
+
+    public $prefilled_message;
+
+    public $button_text;
+
+    public $widget_color = '#25D366';
+
+    public $collect_name = false;
+
+    public $collect_email = false;
 
     // Advanced Settings
-    public $brand_name, $brand_subtitle, $brand_logo_url, $welcome_message, $footer_text, $placeholder_name, $placeholder_email;
-    public $qr_color = '#000000', $qr_bg_color = '#ffffff';
-    public $position = 'right', $bottom_margin = 30, $side_margin = 30, $border_radius = 50;
-    public $open_by_default = false, $show_on_mobile = true, $show_on_desktop = true;
+    public $brand_name;
+
+    public $brand_subtitle;
+
+    public $brand_logo_url;
+
+    public $welcome_message;
+
+    public $footer_text;
+
+    public $placeholder_name;
+
+    public $placeholder_email;
+
+    public $qr_color = '#000000';
+
+    public $qr_bg_color = '#ffffff';
+
+    public $position = 'right';
+
+    public $bottom_margin = 30;
+
+    public $side_margin = 30;
+
+    public $border_radius = 50;
+
+    public $open_by_default = false;
+
+    public $show_on_mobile = true;
+
+    public $show_on_desktop = true;
 
     // Automation Triggers
-    public $page_targeting, $time_on_page = 0, $exit_intent = false;
+    public $page_targeting;
+
+    public $time_on_page = 0;
+
+    public $exit_intent = false;
+
     public $business_hours = []; // Format: ['mon' => ['start' => '09:00', 'end' => '17:00'], ...]
 
-    public $editingWidgetId, $codeWidgetId;
+    public $editingWidgetId;
+
+    public $codeWidgetId;
 
     protected $rules = [
         'name' => 'required|min:3',
@@ -108,7 +152,7 @@ class WidgetManager extends Component
         if ($this->editingWidgetId) {
             LeadCaptureWidget::find($this->editingWidgetId)->update($data);
         } else {
-            $data['slug'] = Str::slug($this->name) . '-' . Str::random(5);
+            $data['slug'] = Str::slug($this->name).'-'.Str::random(5);
             LeadCaptureWidget::create($data);
         }
 

@@ -4,9 +4,6 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Services\EntitlementService;
-use App\Services\OfferAuditService;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,8 +29,7 @@ class TrialOverrideService
 {
     public function __construct(
         private readonly EntitlementService $entitlements,
-    ) {
-    }
+    ) {}
 
     // ------------------------------------------------------------------
     // 1. Force Trial (bypass eligibility)
@@ -45,7 +41,7 @@ class TrialOverrideService
      * (e.g., previously claimed, different domain, etc.) as a manual exception.
      *
      * @param  int|null  $months  Null = use offer_trial_months setting
-     * @param  string    $reason  Mandatory reason for audit log
+     * @param  string  $reason  Mandatory reason for audit log
      */
     public function forceTrial(Team $team, User $admin, ?int $months = null, string $reason = ''): array
     {
@@ -122,7 +118,7 @@ class TrialOverrideService
      */
     public function revokeTrial(Team $team, User $admin, string $reason = ''): array
     {
-        if (!in_array($team->subscription_status, ['trial', 'active'], true)) {
+        if (! in_array($team->subscription_status, ['trial', 'active'], true)) {
             return [
                 'success' => false,
                 'message' => "Cannot revoke: {$team->name} is already '{$team->subscription_status}'.",
@@ -157,8 +153,8 @@ class TrialOverrideService
      * Promote a team to 'active' subscription status manually.
      * Clears trial dates so EntitlementService treats this as a paid account.
      *
-     * @param  string|null  $plan          Subscription plan name (e.g. 'starter', 'growth')
-     * @param  int|null     $durationDays  Active subscription duration (null = permanent)
+     * @param  string|null  $plan  Subscription plan name (e.g. 'starter', 'growth')
+     * @param  int|null  $durationDays  Active subscription duration (null = permanent)
      */
     public function convertToActive(
         Team $team,

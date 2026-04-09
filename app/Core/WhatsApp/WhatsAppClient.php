@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Log;
 class WhatsAppClient
 {
     protected ?Team $team = null;
+
     protected string $baseUrl;
+
     protected ?string $token = null;
+
     protected ?string $phoneId = null;
 
     protected CredentialResolver $resolver;
@@ -18,7 +21,7 @@ class WhatsAppClient
     public function __construct(CredentialResolver $resolver)
     {
         $this->resolver = $resolver;
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
     }
 
     /**
@@ -28,10 +31,10 @@ class WhatsAppClient
     {
         $this->team = $team;
         $creds = $this->resolver->resolve($team);
-        
+
         $this->token = (string) ($creds['token'] ?? '');
         $this->phoneId = $creds['phone_number_id'] ?? null;
-        
+
         return $this;
     }
 
@@ -48,11 +51,12 @@ class WhatsAppClient
      */
     public function sendRequest(string $endpoint, array $data = [], string $method = 'post'): array
     {
-        if (!$this->phoneId) {
+        if (! $this->phoneId) {
             return ['success' => false, 'error' => 'Phone ID not configured', 'status_code' => 400];
         }
 
         $url = "{$this->baseUrl}/{$this->phoneId}/{$endpoint}";
+
         return $this->sendRequestFullUrl($url, $method, $data, $endpoint);
     }
 
@@ -64,16 +68,16 @@ class WhatsAppClient
         // Sandbox Mode Interceptor
         if ($this->team && $this->team->is_sandbox_mode) {
             Log::info("WhatsApp API [SANDBOX] Intercepted [$method] to $endpoint", ['data' => $data]);
-            
+
             return [
                 'success' => true,
                 'is_sandbox' => true,
                 'data' => [
                     'messaging_product' => 'whatsapp',
                     'contacts' => [['input' => $data['to'] ?? 'unknown', 'wa_id' => $data['to'] ?? 'unknown']],
-                    'messages' => [['id' => 'sandbox_' . bin2hex(random_bytes(16))]]
+                    'messages' => [['id' => 'sandbox_'.bin2hex(random_bytes(16))]],
                 ],
-                'duration_ms' => 5.0
+                'duration_ms' => 5.0,
             ];
         }
 
@@ -87,6 +91,7 @@ class WhatsAppClient
                 if ($exception instanceof \Illuminate\Http\Client\RequestException) {
                     return $exception->response->status() >= 500;
                 }
+
                 return false;
             }, throw: false);
 
@@ -105,25 +110,26 @@ class WhatsAppClient
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
-            if (!$response) {
-                return ['success' => false, 'error' => 'Unsupported method: ' . $method, 'duration_ms' => $duration];
+            if (! $response) {
+                return ['success' => false, 'error' => 'Unsupported method: '.$method, 'duration_ms' => $duration];
             }
 
             if ($response->failed()) {
                 $failedResult = $this->handleFailedResponse($response, $url, $data, $endpoint);
                 $failedResult['duration_ms'] = $duration;
+
                 return $failedResult;
             }
 
             Log::info("WhatsApp API Success [$method] to $endpoint", [
                 'duration_ms' => $duration,
-                'status' => $response->status()
+                'status' => $response->status(),
             ]);
 
             if ($this->team) {
                 \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'success', $this->maskSensitiveData($data), [
                     'url' => $url,
-                    'duration_ms' => $duration
+                    'duration_ms' => $duration,
                 ]);
             }
 
@@ -134,8 +140,9 @@ class WhatsAppClient
                 'message' => $e->getMessage(),
                 'url' => $url,
                 'method' => $method,
-                'duration_ms' => $duration
+                'duration_ms' => $duration,
             ]);
+
             return ['success' => false, 'error' => $e->getMessage(), 'status_code' => 500, 'duration_ms' => $duration];
         }
     }
@@ -151,6 +158,7 @@ class WhatsAppClient
         // Custom handling for specific Meta error codes
         if ($errorCode === 141000) {
             Log::info('WhatsApp: Calling not supported for this number (#141000)', ['url' => $url]);
+
             return [
                 'success' => false,
                 'calling_not_supported' => true,
@@ -178,7 +186,7 @@ class WhatsAppClient
             'success' => false,
             'error' => $responseJson,
             'status_code' => $response->status(),
-            'message' => $responseJson['error']['message'] ?? 'Unknown API Error'
+            'message' => $responseJson['error']['message'] ?? 'Unknown API Error',
         ];
     }
 
@@ -203,13 +211,13 @@ class WhatsAppClient
             'password',
             'secret',
             'url',
-            'link'
+            'link',
         ];
 
         array_walk_recursive($data, function (&$value, $key) use ($sensitiveKeys) {
             if (in_array(strtolower($key), $sensitiveKeys) && is_string($value)) {
                 if ($key === 'to' || $key === 'phone_number' || $key === 'phone') {
-                    $value = substr($value, 0, 4) . '****' . substr($value, -2);
+                    $value = substr($value, 0, 4).'****'.substr($value, -2);
                 } else {
                     $value = '********';
                 }

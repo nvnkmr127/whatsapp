@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\Schema;
  * Deduplication strategy:
  *   Keep the most recently updated row per (team_id, type); delete all older ones.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         // ── 1. Deduplicate existing rows before adding the constraint ──────────
@@ -45,7 +46,7 @@ return new class extends Migration {
                     ->delete();
             }
         } else {
-            DB::statement("
+            DB::statement('
                 DELETE i FROM integrations i
                 INNER JOIN (
                     SELECT team_id, type, MAX(updated_at) AS max_updated
@@ -56,13 +57,13 @@ return new class extends Migration {
                   ON  i.team_id = keeper.team_id
                   AND i.type    = keeper.type
                   AND i.updated_at < keeper.max_updated
-            ");
+            ');
         }
 
         // ── 2. Add the UNIQUE constraint ──────────────────────────────────────
         Schema::table('integrations', function (Blueprint $table) {
             // Guard against re-running (e.g. in tests with RefreshDatabase)
-            if (!$this->uniqueExists()) {
+            if (! $this->uniqueExists()) {
                 $table->unique(['team_id', 'type'], 'integrations_team_id_type_unique');
             }
         });
@@ -82,6 +83,7 @@ return new class extends Migration {
     {
         try {
             $indexes = DB::select("SHOW INDEX FROM integrations WHERE Key_name = 'integrations_team_id_type_unique'");
+
             return count($indexes) > 0;
         } catch (\Throwable) {
             return false; // SQLite in tests — no SHOW INDEX

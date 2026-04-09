@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\WebhookSubscription;
 use App\Models\WebhookDelivery;
+use App\Models\WebhookSubscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,9 +17,13 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $subscriptionId;
+
     public $eventType;
+
     public $data;
+
     public $tries = 3;
+
     public $backoff = [10, 60, 300];
 
     public function __construct(int $subscriptionId, string $eventType, array $data)
@@ -33,7 +37,7 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
     public function handle(): void
     {
         $subscription = WebhookSubscription::find($this->subscriptionId);
-        if (!$subscription || !$subscription->is_active) {
+        if (! $subscription || ! $subscription->is_active) {
             return;
         }
 
@@ -46,7 +50,7 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
 
         $signature = null;
         if ($subscription->secret) {
-            $signature = 'sha256=' . hash_hmac('sha256', json_encode($payload), $subscription->secret);
+            $signature = 'sha256='.hash_hmac('sha256', json_encode($payload), $subscription->secret);
         }
 
         $attemptedAt = now();
@@ -66,7 +70,7 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
             ]);
 
             if ($response->failed() && $this->attempts() < $this->tries) {
-                throw new \Exception("Webhook failed with status: " . $response->status());
+                throw new \Exception('Webhook failed with status: '.$response->status());
             }
 
         } catch (\Exception $e) {
@@ -79,7 +83,7 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
                 'attempted_at' => $attemptedAt,
             ]);
 
-            Log::error("Webhook delivery failed for subscription {$subscription->id}: " . $e->getMessage());
+            Log::error("Webhook delivery failed for subscription {$subscription->id}: ".$e->getMessage());
 
             throw $e;
         }

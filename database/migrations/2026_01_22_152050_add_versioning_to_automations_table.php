@@ -4,14 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::table('automations', function (Blueprint $table) {
-            if (!Schema::hasColumn('automations', 'flow_data')) {
+            if (! Schema::hasColumn('automations', 'flow_data')) {
                 $table->json('flow_data')->nullable()->after('trigger_config');
             }
             $table->integer('version')->default(1)->after('name');

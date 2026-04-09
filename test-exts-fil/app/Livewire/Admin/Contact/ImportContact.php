@@ -50,16 +50,16 @@ class ImportContact extends Component
     protected function getValidationRules()
     {
         return [
-            'firstname'   => 'required|string|max:191',
-            'lastname'    => 'required|string|max:191',
-            'company'     => 'nullable|string|max:191',
-            'type'        => 'required|in:lead,customer',
+            'firstname' => 'required|string|max:191',
+            'lastname' => 'required|string|max:191',
+            'company' => 'nullable|string|max:191',
+            'type' => 'required|in:lead,customer',
             'description' => 'nullable|string',
-            'country_id'  => 'nullable|exists:countries,id',
-            'zip'         => 'nullable|string|max:20',
-            'city'        => 'nullable|string|max:100',
-            'state'       => 'nullable|string|max:50',
-            'address'     => 'nullable|string|max:191',
+            'country_id' => 'nullable|exists:countries,id',
+            'zip' => 'nullable|string|max:20',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:191',
             'assigned_id' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -73,8 +73,8 @@ class ImportContact extends Component
             ],
             'status_id' => 'required|exists:statuses,id',
             'source_id' => 'required|exists:sources,id',
-            'email'     => 'nullable|email|max:100|unique:contacts,email',
-            'phone'     => [
+            'email' => 'nullable|email|max:100|unique:contacts,email',
+            'phone' => [
                 'required',
                 'string',
                 'max:50',
@@ -95,7 +95,7 @@ class ImportContact extends Component
             $csv = Reader::createFromPath($this->csvFile->path());
             $csv->setHeaderOffset(0);
 
-            $headers         = array_map('strtolower', $csv->getHeader());
+            $headers = array_map('strtolower', $csv->getHeader());
             $requiredColumns = [
                 'firstname',
                 'lastname',
@@ -108,22 +108,22 @@ class ImportContact extends Component
             $missingColumns = array_diff($requiredColumns, $headers);
 
             if (! empty($missingColumns)) {
-                $this->addError('csvFile', t('missing_required_columns') . ': ' . implode(', ', $missingColumns));
+                $this->addError('csvFile', t('missing_required_columns').': '.implode(', ', $missingColumns));
 
                 return false;
             }
 
             // Get accurate count without loading all records
-            $stmt               = Statement::create();
+            $stmt = Statement::create();
             $this->totalRecords = iterator_count($stmt->process($csv));
             $this->resetCounters();
 
             return true;
         } catch (\Exception $e) {
-            $this->addError('csvFile', t('invalid_csv_file') . ': ' . $e->getMessage());
+            $this->addError('csvFile', t('invalid_csv_file').': '.$e->getMessage());
 
-            app_log('CSV validation failed: ' . $e->getMessage(), 'error', $e, [
-                'file'      => $this->csvFile->getClientOriginalName(),
+            app_log('CSV validation failed: '.$e->getMessage(), 'error', $e, [
+                'file' => $this->csvFile->getClientOriginalName(),
                 'file_path' => $this->csvFile->path(),
                 'file_size' => $this->csvFile->getSize(),
                 'file_mime' => $this->csvFile->getMimeType(),
@@ -138,8 +138,8 @@ class ImportContact extends Component
         if (empty($this->referenceData)) {
             $this->referenceData = [
                 'statuses' => Status::pluck('id', 'name')->toArray(),
-                'sources'  => Source::pluck('id', 'name')->toArray(),
-                'users'    => User::pluck('id', 'firstname')->toArray(),
+                'sources' => Source::pluck('id', 'name')->toArray(),
+                'users' => User::pluck('id', 'firstname')->toArray(),
             ];
         }
 
@@ -151,22 +151,22 @@ class ImportContact extends Component
         $record = array_change_key_case($record, CASE_LOWER);
 
         return [
-            'firstname'          => $record['firstname'],
-            'lastname'           => $record['lastname'],
-            'company'            => $record['company']          ?? null,
-            'type'               => strtolower($record['type']) ?? 'lead',
-            'description'        => $record['description']      ?? null,
-            'assigned_id'        => (int) ($record['assigned_id'] ?? auth()->id()),
-            'status_id'          => (int) $record['status_id'],
-            'source_id'          => (int) $record['source_id'],
-            'email'              => $record['email'] ?? null,
-            'phone'              => $this->formatPhoneNumber($record['phone']),
-            'addedfrom'          => auth()->id(),
-            'dateassigned'       => now(),
+            'firstname' => $record['firstname'],
+            'lastname' => $record['lastname'],
+            'company' => $record['company'] ?? null,
+            'type' => strtolower($record['type']) ?? 'lead',
+            'description' => $record['description'] ?? null,
+            'assigned_id' => (int) ($record['assigned_id'] ?? auth()->id()),
+            'status_id' => (int) $record['status_id'],
+            'source_id' => (int) $record['source_id'],
+            'email' => $record['email'] ?? null,
+            'phone' => $this->formatPhoneNumber($record['phone']),
+            'addedfrom' => auth()->id(),
+            'dateassigned' => now(),
             'last_status_change' => now(),
-            'default_language'   => 'en',
-            'created_at'         => now(),
-            'updated_at'         => now(),
+            'default_language' => 'en',
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 
@@ -177,12 +177,12 @@ class ImportContact extends Component
         foreach ($records as $index => $record) {
             try {
                 $transformedRecord = $this->transformRecord($record);
-                $validator         = Validator::make($transformedRecord, $this->getValidationRules());
+                $validator = Validator::make($transformedRecord, $this->getValidationRules());
 
                 if ($validator->fails()) {
                     $this->invalidRecords++;
                     $this->errorMessages[] = [
-                        'row'    => $this->processedRecords + $index + 1,
+                        'row' => $this->processedRecords + $index + 1,
                         'errors' => $validator->errors()->toArray(),
                     ];
 
@@ -194,16 +194,16 @@ class ImportContact extends Component
             } catch (\Exception $e) {
                 $this->invalidRecords++;
                 $this->errorMessages[] = [
-                    'row'    => $this->processedRecords + $index + 1,
+                    'row' => $this->processedRecords + $index + 1,
                     'errors' => ['system' => [$e->getMessage()]],
                 ];
 
-                app_log('Record transformation failed: ' . $e->getMessage(), 'error', $e, [
-                    'row'         => $this->processedRecords + $index + 1,
+                app_log('Record transformation failed: '.$e->getMessage(), 'error', $e, [
+                    'row' => $this->processedRecords + $index + 1,
                     'record_data' => $record,
-                    'batch_size'  => count($records),
-                    'file'        => $e->getFile(),
-                    'line'        => $e->getLine(),
+                    'batch_size' => count($records),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
             }
         }
@@ -213,10 +213,10 @@ class ImportContact extends Component
                 Contact::insert($validRecords);
             } catch (\Exception $e) {
 
-                app_log('Batch insert failed: ' . $e->getMessage(), 'error', $e, [
+                app_log('Batch insert failed: '.$e->getMessage(), 'error', $e, [
                     'batch_size' => count($validRecords),
-                    'file'       => $e->getFile(),
-                    'line'       => $e->getLine(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
 
                 foreach ($validRecords as $record) {
@@ -226,14 +226,14 @@ class ImportContact extends Component
                         $this->invalidRecords++;
                         $this->validRecords--;
                         $this->errorMessages[] = [
-                            'row'    => 'Unknown',
+                            'row' => 'Unknown',
                             'errors' => ['system' => [$inner->getMessage()]],
                         ];
 
-                        app_log('Fallback record creation failed: ' . $inner->getMessage(), 'error', $inner, [
+                        app_log('Fallback record creation failed: '.$inner->getMessage(), 'error', $inner, [
                             'record_data' => $record,
-                            'file'        => $inner->getFile(),
-                            'line'        => $inner->getLine(),
+                            'file' => $inner->getFile(),
+                            'line' => $inner->getLine(),
                         ]);
                     }
                 }
@@ -279,14 +279,14 @@ class ImportContact extends Component
 
                 $recordsProcessed = count($records);
                 $this->processedRecords += $recordsProcessed;
-                $offset                 += $this->batchSize;
+                $offset += $this->batchSize;
 
                 // Update the UI
                 $this->dispatch('updateImportProgress', [
                     'processed' => $this->processedRecords,
-                    'total'     => $this->totalRecords,
-                    'valid'     => $this->validRecords,
-                    'invalid'   => $this->invalidRecords,
+                    'total' => $this->totalRecords,
+                    'valid' => $this->validRecords,
+                    'invalid' => $this->invalidRecords,
                 ]);
 
                 gc_collect_cycles();
@@ -295,28 +295,28 @@ class ImportContact extends Component
             $this->dispatch('importComplete');
 
             $this->notify([
-                'type'    => 'success',
-                'message' => "{$this->validRecords} " . t('import_completed', [
-                    'valid'   => $this->validRecords,
+                'type' => 'success',
+                'message' => "{$this->validRecords} ".t('import_completed', [
+                    'valid' => $this->validRecords,
                     'invalid' => $this->invalidRecords,
                 ]),
             ]);
         } catch (\Exception $e) {
 
-            app_log('Import failed: ' . $e->getMessage(), 'error', $e, [
-                'user_id'    => auth()->id(),
-                'file_path'  => $this->csvFile->path(),
-                'processed'  => $this->processedRecords,
-                'valid'      => $this->validRecords,
-                'invalid'    => $this->invalidRecords,
+            app_log('Import failed: '.$e->getMessage(), 'error', $e, [
+                'user_id' => auth()->id(),
+                'file_path' => $this->csvFile->path(),
+                'processed' => $this->processedRecords,
+                'valid' => $this->validRecords,
+                'invalid' => $this->invalidRecords,
                 'batch_size' => $this->batchSize,
-                'file'       => $e->getFile(),
-                'line'       => $e->getLine(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('import_error') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('import_error').': '.$e->getMessage(),
             ]);
         } finally {
             $this->importInProgress = false;
@@ -325,10 +325,10 @@ class ImportContact extends Component
 
     protected function resetCounters()
     {
-        $this->validRecords     = 0;
-        $this->invalidRecords   = 0;
+        $this->validRecords = 0;
+        $this->invalidRecords = 0;
         $this->processedRecords = 0;
-        $this->errorMessages    = [];
+        $this->errorMessages = [];
     }
 
     protected function formatPhoneNumber($phone)
@@ -336,7 +336,7 @@ class ImportContact extends Component
         $phone = preg_replace('/[^\d+]/', '', $phone);
 
         if (! str_starts_with($phone, '+')) {
-            $phone = '+' . $phone;
+            $phone = '+'.$phone;
         }
 
         return $phone;

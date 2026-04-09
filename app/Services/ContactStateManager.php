@@ -156,7 +156,7 @@ class ContactStateManager
      */
     public function isWithin24hWindow(Contact $contact): bool
     {
-        if (!$contact->last_customer_message_at) {
+        if (! $contact->last_customer_message_at) {
             return false;
         }
 
@@ -172,7 +172,7 @@ class ContactStateManager
     {
         $lastMessage = $contact->messages()->latest()->first();
 
-        if (!$lastMessage || $lastMessage->direction !== 'inbound') {
+        if (! $lastMessage || $lastMessage->direction !== 'inbound') {
             return false;
         }
 
@@ -182,7 +182,7 @@ class ContactStateManager
             ->where('created_at', '>', $lastMessage->created_at)
             ->exists();
 
-        return !$hasReply;
+        return ! $hasReply;
     }
 
     /**
@@ -205,7 +205,7 @@ class ContactStateManager
             $oldState = $contact->lifecycle_state;
             $contact->update(['lifecycle_state' => $newState]);
 
-            Log::info("Contact lifecycle changed", [
+            Log::info('Contact lifecycle changed', [
                 'contact_id' => $contact->id,
                 'old_state' => $oldState,
                 'new_state' => $newState,
@@ -233,7 +233,7 @@ class ContactStateManager
             'consent_age_days' => $contact->opt_in_at
                 ? (int) abs(now()->diffInDays($contact->opt_in_at, false))
                 : null,
-            'is_consent_expired' => !$contact->hasValidConsent(),
+            'is_consent_expired' => ! $contact->hasValidConsent(),
         ]);
     }
 

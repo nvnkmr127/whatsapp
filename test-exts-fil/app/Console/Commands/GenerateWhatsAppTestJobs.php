@@ -35,7 +35,7 @@ class GenerateWhatsAppTestJobs extends Command
 
         for ($i = 0; $i < $count; $i++) {
             // Get phone number by cycling through the array
-            $phoneIndex  = $i % count($this->phoneNumbers);
+            $phoneIndex = $i % count($this->phoneNumbers);
             $phoneNumber = $this->phoneNumbers[$phoneIndex];
 
             $message = new WhatsAppMessage(

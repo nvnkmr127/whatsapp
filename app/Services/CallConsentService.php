@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Models\Team;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class CallConsentService
 {
@@ -27,7 +27,7 @@ class CallConsentService
 
         // 1. Check trigger type validity
         $checks['trigger_valid'] = $this->validateTriggerType($triggerType, $context, $dryRun);
-        if (!$checks['trigger_valid']['passed']) {
+        if (! $checks['trigger_valid']['passed']) {
             return $this->buildBlockedResponse('trigger', $checks);
         }
 
@@ -38,13 +38,13 @@ class CallConsentService
             $checks['consent'] = $this->validateAgentOfferedConsent($contact, $context);
         }
 
-        if (!$checks['consent']['passed']) {
+        if (! $checks['consent']['passed']) {
             return $this->buildBlockedResponse('consent', $checks);
         }
 
         // 3. Check conversation context
         $checks['context'] = $this->validateConversationContext($contact);
-        if (!$checks['context']['passed']) {
+        if (! $checks['context']['passed']) {
             return $this->buildBlockedResponse('context', $checks);
         }
 
@@ -53,7 +53,7 @@ class CallConsentService
 
         // 5. Check automation state
         $checks['automation'] = $this->checkAutomationState($contact, $context);
-        if (!$checks['automation']['passed']) {
+        if (! $checks['automation']['passed']) {
             return $this->buildBlockedResponse('automation', $checks);
         }
 
@@ -72,13 +72,13 @@ class CallConsentService
      */
     protected function validateTriggerType(string $triggerType, array $context, bool $dryRun = false): array
     {
-        if (!$dryRun) {
+        if (! $dryRun) {
             Log::info('CallConsentService: Validating Trigger', ['type' => $triggerType, 'context' => $context]);
         }
 
         $validTriggers = ['user_initiated', 'agent_offered'];
 
-        if (!in_array($triggerType, $validTriggers)) {
+        if (! in_array($triggerType, $validTriggers)) {
             return [
                 'passed' => false,
                 'block_code' => 'INVALID_TRIGGER_TYPE',
@@ -94,7 +94,7 @@ class CallConsentService
             $validSources = ['message_keyword', 'button_click', 'flow_completion', 'in_app_action'];
             $source = $context['trigger_source'] ?? null;
 
-            if (!$source || !in_array($source, $validSources)) {
+            if (! $source || ! in_array($source, $validSources)) {
                 return [
                     'passed' => false,
                     'block_code' => 'INVALID_TRIGGER_SOURCE',
@@ -108,7 +108,7 @@ class CallConsentService
             // If source is message_keyword, we need to ensure the message actually contains keywords
             if ($source === 'message_keyword') {
                 $message = $context['trigger_message'] ?? '';
-                if (!static::detectCallRequest($message)) {
+                if (! static::detectCallRequest($message)) {
                     return [
                         'passed' => false,
                         'block_code' => 'NO_CALL_KEYWORD_DETECTED',
@@ -184,7 +184,7 @@ class CallConsentService
 
         // Check if offer was sent
         $offerSentAt = $context['offer_sent_at'] ?? null;
-        if (!$offerSentAt) {
+        if (! $offerSentAt) {
             return [
                 'passed' => false,
                 'block_code' => 'NO_OFFER_SENT',
@@ -197,7 +197,7 @@ class CallConsentService
 
         // Check if user responded affirmatively
         $userResponse = $context['user_response'] ?? null;
-        if (!$userResponse || !static::isAffirmative($userResponse)) {
+        if (! $userResponse || ! static::isAffirmative($userResponse)) {
             return [
                 'passed' => false,
                 'block_code' => 'NO_EXPLICIT_CONSENT',
@@ -249,7 +249,7 @@ class CallConsentService
             ->latest()
             ->first();
 
-        if (!$conversation) {
+        if (! $conversation) {
             return [
                 'passed' => false,
                 'block_code' => 'NO_CONVERSATION_HISTORY',
@@ -277,7 +277,7 @@ class CallConsentService
             ->where('direction', 'inbound')
             ->exists();
 
-        if (!$hasInboundMessage) {
+        if (! $hasInboundMessage) {
             return [
                 'passed' => false,
                 'block_code' => 'NO_USER_ENGAGEMENT',
@@ -314,7 +314,7 @@ class CallConsentService
             ->latest()
             ->first();
 
-        if (!$conversation) {
+        if (! $conversation) {
             return [
                 'passed' => false,
                 'within_window' => false,
@@ -329,7 +329,7 @@ class CallConsentService
             ->latest()
             ->first();
 
-        if (!$lastInboundMessage) {
+        if (! $lastInboundMessage) {
             return [
                 'passed' => false,
                 'within_window' => false,
@@ -368,7 +368,7 @@ class CallConsentService
             $automationType = $context['automation_type'] ?? null;
             $allowedTypes = ['support_flow', 'callback_request', 'escalation'];
 
-            if (!in_array($automationType, $allowedTypes)) {
+            if (! in_array($automationType, $allowedTypes)) {
                 return [
                     'passed' => false,
                     'automation_active' => true,
@@ -442,14 +442,14 @@ class CallConsentService
                 'updated_at' => now(),
             ]);
 
-            Log::info("Call consent logged", [
+            Log::info('Call consent logged', [
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
                 'consent_type' => $consentType,
                 'trigger_type' => $triggerType,
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to log call consent: " . $e->getMessage(), [
+            Log::error('Failed to log call consent: '.$e->getMessage(), [
                 'team_id' => $this->team->id,
                 'contact_id' => $contact->id,
             ]);
@@ -531,7 +531,7 @@ class CallConsentService
 
         return $messages[$blockCode] ?? [
             'user' => 'Calling is currently unavailable.',
-            'admin' => 'Unknown block reason: ' . $blockCode,
+            'admin' => 'Unknown block reason: '.$blockCode,
         ];
     }
 
@@ -573,7 +573,7 @@ class CallConsentService
         $messageLower = trim(strtolower($message));
 
         foreach ($affirmatives as $affirmative) {
-            if ($messageLower === $affirmative || str_starts_with($messageLower, $affirmative . ' ') || str_ends_with($messageLower, ' ' . $affirmative)) {
+            if ($messageLower === $affirmative || str_starts_with($messageLower, $affirmative.' ') || str_ends_with($messageLower, ' '.$affirmative)) {
                 return true;
             }
         }

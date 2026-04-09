@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Automation;
 use App\Models\Setting;
 use App\Models\WhatsappTemplate;
-use Illuminate\Support\Facades\Http;
 
 class AutomationValidationService
 {
@@ -22,7 +21,7 @@ class AutomationValidationService
             'is_activatable' => true,
             'critical_errors' => 0,
             'warnings' => 0,
-            'issues' => []
+            'issues' => [],
         ];
 
         // 1. Structural Validations
@@ -56,8 +55,8 @@ class AutomationValidationService
         }
 
         foreach ($nodes as $node) {
-            if (!in_array($node['id'], $reachable)) {
-                $this->addIssue($results, 'warning', "Node is unreachable from any trigger. This logic will never execute.", $node['id']);
+            if (! in_array($node['id'], $reachable)) {
+                $this->addIssue($results, 'warning', 'Node is unreachable from any trigger. This logic will never execute.', $node['id']);
             }
         }
 
@@ -69,7 +68,7 @@ class AutomationValidationService
             $isTerminalNode = in_array($node['type'], ['handover', 'stop', 'stop_flow']);
             $hasOutgoingEdges = collect($edges)->contains('source', $node['id']);
 
-            if (!$isTerminalNode && !$hasOutgoingEdges && $node['type'] !== 'trigger') {
+            if (! $isTerminalNode && ! $hasOutgoingEdges && $node['type'] !== 'trigger') {
                 $this->addIssue($results, 'warning', "Flow stops here. Add an outgoing path if this isn't the end.", $node['id']);
             }
         }
@@ -84,10 +83,10 @@ class AutomationValidationService
 
         if (isset($adj[$u])) {
             foreach ($adj[$u] as $v) {
-                if (!isset($visited[$v])) {
+                if (! isset($visited[$v])) {
                     $this->detectCycles($v, $adj, $visited, $stack, $results);
                 } elseif (isset($stack[$v])) {
-                    $this->addIssue($results, 'error', "Circular loop detected. This will cause an infinite loop.", $u);
+                    $this->addIssue($results, 'error', 'Circular loop detected. This will cause an infinite loop.', $u);
                 }
             }
         }
@@ -97,8 +96,9 @@ class AutomationValidationService
 
     protected function findReachable($u, $adj, &$reachable)
     {
-        if (in_array($u, $reachable))
+        if (in_array($u, $reachable)) {
             return;
+        }
         $reachable[] = $u;
         if (isset($adj[$u])) {
             foreach ($adj[$u] as $v) {
@@ -121,14 +121,14 @@ class AutomationValidationService
 
             case 'template':
                 $templateName = $data['template_name'] ?? null;
-                if (!$templateName) {
+                if (! $templateName) {
                     $this->addIssue($results, 'error', 'No template selected.', $node['id'], 'nodeText');
                 } else {
                     $exists = WhatsappTemplate::where('team_id', $teamId)
                         ->where('name', $templateName)
                         ->where('status', 'APPROVED')
                         ->exists();
-                    if (!$exists) {
+                    if (! $exists) {
                         $this->addIssue($results, 'error', "Template '{$templateName}' is not approved or was deleted.", $node['id'], 'nodeText');
                     }
                 }
@@ -136,7 +136,7 @@ class AutomationValidationService
 
             case 'openai':
                 $apiKey = Setting::where('key', "ai_openai_api_key_$teamId")->value('value');
-                if (!$apiKey) {
+                if (! $apiKey) {
                     $this->addIssue($results, 'error', 'OpenAI API Key is missing in Team Settings.', $node['id']);
                 }
                 if (empty($data['prompt'])) {
@@ -148,7 +148,7 @@ class AutomationValidationService
             case 'api_request':
                 if (empty($data['url'])) {
                     $this->addIssue($results, 'error', 'API URL is required.', $node['id'], 'nodeUrl');
-                } elseif (!filter_var($data['url'], FILTER_VALIDATE_URL)) {
+                } elseif (! filter_var($data['url'], FILTER_VALIDATE_URL)) {
                     $this->addIssue($results, 'warning', 'API URL format looks invalid.', $node['id'], 'nodeUrl');
                 }
                 break;
@@ -172,7 +172,7 @@ class AutomationValidationService
                     ->where('team_id', $teamId)
                     ->where('receives_tickets', true)
                     ->exists();
-                if (!$hasAgents) {
+                if (! $hasAgents) {
                     $this->addIssue($results, 'error', 'No agents are configured to receive tickets. Handover will fail.', $node['id']);
                 }
                 break;
@@ -235,7 +235,7 @@ class AutomationValidationService
             'level' => $level,
             'message' => $message,
             'node_id' => $nodeId,
-            'field' => $field
+            'field' => $field,
         ];
 
         if ($level === 'error') {

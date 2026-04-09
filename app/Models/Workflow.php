@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Workflow extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -43,8 +43,6 @@ class Workflow extends Model
         'conversions_count' => 'integer',
         'time_saved_minutes' => 'integer',
     ];
-
-
 
     public function creator(): BelongsTo
     {

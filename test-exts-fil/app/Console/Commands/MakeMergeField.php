@@ -42,7 +42,7 @@ class MakeMergeField extends Command
         $methodName = $this->generateMethodName($className);
 
         $folderPath = app_path('MergeFields');
-        $filePath   = $folderPath . '/' . $className . '.php';
+        $filePath = $folderPath.'/'.$className.'.php';
 
         // Check if the folder exists, if not, create it
         if (! File::exists($folderPath)) {
@@ -109,7 +109,7 @@ class {$className}
     {
         // Remove "MergeFields" if it's there and convert the first character to lowercase
         $methodName = str_replace('MergeFields', '', $className);
-        $methodName = strtolower($methodName) . '-group';
+        $methodName = strtolower($methodName).'-group';
 
         return $methodName;
     }

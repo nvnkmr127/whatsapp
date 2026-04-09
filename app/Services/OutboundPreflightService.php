@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\TeamWallet;
-use App\Services\EntitlementService;
 
 /**
  * OutboundPreflightService
@@ -20,7 +19,7 @@ use App\Services\EntitlementService;
  * 4. Usage Limit: Has the monthly quota for this specific action been breached?
  * 5. Wallet Balance: Does the team have enough pre-paid wallet balance to cover the action cost?
  * 6. Meta-Level Limits: (If applicable) Is the WABA account healthy and under Meta's daily API limits?
- * 
+ *
  * Centralizing this here prevents scattered tier-checks and ensures
  * zero retroactive billing or silent failures.
  */
@@ -28,18 +27,17 @@ class OutboundPreflightService
 {
     public function __construct(
         private readonly EntitlementService $entitlements,
-    ) {
-    }
+    ) {}
 
     /**
      * Run the complete preflight checklist.
      * Returns an array: ['allowed' => bool, 'reason' => string, 'code' => string]
      *
-     * @param Team $team The executing team
-     * @param string $feature The entitlement feature key (e.g., 'send_message', 'calling')
-     * @param string|null $limitKey The usage limit key (e.g., 'message_limit', 'call_minutes')
-     * @param int|float $currentUsage Current usage count to evaluate against the limit
-     * @param float $cost Cost of the action to check against the wallet
+     * @param  Team  $team  The executing team
+     * @param  string  $feature  The entitlement feature key (e.g., 'send_message', 'calling')
+     * @param  string|null  $limitKey  The usage limit key (e.g., 'message_limit', 'call_minutes')
+     * @param  int|float  $currentUsage  Current usage count to evaluate against the limit
+     * @param  float  $cost  Cost of the action to check against the wallet
      */
     public function authorize(
         Team $team,
@@ -53,17 +51,17 @@ class OutboundPreflightService
         // ── 1. & 2. Overarching Active State (Trial & Grace) ────────
         // $e->active() encompasses Trial checks, Paid validity, and Grace periods.
         // It returns false if Trial is expired OR if Paid is past Grace.
-        if (!$e->active()) {
+        if (! $e->active()) {
             return [
                 'allowed' => false,
                 'code' => 'ERR_SUBSCRIPTION_INACTIVE',
-                'reason' => $e->statusLabel() . ' — Subscription or trial has expired.',
+                'reason' => $e->statusLabel().' — Subscription or trial has expired.',
             ];
         }
 
         // ── 3. Plan Entitlement ─────────────────────────────────────
         // Explicitly check if the current tier (Trial or Paid) enables this capability.
-        if (!$e->can($feature)) {
+        if (! $e->can($feature)) {
             return [
                 'allowed' => false,
                 'code' => 'ERR_FEATURE_LOCKED',
@@ -72,16 +70,24 @@ class OutboundPreflightService
         }
 
         // ── 4. Usage Limit ──────────────────────────────────────────
-        // Only enforce limits if the action is FREE (cost = 0) or if explicitly capped.
-        if ($limitKey && $cost <= 0) {
+        // If they have exceeded their quota, they can still proceed IF they are paying for it out of pocket.
+        // However, if it's a free action (cost <= 0) and they exceed quota, block it.
+        $isOverQuota = false;
+        $limit = null;
+
+        if ($limitKey) {
             $limit = $e->limit($limitKey);
-            if ($limit > 0 && $currentUsage >= $limit) {
-                return [
-                    'allowed' => false,
-                    'code' => 'ERR_QUOTA_EXCEEDED',
-                    'reason' => "Monthly quota of {$limit} for {$limitKey} has been reached. Please top-up your wallet to send more messages.",
-                ];
+            if ($limit !== null && $limit >= 0 && $currentUsage >= $limit) {
+                $isOverQuota = true;
             }
+        }
+
+        if ($isOverQuota && $cost <= 0) {
+            return [
+                'allowed' => false,
+                'code' => 'ERR_QUOTA_EXCEEDED',
+                'reason' => "Monthly quota of {$limit} for {$limitKey} has been reached. Please top-up your wallet or upgrade to continue.",
+            ];
         }
 
         // ── 5. Wallet Balance ───────────────────────────────────────
@@ -90,10 +96,18 @@ class OutboundPreflightService
             $balance = $wallet ? (float) $wallet->balance : 0.00;
 
             if ($balance < $cost) {
+                if ($isOverQuota) {
+                    return [
+                        'allowed' => false,
+                        'code' => 'ERR_QUOTA_EXCEEDED',
+                        'reason' => "Monthly quota of {$limit} for {$limitKey} has been reached. Please top-up your wallet to continue.",
+                    ];
+                }
+
                 return [
                     'allowed' => false,
                     'code' => 'ERR_INSUFFICIENT_FUNDS',
-                    'reason' => "Wallet balance (\$" . number_format($balance, 2) . ") is insufficient for action cost (\$" . number_format($cost, 2) . ").",
+                    'reason' => 'Wallet balance ($'.number_format($balance, 2).') is insufficient for action cost ($'.number_format($cost, 2).').',
                 ];
             }
         }

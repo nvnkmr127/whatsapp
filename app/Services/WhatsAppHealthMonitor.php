@@ -23,7 +23,7 @@ class WhatsAppHealthMonitor
             $engine->verify(); // This updates $team->whatsapp_setup_state, quality, and limits
             $team->refresh(); // Refresh in-memory model to use new limits in health checks
         } catch (\Exception $e) {
-            Log::error("Error syncing integration state in HealthMonitor: " . $e->getMessage());
+            Log::error('Error syncing integration state in HealthMonitor: '.$e->getMessage());
         }
 
         // 2. Run detailed dimension checks with fresh data
@@ -125,8 +125,8 @@ class WhatsAppHealthMonitor
 
         // [AUTO-ALERT] Critical Token Health
         // Skip alert if it's a permanent token (no expiry) unless there's another non-expiry issue
-        if ($score < 50 && $team && $team->owner && !is_null($team->whatsapp_token_expires_at)) {
-            $msg = !empty($issues) ? $issues[0] : "Token health is critical ({$score}%)";
+        if ($score < 50 && $team && $team->owner && ! is_null($team->whatsapp_token_expires_at)) {
+            $msg = ! empty($issues) ? $issues[0] : "Token health is critical ({$score}%)";
 
             // Check for existing unacknowledged alert of same type to avoid duplicates
             $existingAlert = WhatsAppHealthAlert::where('team_id', $team->id)
@@ -135,13 +135,13 @@ class WhatsAppHealthMonitor
                 ->whereNull('resolved_at')
                 ->first();
 
-            if (!$existingAlert) {
+            if (! $existingAlert) {
                 $this->createAlert($team, AlertSeverity::CRITICAL, 'token', 'token_expiry', $msg);
 
                 try {
                     $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification($team, 'token_expiry', $msg));
                 } catch (\Exception $e) {
-                    Log::error("Failed to notify token alert: " . $e->getMessage());
+                    Log::error('Failed to notify token alert: '.$e->getMessage());
                 }
             }
         }
@@ -168,7 +168,7 @@ class WhatsAppHealthMonitor
 
         // Check verification status
         $verified = $team->whatsapp_phone_verification_status === 'verified';
-        if (!$verified) {
+        if (! $verified) {
             $score -= 40;
             $issues[] = 'Phone not verified';
         }
@@ -253,8 +253,8 @@ class WhatsAppHealthMonitor
                 ->whereNull('resolved_at')
                 ->first();
 
-            if (!$existingAlert) {
-                $this->createAlert($team, AlertSeverity::CRITICAL, 'quality', 'quality_red', "Your WhatsApp Quality has dropped to RED. Sending is disabled.");
+            if (! $existingAlert) {
+                $this->createAlert($team, AlertSeverity::CRITICAL, 'quality', 'quality_red', 'Your WhatsApp Quality has dropped to RED. Sending is disabled.');
             }
         }
 
@@ -417,7 +417,7 @@ class WhatsAppHealthMonitor
     {
         // Check token validity
         if (
-            !$team->whatsapp_access_token ||
+            ! $team->whatsapp_access_token ||
             ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->isPast())
         ) {
             return false;
@@ -447,7 +447,7 @@ class WhatsAppHealthMonitor
     {
         $issues = [];
 
-        if (!$team->whatsapp_access_token) {
+        if (! $team->whatsapp_access_token) {
             $issues[] = 'No access token configured';
         } elseif ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->isPast()) {
             $issues[] = 'Access token expired';
@@ -529,7 +529,7 @@ class WhatsAppHealthMonitor
                 \App\Models\AlertLog::create([
                     'rule_id' => $rule->id,
                     'team_id' => $team->id,
-                    'suppression_key' => md5($slug . $team->id . floor(time() / $rule->throttle_seconds)),
+                    'suppression_key' => md5($slug.$team->id.floor(time() / $rule->throttle_seconds)),
                     'status' => 'processed',
                     'severity' => $severity,
                     'payload' => array_merge(['message' => $message], $metadata),

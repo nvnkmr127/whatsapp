@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -13,7 +14,7 @@ return new class extends Migration {
         // First, clean up any duplicate whatsapp_message_id values
         // Remove duplicates before adding unique constraint
         // MySQL workaround: can't specify target table in FROM clause
-        DB::statement("
+        DB::statement('
             DELETE FROM messages 
             WHERE id IN (
                 SELECT id FROM (
@@ -24,7 +25,7 @@ return new class extends Migration {
                     AND m1.whatsapp_message_id IS NOT NULL
                 ) AS duplicates
             )
-        ");
+        ');
 
         Schema::table('messages', function (Blueprint $table) {
             // Drop existing index if it exists (wrapped in try-catch to handle if it doesn't exist)

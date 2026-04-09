@@ -27,7 +27,7 @@ return new class extends Migration
             $table->json('custom_fields')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->index(['team_id', 'name']);
         });
 
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->foreignId('related_contact_id')->constrained('contacts')->cascadeOnDelete();
             $table->string('type'); // colleague, referral, family, etc.
             $table->timestamps();
-            
+
             $table->unique(['contact_id', 'related_contact_id', 'type'], 'unique_relationship');
         });
     }
@@ -51,7 +51,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('contact_relationships');
-        
+
         Schema::table('contacts', function (Blueprint $table) {
             $table->dropForeign(['company_id']);
             $table->dropColumn(['company_id', 'job_title']);

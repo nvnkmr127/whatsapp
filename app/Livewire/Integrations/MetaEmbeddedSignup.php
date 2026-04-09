@@ -2,12 +2,12 @@
 
 namespace App\Livewire\Integrations;
 
-use Livewire\Component;
+use App\Enums\IntegrationStatus;
+use App\Enums\IntegrationType;
+use App\Models\Integration;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Integration;
-use App\Enums\IntegrationType;
-use App\Enums\IntegrationStatus;
+use Livewire\Component;
 
 class MetaEmbeddedSignup extends Component
 {
@@ -29,9 +29,10 @@ class MetaEmbeddedSignup extends Component
         try {
             // 1. Exchange for Long-Lived Token
             $longLivedTokenData = $this->exchangeForLongLivedToken($shortLivedToken);
-            
-            if (!$longLivedTokenData) {
+
+            if (! $longLivedTokenData) {
                 $this->errorMessage = 'Failed to exchange token with Meta.';
+
                 return;
             }
 
@@ -50,7 +51,7 @@ class MetaEmbeddedSignup extends Component
                 ->where('type', 'meta_marketing') // Use string literal or Enum if available
                 ->get()
                 ->filter(function ($integration) use ($facebookUserId) {
-                    return isset($integration->credentials['user_id']) && 
+                    return isset($integration->credentials['user_id']) &&
                            $integration->credentials['user_id'] === $facebookUserId;
                 })
                 ->first();
@@ -69,7 +70,7 @@ class MetaEmbeddedSignup extends Component
                     'status' => 'active', // IntegrationStatus::ACTIVE
                     'updated_at' => now(),
                 ]);
-                
+
                 $message = "Reconnected Meta account for $name";
             } else {
                 Integration::create([
@@ -88,7 +89,7 @@ class MetaEmbeddedSignup extends Component
             $this->dispatch('refresh-integrations'); // Event to refresh parent list if needed
 
         } catch (\Exception $e) {
-            Log::error('Meta Embedded Signup Error: ' . $e->getMessage());
+            Log::error('Meta Embedded Signup Error: '.$e->getMessage());
             $this->errorMessage = 'An error occurred while connecting. Please try again.';
         }
     }
@@ -113,6 +114,7 @@ class MetaEmbeddedSignup extends Component
         }
 
         Log::error('Meta Token Exchange Failed', ['body' => $response->body()]);
+
         return null;
     }
 

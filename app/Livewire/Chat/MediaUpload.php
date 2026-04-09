@@ -10,7 +10,9 @@ class MediaUpload extends Component
     use WithFileUploads;
 
     public $conversationId;
+
     public $newAttachment;
+
     public $uploadError = null;
 
     protected $listeners = [
@@ -25,12 +27,12 @@ class MediaUpload extends Component
     public function updatedNewAttachment()
     {
         $this->uploadError = null;
-        
+
         try {
             $this->validate([
                 'newAttachment' => 'max:16384', // 16MB limit
             ]);
-            
+
             $this->dispatch('mediaUploaded', [
                 'name' => $this->newAttachment->getClientOriginalName(),
                 'mime_type' => $this->newAttachment->getMimeType(),
@@ -38,7 +40,7 @@ class MediaUpload extends Component
                 'temp_url' => $this->newAttachment->temporaryUrl(),
             ]);
         } catch (\Exception $e) {
-            $this->uploadError = "File upload failed: " . $e->getMessage();
+            $this->uploadError = 'File upload failed: '.$e->getMessage();
             $this->newAttachment = null;
         }
     }

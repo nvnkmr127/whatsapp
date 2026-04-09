@@ -14,9 +14,7 @@ class SendMessageStatusWebhook implements ShouldQueue
 
     public $tries = 3;
 
-    public function __construct(protected WebhookService $webhookService)
-    {
-    }
+    public function __construct(protected WebhookService $webhookService) {}
 
     /**
      * Handle the event.
@@ -26,7 +24,7 @@ class SendMessageStatusWebhook implements ShouldQueue
         $message = $event->message;
         $team = $message->team;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -47,7 +45,7 @@ class SendMessageStatusWebhook implements ShouldQueue
         try {
             $this->webhookService->dispatch($team->id, 'message.status_updated', $data);
         } catch (\Exception $e) {
-            Log::error("Failed to dispatch message.status_updated webhook: " . $e->getMessage());
+            Log::error('Failed to dispatch message.status_updated webhook: '.$e->getMessage());
         }
     }
 }

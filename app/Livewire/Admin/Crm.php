@@ -4,15 +4,11 @@ namespace App\Livewire\Admin;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Services\OfferAuditService;
-use App\Services\OfferEligibilityService;
 use App\Services\TrialOverrideService;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Auth;
-
-use Livewire\Attributes\Layout;
 
 #[Layout('components.layouts.app')]
 class Crm extends Component
@@ -20,44 +16,67 @@ class Crm extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = '';
+
     public $setupFilter = '';
+
     public $funnelStage = '';
+
     public $showOfferOnly = false;
 
     public $stats = [];
+
     public $funnel = [];
+
     public $selectedTeamId = null;
+
     public $showTeamModal = false;
 
     // ── CRM Activity & Tasks ───────────────────────────────────────────
     public $activityType = 'note';
+
     public $activityContent = '';
+
     public $activityOutcome = '';
+
     public $activityDuration = null;
 
     public $taskTitle = '';
+
     public $taskDescription = '';
+
     public $taskDueDate = '';
+
     public $taskPriority = 'medium';
+
     public $taskAssignee = null;
 
     // ── Advanced Filters & Segments ────────────────────────────────────
     public $showFilters = false;
+
     public $filterRevenueMin;
+
     public $filterRevenueMax;
+
     public $filterDateStart;
+
     public $filterDateEnd;
+
     public $filterLeadScoreMin;
+
     public $segmentName = '';
 
     // ── Override modal state ───────────────────────────────────────────
     /** Number of days to extend trial (used in extend modal) */
     public int $extendDays = 30;
+
     /** Admin-supplied reason for every override action */
     public string $overrideReason = '';
+
     /** Plan name for manual conversion */
     public string $convertPlan = 'starter';
+
     /** Confirmation text for revoke (must type team name) */
     public string $revokeConfirmation = '';
 
@@ -65,7 +84,7 @@ class Crm extends Component
 
     public function mount()
     {
-        if (!Auth::user()->isSuperAdmin()) {
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403);
         }
         $this->loadStats();
@@ -128,7 +147,7 @@ class Crm extends Component
         ]);
 
         $team = Team::find($this->selectedTeamId);
-        
+
         $team->crmActivities()->create([
             'type' => $this->activityType,
             'content' => $this->activityContent,
@@ -174,13 +193,13 @@ class Crm extends Component
 
     public function toggleFilters()
     {
-        $this->showFilters = !$this->showFilters;
+        $this->showFilters = ! $this->showFilters;
     }
-    
+
     public function saveSegment()
     {
         $this->validate(['segmentName' => 'required']);
-        
+
         $filters = [
             'revenue_min' => $this->filterRevenueMin,
             'revenue_max' => $this->filterRevenueMax,
@@ -191,16 +210,16 @@ class Crm extends Component
             'setup' => $this->setupFilter,
             'funnel' => $this->funnelStage,
         ];
-        
+
         Auth::user()->createdCrmSegments()->create([
             'name' => $this->segmentName,
             'filters' => array_filter($filters), // Remove nulls
         ]);
-        
+
         $this->segmentName = '';
         session()->flash('message', 'Segment saved.');
     }
-    
+
     public function loadSegment($segmentId)
     {
         $segment = \App\Models\CrmSegment::find($segmentId);
@@ -232,11 +251,13 @@ class Crm extends Component
      */
     public function forceTrial(int $teamId): void
     {
-        if (!Auth::user()->isSuperAdmin())
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403);
+        }
 
         if (empty(trim($this->overrideReason))) {
             session()->flash('error', 'A reason is required for forced trial assignment.');
+
             return;
         }
 
@@ -257,8 +278,9 @@ class Crm extends Component
      */
     public function extendTrial(int $teamId): void
     {
-        if (!Auth::user()->isSuperAdmin())
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403);
+        }
 
         $team = Team::findOrFail($teamId);
         $result = app(TrialOverrideService::class)->extendTrial(
@@ -279,18 +301,21 @@ class Crm extends Component
      */
     public function revokeTrial(int $teamId): void
     {
-        if (!Auth::user()->isSuperAdmin())
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403);
+        }
 
         $team = Team::findOrFail($teamId);
 
         if (strtolower(trim($this->revokeConfirmation)) !== strtolower($team->name)) {
             session()->flash('error', "Revocation cancelled: confirmation text does not match team name '{$team->name}'.");
+
             return;
         }
 
         if (empty(trim($this->overrideReason))) {
             session()->flash('error', 'A reason is required for trial revocation.');
+
             return;
         }
 
@@ -310,8 +335,9 @@ class Crm extends Component
      */
     public function convertToActive(int $teamId): void
     {
-        if (!Auth::user()->isSuperAdmin())
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403);
+        }
 
         $team = Team::findOrFail($teamId);
         $result = app(TrialOverrideService::class)->convertToActive(
@@ -369,31 +395,33 @@ class Crm extends Component
         // Apply same filters as render()
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
+                $q->where('name', 'like', '%'.$this->search.'%')
                     ->orWhereHas('owner', function ($sq) {
-                        $sq->where('email', 'like', '%' . $this->search . '%')
-                            ->orWhere('name', 'like', '%' . $this->search . '%');
+                        $sq->where('email', 'like', '%'.$this->search.'%')
+                            ->orWhere('name', 'like', '%'.$this->search.'%');
                     });
             });
         }
-        if ($this->statusFilter)
+        if ($this->statusFilter) {
             $query->where('subscription_status', $this->statusFilter);
-        if ($this->setupFilter)
+        }
+        if ($this->setupFilter) {
             $query->where('whatsapp_setup_state', $this->setupFilter);
+        }
         if ($this->funnelStage) {
             match ($this->funnelStage) {
                 'connected_fb' => $query->whereNotNull('whatsapp_access_token'),
                 'waba_found' => $query->whereNotNull('whatsapp_business_account_id')->whereNotNull('whatsapp_access_token'),
                 'phone_registered' => $query->whereNotNull('whatsapp_phone_number_id'),
                 'active_messaging' => $query->whereHas('messages', function ($q) {
-                        $q->where('direction', 'outbound');
-                    }),
+                    $q->where('direction', 'outbound');
+                }),
                 default => null
             };
         }
 
         $teams = $query->get();
-        $filename = "crm_export_" . now()->format('Y_m_d_His') . ".csv";
+        $filename = 'crm_export_'.now()->format('Y_m_d_His').'.csv';
         $handle = fopen('php://output', 'w');
 
         // Add headers
@@ -408,7 +436,7 @@ class Crm extends Component
                 $this->getSetupLabel($team),
                 $team->lead_score,
                 $team->total_revenue,
-                $team->created_at->format('Y-m-d H:i')
+                $team->created_at->format('Y-m-d H:i'),
             ]);
         }
 
@@ -422,14 +450,19 @@ class Crm extends Component
 
     protected function getSetupLabel($team)
     {
-        if ($team->last_webhook_received_at)
+        if ($team->last_webhook_received_at) {
             return 'Deployed';
-        if ($team->whatsapp_phone_number_id)
+        }
+        if ($team->whatsapp_phone_number_id) {
             return 'Ready';
-        if ($team->whatsapp_business_account_id)
+        }
+        if ($team->whatsapp_business_account_id) {
             return 'Config';
-        if ($team->whatsapp_access_token)
+        }
+        if ($team->whatsapp_access_token) {
             return 'Auth';
+        }
+
         return 'Zero';
     }
 
@@ -439,10 +472,10 @@ class Crm extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
+                $q->where('name', 'like', '%'.$this->search.'%')
                     ->orWhereHas('owner', function ($sq) {
-                        $sq->where('email', 'like', '%' . $this->search . '%')
-                            ->orWhere('name', 'like', '%' . $this->search . '%');
+                        $sq->where('email', 'like', '%'.$this->search.'%')
+                            ->orWhere('name', 'like', '%'.$this->search.'%');
                     });
             });
         }
@@ -465,17 +498,27 @@ class Crm extends Component
                 'waba_found' => $query->whereNotNull('whatsapp_business_account_id')->whereNotNull('whatsapp_access_token'),
                 'phone_registered' => $query->whereNotNull('whatsapp_phone_number_id'),
                 'active_messaging' => $query->whereHas('messages', function ($q) {
-                        $q->where('direction', 'outbound');
-                    }),
+                    $q->where('direction', 'outbound');
+                }),
                 default => null
             };
         }
 
-        if ($this->filterRevenueMin) $query->where('total_revenue', '>=', $this->filterRevenueMin);
-        if ($this->filterRevenueMax) $query->where('total_revenue', '<=', $this->filterRevenueMax);
-        if ($this->filterLeadScoreMin) $query->where('lead_score', '>=', $this->filterLeadScoreMin);
-        if ($this->filterDateStart) $query->whereDate('created_at', '>=', $this->filterDateStart);
-        if ($this->filterDateEnd) $query->whereDate('created_at', '<=', $this->filterDateEnd);
+        if ($this->filterRevenueMin) {
+            $query->where('total_revenue', '>=', $this->filterRevenueMin);
+        }
+        if ($this->filterRevenueMax) {
+            $query->where('total_revenue', '<=', $this->filterRevenueMax);
+        }
+        if ($this->filterLeadScoreMin) {
+            $query->where('lead_score', '>=', $this->filterLeadScoreMin);
+        }
+        if ($this->filterDateStart) {
+            $query->whereDate('created_at', '>=', $this->filterDateStart);
+        }
+        if ($this->filterDateEnd) {
+            $query->whereDate('created_at', '<=', $this->filterDateEnd);
+        }
 
         return view('livewire.admin.crm', [
             'teams' => $query->paginate(15),
@@ -491,7 +534,7 @@ class Crm extends Component
                 },
                 'crmTasks' => function ($q) {
                     $q->with('assignedTo')->latest();
-                }
+                },
             ])->find($this->selectedTeamId) : null,
         ]);
     }

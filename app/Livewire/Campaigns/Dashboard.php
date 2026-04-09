@@ -3,14 +3,15 @@
 namespace App\Livewire\Campaigns;
 
 use App\Models\Campaign;
-use Livewire\Component;
-use Livewire\Attributes\Layout;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
+use Livewire\Component;
 
 class Dashboard extends Component
 {
     public $campaignId;
+
     public $statusLine = '';
 
     public function mount($campaign)
@@ -33,7 +34,7 @@ class Dashboard extends Component
         $campaign = $this->campaign;
         $sentCount = $campaign->messages()->whereIn('status', ['sent', 'delivered', 'read'])->count();
         $failedCount = $campaign->messages()->where('status', 'failed')->count();
-        
+
         return [
             'sent' => max($campaign->sent_count, $sentCount),
             'delivered' => $campaign->del_count,
@@ -57,14 +58,16 @@ class Dashboard extends Component
     public function speed()
     {
         $campaign = $this->campaign;
-        if (!$campaign->started_at || $campaign->status === 'completed') return 0;
-        
+        if (! $campaign->started_at || $campaign->status === 'completed') {
+            return 0;
+        }
+
         // Use last 5 minutes from messages table for more accurate "current" speed
         $sentInLast5Min = \App\Models\Message::where('campaign_id', $campaign->id)
             ->where('created_at', '>=', now()->subMinutes(5))
             ->whereIn('status', ['sent', 'delivered', 'read'])
             ->count();
-            
+
         return round($sentInLast5Min / 5, 1); // msgs per minute
     }
 

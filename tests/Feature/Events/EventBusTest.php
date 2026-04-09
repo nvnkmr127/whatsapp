@@ -2,16 +2,16 @@
 
 namespace Tests\Feature\Events;
 
-use App\Events\ConversationOpened;
-use App\Events\ConversationClosed;
 use App\Events\ContactOptedOut;
+use App\Events\ConversationClosed;
+use App\Events\ConversationOpened;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Team;
 use App\Services\ConsentService;
 use App\Services\ConversationService;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class EventBusTest extends TestCase
@@ -23,7 +23,7 @@ class EventBusTest extends TestCase
         Event::fake();
 
         $contact = Contact::factory()->create();
-        $service = new ConversationService();
+        $service = new ConversationService;
 
         $service->ensureActiveConversation($contact);
 
@@ -40,10 +40,10 @@ class EventBusTest extends TestCase
         $conversation = Conversation::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
-            'status' => 'open'
+            'status' => 'open',
         ]);
 
-        $service = new ConversationService();
+        $service = new ConversationService;
         $service->close($conversation);
 
         Event::assertDispatched(ConversationClosed::class, function ($e) use ($conversation) {
@@ -57,7 +57,7 @@ class EventBusTest extends TestCase
 
         $team = Team::factory()->create();
         $contact = Contact::factory()->create(['team_id' => $team->id]);
-        $service = new ConsentService();
+        $service = new ConsentService;
 
         $service->optOut($contact);
 

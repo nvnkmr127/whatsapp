@@ -5,7 +5,7 @@ use Corbital\Installer\Http\Middleware\CanInstall;
 use Illuminate\Support\Facades\Route;
 
 Route::group([
-    'prefix'     => config('installer.routes.prefix', 'install'),
+    'prefix' => config('installer.routes.prefix', 'install'),
     'middleware' => array_merge(
         (array) config('installer.routes.middleware', ['web']),
         [CanInstall::class]

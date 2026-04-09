@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Jobs\PruneOldBackupsJob;
+use Illuminate\Console\Command;
 
 class BackupClean extends Command
 {
@@ -26,11 +26,11 @@ class BackupClean extends Command
      */
     public function handle()
     {
-        $this->info("Queuing backup cleanup job (7-day retention policy)...");
+        $this->info('Queuing backup cleanup job (7-day retention policy)...');
 
         PruneOldBackupsJob::dispatch();
 
-        $this->info("Cleanup job has been dispatched.");
+        $this->info('Cleanup job has been dispatched.');
 
         return 0;
     }

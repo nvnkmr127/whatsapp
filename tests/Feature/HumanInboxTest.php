@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Chat\ContactDetails;
 use App\Models\Conversation;
 use App\Models\InternalNote;
 use App\Models\Team;
 use App\Models\User;
-use App\Livewire\Chat\ContactDetails;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class HumanInboxTest extends TestCase
 {
@@ -42,7 +42,7 @@ class HumanInboxTest extends TestCase
         $this->assertDatabaseHas('internal_notes', [
             'conversation_id' => $conversation->id,
             'user_id' => $user->id,
-            'content' => 'This is a private note.'
+            'content' => 'This is a private note.',
         ]);
     }
 
@@ -53,14 +53,16 @@ class HumanInboxTest extends TestCase
         $conversation = Conversation::factory()->create(['team_id' => $team->id]);
 
         InternalNote::create([
+            'team_id' => $team->id,
             'conversation_id' => $conversation->id,
             'user_id' => $user->id,
             'content' => 'Existing note',
-            'created_at' => now()->subHour()
+            'created_at' => now()->subHour(),
         ]);
 
         Livewire::actingAs($user)
             ->test(ContactDetails::class, ['conversationId' => $conversation->id])
+            ->set('activeTab', 'profile')
             ->assertSee('Existing note');
     }
 

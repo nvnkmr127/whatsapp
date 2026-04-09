@@ -18,8 +18,7 @@ class InboundWebhookController extends Controller
     public function __construct(
         protected WebhookAuthService $authService,
         protected WebhookMappingService $mappingService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle webhook from a specific source
@@ -30,14 +29,16 @@ class InboundWebhookController extends Controller
         // Find webhook source
         $source = WebhookSource::where('slug', $sourceSlug)->first();
 
-        if (!$source) {
+        if (! $source) {
             Log::warning('Webhook source not found', ['slug' => $sourceSlug]);
+
             // Return slug in error to help user debug typos
             return $this->error("Webhook source not found for slug: {$sourceSlug}", 404, null, 'ERR_WEBHOOK_SOURCE_NOT_FOUND');
         }
 
-        if (!$source->is_active) {
+        if (! $source->is_active) {
             Log::warning('Webhook source is inactive', ['slug' => $sourceSlug]);
+
             return $this->error('Webhook source is inactive', 403, null, 'ERR_WEBHOOK_SOURCE_INACTIVE');
         }
 
@@ -45,7 +46,7 @@ class InboundWebhookController extends Controller
         $source->incrementReceived();
 
         // Authenticate webhook
-        if (!$this->authService->verify($request, $source->auth_method, $source->getAuthConfig())) {
+        if (! $this->authService->verify($request, $source->auth_method, $source->getAuthConfig())) {
             Log::warning('Webhook authentication failed', [
                 'source_id' => $source->id,
                 'source_name' => $source->name,
@@ -53,9 +54,10 @@ class InboundWebhookController extends Controller
                 'url' => $request->fullUrl(),
                 'headers' => array_keys($request->headers->all()),
             ]);
+
             return $this->error('Authentication failed', 401, [
                 'required_auth' => $source->auth_method,
-                'tip' => 'Check your webhook source configuration for the correct credentials and headers.'
+                'tip' => 'Check your webhook source configuration for the correct credentials and headers.',
             ], 'ERR_WEBHOOK_AUTH_FAILED');
         }
 
@@ -107,11 +109,11 @@ class InboundWebhookController extends Controller
             Log::info('Duplicate inbound webhook stored', [
                 'source' => $source->name,
                 'external_id' => $externalId,
-                'status' => 'duplicate'
+                'status' => 'duplicate',
             ]);
 
             return $this->success([
-                'duplicate_id' => $duplicate->id
+                'duplicate_id' => $duplicate->id,
             ], 'Duplicate webhook recorded (already processed)');
         }
 
@@ -123,7 +125,7 @@ class InboundWebhookController extends Controller
         ]);
 
         // Check if payload passes filtering rules
-        if (!$source->checkFilters($payload)) {
+        if (! $source->checkFilters($payload)) {
             Log::info('Webhook skipped by filters', ['source' => $source->name]);
 
             WebhookPayload::create([
@@ -152,12 +154,12 @@ class InboundWebhookController extends Controller
 
             // Map fields
             $mappedData = [];
-            if (!empty($fieldMappings)) {
+            if (! empty($fieldMappings)) {
                 $mappedData = $this->mappingService->mapFields($payload, $fieldMappings);
 
                 // Apply transformations
                 $transformationRules = $source->getTransformationRules();
-                if (!empty($transformationRules)) {
+                if (! empty($transformationRules)) {
                     $mappedData = $this->mappingService->transformData($mappedData, $transformationRules);
                 }
             }
@@ -183,17 +185,17 @@ class InboundWebhookController extends Controller
             // Execute action if configured
             $actionConfig = $source->getActionConfig();
 
-            if (!empty($actionConfig)) {
+            if (! empty($actionConfig)) {
                 if (empty($mappedData)) {
                     // Action configured but no data mapped - Likely a mapping error
                     Log::warning('Webhook processed but no data mapped for action', [
                         'source' => $source->name,
-                        'payload_id' => $webhookPayload->id
+                        'payload_id' => $webhookPayload->id,
                     ]);
 
                     $webhookPayload->update([
                         'status' => 'failed',
-                        'error_message' => 'Action configured but no fields were mapped. Check your field mapping configuration.'
+                        'error_message' => 'Action configured but no fields were mapped. Check your field mapping configuration.',
                     ]);
                     $source->incrementFailed();
                 } else {
@@ -234,7 +236,7 @@ class InboundWebhookController extends Controller
                     }
                 }
             } catch (\Exception $e) {
-                Log::debug("T12 Trigger failed (Ignored): " . $e->getMessage());
+                Log::debug('T12 Trigger failed (Ignored): '.$e->getMessage());
             }
 
             return $this->success([
@@ -260,7 +262,7 @@ class InboundWebhookController extends Controller
     {
         $team = $request->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return $this->error('No team context selected.', 401, null, 'ERR_AUTH_NO_TEAM');
         }
 
@@ -310,7 +312,7 @@ class InboundWebhookController extends Controller
     public function getSourceUrl(Request $request, string $sourceSlug)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',

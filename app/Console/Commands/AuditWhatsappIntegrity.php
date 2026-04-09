@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Team;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class AuditWhatsappIntegrity extends Command
@@ -45,7 +45,7 @@ class AuditWhatsappIntegrity extends Command
 
                 $this->table(
                     ['Phone ID', 'Team ID', 'Team Name', 'State'],
-                    $teams->map(fn($t) => [$dup->whatsapp_phone_number_id, $t->id, $t->name, $t->whatsapp_setup_state?->value])
+                    $teams->map(fn ($t) => [$dup->whatsapp_phone_number_id, $t->id, $t->name, $t->whatsapp_setup_state?->value])
                 );
             }
         } else {
@@ -62,7 +62,7 @@ class AuditWhatsappIntegrity extends Command
             $this->warn("Found {$orphans->count()} teams with orphaned tokens.");
             $this->table(
                 ['Team ID', 'Team Name'],
-                $orphans->map(fn($t) => [$t->id, $t->name])
+                $orphans->map(fn ($t) => [$t->id, $t->name])
             );
         } else {
             $this->info('No orphaned tokens found. (PASS)');
@@ -82,12 +82,12 @@ class AuditWhatsappIntegrity extends Command
             $this->error("Found {$broken->count()} teams marked 'Connected' but missing data.");
             $this->table(
                 ['Team ID', 'Name', 'Has Token', 'Has WABA', 'Has Phone'],
-                $broken->map(fn($t) => [
+                $broken->map(fn ($t) => [
                     $t->id,
                     $t->name,
                     $t->whatsapp_access_token ? 'YES' : 'NO',
                     $t->whatsapp_business_account_id ? 'YES' : 'NO',
-                    $t->whatsapp_phone_number_id ? 'YES' : 'NO'
+                    $t->whatsapp_phone_number_id ? 'YES' : 'NO',
                 ])
             );
         } else {

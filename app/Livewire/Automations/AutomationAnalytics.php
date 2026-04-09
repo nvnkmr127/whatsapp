@@ -15,11 +15,17 @@ use Livewire\Component;
 class AutomationAnalytics extends Component
 {
     public Automation $automation;
+
     public array $dashboard = []; // Contains flow performance data
+
     public string $currencySymbol = '$'; // Currency symbol for revenue display
+
     public int $dateRange = 30; // Number of days to look back in analytics
+
     public string $messageStatusFilter = 'all'; // Filter: all, sent, delivered, read, or failed
+
     public int $messageDetailsLimit = 100; // Max rows to show in message table
+
     public string $stepNodeFilter = 'all'; // Selected step to filter contacts by
 
     public array $messageSummary = [
@@ -33,9 +39,13 @@ class AutomationAnalytics extends Component
     ];
 
     public Collection $messageDetails;
+
     public Collection $recentRuns;
+
     public ?int $selectedRunId = null;
+
     public ?object $selectedRun = null;
+
     public bool $showRunLogModal = false;
 
     public function mount(int $automationId, AutomationAnalyticsService $analytics): void
@@ -128,7 +138,7 @@ class AutomationAnalytics extends Component
                 });
 
             fclose($handle);
-        }, 'automation-' . $this->automation->id . '-message-report.csv');
+        }, 'automation-'.$this->automation->id.'-message-report.csv');
     }
 
     public function exportStepContactsReport()
@@ -196,7 +206,7 @@ class AutomationAnalytics extends Component
                 });
 
             fclose($handle);
-        }, 'automation-' . $this->automation->id . '-step-contacts.csv');
+        }, 'automation-'.$this->automation->id.'-step-contacts.csv');
     }
 
     protected function loadMessageReport(): void
@@ -243,7 +253,7 @@ class AutomationAnalytics extends Component
             })
             ->latest()
             ->limit($this->messageDetailsLimit)
-                ->get();
+            ->get();
     }
 
     protected function loadRecentRuns(): void
@@ -261,7 +271,7 @@ class AutomationAnalytics extends Component
     {
         $this->selectedRunId = $runId;
         $this->selectedRun = \App\Models\AutomationRun::query()
-            ->with(['ledger' => fn($q) => $q->orderBy('created_at')])
+            ->with(['ledger' => fn ($q) => $q->orderBy('created_at')])
             ->findOrFail($runId);
         $this->showRunLogModal = true;
     }
@@ -269,6 +279,7 @@ class AutomationAnalytics extends Component
     protected function normalizeMessageStatusFilter(): string
     {
         $allowed = ['all', 'sent', 'delivered', 'read', 'failed'];
+
         return in_array($this->messageStatusFilter, $allowed, true) ? $this->messageStatusFilter : 'all';
     }
 
@@ -278,7 +289,8 @@ class AutomationAnalytics extends Component
             return 'all';
         }
 
-        $allowedNodes = collect($this->dashboard['funnel'] ?? [])->pluck('node_id')->map(fn($id) => (string) $id)->all();
+        $allowedNodes = collect($this->dashboard['funnel'] ?? [])->pluck('node_id')->map(fn ($id) => (string) $id)->all();
+
         return in_array((string) $this->stepNodeFilter, $allowedNodes, true) ? (string) $this->stepNodeFilter : 'all';
     }
 

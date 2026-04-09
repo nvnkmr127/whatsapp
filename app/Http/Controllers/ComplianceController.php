@@ -18,7 +18,7 @@ class ComplianceController extends Controller
 
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return view('compliance.logs', ['logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20)]);
         }
 
@@ -43,7 +43,7 @@ class ComplianceController extends Controller
 
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return view('compliance.registry', ['contacts' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20)]);
         }
 

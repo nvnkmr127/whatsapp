@@ -2,8 +2,6 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-
-
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -53,6 +51,3 @@ Schedule::command('automations:check-inactivity')->everyFiveMinutes();
 Schedule::command('automations:check-birthdays')->dailyAt('09:00');
 
 Schedule::job(new \App\Jobs\CheckOnboardingInactivityJob)->everyTenMinutes();
-
-
-

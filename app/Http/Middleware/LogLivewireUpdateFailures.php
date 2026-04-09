@@ -14,7 +14,7 @@ class LogLivewireUpdateFailures
     {
         $response = $next($request);
 
-        if (!$request->is('livewire/update')) {
+        if (! $request->is('livewire/update')) {
             return $response;
         }
 
@@ -24,7 +24,7 @@ class LogLivewireUpdateFailures
         $isJson = str_contains(strtolower($contentType), 'application/json');
         $hasErrorStatus = $status >= 400;
 
-        if ($isJson && !$hasErrorStatus) {
+        if ($isJson && ! $hasErrorStatus) {
             return $response;
         }
 
@@ -52,7 +52,7 @@ class LogLivewireUpdateFailures
                 'snippet' => $bodySnippet,
             ], JSON_UNESCAPED_SLASHES);
             if (is_string($line)) {
-                @file_put_contents(storage_path('logs/livewire_update_debug.log'), $line . PHP_EOL, FILE_APPEND);
+                @file_put_contents(storage_path('logs/livewire_update_debug.log'), $line.PHP_EOL, FILE_APPEND);
             }
         } catch (\Throwable $e) {
         }

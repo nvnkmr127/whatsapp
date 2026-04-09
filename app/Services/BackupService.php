@@ -2,21 +2,18 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
+use App\Models\Integration;
 use App\Models\Team;
 use App\Models\TenantBackup;
-use App\Models\Integration;
-use App\Models\ActivityLog;
 use App\Services\Integrations\GoogleDriveService;
-use App\Services\PostRestoreStateResetService;
-use App\Services\BackupLockService;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
-use Exception;
-
 
 class BackupService
 {
@@ -25,7 +22,7 @@ class BackupService
     public function __construct()
     {
         $this->tempPath = storage_path('app/backup-temp');
-        if (!file_exists($this->tempPath)) {
+        if (! file_exists($this->tempPath)) {
             mkdir($this->tempPath, 0755, true);
         }
     }
@@ -47,18 +44,18 @@ class BackupService
     public function backupTenant(Team $team)
     {
         $entitlement = $team->entitlement();
-        if (!$entitlement->hasFeature('backups')) {
-            throw new \App\Exceptions\Backup\BackupException("The backup feature is not available for your team. Please upgrade.");
+        if (! $entitlement->hasFeature('backups')) {
+            throw new \App\Exceptions\Backup\BackupException('The backup feature is not available for your team. Please upgrade.');
         }
 
         // 1. Check Max Backups Count
-        if (!$entitlement->withinLimit('max_backups_per_team')) {
+        if (! $entitlement->withinLimit('max_backups_per_team')) {
             $limit = $entitlement->limit('max_backups_per_team');
             throw new \App\Exceptions\Backup\BackupException("Backup limit reached. You can only keep up to {$limit} backups. Please delete old backups to create a new one.");
         }
 
         // 2. Check Max Storage Size
-        if (!$entitlement->withinLimit('max_storage_mb')) {
+        if (! $entitlement->withinLimit('max_storage_mb')) {
             $limit = $entitlement->limit('max_storage_mb');
             throw new Exception("Storage limit reached. You can only use up to {$limit} MB for backups. Please delete old backups to free up space.");
         }
@@ -79,7 +76,7 @@ class BackupService
         $backupRecord = TenantBackup::create([
             'team_id' => $team->id,
             'type' => 'tenant',
-            'filename' => "tenant_{$team->id}_" . now()->format('Y-m-d_H-i-s') . ".zip",
+            'filename' => "tenant_{$team->id}_".now()->format('Y-m-d_H-i-s').'.zip',
             'path' => "tenants/{$team->id}/",
             'status' => 'pending',
         ]);
@@ -102,10 +99,10 @@ class BackupService
         $lock = $lockService->acquireBackupLock($team);
 
         try {
-            $backupRecord->update(['status' => 'generating']);
+            $backupRecord->update(['status' => 'processing']);
 
             $zipPath = "{$this->tempPath}/{$backupRecord->filename}";
-            $zip = new ZipArchive();
+            $zip = new ZipArchive;
             if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
                 throw new \App\Exceptions\Backup\BackupException("Could not create ZIP file at {$zipPath}");
             }
@@ -150,7 +147,7 @@ class BackupService
         } catch (Exception $e) {
             $backupRecord->update([
                 'status' => 'failed',
-                'error_message' => "Generation failed: " . $e->getMessage(),
+                'error_message' => 'Generation failed: '.$e->getMessage(),
             ]);
             throw $e;
         } finally {
@@ -164,7 +161,7 @@ class BackupService
      */
     public function uploadBackup(TenantBackup $backupRecord, string $localFilePath)
     {
-        if (!file_exists($localFilePath)) {
+        if (! file_exists($localFilePath)) {
             // If the local file is gone (e.g. server restart), we try to get it from local storage
             $storedPath = "backups/{$backupRecord->path}{$backupRecord->filename}";
             if (Storage::disk('local')->exists($storedPath)) {
@@ -172,11 +169,12 @@ class BackupService
                 file_put_contents($localFilePath, $content);
             } else {
                 $backupRecord->update(['status' => 'failed', 'error_message' => 'Local backup file missing for upload.']);
+
                 return;
             }
         }
 
-        $backupRecord->update(['status' => 'uploading']);
+        $backupRecord->update(['status' => 'processing']);
 
         try {
             if ($backupRecord->type === 'global') {
@@ -185,9 +183,9 @@ class BackupService
                     $destinationPath = "{$backupRecord->path}{$backupRecord->filename}";
                     $content = file_get_contents($localFilePath);
                     Storage::disk('google_drive')->put($destinationPath, $content);
-                    $backupRecord->update(['status' => 'uploaded']);
+                    $backupRecord->update(['status' => 'completed']);
                 } else {
-                    $backupRecord->update(['status' => 'uploaded']);
+                    $backupRecord->update(['status' => 'completed']);
                 }
             } else {
                 // Tenant Backup
@@ -199,7 +197,7 @@ class BackupService
 
                     if ($gdIntegration) {
                         if ($gdIntegration->status === 'error') {
-                            throw new \App\Exceptions\Backup\BackupException("Google Drive connection is inactive.");
+                            throw new \App\Exceptions\Backup\BackupException('Google Drive connection is inactive.');
                         }
 
                         $gdService = new GoogleDriveService($gdIntegration);
@@ -208,7 +206,7 @@ class BackupService
                         $backupRecord->update([
                             'remote_account_id' => $gdService->getAccountIdentifier(),
                             'remote_file_id' => $fileId,
-                            'status' => 'uploaded',
+                            'status' => 'completed',
                         ]);
                     } elseif (config('filesystems.disks.google_drive')) {
                         // Model B: Platform Central Drive Fallback
@@ -218,13 +216,13 @@ class BackupService
 
                         $backupRecord->update([
                             'disk' => 'google_drive',
-                            'status' => 'uploaded'
+                            'status' => 'completed',
                         ]);
                     } else {
-                        $backupRecord->update(['status' => 'uploaded']);
+                        $backupRecord->update(['status' => 'completed']);
                     }
                 } else {
-                    $backupRecord->update(['status' => 'uploaded']);
+                    $backupRecord->update(['status' => 'completed']);
                 }
             }
 
@@ -239,7 +237,7 @@ class BackupService
         } catch (Exception $e) {
             $backupRecord->update([
                 'status' => 'failed',
-                'error_message' => "Upload failed: " . $e->getMessage(),
+                'error_message' => 'Upload failed: '.$e->getMessage(),
             ]);
             throw $e;
         }
@@ -252,7 +250,7 @@ class BackupService
     {
         // Simple verification: check if record has checksum and size
         if ($backupRecord->checksum && $backupRecord->size > 0) {
-            $backupRecord->update(['status' => 'verified']);
+            $backupRecord->update(['status' => 'completed']);
         } else {
             $backupRecord->update(['status' => 'failed', 'error_message' => 'Integrity verification failed.']);
         }
@@ -265,8 +263,8 @@ class BackupService
     {
         $backupRecord = TenantBackup::create([
             'type' => 'global',
-            'filename' => "global_" . now()->format('Y-m-d_H-i-s') . ".zip",
-            'path' => "global/",
+            'filename' => 'global_'.now()->format('Y-m-d_H-i-s').'.zip',
+            'path' => 'global/',
             'status' => 'pending',
         ]);
 
@@ -284,7 +282,7 @@ class BackupService
             $backupRecord->update(['status' => 'generating']);
 
             $zipPath = "{$this->tempPath}/{$backupRecord->filename}";
-            $zip = new ZipArchive();
+            $zip = new ZipArchive;
             $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
             $sqlData = $this->getFullDatabaseSql();
@@ -321,7 +319,7 @@ class BackupService
         } catch (Exception $e) {
             $backupRecord->update([
                 'status' => 'failed',
-                'error_message' => "Global generation failed: " . $e->getMessage(),
+                'error_message' => 'Global generation failed: '.$e->getMessage(),
             ]);
             throw $e;
         }
@@ -368,12 +366,14 @@ class BackupService
                     $output .= "-- Table: {$tableName}\n";
                     foreach ($rows as $row) {
                         $values = array_map(function ($value) {
-                            if (is_null($value))
+                            if (is_null($value)) {
                                 return 'NULL';
+                            }
+
                             return DB::getPdo()->quote($value);
                         }, (array) $row);
 
-                        $output .= "INSERT INTO `{$tableName}` VALUES (" . implode(', ', $values) . ");\n";
+                        $output .= "INSERT INTO `{$tableName}` VALUES (".implode(', ', $values).");\n";
                     }
                     $output .= "\n";
                 }
@@ -381,12 +381,13 @@ class BackupService
         }
 
         $output .= "SET FOREIGN_KEY_CHECKS=1;\n";
+
         return $output;
     }
 
     protected function getFullDatabaseSql()
     {
-        // Simple PHP-based dump for small-medium DBs. 
+        // Simple PHP-based dump for small-medium DBs.
         // For very large DBs, system calls to mysqldump are preferred.
         $tables = Schema::getTables();
 
@@ -400,17 +401,20 @@ class BackupService
             $output .= "-- Table: {$tableName}\n";
             foreach ($rows as $row) {
                 $values = array_map(function ($value) {
-                    if (is_null($value))
+                    if (is_null($value)) {
                         return 'NULL';
+                    }
+
                     return DB::getPdo()->quote($value);
                 }, (array) $row);
 
-                $output .= "INSERT INTO `{$tableName}` VALUES (" . implode(', ', $values) . ");\n";
+                $output .= "INSERT INTO `{$tableName}` VALUES (".implode(', ', $values).");\n";
             }
             $output .= "\n";
         }
 
         $output .= "SET FOREIGN_KEY_CHECKS=1;\n";
+
         return $output;
     }
 
@@ -418,7 +422,7 @@ class BackupService
     {
         // Add team-specific files (e.g., logo)
         if ($team->logo_path && Storage::disk('public')->exists($team->logo_path)) {
-            $zip->addFile(Storage::disk('public')->path($team->logo_path), 'storage/public/' . $team->logo_path);
+            $zip->addFile(Storage::disk('public')->path($team->logo_path), 'storage/public/'.$team->logo_path);
         }
 
         // Logic to add other team-specific assets if they existed in specific folders
@@ -430,11 +434,9 @@ class BackupService
     {
         $files = Storage::disk('public')->allFiles();
         foreach ($files as $file) {
-            $zip->addFile(Storage::disk('public')->path($file), 'storage/public/' . $file);
+            $zip->addFile(Storage::disk('public')->path($file), 'storage/public/'.$file);
         }
     }
-
-
 
     /**
      * Enforce 7-day rolling retention.
@@ -467,7 +469,7 @@ class BackupService
                         $gdService = new GoogleDriveService($gdIntegration);
                         $fileId = $backup->remote_file_id;
 
-                        if (!$fileId) {
+                        if (! $fileId) {
                             $file = $gdService->findFileByName($backup->filename);
                             $fileId = $file['id'] ?? null;
                         }
@@ -476,7 +478,7 @@ class BackupService
                             $gdService->deleteFile($fileId);
                         }
                     } catch (Exception $e) {
-                        Log::warning("Failed to delete old tenant backup from Google Drive for Team {$backup->team_id}: " . $e->getMessage());
+                        Log::warning("Failed to delete old tenant backup from Google Drive for Team {$backup->team_id}: ".$e->getMessage());
                     }
                 }
             } elseif ($backup->type === 'global' && config('filesystems.disks.google_drive')) {
@@ -487,7 +489,7 @@ class BackupService
                         Storage::disk('google_drive')->delete($remotePath);
                     }
                 } catch (Exception $e) {
-                    Log::warning("Failed to delete old global backup from Google Drive: " . $e->getMessage());
+                    Log::warning('Failed to delete old global backup from Google Drive: '.$e->getMessage());
                 }
             }
 
@@ -513,9 +515,9 @@ class BackupService
         $content = file_get_contents($filePath);
         $encryptedContent = openssl_encrypt($content, 'aes-256-cbc', $key, 0, $iv);
 
-        $encryptedPath = $filePath . '.enc';
+        $encryptedPath = $filePath.'.enc';
         // Prepend IV to the file for decryption later
-        file_put_contents($encryptedPath, $iv . $encryptedContent);
+        file_put_contents($encryptedPath, $iv.$encryptedContent);
 
         return $encryptedPath;
     }
@@ -544,7 +546,7 @@ class BackupService
         }
 
         if ($decrypted === false) {
-            throw new \App\Exceptions\Backup\BackupException("Decryption failed. Invalid key or corrupted backup file.");
+            throw new \App\Exceptions\Backup\BackupException('Decryption failed. Invalid key or corrupted backup file.');
         }
 
         file_put_contents($outputPath, $decrypted);
@@ -562,7 +564,7 @@ class BackupService
             $baseKey = base64_decode(substr($baseKey, 7));
         }
 
-        if (!$team) {
+        if (! $team) {
             return $baseKey;
         }
 
@@ -584,7 +586,7 @@ class BackupService
     public function restoreTenant(Team $team, TenantBackup $backup)
     {
         if ($backup->team_id !== $team->id) {
-            throw new \App\Exceptions\Backup\RestoreException("Backup does not belong to this team.");
+            throw new \App\Exceptions\Backup\RestoreException('Backup does not belong to this team.');
         }
 
         /** @var BackupLockService $lockService */
@@ -596,7 +598,7 @@ class BackupService
         try {
             // 2. Pause queue & 3. Clear cache
             // We run a pre-reset to ensure a clean slate before DB wipes.
-            $this->logBackupActivity($team, 'backup.restore_pre_reset', "Pre-restore state reset (queue pause & cache clear).");
+            $this->logBackupActivity($team, 'backup.restore_pre_reset', 'Pre-restore state reset (queue pause & cache clear).');
             $this->postRestoreReset($team);
 
             // Emergency snapshot before we overwrite anything
@@ -619,8 +621,9 @@ class BackupService
 
                 return true;
             } catch (Exception $e) {
-                if (DB::transactionLevel() > 0)
+                if (DB::transactionLevel() > 0) {
                     DB::rollBack();
+                }
                 throw $e;
             }
         } finally {
@@ -655,9 +658,10 @@ class BackupService
             // 1. Mime Type Check
             $finfo = new \finfo(FILEINFO_MIME_TYPE);
             $mime = $finfo->file($filePath);
-            if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php', 'text/plain'])) {
-                if (file_exists($filePath))
+            if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php'])) {
+                if (file_exists($filePath)) {
                     unlink($filePath);
+                }
                 throw new \App\Exceptions\Backup\RestoreException("MALWARE RISK: The uploaded file has an invalid or malicious mime type ({$mime}).");
             }
 
@@ -665,7 +669,7 @@ class BackupService
                 DB::beginTransaction();
 
                 // 4. Restore
-                $this->performRestore($team, $filePath, "Manual database restore from upload");
+                $this->performRestore($team, $filePath, 'Manual database restore from upload');
 
                 DB::commit();
 
@@ -676,13 +680,15 @@ class BackupService
                 $this->postRestoreReset($team);
 
                 // Cleanup manual file
-                if (file_exists($filePath))
+                if (file_exists($filePath)) {
                     unlink($filePath);
+                }
 
                 return true;
             } catch (Exception $e) {
-                if (DB::transactionLevel() > 0)
+                if (DB::transactionLevel() > 0) {
                     DB::rollBack();
+                }
                 throw $e;
             }
         } finally {
@@ -700,9 +706,9 @@ class BackupService
         $zipPath = str_replace('.enc', '', $encryptedPath);
         $this->decryptFile($encryptedPath, $zipPath, $team);
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
-            throw new Exception("Could not open backup ZIP.");
+            throw new Exception('Could not open backup ZIP.');
         }
 
         // 3. Restore Database
@@ -710,9 +716,9 @@ class BackupService
         if ($sql) {
             // CVE-13: Validate Internal Signature
             $innerSignature = $zip->getFromName('backup.signature');
-            if (!$innerSignature || hash_hmac('sha256', $sql, config('app.key')) !== $innerSignature) {
+            if (! $innerSignature || hash_hmac('sha256', $sql, config('app.key')) !== $innerSignature) {
                 $zip->close();
-                throw new \App\Exceptions\Backup\RestoreException("MALWARE RISK: The internal backup signature is missing or invalid. Restoration aborted.");
+                throw new \App\Exceptions\Backup\RestoreException('MALWARE RISK: The internal backup signature is missing or invalid. Restoration aborted.');
             }
 
             // Clear existing tenant data (consent_registry is EXCLUDED)
@@ -727,10 +733,12 @@ class BackupService
         // (Placeholder for assets extraction to storage/app/public/tenants/{id}/)
 
         $zip->close();
-        if (file_exists($zipPath))
+        if (file_exists($zipPath)) {
             unlink($zipPath);
-        if (file_exists($encryptedPath))
+        }
+        if (file_exists($encryptedPath)) {
             unlink($encryptedPath);
+        }
 
         // 5. MANDATORY CONSENT REHYDRATION
         try {
@@ -766,7 +774,7 @@ class BackupService
             Log::info("[BackupService] Post-restore state reset complete for Team {$team->id}", $result['counters']);
         } catch (Exception $e) {
             // Log at ERROR but do not re-throw — the restore itself succeeded.
-            Log::error("[BackupService] Post-restore state reset FAILED for Team {$team->id}: " . $e->getMessage(), [
+            Log::error("[BackupService] Post-restore state reset FAILED for Team {$team->id}: ".$e->getMessage(), [
                 'team_id' => $team->id,
             ]);
         }
@@ -778,7 +786,7 @@ class BackupService
     public function restoreGlobal(TenantBackup $backup)
     {
         if ($backup->type !== 'global') {
-            throw new Exception("Cannot perform global restore from a tenant backup.");
+            throw new Exception('Cannot perform global restore from a tenant backup.');
         }
 
         // 1. Global Snapshot
@@ -789,9 +797,9 @@ class BackupService
             $zipPath = str_replace('.enc', '', $encryptedPath);
             $this->decryptFile($encryptedPath, $zipPath, null);
 
-            $zip = new ZipArchive();
+            $zip = new ZipArchive;
             if ($zip->open($zipPath) !== true) {
-                throw new Exception("Could not open backup ZIP.");
+                throw new Exception('Could not open backup ZIP.');
             }
 
             $sql = $zip->getFromName('full_database.sql');
@@ -802,8 +810,9 @@ class BackupService
 
             $zip->close();
             unlink($zipPath);
-            if (file_exists($encryptedPath))
+            if (file_exists($encryptedPath)) {
                 unlink($encryptedPath);
+            }
 
             return true;
         } catch (Exception $e) {
@@ -829,17 +838,17 @@ class BackupService
             // Mark the backup record as invalid and throw a user-friendly error.
             $backup->update([
                 'status' => 'invalid',
-                'error_message' => 'REMOTE_FILE_MISSING: The backup file was deleted from Google Drive manually.'
+                'error_message' => 'REMOTE_FILE_MISSING: The backup file was deleted from Google Drive manually.',
             ]);
 
-            throw new Exception("Restoration failed: The cloud backup file no longer exists (404). The record has been marked as invalid.");
+            throw new Exception('Restoration failed: The cloud backup file no longer exists (404). The record has been marked as invalid.');
         }
 
         // 1. Mime Type Check
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mime = $finfo->file($tempDest);
         // Encrypted files are usually octet-stream, but we definitely want to reject plain .sql or .php
-        if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php', 'text/plain'])) {
+        if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php'])) {
             unlink($tempDest);
             throw new Exception("MALWARE RISK: The backup file has an invalid or malicious mime type ({$mime}).");
         }
@@ -847,22 +856,23 @@ class BackupService
         // 2. Integrity Check (Checksum)
         $actualChecksum = hash_file('sha256', $tempDest);
         if ($actualChecksum !== $backup->checksum) {
-            if (file_exists($tempDest))
+            if (file_exists($tempDest)) {
                 unlink($tempDest);
+            }
 
             $backup->update([
                 'status' => 'invalid',
-                'error_message' => 'CORRUPTED: The backup file checksum does not match.'
+                'error_message' => 'CORRUPTED: The backup file checksum does not match.',
             ]);
 
-            throw new Exception("Backup integrity check failed. The file has been modified or corrupted.");
+            throw new Exception('Backup integrity check failed. The file has been modified or corrupted.');
         }
 
         // 3. System Source Verification (HMAC Signature)
         $expectedSignature = hash_hmac('sha256', $actualChecksum, config('app.key'));
         if ($backup->signature && $backup->signature !== $expectedSignature) {
             unlink($tempDest);
-            throw new Exception("MALWARE RISK: System signature verification failed. This file was not generated by this system.");
+            throw new Exception('MALWARE RISK: System signature verification failed. This file was not generated by this system.');
         }
 
         return $tempDest;
@@ -884,7 +894,7 @@ class BackupService
                     // Security: Ownership verification (ACCOUNT LEVEL)
                     if ($backup->remote_account_id && $gdService->getAccountIdentifier() !== $backup->remote_account_id) {
                         throw new Exception(
-                            "Restoration Blocked: This backup was created with a different Google account. " .
+                            'Restoration Blocked: This backup was created with a different Google account. '.
                             "Ownership verification failed for Team {$backup->team_id}."
                         );
                     }
@@ -892,18 +902,19 @@ class BackupService
                     $fileId = $backup->remote_file_id;
 
                     // Fallback to name-based lookup for legacy backups missing remote_file_id
-                    if (!$fileId) {
+                    if (! $fileId) {
                         $file = $gdService->findFileByName($backup->filename);
-                        if (!$file) {
-                            throw new Exception("Backup file not found in Google Drive.");
+                        if (! $file) {
+                            throw new Exception('Backup file not found in Google Drive.');
                         }
                         $fileId = $file['id'];
                     }
 
                     $gdService->downloadFile($fileId, $destPath);
+
                     return;
                 } catch (Exception $e) {
-                    Log::error("Failed to download from Google Drive Integration for Team {$backup->team_id}: " . $e->getMessage());
+                    Log::error("Failed to download from Google Drive Integration for Team {$backup->team_id}: ".$e->getMessage());
                     throw $e;
                 }
             }
@@ -916,10 +927,11 @@ class BackupService
                 if (Storage::disk('google_drive')->exists($remotePath)) {
                     $content = Storage::disk('google_drive')->get($remotePath);
                     file_put_contents($destPath, $content);
+
                     return;
                 }
             } catch (Exception $e) {
-                Log::error("Failed to download from Global Google Drive: " . $e->getMessage());
+                Log::error('Failed to download from Global Google Drive: '.$e->getMessage());
             }
         }
 
@@ -973,7 +985,7 @@ class BackupService
             }
             Log::info("Backup restore: Index rebuild complete for Team {$team->id}");
         } catch (Exception $e) {
-            Log::warning("Backup restore index rebuild failed for Team {$team->id}: " . $e->getMessage());
+            Log::warning("Backup restore index rebuild failed for Team {$team->id}: ".$e->getMessage());
         }
     }
 
@@ -993,7 +1005,7 @@ class BackupService
                 ],
             ]);
         } catch (Exception $e) {
-            Log::error("Backup ActivityLog failed: " . $e->getMessage());
+            Log::error('Backup ActivityLog failed: '.$e->getMessage());
         }
     }
 
@@ -1052,7 +1064,7 @@ class BackupService
         try {
             DB::unprepared($sql);
         } catch (Exception $e) {
-            Log::error("SQL Restore failed: " . $e->getMessage());
+            Log::error('SQL Restore failed: '.$e->getMessage());
             throw $e;
         }
     }

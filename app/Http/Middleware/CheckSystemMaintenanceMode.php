@@ -19,7 +19,7 @@ class CheckSystemMaintenanceMode
         // We use the helper get_setting() providing a default of false
         $isMaintenanceMode = filter_var(get_setting('maintenance_mode', false), FILTER_VALIDATE_BOOLEAN);
 
-        if (!$isMaintenanceMode) {
+        if (! $isMaintenanceMode) {
             return $next($request);
         }
 
@@ -32,7 +32,7 @@ class CheckSystemMaintenanceMode
                 'password.email',
                 'password.reset',
                 'two-factor.login',
-                'two-factor.challenge'
+                'two-factor.challenge',
             ])
         ) {
             return $next($request);

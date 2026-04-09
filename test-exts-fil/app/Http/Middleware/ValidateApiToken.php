@@ -21,7 +21,7 @@ class ValidateApiToken
     {
         if (! $this->settings->enabled) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'API access is disabled',
             ], 403);
         }
@@ -30,7 +30,7 @@ class ValidateApiToken
 
         if (! $token) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'API token is required',
             ], 401);
         }
@@ -38,7 +38,7 @@ class ValidateApiToken
         // Validate token
         if ($token !== $this->settings->token) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Invalid API token',
             ], 401);
         }
@@ -46,14 +46,14 @@ class ValidateApiToken
         // Check specific ability if provided
         if ($ability && ! in_array($ability, $this->settings->abilities)) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Token does not have the required ability: ' . $ability,
+                'status' => 'error',
+                'message' => 'Token does not have the required ability: '.$ability,
             ], 403);
         }
 
         // Rate limiting
-        $key          = 'api_token_' . $token;
-        $maxAttempts  = $this->settings->rate_limit_max   ?? 60;
+        $key = 'api_token_'.$token;
+        $maxAttempts = $this->settings->rate_limit_max ?? 60;
         $decayMinutes = $this->settings->rate_limit_decay ?? 1;
 
         // Check if the user has exceeded the rate limit
@@ -61,7 +61,7 @@ class ValidateApiToken
             $retryAfter = RateLimiter::availableIn($key);
 
             return response()->json([
-                'message'     => t('too_many_requests'),
+                'message' => t('too_many_requests'),
                 'retry_after' => $retryAfter,
             ], Response::HTTP_TOO_MANY_REQUESTS);
         }

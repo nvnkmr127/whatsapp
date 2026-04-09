@@ -2,17 +2,17 @@
 
 namespace App\Services;
 
-use App\Notifications\OtpNotification;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Notification;
 use App\Models\Team;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class OTPService
 {
     protected $ttl;
+
     protected $maxAttempts;
+
     protected $maxRequestsPer24h;
 
     public function __construct()
@@ -47,7 +47,8 @@ class OTPService
         // Abuse Prevention: Dead drop check
         if ($this->isBlacklisted($identifier)) {
             Log::warning("OTP Request blocked for blacklisted identifier: {$identifier}");
-            AuditService::log('Auth.Abuse.Blocked', null, $identifier, $type . '_otp', ['reason' => 'Too many requests in 24h']);
+            AuditService::log('Auth.Abuse.Blocked', null, $identifier, $type.'_otp', ['reason' => 'Too many requests in 24h']);
+
             return false;
         }
 
@@ -69,9 +70,9 @@ class OTPService
             }
 
             // Log for CRM tracking of new leads
-            if (!$teamId) {
+            if (! $teamId) {
                 $metadata = [
-                    'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists()
+                    'is_new_user' => ! \App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists(),
                 ];
 
                 // Capture UTMs from request if available
@@ -91,16 +92,16 @@ class OTPService
             $eventData = [
                 'identifier' => $identifier,
                 'type' => $type,
-                'is_new_user' => !\App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists(),
+                'is_new_user' => ! \App\Models\User::where($type === 'email' ? 'email' : 'phone', $identifier)->exists(),
                 'timestamp' => now()->toIso8601String(),
             ];
 
             // Dispatch system-wide webhook for Login OTP if no teamId
-            if (!$teamId) {
+            if (! $teamId) {
                 try {
                     $webhookService->dispatch(null, 'auth.otp.login', $eventData);
                 } catch (\Exception $e) {
-                    Log::error("Failed to dispatch auth.otp.login webhook: " . $e->getMessage());
+                    Log::error('Failed to dispatch auth.otp.login webhook: '.$e->getMessage());
                 }
             }
 
@@ -108,7 +109,7 @@ class OTPService
             try {
                 $webhookService->dispatch($teamId, 'otp.sent', $eventData);
             } catch (\Exception $e) {
-                Log::error("Failed to dispatch otp.sent webhook: " . $e->getMessage());
+                Log::error('Failed to dispatch otp.sent webhook: '.$e->getMessage());
             }
         }
 
@@ -122,7 +123,7 @@ class OTPService
     {
         $data = Cache::get($this->getCacheKey($identifier));
 
-        if (!$data) {
+        if (! $data) {
             return false;
         }
 
@@ -176,12 +177,12 @@ class OTPService
 
     protected function getCacheKey(string $identifier): string
     {
-        return 'otp_secure_' . md5($identifier);
+        return 'otp_secure_'.md5($identifier);
     }
 
     protected function getDailyCountKey(string $identifier): string
     {
-        return 'otp_daily_count_' . md5($identifier);
+        return 'otp_daily_count_'.md5($identifier);
     }
 
     /**
@@ -190,6 +191,7 @@ class OTPService
     protected function isBlacklisted(string $identifier): bool
     {
         $count = Cache::get($this->getDailyCountKey($identifier), 0);
+
         return $count >= $this->maxRequestsPer24h;
     }
 
@@ -209,12 +211,13 @@ class OTPService
             app(\App\Services\Email\CentralEmailService::class)->sendOtp($email, [
                 'name' => $name,
                 'code' => $code,
-                'expiry' => '5 minutes'
+                'expiry' => '5 minutes',
             ]);
 
             return true;
         } catch (\Exception $e) {
-            Log::error("Failed to send Email OTP to {$email}: " . $e->getMessage());
+            Log::error("Failed to send Email OTP to {$email}: ".$e->getMessage());
+
             return false;
         }
     }
@@ -223,8 +226,9 @@ class OTPService
     {
         try {
             $team = $this->findSendingTeam($teamId);
-            if (!$team) {
-                Log::error("No eligible team or system credentials found for sending WhatsApp OTP.");
+            if (! $team) {
+                Log::error('No eligible team or system credentials found for sending WhatsApp OTP.');
+
                 return false;
             }
 
@@ -233,19 +237,20 @@ class OTPService
             // Find an available template (priority to AUTHENTICATION category)
             $tpl = $this->findOtpTemplate($team);
 
-            if (!$tpl) {
+            if (! $tpl) {
                 // Try one sync pass and retry lookup before failing.
                 if ($this->trySyncOtpTemplates($team)) {
                     $tpl = $this->findOtpTemplate($team);
                 }
 
-                if (!$tpl) {
+                if (! $tpl) {
                     Log::error("No synced WhatsApp OTP template found for team {$team->id}. Sync templates from Meta and ensure WHATSAPP_OTP_TEMPLATE_NAME matches an approved template + language in your WABA.", [
                         'configured_template_name' => config('otp.whatsapp_template_name'),
                         'app_locale' => app()->getLocale(),
-                        'has_waba_id' => !empty($team->whatsapp_business_account_id),
-                        'has_access_token' => !empty($team->whatsapp_access_token),
+                        'has_waba_id' => ! empty($team->whatsapp_business_account_id),
+                        'has_access_token' => ! empty($team->whatsapp_access_token),
                     ]);
+
                     return false;
                 }
             }
@@ -259,7 +264,8 @@ class OTPService
 
             return $this->sendCustomWhatsAppOtp($phone, $code, $tpl->name, $tpl->language, [$code], $team);
         } catch (\Exception $e) {
-            Log::error("Failed to send WhatsApp OTP to {$phone}: " . $e->getMessage());
+            Log::error("Failed to send WhatsApp OTP to {$phone}: ".$e->getMessage());
+
             return false;
         }
     }
@@ -274,7 +280,7 @@ class OTPService
 
         // CASE 1: Platform-wide Authentication (Login or Signup)
         // If no team context is provided, we MUST use the system number from .env/config.
-        if (!$teamId && $systemToken && $systemPhoneId) {
+        if (! $teamId && $systemToken && $systemPhoneId) {
             $shellTeam = Team::where('id', 1)->first() ?: Team::first();
 
             if ($shellTeam) {
@@ -288,6 +294,7 @@ class OTPService
                     $shellTeam->whatsapp_business_account_id = config('whatsapp.system_waba_id');
                 }
                 $shellTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+
                 return $shellTeam;
             }
         }
@@ -296,7 +303,7 @@ class OTPService
         // If a specific team is requesting an OTP, prioritize their own credentials first.
         if ($teamId) {
             $currentTeam = Team::find($teamId);
-            if ($currentTeam && !empty($currentTeam->whatsapp_access_token) && !empty($currentTeam->whatsapp_phone_number_id)) {
+            if ($currentTeam && ! empty($currentTeam->whatsapp_access_token) && ! empty($currentTeam->whatsapp_phone_number_id)) {
                 return $currentTeam;
             }
         }
@@ -323,12 +330,12 @@ class OTPService
                 ->where('whatsapp_access_token', '!=', '')
                 ->whereHas('whatsappTemplates', function ($q) {
                     $q->where('status', 'APPROVED')
-                      ->where(function ($q2) {
-                          $q2->where('category', 'AUTHENTICATION')
-                             ->orWhere('name', 'like', '%otp%')
-                             ->orWhere('name', 'like', '%verification%')
-                             ->orWhere('name', 'like', '%code%');
-                      });
+                        ->where(function ($q2) {
+                            $q2->where('category', 'AUTHENTICATION')
+                                ->orWhere('name', 'like', '%otp%')
+                                ->orWhere('name', 'like', '%verification%')
+                                ->orWhere('name', 'like', '%code%');
+                        });
                 })
                 ->first();
 
@@ -339,6 +346,7 @@ class OTPService
                     $realTeam->whatsapp_business_account_id = config('whatsapp.system_waba_id');
                 }
                 $realTeam->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
+
                 return $realTeam;
             }
         }
@@ -348,7 +356,7 @@ class OTPService
             ->where('whatsapp_access_token', '!=', '')
             ->whereNotNull('whatsapp_phone_number_id')
             ->get()
-            ->first(fn(Team $team) => $team->canAccess('send_message'));
+            ->first(fn (Team $team) => $team->canAccess('send_message'));
     }
 
     /**
@@ -388,8 +396,9 @@ class OTPService
             ->orderByRaw($languageOrderSql, [$appLocale])
             ->first();
 
-        if ($tpl)
+        if ($tpl) {
             return $tpl;
+        }
 
         // 3. Look for synced templates with "otp"/"verification"/"code" in the name.
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
@@ -403,8 +412,9 @@ class OTPService
             ->orderByRaw($languageOrderSql, [$appLocale])
             ->first();
 
-        if ($tpl)
+        if ($tpl) {
             return $tpl;
+        }
 
         // 4. Last resort: Any synced approved UTILITY template.
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $team->id)
@@ -438,6 +448,7 @@ class OTPService
                     'template_name' => $fallback->name,
                     'template_language' => $fallback->language,
                 ]);
+
                 return $fallback;
             }
         }
@@ -453,9 +464,10 @@ class OTPService
         if (empty($team->whatsapp_business_account_id) || empty($team->whatsapp_access_token)) {
             Log::warning('Cannot auto-sync WhatsApp templates for OTP: missing team credentials.', [
                 'team_id' => $team->id,
-                'has_waba_id' => !empty($team->whatsapp_business_account_id),
-                'has_access_token' => !empty($team->whatsapp_access_token),
+                'has_waba_id' => ! empty($team->whatsapp_business_account_id),
+                'has_access_token' => ! empty($team->whatsapp_access_token),
             ]);
+
             return false;
         }
 
@@ -465,12 +477,14 @@ class OTPService
                 'team_id' => $team->id,
                 'synced_count' => count($syncedNames),
             ]);
+
             return true;
         } catch (\Throwable $e) {
             Log::warning('Auto-sync of WhatsApp templates failed before OTP send.', [
                 'team_id' => $team->id,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -488,7 +502,7 @@ class OTPService
         int $otpPosition = 0
     ): bool {
         try {
-            $whatsappService = new WhatsAppService($team);
+            $whatsappService = app(WhatsAppService::class)->setTeam($team);
 
             // Replace the specific position with the OTP code
             if (isset($parameters[$otpPosition])) {
@@ -509,8 +523,8 @@ class OTPService
 
                 if (
                     $teamFromDb
-                    && !empty($teamFromDb->whatsapp_access_token)
-                    && !empty($teamFromDb->whatsapp_phone_number_id)
+                    && ! empty($teamFromDb->whatsapp_access_token)
+                    && ! empty($teamFromDb->whatsapp_phone_number_id)
                 ) {
                     Log::warning('OTP send got Meta permission denial with current credentials; retrying with team stored credentials', [
                         'team_id' => $team->id,
@@ -521,7 +535,7 @@ class OTPService
                         'fallback_token_fingerprint' => $this->tokenFingerprint($teamFromDb->whatsapp_access_token),
                     ]);
 
-                    $fallbackService = new WhatsAppService($teamFromDb);
+                    $fallbackService = app(WhatsAppService::class)->setTeam($teamFromDb);
                     $response = $fallbackService->sendTemplate(
                         $phone,
                         $templateName,
@@ -543,22 +557,24 @@ class OTPService
                         'timestamp' => now()->toIso8601String(),
                     ]);
                 } catch (\Exception $e) {
-                    Log::error("Failed to dispatch otp.sent webhook: " . $e->getMessage());
+                    Log::error('Failed to dispatch otp.sent webhook: '.$e->getMessage());
                 }
 
                 return true;
             }
 
-            Log::warning("WhatsApp template send failed for custom OTP", [
+            Log::warning('WhatsApp template send failed for custom OTP', [
                 'team_id' => $team->id,
                 'credential_source' => $this->getOtpCredentialSource($team),
                 'phone_number_id' => $team->whatsapp_phone_number_id,
                 'token_fingerprint' => $this->tokenFingerprint($team->whatsapp_access_token),
                 'response' => $response,
             ]);
+
             return false;
         } catch (\Exception $e) {
-            Log::error("Failed to send Custom WhatsApp OTP to {$phone}: " . $e->getMessage());
+            Log::error("Failed to send Custom WhatsApp OTP to {$phone}: ".$e->getMessage());
+
             return false;
         }
     }
@@ -592,7 +608,7 @@ class OTPService
 
     protected function tokenFingerprint(?string $token): ?string
     {
-        if (!$token) {
+        if (! $token) {
             return null;
         }
 

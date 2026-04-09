@@ -27,7 +27,7 @@ class PolicyServiceTest extends TestCase
     {
         $contact = new Contact([
             'last_interaction_at' => now()->subHours(1),
-            'opt_in_status' => 'opted_out'
+            'opt_in_status' => 'opted_out',
         ]);
         $this->assertFalse((new PolicyService)->canSendFreeMessage($contact));
     }

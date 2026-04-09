@@ -53,7 +53,7 @@ final class RoleTable extends PowerGridComponent
             })
             ->add('created_at_formatted', function ($row) {
                 return '<div class="relative group">
-                         <span class="cursor-default"  data-tippy-content="' . format_date_time($row->created_at) . '">' . \Carbon\Carbon::parse($row->created_at)->diffForHumans(['options' => \Carbon\Carbon::JUST_NOW]) . '</span>
+                         <span class="cursor-default"  data-tippy-content="'.format_date_time($row->created_at).'">'.\Carbon\Carbon::parse($row->created_at)->diffForHumans(['options' => \Carbon\Carbon::JUST_NOW]).'</span>
                         </div>';
             });
     }

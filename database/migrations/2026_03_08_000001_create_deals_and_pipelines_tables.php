@@ -17,7 +17,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->integer('position')->default(0);
             $table->timestamps();
-            
+
             $table->index(['team_id', 'is_active']);
         });
 
@@ -32,7 +32,7 @@ return new class extends Migration
             $table->boolean('is_closed_lost')->default(false);
             $table->integer('expected_days')->nullable();
             $table->timestamps();
-            
+
             $table->index(['pipeline_id', 'position']);
         });
 
@@ -43,31 +43,31 @@ return new class extends Migration
             $table->foreignId('pipeline_id')->constrained()->cascadeOnDelete();
             $table->foreignId('stage_id')->constrained('pipeline_stages')->cascadeOnDelete();
             $table->foreignId('owner_id')->nullable()->constrained('users')->nullOnDelete();
-            
+
             $table->string('title');
             $table->text('description')->nullable();
             $table->decimal('value', 15, 2)->default(0);
             $table->string('currency', 3)->default('USD');
             $table->date('expected_close_date')->nullable();
             $table->date('actual_close_date')->nullable();
-            
+
             $table->enum('status', ['open', 'won', 'lost', 'abandoned'])->default('open');
             $table->string('lost_reason')->nullable();
             $table->text('notes')->nullable();
-            
+
             $table->decimal('probability', 5, 2)->default(0);
             $table->decimal('weighted_value', 15, 2)->default(0);
-            
+
             $table->json('custom_fields')->nullable();
             $table->string('source')->nullable();
-            
+
             $table->timestamp('last_activity_at')->nullable();
             $table->integer('days_in_stage')->default(0);
             $table->integer('days_in_pipeline')->default(0);
-            
+
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->index(['team_id', 'status']);
             $table->index(['stage_id', 'status']);
             $table->index(['owner_id', 'status']);
@@ -79,14 +79,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('deal_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            
+
             $table->enum('type', ['note', 'email', 'call', 'meeting', 'task', 'stage_change', 'status_change', 'value_change']);
             $table->text('content')->nullable();
             $table->json('metadata')->nullable();
-            
+
             $table->timestamp('occurred_at');
             $table->timestamps();
-            
+
             $table->index(['deal_id', 'occurred_at']);
             $table->index('type');
         });
@@ -94,7 +94,7 @@ return new class extends Migration
         Schema::create('deal_products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('deal_id')->constrained()->cascadeOnDelete();
-            
+
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('unit_price', 15, 2)->default(0);
@@ -102,7 +102,7 @@ return new class extends Migration
             $table->decimal('discount', 5, 2)->default(0);
             $table->decimal('tax', 5, 2)->default(0);
             $table->decimal('total', 15, 2)->default(0);
-            
+
             $table->json('metadata')->nullable();
             $table->timestamps();
         });

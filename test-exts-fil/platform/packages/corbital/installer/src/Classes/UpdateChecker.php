@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Corbital\Installer\Classes\EnvironmentManager;
-
 use ZipArchive;
 
 class UpdateChecker
@@ -21,7 +19,7 @@ class UpdateChecker
     public function __construct()
     {
         $environment = new EnvironmentManager;
-        $this->url   = $environment->guessUrl();
+        $this->url = $environment->guessUrl();
     }
 
     public function installVersion($data)
@@ -32,11 +30,11 @@ class UpdateChecker
             $download = $this->downloadUpdate($update['data']['update_id'], $update['data']['has_sql_update'], $update['data']['latest_version'], $data['token'], $data['purchase_code'], $data['username']);
             if ($download['success'] == true) {
                 set_settings_batch('whats-mark', [
-                    'wm_version'            => $update['data']['latest_version'],
-                    'wm_verification_id'    => base64_encode($data['verification_id']),
-                    'wm_verification_token' => base64_encode($data['verification_id']) . '|' . $data['token'],
-                    'wm_last_verification'  => now()->timestamp,
-                    'wm_support_until'      => $data['support_until'],
+                    'wm_version' => $update['data']['latest_version'],
+                    'wm_verification_id' => base64_encode($data['verification_id']),
+                    'wm_verification_token' => base64_encode($data['verification_id']).'|'.$data['token'],
+                    'wm_last_verification' => now()->timestamp,
+                    'wm_support_until' => $data['support_until'],
                 ]);
             }
         }
@@ -46,15 +44,15 @@ class UpdateChecker
     {
         $response = Http::timeout(60)
             ->withHeaders([
-                'Accept'        => 'application/json',
-                'Content-Type'  => 'application/json',
-                'Authorization' => 'Bearer ' . $token,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer '.$token,
             ])
-            ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . '/check-update', [
+            ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/').'/check-update', [
                 'item_id' => config('installer.license_verification.product_id'),
                 'version' => config('installer.license_verification.current_version'),
                 'initial' => true,
-                'mode'    => $mode,
+                'mode' => $mode,
             ]);
 
         return json_decode($response->getBody(), true);
@@ -91,7 +89,7 @@ class UpdateChecker
             ];
         } catch (\Throwable $e) {
 
-            Log::error('Update failed: ' . $e->getMessage());
+            Log::error('Update failed: '.$e->getMessage());
 
             return [
                 'success' => false,
@@ -102,7 +100,7 @@ class UpdateChecker
 
     private function downloadFile(string $type, string $updateId, string $version, string $token, ?string $license, ?string $client)
     {
-        $destination = config('installer.license_verification.root_path') . "/update_{$type}_{$version}.zip";
+        $destination = config('installer.license_verification.root_path')."/update_{$type}_{$version}.zip";
 
         if (! is_dir(dirname($destination))) {
             mkdir(dirname($destination), 0755, true);
@@ -110,13 +108,13 @@ class UpdateChecker
 
         $response = Http::timeout(60)
             ->withHeaders([
-                'Accept'        => 'application/json',
-                'Authorization' => 'Bearer ' . $token,
+                'Accept' => 'application/json',
+                'Authorization' => 'Bearer '.$token,
             ])
             ->sink($destination)
-            ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . "/download-update/$type/$updateId", [
-                'license_code'     => $license,
-                'client_name'      => $client,
+            ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/')."/download-update/$type/$updateId", [
+                'license_code' => $license,
+                'client_name' => $client,
                 'activated_domain' => $this->url,
             ]);
 
@@ -185,7 +183,7 @@ class UpdateChecker
         // Search for an SQL file in the extracted directory
         foreach (scandir($extractPath) as $file) {
             if (pathinfo($file, PATHINFO_EXTENSION) === 'sql') {
-                $sqlFile = $extractPath . '/' . $file;
+                $sqlFile = $extractPath.'/'.$file;
                 break;
             }
         }
@@ -205,7 +203,7 @@ class UpdateChecker
             File::delete($sqlFile);
 
         } catch (\Exception $e) {
-            throw new \RuntimeException('SQL import failed: ' . $e->getMessage());
+            throw new \RuntimeException('SQL import failed: '.$e->getMessage());
         }
     }
 
@@ -213,14 +211,14 @@ class UpdateChecker
     {
         if ($supportedUntil) {
             $supportedDate = Carbon::parse($supportedUntil)->addDay();
-            $currentDate   = Carbon::now();
+            $currentDate = Carbon::now();
 
             if ($currentDate->greaterThanOrEqualTo($supportedDate)) {
                 return [
-                    'success'     => false,
-                    'type'        => 'danger',
-                    'message'     => 'Support has already expired.',
-                    'time_diff'   => '',
+                    'success' => false,
+                    'type' => 'danger',
+                    'message' => 'Support has already expired.',
+                    'time_diff' => '',
                     'support_url' => trim(base64_decode(config('installer.license_verification.support_url'))),
                 ];
             }
@@ -228,10 +226,10 @@ class UpdateChecker
             $timeDiff = $currentDate->diff($supportedDate)->format('%m months %d days');
 
             return [
-                'success'     => true,
-                'type'        => 'success',
-                'message'     => "Support will expire on {$supportedDate->format('d M, Y')} ({$timeDiff}).",
-                'time_diff'   => "{$timeDiff} left",
+                'success' => true,
+                'type' => 'success',
+                'message' => "Support will expire on {$supportedDate->format('d M, Y')} ({$timeDiff}).",
+                'time_diff' => "{$timeDiff} left",
                 'support_url' => trim(base64_decode(config('installer.license_verification.support_url'))),
             ];
         }
@@ -245,23 +243,23 @@ class UpdateChecker
 
         $response = Http::timeout(60)
             ->withHeaders([
-                'Accept'       => 'application/json',
+                'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
             ])
-            ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . "/products/$item_id");
+            ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/')."/products/$item_id");
 
         return json_decode($response->getBody(), true);
     }
 
     public function validateRequest()
     {
-        $token           = explode('|', get_setting('whats-mark.wm_verification_token'))[1];
+        $token = explode('|', get_setting('whats-mark.wm_verification_token'))[1];
         $verification_id = ! empty(get_setting('whats-mark.wm_verification_id')) ? base64_decode(get_setting('whats-mark.wm_verification_id')) : '';
 
-        $id_data  = explode('|', $verification_id);
-        $verified = ! ((empty($verification_id)) || (4 != \count($id_data)));
+        $id_data = explode('|', $verification_id);
+        $verified = ! ((empty($verification_id)) || (\count($id_data) != 4));
 
-        if (4 === \count($id_data)) {
+        if (\count($id_data) === 4) {
             $verified = ! empty($token);
             try {
 
@@ -276,22 +274,22 @@ class UpdateChecker
             }
 
             $last_verification = (int) get_setting('whats-mark.wm_last_verification');
-            $seconds           = $data->check_interval ?? 0;
+            $seconds = $data->check_interval ?? 0;
             if (! empty($seconds) && time() > ($last_verification + $seconds)) {
                 $verified = false;
                 try {
                     $response = Http::timeout(60)
                         ->withHeaders([
-                            'Accept'        => 'application/json',
-                            'Content-Type'  => 'application/json',
-                            'Authorization' => 'Bearer ' . $token,
+                            'Accept' => 'application/json',
+                            'Content-Type' => 'application/json',
+                            'Authorization' => 'Bearer '.$token,
                         ])
-                        ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . '/validate', [
-                            'verification_id'  => $verification_id,
-                            'item_id'          => config('installer.license_verification.product_id'),
+                        ->post(rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/').'/validate', [
+                            'verification_id' => $verification_id,
+                            'item_id' => config('installer.license_verification.product_id'),
                             'activated_domain' => $this->url,
-                            'version'          => config('installer.license_verification.current_version'),
-                            'purchase_code'    => $id_data[3],
+                            'version' => config('installer.license_verification.current_version'),
+                            'purchase_code' => $id_data[3],
                         ]);
 
                     $result = json_decode($response->getBody(), true);

@@ -11,7 +11,7 @@ use InvalidArgumentException;
 class EmailProviderManager
 {
     /**
-     * @param array<string, EmailProviderContract> $drivers
+     * @param  array<string, EmailProviderContract>  $drivers
      */
     public function __construct(
         protected array $drivers
@@ -22,7 +22,7 @@ class EmailProviderManager
      */
     public function driver(string $name): EmailProviderContract
     {
-        if (!isset($this->drivers[$name])) {
+        if (! isset($this->drivers[$name])) {
             throw new InvalidArgumentException("Email driver [{$name}] is not registered.");
         }
 
@@ -35,10 +35,10 @@ class EmailProviderManager
     public function forUseCase(EmailUseCase $useCase): EmailProviderContract
     {
         // 1. Check specific routing for this use case
-        $name = config('mail.routing.' . $useCase->value);
+        $name = config('mail.routing.'.$useCase->value);
 
         // 2. Fall back to global default provider
-        if (!$name) {
+        if (! $name) {
             $name = config('mail.provider', 'smtp');
         }
 

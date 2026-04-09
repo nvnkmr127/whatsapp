@@ -13,6 +13,12 @@ class WebhookComplianceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        \Illuminate\Support\Facades\Config::set('whatsapp.app_secret', 'test-secret');
+    }
+
     public function test_handling_stop_keyword_opts_out_contact()
     {
         Event::fake(); // Prevent actual broadcasting
@@ -24,7 +30,7 @@ class WebhookComplianceTest extends TestCase
 
         $contact = Contact::create([
             'team_id' => $team->id,
-            'phone_number' => '15550000000',
+            'phone_number' => '+9115550000000',
             'name' => 'Tester',
             'opt_in_status' => 'opted_in', // Already opted in
         ]);
@@ -44,28 +50,32 @@ class WebhookComplianceTest extends TestCase
                                         'type' => 'text',
                                         'text' => ['body' => 'STOP'],
                                         'timestamp' => time(),
-                                    ]
+                                    ],
                                 ],
-                                'contacts' => [['profile' => ['name' => 'Tester']]]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                'contacts' => [['profile' => ['name' => 'Tester']]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         // Send Webhook Request
         $secret = 'test-secret';
-        \Illuminate\Support\Facades\Config::set('services.whatsapp.client_secret', $secret);
 
         $payloadJson = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $payloadJson, $secret);
+        $signature = 'sha256='.hash_hmac('sha256', $payloadJson, $secret);
 
         $response = $this->withHeaders([
             'X-Hub-Signature-256' => $signature,
         ])->postJson('/api/webhook/whatsapp', $payload);
 
         $response->assertStatus(200);
+
+        // Wait for Jobs to process (or use Queue::fake() and process manually)
+        $payloadRecord = \App\Models\WebhookPayload::first();
+        $job = new \App\Jobs\ProcessWebhookJob($payloadRecord->id);
+        app()->call([$job, 'handle']);
 
         // 4. Assertions
         $contact = Contact::find($contact->id);

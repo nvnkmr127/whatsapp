@@ -11,9 +11,7 @@ class OTPVerificationController extends Controller
 {
     use StandardApiResponses;
 
-    public function __construct(protected OTPService $otpService)
-    {
-    }
+    public function __construct(protected OTPService $otpService) {}
 
     /**
      * Verify an OTP sent via webhook
@@ -23,7 +21,7 @@ class OTPVerificationController extends Controller
     {
         $request->validate([
             'phone' => 'required|string',
-            'code'  => 'required|string',
+            'code' => 'required|string',
         ]);
 
         $phone = $request->phone;
@@ -36,4 +34,3 @@ class OTPVerificationController extends Controller
         return $this->error('Invalid or expired OTP', 422, null, 'ERR_OTP_INVALID');
     }
 }
-

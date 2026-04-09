@@ -11,11 +11,10 @@ class ContactMergeService
 {
     /**
      * Merge source contact into primary contact.
-     * 
-     * @param Contact $primary The contact that remains
-     * @param Contact $source The contact that will be deleted
-     * @param int|null $mergedBy User ID who performed the merge
-     * @return bool
+     *
+     * @param  Contact  $primary  The contact that remains
+     * @param  Contact  $source  The contact that will be deleted
+     * @param  int|null  $mergedBy  User ID who performed the merge
      */
     public function merge(Contact $primary, Contact $source, ?int $mergedBy = null): bool
     {

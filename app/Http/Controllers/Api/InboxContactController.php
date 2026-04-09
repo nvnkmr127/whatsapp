@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Contact;
 use App\Services\ContactResolver;
 use App\Traits\StandardApiResponses;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class InboxContactController extends Controller
 {
@@ -15,8 +15,7 @@ class InboxContactController extends Controller
 
     public function __construct(
         protected ContactResolver $resolver
-    ) {
-    }
+    ) {}
 
     /**
      * Resolve contact from phone number.
@@ -30,7 +29,7 @@ class InboxContactController extends Controller
         $user = $request->user();
         $teamId = $user?->current_team_id;
 
-        if (!$teamId) {
+        if (! $teamId) {
             return $this->error('No team context selected.', 400);
         }
 
@@ -39,7 +38,7 @@ class InboxContactController extends Controller
             $teamId
         );
 
-        if (!$contact) {
+        if (! $contact) {
             return $this->error('Contact not found.', 404);
         }
 
@@ -52,14 +51,14 @@ class InboxContactController extends Controller
     public function resolveBatch(Request $request): JsonResponse
     {
         $request->validate([
-            'phones'   => 'required|array',
+            'phones' => 'required|array',
             'phones.*' => 'required|string',
         ]);
 
         $user = $request->user();
         $teamId = $user?->current_team_id;
 
-        if (!$teamId) {
+        if (! $teamId) {
             return $this->error('No team context selected.', 400);
         }
 
@@ -77,10 +76,10 @@ class InboxContactController extends Controller
     public function update(Request $request, Contact $contact): JsonResponse
     {
         $request->validate([
-            'version'           => 'required|integer',
-            'name'              => 'sometimes|string|max:255',
-            'email'             => 'sometimes|email|nullable',
-            'assigned_to'       => 'sometimes|integer|nullable',
+            'version' => 'required|integer',
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|nullable',
+            'assigned_to' => 'sometimes|integer|nullable',
             'custom_attributes' => 'sometimes|array',
         ]);
 
@@ -96,7 +95,7 @@ class InboxContactController extends Controller
                 409,
                 [
                     'current_version' => $contact->version,
-                    'current_data'    => $contact->toArray(),
+                    'current_data' => $contact->toArray(),
                 ],
                 'ERR_CONFLICT'
             );
@@ -107,7 +106,7 @@ class InboxContactController extends Controller
             'name',
             'email',
             'assigned_to',
-            'custom_attributes'
+            'custom_attributes',
         ]));
 
         return $this->success(
@@ -137,4 +136,3 @@ class InboxContactController extends Controller
         return $this->success($contact->fresh(), 'Contact assigned successfully.');
     }
 }
-

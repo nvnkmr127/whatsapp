@@ -2,24 +2,29 @@
 
 namespace App\Livewire\Commerce;
 
-use Livewire\Component;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\Integration;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Carbon\Carbon;
+use Livewire\Component;
 
 #[Title('Commerce')]
 class Dashboard extends Component
 {
     public $stats = [];
+
     public $trends = [];
+
     public $funnel = [];
+
     public $operational = [];
+
     public $integrationStatus = 'unknown';
+
     public $lastUpdated;
+
     public $isEmpty = false;
 
     public function mount()
@@ -101,7 +106,7 @@ class Dashboard extends Component
                 'cart_rate' => $catalogViews > 0 ? ($cartsCreated / $catalogViews) * 100 : 0,
                 'conversion_rate' => $cartsCreated > 0 ? ($ordersCurrentMonth / $cartsCreated) * 100 : 0,
                 'global_rate' => $catalogViews > 0 ? ($ordersCurrentMonth / $catalogViews) * 100 : 0,
-            ]
+            ],
         ];
 
         // Operational Stats (Command Center)
@@ -124,8 +129,8 @@ class Dashboard extends Component
             'ai' => [
                 'active' => $activeBots > 0,
                 'replies' => $totalReplies,
-                'hours_saved' => round(($totalReplies * 2) / 60, 1) // Est 2 mins per reply
-            ]
+                'hours_saved' => round(($totalReplies * 2) / 60, 1), // Est 2 mins per reply
+            ],
         ];
 
         $this->stats = [
@@ -148,6 +153,7 @@ class Dashboard extends Component
         if ($previous == 0) {
             return $current > 0 ? 100 : 0;
         }
+
         return (($current - $previous) / $previous) * 100;
     }
 

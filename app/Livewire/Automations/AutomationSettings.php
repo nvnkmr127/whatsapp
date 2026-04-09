@@ -2,14 +2,17 @@
 
 namespace App\Livewire\Automations;
 
-use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 class AutomationSettings extends Component
 {
     public $away_message;
+
     public $away_message_enabled;
+
     public $timezone;
+
     public $business_hours; // JSON string for now
 
     public function mount()

@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\Team;
 use App\Services\OfferAuditService;
-use App\Services\OfferEligibilityService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -79,7 +78,7 @@ class TeamObserver
         if ($team->offer_claimed_at !== null) {
             $owner = $team->owner ?? \App\Models\User::find($team->user_id);
 
-            if ($owner && !$owner->has_claimed_offer) {
+            if ($owner && ! $owner->has_claimed_offer) {
                 $owner->has_claimed_offer = true;
                 $owner->offer_claimed_at = $team->offer_claimed_at;
                 $owner->saveQuietly();

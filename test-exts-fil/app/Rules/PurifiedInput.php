@@ -26,7 +26,7 @@ class PurifiedInput implements ValidationRule
 
             if (is_array($value)) {
                 foreach ($value as $key => $val) {
-                    $this->validateArrayItem($attribute . '.' . $key, $val, $fail);
+                    $this->validateArrayItem($attribute.'.'.$key, $val, $fail);
                 }
 
                 return;
@@ -57,9 +57,9 @@ class PurifiedInput implements ValidationRule
                 $fail(str_replace(':attribute', $attribute, $this->message));
             }
         } catch (Exception $e) {
-            app_log('Validation error in PurifiedInput: ' . $e->getMessage(), 'error', $e, [
+            app_log('Validation error in PurifiedInput: '.$e->getMessage(), 'error', $e, [
                 'attribute' => $attribute,
-                'value'     => $value,
+                'value' => $value,
             ]);
 
             $fail(t('validation_failed_due_to_unexpected_error'));
@@ -73,7 +73,7 @@ class PurifiedInput implements ValidationRule
     {
         if (is_array($value)) {
             foreach ($value as $key => $val) {
-                $this->validateArrayItem($attribute . '.' . $key, $val, $fail);
+                $this->validateArrayItem($attribute.'.'.$key, $val, $fail);
             }
 
             return;
@@ -101,14 +101,14 @@ class PurifiedInput implements ValidationRule
             $config->set('Core.EscapeInvalidTags', true);  // Optional
 
             $purifier = new HTMLPurifier($config);
-            $clean    = $purifier->purify($value);
+            $clean = $purifier->purify($value);
 
             // Decode &amp; back to & for final output
             $clean = str_replace('&amp;', '&', $clean);
 
             return $clean;
         } catch (Exception $e) {
-            app_log('Error in HTML purification: ' . $e->getMessage(), 'error', $e, [
+            app_log('Error in HTML purification: '.$e->getMessage(), 'error', $e, [
                 'value' => $value,
             ]);
 
@@ -149,7 +149,7 @@ class PurifiedInput implements ValidationRule
                 }
             }
         } catch (\Exception $e) {
-            app_log('SQL Injection detection failed: ' . $e->getMessage(), 'error', $e, [
+            app_log('SQL Injection detection failed: '.$e->getMessage(), 'error', $e, [
                 'value' => $value,
             ]);
 
@@ -179,7 +179,7 @@ class PurifiedInput implements ValidationRule
                 }
             }
         } catch (\Exception $e) {
-            app_log('JSON Injection detection failed: ' . $e->getMessage(), 'error', $e, [
+            app_log('JSON Injection detection failed: '.$e->getMessage(), 'error', $e, [
                 'value' => $value,
             ]);
         }

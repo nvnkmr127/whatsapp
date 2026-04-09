@@ -12,15 +12,14 @@ class QualityProtectionValidator
 {
     public function __construct(
         protected WhatsAppHealthMonitor $healthMonitor
-    ) {
-    }
+    ) {}
 
     /**
      * Validate quality rating and campaign size
      */
     public function validate(Team $team, int $recipientCount): ValidationResult
     {
-        $result = new ValidationResult();
+        $result = new ValidationResult;
         $rating = $team->wm_quality_rating ?? 'UNKNOWN';
 
         // Block if RED

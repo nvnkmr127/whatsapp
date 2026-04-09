@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Conversation;
 use App\Services\ConversationService;
+use Illuminate\Http\Request;
 
 class ConversationController extends Controller
 {
@@ -18,7 +18,7 @@ class ConversationController extends Controller
     public function lock(Request $request, Conversation $conversation)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No team context'], 400);
         }
 
@@ -35,7 +35,7 @@ class ConversationController extends Controller
     public function unlock(Request $request, Conversation $conversation)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No team context'], 400);
         }
 
@@ -51,7 +51,7 @@ class ConversationController extends Controller
     public function heartbeat(Request $request, Conversation $conversation)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No team context'], 400);
         }
 
@@ -68,7 +68,7 @@ class ConversationController extends Controller
     public function forceTakeOver(Request $request, Conversation $conversation)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No team context'], 400);
         }
 

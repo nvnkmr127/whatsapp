@@ -41,7 +41,7 @@ class ProcessCartEngine extends Command
             Log::info("Cart {$cart->id} marked as abandoned.");
         }
 
-        $this->info("Marked " . $expiredCarts->count() . " carts as abandoned.");
+        $this->info('Marked '.$expiredCarts->count().' carts as abandoned.');
 
         // 2. Process Reminders for Abandoned Carts
         // We iterate through teams to get their specific delay settings
@@ -64,13 +64,13 @@ class ProcessCartEngine extends Command
 
             foreach ($abandonedCarts as $cart) {
                 $this->sendReminder($cart);
-                
+
                 // Advanced Automation Engine Trigger (T7. cart_abandoned)
                 try {
                     $automationService = app(\App\Services\AutomationService::class);
                     $automationService->checkSpecialTriggers($cart->contact, 'cart_abandoned', [
                         'cart_uuid' => $cart->uuid,
-                        'total_amount' => $cart->total_amount
+                        'total_amount' => $cart->total_amount,
                     ]);
                 } catch (\Exception $e) {
                 }
@@ -83,14 +83,16 @@ class ProcessCartEngine extends Command
     protected function sendReminder(Cart $cart)
     {
         $team = $cart->team;
-        if (!$team) {
+        if (! $team) {
             Log::error("Cart {$cart->id} has no team.");
+
             return;
         }
 
         $contact = $cart->contact;
-        if (!$contact) {
+        if (! $contact) {
             Log::error("Cart {$cart->id} has no contact.");
+
             return;
         }
 
@@ -105,7 +107,7 @@ class ProcessCartEngine extends Command
                 // Send Template Message
                 // Assuming template has 1 variable for the cart link or checkout URL
                 // We'll generate a checkout link (mock for now if not defined)
-                $checkoutUrl = config('app.url') . "/checkout/" . $cart->uuid;
+                $checkoutUrl = config('app.url').'/checkout/'.$cart->uuid;
 
                 $result = $whatsapp->sendTemplate(
                     $contact->phone_number,
@@ -115,8 +117,8 @@ class ProcessCartEngine extends Command
                 );
             } else {
                 // Fallback: Send Text Message
-                $checkoutUrl = config('app.url') . "/checkout/" . $cart->uuid;
-                $message = "Hi " . ($contact->first_name ?? 'there') . ", you left items in your cart. Complete your purchase here: " . $checkoutUrl;
+                $checkoutUrl = config('app.url').'/checkout/'.$cart->uuid;
+                $message = 'Hi '.($contact->first_name ?? 'there').', you left items in your cart. Complete your purchase here: '.$checkoutUrl;
 
                 $result = $whatsapp->sendText($contact->phone_number, $message);
             }
@@ -126,14 +128,14 @@ class ProcessCartEngine extends Command
 
                 $cart->update([
                     'reminder_sent_at' => now(),
-                    'status' => 'reminder_sent' // Optional: update status to reflect reminder sent
+                    'status' => 'reminder_sent', // Optional: update status to reflect reminder sent
                 ]);
             } else {
-                Log::error("Failed to send reminder for Cart {$cart->uuid}: " . json_encode($result));
+                Log::error("Failed to send reminder for Cart {$cart->uuid}: ".json_encode($result));
             }
 
         } catch (\Exception $e) {
-            Log::error("Exception sending reminder for Cart {$cart->uuid}: " . $e->getMessage());
+            Log::error("Exception sending reminder for Cart {$cart->uuid}: ".$e->getMessage());
         }
     }
 }

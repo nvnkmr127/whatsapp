@@ -6,8 +6,8 @@ return new class extends SettingsMigration
 {
     protected array $settings = [
         're-captcha.isReCaptchaEnable' => false,
-        're-captcha.site_key'          => '',
-        're-captcha.secret_key'        => '',
+        're-captcha.site_key' => '',
+        're-captcha.secret_key' => '',
     ];
 
     public function up(): void

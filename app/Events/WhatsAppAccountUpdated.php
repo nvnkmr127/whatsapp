@@ -14,8 +14,6 @@ class WhatsAppAccountUpdated
 
     /**
      * Create a new event instance.
-     *
-     * @param array $payload
      */
     public function __construct(array $payload)
     {

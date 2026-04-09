@@ -22,7 +22,7 @@ class AuthenticatedSessionController extends Controller
     public function create()
     {
         $announcement = get_settings_by_group('announcement');
-        $user         = Auth::user();
+        $user = Auth::user();
         if (! $user) {
             return view('auth.login', compact('announcement'));
         }
@@ -42,10 +42,10 @@ class AuthenticatedSessionController extends Controller
             ]);
 
             $recaptchaResponse = $request->input('g-recaptcha-response');
-            $secretKey         = get_setting('re-captcha.secret_key');
+            $secretKey = get_setting('re-captcha.secret_key');
 
             $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret'   => $secretKey,
+                'secret' => $secretKey,
                 'response' => $recaptchaResponse,
                 'remoteip' => $request->ip(),
             ]);
@@ -74,7 +74,7 @@ class AuthenticatedSessionController extends Controller
         if (Auth::attempt($request->only('email', 'password'), $remember)) {
             $request->session()->regenerate();
 
-            $user   = Auth::user();
+            $user = Auth::user();
             $locale = Session::get('locale', config('app.locale'));
             Cache::forget("translations.{$locale}");
             $default_language = (! is_null($user->default_language)) ? $user->default_language : get_setting('general.active_language');

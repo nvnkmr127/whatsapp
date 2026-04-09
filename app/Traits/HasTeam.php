@@ -16,7 +16,7 @@ trait HasTeam
 
         // Automatically set team_id on creation
         static::creating(function ($model) {
-            if (!$model->team_id && Auth::check()) {
+            if (! $model->team_id && Auth::check()) {
                 $model->team_id = Auth::user()->current_team_id;
             }
         });

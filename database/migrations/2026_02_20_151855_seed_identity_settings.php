@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
  * identity_public_domains  – comma-separated extra domains to treat as public
  *                            (will not apply domain uniqueness checks)
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         $settings = [
@@ -34,7 +35,7 @@ return new class extends Migration {
                     'value' => $s['value'],
                     'group' => $s['group'],
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]
             );
         }

@@ -16,6 +16,7 @@ class User extends Authenticatable
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
+
     use HasProfilePhoto;
     use HasTeams;
     use Notifiable;
@@ -39,6 +40,7 @@ class User extends Authenticatable
         // Offer claim tracking – set once, never cleared
         'has_claimed_offer',
         'offer_claimed_at',
+        'call_status',
     ];
 
     /**
@@ -81,6 +83,7 @@ class User extends Authenticatable
             'offer_claimed_at' => 'datetime',
         ];
     }
+
     /**
      * Get all of the teams the user belongs to or owns.
      *
@@ -103,12 +106,12 @@ class User extends Authenticatable
      */
     public function belongsToTeam($team)
     {
-        if ($this->is_super_admin) {
-            return true;
-        }
-
         if (is_null($team)) {
             return false;
+        }
+
+        if ($this->is_super_admin) {
+            return true;
         }
 
         return $this->ownsTeam($team) || $this->teams->contains(function ($t) use ($team) {
@@ -136,7 +139,7 @@ class User extends Authenticatable
             return new \Laravel\Jetstream\OwnerRole;
         }
 
-        if (!$this->belongsToTeam($team)) {
+        if (! $this->belongsToTeam($team)) {
             return;
         }
 
@@ -193,7 +196,7 @@ class User extends Authenticatable
             return true;
         }
 
-        if (!$this->currentTeam) {
+        if (! $this->currentTeam) {
             return false;
         }
 
@@ -208,7 +211,7 @@ class User extends Authenticatable
         // Use existing membership if already loaded (e.g. from Team::users() relation)
         $membership = $this->membership ?? $team->users()->where('users.id', $this->id)->first()?->membership;
 
-        if (!$membership || !$membership->is_call_enabled) {
+        if (! $membership || ! $membership->is_call_enabled) {
             return false;
         }
 

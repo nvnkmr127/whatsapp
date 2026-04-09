@@ -3,9 +3,9 @@
 namespace App\Livewire\Crm;
 
 use App\Services\OnboardingService;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class OnboardingManager extends Component
 {
@@ -23,11 +23,11 @@ class OnboardingManager extends Component
 
     public function render()
     {
-        $service = new OnboardingService();
+        $service = new OnboardingService;
 
         if ($this->filter === 'leads') {
             $allLeads = $service->getOtpLeads();
-            
+
             // Manual Pagination for Collection
             $perPage = 10;
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
@@ -35,7 +35,7 @@ class OnboardingManager extends Component
             $teams = new LengthAwarePaginator($currentItems, count($allLeads), $perPage);
             $teams->setPath(request()->url());
         } else {
-            $query = match($this->filter) {
+            $query = match ($this->filter) {
                 'not_started' => $service->getSignupsNotStarted(),
                 'abandoned' => $service->getAbandonedSetup(),
                 'no_activity' => $service->getSetupCompletedNoActivity(),

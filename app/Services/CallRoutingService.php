@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Team;
-use App\Models\User;
 use App\Models\Contact;
+use App\Models\Team;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -44,7 +43,7 @@ class CallRoutingService
             default => $this->getFallbackAgent(),
         };
 
-        if ($result['agent'] || !empty($result['agents'])) {
+        if ($result['agent'] || ! empty($result['agents'])) {
             return $result;
         }
 
@@ -67,7 +66,7 @@ class CallRoutingService
         $bestAgent = $agents->sortBy(function ($agent) {
             return [
                 $agent->membership->last_call_ended_at ? $agent->membership->last_call_ended_at->timestamp : 0,
-                $agent->id
+                $agent->id,
             ];
         })->first();
 
@@ -96,7 +95,7 @@ class CallRoutingService
         $bestAgent = $agents->sortBy(function ($agent) {
             return [
                 $agent->membership->last_call_ended_at ? $agent->membership->last_call_ended_at->timestamp : 0,
-                $agent->id
+                $agent->id,
             ];
         })->first();
 
@@ -129,7 +128,7 @@ class CallRoutingService
         $config = $this->team->getCallRoutingConfig();
         $fallback = $config['fallback_action'] ?? 'auto_reply';
 
-        Log::info("Call fallback triggered", [
+        Log::info('Call fallback triggered', [
             'team_id' => $this->team->id,
             'contact_id' => $contact->id,
             'action' => $fallback,

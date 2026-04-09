@@ -19,8 +19,8 @@ class WebhookTriggerController extends Controller
     {
         $user = $request->user();
         $team = $user?->currentTeam;
-        
-        if (!$team) {
+
+        if (! $team) {
             return $this->error('No team context selected.', 400);
         }
 
@@ -29,14 +29,14 @@ class WebhookTriggerController extends Controller
             ->where('team_id', $team->id)
             ->first();
 
-        if (!$workflow) {
+        if (! $workflow) {
             return $this->error('Workflow not found or inactive.', 404);
         }
 
         // Validate payload: expect 'phone' or 'recipient_id'
         $recipient = $request->input('phone') ?? $request->input('recipient_id');
 
-        if (!$recipient) {
+        if (! $recipient) {
             return $this->error('Missing phone or recipient_id in payload.', 400);
         }
 
@@ -53,11 +53,12 @@ class WebhookTriggerController extends Controller
             return $this->success([], 'Workflow triggered successfully.');
 
         } catch (\Exception $e) {
-            Log::error("Webhook Workflow Execution Error: " . $e->getMessage(), [
+            Log::error('Webhook Workflow Execution Error: '.$e->getMessage(), [
                 'workflow_id' => $workflow->id,
                 'team_id' => $team->id,
-                'recipient' => $recipient
+                'recipient' => $recipient,
             ]);
+
             return $this->error('Failed to trigger workflow due to server error.', 500, null, 'ERR_SERVER_ERROR');
         }
     }

@@ -28,7 +28,7 @@ class WebhookSource extends Model
 
         static::creating(function ($source) {
             if (empty($source->slug)) {
-                $source->slug = Str::slug($source->name) . '-' . Str::random(6);
+                $source->slug = Str::slug($source->name).'-'.Str::random(6);
             }
         });
     }
@@ -103,6 +103,7 @@ class WebhookSource extends Model
                     return null;
                 }
             }
+
             return $array;
         };
 
@@ -117,36 +118,44 @@ class WebhookSource extends Model
 
             switch ($operator) {
                 case 'equals':
-                    if ((string) $fieldValue !== (string) $targetValue)
+                    if ((string) $fieldValue !== (string) $targetValue) {
                         return false;
+                    }
                     break;
                 case 'not_equals':
-                    if ((string) $fieldValue === (string) $targetValue)
+                    if ((string) $fieldValue === (string) $targetValue) {
                         return false;
+                    }
                     break;
                 case 'contains':
-                    if (is_string($fieldValue) && !str_contains($fieldValue, (string) $targetValue))
+                    if (is_string($fieldValue) && ! str_contains($fieldValue, (string) $targetValue)) {
                         return false;
+                    }
                     break;
                 case 'not_contains':
-                    if (is_string($fieldValue) && str_contains($fieldValue, (string) $targetValue))
+                    if (is_string($fieldValue) && str_contains($fieldValue, (string) $targetValue)) {
                         return false;
+                    }
                     break;
                 case 'greater_than':
-                    if (!is_numeric($fieldValue) || !($fieldValue > $targetValue))
+                    if (! is_numeric($fieldValue) || ! ($fieldValue > $targetValue)) {
                         return false;
+                    }
                     break;
                 case 'less_than':
-                    if (!is_numeric($fieldValue) || !($fieldValue < $targetValue))
+                    if (! is_numeric($fieldValue) || ! ($fieldValue < $targetValue)) {
                         return false;
+                    }
                     break;
                 case 'is_empty':
-                    if (!empty($fieldValue))
+                    if (! empty($fieldValue)) {
                         return false;
+                    }
                     break;
                 case 'is_not_empty':
-                    if (empty($fieldValue))
+                    if (empty($fieldValue)) {
                         return false;
+                    }
                     break;
             }
         }

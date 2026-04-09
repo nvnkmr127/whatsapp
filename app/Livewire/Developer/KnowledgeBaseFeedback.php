@@ -12,9 +12,13 @@ class KnowledgeBaseFeedback extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = 'pending';
+
     public $resolutionNote = '';
+
     public $selectedGapId = null;
+
     public $showResolutionModal = false;
 
     protected $queryString = ['search', 'statusFilter'];
@@ -60,7 +64,7 @@ class KnowledgeBaseFeedback extends Component
     {
         $gaps = KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)
             ->when($this->search, function ($query) {
-                $query->where('query', 'like', '%' . $this->search . '%');
+                $query->where('query', 'like', '%'.$this->search.'%');
             })
             ->when($this->statusFilter, function ($query) {
                 $query->where('status', $this->statusFilter);
@@ -69,7 +73,7 @@ class KnowledgeBaseFeedback extends Component
             ->paginate(10);
 
         return view('livewire.developer.knowledge-base-feedback', [
-            'gaps' => $gaps
+            'gaps' => $gaps,
         ]);
     }
 }

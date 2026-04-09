@@ -12,7 +12,7 @@ class SeoSettings extends Component
     public ?string $meta_description = '';
 
     private array $keys = [
-        'meta_title'       => null,
+        'meta_title' => null,
         'meta_description' => null,
     ];
 
@@ -26,7 +26,7 @@ class SeoSettings extends Component
     protected function rules()
     {
         return [
-            'meta_title'       => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'meta_title' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
             'meta_description' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
         ];
     }
@@ -45,7 +45,7 @@ class SeoSettings extends Component
     {
         $settings = get_settings_by_group('seo');
 
-        $this->meta_title       = $settings->meta_title ?? false;
+        $this->meta_title = $settings->meta_title ?? false;
         $this->meta_description = $settings->meta_description;
     }
 
@@ -57,13 +57,13 @@ class SeoSettings extends Component
             $originalSettings = get_settings_by_group('seo');
 
             $newSettings = [
-                'meta_title'       => $this->meta_title,
+                'meta_title' => $this->meta_title,
                 'meta_description' => $this->meta_description,
             ];
 
             // Filter the settings that have been modified
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Save only if there are modifications

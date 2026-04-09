@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class AutomationTest extends TestCase
@@ -17,7 +16,7 @@ class AutomationTest extends TestCase
 
         // Mock WhatsAppService
         $this->mock(\App\Services\WhatsAppService::class, function ($mock) {
-            $mock->shouldReceive('setTeam')->once();
+            $mock->shouldReceive('setTeam');
             $mock->shouldReceive('sendText')->once()->withArgs(function ($phone, $text) {
                 return $text === 'Hello World'; // Check automated reply
             });
@@ -33,15 +32,15 @@ class AutomationTest extends TestCase
             'flow_data' => [
                 'nodes' => [
                     ['id' => '1', 'type' => 'trigger'],
-                    ['id' => '2', 'type' => 'message', 'data' => ['text' => 'Hello World']]
+                    ['id' => '2', 'type' => 'message', 'data' => ['text' => 'Hello World']],
                 ],
                 'edges' => [
-                    ['source' => '1', 'target' => '2']
-                ]
-            ]
+                    ['source' => '1', 'target' => '2'],
+                ],
+            ],
         ]);
 
-        $service = new \App\Services\AutomationService(app(\App\Services\WhatsAppService::class));
+        $service = app(\App\Services\AutomationService::class);
 
         // Assert Checked Triggers
         $triggered = $service->checkTriggers($contact, 'hello there');
@@ -51,7 +50,7 @@ class AutomationTest extends TestCase
         $this->assertDatabaseHas('automation_runs', [
             'contact_id' => $contact->id,
             'automation_id' => $automation->id,
-            'status' => 'completed' // Should finish immediately as it's 1 message
+            'status' => 'completed', // Should finish immediately as it's 1 message
         ]);
     }
 
@@ -78,24 +77,26 @@ class AutomationTest extends TestCase
             'flow_data' => [
                 'nodes' => [
                     ['id' => '1', 'type' => 'trigger'],
-                    ['id' => '2', 'type' => 'question', 'data' => ['text' => 'Need help?']],
+                    ['id' => '2', 'type' => 'user_input', 'data' => ['question' => 'Need help?', 'variable' => 'help_needed']],
                     ['id' => '3', 'type' => 'message', 'data' => ['text' => 'Glad to help']],
-                    ['id' => '4', 'type' => 'message', 'data' => ['text' => 'Okay, bye']]
+                    ['id' => '4', 'type' => 'message', 'data' => ['text' => 'Okay, bye']],
                 ],
                 'edges' => [
                     ['source' => '1', 'target' => '2'],
                     ['source' => '2', 'target' => '3', 'condition' => 'yes'],
-                    ['source' => '2', 'target' => '4', 'condition' => 'no']
-                ]
-            ]
+                    ['source' => '2', 'target' => '4', 'condition' => 'no'],
+                ],
+            ],
         ]);
 
-        $service = new \App\Services\AutomationService(app(\App\Services\WhatsAppService::class));
+        $service = app(\App\Services\AutomationService::class);
 
         // 1. Initial trigger
-        $service->checkTriggers($contact, 'support');
+        $triggered = $service->checkTriggers($contact, 'support');
+        $this->assertTrue($triggered);
 
         $run = \App\Models\AutomationRun::where('contact_id', $contact->id)->first();
+        $this->assertNotNull($run, 'AutomationRun should be created');
         $this->assertEquals('waiting_input', $run->status);
         $this->assertEquals('2', $run->state_data['current_node_id']);
 
@@ -114,13 +115,13 @@ class AutomationTest extends TestCase
         \Livewire\Livewire::actingAs($user)
             ->test(\App\Livewire\Automations\AutomationBuilder::class)
             ->set('name', 'Test Bot')
-            ->set('triggerKeyword', 'test')
+            ->set('triggerKeywordsString', 'test')
             ->call('save')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('automations', [
             'team_id' => $user->currentTeam->id,
-            'name' => 'Test Bot'
+            'name' => 'Test Bot',
         ]);
     }
 }

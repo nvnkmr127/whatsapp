@@ -36,14 +36,14 @@ class EmailSettings extends Component
     protected function rules()
     {
         return [
-            'mailer'          => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'smtp_port'       => ['nullable', 'numeric'],
-            'smtp_username'   => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'smtp_password'   => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'mailer' => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'smtp_port' => ['nullable', 'numeric'],
+            'smtp_username' => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'smtp_password' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
             'smtp_encryption' => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'sender_name'     => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'sender_email'    => 'nullable|email|max:255',
-            'smtp_host'       => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'sender_name' => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'sender_email' => 'nullable|email|max:255',
+            'smtp_host' => ['nullable', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
         ];
     }
 
@@ -62,14 +62,14 @@ class EmailSettings extends Component
     {
         $settings = get_settings_by_group('email');
 
-        $this->mailer          = $settings->mailer ?? false;
-        $this->smtp_port       = $settings->smtp_port;
-        $this->smtp_host       = $settings->smtp_host;
-        $this->smtp_username   = $settings->smtp_username;
-        $this->smtp_password   = $settings->smtp_password;
+        $this->mailer = $settings->mailer ?? false;
+        $this->smtp_port = $settings->smtp_port;
+        $this->smtp_host = $settings->smtp_host;
+        $this->smtp_username = $settings->smtp_username;
+        $this->smtp_password = $settings->smtp_password;
         $this->smtp_encryption = $settings->smtp_encryption;
-        $this->sender_name     = $settings->sender_name;
-        $this->sender_email    = $settings->sender_email;
+        $this->sender_name = $settings->sender_name;
+        $this->sender_email = $settings->sender_email;
     }
 
     public function sendTestEmail($email)
@@ -87,7 +87,7 @@ class EmailSettings extends Component
                 session()->flash('error', $result['message']);
             }
         } catch (\Exception $e) {
-            $this->notify(['type' => 'danger', 'message' => t('failed_to_send_test_mail') . $e->getMessage()]);
+            $this->notify(['type' => 'danger', 'message' => t('failed_to_send_test_mail').$e->getMessage()]);
         }
     }
 
@@ -99,19 +99,19 @@ class EmailSettings extends Component
             $originalSettings = get_settings_by_group('email');
 
             $newSettings = [
-                'mailer'          => $this->mailer,
-                'smtp_port'       => $this->smtp_port,
-                'smtp_username'   => $this->smtp_username,
-                'smtp_password'   => $this->smtp_password,
+                'mailer' => $this->mailer,
+                'smtp_port' => $this->smtp_port,
+                'smtp_username' => $this->smtp_username,
+                'smtp_password' => $this->smtp_password,
                 'smtp_encryption' => $this->smtp_encryption,
-                'sender_name'     => $this->sender_name,
-                'sender_email'    => $this->sender_email,
-                'smtp_host'       => $this->smtp_host,
+                'sender_name' => $this->sender_name,
+                'sender_email' => $this->sender_email,
+                'smtp_host' => $this->smtp_host,
             ];
 
             // Compare and filter only modified settings
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Save only if there are modifications

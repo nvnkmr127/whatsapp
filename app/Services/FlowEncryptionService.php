@@ -22,8 +22,8 @@ class FlowEncryptionService
      */
     public function decryptRequest($encryptedFlowData, $encryptedAesKey, $initialVector)
     {
-        if (!$this->privateKey) {
-            throw new \Exception("Flow Private Key not found. Please generate keys.");
+        if (! $this->privateKey) {
+            throw new \Exception('Flow Private Key not found. Please generate keys.');
         }
 
         try {
@@ -54,14 +54,14 @@ class FlowEncryptionService
             );
 
             if ($decryptedJSON === false) {
-                throw new \Exception("OpenSSL Decryption failed.");
+                throw new \Exception('OpenSSL Decryption failed.');
             }
 
             return json_decode($decryptedJSON, true);
 
         } catch (\Exception $e) {
-            Log::error("Flow Decryption Error: " . $e->getMessage());
-            throw new \Exception("Decryption failed: " . $e->getMessage());
+            Log::error('Flow Decryption Error: '.$e->getMessage());
+            throw new \Exception('Decryption failed: '.$e->getMessage());
         }
     }
 
@@ -70,8 +70,8 @@ class FlowEncryptionService
      */
     public function encryptResponse($response, $encryptedAesKey, $initialVector)
     {
-        if (!$this->privateKey) {
-            throw new \Exception("Flow Private Key not found.");
+        if (! $this->privateKey) {
+            throw new \Exception('Flow Private Key not found.');
         }
 
         try {
@@ -85,7 +85,7 @@ class FlowEncryptionService
             $invertedIv = ~$initialVectorIdx;
 
             // 3. Encrypt Response
-            $tag = "";
+            $tag = '';
             $encryptedResponse = openssl_encrypt(
                 json_encode($response),
                 'aes-128-gcm',
@@ -96,13 +96,13 @@ class FlowEncryptionService
             );
 
             // Append tag to ciphertext
-            $payload = $encryptedResponse . $tag;
+            $payload = $encryptedResponse.$tag;
 
             return base64_encode($payload);
 
         } catch (\Exception $e) {
-            Log::error("Flow Encryption Error: " . $e->getMessage());
-            throw new \Exception("Encryption failed.");
+            Log::error('Flow Encryption Error: '.$e->getMessage());
+            throw new \Exception('Encryption failed.');
         }
     }
 }

@@ -22,11 +22,11 @@ class UpdateTeamMemberRoleTest extends TestCase
 
         Livewire::test(TeamMemberManager::class, ['team' => $user->currentTeam])
             ->set('managingRoleFor', $otherUser)
-            ->set('currentRole', 'editor')
+            ->set('currentRole', 'manager')
             ->call('updateRole');
 
         $this->assertTrue($otherUser->fresh()->hasTeamRole(
-            $user->currentTeam->fresh(), 'editor'
+            $user->currentTeam->fresh(), 'manager'
         ));
     }
 
@@ -42,7 +42,7 @@ class UpdateTeamMemberRoleTest extends TestCase
 
         Livewire::test(TeamMemberManager::class, ['team' => $user->currentTeam])
             ->set('managingRoleFor', $otherUser)
-            ->set('currentRole', 'editor')
+            ->set('currentRole', 'manager')
             ->call('updateRole')
             ->assertStatus(403);
 

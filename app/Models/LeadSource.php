@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LeadSource extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -23,8 +22,6 @@ class LeadSource extends Model
         'is_active' => 'boolean',
     ];
 
-
-
     public function contacts(): HasMany
     {
         return $this->hasMany(Contact::class);
@@ -36,11 +33,11 @@ class LeadSource extends Model
         if ($total === 0) {
             return 0;
         }
-        
+
         $converted = $this->contacts()->whereHas('deals', function ($q) {
             $q->where('status', 'won');
         })->count();
-        
+
         return round(($converted / $total) * 100, 2);
     }
 }

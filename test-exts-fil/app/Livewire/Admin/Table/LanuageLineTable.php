@@ -53,10 +53,10 @@ final class LanuageLineTable extends PowerGridComponent
         $languageData = getLanguageJson($this->languageCode);
 
         return collect($languageData)->map(function ($value, $key) {
-            $item          = new \stdClass;
-            $item->id      = (string) $key;
-            $item->key     = (string) $key;
-            $item->value   = $value;
+            $item = new \stdClass;
+            $item->id = (string) $key;
+            $item->key = (string) $key;
+            $item->value = $value;
             $item->english = getLangugeValue('en', $key);
 
             return $item;
@@ -107,7 +107,7 @@ final class LanuageLineTable extends PowerGridComponent
         $normalize = fn ($val) => trim(str_replace("\u{A0}", ' ', $val ?? ''));
 
         $normalizedCurrent = $normalize($currentValue);
-        $value             = $normalize($value);
+        $value = $normalize($value);
 
         // If the normalized value hasn't changed, return early (no update needed)
         if ($normalizedCurrent === $value) {

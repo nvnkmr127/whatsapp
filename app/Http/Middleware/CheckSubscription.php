@@ -15,9 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class CheckSubscription
 {
-    public function __construct(private readonly EntitlementService $entitlements)
-    {
-    }
+    public function __construct(private readonly EntitlementService $entitlements) {}
 
     public function handle(Request $request, Closure $next): Response
     {

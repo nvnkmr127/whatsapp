@@ -16,8 +16,6 @@ class TriggerWorkflowsOnContactCreated implements ShouldQueue
 
     /**
      * Create the event listener.
-     *
-     * @param WorkflowEngine $workflowEngine
      */
     public function __construct(WorkflowEngine $workflowEngine)
     {
@@ -26,22 +24,19 @@ class TriggerWorkflowsOnContactCreated implements ShouldQueue
 
     /**
      * Handle the event.
-     *
-     * @param ContactCreated $event
-     * @return void
      */
     public function handle(ContactCreated $event): void
     {
         try {
             $this->workflowEngine->trigger(
-                'contact_created', 
-                $event->contact, 
+                'contact_created',
+                $event->contact,
                 $event->context
             );
         } catch (\Exception $e) {
-            Log::error("Workflow trigger failed on ContactCreated Event: " . $e->getMessage(), [
+            Log::error('Workflow trigger failed on ContactCreated Event: '.$e->getMessage(), [
                 'contact_id' => $event->contact->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

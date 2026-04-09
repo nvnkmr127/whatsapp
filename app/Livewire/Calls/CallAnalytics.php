@@ -2,14 +2,15 @@
 
 namespace App\Livewire\Calls;
 
+use App\Models\Contact;
 use App\Services\BillingService;
 use App\Services\CallService;
-use App\Models\Contact;
 use Livewire\Component;
 
 class CallAnalytics extends Component
 {
     public $period = 'month'; // today, week, month, year
+
     public $dateRange = [];
 
     public function mount()
@@ -44,7 +45,7 @@ class CallAnalytics extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return view('livewire.calls.call-analytics', [
                 'statistics' => [],
                 'billingStats' => null,
@@ -55,7 +56,7 @@ class CallAnalytics extends Component
         }
 
         $callService = app(CallService::class)->setTeam($team);
-        $billingService = new BillingService();
+        $billingService = new BillingService;
 
         // Get call statistics
         $statistics = $callService->getCallStatistics($this->period);
@@ -96,7 +97,7 @@ class CallAnalytics extends Component
         $qualityTrends = \App\Models\CallQualityMetric::selectRaw(
             'AVG(network_quality_score) as avg_mos, AVG(answer_latency_ms) as avg_latency, DATE(created_at) as date'
         )
-            ->whereHas('whatsappCall', function($q) use ($team) {
+            ->whereHas('whatsappCall', function ($q) use ($team) {
                 $q->where('team_id', $team->id);
             })
             ->whereBetween('created_at', $this->dateRange)

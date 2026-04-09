@@ -2,20 +2,19 @@
 
 namespace App\Services\Alerts;
 
-use App\Models\AlertRule;
 use App\Models\AlertLog;
+use App\Models\AlertRule;
 use App\Services\Email\CentralEmailService;
 use App\Services\Email\EmailTemplateService;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AlertEngineService
 {
     public function __construct(
         protected CentralEmailService $emailService,
         protected EmailTemplateService $templateService
-    ) {
-    }
+    ) {}
 
     /**
      * Trigger an alert by its slug.
@@ -24,8 +23,9 @@ class AlertEngineService
     {
         $rule = AlertRule::where('slug', $slug)->where('is_active', true)->first();
 
-        if (!$rule) {
+        if (! $rule) {
             Log::warning("Alert trigger failed: Rule not found or inactive for slug '{$slug}'");
+
             return;
         }
 
@@ -33,6 +33,7 @@ class AlertEngineService
 
         if ($this->isThrottled($rule, $suppressionKey)) {
             $this->logAlert($rule, $payload, $teamId, $suppressionKey, 'throttled');
+
             return;
         }
 
@@ -73,7 +74,7 @@ class AlertEngineService
             }
 
         } catch (\Exception $e) {
-            Log::error("Alert processing failed for rule '{$rule->slug}': " . $e->getMessage());
+            Log::error("Alert processing failed for rule '{$rule->slug}': ".$e->getMessage());
             $this->logAlert($rule, $payload, $teamId, $suppressionKey, 'failed', $e->getMessage());
         }
     }
@@ -85,7 +86,8 @@ class AlertEngineService
     {
         // Customizable key based on payload (e.g., target user id or error code)
         $resourceId = $payload['resource_id'] ?? $teamId ?? 'global';
-        return md5($rule->slug . '_' . $resourceId);
+
+        return md5($rule->slug.'_'.$resourceId);
     }
 
     /**

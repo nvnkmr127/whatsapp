@@ -4,10 +4,10 @@ namespace App\Livewire\Settings;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Component;
-use Livewire\WithFileUploads;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Title('System Settings')]
 class SystemSettings extends Component
@@ -15,14 +15,20 @@ class SystemSettings extends Component
     use WithFileUploads;
 
     public $teamName;
+
     public $timezone;
+
     public $logo;
+
     public $currentLogoPath;
 
     // Smart Country Settings
     public $selectedCountry;
+
     public $language = 'en';
+
     public $metaPolicyInfo = '';
+
     public $countries = [
         'IN' => ['label' => 'India', 'country_code' => '+91', 'timezone' => 'Asia/Kolkata', 'currency' => 'INR', 'lang' => 'hi', 'policy' => 'India requires DLT/TRAI registration for templates. Category mixing is strictly prohibited.'],
         'AE' => ['label' => 'United Arab Emirates', 'country_code' => '+971', 'timezone' => 'Asia/Dubai', 'currency' => 'AED', 'lang' => 'ar', 'policy' => 'UAE requires official business registration and verified Meta Business Manager.'],
@@ -39,15 +45,22 @@ class SystemSettings extends Component
 
     // Enhanced Settings
     public $primaryColor = '#4F46E5'; // Default Indigo
+
     public $currencySymbol = '$';
+
     public $dateFormat = 'Y-m-d';
+
     public $paginationLimit = 20;
+
     public $supportEmail;
+
     public $maintenanceMode = false;
 
     // System WhatsApp Configuration
     public $systemWabaId;
+
     public $systemPhoneNumberId;
+
     public $systemAccessToken;
 
     public $timezones = [
@@ -80,7 +93,7 @@ class SystemSettings extends Component
     {
         return [
             'teamName' => ['required', 'string', 'max:255'],
-            'timezone' => ['required', 'string', 'in:' . implode(',', array_keys($this->timezones))],
+            'timezone' => ['required', 'string', 'in:'.implode(',', array_keys($this->timezones))],
             'logo' => ['nullable', 'image', 'max:2048'], // 2MB max
             // Use array syntax to prevent pipe delimiter collision in regex
             'primaryColor' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
@@ -118,8 +131,8 @@ class SystemSettings extends Component
             set_setting('primary_language', $this->language, 'system');
             set_setting('default_country_code', $country['country_code'], 'system');
 
-            session()->flash('message', 'Country settings updated! Timezone changed to ' . $country['timezone'] . ', Country code set to ' . $country['country_code']);
-            audit('settings.country_changed', "Country changed to {$country['label']} by " . Auth::user()->name);
+            session()->flash('message', 'Country settings updated! Timezone changed to '.$country['timezone'].', Country code set to '.$country['country_code']);
+            audit('settings.country_changed', "Country changed to {$country['label']} by ".Auth::user()->name);
             $this->dispatch('saved');
         }
     }
@@ -130,7 +143,7 @@ class SystemSettings extends Component
 
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             // Handle case where team is null (e.g., redirect or set defaults)
             // For now, we'll initialize empty values to prevent crashes
             $this->teamName = '';
@@ -170,7 +183,7 @@ class SystemSettings extends Component
 
         $this->validate([
             'teamName' => ['required', 'string', 'max:255'],
-            'timezone' => ['required', 'string', 'in:' . implode(',', array_keys($this->timezones))],
+            'timezone' => ['required', 'string', 'in:'.implode(',', array_keys($this->timezones))],
             'logo' => ['nullable', 'image', 'max:2048'],
             'primaryColor' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
             'currencySymbol' => ['required', 'string', 'max:10'],
@@ -229,7 +242,7 @@ class SystemSettings extends Component
         }
 
         session()->flash('message', 'System settings updated successfully.');
-        audit('settings.updated', "System settings updated by " . Auth::user()->name);
+        audit('settings.updated', 'System settings updated by '.Auth::user()->name);
         $this->dispatch('saved');
 
         // Full page redirect to reflect branding changes (logo, primary color, team name) in the layout

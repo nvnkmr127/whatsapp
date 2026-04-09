@@ -11,9 +11,13 @@ class CallRestrictionApplied
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $teamId;
+
     public $phoneNumberId;
+
     public $reason;
+
     public $restrictedUntil;
+
     public $payload;
 
     /**

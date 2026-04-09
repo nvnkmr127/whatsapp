@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\AutomationService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class ResumeDelayedAutomations extends Command
@@ -40,6 +40,7 @@ class ResumeDelayedAutomations extends Command
             ]);
 
             $this->error('Automation resume failed. Check logs for details.');
+
             return self::FAILURE;
         }
     }

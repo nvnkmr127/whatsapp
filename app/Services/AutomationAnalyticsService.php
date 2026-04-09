@@ -75,7 +75,7 @@ class AutomationAnalyticsService
         // Fallback to execution history for runs that do not have ledger records.
         $historyRuns = AutomationRun::query()
             ->where('automation_id', $automation->id)
-            ->when(!empty($runIdsWithLedger), fn($q) => $q->whereNotIn('id', array_keys($runIdsWithLedger)))
+            ->when(! empty($runIdsWithLedger), fn ($q) => $q->whereNotIn('id', array_keys($runIdsWithLedger)))
             ->get(['id', 'execution_history']);
 
         foreach ($historyRuns as $run) {
@@ -142,8 +142,9 @@ class AutomationAnalyticsService
             $currentTs = Carbon::parse($row->created_at)->getTimestamp();
             $runIdsWithLedger[$runId] = true;
 
-            if (!isset($previousByRun[$runId])) {
+            if (! isset($previousByRun[$runId])) {
                 $previousByRun[$runId] = ['node_id' => $currentNodeId, 'ts' => $currentTs];
+
                 continue;
             }
 
@@ -152,9 +153,9 @@ class AutomationAnalyticsService
             $diffSeconds = $currentTs - $prevTs;
 
             if ($diffSeconds >= 0 && $prevNodeId !== $currentNodeId) {
-                $key = $prevNodeId . '>>' . $currentNodeId;
+                $key = $prevNodeId.'>>'.$currentNodeId;
 
-                if (!isset($pairTotals[$key])) {
+                if (! isset($pairTotals[$key])) {
                     $pairTotals[$key] = [
                         'from_node_id' => $prevNodeId,
                         'to_node_id' => $currentNodeId,
@@ -173,16 +174,16 @@ class AutomationAnalyticsService
         // Fallback timing from execution_history for runs missing ledger transitions.
         $historyRuns = AutomationRun::query()
             ->where('automation_id', $automation->id)
-            ->when(!empty($runIdsWithLedger), fn($q) => $q->whereNotIn('id', array_keys($runIdsWithLedger)))
+            ->when(! empty($runIdsWithLedger), fn ($q) => $q->whereNotIn('id', array_keys($runIdsWithLedger)))
             ->get(['id', 'execution_history']);
 
         foreach ($historyRuns as $run) {
             $transitions = $this->extractHistoryTransitions($run->execution_history);
 
             foreach ($transitions as $transition) {
-                $key = $transition['from_node_id'] . '>>' . $transition['to_node_id'];
+                $key = $transition['from_node_id'].'>>'.$transition['to_node_id'];
 
-                if (!isset($pairTotals[$key])) {
+                if (! isset($pairTotals[$key])) {
                     $pairTotals[$key] = [
                         'from_node_id' => $transition['from_node_id'],
                         'to_node_id' => $transition['to_node_id'],
@@ -236,7 +237,7 @@ class AutomationAnalyticsService
             ->orderByDesc('failures')
             ->first();
 
-        if (!$row) {
+        if (! $row) {
             return null;
         }
 
@@ -259,7 +260,7 @@ class AutomationAnalyticsService
             ->groupBy('contact_id')
             ->map(function ($runs) {
                 return $runs
-                    ->map(fn($run) => Carbon::parse($run->created_at)->getTimestamp())
+                    ->map(fn ($run) => Carbon::parse($run->created_at)->getTimestamp())
                     ->values()
                     ->all();
             })
@@ -283,7 +284,7 @@ class AutomationAnalyticsService
 
         foreach ($orders as $order) {
             $contactRuns = $runsByContact[$order->contact_id] ?? null;
-            if (!$contactRuns) {
+            if (! $contactRuns) {
                 continue;
             }
 
@@ -344,11 +345,11 @@ class AutomationAnalyticsService
             ?? $data['text']
             ?? null;
 
-        if (!$candidate) {
+        if (! $candidate) {
             return $type;
         }
 
-        return $type . ': ' . Str::limit(trim(strip_tags((string) $candidate)), 40);
+        return $type.': '.Str::limit(trim(strip_tags((string) $candidate)), 40);
     }
 
     private function resolveNodeOrder(array $flowData): array
@@ -383,7 +384,7 @@ class AutomationAnalyticsService
 
         $startNode = null;
         foreach ($nodes as $node) {
-            if (($node['type'] ?? null) === 'trigger' && !empty($node['id'])) {
+            if (($node['type'] ?? null) === 'trigger' && ! empty($node['id'])) {
                 $startNode = $node['id'];
                 break;
             }
@@ -397,7 +398,7 @@ class AutomationAnalyticsService
             $queue[] = $startNode;
         }
 
-        while (!empty($queue)) {
+        while (! empty($queue)) {
             $current = array_shift($queue);
 
             if (isset($seen[$current])) {
@@ -408,14 +409,14 @@ class AutomationAnalyticsService
             $ordered[] = $current;
 
             foreach ($adjacency[$current] ?? [] as $target) {
-                if (!isset($seen[$target])) {
+                if (! isset($seen[$target])) {
                     $queue[] = $target;
                 }
             }
         }
 
         foreach ($allNodeIds as $nodeId) {
-            if (!isset($seen[$nodeId])) {
+            if (! isset($seen[$nodeId])) {
                 $ordered[] = $nodeId;
             }
         }
@@ -426,34 +427,34 @@ class AutomationAnalyticsService
     private function humanDuration(int $seconds): string
     {
         if ($seconds < 60) {
-            return $seconds . 's';
+            return $seconds.'s';
         }
 
         if ($seconds < 3600) {
-            return round($seconds / 60, 1) . 'm';
+            return round($seconds / 60, 1).'m';
         }
 
         if ($seconds < 86400) {
-            return round($seconds / 3600, 1) . 'h';
+            return round($seconds / 3600, 1).'h';
         }
 
-        return round($seconds / 86400, 1) . 'd';
+        return round($seconds / 86400, 1).'d';
     }
 
     private function extractHistoryNodes($executionHistory): array
     {
-        if (!is_array($executionHistory)) {
+        if (! is_array($executionHistory)) {
             return [];
         }
 
         $nodes = [];
         foreach ($executionHistory as $entry) {
-            if (!is_array($entry)) {
+            if (! is_array($entry)) {
                 continue;
             }
 
             $nodeId = $entry['node_id'] ?? null;
-            if (!$nodeId) {
+            if (! $nodeId) {
                 continue;
             }
 
@@ -465,21 +466,21 @@ class AutomationAnalyticsService
 
     private function extractHistoryTransitions($executionHistory): array
     {
-        if (!is_array($executionHistory)) {
+        if (! is_array($executionHistory)) {
             return [];
         }
 
         $orderedEntries = [];
 
         foreach ($executionHistory as $entry) {
-            if (!is_array($entry)) {
+            if (! is_array($entry)) {
                 continue;
             }
 
             $nodeId = $entry['node_id'] ?? null;
             $timestamp = $entry['timestamp'] ?? null;
 
-            if (!$nodeId || !$timestamp) {
+            if (! $nodeId || ! $timestamp) {
                 continue;
             }
 
@@ -499,7 +500,7 @@ class AutomationAnalyticsService
             return [];
         }
 
-        usort($orderedEntries, fn($a, $b) => $a['ts'] <=> $b['ts']);
+        usort($orderedEntries, fn ($a, $b) => $a['ts'] <=> $b['ts']);
 
         $transitions = [];
         for ($i = 1; $i < count($orderedEntries); $i++) {

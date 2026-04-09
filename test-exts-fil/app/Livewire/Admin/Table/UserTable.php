@@ -56,12 +56,12 @@ final class UserTable extends PowerGridComponent
 
                 // Determine delete action based on user assignment status
                 $deleteAction = $isUserAssigned
-                    ? "Livewire.dispatch('notify', { message: '" . t('user_in_use_notify') . "', type: 'warning' })"
+                    ? "Livewire.dispatch('notify', { message: '".t('user_in_use_notify')."', type: 'warning' })"
                     : "Livewire.dispatch('confirmDelete', { userId: {$user->id} })";
 
                 // Determine profile image
                 $profile_img = $user->profile_image_url && Storage::disk('public')->exists($user->profile_image_url)
-                    ? asset('storage/' . $user->profile_image_url)
+                    ? asset('storage/'.$user->profile_image_url)
                     : asset('img/user-placeholder.jpg');
 
                 $loggedInUser = Auth::user();
@@ -69,18 +69,18 @@ final class UserTable extends PowerGridComponent
                 // Start rendering output
                 $output = '<div class="group relative inline-block min-h-[40px]">
                 <div class="flex items-center gap-3 w-auto min-w-0 max-w-full ">
-                    <img src="' . $profile_img . '" class="inline-block object-cover h-8 w-8 rounded-full">
-                    <p class="dark:text-gray-200 text-indigo-600 dark:hover:text-indigo-400 text-sm break-words truncate">' . $user->firstname . ' ' . $user->lastname . '</p>
+                    <img src="'.$profile_img.'" class="inline-block object-cover h-8 w-8 rounded-full">
+                    <p class="dark:text-gray-200 text-indigo-600 dark:hover:text-indigo-400 text-sm break-words truncate">'.$user->firstname.' '.$user->lastname.'</p>
                 </div>
 
                 <!-- Action Links (Hidden by Default, Shown on Hover) -->
                 <div class="absolute contact-actions dark:text-gray-300 group-hover:flex hidden left-0 mt-5 space-x-1 text-gray-600 text-xs top-3">';
 
                 if (checkPermission('user.view')) {
-                    $output .= ' <button onclick="Livewire.dispatch(\'viewUser\', { userId: ' . $user->id . ' })" class="hover:text-blue-600">' . t('view') . '</button>';
+                    $output .= ' <button onclick="Livewire.dispatch(\'viewUser\', { userId: '.$user->id.' })" class="hover:text-blue-600">'.t('view').'</button>';
                 }
                 if (checkPermission('user.edit')) {
-                    $output .= ' <span>|</span><button onclick="Livewire.dispatch(\'editUser\', { userId: ' . $user->id . ' })" class="hover:text-green-600">' . t('edit') . '</button>';
+                    $output .= ' <span>|</span><button onclick="Livewire.dispatch(\'editUser\', { userId: '.$user->id.' })" class="hover:text-green-600">'.t('edit').'</button>';
                 }
 
                 if (checkPermission('user.delete')) {
@@ -90,7 +90,7 @@ final class UserTable extends PowerGridComponent
                         )
                     ) {
                         $output .= '<span>|</span>
-                            <button onclick="' . $deleteAction . '" class="hover:text-red-600">' . t('delete') . '</button>';
+                            <button onclick="'.$deleteAction.'" class="hover:text-red-600">'.t('delete').'</button>';
                     }
                 }
 
@@ -105,9 +105,9 @@ final class UserTable extends PowerGridComponent
             ->add('role_id', fn ($user) => $user->is_admin ? 'Admin' : $user->getRoleNames()->first())
             ->add('created_at_formatted', function ($user) {
                 return '<div class="relative group">
-                     <span class="cursor-default" data-tippy-content="' . format_date_time($user->created_at) . '">'
-                    . \Carbon\Carbon::parse($user->created_at)->diffForHumans(['options' => \Carbon\Carbon::JUST_NOW])
-                    . '</span>
+                     <span class="cursor-default" data-tippy-content="'.format_date_time($user->created_at).'">'
+                    .\Carbon\Carbon::parse($user->created_at)->diffForHumans(['options' => \Carbon\Carbon::JUST_NOW])
+                    .'</span>
                     </div>';
             });
     }
@@ -161,7 +161,7 @@ final class UserTable extends PowerGridComponent
                 if (auth()->id() === $user->id) {
                     $this->notify([
                         'message' => t('account_cannot_be_deactivated'),
-                        'type'    => 'warning',
+                        'type' => 'warning',
                     ]);
 
                     return;
@@ -170,14 +170,14 @@ final class UserTable extends PowerGridComponent
                 if (! auth()->user()->is_admin && $user->is_admin) {
                     $this->notify([
                         'message' => t('account_cannot_be_deactivated'),
-                        'type'    => 'warning',
+                        'type' => 'warning',
                     ]);
 
                     return;
                 }
 
                 if (auth()->user()->is_admin && $user->is_admin) {
-                    $user->active    = ($value === '1') ? 1 : 0;
+                    $user->active = ($value === '1') ? 1 : 0;
                     $user->banned_at = ! $user->active ? now() : null;
                     $user->save();
 
@@ -187,13 +187,13 @@ final class UserTable extends PowerGridComponent
 
                     $this->notify([
                         'message' => $statusMessage,
-                        'type'    => 'success',
+                        'type' => 'success',
                     ]);
 
                     return;
                 }
 
-                $user->active    = ($value === '1') ? 1 : 0;
+                $user->active = ($value === '1') ? 1 : 0;
                 $user->banned_at = ! $user->active ? now() : null;
                 $user->save();
 
@@ -203,13 +203,13 @@ final class UserTable extends PowerGridComponent
 
                 $this->notify([
                     'message' => $statusMessage,
-                    'type'    => 'success',
+                    'type' => 'success',
                 ]);
             }
         } else {
             $this->notify([
                 'message' => t('no_permission_to_perform_action'),
-                'type'    => 'warning',
+                'type' => 'warning',
             ]);
         }
     }

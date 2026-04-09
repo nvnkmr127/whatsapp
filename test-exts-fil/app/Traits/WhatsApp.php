@@ -34,24 +34,24 @@ trait WhatsApp
     protected static string $facebookAPI = 'https://graph.facebook.com/';
 
     protected static array $extensionMap = [
-        'image/jpeg'                                                                => 'jpg',
-        'image/png'                                                                 => 'png',
-        'audio/mp3'                                                                 => 'mp3',
-        'video/mp4'                                                                 => 'mp4',
-        'audio/aac'                                                                 => 'aac',
-        'audio/amr'                                                                 => 'amr',
-        'audio/ogg'                                                                 => 'ogg',
-        'audio/mp4'                                                                 => 'mp4',
-        'text/plain'                                                                => 'txt',
-        'application/pdf'                                                           => 'pdf',
-        'application/vnd.ms-powerpoint'                                             => 'ppt',
-        'application/msword'                                                        => 'doc',
-        'application/vnd.ms-excel'                                                  => 'xls',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   => 'docx',
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'audio/mp3' => 'mp3',
+        'video/mp4' => 'mp4',
+        'audio/aac' => 'aac',
+        'audio/amr' => 'amr',
+        'audio/ogg' => 'ogg',
+        'audio/mp4' => 'mp4',
+        'text/plain' => 'txt',
+        'application/pdf' => 'pdf',
+        'application/vnd.ms-powerpoint' => 'ppt',
+        'application/msword' => 'doc',
+        'application/vnd.ms-excel' => 'xls',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'         => 'xlsx',
-        'video/3gp'                                                                 => '3gp',
-        'image/webp'                                                                => 'webp',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+        'video/3gp' => '3gp',
+        'image/webp' => 'webp',
     ];
 
     protected static function getApiVersion(): string
@@ -61,25 +61,25 @@ trait WhatsApp
 
     protected static function getBaseUrl(): string
     {
-        return self::$facebookAPI . self::getApiVersion() . '/';
+        return self::$facebookAPI.self::getApiVersion().'/';
     }
 
     protected function handleApiError(Throwable $e, string $operation, array $context = []): array
     {
         $errorContext = array_merge([
-            'operation'  => $operation,
-            'trace'      => $e->getTraceAsString(),
+            'operation' => $operation,
+            'trace' => $e->getTraceAsString(),
             'account_id' => $this->getAccountID(),
-            'phone_id'   => $this->getPhoneID(),
+            'phone_id' => $this->getPhoneID(),
         ], $context);
 
-        whatsapp_log("[WhatsApp {$operation} Error] " . $e->getMessage(), 'error', $errorContext, $e);
+        whatsapp_log("[WhatsApp {$operation} Error] ".$e->getMessage(), 'error', $errorContext, $e);
 
         return [
-            'status'  => false,
+            'status' => false,
             'message' => config('app.debug')
                 ? $e->getMessage()
-                : __('whatsapp.errors.' . $operation, ['default' => 'An error occurred during ' . $operation]),
+                : __('whatsapp.errors.'.$operation, ['default' => 'An error occurred during '.$operation]),
         ];
     }
 
@@ -111,14 +111,14 @@ trait WhatsApp
     /**
      * Load WhatsApp Cloud API configuration
      *
-     * @param  string|null      $fromNumber Optional phone number to use as the sender
+     * @param  string|null  $fromNumber  Optional phone number to use as the sender
      * @return WhatsAppCloudApi Instance of the WhatsAppCloudApi class
      */
     public function loadConfig($fromNumber = null)
     {
         return new WhatsAppCloudApi([
             'from_phone_number_id' => (! empty($fromNumber)) ? $fromNumber : $this->getPhoneID(),
-            'access_token'         => $this->getToken(),
+            'access_token' => $this->getToken(),
         ]);
     }
 
@@ -126,7 +126,7 @@ trait WhatsApp
     {
         try {
 
-            $response = Http::get(self::getBaseUrl() . "{$this->getAccountID()}/phone_numbers", [
+            $response = Http::get(self::getBaseUrl()."{$this->getAccountID()}/phone_numbers", [
                 'access_token' => $this->getToken(),
             ]);
 
@@ -143,8 +143,8 @@ trait WhatsApp
     public function loadTemplatesFromWhatsApp(): array
     {
         try {
-            $response = Http::get(self::getBaseUrl() . "{$this->getAccountID()}/", [
-                'fields'       => 'id,name,message_templates,phone_numbers',
+            $response = Http::get(self::getBaseUrl()."{$this->getAccountID()}/", [
+                'fields' => 'id,name,message_templates,phone_numbers',
                 'access_token' => $this->getToken(),
             ]);
 
@@ -159,20 +159,20 @@ trait WhatsApp
 
             // Get existing template IDs from database to track what should be deleted
             $existingTemplateIds = WhatsappTemplate::pluck('template_id')->toArray();
-            $apiTemplateIds      = [];
+            $apiTemplateIds = [];
 
             foreach ($messageTemplates as $templateData) {
                 $apiTemplateIds[] = $templateData['id'];
-                $template         = [
+                $template = [
                     'template_name' => $templateData['name'],
-                    'language'      => $templateData['language'],
-                    'status'        => $templateData['status'],
-                    'category'      => $templateData['category'],
-                    'id'            => $templateData['id'],
+                    'language' => $templateData['language'],
+                    'status' => $templateData['status'],
+                    'category' => $templateData['category'],
+                    'id' => $templateData['id'],
                 ];
 
-                $components        = [];
-                $headerText        = $bodyText = $footerText = $buttonsData = [];
+                $components = [];
+                $headerText = $bodyText = $footerText = $buttonsData = [];
                 $headerParamsCount = $bodyParamsCount = $footerParamsCount = 0;
 
                 foreach ($templateData['components'] as $component) {
@@ -180,21 +180,21 @@ trait WhatsApp
                         $components['TYPE'] = $component['format'];
 
                         if (isset($component['text'])) {
-                            $headerText           = $component['text'];
-                            $headerParamsCount    = preg_match_all('/{{(.*?)}}/i', $headerText, $matches);
+                            $headerText = $component['text'];
+                            $headerParamsCount = preg_match_all('/{{(.*?)}}/i', $headerText, $matches);
                             $components['HEADER'] = $component['text'];
                         }
                     }
 
                     if (isset($component['type']) && $component['type'] === 'BODY' && isset($component['text'])) {
-                        $bodyText           = $component['text'];
-                        $bodyParamsCount    = preg_match_all('/{{(.*?)}}/i', $bodyText, $matches);
+                        $bodyText = $component['text'];
+                        $bodyParamsCount = preg_match_all('/{{(.*?)}}/i', $bodyText, $matches);
                         $components['BODY'] = $component['text'];
                     }
 
                     if (isset($component['type']) && $component['type'] === 'FOOTER' && isset($component['text'])) {
-                        $footerText           = $component['text'];
-                        $footerParamsCount    = preg_match_all('/{{(.*?)}}/i', $footerText, $matches);
+                        $footerText = $component['text'];
+                        $footerParamsCount = preg_match_all('/{{(.*?)}}/i', $footerText, $matches);
                         $components['FOOTER'] = $component['text'];
                     }
 
@@ -203,13 +203,13 @@ trait WhatsApp
                     }
                 }
 
-                $template['header_data_text']    = $components['HEADER']  ?? null;
-                $template['header_data_format']  = $components['TYPE']    ?? null;
-                $template['body_data']           = $components['BODY']    ?? null;
-                $template['footer_data']         = $components['FOOTER']  ?? null;
-                $template['buttons_data']        = $components['BUTTONS'] ?? null;
+                $template['header_data_text'] = $components['HEADER'] ?? null;
+                $template['header_data_format'] = $components['TYPE'] ?? null;
+                $template['body_data'] = $components['BODY'] ?? null;
+                $template['footer_data'] = $components['FOOTER'] ?? null;
+                $template['buttons_data'] = $components['BUTTONS'] ?? null;
                 $template['header_params_count'] = $headerParamsCount;
-                $template['body_params_count']   = $bodyParamsCount;
+                $template['body_params_count'] = $bodyParamsCount;
                 $template['footer_params_count'] = $footerParamsCount;
 
                 WhatsappTemplate::updateOrCreate(
@@ -224,16 +224,16 @@ trait WhatsApp
                 $deletedCount = WhatsappTemplate::whereIn('template_id', $templatesForDeletion)->delete();
                 whatsapp_log('Deleted templates during sync', 'info', [
                     'deleted_count' => $deletedCount,
-                    'template_ids'  => $templatesForDeletion,
+                    'template_ids' => $templatesForDeletion,
                 ]);
             }
 
             return [
                 'status' => true,
-                'data'   => $messageTemplates,
+                'data' => $messageTemplates,
                 'synced' => [
                     'updated_or_created' => count($apiTemplateIds),
-                    'deleted'            => count($templatesForDeletion),
+                    'deleted' => count($templatesForDeletion),
                 ],
                 'message' => 'Templates synced successfully',
             ];
@@ -245,8 +245,8 @@ trait WhatsApp
     public function subscribeWebhook()
     {
         $accessToken = $this->getToken();
-        $accountId   = $this->getAccountID();
-        $url         = self::$facebookAPI . "/$accountId/subscribed_apps?access_token=" . $accessToken;
+        $accountId = $this->getAccountID();
+        $url = self::$facebookAPI."/$accountId/subscribed_apps?access_token=".$accessToken;
 
         try {
             $response = Http::post($url);
@@ -255,24 +255,24 @@ trait WhatsApp
 
             if (isset($data['error'])) {
                 return [
-                    'status'  => false,
+                    'status' => false,
                     'message' => $data['error']['message'],
                 ];
             }
 
             return [
                 'status' => true,
-                'data'   => $data,
+                'data' => $data,
             ];
         } catch (\Throwable $th) {
-            whatsapp_log('Failed to subscribe webhook: ' . $th->getMessage(), 'error', [
-                'url'        => $url,
+            whatsapp_log('Failed to subscribe webhook: '.$th->getMessage(), 'error', [
+                'url' => $url,
                 'account_id' => $accountId,
             ], $th);
 
             return [
-                'status'  => false,
-                'message' => 'Something went wrong: ' . $th->getMessage(),
+                'status' => false,
+                'message' => 'Something went wrong: '.$th->getMessage(),
             ];
         }
     }
@@ -295,8 +295,8 @@ trait WhatsApp
     {
         try {
             $accessToken = $this->getToken();
-            $response    = Http::get(self::getBaseUrl() . 'debug_token', [
-                'input_token'  => $accessToken,
+            $response = Http::get(self::getBaseUrl().'debug_token', [
+                'input_token' => $accessToken,
                 'access_token' => $accessToken,
             ]);
 
@@ -313,8 +313,8 @@ trait WhatsApp
     public function getProfile(): array
     {
         try {
-            $response = Http::get(self::getBaseUrl() . $this->getPhoneID() . '/whatsapp_business_profile', [
-                'fields'       => 'profile_picture_url',
+            $response = Http::get(self::getBaseUrl().$this->getPhoneID().'/whatsapp_business_profile', [
+                'fields' => 'profile_picture_url',
                 'access_token' => $this->getToken(),
             ]);
 
@@ -331,8 +331,8 @@ trait WhatsApp
     public function getHealthStatus(): array
     {
         try {
-            $response = Http::get(self::getBaseUrl() . $this->getAccountID(), [
-                'fields'       => 'health_status',
+            $response = Http::get(self::getBaseUrl().$this->getAccountID(), [
+                'fields' => 'health_status',
                 'access_token' => $this->getToken(),
             ]);
 
@@ -349,11 +349,11 @@ trait WhatsApp
     public function getMessageLimit(): array
     {
         $startTime = strtotime(date('Y-m-d 00:00:00'));
-        $endTime   = strtotime(date('Y-m-d 23:59:59'));
+        $endTime = strtotime(date('Y-m-d 23:59:59'));
         try {
 
-            $response = Http::get(self::getBaseUrl() . $this->getAccountID(), [
-                'fields'       => "id,name,analytics.start({$startTime}).end({$endTime}).granularity(DAY)",
+            $response = Http::get(self::getBaseUrl().$this->getAccountID(), [
+                'fields' => "id,name,analytics.start({$startTime}).end({$endTime}).granularity(DAY)",
                 'access_token' => $this->getToken(),
             ]);
 
@@ -415,8 +415,8 @@ trait WhatsApp
 
             return true;
         } catch (Throwable $e) {
-            whatsapp_log('Error generating QR code: ' . $e->getMessage(), 'error', [
-                'url'  => $url,
+            whatsapp_log('Error generating QR code: '.$e->getMessage(), 'error', [
+                'url' => $url,
                 'logo' => $logo,
             ], $e);
 
@@ -426,15 +426,15 @@ trait WhatsApp
 
     public function connectWebhook()
     {
-        $appId     = $this->getFBAppID();
+        $appId = $this->getFBAppID();
         $appSecret = $this->getFBAppSecret();
 
         try {
-            $url = self::$facebookAPI . $appId . '/subscriptions?access_token=' . $appId . '|' . $appSecret;
+            $url = self::$facebookAPI.$appId.'/subscriptions?access_token='.$appId.'|'.$appSecret;
 
             $response = Http::post($url, [
-                'object'       => 'whatsapp_business_account',
-                'fields'       => 'messages,message_template_quality_update,message_template_status_update,account_update',
+                'object' => 'whatsapp_business_account',
+                'fields' => 'messages,message_template_quality_update,message_template_status_update,account_update',
                 'callback_url' => route('whatsapp.webhook'),
                 'verify_token' => get_setting('whatsapp.webhook_verify_token'),
             ]);
@@ -443,31 +443,31 @@ trait WhatsApp
 
             if (isset($data['error'])) {
                 return [
-                    'status'  => false,
+                    'status' => false,
                     'message' => $data['error']['message'],
                 ];
             }
 
             return [
                 'status' => true,
-                'data'   => $data,
+                'data' => $data,
             ];
         } catch (\Throwable $th) {
-            whatsapp_log('Error connecting webhook: ' . $th->getMessage(), 'error', [], $th);
+            whatsapp_log('Error connecting webhook: '.$th->getMessage(), 'error', [], $th);
 
             return [
-                'status'  => false,
-                'message' => 'Something went wrong: ' . $th->getMessage(),
+                'status' => false,
+                'message' => 'Something went wrong: '.$th->getMessage(),
             ];
         }
     }
 
     public function disconnectWebhook()
     {
-        $appId     = $this->getFBAppID();
+        $appId = $this->getFBAppID();
         $appSecret = $this->getFBAppSecret();
 
-        $url = self::$facebookAPI . $appId . '/subscriptions?access_token=' . $appId . '|' . $appSecret;
+        $url = self::$facebookAPI.$appId.'/subscriptions?access_token='.$appId.'|'.$appSecret;
 
         try {
             $response = Http::delete($url, [], [
@@ -479,21 +479,21 @@ trait WhatsApp
 
             if (isset($data['error'])) {
                 return [
-                    'status'  => false,
+                    'status' => false,
                     'message' => $data['error']['message'],
                 ];
             }
 
             return [
                 'status' => true,
-                'data'   => $data,
+                'data' => $data,
             ];
         } catch (\Throwable $th) {
-            whatsapp_log('Error disconnecting webhook: ' . $th->getMessage(), 'error', [], $th);
+            whatsapp_log('Error disconnecting webhook: '.$th->getMessage(), 'error', [], $th);
 
             return [
-                'status'  => false,
-                'message' => 'Something went wrong: ' . $th->getMessage(),
+                'status' => false,
+                'message' => 'Something went wrong: '.$th->getMessage(),
             ];
         }
     }
@@ -503,18 +503,18 @@ trait WhatsApp
         $whatsapp_cloud_api = $this->loadConfig();
 
         try {
-            $result       = $whatsapp_cloud_api->sendTemplate($number, 'hello_world', 'en_US');
-            $status       = true;
-            $message      = t('whatsapp_message_sent_successfully');
-            $data         = json_decode($result->body());
+            $result = $whatsapp_cloud_api->sendTemplate($number, 'hello_world', 'en_US');
+            $status = true;
+            $message = t('whatsapp_message_sent_successfully');
+            $data = json_decode($result->body());
             $responseCode = $result->httpStatusCode();
         } catch (\Netflie\WhatsAppCloudApi\Response\ResponseException $th) {
-            $status       = false;
-            $message      = $th->responseData()['error']['message'] ?? $th->rawResponse() ?? json_decode($th->getMessage());
+            $status = false;
+            $message = $th->responseData()['error']['message'] ?? $th->rawResponse() ?? json_decode($th->getMessage());
             $responseCode = $th->httpStatusCode();
 
-            whatsapp_log('Error sending test message: ' . $message, 'error', [
-                'number'        => $number,
+            whatsapp_log('Error sending test message: '.$message, 'error', [
+                'number' => $number,
                 'response_code' => $responseCode,
             ], $th);
         }
@@ -526,11 +526,11 @@ trait WhatsApp
     {
         try {
             $healthData = [
-                'api_status'      => $this->getHealthStatus(),
-                'queue_size'      => Queue::size(json_decode(get_setting('whatsapp.queue'), true)['name']),
-                'daily_api_calls' => Cache::get('whatsapp_api_calls_' . now()->format('Y-m-d')),
-                'token_status'    => $this->debugToken(),
-                'profile_status'  => $this->getProfile(),
+                'api_status' => $this->getHealthStatus(),
+                'queue_size' => Queue::size(json_decode(get_setting('whatsapp.queue'), true)['name']),
+                'daily_api_calls' => Cache::get('whatsapp_api_calls_'.now()->format('Y-m-d')),
+                'token_status' => $this->debugToken(),
+                'profile_status' => $this->getProfile(),
             ];
 
             whatsapp_log(
@@ -553,67 +553,67 @@ trait WhatsApp
     /**
      * Send a template message using the WhatsApp Cloud API
      *
-     * @param  string      $to            Recipient phone number
-     * @param  array       $template_data Data for the template message
-     * @param  string      $type          Type of the message, default is 'campaign'
-     * @param  string|null $fromNumber    Optional sender phone number
-     * @return array       Response containing status, log data, and any response data or error message
+     * @param  string  $to  Recipient phone number
+     * @param  array  $template_data  Data for the template message
+     * @param  string  $type  Type of the message, default is 'campaign'
+     * @param  string|null  $fromNumber  Optional sender phone number
+     * @return array Response containing status, log data, and any response data or error message
      */
     public function sendTemplate($to, $template_data, $type = 'campaign', $fromNumber = null)
     {
-        $rel_type    = $template_data['rel_type'];
+        $rel_type = $template_data['rel_type'];
         $header_data = [];
         if ($template_data['header_data_format'] == 'TEXT') {
             $header_data = parseText($rel_type, 'header', $template_data, 'array');
         }
-        $body_data    = parseText($rel_type, 'body', $template_data, 'array');
+        $body_data = parseText($rel_type, 'body', $template_data, 'array');
         $buttons_data = parseText($rel_type, 'footer', $template_data, 'array');
 
         $component_header = $component_body = $component_buttons = [];
-        $file_link        = asset('storage/' . $template_data['filename']);
+        $file_link = asset('storage/'.$template_data['filename']);
 
-        $component_header  = $this->buildHeaderComponent($template_data, $file_link, $header_data);
-        $component_body    = $this->buildTextComponent($body_data);
+        $component_header = $this->buildHeaderComponent($template_data, $file_link, $header_data);
+        $component_body = $this->buildTextComponent($body_data);
         $component_buttons = $this->buildTextComponent($buttons_data);
 
         $whatsapp_cloud_api = $this->loadConfig($fromNumber);
 
         try {
-            $components   = new Component($component_header, $component_body, $component_buttons);
-            $result       = $whatsapp_cloud_api->sendTemplate($to, $template_data['template_name'], $template_data['language'], $components);
-            $status       = true;
-            $data         = json_decode($result->body());
+            $components = new Component($component_header, $component_body, $component_buttons);
+            $result = $whatsapp_cloud_api->sendTemplate($to, $template_data['template_name'], $template_data['language'], $components);
+            $status = true;
+            $data = json_decode($result->body());
             $responseCode = $result->httpStatusCode();
             $responseData = json_encode($result->decodedBody());
-            $rawData      = json_encode($result->request()->body());
+            $rawData = json_encode($result->request()->body());
         } catch (\Netflie\WhatsAppCloudApi\Response\ResponseException $th) {
-            $status       = false;
-            $message      = $th->responseData()['error']['message'] ?? $th->rawResponse() ?? json_decode($th->getMessage());
+            $status = false;
+            $message = $th->responseData()['error']['message'] ?? $th->rawResponse() ?? json_decode($th->getMessage());
             $responseCode = $th->httpStatusCode();
             $responseData = json_encode($message);
-            $rawData      = json_encode([]);
+            $rawData = json_encode([]);
 
-            whatsapp_log('Error sending template: ' . $message, 'error', [
-                'to'            => $to,
+            whatsapp_log('Error sending template: '.$message, 'error', [
+                'to' => $to,
                 'template_name' => $template_data['template_name'],
-                'language'      => $template_data['language'],
+                'language' => $template_data['language'],
                 'response_code' => $responseCode,
                 'response_data' => $responseData,
-                'raw_data'      => $rawData,
+                'raw_data' => $rawData,
             ], $th);
         }
 
         $log_data = [
-            'response_code'       => $responseCode,
-            'category'            => $type,
-            'category_id'         => $template_data['campaign_id'] ?? $template_data['template_bot_id'],
-            'rel_type'            => $rel_type,
-            'rel_id'              => $template_data['rel_id'],
-            'category_params'     => json_encode(['templateId' => $template_data['template_id'], 'message' => $message ?? '']),
-            'response_data'       => $responseData,
-            'raw_data'            => $rawData,
-            'phone_number_id'     => get_setting('whatsapp.wm_default_phone_number_id'),
-            'access_token'        => get_setting('whatsapp.wm_access_token'),
+            'response_code' => $responseCode,
+            'category' => $type,
+            'category_id' => $template_data['campaign_id'] ?? $template_data['template_bot_id'],
+            'rel_type' => $rel_type,
+            'rel_id' => $template_data['rel_id'],
+            'category_params' => json_encode(['templateId' => $template_data['template_id'], 'message' => $message ?? '']),
+            'response_data' => $responseData,
+            'raw_data' => $rawData,
+            'phone_number_id' => get_setting('whatsapp.wm_default_phone_number_id'),
+            'access_token' => get_setting('whatsapp.wm_access_token'),
             'business_account_id' => get_setting('whatsapp.wm_business_account_id'),
         ];
 
@@ -625,14 +625,14 @@ trait WhatsApp
     /**
      * Send a message using the WhatsApp Cloud API
      *
-     * @param  string      $to           Recipient phone number
-     * @param  array       $message_data Data for the message
-     * @param  string|null $fromNumber   Optional sender phone number
-     * @return array       Response containing status, log data, and any response data or error message
+     * @param  string  $to  Recipient phone number
+     * @param  array  $message_data  Data for the message
+     * @param  string|null  $fromNumber  Optional sender phone number
+     * @return array Response containing status, log data, and any response data or error message
      */
     public function sendMessage($to, $message_data, $fromNumber = null, $folder = 'bot_files')
     {
-        $message_data       = parseMessageText($message_data);
+        $message_data = parseMessageText($message_data);
         $whatsapp_cloud_api = $this->loadConfig($fromNumber);
 
         try {
@@ -667,13 +667,13 @@ trait WhatsApp
                     $message_data['bot_footer'],
                 );
             } else {
-                $message = $message_data['bot_header'] . "\n" . $message_data['reply_text'] . "\n" . $message_data['bot_footer'];
+                $message = $message_data['bot_header']."\n".$message_data['reply_text']."\n".$message_data['bot_footer'];
                 if (! empty($message_data['filename'])) {
-                    $url            = asset('storage/' . $message_data['filename']);
-                    $link_id        = new LinkID($url);
+                    $url = asset('storage/'.$message_data['filename']);
+                    $link_id = new LinkID($url);
                     $fileExtensions = get_meta_allowed_extension();
-                    $extension      = strtolower(pathinfo($message_data['filename'], PATHINFO_EXTENSION));
-                    $fileType       = array_key_first(array_filter($fileExtensions, fn ($data) => in_array('.' . $extension, explode(', ', $data['extension']))));
+                    $extension = strtolower(pathinfo($message_data['filename'], PATHINFO_EXTENSION));
+                    $fileType = array_key_first(array_filter($fileExtensions, fn ($data) => in_array('.'.$extension, explode(', ', $data['extension']))));
                     if ($fileType == 'image') {
                         $result = $whatsapp_cloud_api->sendImage($to, $link_id, $message);
                     } elseif ($fileType == 'video') {
@@ -686,30 +686,30 @@ trait WhatsApp
                 }
             }
 
-            $status       = true;
-            $data         = json_decode($result->body());
+            $status = true;
+            $data = json_decode($result->body());
             $responseCode = $result->httpStatusCode();
             $responseData = $data;
-            $rawData      = json_encode($result->request()->body());
+            $rawData = json_encode($result->request()->body());
         } catch (\Netflie\WhatsAppCloudApi\Response\ResponseException $th) {
-            $status       = false;
-            $message      = $th->responseData()['error']['message'] ?? $th->rawResponse() ?? $th->getMessage();
+            $status = false;
+            $message = $th->responseData()['error']['message'] ?? $th->rawResponse() ?? $th->getMessage();
             $responseCode = $th->httpStatusCode();
             $responseData = $message;
-            $rawData      = json_encode([]);
+            $rawData = json_encode([]);
         }
 
-        $log_data['response_code']   = $responseCode;
-        $log_data['category']        = $folder == 'bot_files' ? 'message_bot' : '';
-        $log_data['category_id']     = $message_data['id'];
-        $log_data['rel_type']        = $message_data['rel_type'];
-        $log_data['rel_id']          = ' - ';
+        $log_data['response_code'] = $responseCode;
+        $log_data['category'] = $folder == 'bot_files' ? 'message_bot' : '';
+        $log_data['category_id'] = $message_data['id'];
+        $log_data['rel_type'] = $message_data['rel_type'];
+        $log_data['rel_id'] = ' - ';
         $log_data['category_params'] = json_encode(['message' => $message ?? '']);
-        $log_data['response_data']   = ! empty($responseData) ? json_encode($responseData) : '';
-        $log_data['raw_data']        = $rawData;
+        $log_data['response_data'] = ! empty($responseData) ? json_encode($responseData) : '';
+        $log_data['raw_data'] = $rawData;
 
-        $log_data['phone_number_id']     = get_setting('whatsmark.wm_default_phone_number_id');
-        $log_data['access_token']        = get_setting('whatsmark.wm_access_token');
+        $log_data['phone_number_id'] = get_setting('whatsmark.wm_default_phone_number_id');
+        $log_data['access_token'] = get_setting('whatsmark.wm_access_token');
         $log_data['business_account_id'] = get_setting('whatsmark.wm_business_account_id');
 
         WmActivityLog::create($log_data);
@@ -720,11 +720,11 @@ trait WhatsApp
     /**
      * Send bulk campaign to WhatsApp recipients
      *
-     * @param  string      $to           Recipient phone number
-     * @param  array       $templateData Template configuration
-     * @param  array       $campaign     Campaign data
-     * @param  string|null $fromNumber   Sender phone number (optional)
-     * @return array       Response data
+     * @param  string  $to  Recipient phone number
+     * @param  array  $templateData  Template configuration
+     * @param  array  $campaign  Campaign data
+     * @param  string|null  $fromNumber  Sender phone number (optional)
+     * @return array Response data
      */
     public function sendBulkCampaign($to, $templateData, $campaign, $fromNumber = null)
     {
@@ -735,15 +735,15 @@ trait WhatsApp
                 $headerData = parseCsvText('header', $templateData, $campaign);
             }
 
-            $bodyData    = parseCsvText('body', $templateData, $campaign);
+            $bodyData = parseCsvText('body', $templateData, $campaign);
             $buttonsData = parseCsvText('footer', $templateData, $campaign);
 
             // Get file link if available
-            $fileLink = ($templateData['filename']) ? asset('storage/' . $templateData['filelink']) : '';
+            $fileLink = ($templateData['filename']) ? asset('storage/'.$templateData['filelink']) : '';
 
             // Build components for WhatsApp message
-            $componentHeader  = $this->buildHeaderComponent($templateData, $fileLink, $headerData);
-            $componentBody    = $this->buildTextComponent($bodyData);
+            $componentHeader = $this->buildHeaderComponent($templateData, $fileLink, $headerData);
+            $componentBody = $this->buildTextComponent($bodyData);
             $componentButtons = $this->buildTextComponent($buttonsData);
 
             // Load WhatsApp API configuration
@@ -751,7 +751,7 @@ trait WhatsApp
 
             // Create components object and send template
             $components = new Component($componentHeader, $componentBody, $componentButtons);
-            $result     = $whatsappCloudApi->sendTemplate(
+            $result = $whatsappCloudApi->sendTemplate(
                 $to,
                 $templateData['template_name'],
                 $templateData['language'],
@@ -759,42 +759,42 @@ trait WhatsApp
             );
 
             return [
-                'status'       => true,
-                'data'         => json_decode($result->body(), true),
+                'status' => true,
+                'data' => json_decode($result->body(), true),
                 'responseCode' => $result->httpStatusCode(),
-                'message'      => '',
-                'phone'        => $to,
+                'message' => '',
+                'phone' => $to,
             ];
         } catch (ResponseException $e) {
 
-            whatsapp_log('WhatsApp API Error: ' . $e->getMessage(), 'error', [
-                'phone'         => $to,
-                'template'      => $templateData['template_name'],
+            whatsapp_log('WhatsApp API Error: '.$e->getMessage(), 'error', [
+                'phone' => $to,
+                'template' => $templateData['template_name'],
                 'response_code' => $e->httpStatusCode(),
                 'response_data' => $e->responseData() ?? [],
             ], $e);
 
             return [
-                'status'       => false,
-                'data'         => [],
+                'status' => false,
+                'data' => [],
                 'responseCode' => $e->httpStatusCode(),
-                'message'      => $e->responseData()['error']['message'] ?? $e->getMessage(),
-                'phone'        => $to,
+                'message' => $e->responseData()['error']['message'] ?? $e->getMessage(),
+                'phone' => $to,
             ];
         } catch (\Exception $e) {
 
-            whatsapp_log('WhatsApp Campaign Error: ' . $e->getMessage(), 'error', [
-                'phone'         => $to,
-                'template'      => $templateData['template_name'] ?? 'unknown',
+            whatsapp_log('WhatsApp Campaign Error: '.$e->getMessage(), 'error', [
+                'phone' => $to,
+                'template' => $templateData['template_name'] ?? 'unknown',
                 'response_code' => 500,
             ], $e);
 
             return [
-                'status'       => false,
-                'data'         => [],
+                'status' => false,
+                'data' => [],
                 'responseCode' => 500,
-                'message'      => $e->getMessage(),
-                'phone'        => $to,
+                'message' => $e->getMessage(),
+                'phone' => $to,
             ];
         }
     }
@@ -802,17 +802,17 @@ trait WhatsApp
     /**
      * Retry sending a campaign message with exponential backoff
      *
-     * @param  string      $to           Recipient phone number
-     * @param  array       $templateData Template configuration
-     * @param  array       $campaign     Campaign data
-     * @param  string|null $fromNumber   Sender phone number (optional)
-     * @param  int         $maxRetries   Maximum number of retry attempts
-     * @return array       Response data
+     * @param  string  $to  Recipient phone number
+     * @param  array  $templateData  Template configuration
+     * @param  array  $campaign  Campaign data
+     * @param  string|null  $fromNumber  Sender phone number (optional)
+     * @param  int  $maxRetries  Maximum number of retry attempts
+     * @return array Response data
      */
     public function sendWithRetry($to, $templateData, $campaign, $fromNumber = null, $maxRetries = 3)
     {
         $attempt = 0;
-        $result  = null;
+        $result = null;
 
         while ($attempt < $maxRetries) {
             $result = $this->sendBulkCampaign($to, $templateData, $campaign, $fromNumber);
@@ -828,11 +828,11 @@ trait WhatsApp
             $attempt++;
 
             whatsapp_log("Retrying WhatsApp message to {$to} (attempt {$attempt})", 'info', [
-                'phone'         => $to,
-                'template'      => $templateData['template_name'] ?? 'unknown',
-                'attempt'       => $attempt,
+                'phone' => $to,
+                'template' => $templateData['template_name'] ?? 'unknown',
+                'attempt' => $attempt,
                 'response_code' => $result['responseCode'] ?? null,
-                'response_data' => $result['data']         ?? [],
+                'response_data' => $result['data'] ?? [],
             ]);
         }
 
@@ -842,7 +842,7 @@ trait WhatsApp
     /**
      * Check if an error is retryable
      *
-     * @param  int  $statusCode HTTP status code
+     * @param  int  $statusCode  HTTP status code
      * @return bool Whether the error is retryable
      */
     protected function isRetryableError($statusCode)
@@ -854,9 +854,9 @@ trait WhatsApp
     /**
      * Handle batch processing for large campaigns
      *
-     * @param  array $recipients   List of recipients
-     * @param  array $templateData Template configuration
-     * @param  int   $batchSize    Batch size (default: 50)
+     * @param  array  $recipients  List of recipients
+     * @param  array  $templateData  Template configuration
+     * @param  int  $batchSize  Batch size (default: 50)
      * @return array Results for each recipient
      */
     public function processBatchCampaign($recipients, $templateData, $batchSize = 50)
@@ -866,8 +866,8 @@ trait WhatsApp
 
         foreach ($batches as $batch) {
             foreach ($batch as $recipient) {
-                $to        = $recipient['phone'];
-                $result    = $this->sendBulkCampaign($to, $templateData, $recipient);
+                $to = $recipient['phone'];
+                $result = $this->sendBulkCampaign($to, $templateData, $recipient);
                 $results[] = $result;
             }
 
@@ -883,10 +883,10 @@ trait WhatsApp
     private function buildHeaderComponent($templateData, $fileLink, $headerData)
     {
         return match ($templateData['header_data_format']) {
-            'IMAGE'    => [['type' => 'image', 'image' => ['link' => $fileLink]]],
+            'IMAGE' => [['type' => 'image', 'image' => ['link' => $fileLink]]],
             'DOCUMENT' => [['type' => 'document', 'document' => ['link' => $fileLink, 'filename' => $templateData['filename']]]],
-            'VIDEO'    => [['type' => 'video', 'video' => ['link' => $fileLink]]],
-            default    => collect($headerData)->map(fn ($header) => ['type' => 'text', 'text' => $header])->toArray(),
+            'VIDEO' => [['type' => 'video', 'video' => ['link' => $fileLink]]],
+            default => collect($headerData)->map(fn ($header) => ['type' => 'text', 'text' => $header])->toArray(),
         };
     }
 
@@ -898,13 +898,13 @@ trait WhatsApp
     /**
      * Retrieve a URL for a media file using its media ID
      *
-     * @param  string      $media_id    Media ID to retrieve the URL for
-     * @param  string      $accessToken Access token for authentication
+     * @param  string  $media_id  Media ID to retrieve the URL for
+     * @param  string  $accessToken  Access token for authentication
      * @return string|null Filename of the saved media file or null on failure
      */
     public function retrieveUrl($media_id)
     {
-        $url         = self::$facebookAPI . $media_id;
+        $url = self::$facebookAPI.$media_id;
         $accessToken = $this->getToken();
 
         $response = Http::withToken($accessToken)->get($url);
@@ -913,17 +913,17 @@ trait WhatsApp
             $responseData = $response->json();
 
             if (isset($responseData['url'])) {
-                $mediaUrl  = $responseData['url'];
+                $mediaUrl = $responseData['url'];
                 $mediaData = Http::withToken($accessToken)->get($mediaUrl);
 
                 if ($mediaData->successful()) {
                     $imageContent = $mediaData->body();
-                    $contentType  = $mediaData->header('Content-Type');
+                    $contentType = $mediaData->header('Content-Type');
 
                     $extensionMap = self::$extensionMap;
-                    $extension    = $extensionMap[$contentType] ?? 'unknown';
-                    $filename     = 'media_' . uniqid() . '.' . $extension;
-                    $storagePath  = 'whatsapp-attachments/' . $filename;
+                    $extension = $extensionMap[$contentType] ?? 'unknown';
+                    $filename = 'media_'.uniqid().'.'.$extension;
+                    $storagePath = 'whatsapp-attachments/'.$filename;
 
                     Storage::disk('public')->put($storagePath, $imageContent);
 

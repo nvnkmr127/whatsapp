@@ -198,7 +198,7 @@ enum WhatsAppSetupState: string
      */
     public function canRetry(): bool
     {
-        return $this->isError() && !in_array($this, [
+        return $this->isError() && ! in_array($this, [
             self::NO_PHONES_AVAILABLE,
             self::INVALID_CREDENTIALS,
         ]);

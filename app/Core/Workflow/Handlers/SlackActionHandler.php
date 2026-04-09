@@ -14,7 +14,7 @@ class SlackActionHandler implements ActionHandlerInterface
         $webhookUrl = $config['webhook_url'] ?? get_setting('slack_webhook_url');
         $message = $config['message'] ?? 'Workflow Notification';
 
-        if (!$webhookUrl) {
+        if (! $webhookUrl) {
             return;
         }
 
@@ -26,9 +26,9 @@ class SlackActionHandler implements ActionHandlerInterface
             Http::post($webhookUrl, [
                 'text' => $message,
             ]);
-            Log::info("Workflow sent Slack notification.");
+            Log::info('Workflow sent Slack notification.');
         } catch (\Exception $e) {
-            Log::error("Workflow Slack Error: " . $e->getMessage());
+            Log::error('Workflow Slack Error: '.$e->getMessage());
         }
     }
 }

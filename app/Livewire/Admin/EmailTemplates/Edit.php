@@ -12,16 +12,24 @@ class Edit extends Component
 
     // Form fields
     public $slug;
+
     public $name;
+
     public $subject;
+
     public $content_html;
+
     public $content_text;
+
     public $description;
 
     // Preview
     public $previewHtml;
+
     public $previewSubject;
+
     public $previewData;
+
     public $activeTab = 'edit'; // edit, preview
 
     protected function rules()
@@ -56,6 +64,7 @@ class Edit extends Component
             $service->validateTemplateContent($this->content_html, $this->template->variable_schema ?? []);
         } catch (\Exception $e) {
             $this->addError('content_html', $e->getMessage());
+
             return;
         }
 

@@ -11,14 +11,14 @@ class MarketingUnsubscribeController extends Controller
     {
         $token = $request->query('token');
 
-        if (!$token) {
+        if (! $token) {
             abort(404);
         }
 
         $success = $service->unsubscribe($token);
 
         return view('marketing.unsubscribe', [
-            'success' => $success
+            'success' => $success,
         ]);
     }
 }

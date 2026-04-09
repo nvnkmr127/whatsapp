@@ -15,7 +15,6 @@ class CreateTeam implements CreatesTeams
     /**
      * Validate and create a new team for the given user.
      *
-     * @param  User  $user
      * @param  array<string, string>  $input
      */
     public function create(User $user, array $input): Team
@@ -31,7 +30,7 @@ class CreateTeam implements CreatesTeams
         // Inherit offer limits if user's personal team has them (Offer Extension)
         $personalTeam = $user->personalTeam();
         $offerSnapshot = $personalTeam ? $personalTeam->offer_snapshot : null;
-        
+
         $team = $user->ownedTeams()->create([
             'name' => $input['name'],
             'personal_team' => false,
@@ -43,13 +42,13 @@ class CreateTeam implements CreatesTeams
 
         // Initialize Wallet
         $initialBalance = 0;
-        
+
         // If user is on an offer (has snapshot), they might get bonus credits per team OR just limits.
         // Usually, bonus credits are a one-time signup gift, not per-team.
         // However, if the PLAN has an initial balance, we honor that.
         $defaultPlan = \App\Models\Plan::where('name', 'basic')->first();
         if ($defaultPlan) {
-             $initialBalance = $defaultPlan->initial_wallet_balance;
+            $initialBalance = $defaultPlan->initial_wallet_balance;
         }
 
         $wallet = \App\Models\TeamWallet::create([

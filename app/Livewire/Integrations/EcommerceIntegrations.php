@@ -11,24 +11,37 @@ use Livewire\Component;
 class EcommerceIntegrations extends Component
 {
     public $showConnectModal = false;
+
     public $selectedType = null;
 
     // Form Binding
     public $name;
+
     public $domain; // Shopify
+
     public $access_token; // Shopify
+
     public $url; // WooCommerce
+
     public $consumer_key; // WooCommerce
+
     public $consumer_secret; // WooCommerce
+
     public $meta_catalog_id; // Meta Commerce
+
     public $meta_access_token; // Meta Commerce
+
     public $meta_marketing_token; // Meta Marketing API
 
     // Diagnostics & Settings
     public $showDiagnosticsModal = false;
+
     public $showSettingsModal = false;
+
     public $activeIntegration = null;
+
     public $syncSessions = [];
+
     public $healthData = [
         'score' => 0,
         'issues' => [],
@@ -41,9 +54,10 @@ class EcommerceIntegrations extends Component
         'category_id' => '',
         'inventory' => [
             'sync_stock' => true,
-            'sync_price' => true
-        ]
+            'sync_price' => true,
+        ],
     ];
+
     public $webhook_secret;
 
     public function render()
@@ -53,7 +67,7 @@ class EcommerceIntegrations extends Component
             ->get();
 
         return view('livewire.integrations.ecommerce-integrations', [
-            'integrations' => $integrations
+            'integrations' => $integrations,
         ]); // Removed layout call as it's likely used inside a layout already or as a full page component where layout is defined in routes or class
     }
 
@@ -62,7 +76,7 @@ class EcommerceIntegrations extends Component
         $this->selectedType = $type;
         $this->showConnectModal = true;
         $this->reset(['name', 'domain', 'access_token', 'url', 'consumer_key', 'consumer_secret', 'meta_catalog_id', 'meta_access_token', 'meta_marketing_token']);
-        $this->name = ucfirst(str_replace('_', ' ', $type)) . ' Integration';
+        $this->name = ucfirst(str_replace('_', ' ', $type)).' Integration';
     }
 
     public function connect()
@@ -95,7 +109,7 @@ class EcommerceIntegrations extends Component
             ];
         } elseif ($this->selectedType === 'custom') {
             $credentials = [
-                'api_key' => 'sk_custom_' . Str::random(32),
+                'api_key' => 'sk_custom_'.Str::random(32),
             ];
         } elseif ($this->selectedType === 'meta_commerce') {
             $this->validate([
@@ -148,11 +162,11 @@ class EcommerceIntegrations extends Component
             } elseif ($integration->type === 'meta_commerce') {
                 \App\Jobs\SyncProductsToMetaJob::dispatch($integration->id);
                 $integration->update(['last_synced_at' => now()]);
-                session()->flash('flash.banner', "Sync job for Meta Commerce has been dispatched.");
+                session()->flash('flash.banner', 'Sync job for Meta Commerce has been dispatched.');
             }
         } catch (\Exception $e) {
             $integration->update(['status' => 'error', 'error_message' => $e->getMessage()]);
-            session()->flash('flash.banner', "Sync failed: " . $e->getMessage());
+            session()->flash('flash.banner', 'Sync failed: '.$e->getMessage());
             session()->flash('flash.bannerStyle', 'danger');
         }
     }
@@ -208,7 +222,7 @@ class EcommerceIntegrations extends Component
 
         $this->activeIntegration->update([
             'settings' => array_merge($this->activeIntegration->settings ?? [], ['sync_scope' => $this->sync_scope]),
-            'webhook_secret' => $this->webhook_secret
+            'webhook_secret' => $this->webhook_secret,
         ]);
 
         $this->showSettingsModal = false;

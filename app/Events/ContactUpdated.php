@@ -13,6 +13,7 @@ class ContactUpdated implements ShouldBroadcast
     use InteractsWithSockets, SerializesModels;
 
     public $contact;
+
     public $changes;
 
     /**

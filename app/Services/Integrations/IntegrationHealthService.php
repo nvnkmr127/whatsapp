@@ -2,9 +2,8 @@
 
 namespace App\Services\Integrations;
 
-use App\Models\Integration;
 use App\Enums\IntegrationState;
-use Carbon\Carbon;
+use App\Models\Integration;
 use Illuminate\Support\Facades\Log;
 
 class IntegrationHealthService
@@ -19,7 +18,7 @@ class IntegrationHealthService
 
         // 1. Check Auth Health
         $authHealth = $this->checkAuthHealth($integration);
-        if (!$authHealth['valid']) {
+        if (! $authHealth['valid']) {
             $score = 0;
             $issues[] = $authHealth['error'];
         }
@@ -39,7 +38,7 @@ class IntegrationHealthService
         // Persist to model (using the health_status JSON if we add it, or updating status)
         $integration->update([
             'status' => $state,
-            'error_message' => !empty($issues) ? implode('; ', $issues) : null,
+            'error_message' => ! empty($issues) ? implode('; ', $issues) : null,
         ]);
 
         return [
@@ -65,7 +64,7 @@ class IntegrationHealthService
 
     protected function checkSyncHealth(Integration $integration): array
     {
-        if (!$integration->last_synced_at) {
+        if (! $integration->last_synced_at) {
             return ['stale' => true, 'penalty' => 50, 'issue' => 'Never synced'];
         }
 
@@ -114,6 +113,6 @@ class IntegrationHealthService
             'error_message' => $message,
         ]);
 
-        Log::warning("Integration {$integration->id} health update: " . $state->name);
+        Log::warning("Integration {$integration->id} health update: ".$state->name);
     }
 }

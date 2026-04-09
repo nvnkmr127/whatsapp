@@ -18,13 +18,13 @@ class WebhookPipelineTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Config::set('services.whatsapp.client_secret', 'test-secret');
+        Config::set('whatsapp.app_secret', 'test-secret');
     }
 
     public function test_signature_verification_succeeds_with_valid_signature()
     {
         $payload = json_encode(['test' => 'data']);
-        $signature = 'sha256=' . hash_hmac('sha256', $payload, 'test-secret');
+        $signature = 'sha256='.hash_hmac('sha256', $payload, 'test-secret');
 
         $response = $this->withHeaders([
             'X-Hub-Signature-256' => $signature,
@@ -34,9 +34,9 @@ class WebhookPipelineTest extends TestCase
     }
 
     /*
-    // Middleware is not applied to the route yet in api.php globally or individually? 
+    // Middleware is not applied to the route yet in api.php globally or individually?
     // Wait, typically we apply it to the route. I need to check api.php or apply it.
-    // Assuming I will update api.php in next step, or if it was auto-applied... 
+    // Assuming I will update api.php in next step, or if it was auto-applied...
     // Actually I haven't applied the middleware to the route yet!
     // I should do that. But let's write the test first.
     */
@@ -46,7 +46,7 @@ class WebhookPipelineTest extends TestCase
         Queue::fake();
 
         $payload = ['entry' => []];
-        $signature = 'sha256=' . hash_hmac('sha256', json_encode($payload), 'test-secret');
+        $signature = 'sha256='.hash_hmac('sha256', json_encode($payload), 'test-secret');
 
         $response = $this->withHeaders([
             'X-Hub-Signature-256' => $signature,
@@ -79,28 +79,28 @@ class WebhookPipelineTest extends TestCase
                                         'from' => '9876543210',
                                         'id' => 'wamid.test',
                                         'type' => 'text',
-                                        'text' => ['body' => 'Hello World']
-                                    ]
+                                        'text' => ['body' => 'Hello World'],
+                                    ],
                                 ],
                                 'contacts' => [
                                     [
-                                        'profile' => ['name' => 'Tester']
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                        'profile' => ['name' => 'Tester'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payloadRecord = WebhookPayload::create([
             'payload' => $payloadData,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $job = new ProcessWebhookJob($payloadRecord->id);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
         $this->assertDatabaseHas('messages', [
             'whatsapp_message_id' => 'wamid.test',
@@ -135,23 +135,23 @@ class WebhookPipelineTest extends TestCase
                                         'from' => '9876543210',
                                         'id' => 'wamid.duplicate',
                                         'type' => 'text',
-                                        'text' => ['body' => 'Hello Again']
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                        'text' => ['body' => 'Hello Again'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payloadRecord = WebhookPayload::create([
             'payload' => $payloadData,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $job = new ProcessWebhookJob($payloadRecord->id);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
         $this->assertEquals('processed', $payloadRecord->fresh()->status);
         $this->assertCount(1, Message::where('whatsapp_message_id', 'wamid.duplicate')->get());
@@ -177,22 +177,22 @@ class WebhookPipelineTest extends TestCase
                             [
                                 'value' => [
                                     'metadata' => ['phone_number_id' => '123456789'],
-                                    'messages' => [$data + ['from' => '12345']],
-                                    'contacts' => [['profile' => ['name' => 'Tester']]]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
+                                    'messages' => [$data + ['from' => '9876543210']],
+                                    'contacts' => [['profile' => ['name' => 'Tester']]],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ];
 
             $payloadRecord = WebhookPayload::create([
                 'payload' => $payloadData,
-                'status' => 'pending'
+                'status' => 'pending',
             ]);
 
             $job = new ProcessWebhookJob($payloadRecord->id);
-            $job->handle();
+            app()->call([$job, 'handle']);
 
             $this->assertDatabaseHas('messages', [
                 'whatsapp_message_id' => $data['id'],
@@ -217,31 +217,31 @@ class WebhookPipelineTest extends TestCase
                                         'from' => '1112223333',
                                         'id' => 'wamid.stop',
                                         'type' => 'text',
-                                        'text' => ['body' => 'STOP']
-                                    ]
+                                        'text' => ['body' => 'STOP'],
+                                    ],
                                 ],
-                                'contacts' => [['profile' => ['name' => 'Stopper']]]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                'contacts' => [['profile' => ['name' => 'Stopper']]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payloadRecord = WebhookPayload::create([
             'payload' => $payloadData,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $job = new ProcessWebhookJob($payloadRecord->id);
-        $job->handle();
+        app()->call([$job, 'handle']);
 
-        $contact = \App\Models\Contact::where('phone_number', '1112223333')->first();
+        $contact = \App\Models\Contact::where('phone_number', '+911112223333')->first();
         $this->assertEquals('opted_out', $contact->opt_in_status);
         $this->assertDatabaseHas('consent_logs', [
             'contact_id' => $contact->id,
             'action' => 'OPT_OUT',
-            'source' => 'STOP_KEYWORD'
+            'source' => 'STOP_KEYWORD',
         ]);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Contact;
 use App\Helpers\PhoneNumberHelper;
+use App\Models\Contact;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -37,7 +37,7 @@ class ContactResolver
                     'last_interaction_at',
                     'has_pending_reply',
                     'is_within_24h_window',
-                    'version'
+                    'version',
                 ])
                 ->first();
         });
@@ -49,7 +49,7 @@ class ContactResolver
     public function resolveBatch(array $phones, int $teamId): Collection
     {
         $normalized = array_map(
-            fn($phone) => PhoneNumberHelper::normalize($phone),
+            fn ($phone) => PhoneNumberHelper::normalize($phone),
             $phones
         );
 
@@ -69,7 +69,7 @@ class ContactResolver
                 'last_interaction_at',
                 'has_pending_reply',
                 'is_within_24h_window',
-                'version'
+                'version',
             ])
             ->get()
             ->keyBy('phone_number');
@@ -93,7 +93,7 @@ class ContactResolver
 
         $contact = $this->resolve($normalized, $teamId);
 
-        if (!$contact) {
+        if (! $contact) {
             $contact = Contact::create(array_merge([
                 'team_id' => $teamId,
                 'phone_number' => $normalized,

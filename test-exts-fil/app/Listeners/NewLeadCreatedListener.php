@@ -22,7 +22,7 @@ class NewLeadCreatedListener
             'info',
             null,
             [
-                'lead_id'   => $event->lead->id,
+                'lead_id' => $event->lead->id,
                 'lead_name' => $event->lead->name,
             ]
         );

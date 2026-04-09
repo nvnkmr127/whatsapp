@@ -13,8 +13,7 @@ class ExternalTemplateController extends Controller
 
     public function __construct(
         protected WhatsAppService $whatsappService
-    ) {
-    }
+    ) {}
 
     /**
      * List all available WhatsApp templates for the authenticated team.
@@ -24,7 +23,7 @@ class ExternalTemplateController extends Controller
     {
         $team = $request->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return $this->error('No team context selected.', 400);
         }
 
@@ -46,4 +45,3 @@ class ExternalTemplateController extends Controller
         }
     }
 }
-

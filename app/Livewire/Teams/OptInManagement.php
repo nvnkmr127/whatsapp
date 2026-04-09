@@ -2,27 +2,33 @@
 
 namespace App\Livewire\Teams;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class OptInManagement extends Component
 {
     public $optInKeywords = [];
+
     public $optOutKeywords = [];
+
     public $optInMessage;
+
     public $optOutMessage;
+
     public $optInMessageEnabled = false;
+
     public $optOutMessageEnabled = false;
 
     // Helper for input binding
     public $newOptInKeyword = '';
+
     public $newOptOutKeyword = '';
 
     public function mount()
     {
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
         $this->optInKeywords = $team->opt_in_keywords ?? [];
@@ -35,9 +41,10 @@ class OptInManagement extends Component
 
     public function addOptInKeyword()
     {
-        if (trim($this->newOptInKeyword) === '')
+        if (trim($this->newOptInKeyword) === '') {
             return;
-        if (!in_array($this->newOptInKeyword, $this->optInKeywords)) {
+        }
+        if (! in_array($this->newOptInKeyword, $this->optInKeywords)) {
             $this->optInKeywords[] = trim($this->newOptInKeyword);
         }
         $this->newOptInKeyword = '';
@@ -51,9 +58,10 @@ class OptInManagement extends Component
 
     public function addOptOutKeyword()
     {
-        if (trim($this->newOptOutKeyword) === '')
+        if (trim($this->newOptOutKeyword) === '') {
             return;
-        if (!in_array($this->newOptOutKeyword, $this->optOutKeywords)) {
+        }
+        if (! in_array($this->newOptOutKeyword, $this->optOutKeywords)) {
             $this->optOutKeywords[] = trim($this->newOptOutKeyword);
         }
         $this->newOptOutKeyword = '';

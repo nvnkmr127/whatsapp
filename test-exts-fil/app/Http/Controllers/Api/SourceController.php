@@ -45,13 +45,13 @@ class SourceController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $sources,
+                'data' => $sources,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => t('failed_to_fetch_sources'),
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -89,24 +89,24 @@ class SourceController extends Controller
 
             if ($validator->fails()) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $source = Source::create($request->all());
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Source created successfully',
-                'data'    => $source,
+                'data' => $source,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to create source',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -139,13 +139,13 @@ class SourceController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $source,
+                'data' => $source,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Source not found',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 404);
         }
     }
@@ -175,29 +175,29 @@ class SourceController extends Controller
             $source = Source::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255|unique:sources,name,' . $id,
+                'name' => 'required|string|max:255|unique:sources,name,'.$id,
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $source->update($request->all());
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Source updated successfully',
-                'data'    => $source,
+                'data' => $source,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to update source',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -225,14 +225,14 @@ class SourceController extends Controller
             $source->delete();
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Source deleted successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to delete source',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

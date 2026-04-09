@@ -6,15 +6,15 @@ use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Notification;
 
 class ConversationAssignedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     protected $conversation;
+
     protected $assignedBy;
 
     /**
@@ -59,7 +59,7 @@ class ConversationAssignedNotification extends Notification implements ShouldQue
         return new BroadcastMessage([
             'conversation_id' => $this->conversation->id,
             'contact_name' => $this->conversation->contact->name ?? $this->conversation->contact->phone_number,
-            'message' => "New assignment: " . ($this->conversation->contact->name ?? $this->conversation->contact->phone_number),
+            'message' => 'New assignment: '.($this->conversation->contact->name ?? $this->conversation->contact->phone_number),
             'assigned_by' => $this->assignedBy->name,
         ]);
     }

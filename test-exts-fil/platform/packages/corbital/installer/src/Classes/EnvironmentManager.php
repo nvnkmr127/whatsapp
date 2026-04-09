@@ -23,7 +23,7 @@ class EnvironmentManager
     /**
      * Save the environment variables to the .env file.
      *
-     * @param array $values Key-value pairs of environment variables
+     * @param  array  $values  Key-value pairs of environment variables
      */
     public function saveEnv(array $values): bool
     {
@@ -32,26 +32,26 @@ class EnvironmentManager
             if (! file_exists(dirname($this->getEnvFilePath()))) {
                 // Create directory if it doesn't exist
                 if (! mkdir(dirname($this->getEnvFilePath()), 0755, true)) {
-                    throw new Exception('Could not create directory: ' . dirname($this->getEnvFilePath()));
+                    throw new Exception('Could not create directory: '.dirname($this->getEnvFilePath()));
                 }
             }
 
             // Create the file if it doesn't exist
             if (! touch($this->getEnvFilePath())) {
-                throw new Exception('Could not create environment file: ' . $this->getEnvFilePath());
+                throw new Exception('Could not create environment file: '.$this->getEnvFilePath());
             }
         }
 
         // Check if the file is writable
         if (! is_writable($this->getEnvFilePath())) {
-            throw new Exception('Environment file is not writable: ' . $this->getEnvFilePath());
+            throw new Exception('Environment file is not writable: '.$this->getEnvFilePath());
         }
 
         // Read current env file content
         try {
             $envFile = file_get_contents($this->getEnvFilePath());
         } catch (Exception $e) {
-            throw new Exception('Could not read environment file: ' . $e->getMessage());
+            throw new Exception('Could not read environment file: '.$e->getMessage());
         }
 
         // If the file is empty, let's prepare a new one
@@ -64,16 +64,16 @@ class EnvironmentManager
             // Format the value properly for the .env file
             $value = $this->formatEnvValue($value);
 
-            if (strpos($envFile, $key . '=') !== false) {
+            if (strpos($envFile, $key.'=') !== false) {
                 // Replace the existing value
                 $envFile = preg_replace(
-                    '/^' . preg_quote($key, '/') . '=.*$/m',
-                    $key . '=' . $value,
+                    '/^'.preg_quote($key, '/').'=.*$/m',
+                    $key.'='.$value,
                     $envFile
                 );
             } else {
                 // Add the variable to the end of the file
-                $envFile .= PHP_EOL . $key . '=' . $value;
+                $envFile .= PHP_EOL.$key.'='.$value;
             }
         }
 
@@ -83,14 +83,14 @@ class EnvironmentManager
 
             return $result !== false;
         } catch (Exception $e) {
-            throw new Exception('Could not write to environment file: ' . $e->getMessage());
+            throw new Exception('Could not write to environment file: '.$e->getMessage());
         }
     }
 
     /**
      * Format the environment value.
      *
-     * @param mixed $value
+     * @param  mixed  $value
      */
     protected function formatEnvValue($value): string
     {
@@ -112,7 +112,7 @@ class EnvironmentManager
             $value = str_replace("'", "\'", $value);
 
             // Wrap in single quotes
-            return "'" . $value . "'";
+            return "'".$value."'";
         }
 
         return $value;
@@ -123,7 +123,7 @@ class EnvironmentManager
      */
     public function generateAppKey(): string
     {
-        return 'base64:' . base64_encode(Str::random(32));
+        return 'base64:'.base64_encode(Str::random(32));
     }
 
     /**
@@ -139,7 +139,7 @@ class EnvironmentManager
      */
     protected function getDefaultEnvContent(): string
     {
-        return <<<EOT
+        return <<<'EOT'
 APP_NAME=WhatsMark
 APP_ENV=production
 APP_KEY=base64:dk1nSmxyUGhoUml3WGFXWWpqSEU0NTc2ajdKcEtFWEo=
@@ -178,7 +178,7 @@ REDIS_HOST=127.0.0.1
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
-VITE_APP_NAME="\${APP_NAME}"
+VITE_APP_NAME="${APP_NAME}"
 
 WHATSAPP_LOGGING_ENABLED=false
 EOT;
@@ -198,7 +198,7 @@ EOT;
     public static function guessUrl(): string
     {
         $guessedUrl = isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on' ? 'https' : 'http';
-        $guessedUrl .= '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $guessedUrl .= '://'.($_SERVER['HTTP_HOST'] ?? 'localhost');
 
         if (! isset($_SERVER['HERD_SITE_PATH']) && ! isset($_SERVER['HERD_HOME'])) {
             $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';

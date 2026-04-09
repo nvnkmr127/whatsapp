@@ -14,10 +14,11 @@ use Illuminate\Support\Facades\Log;
 
 class PrepareCampaignJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
     use \App\Traits\ChecksTenantMaintenanceMode;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $campaignId;
+
     public $criteria; // ['selection_type' => 'all' or 'ids' => [...]]
 
     /**
@@ -36,7 +37,7 @@ class PrepareCampaignJob implements ShouldQueue
     public function handle(): void
     {
         $campaign = Campaign::find($this->campaignId);
-        if (!$campaign) {
+        if (! $campaign) {
             return;
         }
 
@@ -55,11 +56,11 @@ class PrepareCampaignJob implements ShouldQueue
             $query = Contact::where('team_id', $campaign->team_id);
 
             // Filter logic
-            if ($this->criteria['selection_type'] === 'tags' && !empty($this->criteria['tags'])) {
+            if ($this->criteria['selection_type'] === 'tags' && ! empty($this->criteria['tags'])) {
                 $query->whereHas('tags', function ($q) {
                     $q->whereIn('contact_tags.id', $this->criteria['tags']);
                 });
-            } elseif (in_array($this->criteria['selection_type'], ['contacts', 'ids']) && !empty($this->criteria['ids'] ?? $this->criteria['contacts'] ?? [])) {
+            } elseif (in_array($this->criteria['selection_type'], ['contacts', 'ids']) && ! empty($this->criteria['ids'] ?? $this->criteria['contacts'] ?? [])) {
                 $ids = $this->criteria['ids'] ?? $this->criteria['contacts'] ?? [];
                 $query->whereIn('id', $ids);
             }
@@ -70,13 +71,13 @@ class PrepareCampaignJob implements ShouldQueue
                 $timestamp = now();
                 $isAB = $campaign->is_ab_test;
                 $ratio = $campaign->split_ratio ?? 50;
-                
+
                 foreach ($contacts as $contact) {
                     $variant = 'A';
                     if ($isAB) {
                         $variant = (rand(1, 100) <= $ratio) ? 'A' : 'B';
                     }
-                    
+
                     $details[] = [
                         'campaign_id' => $campaign->id,
                         'contact_id' => $contact->id,
@@ -93,10 +94,10 @@ class PrepareCampaignJob implements ShouldQueue
             // Update Counts
             $count = CampaignDetail::where('campaign_id', $campaign->id)->count();
             $status = ($campaign->campaign_type === 'drip') ? 'processing' : 'scheduled';
-            
+
             $campaign->update([
                 'total_contacts' => $count,
-                'status' => $status
+                'status' => $status,
             ]);
 
             if ($campaign->campaign_type === 'drip') {
@@ -109,8 +110,8 @@ class PrepareCampaignJob implements ShouldQueue
             Log::info("Campaign {$campaign->id} prepared with {$count} contacts.");
 
         } catch (\Throwable $e) {
-            Log::error("Failed to prepare campaign {$campaign->id}: " . $e->getMessage());
-            $campaign->update(['status' => 'failed', 'error_message' => 'Preparation Failed: ' . $e->getMessage()]);
+            Log::error("Failed to prepare campaign {$campaign->id}: ".$e->getMessage());
+            $campaign->update(['status' => 'failed', 'error_message' => 'Preparation Failed: '.$e->getMessage()]);
             throw $e;
         }
     }

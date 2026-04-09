@@ -3,10 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsAppCall;
-use App\Models\CallQualityMetric;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class CallMetricsController extends Controller
 {
@@ -91,7 +88,7 @@ class CallMetricsController extends Controller
         $format = $request->format ?? 'json';
 
         if ($format === 'csv') {
-            $filename = 'sdp_logs_' . now()->format('Y-m-d_His') . '.csv';
+            $filename = 'sdp_logs_'.now()->format('Y-m-d_His').'.csv';
             $headers = [
                 'Content-Type' => 'text/csv',
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",

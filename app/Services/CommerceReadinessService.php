@@ -2,15 +2,16 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Models\Integration;
 use App\Models\Product;
-use App\Models\WhatsappTemplate;
+use App\Models\Team;
 
 class CommerceReadinessService
 {
     public const STATE_READY = 'READY';
+
     public const STATE_WARNING = 'WARNING';
+
     public const STATE_BLOCKED = 'BLOCKED';
 
     public function evaluate(Team $team): array
@@ -21,9 +22,9 @@ class CommerceReadinessService
         // 1. Critical Base Config
         $checks['currency'] = [
             'label' => 'Store Currency',
-            'status' => !empty($config['currency']),
+            'status' => ! empty($config['currency']),
             'level' => 'critical',
-            'message' => 'Currency must be defined to process payments.'
+            'message' => 'Currency must be defined to process payments.',
         ];
 
         // 2. Payment Readiness
@@ -32,13 +33,13 @@ class CommerceReadinessService
             ->where('status', 'active')
             ->exists();
 
-        $codEnabled = !empty($config['cod_enabled']);
+        $codEnabled = ! empty($config['cod_enabled']);
 
         $checks['payments'] = [
             'label' => 'Payment Support',
             'status' => $hasPaymentGateway || $codEnabled,
             'level' => 'critical',
-            'message' => 'Neither Cash on Delivery nor a Payment Gateway is enabled.'
+            'message' => 'Neither Cash on Delivery nor a Payment Gateway is enabled.',
         ];
 
         // 3. Messaging Dependency
@@ -49,30 +50,30 @@ class CommerceReadinessService
             'label' => 'WhatsApp Connection',
             'status' => $canSend,
             'level' => 'critical',
-            'message' => 'WhatsApp must be connected and active to send order updates.'
+            'message' => 'WhatsApp must be connected and active to send order updates.',
         ];
 
         // 4. Operational Readiness (Templates)
         $templates = $config['templates'] ?? [];
-        $orderPlacedMapped = !empty($templates['placed']);
+        $orderPlacedMapped = ! empty($templates['placed']);
 
         $checks['order_placed_template'] = [
             'label' => 'Confirmation Template',
             'status' => $orderPlacedMapped,
             'level' => 'critical',
-            'message' => 'The Order Placed notification template is missing.'
+            'message' => 'The Order Placed notification template is missing.',
         ];
 
         // 5. Optimization Warnings (AI)
-        $aiEnabled = !empty($config['ai_assistant_enabled']);
-        $aiKeySet = !empty(get_setting("ai_openai_api_key_{$team->id}"));
+        $aiEnabled = ! empty($config['ai_assistant_enabled']);
+        $aiKeySet = ! empty(get_setting("ai_openai_api_key_{$team->id}"));
 
         if ($aiEnabled) {
             $checks['ai_readiness'] = [
                 'label' => 'AI Assistant Config',
                 'status' => $aiKeySet,
                 'level' => 'warning',
-                'message' => 'AI is enabled but OpenAI key is missing. AI Shop Assistant will not respond.'
+                'message' => 'AI is enabled but OpenAI key is missing. AI Shop Assistant will not respond.',
             ];
         }
 
@@ -82,24 +83,24 @@ class CommerceReadinessService
             ->where('status', 'active')
             ->first();
 
-        $catalogLinked = $metaIntegration && 
-                         !empty($metaIntegration->credentials['catalog_id']) && 
-                         !empty($metaIntegration->credentials['access_token']);
+        $catalogLinked = $metaIntegration &&
+                         ! empty($metaIntegration->credentials['catalog_id']) &&
+                         ! empty($metaIntegration->credentials['access_token']);
 
         $checks['catalog_linkage'] = [
             'label' => 'Meta Catalog Linkage',
             'status' => $catalogLinked,
             'level' => 'critical',
-            'message' => 'Your Meta Catalog is not linked or credentials (Access Token/Catalog ID) are missing.'
+            'message' => 'Your Meta Catalog is not linked or credentials (Access Token/Catalog ID) are missing.',
         ];
 
         // 7. Policy Agreement
-        $policyAccepted = !empty($config['commerce_policy_accepted']);
+        $policyAccepted = ! empty($config['commerce_policy_accepted']);
         $checks['meta_policy'] = [
             'label' => 'Meta Policy Agreement',
             'status' => $policyAccepted,
             'level' => 'critical',
-            'message' => 'You must agree to Meta Commerce Policies to sell via WhatsApp.'
+            'message' => 'You must agree to Meta Commerce Policies to sell via WhatsApp.',
         ];
 
         // 8. Catalog Health
@@ -108,26 +109,26 @@ class CommerceReadinessService
             'label' => 'Product Catalog',
             'status' => $productCount > 0,
             'level' => 'warning',
-            'message' => 'Your catalog is empty. Customers cannot browse or buy products.'
+            'message' => 'Your catalog is empty. Customers cannot browse or buy products.',
         ];
 
         return [
             'state' => $this->calculateOverallState($checks),
             'checks' => $checks,
-            'score' => $this->calculateScore($checks)
+            'score' => $this->calculateScore($checks),
         ];
     }
 
     protected function calculateOverallState(array $checks): string
     {
         foreach ($checks as $check) {
-            if (!$check['status'] && $check['level'] === 'critical') {
+            if (! $check['status'] && $check['level'] === 'critical') {
                 return self::STATE_BLOCKED;
             }
         }
 
         foreach ($checks as $check) {
-            if (!$check['status'] && $check['level'] === 'warning') {
+            if (! $check['status'] && $check['level'] === 'warning') {
                 return self::STATE_WARNING;
             }
         }
@@ -138,7 +139,8 @@ class CommerceReadinessService
     protected function calculateScore(array $checks): int
     {
         $total = count($checks);
-        $passed = count(array_filter($checks, fn($c) => $c['status']));
+        $passed = count(array_filter($checks, fn ($c) => $c['status']));
+
         return (int) (($passed / $total) * 100);
     }
 
@@ -169,8 +171,8 @@ class CommerceReadinessService
         $readiness = $this->evaluate($team);
 
         if ($readiness['state'] === self::STATE_BLOCKED) {
-            $criticalErrors = array_filter($readiness['checks'], fn($c) => !$c['status'] && $c['level'] === 'critical');
-            $message = "Store blocked from [{$context}]: " . implode(', ', array_column($criticalErrors, 'message'));
+            $criticalErrors = array_filter($readiness['checks'], fn ($c) => ! $c['status'] && $c['level'] === 'critical');
+            $message = "Store blocked from [{$context}]: ".implode(', ', array_column($criticalErrors, 'message'));
 
             throw new \Exception($message);
         }

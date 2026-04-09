@@ -14,7 +14,7 @@ class TraceProcessor implements ProcessorInterface
     public function __invoke(LogRecord $record): LogRecord
     {
         $traceId = TraceContext::getTraceId();
-        
+
         if ($traceId) {
             $record->extra['trace_id'] = $traceId;
         }

@@ -14,8 +14,8 @@ class UserList extends Component
     public $user_id = null;
 
     protected $listeners = [
-        'editUser'      => 'editUser',
-        'viewUser'      => 'viewUser',
+        'editUser' => 'editUser',
+        'viewUser' => 'viewUser',
         'confirmDelete' => 'confirmDelete',
     ];
 
@@ -31,7 +31,7 @@ class UserList extends Component
 
     public function confirmDelete($userId)
     {
-        $this->user_id            = $userId;
+        $this->user_id = $userId;
         $this->confirmingDeletion = true;
     }
 

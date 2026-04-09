@@ -13,7 +13,7 @@ trait HasPersistence
             'raw_nodes_count' => count($this->nodes),
             'raw_edges_count' => count($this->edges),
             'selected_node' => $this->selectedNodeId,
-            'should_activate' => $shouldActivate
+            'should_activate' => $shouldActivate,
         ]);
 
         $this->updateNodeData();
@@ -28,9 +28,10 @@ trait HasPersistence
                 'nodes.min' => 'Please add at least one node to the automation.',
             ]);
 
-            if ($shouldActivate && !$this->isActivatable) {
+            if ($shouldActivate && ! $this->isActivatable) {
                 $this->addError('base', 'There are critical errors in your flow. Please fix them before publishing.');
                 $this->showErrorModal = true;
+
                 return;
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -50,8 +51,8 @@ trait HasPersistence
                 'publish_log' => $this->publishLog,
                 'flow_data' => [
                     'nodes' => array_values($this->nodes),
-                    'edges' => array_values($this->edges)
-                ]
+                    'edges' => array_values($this->edges),
+                ],
             ];
 
             if ($this->debugMode) {
@@ -59,7 +60,7 @@ trait HasPersistence
                     'id' => $this->automationId,
                     'node_count' => count($this->nodes),
                     'edge_count' => count($this->edges),
-                    'payload' => $data['flow_data']
+                    'payload' => $data['flow_data'],
                 ]);
             }
 
@@ -73,6 +74,7 @@ trait HasPersistence
                 $this->automationId = $automation->id;
                 $this->isDirty = false;
                 session()->flash('success', $shouldActivate ? 'Automation created and published!' : 'Draft created successfully!');
+
                 return redirect()->route('automations.builder', $automation->id);
             }
         } catch (\Exception $e) {
@@ -87,9 +89,10 @@ trait HasPersistence
         $this->updateNodeData();
         $this->runValidation();
 
-        if (!$this->isActivatable) {
+        if (! $this->isActivatable) {
             $this->addError('base', 'There are critical errors in your flow. Please fix them before publishing.');
             $this->showErrorModal = true;
+
             return;
         }
 
@@ -114,10 +117,10 @@ trait HasPersistence
             'version' => $this->version,
             'note' => $this->publishNote,
             'published_at' => now()->toDateTimeString(),
-            'published_by' => Auth::user()->name
+            'published_by' => Auth::user()->name,
         ];
 
-        if (!is_array($this->publishLog)) {
+        if (! is_array($this->publishLog)) {
             $this->publishLog = [];
         }
         array_unshift($this->publishLog, $entry);

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreContactRequest;
 use App\Models\Contact;
 use App\Services\ConsentService;
 use App\Traits\StandardApiResponses;
-use App\Http\Requests\Api\StoreContactRequest;
 use Illuminate\Http\Request;
 
 class ExternalContactController extends Controller
@@ -15,8 +15,7 @@ class ExternalContactController extends Controller
 
     public function __construct(
         protected ConsentService $consentService
-    ) {
-    }
+    ) {}
 
     /**
      * List all contacts for the authenticated team.
@@ -26,7 +25,7 @@ class ExternalContactController extends Controller
     {
         $team = $request->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
@@ -46,14 +45,14 @@ class ExternalContactController extends Controller
     {
         $team = $request->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
         $contact = Contact::updateOrCreate(
             [
                 'team_id' => $team->id,
-                'phone_number' => $request->phone_number
+                'phone_number' => $request->phone_number,
             ],
             [
                 'name' => $request->name ?? $request->phone_number,
@@ -79,4 +78,3 @@ class ExternalContactController extends Controller
         );
     }
 }
-

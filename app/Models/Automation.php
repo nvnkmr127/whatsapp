@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
-
-use \App\Traits\HasTeam;
 
 class Automation extends Model
 {
@@ -31,7 +30,7 @@ class Automation extends Model
 
     public function validate()
     {
-        return (new \App\Services\AutomationValidationService())->validate($this);
+        return (new \App\Services\AutomationValidationService)->validate($this);
     }
 
     public function runs()

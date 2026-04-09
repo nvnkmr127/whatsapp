@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EventBusService
 {
@@ -14,16 +14,18 @@ class EventBusService
     {
         try {
             $id = DB::table('broadcast_events')->insertGetId([
-                'team_id'    => $teamId,
+                'team_id' => $teamId,
                 'event_type' => $eventType,
-                'payload'    => json_encode($payload),
-                'status'     => 'pending',
+                'payload' => json_encode($payload),
+                'status' => 'pending',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
             return (string) $id;
         } catch (\Exception $e) {
-            Log::error("EventBus: Failed to publish to Database: " . $e->getMessage());
+            Log::error('EventBus: Failed to publish to Database: '.$e->getMessage());
+
             return null;
         }
     }
@@ -40,19 +42,21 @@ class EventBusService
         try {
             $data = array_map(function ($event) {
                 return [
-                    'team_id'    => $event['team_id'] ?? null,
+                    'team_id' => $event['team_id'] ?? null,
                     'event_type' => $event['event_type'],
-                    'payload'    => json_encode($event['payload']),
-                    'status'     => 'pending',
+                    'payload' => json_encode($event['payload']),
+                    'status' => 'pending',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
             }, $events);
 
             DB::table('broadcast_events')->insert($data);
+
             return true;
         } catch (\Exception $e) {
-            Log::error("EventBus: Failed to publish batch to Database: " . $e->getMessage());
+            Log::error('EventBus: Failed to publish batch to Database: '.$e->getMessage());
+
             return false;
         }
     }
@@ -67,4 +71,3 @@ class EventBusService
             ->update(['status' => 'completed', 'updated_at' => now()]);
     }
 }
-

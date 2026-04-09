@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -12,6 +11,7 @@ class CampaignFailedNotification extends Notification
     use Queueable;
 
     public $campaign;
+
     public $errorMessage;
 
     /**
@@ -40,10 +40,10 @@ class CampaignFailedNotification extends Notification
     {
         return (new MailMessage)
             ->error()
-            ->subject('Campaign Failure Alert: ' . ($this->campaign->name ?? 'WhatsApp Campaign'))
+            ->subject('Campaign Failure Alert: '.($this->campaign->name ?? 'WhatsApp Campaign'))
             ->line('A critical error has occurred during your campaign broadcast.')
-            ->line('Error Message: ' . $this->errorMessage)
-            ->action('View Dashboard', url('/campaigns/' . $this->campaign->id . '/live'));
+            ->line('Error Message: '.$this->errorMessage)
+            ->action('View Dashboard', url('/campaigns/'.$this->campaign->id.'/live'));
     }
 
     /**
@@ -58,7 +58,7 @@ class CampaignFailedNotification extends Notification
             'campaign_name' => $this->campaign->name ?? '',
             'error' => $this->errorMessage,
             'icon' => 'exclamation-triangle',
-            'type' => 'campaign_failure'
+            'type' => 'campaign_failure',
         ];
     }
 }

@@ -16,7 +16,7 @@ class Integration extends Model
         'status',
         'settings',
         'last_synced_at',
-        'error_message'
+        'error_message',
     ];
 
     protected $casts = [

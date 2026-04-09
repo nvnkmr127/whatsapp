@@ -24,7 +24,7 @@ class WhatsAppCallFactory extends Factory
     {
         return [
             'team_id' => Team::factory(),
-            'call_id' => 'wacid.' . $this->faker->uuid,
+            'call_id' => 'wacid.'.$this->faker->uuid,
             'direction' => 'inbound',
             'status' => 'initiated',
             'from_number' => $this->faker->phoneNumber,

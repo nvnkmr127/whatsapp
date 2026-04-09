@@ -4,7 +4,6 @@ namespace App\Services\Email\Drivers;
 
 use App\Enums\EmailUseCase;
 use App\Mail\DynamicSystemMail;
-use App\Models\EmailLog;
 use App\Models\SmtpConfig;
 use App\Services\Email\Contracts\EmailPayload;
 use App\Services\Email\Contracts\EmailProviderContract;
@@ -37,7 +36,8 @@ class SmtpDriver implements EmailProviderContract
         try {
             if (SmtpConfig::count() === 0) {
                 $this->sendLegacy($to, $useCase, $mailable);
-                return EmailResult::ok('smtp', 'legacy_' . uniqid());
+
+                return EmailResult::ok('smtp', 'legacy_'.uniqid());
             }
 
             $configs = SmtpConfig::where('is_active', true)
@@ -54,24 +54,25 @@ class SmtpDriver implements EmailProviderContract
 
                 if ($configs->isEmpty()) {
                     $this->sendLegacy($to, $useCase, $mailable);
-                    return EmailResult::ok('smtp', 'legacy_fallback_' . uniqid());
+
+                    return EmailResult::ok('smtp', 'legacy_fallback_'.uniqid());
                 }
             }
 
             foreach ($configs as $config) {
                 try {
-                    $mailerName = 'dynamic_smtp_' . $config->id;
+                    $mailerName = 'dynamic_smtp_'.$config->id;
                     $this->configureDynamicMailer($mailerName, $config);
 
                     Mail::mailer($mailerName)->to($to)->send($mailable);
 
                     $this->healthService->reportSuccess($config);
 
-                    return EmailResult::ok('smtp', 'smtp_cfg_' . $config->id . '_' . uniqid());
+                    return EmailResult::ok('smtp', 'smtp_cfg_'.$config->id.'_'.uniqid());
 
                 } catch (Exception $e) {
                     $this->healthService->reportFailure($config);
-                    Log::error("SmtpDriver: Failed to send via {$config->name}: " . $e->getMessage());
+                    Log::error("SmtpDriver: Failed to send via {$config->name}: ".$e->getMessage());
                 }
             }
 
@@ -117,12 +118,12 @@ class SmtpDriver implements EmailProviderContract
                 'encryption' => $config->encryption,
                 'timeout' => 30,
                 'local_domain' => config('mail.mailers.smtp.local_domain'),
-            ]
+            ],
         ]);
 
-        if (!empty($config->from_address)) {
-            config(["mail.from.address" => $config->from_address]);
-            config(["mail.from.name" => $config->from_name]);
+        if (! empty($config->from_address)) {
+            config(['mail.from.address' => $config->from_address]);
+            config(['mail.from.name' => $config->from_name]);
         }
     }
 }

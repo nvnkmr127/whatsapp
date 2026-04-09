@@ -54,9 +54,9 @@ class EmailTemplateSave extends Component
         $template = EmailTemplate::find($this->templateId);
 
         if ($template) {
-            $this->name           = $template->name;
-            $this->subject        = $template->subject;
-            $this->message        = $template->message;
+            $this->name = $template->name;
+            $this->subject = $template->subject;
+            $this->message = $template->message;
             $this->selectedGroups = $template->merge_fields_groups ?? [];
         }
     }
@@ -74,7 +74,7 @@ class EmailTemplateSave extends Component
 
     public function insertMergeField($field)
     {
-        $this->message .= ' ' . $field;
+        $this->message .= ' '.$field;
 
         // Find which group contains this field
         foreach ($this->groupedFields as $group => $fields) {
@@ -119,7 +119,7 @@ class EmailTemplateSave extends Component
 
         try {
 
-            $template          = EmailTemplate::find($this->templateId);
+            $template = EmailTemplate::find($this->templateId);
             $template->subject = $this->subject;
             $template->message = $this->message;
 
@@ -129,7 +129,7 @@ class EmailTemplateSave extends Component
 
             return $this->redirect(route('admin.emails'));
         } catch (\Exception $e) {
-            app_log('Failed to update email template: ' . $e->getMessage(), 'error', $e, [
+            app_log('Failed to update email template: '.$e->getMessage(), 'error', $e, [
                 'template_id' => $this->templateId,
             ]);
 

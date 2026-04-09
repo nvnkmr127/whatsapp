@@ -2,19 +2,21 @@
 
 namespace App\Livewire\Campaigns;
 
-use Livewire\Component;
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\Computed;
 use App\Models\Campaign;
 use App\Models\CampaignDetail;
 use App\Models\Message;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 class Show extends Component
 {
     use \Livewire\WithPagination;
 
     public $campaignId;
+
     public $showRetargetModal = false;
+
     public $retargetingCriteria = 'not_read'; // not_delivered, not_read, read, failed
 
     public function openRetargetModal()
@@ -50,14 +52,15 @@ class Show extends Component
         if (empty($contactIds)) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'No contacts found matching criteria.'
+                'message' => 'No contacts found matching criteria.',
             ]);
+
             return;
         }
 
         session([
             'retarget_ids' => $contactIds,
-            'default_name' => "Follow-up: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
+            'default_name' => 'Follow-up: '.$campaign->name.' ('.str_replace('_', ' ', $this->retargetingCriteria).')',
         ]);
 
         return redirect()->route('campaigns.create');
@@ -128,7 +131,7 @@ class Show extends Component
             ->paginate(20);
 
         return view('livewire.campaigns.show', [
-            'messages' => $messages
+            'messages' => $messages,
         ]);
     }
 
@@ -138,8 +141,9 @@ class Show extends Component
             $message = Message::findOrFail($messageId);
             $campaign = $message->campaign;
 
-            if (!$campaign) {
+            if (! $campaign) {
                 session()->flash('error', 'Campaign not found for this message.');
+
                 return;
             }
 
@@ -149,7 +153,7 @@ class Show extends Component
                 'error_message' => null,
                 'last_error' => null,
                 'retry_count' => 0,
-                'next_retry_at' => null
+                'next_retry_at' => null,
             ]);
 
             // Re-dispatch the job
@@ -157,8 +161,8 @@ class Show extends Component
 
             session()->flash('success', 'Message re-queued for delivery.');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Manual Campaign Replay Error: " . $e->getMessage());
-            session()->flash('error', 'Replay failed: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Manual Campaign Replay Error: '.$e->getMessage());
+            session()->flash('error', 'Replay failed: '.$e->getMessage());
         }
     }
 }

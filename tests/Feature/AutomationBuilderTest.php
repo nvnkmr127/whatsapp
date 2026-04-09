@@ -2,12 +2,11 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Automation;
 use App\Livewire\Automations\AutomationBuilder;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\TestCase;
 
 class AutomationBuilderTest extends TestCase
 {
@@ -18,13 +17,14 @@ class AutomationBuilderTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $user->current_team_id = $user->personalTeam()->id;
         $user->save();
+
         return $user->fresh();
     }
 
     public function test_can_load_automation_builder()
     {
         $user = $this->setupUser();
-        
+
         Livewire::actingAs($user)
             ->test(AutomationBuilder::class)
             ->assertStatus(200)
@@ -34,7 +34,7 @@ class AutomationBuilderTest extends TestCase
     public function test_can_add_node_to_automation()
     {
         $user = $this->setupUser();
-        
+
         Livewire::actingAs($user)
             ->test(AutomationBuilder::class)
             ->call('addNode', 'text')
@@ -45,11 +45,11 @@ class AutomationBuilderTest extends TestCase
     public function test_can_add_edge_and_fail_validation_if_incomplete()
     {
         $user = $this->setupUser();
-        
+
         Livewire::actingAs($user)
             ->test(AutomationBuilder::class)
             ->call('addNode', 'text')
-            ->set('nodeText', '') 
+            ->set('nodeText', '')
             ->call('updateNodeData')
             ->call('runValidation')
             ->assertSet('isActivatable', false);
@@ -58,7 +58,7 @@ class AutomationBuilderTest extends TestCase
     public function test_can_save_valid_automation()
     {
         $user = $this->setupUser();
-        
+
         Livewire::actingAs($user)
             ->test(AutomationBuilder::class)
             ->set('name', 'My New Bot')
@@ -70,14 +70,14 @@ class AutomationBuilderTest extends TestCase
 
         $this->assertDatabaseHas('automations', [
             'name' => 'My New Bot',
-            'team_id' => $user->currentTeam->id
+            'team_id' => $user->currentTeam->id,
         ]);
     }
 
     public function test_ab_split_validation()
     {
         $user = $this->setupUser();
-        
+
         Livewire::actingAs($user)
             ->test(AutomationBuilder::class)
             ->call('addNode', 'ab_split')

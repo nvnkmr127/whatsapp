@@ -44,10 +44,10 @@ class ContactCreator extends Component
 
             return redirect(route('admin.dashboard'));
         }
-        $this->id        = $this->getId();
-        $this->contact   = $this->contactId ? Contact::findOrFail($this->contactId) : new Contact;
+        $this->id = $this->getId();
+        $this->contact = $this->contactId ? Contact::findOrFail($this->contactId) : new Contact;
         $this->contactId = $contactId ?? request()->route('contactId');
-        $this->notetab   = request()->query('notetab');
+        $this->notetab = request()->query('notetab');
         $this->loadNotes();
         $this->initialNotesCount = $this->contact->notes()->count();
         if ($this->notetab === 'notes') {
@@ -58,22 +58,22 @@ class ContactCreator extends Component
     protected function rules()
     {
         return [
-            'contact.firstname'        => ['required', 'string', new PurifiedInput(t('sql_injection_error')), 'max:191'],
-            'contact.lastname'         => ['required', 'string', new PurifiedInput(t('sql_injection_error')), 'max:191'],
-            'contact.company'          => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:191'],
-            'contact.type'             => ['required', 'in:customer,lead'],
-            'contact.description'      => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:65535'],
-            'contact.country_id'       => ['nullable', 'integer'],
-            'contact.zip'              => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:15'],
-            'contact.city'             => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:100'],
-            'contact.state'            => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:100'],
-            'contact.address'          => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:500'],
-            'contact.assigned_id'      => ['nullable'],
-            'contact.status_id'        => ['required', 'exists:statuses,id'],
-            'contact.source_id'        => ['required', 'exists:sources,id'],
-            'contact.email'            => ['nullable', 'email', 'unique:contacts,email,' . $this->contact->id, 'max:191'],
-            'contact.website'          => ['nullable', 'url', new PurifiedInput(t('sql_injection_error')), 'max:100'],
-            'contact.phone'            => ['required', 'unique:contacts,phone,' . $this->contact->id, new PurifiedInput(t('sql_injection_error'))],
+            'contact.firstname' => ['required', 'string', new PurifiedInput(t('sql_injection_error')), 'max:191'],
+            'contact.lastname' => ['required', 'string', new PurifiedInput(t('sql_injection_error')), 'max:191'],
+            'contact.company' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:191'],
+            'contact.type' => ['required', 'in:customer,lead'],
+            'contact.description' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:65535'],
+            'contact.country_id' => ['nullable', 'integer'],
+            'contact.zip' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:15'],
+            'contact.city' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:100'],
+            'contact.state' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:100'],
+            'contact.address' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error')), 'max:500'],
+            'contact.assigned_id' => ['nullable'],
+            'contact.status_id' => ['required', 'exists:statuses,id'],
+            'contact.source_id' => ['required', 'exists:sources,id'],
+            'contact.email' => ['nullable', 'email', 'unique:contacts,email,'.$this->contact->id, 'max:191'],
+            'contact.website' => ['nullable', 'url', new PurifiedInput(t('sql_injection_error')), 'max:100'],
+            'contact.phone' => ['required', 'unique:contacts,phone,'.$this->contact->id, new PurifiedInput(t('sql_injection_error'))],
             'contact.default_language' => ['nullable'],
         ];
     }
@@ -84,9 +84,9 @@ class ContactCreator extends Component
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn ($note) => [
-                'id'                => $note->id,
+                'id' => $note->id,
                 'notes_description' => $note->notes_description,
-                'created_at'        => $note->created_at->diffForHumans(),
+                'created_at' => $note->created_at->diffForHumans(),
             ])
             ->toArray();
     }
@@ -106,12 +106,12 @@ class ContactCreator extends Component
 
         ContactNote::create([
             'notes_description' => $this->notes_description,
-            'contact_id'        => $this->contact->id,
+            'contact_id' => $this->contact->id,
         ]);
 
         $this->notes_description = '';
         $this->notify([
-            'type'    => 'success',
+            'type' => 'success',
             'message' => t('note_added_successfully'),
         ]);
 
@@ -133,28 +133,28 @@ class ContactCreator extends Component
             if ($deleted === 0) {
                 app_log('Attempted to delete a non-existing note.', 'warning', null, [
                     'note_id' => $this->noteId,
-                    'file'    => __FILE__,
-                    'line'    => __LINE__,
+                    'file' => __FILE__,
+                    'line' => __LINE__,
                 ]);
             }
 
             $this->confirmingDeletion = false;
             $this->notify([
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => t('note_delete_successfully'),
             ]);
 
             $this->loadNotes();
         } catch (\Throwable $e) {
 
-            app_log('Failed to delete note: ' . $e->getMessage(), 'error', $e, [
+            app_log('Failed to delete note: '.$e->getMessage(), 'error', $e, [
                 'note_id' => $this->noteId ?? 'unknown',
-                'file'    => $e->getFile(),
-                'line'    => $e->getLine(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             $this->notify([
-                'type'    => 'danger',
+                'type' => 'danger',
                 'message' => t('error_deleting_note'),
             ]);
         }
@@ -180,7 +180,7 @@ class ContactCreator extends Component
 
                 $notesChanged = ContactNote::where('contact_id', $this->contact->id)->exists() !== ($this->initialNotesCount > 0);
 
-                $isNewContact    = ! $this->contact->exists;
+                $isNewContact = ! $this->contact->exists;
                 $assignedChanged = $this->contact->isDirty('assigned_id') && ! is_null($this->contact->assigned_id);
 
                 if ($this->contact->isDirty() || $notesChanged) {
@@ -194,7 +194,7 @@ class ContactCreator extends Component
 
                             if ($assignee) {
                                 $assignedEmail = $assignee->email;
-                                $assignedName  = "{$assignee->firstname} {$assignee->lastname}";
+                                $assignedName = "{$assignee->firstname} {$assignee->lastname}";
 
                                 $this->sendMail($assignedEmail, new NewAssignedMail(
                                     "Hello, {$assignedName}",
@@ -209,7 +209,7 @@ class ContactCreator extends Component
                     $this->initialNotesCount = ContactNote::where('contact_id', $this->contact->id)->count();
 
                     $this->notify([
-                        'type'    => 'success',
+                        'type' => 'success',
                         'message' => $this->contact->wasRecentlyCreated
                             ? t('contact_created_successfully')
                             : t('contact_update_successfully'),
@@ -219,14 +219,14 @@ class ContactCreator extends Component
                 return $this->redirect(route('admin.contacts.list'));
             } catch (\Throwable $e) {
 
-                app_log('Error while saving contact: ' . $e->getMessage(), 'error', $e, [
+                app_log('Error while saving contact: '.$e->getMessage(), 'error', $e, [
                     'contact_id' => $this->contact->id ?? 'unknown',
-                    'file'       => $e->getFile(),
-                    'line'       => $e->getLine(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
 
                 $this->notify([
-                    'type'    => 'danger',
+                    'type' => 'danger',
                     'message' => $e->getMessage(),
                 ]);
             }
@@ -241,10 +241,10 @@ class ContactCreator extends Component
 
     public function render()
     {
-        $data['statuses']  = Status::all();
-        $data['sources']   = Source::all();
+        $data['statuses'] = Status::all();
+        $data['sources'] = Source::all();
         $data['countries'] = getCountryList();
-        $data['users']     = User::all();
+        $data['users'] = User::all();
 
         return view('livewire.admin.contact.contact-creator', $data);
     }

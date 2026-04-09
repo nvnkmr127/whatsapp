@@ -5,11 +5,11 @@ namespace App\Jobs\Email;
 use App\Enums\EmailUseCase;
 use App\Services\Email\EmailDispatcher;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 
 class SendSystemEmailJob implements ShouldQueue
@@ -36,19 +36,18 @@ class SendSystemEmailJob implements ShouldQueue
         protected EmailUseCase $useCase,
         protected Mailable $mailable,
         protected ?int $templateId = null
-    ) {
-    }
+    ) {}
 
     public function handle(EmailDispatcher $dispatcher): void
     {
         try {
             $dispatcher->send($this->to, $this->useCase, $this->mailable, $this->templateId);
         } catch (\Exception $e) {
-            Log::error("SendSystemEmailJob Attempt Failed", [
+            Log::error('SendSystemEmailJob Attempt Failed', [
                 'to' => $this->to,
                 'use_case' => $this->useCase,
                 'attempt' => $this->attempts(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             // If we have more tries, we let the queue handle it.
@@ -63,9 +62,9 @@ class SendSystemEmailJob implements ShouldQueue
 
     protected function handlePermanentFailure(): void
     {
-        Log::critical("System Email Delivery Permanently Failed", [
+        Log::critical('System Email Delivery Permanently Failed', [
             'to' => $this->to,
-            'use_case' => $this->useCase->value
+            'use_case' => $this->useCase->value,
         ]);
 
         // Logic for cross-channel fallback (e.g. Send SMS if Email OTP fails) would go here.

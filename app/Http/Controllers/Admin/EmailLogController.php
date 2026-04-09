@@ -22,8 +22,8 @@ class EmailLogController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('recipient', 'like', '%' . $request->search . '%')
-                ->orWhere('subject', 'like', '%' . $request->search . '%');
+            $query->where('recipient', 'like', '%'.$request->search.'%')
+                ->orWhere('subject', 'like', '%'.$request->search.'%');
         }
 
         $logs = $query->paginate(20);

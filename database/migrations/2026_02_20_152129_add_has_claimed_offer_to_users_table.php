@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Schema;
  * re-registration under a new email or after team deletion still respects
  * the original claim.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {

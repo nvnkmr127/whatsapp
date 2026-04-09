@@ -12,9 +12,13 @@ class UsageThresholdReached
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $team;
+
     public $metric;
+
     public $level;
+
     public $percent;
+
     public $message;
 
     /**

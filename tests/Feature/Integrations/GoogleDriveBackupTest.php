@@ -4,7 +4,6 @@ namespace Tests\Feature\Integrations;
 
 use App\Models\Integration;
 use App\Models\Team;
-use App\Services\BackupService;
 use App\Services\Integrations\GoogleDriveService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -37,15 +36,15 @@ class GoogleDriveBackupTest extends TestCase
             // Mock token refresh just in case
             'https://oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'mock_access_token',
-                'expires_in' => 3600
+                'expires_in' => 3600,
             ]),
             // Mock folder check (exists)
             'https://www.googleapis.com/drive/v3/files?q=*' => Http::response([
-                'files' => [['id' => 'mock_folder_id']]
+                'files' => [['id' => 'mock_folder_id']],
             ]),
             // Mock file upload
             'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart' => Http::response([
-                'id' => 'mock_file_id'
+                'id' => 'mock_file_id',
             ]),
         ]);
 
@@ -56,7 +55,7 @@ class GoogleDriveBackupTest extends TestCase
         $service = new GoogleDriveService($integration);
         $result = $service->uploadFile($filePath, 'backup.zip');
 
-        $this->assertEquals('mock_file_id', $result['id']);
+        $this->assertEquals('mock_file_id', $result);
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'upload/drive/v3/files') &&
@@ -92,7 +91,7 @@ class GoogleDriveBackupTest extends TestCase
             // Mock token refresh
             'https://oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'new_token',
-                'expires_in' => 3600
+                'expires_in' => 3600,
             ]),
             // Mock folder check
             'https://www.googleapis.com/drive/v3/files?q=*' => Http::response(['files' => [['id' => 'fid']]]),

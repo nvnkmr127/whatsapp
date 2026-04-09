@@ -8,16 +8,24 @@ use Livewire\Component;
 class PlanManager extends Component
 {
     public $plans;
+
     public $editingPlan = null;
+
     public $showModal = false;
 
     // Form fields
     public $name;
+
     public $monthly_price;
+
     public $initial_wallet_balance;
+
     public $message_limit;
+
     public $agent_limit;
+
     public $features = [];
+
     public $call_minutes_limit;
 
     protected $rules = [
@@ -59,7 +67,7 @@ class PlanManager extends Component
         if (is_string($features)) {
             $features = json_decode($features, true) ?? [];
         }
-        if (!is_array($features)) {
+        if (! is_array($features)) {
             $features = [];
         }
         $this->features = $features;
@@ -76,7 +84,7 @@ class PlanManager extends Component
         if (is_string($currentFeatures)) {
             $currentFeatures = json_decode($currentFeatures, true) ?? [];
         }
-        if (!is_array($currentFeatures)) {
+        if (! is_array($currentFeatures)) {
             $currentFeatures = [];
         }
 

@@ -8,8 +8,7 @@ class ValidationResult
         public array $errors = [],
         public array $warnings = [],
         public array $recipientResults = []
-    ) {
-    }
+    ) {}
 
     public function isValid(): bool
     {
@@ -23,17 +22,17 @@ class ValidationResult
 
     public function getBlockingErrors(): array
     {
-        return array_filter($this->errors, fn($error) => $error->isBlocking());
+        return array_filter($this->errors, fn ($error) => $error->isBlocking());
     }
 
     public function getErrors(): array
     {
-        return array_map(fn($error) => $error->toArray(), $this->errors);
+        return array_map(fn ($error) => $error->toArray(), $this->errors);
     }
 
     public function getWarnings(): array
     {
-        return array_map(fn($warning) => $warning->toArray(), $this->warnings);
+        return array_map(fn ($warning) => $warning->toArray(), $this->warnings);
     }
 
     public function getBlockingReason(): string
@@ -65,7 +64,7 @@ class ValidationResult
         $invalid = [];
 
         foreach ($this->recipientResults as $contactId => $result) {
-            if (!$result['valid']) {
+            if (! $result['valid']) {
                 $invalid[$contactId] = $result;
             }
         }

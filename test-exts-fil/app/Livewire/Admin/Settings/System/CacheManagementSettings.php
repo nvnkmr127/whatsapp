@@ -22,8 +22,8 @@ class CacheManagementSettings extends Component
     protected function rules()
     {
         return [
-            'environment'     => ['nullable', 'boolean'],
-            'enable_wp_log'   => ['nullable', 'boolean'],
+            'environment' => ['nullable', 'boolean'],
+            'enable_wp_log' => ['nullable', 'boolean'],
             'production_mode' => ['nullable', 'boolean'],
         ];
     }
@@ -39,7 +39,7 @@ class CacheManagementSettings extends Component
         // Use config values instead of env for better caching support
         $this->environment = config('app.debug');
         // Check if whatsapp logging channel exists, otherwise fallback to env
-        $this->enable_wp_log   = config('logging.channels.whatsapp.enabled', env('WHATSAPP_LOGGING_ENABLED') === 'true');
+        $this->enable_wp_log = config('logging.channels.whatsapp.enabled', env('WHATSAPP_LOGGING_ENABLED') === 'true');
         $this->production_mode = config('app.env') !== 'local';
 
         $this->calculateSizes();
@@ -49,10 +49,10 @@ class CacheManagementSettings extends Component
     {
         $directories = [
             'framework' => storage_path('framework/cache'),
-            'views'     => storage_path('framework/views'),
-            'config'    => base_path('bootstrap/cache'),
-            'routing'   => base_path('bootstrap/cache'), // Route cache is stored here in Laravel 11
-            'logs'      => storage_path('logs'),
+            'views' => storage_path('framework/views'),
+            'config' => base_path('bootstrap/cache'),
+            'routing' => base_path('bootstrap/cache'), // Route cache is stored here in Laravel 11
+            'logs' => storage_path('logs'),
         ];
 
         $this->cacheSizes = array_map(
@@ -68,25 +68,25 @@ class CacheManagementSettings extends Component
         try {
             match ($type) {
                 'framework' => clear_cache(),
-                'views'     => clear_view(),
-                'config'    => clear_config(),
-                'routing'   => $this->clearRouteCache(),
-                'logs'      => $this->clearLogFiles(),
-                default     => throw new \InvalidArgumentException("Invalid cache type: {$type}"),
+                'views' => clear_view(),
+                'config' => clear_config(),
+                'routing' => $this->clearRouteCache(),
+                'logs' => $this->clearLogFiles(),
+                default => throw new \InvalidArgumentException("Invalid cache type: {$type}"),
             };
 
             // Update only the cleared cache size
             $this->cacheSizes[$type] = $this->getDirectorySize($this->getDirectoryPath($type));
 
             $this->notify([
-                'type'    => 'success',
-                'message' => Str::headline($type) . t('cache_cleared_successfully'),
+                'type' => 'success',
+                'message' => Str::headline($type).t('cache_cleared_successfully'),
             ]);
         } catch (\Exception $e) {
             report($e);
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('failed_to_clear_cache') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('failed_to_clear_cache').': '.$e->getMessage(),
             ]);
         }
 
@@ -97,11 +97,11 @@ class CacheManagementSettings extends Component
     {
         return match ($type) {
             'framework' => storage_path('framework/cache'),
-            'views'     => storage_path('framework/views'),
-            'config'    => base_path('bootstrap/cache'),
-            'routing'   => base_path('bootstrap/cache'), // Route cache is in bootstrap/cache
-            'logs'      => storage_path('logs'),
-            default     => throw new \InvalidArgumentException("Invalid cache type: {$type}"),
+            'views' => storage_path('framework/views'),
+            'config' => base_path('bootstrap/cache'),
+            'routing' => base_path('bootstrap/cache'), // Route cache is in bootstrap/cache
+            'logs' => storage_path('logs'),
+            default => throw new \InvalidArgumentException("Invalid cache type: {$type}"),
         };
     }
 
@@ -181,12 +181,12 @@ class CacheManagementSettings extends Component
     private function formatSizeUnits(int $bytes): string
     {
         return match (true) {
-            $bytes >= 1_073_741_824 => number_format($bytes / 1_073_741_824, 2) . ' GB',
-            $bytes >= 1_048_576     => number_format($bytes / 1_048_576, 2) . ' MB',
-            $bytes >= 1_024         => number_format($bytes / 1_024, 2) . ' KB',
-            $bytes > 1              => "{$bytes} bytes",
-            $bytes === 1            => '1 byte',
-            default                 => '0 B',
+            $bytes >= 1_073_741_824 => number_format($bytes / 1_073_741_824, 2).' GB',
+            $bytes >= 1_048_576 => number_format($bytes / 1_048_576, 2).' MB',
+            $bytes >= 1_024 => number_format($bytes / 1_024, 2).' KB',
+            $bytes > 1 => "{$bytes} bytes",
+            $bytes === 1 => '1 byte',
+            default => '0 B',
         };
     }
 
@@ -197,14 +197,14 @@ class CacheManagementSettings extends Component
             $this->updateEnvVariable('APP_DEBUG', $this->environment ? 'true' : 'false');
 
             $this->notify([
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => t('environment_updated'),
             ]);
         } catch (\Exception $e) {
             report($e);
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('failed_to_update_environment') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('failed_to_update_environment').': '.$e->getMessage(),
             ]);
         }
     }
@@ -216,14 +216,14 @@ class CacheManagementSettings extends Component
             $this->updateEnvVariable('WHATSAPP_LOGGING_ENABLED', $this->enable_wp_log ? 'true' : 'false');
 
             $this->notify([
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => t('whatsapp_log_updated'),
             ]);
         } catch (\Exception $e) {
             report($e);
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('failed_to_update_whatsapp_log_setting') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('failed_to_update_whatsapp_log_setting').': '.$e->getMessage(),
             ]);
         }
     }
@@ -235,7 +235,7 @@ class CacheManagementSettings extends Component
             $this->updateEnvVariable('APP_ENV', $this->production_mode ? 'production' : 'local');
 
             $this->notify([
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => $this->production_mode
                     ? t('enable_production_mode_successfully')
                     : t('disable_production_mode_successfully'),
@@ -243,8 +243,8 @@ class CacheManagementSettings extends Component
         } catch (\Exception $e) {
             report($e);
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('failed_to_update_production_mode') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('failed_to_update_production_mode').': '.$e->getMessage(),
             ]);
         }
     }
@@ -272,7 +272,7 @@ class CacheManagementSettings extends Component
                 $content = preg_replace("/^{$escapedKey}=.*$/m", "{$key}={$value}", $content);
             } else {
                 // If the key doesn't exist, add it
-                $content .= PHP_EOL . "{$key}={$value}";
+                $content .= PHP_EOL."{$key}={$value}";
             }
 
             file_put_contents($path, $content);
@@ -281,12 +281,12 @@ class CacheManagementSettings extends Component
             Artisan::call('config:clear');
 
             // Update the current environment variable for this request
-            $_ENV[$key]    = $value;
+            $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
             putenv("{$key}={$value}");
         } catch (\Exception $e) {
             report($e);
-            throw new \Exception('Failed to update environment variable: ' . $e->getMessage());
+            throw new \Exception('Failed to update environment variable: '.$e->getMessage());
         }
     }
 

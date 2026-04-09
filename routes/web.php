@@ -1,17 +1,16 @@
 <?php
 
+use App\Http\Controllers\Integrations\GoogleDriveController;
 use App\Http\Controllers\LeadCaptureWidgetController;
-use Illuminate\Support\Facades\Route;
 use App\Livewire\Developer\KnowledgeBaseManager;
 use App\Livewire\Settings\AiSettings;
-use App\Http\Controllers\Integrations\GoogleDriveController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->to('https://watxio.com/');
 });
 
 Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
-
 
 // Passwordless Auth Routes
 Route::prefix('auth')->name('auth.')->group(function () {
@@ -111,6 +110,7 @@ Route::middleware([
         // Entitlement debug: full snapshot for any team (Super Admin only)
         Route::get('/admin/entitlement/{team}', function (\App\Models\Team $team) {
             $snapshot = app(\App\Services\EntitlementService::class)->for($team)->toArray();
+
             return response()->json($snapshot, 200, ['Content-Type' => 'application/json'], JSON_PRETTY_PRINT);
         })->name('admin.entitlement.debug');
 
@@ -257,7 +257,6 @@ Route::middleware([
 // Link Redirect
 Route::get('/l/{code}', [App\Http\Controllers\ShortLinkController::class, 'redirect'])->name('short-link.redirect');
 
-
 // Embed Routes (Publicly accessible but Token protected internally)
 Route::get('/embed/chat', [\App\Http\Controllers\EmbedController::class, 'show'])->name('embed.chat');
 
@@ -267,6 +266,6 @@ Route::get('/embed/chat', [\App\Http\Controllers\EmbedController::class, 'show']
  * These routes are ONLY loaded if the routes/local.php file exists.
  * This file is git-ignored and intended for local testing tools.
  */
-if (file_exists(__DIR__ . '/local.php')) {
-    require __DIR__ . '/local.php';
+if (file_exists(__DIR__.'/local.php')) {
+    require __DIR__.'/local.php';
 }

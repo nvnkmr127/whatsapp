@@ -5,16 +5,16 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'general.site_name'        => 'Whatsmark',
+        'general.site_name' => 'Whatsmark',
         'general.site_description' => 'Whatsapp marketing website',
-        'general.timezone'         => 'UTC',
-        'general.date_format'      => 'd-m-Y',
-        'general.time_format'      => '12',
-        'general.site_logo'        => '',
-        'general.favicon'          => '',
+        'general.timezone' => 'UTC',
+        'general.date_format' => 'd-m-Y',
+        'general.time_format' => '12',
+        'general.site_logo' => '',
+        'general.favicon' => '',
         'general.cover_page_image' => '',
-        'general.site_dark_logo'   => '',
-        'general.active_language'  => 'en',
+        'general.site_dark_logo' => '',
+        'general.active_language' => 'en',
     ];
 
     public function up(): void

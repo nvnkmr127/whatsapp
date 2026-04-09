@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\Contact;
 use App\Models\Product;
-use App\Models\Team;
-use App\Services\EntitlementService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -29,36 +27,41 @@ class AiCommerceService
 
         // 0. Commerce Readiness Check
         $readinessService = app(\App\Services\CommerceReadinessService::class);
-        if (!$readinessService->canPerformAction($team, 'ai_shop')) {
+        if (! $readinessService->canPerformAction($team, 'ai_shop')) {
             Log::info("AiCommerceService: AI Bot blocked for team {$team->name} due to readiness failure.");
+
             return false;
         }
 
         // 0.5 Entitlement checks (single resolution, three capability checks)
         $e = app(EntitlementService::class)->for($team);
 
-        if (!$e->hasFeature('ai')) {
+        if (! $e->hasFeature('ai')) {
             Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - feature 'ai' not included.");
+
             return false;
         }
 
-        if (!$e->hasFeature('commerce')) {
+        if (! $e->hasFeature('commerce')) {
             Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - feature 'commerce' not included.");
+
             return false;
         }
 
-        if (!$e->can('send_message')) {
+        if (! $e->can('send_message')) {
             Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - message limit reached.");
+
             return false;
         }
 
         // Fetch Centralized Settings
         $apiKey = \App\Models\Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? config('services.ai.openai.api_key');
         $model = \App\Models\Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? config('services.ai.openai.default_model', 'gpt-4o');
-        $persona = \App\Models\Setting::where('key', "ai_persona_{$teamId}")->value('value') ?? "You are a helpful shopping assistant for a store. Your goal is to help the user find products from the CATALOG provided below.";
+        $persona = \App\Models\Setting::where('key', "ai_persona_{$teamId}")->value('value') ?? 'You are a helpful shopping assistant for a store. Your goal is to help the user find products from the CATALOG provided below.';
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             Log::warning("AI Assistant enabled for team {$team->name} but OPENAI_API_KEY is missing (checked Settings and ENV).");
+
             return false;
         }
 
@@ -79,14 +82,14 @@ class AiCommerceService
                 'id' => $p->id,
                 'name' => $p->name,
                 'price' => $p->price,
-                'desc' => substr($p->description ?? '', 0, 100)
+                'desc' => substr($p->description ?? '', 0, 100),
             ];
         })->toJson();
 
         // 1.5 Fetch Knowledge Base Context (if enabled)
         $useKb = (bool) get_setting("ai_use_kb_{$teamId}", false);
-        $kbContext = "";
-        $kbGrounding = "";
+        $kbContext = '';
+        $kbGrounding = '';
         if ($useKb) {
             $kbService = app(KnowledgeBaseService::class);
             $kbScope = get_setting("ai_kb_scope_{$teamId}", 'all');
@@ -130,19 +133,20 @@ class AiCommerceService
                     ['role' => 'user', 'content' => $message],
                 ],
                 'temperature' => 0.7,
-                'response_format' => ['type' => 'json_object']
+                'response_format' => ['type' => 'json_object'],
             ]);
 
             if ($response->failed()) {
-                Log::error("OpenAI API Failed: " . $response->body());
+                Log::error('OpenAI API Failed: '.$response->body());
+
                 return false;
             }
 
             $aiData = $response->json('choices.0.message.content');
-            Log::debug("OpenAI Response Content: " . $aiData);
+            Log::debug('OpenAI Response Content: '.$aiData);
             $aiJson = json_decode($aiData, true);
 
-            if (!isset($aiJson['reply_text'])) {
+            if (! isset($aiJson['reply_text'])) {
                 return false;
             }
 
@@ -152,7 +156,7 @@ class AiCommerceService
                 'action' => 'ai_interaction',
                 'description' => "AI Response sent to {$contact->phone_number}",
                 'subject_type' => get_class($contact),
-                'subject_id' => $contact->id
+                'subject_id' => $contact->id,
             ]);
 
             // Check for grounding failure (unanswered)
@@ -171,19 +175,19 @@ class AiCommerceService
             $this->whatsappService->sendText($contact->phone_number, $aiJson['reply_text']);
 
             // B. If products matched, initialize cart and provide link
-            if (!empty($aiJson['matched']) && !empty($aiJson['product_ids'])) {
+            if (! empty($aiJson['matched']) && ! empty($aiJson['product_ids'])) {
                 $this->sendProductCards($contact, $products, $aiJson['product_ids']);
-                
+
                 // Technical: Pre-fill cart for the user if they were specifically looking for these
                 // This makes the 'Checkout' button actually useful immediately.
                 $this->prefillCart($contact, $aiJson['product_ids']);
-                
+
                 // C. Send Checkout Link
                 $cart = app(CartService::class)->getOrCreateCart($contact, $team);
                 $checkoutUrl = route('commerce.checkout', ['uuid' => $cart->uuid]);
-                
+
                 $this->whatsappService->sendText(
-                    $contact->phone_number, 
+                    $contact->phone_number,
                     "🛒 *Checkout Link:* {$checkoutUrl}\n\nI've prepared a cart with these items for you. Click above to complete your order!"
                 );
             }
@@ -191,7 +195,8 @@ class AiCommerceService
             return true;
 
         } catch (\Exception $e) {
-            Log::error("AiCommerceService Error: " . $e->getMessage());
+            Log::error('AiCommerceService Error: '.$e->getMessage());
+
             return false;
         }
     }
@@ -236,7 +241,7 @@ class AiCommerceService
         try {
             $cartService = app(CartService::class);
             $cart = $cartService->getOrCreateCart($contact, $contact->team);
-            
+
             foreach ($productIds as $id) {
                 $product = Product::find($id);
                 if ($product && $product->team_id === $contact->team_id) {
@@ -244,7 +249,7 @@ class AiCommerceService
                 }
             }
         } catch (\Exception $e) {
-            Log::error("AiCommerceService: Prefill failed: " . $e->getMessage());
+            Log::error('AiCommerceService: Prefill failed: '.$e->getMessage());
         }
     }
 }

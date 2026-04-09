@@ -4,9 +4,9 @@ namespace App\Livewire\Campaigns;
 
 use App\Models\Campaign;
 use App\Models\ContactTag;
+use App\Services\BroadcastService;
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Services\BroadcastService;
 
 class CampaignManager extends Component
 {
@@ -16,16 +16,24 @@ class CampaignManager extends Component
 
     // Form Config
     public $name;
+
     public $campaignType = 'template'; // 'template' or 'workflow'
+
     public $templateName;
+
     public $workflowId;
+
     public $selectedTags = []; // IDs
+
     public $sendNow = true;
+
     public $scheduledAt;
 
     // Loaded Data
     public $availableTemplates = [];
+
     public $availableTags = [];
+
     public $availableWorkflows = [];
 
     public function mount()
@@ -58,7 +66,7 @@ class CampaignManager extends Component
         }
 
         $segmentConfig = [
-            'tags' => $this->selectedTags
+            'tags' => $this->selectedTags,
         ];
 
         $campaign = Campaign::create([
@@ -80,7 +88,7 @@ class CampaignManager extends Component
 
             if ($this->campaignType === 'workflow') {
                 $query = \App\Models\Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id);
-                if (!empty($this->selectedTags)) {
+                if (! empty($this->selectedTags)) {
                     $query->whereHas('tags', function ($q) {
                         $q->whereIn('contact_tags.id', $this->selectedTags);
                     });
@@ -110,6 +118,7 @@ class CampaignManager extends Component
     }
 
     public $retargetingCampaignId;
+
     public $retargetingCriteria = 'not_read'; // not_delivered, not_read, read, failed
 
     public function openRetargetModal($campaignId)
@@ -145,14 +154,15 @@ class CampaignManager extends Component
         if (empty($contactIds)) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'No contacts found matching criteria.'
+                'message' => 'No contacts found matching criteria.',
             ]);
+
             return;
         }
 
         session([
             'retarget_ids' => $contactIds,
-            'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
+            'default_name' => 'Retarget: '.$campaign->name.' ('.str_replace('_', ' ', $this->retargetingCriteria).')',
         ]);
 
         return redirect()->route('campaigns.create');
@@ -161,6 +171,7 @@ class CampaignManager extends Component
     public function render()
     {
         $campaigns = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->latest()->paginate(10);
+
         return view('livewire.campaigns.campaign-manager', ['campaigns' => $campaigns]);
     }
 }

@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Models\Campaign;
 use App\Models\Team;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
-use App\Notifications\CampaignFailedNotification;
 
 class CampaignAlertService
 {
@@ -32,7 +30,7 @@ class CampaignAlertService
                 Log::info("Sent failure alert for Campaign {$campaign->id} to Team {$team->id}");
             }
         } catch (\Exception $e) {
-            Log::error("Failed to send campaign alert: " . $e->getMessage());
+            Log::error('Failed to send campaign alert: '.$e->getMessage());
         }
     }
 }

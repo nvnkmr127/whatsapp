@@ -2,17 +2,23 @@
 
 namespace App\Livewire\Onboarding;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class SetupChecklist extends Component
 {
     public $steps = [];
+
     public $isComplete = false;
+
     public $showChecklist = true;
+
     public $diagnosticResult = null;
+
     public $isDiagnosing = false;
+
     public $isSyncing = false;
+
     public $isSendingTest = false;
 
     use \App\Traits\WhatsApp;
@@ -26,8 +32,9 @@ class SetupChecklist extends Component
     {
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             $this->showChecklist = false;
+
             return;
         }
 
@@ -38,25 +45,25 @@ class SetupChecklist extends Component
                 'id' => 'connect_account',
                 'title' => 'Connect WhatsApp',
                 'description' => 'Link your WhatsApp Business account.',
-                'completed' => !empty($team->whatsapp_access_token),
+                'completed' => ! empty($team->whatsapp_access_token),
                 'link' => route('teams.whatsapp_config'),
-                'icon' => 'wa'
+                'icon' => 'wa',
             ],
             [
                 'id' => 'waba_id',
                 'title' => 'Detect AI Account',
                 'description' => 'Find your Business Account ID.',
-                'completed' => !empty($team->whatsapp_business_account_id),
+                'completed' => ! empty($team->whatsapp_business_account_id),
                 'link' => route('teams.whatsapp_config'),
-                'icon' => 'waba'
+                'icon' => 'waba',
             ],
             [
                 'id' => 'phone_number',
                 'title' => 'Verify Number',
                 'description' => 'Register your phone identity.',
-                'completed' => !empty($team->whatsapp_phone_number_id),
+                'completed' => ! empty($team->whatsapp_phone_number_id),
                 'link' => route('teams.whatsapp_config'),
-                'icon' => 'phone'
+                'icon' => 'phone',
             ],
             [
                 'id' => 'active_status',
@@ -64,14 +71,14 @@ class SetupChecklist extends Component
                 'description' => 'Account is verified and active.',
                 'completed' => $team->whatsapp_connected || $team->isWhatsAppActive(),
                 'link' => route('teams.whatsapp_config'),
-                'icon' => 'rocket'
+                'icon' => 'rocket',
             ],
         ];
 
         // Check for new completions to trigger celebration
-        if (!empty($previousSteps)) {
+        if (! empty($previousSteps)) {
             foreach ($this->steps as $index => $step) {
-                if ($step['completed'] && !($previousSteps[$index]['completed'] ?? false)) {
+                if ($step['completed'] && ! ($previousSteps[$index]['completed'] ?? false)) {
                     $this->dispatch('onboarding-milestone-completed', id: $step['id']);
                 }
             }
@@ -80,7 +87,7 @@ class SetupChecklist extends Component
         $completedCount = collect($this->steps)->where('completed', true)->count();
         $this->isComplete = $completedCount === count($this->steps);
 
-        // Hide if complete for more than 24 hours? 
+        // Hide if complete for more than 24 hours?
         // For now, let's just allow manual dismissal or hide when 100% complete.
         if ($this->isComplete) {
             // $this->showChecklist = false;
@@ -89,7 +96,7 @@ class SetupChecklist extends Component
 
     public function toggleChecklist()
     {
-        $this->showChecklist = !$this->showChecklist;
+        $this->showChecklist = ! $this->showChecklist;
     }
 
     public function diagnoseConnection()
@@ -99,12 +106,13 @@ class SetupChecklist extends Component
 
         $team = Auth::user()->currentTeam;
 
-        if (!$team || !$team->whatsapp_access_token) {
+        if (! $team || ! $team->whatsapp_access_token) {
             $this->diagnosticResult = [
                 'status' => 'error',
-                'message' => 'No access token found. Please connect your Facebook account first.'
+                'message' => 'No access token found. Please connect your Facebook account first.',
             ];
             $this->isDiagnosing = false;
+
             return;
         }
 
@@ -112,40 +120,40 @@ class SetupChecklist extends Component
             // 1. Check Token Validity & Scopes
             $debug = $this->debugToken($team->whatsapp_access_token);
 
-            if (!$debug['status']) {
+            if (! $debug['status']) {
                 $this->diagnosticResult = [
                     'status' => 'error',
-                    'message' => 'Token Invalid: ' . ($debug['message'] ?? 'Unknown error')
+                    'message' => 'Token Invalid: '.($debug['message'] ?? 'Unknown error'),
                 ];
             } else {
                 $scopes = collect($debug['data']['granular_scopes'] ?? [])->pluck('scope')->toArray();
                 $required = ['whatsapp_business_messaging', 'whatsapp_business_management'];
                 $missing = array_diff($required, $scopes);
 
-                if (!empty($missing)) {
+                if (! empty($missing)) {
                     $this->diagnosticResult = [
                         'status' => 'warning',
-                        'message' => 'Missing permissions: ' . implode(', ', $missing) . '. Please reconnect and grant all requested permissions.'
+                        'message' => 'Missing permissions: '.implode(', ', $missing).'. Please reconnect and grant all requested permissions.',
                     ];
                 } else {
                     // 2. Check Webhook Subscription if WABA exists
                     if ($team->whatsapp_business_account_id) {
                         $hook = $this->checkWebhookSubscription($team->whatsapp_business_account_id, $team->whatsapp_access_token);
-                        if (!$hook['status'] || !$hook['is_subscribed']) {
+                        if (! $hook['status'] || ! $hook['is_subscribed']) {
                             $this->diagnosticResult = [
                                 'status' => 'warning',
-                                'message' => 'Connection is strong, but webhooks are not subscribed. Click "Sync" to fix.'
+                                'message' => 'Connection is strong, but webhooks are not subscribed. Click "Sync" to fix.',
                             ];
                         } else {
                             $this->diagnosticResult = [
                                 'status' => 'success',
-                                'message' => 'Connection is healthy! All permissions and webhooks are active.'
+                                'message' => 'Connection is healthy! All permissions and webhooks are active.',
                             ];
                         }
                     } else {
                         $this->diagnosticResult = [
                             'status' => 'success',
-                            'message' => 'Token is valid. Now, select your Business Account in settings.'
+                            'message' => 'Token is valid. Now, select your Business Account in settings.',
                         ];
                     }
                 }
@@ -153,7 +161,7 @@ class SetupChecklist extends Component
         } catch (\Exception $e) {
             $this->diagnosticResult = [
                 'status' => 'error',
-                'message' => 'Diagnostic failed: ' . $e->getMessage()
+                'message' => 'Diagnostic failed: '.$e->getMessage(),
             ];
         }
 
@@ -175,15 +183,15 @@ class SetupChecklist extends Component
                 $result = $this->loadTemplatesFromWhatsApp();
 
                 if ($result['status']) {
-                    session()->flash('checklist_message', 'Sync completed! Found ' . ($result['count'] ?? 0) . ' templates.');
+                    session()->flash('checklist_message', 'Sync completed! Found '.($result['count'] ?? 0).' templates.');
                 } else {
-                    session()->flash('checklist_error', 'Sync failed: ' . $result['message']);
+                    session()->flash('checklist_error', 'Sync failed: '.$result['message']);
                 }
             } else {
                 session()->flash('checklist_error', 'Cannot sync: WhatsApp not fully configured.');
             }
         } catch (\Exception $e) {
-            session()->flash('checklist_error', 'Sync error: ' . $e->getMessage());
+            session()->flash('checklist_error', 'Sync error: '.$e->getMessage());
         }
 
         $this->isSyncing = false;
@@ -197,26 +205,28 @@ class SetupChecklist extends Component
         $user = Auth::user();
 
         try {
-            if (!$team->isWhatsAppActive()) {
+            if (! $team->isWhatsAppActive()) {
                 session()->flash('checklist_error', 'Cannot send test message: WhatsApp is not fully configured or connected.');
                 $this->isSendingTest = false;
+
                 return;
             }
 
-            if (!$user->phone_number) {
+            if (! $user->phone_number) {
                 session()->flash('checklist_error', 'Your profile is missing a phone number. Please add one in your settings first.');
                 $this->isSendingTest = false;
+
                 return;
             }
 
             $service = new \App\Services\WhatsAppService($team);
-            $message = "Hello from Antigravity! 🚀 Your WhatsApp Business API integration is officially alive. (Test ID: " . uniqid() . ")";
+            $message = 'Hello from Antigravity! 🚀 Your WhatsApp Business API integration is officially alive. (Test ID: '.uniqid().')';
 
             $service->sendText($user->phone_number, $message);
 
-            session()->flash('checklist_message', 'Test message sent successfully to ' . $user->phone_number . '! Check your WhatsApp.');
+            session()->flash('checklist_message', 'Test message sent successfully to '.$user->phone_number.'! Check your WhatsApp.');
         } catch (\Exception $e) {
-            session()->flash('checklist_error', 'Test failed: ' . $e->getMessage());
+            session()->flash('checklist_error', 'Test failed: '.$e->getMessage());
         }
 
         $this->isSendingTest = false;

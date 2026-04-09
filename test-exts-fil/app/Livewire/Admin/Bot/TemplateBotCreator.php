@@ -45,8 +45,8 @@ class TemplateBotCreator extends Component
     public $isUploading = false;
 
     protected $listeners = [
-        'save'            => 'save',
-        'upload-started'  => 'setUploading',
+        'save' => 'save',
+        'upload-started' => 'setUploading',
         'upload-finished' => 'setUploadingComplete',
     ];
 
@@ -58,21 +58,21 @@ class TemplateBotCreator extends Component
             return redirect(route('admin.dashboard'));
         }
 
-        $this->id      = $this->getId();
+        $this->id = $this->getId();
         $templatebotId = request()->route('templatebotId');
 
         if ($templatebotId) {
-            $this->template_bot  = TemplateBot::findOrFail($templatebotId);
+            $this->template_bot = TemplateBot::findOrFail($templatebotId);
             $this->template_name = $this->template_bot->name;
-            $this->rel_type      = $this->template_bot->rel_type;
-            $this->template_id   = $this->template_bot->template_id;
-            $this->reply_type    = $this->template_bot->reply_type;
+            $this->rel_type = $this->template_bot->rel_type;
+            $this->template_id = $this->template_bot->template_id;
+            $this->reply_type = $this->template_bot->reply_type;
             $this->is_bot_active = $this->template_bot->is_bot_active;
-            $this->trigger       = $this->template_bot->trigger ? array_filter(explode(',', $this->template_bot->trigger)) : [];
-            $this->headerInputs  = json_decode($this->template_bot->header_params, true) ?? [];
-            $this->bodyInputs    = json_decode($this->template_bot->body_params, true)   ?? [];
-            $this->footerInputs  = json_decode($this->template_bot->footer_params, true) ?? [];
-            $this->filename      = $this->template_bot->filename;
+            $this->trigger = $this->template_bot->trigger ? array_filter(explode(',', $this->template_bot->trigger)) : [];
+            $this->headerInputs = json_decode($this->template_bot->header_params, true) ?? [];
+            $this->bodyInputs = json_decode($this->template_bot->body_params, true) ?? [];
+            $this->footerInputs = json_decode($this->template_bot->footer_params, true) ?? [];
+            $this->filename = $this->template_bot->filename;
         } else {
             $this->template_bot = new TemplateBot;
         }
@@ -83,16 +83,16 @@ class TemplateBotCreator extends Component
     protected function rules()
     {
         return [
-            'template_name'  => ['required', 'string', 'max:100', new PurifiedInput(t('sql_injection_error'))],
-            'rel_type'       => 'required|string|max:50',
-            'template_id'    => 'required|integer|exists:whatsapp_templates,template_id',
-            'reply_type'     => 'required|integer',
+            'template_name' => ['required', 'string', 'max:100', new PurifiedInput(t('sql_injection_error'))],
+            'rel_type' => 'required|string|max:50',
+            'template_id' => 'required|integer|exists:whatsapp_templates,template_id',
+            'reply_type' => 'required|integer',
             'footerInputs.*' => [count($this->footerInputs) > 0 ? 'required' : 'nullable', new PurifiedInput(t('dynamic_input_error'))],
             'headerInputs.*' => [count($this->headerInputs) > 0 ? 'required' : 'nullable', new PurifiedInput(t('dynamic_input_error'))],
-            'bodyInputs.*'   => [count($this->bodyInputs) > 0 ? 'required' : 'nullable',  new PurifiedInput(t('dynamic_input_error'))],
-            'trigger'        => ($this->reply_type == 1 || $this->reply_type == 2) ? 'required' : 'nullable',
-            'trigger.*'      => 'string|max:255|distinct',
-            'file'           => 'nullable|file',
+            'bodyInputs.*' => [count($this->bodyInputs) > 0 ? 'required' : 'nullable',  new PurifiedInput(t('dynamic_input_error'))],
+            'trigger' => ($this->reply_type == 1 || $this->reply_type == 2) ? 'required' : 'nullable',
+            'trigger.*' => 'string|max:255|distinct',
+            'file' => 'nullable|file',
 
         ];
     }
@@ -102,7 +102,7 @@ class TemplateBotCreator extends Component
         if (checkPermission('template_bot.create', 'template_bot.edit')) {
             $this->validate();
 
-            $template     = WhatsappTemplate::where('template_id', $this->template_id)->firstOrFail();
+            $template = WhatsappTemplate::where('template_id', $this->template_id)->firstOrFail();
             $headerFormat = $template->header_data_format ?? 'TEXT';
 
             if ($headerFormat !== 'TEXT') {
@@ -130,14 +130,14 @@ class TemplateBotCreator extends Component
 
             // Update model properties
             $this->template_bot->fill([
-                'name'          => $this->template_name,
-                'rel_type'      => $this->rel_type,
-                'template_id'   => $this->template_id,
-                'reply_type'    => $this->reply_type,
+                'name' => $this->template_name,
+                'rel_type' => $this->rel_type,
+                'template_id' => $this->template_id,
+                'reply_type' => $this->reply_type,
                 'is_bot_active' => $this->is_bot_active,
-                'trigger'       => ($this->reply_type == 1 || $this->reply_type == 2) ? implode(',', $this->trigger) : null,
+                'trigger' => ($this->reply_type == 1 || $this->reply_type == 2) ? implode(',', $this->trigger) : null,
                 'header_params' => json_encode(array_values(array_filter($this->headerInputs))),
-                'body_params'   => json_encode(array_values(array_filter($this->bodyInputs))),
+                'body_params' => json_encode(array_values(array_filter($this->bodyInputs))),
                 'footer_params' => json_encode(array_values(array_filter($this->footerInputs))),
             ]);
 
@@ -152,11 +152,11 @@ class TemplateBotCreator extends Component
     protected function getFileValidationRules($format)
     {
         return match ($format) {
-            'IMAGE'    => ['mimes:jpeg,png', 'max:8192'],
+            'IMAGE' => ['mimes:jpeg,png', 'max:8192'],
             'DOCUMENT' => ['mimes:pdf,doc,docx,txt,ppt,pptx,xlsx,xls', 'max:102400'],
-            'VIDEO'    => ['mimes:mp4,3gp', 'max:16384'],
-            'AUDIO'    => ['mimes:mp3,wav,aac,ogg', 'max:16384'],
-            default    => ['file', 'max:5120'],
+            'VIDEO' => ['mimes:mp4,3gp', 'max:16384'],
+            'AUDIO' => ['mimes:mp3,wav,aac,ogg', 'max:16384'],
+            default => ['file', 'max:5120'],
         };
     }
 
@@ -168,11 +168,11 @@ class TemplateBotCreator extends Component
         }
 
         $directory = match ($format) {
-            'IMAGE'    => 'template_bot/images',
+            'IMAGE' => 'template_bot/images',
             'DOCUMENT' => 'template_bot/documents',
-            'VIDEO'    => 'template_bot/videos',
-            'AUDIO'    => 'template_bot/audio',
-            default    => 'template_bot',
+            'VIDEO' => 'template_bot/videos',
+            'AUDIO' => 'template_bot/audio',
+            default => 'template_bot',
         };
 
         $this->template_bot->filename = $this->file->storeAs(
@@ -186,7 +186,7 @@ class TemplateBotCreator extends Component
     {
         $original = str_replace(' ', '_', $this->file->getClientOriginalName());
 
-        return pathinfo($original, PATHINFO_FILENAME) . '_' . time() . '.' . $this->file->extension();
+        return pathinfo($original, PATHINFO_FILENAME).'_'.time().'.'.$this->file->extension();
     }
 
     public function getTemplatesProperty()
@@ -210,7 +210,7 @@ class TemplateBotCreator extends Component
         );
 
         $this->mergeFields = json_encode(array_map(fn ($value) => [
-            'key'   => ucfirst($value['name']),
+            'key' => ucfirst($value['name']),
             'value' => $value['key'],
         ], $field));
     }

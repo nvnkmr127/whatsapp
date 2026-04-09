@@ -20,16 +20,19 @@ class CallHistory extends Component
     ];
 
     public $perPage = 15;
+
     public $sortBy = 'created_at';
+
     public $sortDirection = 'desc';
 
     public function getListeners()
     {
-        if (!auth()->check() || !auth()->user()->currentTeam) {
+        if (! auth()->check() || ! auth()->user()->currentTeam) {
             return [];
         }
 
         $teamId = auth()->user()->currentTeam->id;
+
         return [
             "echo-private:teams.{$teamId},.call.offered" => '$refresh',
             "echo-private:teams.{$teamId},.call.ended" => '$refresh',
@@ -78,7 +81,7 @@ class CallHistory extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return view('livewire.calls.call-history', [
                 'calls' => collect(), // Or empty paginator
                 'statistics' => [],
@@ -91,23 +94,23 @@ class CallHistory extends Component
             ->with(['contact:id,name,phone_number']);
 
         // Apply filters
-        if (!empty($this->filters['direction'])) {
+        if (! empty($this->filters['direction'])) {
             $query->where('direction', $this->filters['direction']);
         }
 
-        if (!empty($this->filters['status'])) {
+        if (! empty($this->filters['status'])) {
             $query->where('status', $this->filters['status']);
         }
 
-        if (!empty($this->filters['from_date'])) {
+        if (! empty($this->filters['from_date'])) {
             $query->whereDate('created_at', '>=', $this->filters['from_date']);
         }
 
-        if (!empty($this->filters['to_date'])) {
+        if (! empty($this->filters['to_date'])) {
             $query->whereDate('created_at', '<=', $this->filters['to_date']);
         }
 
-        if (!empty($this->filters['search'])) {
+        if (! empty($this->filters['search'])) {
             $search = $this->filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('from_number', 'like', "%{$search}%")
@@ -128,9 +131,9 @@ class CallHistory extends Component
         $callService = app(CallService::class)->setTeam($team);
         $statistics = $callService->getCallStatistics('month');
         $usageLimits = $callService->checkUsageLimits();
-        
+
         // Get safeguard status
-        $safeguardService = new \App\Services\CallSafeguardService();
+        $safeguardService = new \App\Services\CallSafeguardService;
         $safeguardStatus = $safeguardService->getStatus($team);
 
         return view('livewire.calls.call-history', [

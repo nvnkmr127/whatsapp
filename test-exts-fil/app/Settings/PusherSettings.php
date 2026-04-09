@@ -28,17 +28,17 @@ class PusherSettings extends Settings
     public function toArray(): array
     {
         return [
-            'driver'  => 'pusher',
-            'key'     => $this->app_key    ?? null,
-            'secret'  => $this->app_secret ?? null,
-            'app_id'  => $this->app_id     ?? null,
+            'driver' => 'pusher',
+            'key' => $this->app_key ?? null,
+            'secret' => $this->app_secret ?? null,
+            'app_id' => $this->app_id ?? null,
             'options' => [
-                'cluster'   => $this->cluster ?? 'ap2',
-                'host'      => 'api-' . $this->cluster . '.pusher.com',
-                'port'      => 443,
-                'scheme'    => 'https',
+                'cluster' => $this->cluster ?? 'ap2',
+                'host' => 'api-'.$this->cluster.'.pusher.com',
+                'port' => 443,
+                'scheme' => 'https',
                 'encrypted' => true,
-                'useTLS'    => true,
+                'useTLS' => true,
             ],
         ];
     }

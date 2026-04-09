@@ -5,10 +5,10 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'cron-job.status'              => 'unknown',
-        'cron-job.last_cron_stats'     => '{}',
+        'cron-job.status' => 'unknown',
+        'cron-job.last_cron_stats' => '{}',
         'cron-job.last_execution_time' => 0,
-        'cron-job.job_start_time'      => 0,
+        'cron-job.job_start_time' => 0,
     ];
 
     public function up(): void

@@ -4,13 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        if (!Schema::hasColumn('contacts', 'opt_in_expires_at')) {
+        if (! Schema::hasColumn('contacts', 'opt_in_expires_at')) {
             Schema::table('contacts', function (Blueprint $table) {
                 // Add consent expiry timestamp for GDPR compliance
                 $table->timestamp('opt_in_expires_at')->nullable()->after('opt_in_at');

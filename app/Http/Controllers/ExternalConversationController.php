@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\Conversation;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 
 class ExternalConversationController extends Controller
@@ -16,28 +15,28 @@ class ExternalConversationController extends Controller
     public function index(Request $request, $phone)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No team context'], 400);
         }
 
         $contact = Contact::where('team_id', $team->id)->where('phone_number', $phone)->first();
 
-        if (!$contact) {
+        if (! $contact) {
             return response()->json(['data' => []]);
         }
 
         $conversation = Conversation::where('contact_id', $contact->id)->with([
             'messages' => function ($q) {
                 $q->latest()->take(50);
-            }
+            },
         ])->first();
 
-        if (!$conversation) {
+        if (! $conversation) {
             return response()->json(['data' => []]);
         }
 
         return response()->json([
-            'data' => $conversation->messages->reverse()->values()
+            'data' => $conversation->messages->reverse()->values(),
         ]);
     }
 
@@ -59,7 +58,7 @@ class ExternalConversationController extends Controller
         ]);
 
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No Team Context'], 400);
         }
 
@@ -71,7 +70,7 @@ class ExternalConversationController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Request already processed (Idempotent)',
-                    'status' => 'queued_previously'
+                    'status' => 'queued_previously',
                 ], 200);
             }
             // Lock Key for 24 hours
@@ -82,7 +81,7 @@ class ExternalConversationController extends Controller
         $contact = \App\Models\Contact::firstOrCreate(
             ['team_id' => $team->id, 'phone_number' => $request->phone_number]
         );
-        $conversation = (new \App\Services\ConversationService())->ensureActiveConversation($contact);
+        $conversation = (new \App\Services\ConversationService)->ensureActiveConversation($contact);
 
         // 2. Pre-persist
         $message = \App\Models\Message::create([
@@ -119,7 +118,7 @@ class ExternalConversationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Message queued for sending.',
-            'status' => 'queued'
+            'status' => 'queued',
         ], 202);
     }
 }

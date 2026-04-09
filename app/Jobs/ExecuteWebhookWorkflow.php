@@ -10,7 +10,9 @@ class ExecuteWebhookWorkflow implements ShouldQueue
     use Queueable;
 
     public $workflow;
+
     public $recipient;
+
     public $parameters;
 
     /**
@@ -30,8 +32,9 @@ class ExecuteWebhookWorkflow implements ShouldQueue
     {
         $template = $this->workflow->template;
 
-        if (!$template) {
+        if (! $template) {
             \Illuminate\Support\Facades\Log::error("Workflow {$this->workflow->id} has no template.");
+
             return;
         }
 
@@ -65,18 +68,18 @@ class ExecuteWebhookWorkflow implements ShouldQueue
                         'content' => "Template: {$template->name}",
                         'metadata' => [
                             'template_name' => $template->name,
-                            'parameters' => $this->parameters
+                            'parameters' => $this->parameters,
                         ],
                         'sent_at' => now(),
                     ]);
                 }
 
             } else {
-                \Illuminate\Support\Facades\Log::error("Workflow Send Failed: " . json_encode($result));
+                \Illuminate\Support\Facades\Log::error('Workflow Send Failed: '.json_encode($result));
             }
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Workflow Job Error: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Workflow Job Error: '.$e->getMessage());
             $this->fail($e);
         }
     }

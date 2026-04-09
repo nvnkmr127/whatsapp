@@ -9,8 +9,7 @@ class TemplateValidationParams
         public array $bodyVariables = [],
         public array $footerVariables = [],
         public array $buttonVariables = []
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

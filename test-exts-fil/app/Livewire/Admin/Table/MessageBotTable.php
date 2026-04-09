@@ -55,20 +55,20 @@ final class MessageBotTable extends PowerGridComponent
             ->add('name', function ($messageBot) {
                 $user = auth()->user();
 
-                $canEdit   = $user->can('message_bot.edit')   || $user->is_admin == 1;
+                $canEdit = $user->can('message_bot.edit') || $user->is_admin == 1;
                 $canDelete = $user->can('message_bot.delete') || $user->is_admin == 1;
-                $canClone  = $user->can('message_bot.clone')  || $user->is_admin == 1;
+                $canClone = $user->can('message_bot.clone') || $user->is_admin == 1;
 
                 return '
             <div class="group relative inline-block min-h-[40px]">
-                <span>' . $messageBot->name . '</span>
+                <span>'.$messageBot->name.'</span>
                 <!-- Action Links -->
                 <div class="absolute left-[-40px] lg:left-0 top-3 mt-2 pt-1 hidden contact-actions space-x-1 text-xs text-gray-600 dark:text-gray-300">'
-                    . ($canEdit ? '<a href="' . route('admin.messagebot.create', ['messagebotId' => $messageBot->id]) . '" class="hover:text-green-600">' . t('edit') . '</a>' : '') .
-                    ($canEdit && ($canDelete || $canClone) ? '<span>|</span>' : '') .
-                    ($canDelete ? '<button onclick="Livewire.dispatch(\'confirmDelete\', { botId: ' . $messageBot->id . ' })" class="hover:text-red-600">' . t('delete') . '</button>' : '') .
-                    ($canDelete && $canClone ? '<span>|</span>' : '') .
-                    ($canClone ? '<button onclick="Livewire.dispatch(\'cloneRecord\', { botId: ' . $messageBot->id . ' })" class="hover:text-blue-600">' . t('clone') . '</button>' : '') .
+                    .($canEdit ? '<a href="'.route('admin.messagebot.create', ['messagebotId' => $messageBot->id]).'" class="hover:text-green-600">'.t('edit').'</a>' : '').
+                    ($canEdit && ($canDelete || $canClone) ? '<span>|</span>' : '').
+                    ($canDelete ? '<button onclick="Livewire.dispatch(\'confirmDelete\', { botId: '.$messageBot->id.' })" class="hover:text-red-600">'.t('delete').'</button>' : '').
+                    ($canDelete && $canClone ? '<span>|</span>' : '').
+                    ($canClone ? '<button onclick="Livewire.dispatch(\'cloneRecord\', { botId: '.$messageBot->id.' })" class="hover:text-blue-600">'.t('clone').'</button>' : '').
                     '</div>
             </div>';
             })
@@ -76,10 +76,10 @@ final class MessageBotTable extends PowerGridComponent
             ->add(
                 'rel_type',
                 fn ($msgBot) => $msgBot->rel_type === 'lead'
-                    ? '<span class="bg-purple-100 text-purple-800 dark:text-purple-400 dark:bg-purple-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium ">' . t($msgBot->rel_type) . '</span>'
+                    ? '<span class="bg-purple-100 text-purple-800 dark:text-purple-400 dark:bg-purple-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium ">'.t($msgBot->rel_type).'</span>'
                     : ($msgBot->rel_type === 'customer'
-                        ? '<span class="bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium ">' . t($msgBot->rel_type) . '</span>'
-                        : '<span class="bg-red-100 ring-1 ring-red-300 text-red-800 dark:bg-red-800 dark:ring-red-600 dark:text-red-100 px-3 py-1 rounded-full text-xs font-semibold">' . (t($msgBot->rel_type) ?? 'N/A') . '</span>')
+                        ? '<span class="bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium ">'.t($msgBot->rel_type).'</span>'
+                        : '<span class="bg-red-100 ring-1 ring-red-300 text-red-800 dark:bg-red-800 dark:ring-red-600 dark:text-red-100 px-3 py-1 rounded-full text-xs font-semibold">'.(t($msgBot->rel_type) ?? 'N/A').'</span>')
             )
             ->add('trigger', function ($model) {
                 $replyTextArray = json_decode($model->trigger);
@@ -94,7 +94,7 @@ final class MessageBotTable extends PowerGridComponent
 
             ->add('created_at_formatted', function ($messageBot) {
                 return '<div class="relative group">
-                         <span class="cursor-default"  data-tippy-content="' . format_date_time($messageBot->created_at) . '">' . \Carbon\Carbon::parse($messageBot->created_at)->diffForHumans(['options' => \Carbon\Carbon::JUST_NOW]) . '</span>
+                         <span class="cursor-default"  data-tippy-content="'.format_date_time($messageBot->created_at).'">'.\Carbon\Carbon::parse($messageBot->created_at)->diffForHumans(['options' => \Carbon\Carbon::JUST_NOW]).'</span>
                         </div>';
             });
     }
@@ -175,13 +175,13 @@ final class MessageBotTable extends PowerGridComponent
 
                 $this->notify([
                     'message' => $statusMessage,
-                    'type'    => 'success',
+                    'type' => 'success',
                 ]);
             }
         } else {
             $this->notify([
                 'message' => t('no_permission_to_perform_action'),
-                'type'    => 'warning',
+                'type' => 'warning',
             ]);
         }
     }
@@ -198,7 +198,7 @@ final class MessageBotTable extends PowerGridComponent
         $oldFilePath = $existingBot->filename;
         if ($oldFilePath) {
             $folderPath = 'bot_files';
-            $fileName   = pathinfo($oldFilePath, PATHINFO_BASENAME);
+            $fileName = pathinfo($oldFilePath, PATHINFO_BASENAME);
             // Ensure the file name follows expected format before splitting
             $fileParts = explode('_', $fileName, 2);
             if (count($fileParts) < 2) {
@@ -206,8 +206,8 @@ final class MessageBotTable extends PowerGridComponent
 
                 return false;
             }
-            $newFileName = time() . '_' . $fileParts[1];
-            $newFilePath = $folderPath . '/' . $newFileName;
+            $newFileName = time().'_'.$fileParts[1];
+            $newFilePath = $folderPath.'/'.$newFileName;
             if (Storage::disk('public')->exists($oldFilePath)) {
                 Storage::disk('public')->copy($oldFilePath, $newFilePath);
             } else {
@@ -219,7 +219,7 @@ final class MessageBotTable extends PowerGridComponent
 
             $newFilePath = null;
         }
-        $cloneBot           = $existingBot->replicate();
+        $cloneBot = $existingBot->replicate();
         $cloneBot->filename = $newFilePath;
         $cloneBot->save();
 

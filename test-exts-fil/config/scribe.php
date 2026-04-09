@@ -95,12 +95,12 @@ return [
 
     // How is your API authenticated? This information will be used in the displayed docs, generated examples and response calls.
     'auth' => [
-        'enabled'     => true,
-        'in'          => 'bearer',
-        'name'        => 'Authorization',
-        'use_value'   => 'Bearer {token}',
+        'enabled' => true,
+        'in' => 'bearer',
+        'name' => 'Authorization',
+        'use_value' => 'Bearer {token}',
         'placeholder' => '{token}',
-        'extra_info'  => 'You can get your API token from the API settings page.',
+        'extra_info' => 'You can get your API token from the API settings page.',
         // Set this to true if your API should be authenticated by default. If so, you must also set `enabled` (above) to true.
         // You can then use @unauthenticated or @authenticated on individual endpoints to change their status from the default.
         'default' => false,
@@ -208,7 +208,7 @@ INTRO
                 'override',
                 [
                     'Content-Type' => 'application/json',
-                    'Accept'       => 'application/json',
+                    'Accept' => 'application/json',
                 ],
             ],
         ],

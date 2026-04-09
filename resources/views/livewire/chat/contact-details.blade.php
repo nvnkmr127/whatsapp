@@ -185,6 +185,21 @@
                             </svg>
                             {{ __('Internal Notes') }}
                         </h5>
+                        <div class="mb-4 space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+                            @forelse($conversation->notes as $note)
+                                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-3">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[9px] font-black text-yellow-600 dark:text-yellow-500 uppercase">{{ $note->user->name ?? 'System' }}</span>
+                                        <span class="text-[9px] font-medium text-yellow-500/70">{{ $note->created_at->diffForHumans() }}</span>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ $note->content }}</p>
+                                </div>
+                            @empty
+                                <div class="text-center py-4 opacity-50">
+                                    <span class="text-[10px] font-medium text-slate-500">{{ __('No notes yet') }}</span>
+                                </div>
+                            @endforelse
+                        </div>
                         <form wire:submit.prevent="addNote" class="relative group">
                             <textarea wire:model="newNoteBody"
                                 class="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-[11px] font-medium text-slate-900 dark:text-white focus:ring-wa-teal/20 focus:border-wa-teal transition-all min-h-[100px]"
@@ -210,10 +225,10 @@
                                 <div class="absolute left-[-5.5px] top-0 w-3 h-3 rounded-full bg-white dark:bg-slate-950 border-2 border-wa-teal shadow-[0_0_10px_rgba(37,211,102,0.3)]"></div>
                                 <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 shadow-sm">
                                     <div class="flex justify-between items-start mb-1">
-                                        <span class="text-[10px] font-black uppercase text-wa-teal tracking-widest">{{ $item['title'] }}</span>
+                                        <span class="text-[10px] font-black uppercase text-wa-teal tracking-widest">{{ __($item['title']) }}</span>
                                         <span class="text-[9px] font-bold text-slate-400">{{ \Carbon\Carbon::parse($item['occurred_at'])->diffForHumans() }}</span>
                                     </div>
-                                    <p class="text-[11px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ $item['description'] }}</p>
+                                    <p class="text-[11px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ __($item['description']) }}</p>
                                     @if(isset($item['user']))
                                         <div class="mt-2 text-[9px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1.5 opacity-60">
                                             <div class="w-1 h-1 rounded-full bg-slate-300"></div>

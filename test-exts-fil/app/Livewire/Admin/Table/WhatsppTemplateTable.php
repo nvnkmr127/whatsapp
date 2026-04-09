@@ -48,11 +48,11 @@ final class WhatsppTemplateTable extends PowerGridComponent
         return PowerGrid::fields()
             ->add(
                 'status',
-                fn ($contact) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' .
+                fn ($contact) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium '.
                     ($contact->status === 'APPROVED'
                     ? 'bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300') .
-                    '">' . ($contact->status ?? 'N/A') . '</span>'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300').
+                    '">'.($contact->status ?? 'N/A').'</span>'
             )->add('header_data_format', fn ($contact) => $contact->header_data_format == null ? '-' : $contact->header_data_format);
     }
 
@@ -95,7 +95,7 @@ final class WhatsppTemplateTable extends PowerGridComponent
     #[\Livewire\Attributes\On('edit')]
     public function edit($rowId): void
     {
-        $this->js('alert(' . $rowId . ')');
+        $this->js('alert('.$rowId.')');
     }
 
     public function filters(): array

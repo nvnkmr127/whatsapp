@@ -34,8 +34,7 @@ final class Entitlement
         public readonly array $limits,
         /** @var array<string, int> */
         public readonly array $usage,
-    ) {
-    }
+    ) {}
 
     // ------------------------------------------------------------------
     // Status helpers
@@ -88,11 +87,13 @@ final class Entitlement
                 return 'Trial';
             }
             $days = $this->trialDaysRemaining;
+
             return $days > 0 ? "Trial ({$days}d left)" : 'Trial (expiring today)';
         }
         if ($this->inGrace) {
             return 'Grace Period';
         }
+
         return match ($this->status) {
             'active' => 'Active',
             'canceled' => 'Canceled',
@@ -122,7 +123,7 @@ final class Entitlement
             return true;
         }
 
-        if (!$this->active) {
+        if (! $this->active) {
             return false;
         }
 
@@ -163,7 +164,8 @@ final class Entitlement
         if ($max === 0) {
             return true; // Unlimited
         }
-        $used = $currentUsage ?? ($this->usage[$key . '_count'] ?? $this->usage[$key . '_this_month'] ?? 0);
+        $used = $currentUsage ?? ($this->usage[$key.'_count'] ?? $this->usage[$key.'_this_month'] ?? 0);
+
         return $used < $max;
     }
 
@@ -187,7 +189,7 @@ final class Entitlement
             return true;
         }
 
-        if (!$this->active) {
+        if (! $this->active) {
             return false;
         }
 
@@ -212,11 +214,11 @@ final class Entitlement
             return "Your {$this->statusLabel()} subscription does not permit access to '{$capability}'.";
         }
 
-        if (!$this->active) {
-            return "Your account is inactive. Please contact billing.";
+        if (! $this->active) {
+            return 'Your account is inactive. Please contact billing.';
         }
 
-        if (!$this->can($capability)) {
+        if (! $this->can($capability)) {
             return "Your current plan does not include '{$capability}'.";
         }
 
@@ -265,6 +267,7 @@ final class Entitlement
         if ($limit === 0) {
             return true;
         }
+
         return ($this->usage['messages_this_month'] ?? 0) < $limit;
     }
 
@@ -274,6 +277,7 @@ final class Entitlement
         if ($limit === 0) {
             return true;
         }
+
         return ($this->usage['agent_count'] ?? 0) < $limit;
     }
 

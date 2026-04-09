@@ -21,7 +21,7 @@ class OrderService
         $readinessService = app(\App\Services\CommerceReadinessService::class);
         $readiness = $readinessService->evaluate($team);
         if ($readiness['state'] === \App\Services\CommerceReadinessService::STATE_BLOCKED) {
-            throw new \Exception("Commerce service is currently unavailable for this store. Please contact the administrator.");
+            throw new \Exception('Commerce service is currently unavailable for this store. Please contact the administrator.');
         }
 
         // 1. Check Min Order Value
@@ -33,14 +33,14 @@ class OrderService
         // 2. Check COD Eligibility if applicable
         if (isset($paymentDetails['method']) && $paymentDetails['method'] === 'cod') {
             if (empty($config['cod_enabled'])) {
-                throw new \Exception("Cash on Delivery is not enabled for this store.");
+                throw new \Exception('Cash on Delivery is not enabled for this store.');
             }
         }
 
         $order = Order::create([
             'team_id' => $team->id ?? auth()->user()->currentTeam->id,
             'contact_id' => $cart->contact_id,
-            'order_id' => 'ORD-' . strtoupper(Str::random(10)), // Internal ID
+            'order_id' => 'ORD-'.strtoupper(Str::random(10)), // Internal ID
             'items' => $cart->items,
             'total_amount' => $cart->total_amount,
             'currency' => $cart->currency,
@@ -53,11 +53,11 @@ class OrderService
 
         // Trigger automation for order received
         try {
-            $whatsappService = new WhatsAppService();
+            $whatsappService = new WhatsAppService;
             $automationService = new AutomationService($whatsappService);
             $automationService->checkSpecialTriggers($cart->contact, 'order_received');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Order Received Automation Trigger Failed: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Order Received Automation Trigger Failed: '.$e->getMessage());
         }
 
         // Dispatch Event
@@ -78,15 +78,15 @@ class OrderService
 
         // If no user is present (e.g. webhook), check if we allow system-level transition
         // or if an acting_user is provided in context (e.g. integration owner)
-        if (!$user && empty($context['system'])) {
-            throw new \Exception("Authentication or System context required to update order status.");
+        if (! $user && empty($context['system'])) {
+            throw new \Exception('Authentication or System context required to update order status.');
         }
 
         // Validate Lifecycle
         $lifecycleService = app(\App\Services\CommerceLifecycleService::class);
         $check = $lifecycleService->canTransition($order, $status, $user);
 
-        if (!$check['allowed']) {
+        if (! $check['allowed']) {
             throw new \Exception($check['message']);
         }
 
@@ -106,7 +106,7 @@ class OrderService
                 $automationService->checkSpecialTriggers($order->contact, 'order_status_changed', [
                     'order_id' => $order->order_id,
                     'old_status' => $oldStatus,
-                    'new_status' => $status
+                    'new_status' => $status,
                 ]);
             }
         } catch (\Exception $e) {
@@ -119,7 +119,7 @@ class OrderService
     {
         $order->events()->create([
             'event' => $event,
-            'metadata' => $metadata
+            'metadata' => $metadata,
         ]);
     }
 }

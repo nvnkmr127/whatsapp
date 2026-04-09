@@ -14,11 +14,11 @@ class MergeFields
     public function register(string $className): void
     {
         if (! class_exists($className)) {
-            throw new \InvalidArgumentException(t('class') . $className . t('does_not_exist'));
+            throw new \InvalidArgumentException(t('class').$className.t('does_not_exist'));
         }
 
         if (! method_exists($className, 'name') || ! method_exists($className, 'build')) {
-            throw new \InvalidArgumentException(t('class') . $className . t('must_implement'));
+            throw new \InvalidArgumentException(t('class').$className.t('must_implement'));
         }
 
         if (! in_array($className, $this->registered)) {
@@ -42,9 +42,9 @@ class MergeFields
                 }
 
                 $allFields[] = [
-                    'name'   => $instance->name(),
+                    'name' => $instance->name(),
                     'fields' => $instance->build(),
-                    'class'  => $className,
+                    'class' => $className,
                 ];
             }
         }
@@ -174,7 +174,7 @@ class MergeFields
             }
 
             if (in_array($slug, $instance->templates())) {
-                $groupName      = $instance->name();
+                $groupName = $instance->name();
                 $filteredFields = [];
 
                 foreach ($instance->build() as $field) {

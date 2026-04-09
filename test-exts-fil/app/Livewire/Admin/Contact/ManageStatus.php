@@ -20,7 +20,7 @@ class ManageStatus extends Component
     public $confirmingDeletion = false;
 
     protected $listeners = [
-        'editStatus'    => 'editStatus',
+        'editStatus' => 'editStatus',
         'confirmDelete' => 'confirmDelete',
     ];
 
@@ -42,7 +42,7 @@ class ManageStatus extends Component
                 'required',
                 'min:3',
                 'max:255',
-                'unique:statuses,name,' . ($this->status->id ?? 'NULL'),
+                'unique:statuses,name,'.($this->status->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
             ],
             'status.color' => [
@@ -67,7 +67,7 @@ class ManageStatus extends Component
                 if ($this->status->isDirty()) {
                     $this->status->save();
                     $this->status->isdefault = 0;
-                    $this->showStatusModal   = false;
+                    $this->showStatusModal = false;
 
                     $message = $this->status->wasRecentlyCreated
                     ? t('status_save_successfully')
@@ -79,7 +79,7 @@ class ManageStatus extends Component
                     $this->showStatusModal = false;
                 }
             } catch (\Exception $e) {
-                app_log('Status save failed: ' . $e->getMessage(), 'error', $e, [
+                app_log('Status save failed: '.$e->getMessage(), 'error', $e, [
                     'status_id' => $this->status->id ?? null,
                 ]);
 
@@ -90,7 +90,7 @@ class ManageStatus extends Component
 
     public function editStatus($statusId)
     {
-        $status       = Status::findOrFail($statusId);
+        $status = Status::findOrFail($statusId);
         $this->status = $status;
         $this->resetValidation();
         $this->showStatusModal = true;
@@ -98,7 +98,7 @@ class ManageStatus extends Component
 
     public function confirmDelete($statusId)
     {
-        $this->status_id          = $statusId;
+        $this->status_id = $statusId;
         $this->confirmingDeletion = true;
     }
 
@@ -120,7 +120,7 @@ class ManageStatus extends Component
                 $this->notify(['type' => 'success', 'message' => t('status_delete_successfully')]);
                 $this->dispatch('pg:eventRefresh-status-table-nz8nvq-table');
             } catch (\Exception $e) {
-                app_log('Status deletion failed: ' . $e->getMessage(), 'error', $e, [
+                app_log('Status deletion failed: '.$e->getMessage(), 'error', $e, [
                     'status_id' => $this->status_id,
                 ]);
 

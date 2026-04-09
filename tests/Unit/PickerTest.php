@@ -2,19 +2,19 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
+use App\Livewire\Templates\TemplatePicker;
 use App\Models\Team;
 use App\Models\User;
-use App\Livewire\Templates\TemplatePicker;
 use App\Models\WhatsappTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\TestCase;
 
 class PickerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->user = User::factory()->create();
@@ -30,32 +30,35 @@ class PickerTest extends TestCase
         $safe = WhatsappTemplate::create([
             'team_id' => $this->team->id,
             'name' => 'safe_tpl',
+            'category' => 'MARKETING',
             'language' => 'en_US',
             'status' => 'APPROVED',
             'is_paused' => false,
             'readiness_score' => 100,
-            'components' => []
+            'components' => [],
         ]);
 
         // Unsafe Templates
         $paused = WhatsappTemplate::create([
             'team_id' => $this->team->id,
             'name' => 'paused_tpl',
+            'category' => 'MARKETING',
             'language' => 'en_US',
             'status' => 'APPROVED',
             'is_paused' => true,
             'readiness_score' => 100,
-            'components' => []
+            'components' => [],
         ]);
 
         $pending = WhatsappTemplate::create([
             'team_id' => $this->team->id,
             'name' => 'pending_tpl',
+            'category' => 'MARKETING',
             'language' => 'en_US',
             'status' => 'PENDING',
             'is_paused' => false,
             'readiness_score' => 80,
-            'components' => []
+            'components' => [],
         ]);
 
         Livewire::test(TemplatePicker::class)
@@ -77,7 +80,7 @@ class PickerTest extends TestCase
             'status' => 'APPROVED',
             'is_paused' => false,
             'readiness_score' => 100,
-            'components' => []
+            'components' => [],
         ]);
 
         WhatsappTemplate::create([
@@ -88,7 +91,7 @@ class PickerTest extends TestCase
             'status' => 'APPROVED',
             'is_paused' => false,
             'readiness_score' => 100,
-            'components' => []
+            'components' => [],
         ]);
 
         Livewire::test(TemplatePicker::class, ['allowedCategories' => ['MARKETING']])
@@ -101,25 +104,27 @@ class PickerTest extends TestCase
         $risky = WhatsappTemplate::create([
             'team_id' => $this->team->id,
             'name' => 'risky_tpl',
+            'category' => 'MARKETING',
             'language' => 'en_US',
             'status' => 'APPROVED',
             'readiness_score' => 60,
-            'components' => []
+            'components' => [],
         ]);
 
         $caution = WhatsappTemplate::create([
             'team_id' => $this->team->id,
             'name' => 'caution_tpl',
+            'category' => 'MARKETING',
             'language' => 'en_US',
             'status' => 'APPROVED',
             'readiness_score' => 80,
-            'components' => []
+            'components' => [],
         ]);
 
         Livewire::test(TemplatePicker::class)
             ->set('selectedTemplateId', $risky->id)
-            ->assertSet('selectionWarning', "High Risk: This template has a low quality score (60). Delivery may fail.")
+            ->assertSet('selectionWarning', 'High Risk: This template has a low quality score (60). Delivery may fail.')
             ->set('selectedTemplateId', $caution->id)
-            ->assertSet('selectionWarning', "Caution: This template has some issues (80/100).");
+            ->assertSet('selectionWarning', 'Caution: This template has some issues (80/100).');
     }
 }

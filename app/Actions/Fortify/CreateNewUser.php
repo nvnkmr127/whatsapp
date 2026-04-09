@@ -4,9 +4,8 @@ namespace App\Actions\Fortify;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Services\UniqueIdentityService;
 use App\Services\OfferEligibilityService;
-use Illuminate\Http\Request;
+use App\Services\UniqueIdentityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -20,13 +19,12 @@ class CreateNewUser implements CreatesNewUsers
 
     public function __construct(
         private readonly UniqueIdentityService $identity,
-    ) {
-    }
+    ) {}
 
     /**
      * Validate, enforce identity uniqueness, then create the user + team.
      *
-     * @param array<string, string> $input
+     * @param  array<string, string>  $input
      */
     public function create(array $input): User
     {
@@ -52,7 +50,7 @@ class CreateNewUser implements CreatesNewUsers
             paymentFingerprint: $input['payment_fingerprint'] ?? null,
         );
 
-        if (!$identityResult->passed) {
+        if (! $identityResult->passed) {
             throw ValidationException::withMessages([
                 'email' => $identityResult->denial_reason,
             ]);
@@ -92,7 +90,7 @@ class CreateNewUser implements CreatesNewUsers
     {
         $team = Team::forceCreate([
             'user_id' => $user->id,
-            'name' => explode(' ', $user->name, 2)[0] . "'s Team",
+            'name' => explode(' ', $user->name, 2)[0]."'s Team",
             'personal_team' => true,
             'subscription_status' => 'trial',
             'trial_ends_at' => now()->addMonths(

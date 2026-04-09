@@ -20,9 +20,7 @@ class ProcessKnowledgeBaseSourceJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public KnowledgeBaseSource $source)
-    {
-    }
+    public function __construct(public KnowledgeBaseSource $source) {}
 
     /**
      * Execute the job.
@@ -51,7 +49,7 @@ class ProcessKnowledgeBaseSourceJob implements ShouldQueue
             // Check if content extraction returned an error string (naive check based on current service implementation)
             // ideally service should throw exceptions, but we'll check for error markers or empty content
             if (empty($content) || str_starts_with($content, '[Error')) {
-                throw new \Exception("Extraction failed: " . $content);
+                throw new \Exception('Extraction failed: '.$content);
             }
 
             $this->source->update([
@@ -61,16 +59,16 @@ class ProcessKnowledgeBaseSourceJob implements ShouldQueue
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Knowledge Base Processing Failed Source ID: {$this->source->id}. Error: " . $e->getMessage());
+            Log::error("Knowledge Base Processing Failed Source ID: {$this->source->id}. Error: ".$e->getMessage());
 
             $this->source->update([
                 'status' => KnowledgeBaseSource::STATUS_FAILED,
                 'error_message' => $e->getMessage(),
             ]);
 
-            // Re-throw if you want the job to be retried by the queue worker, 
+            // Re-throw if you want the job to be retried by the queue worker,
             // but for now we mark it as failed effectively.
-            // fail($e); 
+            // fail($e);
         }
     }
 }

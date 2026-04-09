@@ -15,9 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class CheckTenantSubscription
 {
-    public function __construct(private readonly EntitlementService $entitlements)
-    {
-    }
+    public function __construct(private readonly EntitlementService $entitlements) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -30,13 +28,13 @@ class CheckTenantSubscription
 
         $team = $user?->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return $next($request);
         }
 
         $e = $this->entitlements->for($team);
 
-        if (!$e->active()) {
+        if (! $e->active()) {
             abort(403, "Your subscription is inactive ({$e->statusLabel()}). Please contact billing.");
         }
 

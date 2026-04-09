@@ -11,7 +11,7 @@ class TemplateHealthService
 {
     /**
      * Check if a contact is in a cooldown period for a specific template category.
-     * 
+     *
      * Rules:
      * - MARKETING: 1 message per 24 hours.
      * - UTILITY: No limit (transactional).
@@ -25,6 +25,7 @@ class TemplateHealthService
             // Check if key exists
             if (Cache::has($key)) {
                 Log::warning("Cooldown Block: Contact {$contact->id} blocked from receiving MARKETING msg.");
+
                 return false; // BLOCKED
             }
             // If not blocked, we will set the lock AFTER sending (in recordUsage)
@@ -34,6 +35,7 @@ class TemplateHealthService
             $count = Cache::get($key, 0);
             if ($count >= 5) {
                 Log::warning("Cooldown Block: Contact {$contact->id} hit AUTH rate limit.");
+
                 return false; // BLOCKED
             }
         }
@@ -55,9 +57,9 @@ class TemplateHealthService
         if ($category === 'AUTHENTICATION') {
             $rlKey = "contact:{$contactId}:auth:count:1h";
             Cache::increment($rlKey);
-            // Ensure expiry is set on first increment? 
+            // Ensure expiry is set on first increment?
             // Cache::add only works if not exists.
-            // Simplified: just increment. 
+            // Simplified: just increment.
             // In a real high-throughput system we'd use Lua script or specific rate limiter class.
             // For now, assume Laravel rate limiter or basic cache logic.
         }
@@ -85,12 +87,12 @@ class TemplateHealthService
                     'is_paused' => true,
                     // We could add a 'pause_reason' column, but for now log it.
                 ]);
-                \Illuminate\Support\Facades\Log::alert("Circuit Breaker Triggered: Template {$template->id} ({$template->name}) paused due to low read rate (" . number_format($readRate * 100, 2) . "%).");
+                \Illuminate\Support\Facades\Log::alert("Circuit Breaker Triggered: Template {$template->id} ({$template->name}) paused due to low read rate (".number_format($readRate * 100, 2).'%).');
             }
         }
 
         // Rule 2: High Block Rate (Hypothetical - requires Block signal)
-        // If we had 'total_blocks' column... 
+        // If we had 'total_blocks' column...
     }
 
     /**

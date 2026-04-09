@@ -26,7 +26,7 @@ class CampaignList extends Component
 
     public function confirmDelete($campaignId)
     {
-        $this->campaign_id        = $campaignId;
+        $this->campaign_id = $campaignId;
         $this->confirmingDeletion = true;
     }
 

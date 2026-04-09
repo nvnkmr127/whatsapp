@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\WhatsAppCall;
 use App\Models\Message;
+use App\Models\WhatsAppCall;
 use Illuminate\Support\Facades\Log;
 
 class CallLogService
@@ -13,8 +13,9 @@ class CallLogService
      */
     public function logCall(WhatsAppCall $call): ?Message
     {
-        if (!$call->conversation_id || !$call->contact_id) {
-            Log::warning("Call missing conversation or contact ID, skipping log entry", ['call_id' => $call->call_id]);
+        if (! $call->conversation_id || ! $call->contact_id) {
+            Log::warning('Call missing conversation or contact ID, skipping log entry', ['call_id' => $call->call_id]);
+
             return null;
         }
 
@@ -50,7 +51,7 @@ class CallLogService
         $summary = "{$emoji} {$direction} Call: {$status}";
 
         if ($call->status === 'completed' && $call->duration_seconds > 0) {
-            $summary .= " (" . $call->formatted_duration . ")";
+            $summary .= ' ('.$call->formatted_duration.')';
         }
 
         if ($call->status === 'failed' && $call->failure_reason) {

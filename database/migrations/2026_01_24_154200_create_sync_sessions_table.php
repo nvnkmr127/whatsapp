@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('sync_sessions', function (Blueprint $table) {
@@ -23,10 +24,10 @@ return new class extends Migration {
         });
 
         Schema::table('products', function (Blueprint $table) {
-            if (!Schema::hasColumn('products', 'sync_attempts')) {
+            if (! Schema::hasColumn('products', 'sync_attempts')) {
                 $table->integer('sync_attempts')->default(0)->after('sync_state');
             }
-            if (!Schema::hasColumn('products', 'last_sync_error')) {
+            if (! Schema::hasColumn('products', 'last_sync_error')) {
                 $table->text('last_sync_error')->nullable()->after('sync_attempts');
             }
         });

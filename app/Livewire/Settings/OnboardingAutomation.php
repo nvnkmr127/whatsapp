@@ -5,36 +5,42 @@ namespace App\Livewire\Settings;
 use App\Models\OnboardingStatus;
 use App\Models\WhatsappTemplate;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Onboarding Automation Settings')]
 class OnboardingAutomation extends Component
 {
     public $remoteReminderTemplate;
+
     public $remoteReminderVariables = '{name}, {setup_link}';
 
     public $profileReminderTemplate;
+
     public $profileReminderVariables = '{name}, {setup_link}';
 
     public $campaignTutorialTemplate;
+
     public $campaignTutorialVariables = '{name}';
 
     // Delays (in hours)
     public $firstDelay = 1;
+
     public $secondDelay = 2;
+
     public $thirdDelay = 24;
 
     // Channels
     public $onboardingChannel = 'whatsapp'; // whatsapp, email, both
 
     public $templates = [];
+
     public $availablePlaceholders = [
         '{name}' => 'User Full Name',
         '{setup_link}' => 'Onboarding/Setup URL',
         '{email}' => 'User Email Address',
-        '{company}' => 'Team/Company Name'
+        '{company}' => 'Team/Company Name',
     ];
 
     #[Layout('layouts.app')]
@@ -58,18 +64,20 @@ class OnboardingAutomation extends Component
 
         return view('livewire.settings.onboarding-automation', [
             'stats' => $stats,
-            'previews' => $previews
+            'previews' => $previews,
         ]);
     }
 
     protected function getTemplatePreview($name)
     {
-        if (!$name)
+        if (! $name) {
             return null;
+        }
 
         $template = collect($this->templates)->firstWhere('name', $name);
-        if (!$template)
+        if (! $template) {
             return null;
+        }
 
         $content = [];
         foreach ($template['components'] ?? [] as $component) {
@@ -77,12 +85,13 @@ class OnboardingAutomation extends Component
                 $content[] = $component['text'];
             }
         }
+
         return implode("\n", $content);
     }
 
     public function mount()
     {
-        if (!Auth::user()->is_super_admin) {
+        if (! Auth::user()->is_super_admin) {
             abort(403);
         }
 
@@ -116,7 +125,7 @@ class OnboardingAutomation extends Component
         if (empty($current)) {
             $this->$field = $placeholder;
         } else {
-            $this->$field = $current . ', ' . $placeholder;
+            $this->$field = $current.', '.$placeholder;
         }
     }
 
@@ -139,6 +148,6 @@ class OnboardingAutomation extends Component
         set_setting('onboarding_channel', $this->onboardingChannel, 'onboarding');
 
         $this->dispatch('notify', type: 'success', message: 'Onboarding automation settings saved successfully!');
-        audit('settings.onboarding_updated', "Onboarding automation templates updated by " . Auth::user()->name);
+        audit('settings.onboarding_updated', 'Onboarding automation templates updated by '.Auth::user()->name);
     }
 }

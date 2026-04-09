@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Deal extends Model
 {
-    use HasFactory, SoftDeletes;
     use \App\Traits\HasTeam;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'team_id',
@@ -82,13 +82,13 @@ class Deal extends Model
                 if (class_exists(\App\Services\WorkflowEngine::class)) {
                     app(\App\Services\WorkflowEngine::class)->trigger('deal_created', $deal, ['source' => 'system']);
                 }
-                
+
                 // Advanced Automation Engine
                 if (class_exists(\App\Services\AutomationService::class)) {
                     app(\App\Services\AutomationService::class)->checkDealTriggers($deal, 'deal_created');
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Deal Created Trigger Failed: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('Deal Created Trigger Failed: '.$e->getMessage());
             }
         });
 
@@ -101,32 +101,30 @@ class Deal extends Model
                     if ($deal->wasChanged('stage_id')) {
                         app(\App\Services\WorkflowEngine::class)->trigger('deal_stage_changed', $deal, [
                             'old_stage' => $deal->getOriginal('stage_id'),
-                            'new_stage' => $deal->stage_id
+                            'new_stage' => $deal->stage_id,
                         ]);
-                        
+
                         if ($automationService) {
                             $automationService->checkDealTriggers($deal, 'deal_stage_changed', [
                                 'old_stage_id' => $deal->getOriginal('stage_id'),
-                                'new_stage_id' => $deal->stage_id
+                                'new_stage_id' => $deal->stage_id,
                             ]);
                         }
                     }
-                    
+
                     if ($deal->wasChanged('status') && $deal->status === 'won') {
                         app(\App\Services\WorkflowEngine::class)->trigger('deal_won', $deal, ['value' => $deal->value]);
-                        
+
                         if ($automationService) {
                             $automationService->checkDealTriggers($deal, 'deal_won', ['value' => $deal->value]);
                         }
                     }
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Deal Updated Trigger Failed: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('Deal Updated Trigger Failed: '.$e->getMessage());
             }
         });
     }
-
-
 
     public function contact(): BelongsTo
     {
@@ -184,7 +182,7 @@ class Deal extends Model
         $this->save();
     }
 
-    public function markAsLost(string $reason = null): void
+    public function markAsLost(?string $reason = null): void
     {
         $this->status = 'lost';
         $this->lost_reason = $reason;
@@ -192,7 +190,7 @@ class Deal extends Model
         $this->save();
     }
 
-    public function addNote(string $content, User $user = null): DealActivity
+    public function addNote(string $content, ?User $user = null): DealActivity
     {
         return $this->activities()->create([
             'type' => 'note',
@@ -248,7 +246,7 @@ class Deal extends Model
 
     public function getIsAtRiskAttribute(): bool
     {
-        if (!$this->stage->expected_days) {
+        if (! $this->stage->expected_days) {
             return false;
         }
 

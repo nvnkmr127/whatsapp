@@ -22,7 +22,7 @@ class ManageCannedReply extends Component
 
     protected $listeners = [
         'editCannedPage' => 'editCannedPage',
-        'confirmDelete'  => 'confirmDelete',
+        'confirmDelete' => 'confirmDelete',
     ];
 
     public function mount()
@@ -50,7 +50,7 @@ class ManageCannedReply extends Component
                 'required',
                 'min:3',
                 'max:255',
-                'unique:canned_replies,title,' . ($this->canned->id ?? 'NULL'),
+                'unique:canned_replies,title,'.($this->canned->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
             ],
             'canned.description' => ['required', new PurifiedInput(t('sql_injection_error'))],
@@ -71,7 +71,7 @@ class ManageCannedReply extends Component
             $this->validate();
             try {
                 if (! $this->canned->exists) {
-                    $this->canned->is_public  = 0;
+                    $this->canned->is_public = 0;
                     $this->canned->added_from = Auth::id();
                 }
 
@@ -95,7 +95,7 @@ class ManageCannedReply extends Component
     public function editCannedPage($cannedId)
     {
         try {
-            $canned       = CannedReply::findOrFail($cannedId);
+            $canned = CannedReply::findOrFail($cannedId);
             $this->canned = $canned;
             $this->resetValidation();
             $this->showCannedModal = true;
@@ -107,7 +107,7 @@ class ManageCannedReply extends Component
 
     public function confirmDelete($cannedId)
     {
-        $this->canned_id          = $cannedId;
+        $this->canned_id = $cannedId;
         $this->confirmingDeletion = true;
     }
 

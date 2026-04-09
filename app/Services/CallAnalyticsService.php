@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\WhatsAppCall;
 use App\Models\CallQualityMetric;
-use Illuminate\Support\Facades\DB;
+use App\Models\WhatsAppCall;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class CallAnalyticsService
 {
@@ -18,18 +18,18 @@ class CallAnalyticsService
         $query = CallQualityMetric::query()
             ->join('whatsapp_calls', 'call_quality_metrics.call_id', '=', 'whatsapp_calls.id');
 
-        if (!empty($filters['start_date'])) {
+        if (! empty($filters['start_date'])) {
             $query->where('whatsapp_calls.created_at', '>=', $filters['start_date']);
         }
-        if (!empty($filters['end_date'])) {
+        if (! empty($filters['end_date'])) {
             $query->where('whatsapp_calls.created_at', '<=', $filters['end_date']);
         }
-        if (!empty($filters['team_id'])) {
+        if (! empty($filters['team_id'])) {
             $query->where('whatsapp_calls.team_id', $filters['team_id']);
         }
 
         $totalCalls = $query->count();
-        
+
         $metrics = [
             'total_calls' => $totalCalls,
             'successful_connections' => $query->clone()->whereNotNull('call_quality_metrics.connection_established_at')->count(),
@@ -62,8 +62,8 @@ class CallAnalyticsService
     public function getSuccessRateOverTime(array $filters = []): Collection
     {
         $interval = $filters['interval'] ?? 'day';
-        $startDate = !empty($filters['start_date']) ? Carbon::parse($filters['start_date']) : now()->subDays(30);
-        $endDate = !empty($filters['end_date']) ? Carbon::parse($filters['end_date']) : now();
+        $startDate = ! empty($filters['start_date']) ? Carbon::parse($filters['start_date']) : now()->subDays(30);
+        $endDate = ! empty($filters['end_date']) ? Carbon::parse($filters['end_date']) : now();
 
         $dateFormat = match ($interval) {
             'hour' => '%Y-%m-%d %H:00:00',
@@ -80,7 +80,7 @@ class CallAnalyticsService
             ])
             ->whereBetween('created_at', [$startDate, $endDate]);
 
-        if (!empty($filters['team_id'])) {
+        if (! empty($filters['team_id'])) {
             $query->where('team_id', $filters['team_id']);
         }
 
@@ -105,7 +105,7 @@ class CallAnalyticsService
         $last24Hours = now()->subDay();
 
         $recentCalls = WhatsAppCall::query()
-            ->when($teamId, fn($q) => $q->where('team_id', $teamId))
+            ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
             ->where('created_at', '>=', $last24Hours);
 
         return [
@@ -118,13 +118,13 @@ class CallAnalyticsService
             ],
             'current_status' => [
                 'active_calls' => WhatsAppCall::query()
-                    ->when($teamId, fn($q) => $q->where('team_id', $teamId))
+                    ->when($teamId, fn ($q) => $q->where('team_id', $teamId))
                     ->where('status', 'in_progress')
                     ->count(),
             ],
             'quality_summary' => CallQualityMetric::query()
                 ->join('whatsapp_calls', 'call_quality_metrics.call_id', '=', 'whatsapp_calls.id')
-                ->when($teamId, fn($q) => $q->where('whatsapp_calls.team_id', $teamId))
+                ->when($teamId, fn ($q) => $q->where('whatsapp_calls.team_id', $teamId))
                 ->where('whatsapp_calls.created_at', '>=', $last24Hours)
                 ->selectRaw('
                     AVG(network_quality_score) as avg_quality,

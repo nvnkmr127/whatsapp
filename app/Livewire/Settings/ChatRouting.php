@@ -2,10 +2,10 @@
 
 namespace App\Livewire\Settings;
 
-use Livewire\Component;
-use Livewire\Attributes\Layout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 #[Layout('layouts.app')]
 class ChatRouting extends Component
@@ -45,15 +45,16 @@ class ChatRouting extends Component
      */
     public function mount()
     {
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             $this->team = null;
+
             return;
         }
 
         $this->team = Auth::user()->currentTeam;
 
         // Ensure user has permission to manage settings
-        if (!Gate::check('manage-settings')) {
+        if (! Gate::check('manage-settings')) {
             abort(403);
         }
 
@@ -68,15 +69,20 @@ class ChatRouting extends Component
      * Simulation Properties
      */
     public $simulationPhone = '';
+
     public $simulationSource = '';
+
     public $simulationTags = '';
+
     public $simulationResult = null;
+
     public $isSimulateModalOpen = false;
 
     /**
      * Custom Assignment Rules Properties
      */
     public $customRules = [];
+
     public $stickyEnabled = false;
 
     /**
@@ -87,9 +93,9 @@ class ChatRouting extends Component
     protected function rules()
     {
         return [
-            'statusRules.*.status_in' => ['required', 'string', 'in:' . implode(',', $this->availableStatuses)],
+            'statusRules.*.status_in' => ['required', 'string', 'in:'.implode(',', $this->availableStatuses)],
             'statusRules.*.after_days' => ['required', 'integer', 'min:1', 'max:365'],
-            'statusRules.*.status_to' => ['required', 'string', 'in:' . implode(',', $this->availableStatuses)],
+            'statusRules.*.status_to' => ['required', 'string', 'in:'.implode(',', $this->availableStatuses)],
 
             // Custom Rules Validation
             'stickyEnabled' => ['boolean'],
@@ -101,7 +107,6 @@ class ChatRouting extends Component
     }
 
     // ... mount ...
-
 
     public function openSimulateModal()
     {
@@ -121,7 +126,7 @@ class ChatRouting extends Component
         ]);
 
         // Mock Tags
-        if (!empty($this->simulationTags)) {
+        if (! empty($this->simulationTags)) {
             // Treat comma-separated string as tags
             $tagNames = is_array($this->simulationTags)
                 ? $this->simulationTags
@@ -129,7 +134,7 @@ class ChatRouting extends Component
 
             $tags = collect();
             foreach ($tagNames as $name) {
-                if (!empty($name)) {
+                if (! empty($name)) {
                     // Create a mock object that behaves like a ContactTag
                     $tags->push(new \App\Models\ContactTag(['name' => $name]));
                 }
@@ -147,13 +152,15 @@ class ChatRouting extends Component
      * Confirmation state for disabling tickets.
      */
     public $confirmingTicketDisabling = false;
+
     public $ticketDisablingFor = null;
+
     public $activeTicketsForDisabling = 0;
 
     /**
      * Toggle ticket assignment for a member.
      *
-     * @param int $userId
+     * @param  int  $userId
      * @return void
      */
     public function toggleTicketAssignment($userId)
@@ -175,12 +182,13 @@ class ChatRouting extends Component
                     $this->ticketDisablingFor = $userId;
                     $this->activeTicketsForDisabling = $count;
                     $this->confirmingTicketDisabling = true;
+
                     return;
                 }
             }
 
             // Otherwise, toggle immediately
-            $this->performToggle($userId, !$isReceiving);
+            $this->performToggle($userId, ! $isReceiving);
         }
     }
 
@@ -224,7 +232,7 @@ class ChatRouting extends Component
     /**
      * Remove a status rule.
      *
-     * @param int $index
+     * @param  int  $index
      * @return void
      */
     public function removeStatusRule($index)
@@ -238,9 +246,9 @@ class ChatRouting extends Component
         $this->customRules[] = [
             'priority' => count($this->customRules) + 1,
             'conditions' => [
-                ['type' => 'tag', 'value' => '']
+                ['type' => 'tag', 'value' => ''],
             ],
-            'assign_to' => ['type' => 'role', 'role' => 'agent']
+            'assign_to' => ['type' => 'role', 'role' => 'agent'],
         ];
     }
 
@@ -274,8 +282,8 @@ class ChatRouting extends Component
         $this->team->forceFill([
             'chat_assignment_config' => [
                 'sticky_enabled' => $this->stickyEnabled,
-                'rules' => $this->customRules
-            ]
+                'rules' => $this->customRules,
+            ],
         ])->save();
 
         $this->dispatch('saved');
@@ -300,7 +308,7 @@ class ChatRouting extends Component
     /**
      * Get the recommended chat status for a given role.
      *
-     * @param string|null $role
+     * @param  string|null  $role
      * @return bool
      */
     public function getRecommendedStatus($role)
@@ -311,7 +319,7 @@ class ChatRouting extends Component
     /**
      * Get the eligibility description for a given role.
      *
-     * @param string|null $role
+     * @param  string|null  $role
      * @return string
      */
     public function getRoleEligibilityNote($role)
@@ -330,24 +338,24 @@ class ChatRouting extends Component
      */
     public function render()
     {
-        if (!$this->team) {
+        if (! $this->team) {
             return view('livewire.settings.chat-routing', [
                 'users' => collect(),
-                'teamMembers' => collect()
+                'teamMembers' => collect(),
             ]);
         }
 
         $users = $this->team->users()
             ->when($this->memberSearch, function ($query) {
-                $query->where('name', 'like', '%' . $this->memberSearch . '%')
-                    ->orWhere('email', 'like', '%' . $this->memberSearch . '%');
+                $query->where('name', 'like', '%'.$this->memberSearch.'%')
+                    ->orWhere('email', 'like', '%'.$this->memberSearch.'%');
             })
             ->orderBy('name')
             ->paginate(10);
 
         return view('livewire.settings.chat-routing', [
             'users' => $users,
-            'teamMembers' => $this->team->users()->orderBy('name')->get()
+            'teamMembers' => $this->team->users()->orderBy('name')->get(),
         ]);
     }
 }

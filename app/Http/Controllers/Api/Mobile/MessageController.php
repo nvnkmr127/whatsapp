@@ -78,22 +78,23 @@ class MessageController extends Controller
 
     protected function authorizeConversation($user, $conversation)
     {
-        if ($conversation->team_id !== $user->currentTeam?->id && !$user->isSuperAdmin()) {
+        if ($conversation->team_id !== $user->currentTeam?->id && ! $user->isSuperAdmin()) {
             abort(403, 'Unauthorized access to this conversation.');
         }
     }
+
     /**
      * Delete a message (Unsend for everyone).
      */
     public function destroy(Request $request, Message $message)
     {
         $conversation = $message->conversation;
-        if ($conversation->team_id !== $request->user()->currentTeam?->id && !$request->user()->isSuperAdmin()) {
+        if ($conversation->team_id !== $request->user()->currentTeam?->id && ! $request->user()->isSuperAdmin()) {
             abort(403);
         }
 
         // Only outbound messages can be unsent
-        if (!$message->is_outbound) {
+        if (! $message->is_outbound) {
             return response()->json(['error' => 'Only outbound messages can be deleted.'], 422);
         }
 
@@ -138,17 +139,18 @@ class MessageController extends Controller
     public function toggleStar(Request $request, Message $message)
     {
         $conversation = $message->conversation;
-        if ($conversation->team_id !== $request->user()->currentTeam?->id && !$request->user()->isSuperAdmin()) {
+        if ($conversation->team_id !== $request->user()->currentTeam?->id && ! $request->user()->isSuperAdmin()) {
             abort(403);
         }
 
-        $message->update(['is_starred' => !$message->is_starred]);
+        $message->update(['is_starred' => ! $message->is_starred]);
 
         return response()->json([
             'success' => true,
-            'is_starred' => $message->is_starred
+            'is_starred' => $message->is_starred,
         ]);
     }
+
     /**
      * React to a message with an emoji.
      */
@@ -167,13 +169,16 @@ class MessageController extends Controller
 
         return response()->json(['success' => true]);
     }
+
     /**
      * Get approved WhatsApp templates for the current team.
      */
     public function getTemplates(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) return response()->json([]);
+        if (! $team) {
+            return response()->json([]);
+        }
 
         return response()->json(
             \App\Models\WhatsappTemplate::where('team_id', $team->id)

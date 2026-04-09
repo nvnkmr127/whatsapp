@@ -3,13 +3,12 @@
 namespace App\Core\WhatsApp;
 
 use App\Models\Team;
-use App\Models\WhatsAppFlow;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class FlowClient
 {
     protected WhatsAppClient $client;
+
     protected CredentialResolver $resolver;
 
     public function __construct(WhatsAppClient $client, CredentialResolver $resolver)
@@ -37,9 +36,9 @@ class FlowClient
      */
     public function uploadAssets(Team $team, string $flowId, string $jsonContent): array
     {
-        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
         $creds = $this->resolver->resolve($team);
-        
+
         // Multipart upload via Http facade
         $response = Http::withToken((string) $creds['token'])
             ->attach('file', $jsonContent, 'flow.json', ['Content-Type' => 'application/json'])

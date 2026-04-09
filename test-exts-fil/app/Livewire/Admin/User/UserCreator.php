@@ -17,7 +17,6 @@ use Spatie\Permission\Models\Role;
 class UserCreator extends Component
 {
     use SendMailTrait;
-
     use WithFileUploads;
 
     public $id;
@@ -70,16 +69,16 @@ class UserCreator extends Component
             'user.email' => [
                 'required',
                 'email',
-                'unique:users,email,' . ($this->user->id ?? 'NULL'),
+                'unique:users,email,'.($this->user->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
                 'max:255',
             ],
-            'is_admin'               => 'nullable|boolean',
-            'user.phone'             => ['required', 'unique:users,phone,' . $this->user->id, new PurifiedInput(t('sql_injection_error'))],
-            'user.default_language'  => 'nullable',
+            'is_admin' => 'nullable|boolean',
+            'user.phone' => ['required', 'unique:users,phone,'.$this->user->id, new PurifiedInput(t('sql_injection_error'))],
+            'user.default_language' => 'nullable',
             'user.profile_image_url' => is_object($this->user->profile_image_url) ? ['nullable', 'image', 'mimes:png,jpg,jpeg'] : 'nullable',
-            'password'               => ($this->user->id) ? ['nullable', Password::defaults(), 'min:8', 'max:12'] : ['required', 'confirmed', Password::defaults(), 'min:8', 'max:12'],
-            'role_id'                => [$this->is_admin ? 'nullable' : 'required', 'integer', 'exists:roles,id'],
+            'password' => ($this->user->id) ? ['nullable', Password::defaults(), 'min:8', 'max:12'] : ['required', 'confirmed', Password::defaults(), 'min:8', 'max:12'],
+            'role_id' => [$this->is_admin ? 'nullable' : 'required', 'integer', 'exists:roles,id'],
         ];
     }
 
@@ -90,14 +89,14 @@ class UserCreator extends Component
 
             return redirect()->route('admin.dashboard');
         }
-        $this->id              = $this->getId();
-        $userId                = request()->route('userId') ?? null;
-        $this->roles           = Role::where('name', '!=', 'Admin')->pluck('name', 'id');
-        $this->user            = ($userId) ? User::findOrFail($userId) : new User;
-        $this->role_id         = ($userId && ! empty($this->user->role_id)) ? optional($this->user->roles->first())->id : null;
-        $this->is_admin        = $this->user->is_admin;
+        $this->id = $this->getId();
+        $userId = request()->route('userId') ?? null;
+        $this->roles = Role::where('name', '!=', 'Admin')->pluck('name', 'id');
+        $this->user = ($userId) ? User::findOrFail($userId) : new User;
+        $this->role_id = ($userId && ! empty($this->user->role_id)) ? optional($this->user->roles->first())->id : null;
+        $this->is_admin = $this->user->is_admin;
         $this->sendWelcomeMail = $this->user->send_welcome_mail ?? false;
-        $this->isVerified      = ! empty($this->user->email_verified_at) ? true : false;
+        $this->isVerified = ! empty($this->user->email_verified_at) ? true : false;
         if ($this->role_id) {
             $this->loadPermissions($this->role_id);
         }
@@ -131,9 +130,9 @@ class UserCreator extends Component
     private function loadPermissions($roleId)
     {
         // Clear previous permissions
-        $this->rolePermissions           = [];
+        $this->rolePermissions = [];
         $this->userAdditionalPermissions = [];
-        $this->selectedPermissions       = [];
+        $this->selectedPermissions = [];
 
         if (! empty($roleId) && ! $this->is_admin) {
             $role = Role::findOrFail($roleId);
@@ -146,7 +145,7 @@ class UserCreator extends Component
                 $this->userAdditionalPermissions = $this->roleAdditionalPermissions[$roleId];
             } else {
                 // Calculate user-specific permissions not included in the role
-                $userPermissions                 = $this->user->permissions->pluck('name')->toArray();
+                $userPermissions = $this->user->permissions->pluck('name')->toArray();
                 $this->userAdditionalPermissions = array_diff($userPermissions, $this->rolePermissions);
             }
 
@@ -181,7 +180,7 @@ class UserCreator extends Component
 
                 $this->user->email_verified_at = (! can_send_email('email-confirmation')) || $this->isVerified ? to_sql_date(now(), true) : null;
 
-                $isChanged                     = $this->user->getOriginal('send_welcome_mail');
+                $isChanged = $this->user->getOriginal('send_welcome_mail');
                 $this->user->send_welcome_mail = $this->sendWelcomeMail;
 
                 $this->user->save();
@@ -202,7 +201,7 @@ class UserCreator extends Component
                 $this->user->syncPermissions($additionalPermissions);
 
                 $this->notify([
-                    'type'    => 'success',
+                    'type' => 'success',
                     'message' => $this->user->wasRecentlyCreated
                         ? t('user_save_successfully')
                         : t('user_update_successfully'),
@@ -210,15 +209,15 @@ class UserCreator extends Component
 
                 $this->redirect(route('admin.users.list'));
             } catch (\Exception $e) {
-                app_log('User save failed: ' . $e->getMessage(), 'error', $e, [
-                    'user_id'     => $this->user->id ?? null,
-                    'is_admin'    => $this->is_admin,
-                    'role_id'     => $this->role_id,
+                app_log('User save failed: '.$e->getMessage(), 'error', $e, [
+                    'user_id' => $this->user->id ?? null,
+                    'is_admin' => $this->is_admin,
+                    'role_id' => $this->role_id,
                     'permissions' => $this->selectedPermissions,
                 ]);
 
                 $this->notify([
-                    'type'    => 'danger',
+                    'type' => 'danger',
                     'message' => t('user_save_failed'),
                 ], true);
             }
@@ -249,17 +248,17 @@ class UserCreator extends Component
                     Storage::disk('public')->delete($this->user->getOriginal('profile_image_url'));
                 }
 
-                $filename = 'profile_' . time() . '.' . $this->user->profile_image_url->getClientOriginalExtension();
-                $path     = $this->user->profile_image_url->storeAs('profile-images', $filename, 'public');
+                $filename = 'profile_'.time().'.'.$this->user->profile_image_url->getClientOriginalExtension();
+                $path = $this->user->profile_image_url->storeAs('profile-images', $filename, 'public');
 
                 $this->user->profile_image_url = $path;
             }
         } catch (\Exception $e) {
-            app_log('Profile image upload failed: ' . $e->getMessage(), 'error', $e, [
+            app_log('Profile image upload failed: '.$e->getMessage(), 'error', $e, [
                 'user_id' => $this->user->id ?? null,
             ]);
 
-            throw new \Exception('Failed to upload profile image: ' . $e->getMessage());
+            throw new \Exception('Failed to upload profile image: '.$e->getMessage());
         }
     }
 
@@ -278,7 +277,7 @@ class UserCreator extends Component
                 $this->notify(['type' => 'success', 'message' => t('profile_image_removed_successfully')]);
             }
         } catch (\Exception $e) {
-            app_log('Profile image removal failed: ' . $e->getMessage(), 'error', $e, [
+            app_log('Profile image removal failed: '.$e->getMessage(), 'error', $e, [
                 'user_id' => $this->user->id ?? null,
             ]);
 

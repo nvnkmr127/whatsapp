@@ -26,7 +26,7 @@ class MessageBotList extends Component
 
     public function confirmDelete($botId)
     {
-        $this->botId              = $botId;
+        $this->botId = $botId;
         $this->confirmingDeletion = true;
     }
 
@@ -34,7 +34,7 @@ class MessageBotList extends Component
     {
         if (checkPermission('message_bot.delete')) {
             $messageBot = MessageBots::findOrFail($this->botId);
-            $files      = storage_path('/app/public/' . $messageBot->filename);
+            $files = storage_path('/app/public/'.$messageBot->filename);
             if (is_file($files)) {
                 unlink($files);
             }

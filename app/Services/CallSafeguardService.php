@@ -24,7 +24,7 @@ class CallSafeguardService
 
         // 2. Check Rate Limits (Minutely)
         $minLimit = (int) $this->getConfig($team, 'rate_limit_minute', 5);
-        $minKey = "call_rate_min_{$team->id}_" . now()->format('YmdHi');
+        $minKey = "call_rate_min_{$team->id}_".now()->format('YmdHi');
         $minCount = (int) Cache::get($minKey, 0);
 
         if ($minCount >= $minLimit) {
@@ -37,7 +37,7 @@ class CallSafeguardService
 
         // 3. Check Rate Limits (Hourly)
         $hourLimit = (int) $this->getConfig($team, 'rate_limit_hour', 60);
-        $hourKey = "call_rate_hour_{$team->id}_" . now()->format('YmdH');
+        $hourKey = "call_rate_hour_{$team->id}_".now()->format('YmdH');
         $hourCount = (int) Cache::get($hourKey, 0);
 
         if ($hourCount >= $hourLimit) {
@@ -57,11 +57,11 @@ class CallSafeguardService
     public function getStatus(Team $team): array
     {
         $minLimit = (int) $this->getConfig($team, 'rate_limit_minute', 5);
-        $minKey = "call_rate_min_{$team->id}_" . now()->format('YmdHi');
+        $minKey = "call_rate_min_{$team->id}_".now()->format('YmdHi');
         $minCount = (int) Cache::get($minKey, 0);
 
         $hourLimit = (int) $this->getConfig($team, 'rate_limit_hour', 60);
-        $hourKey = "call_rate_hour_{$team->id}_" . now()->format('YmdH');
+        $hourKey = "call_rate_hour_{$team->id}_".now()->format('YmdH');
         $hourCount = (int) Cache::get($hourKey, 0);
 
         $missedWindow = (int) $this->getConfig($team, 'missed_call_window', 30);
@@ -69,7 +69,7 @@ class CallSafeguardService
         $missedKey = "missed_calls_{$team->id}";
         $missedEvents = Cache::get($missedKey, []);
         $cutoff = now()->subMinutes($missedWindow)->timestamp;
-        $activeMissedEvents = array_filter($missedEvents, fn($t) => $t > $cutoff);
+        $activeMissedEvents = array_filter($missedEvents, fn ($t) => $t > $cutoff);
 
         return [
             'rate_min' => [
@@ -98,8 +98,8 @@ class CallSafeguardService
      */
     public function recordOutboundCall(Team $team): void
     {
-        $minKey = "call_rate_min_{$team->id}_" . now()->format('YmdHi');
-        $hourKey = "call_rate_hour_{$team->id}_" . now()->format('YmdH');
+        $minKey = "call_rate_min_{$team->id}_".now()->format('YmdHi');
+        $hourKey = "call_rate_hour_{$team->id}_".now()->format('YmdH');
 
         Cache::put($minKey, Cache::get($minKey, 0) + 1, 120);
         Cache::put($hourKey, Cache::get($hourKey, 0) + 1, 3600);
@@ -110,7 +110,7 @@ class CallSafeguardService
      */
     public function recordEvent(Team $team, string $type): void
     {
-        if (!in_array($type, ['missed', 'failed'])) {
+        if (! in_array($type, ['missed', 'failed'])) {
             return;
         }
 
@@ -125,7 +125,7 @@ class CallSafeguardService
 
         // Filter events within window
         $cutoff = now()->subMinutes($window)->timestamp;
-        $events = array_filter($events, fn($t) => $t > $cutoff);
+        $events = array_filter($events, fn ($t) => $t > $cutoff);
 
         Cache::put($key, $events, $window * 60);
 

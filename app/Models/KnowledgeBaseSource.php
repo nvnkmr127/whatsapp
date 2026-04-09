@@ -9,8 +9,11 @@ class KnowledgeBaseSource extends Model
     use \App\Traits\HasTeam;
 
     const STATUS_PENDING = 'pending';
+
     const STATUS_PROCESSING = 'processing';
+
     const STATUS_READY = 'ready';
+
     const STATUS_FAILED = 'failed';
 
     protected $fillable = [

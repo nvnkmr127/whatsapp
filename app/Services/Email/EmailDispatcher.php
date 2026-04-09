@@ -11,9 +11,6 @@ use Illuminate\Support\Facades\Log;
 
 class EmailDispatcher
 {
-    /**
-     * @param EmailProviderManager $manager
-     */
     public function __construct(
         protected EmailProviderManager $manager
     ) {}
@@ -37,9 +34,9 @@ class EmailDispatcher
                 $prop->setAccessible(true);
                 $subject = $prop->getValue($mailable) ?: 'System Email';
             }
-            
+
             // Text content handling if available
-            if (property_exists($mailable, 'textContent') && !empty($mailable->textContent)) {
+            if (property_exists($mailable, 'textContent') && ! empty($mailable->textContent)) {
                 $text = $mailable->textContent;
             }
 
@@ -54,7 +51,7 @@ class EmailDispatcher
                 $headers = $mailable->headersArray;
             }
         } catch (\Exception $e) {
-            Log::warning("EmailDispatcher Content Extraction: " . $e->getMessage());
+            Log::warning('EmailDispatcher Content Extraction: '.$e->getMessage());
         }
 
         // 2. Build Payload
@@ -75,8 +72,8 @@ class EmailDispatcher
         $this->logResult($to, $useCase, $result, $subject, $templateId);
 
         // 5. Fail loud if the final driver (including fallback) failed
-        if (!$result->success) {
-            throw new Exception("Final Email Delivery Failure ({$result->providerName}): " . $result->error);
+        if (! $result->success) {
+            throw new Exception("Final Email Delivery Failure ({$result->providerName}): ".$result->error);
         }
     }
 
@@ -86,7 +83,7 @@ class EmailDispatcher
     public function dispatchByTemplate(string $to, string $templateSlug, array $data = []): void
     {
         $template = \App\Models\EmailTemplate::where('slug', $templateSlug)->first();
-        if (!$template) {
+        if (! $template) {
             throw new Exception("Email template with slug '$templateSlug' not found.");
         }
 
@@ -95,7 +92,7 @@ class EmailDispatcher
         $text = $template->content_text ?: null;
 
         // Simple variable replacement logic
-        // We'll use a standardized approach for all dynamic content later, 
+        // We'll use a standardized approach for all dynamic content later,
         // but for now, we'll do basic replacement.
         $replace = [];
         foreach ($data as $key => $value) {
@@ -103,7 +100,7 @@ class EmailDispatcher
                 $replace["{{$key}}"] = $value;
             }
         }
-        
+
         // Add common objects if present
         if (isset($data['contact'])) {
             $contact = $data['contact'];
@@ -116,18 +113,20 @@ class EmailDispatcher
         // Add extra variables from data['variables'] if present
         if (isset($data['variables']) && is_array($data['variables'])) {
             foreach ($data['variables'] as $k => $v) {
-                 if (is_scalar($v)) {
-                     $replace["{{$k}}"] = $v;
-                 }
+                if (is_scalar($v)) {
+                    $replace["{{$k}}"] = $v;
+                }
             }
         }
 
         $subject = strtr($subject, $replace);
         $html = strtr($html, $replace);
-        if ($text) $text = strtr($text, $replace);
+        if ($text) {
+            $text = strtr($text, $replace);
+        }
 
         $mailable = new \App\Mail\DynamicSystemMail($subject, $html, $text);
-        
+
         $this->send($to, $template->type, $mailable, $template->id);
     }
 
@@ -147,7 +146,7 @@ class EmailDispatcher
                 'message_id' => $result->messageId,
                 'metadata' => [
                     'message_id' => $result->messageId,
-                    'error' => $result->error
+                    'error' => $result->error,
                 ],
             ];
 
@@ -161,7 +160,7 @@ class EmailDispatcher
 
             \App\Models\EmailLog::create($data);
         } catch (\Exception $e) {
-            Log::error("Failed to write EmailLog via EmailDispatcher: " . $e->getMessage());
+            Log::error('Failed to write EmailLog via EmailDispatcher: '.$e->getMessage());
         }
     }
 }

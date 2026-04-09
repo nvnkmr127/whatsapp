@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class WhatsAppFlowResponse extends Model
 {
     protected $table = 'whatsapp_flow_responses';
+
     protected $guarded = [];
 
     protected $casts = [

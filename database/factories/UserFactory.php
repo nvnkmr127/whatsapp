@@ -67,6 +67,10 @@ class UserFactory extends Factory
                 ])
                 ->when(is_callable($callback), $callback),
             'ownedTeams'
-        );
+        )->afterCreating(function (User $user) {
+            $user->unsetRelation('ownedTeams');
+            $user->unsetRelation('currentTeam');
+            $user->switchTeam($user->personalTeam());
+        });
     }
 }

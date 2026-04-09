@@ -42,7 +42,7 @@ class InstallController extends Controller
         $requirementsChecker = new RequirementsChecker;
 
         $requirements = $requirementsChecker->check();
-        $php          = $requirementsChecker->checkPHPVersion();
+        $php = $requirementsChecker->checkPHPVersion();
 
         return view('installer::installation.requirements', compact('requirements', 'php'));
     }
@@ -55,7 +55,7 @@ class InstallController extends Controller
     public function permissions()
     {
         $permissionsChecker = new PermissionsChecker;
-        $permissions        = $permissionsChecker->check();
+        $permissions = $permissionsChecker->check();
 
         return view('installer::installation.permissions', compact('permissions'));
     }
@@ -68,7 +68,7 @@ class InstallController extends Controller
     public function setup()
     {
         $environmentManager = new EnvironmentManager;
-        $guessedUrl         = $environmentManager::guessUrl();
+        $guessedUrl = $environmentManager::guessUrl();
 
         // You may need to add this method to get countries or provide them another way
         $countries = $this->getCountries();
@@ -95,14 +95,14 @@ class InstallController extends Controller
 
             // Generate app key and identification key
             $environmentManager = new EnvironmentManager;
-            $appKey             = $environmentManager->generateAppKey();
-            $identificationKey  = $environmentManager->generateIdentificationKey();
+            $appKey = $environmentManager->generateAppKey();
+            $identificationKey = $environmentManager->generateIdentificationKey();
 
             config([
-                'database.default'                    => 'mysql',
-                'database.connections.mysql.driver'   => 'mysql',
-                'database.connections.mysql.host'     => $request->database_hostname,
-                'database.connections.mysql.port'     => $request->database_port,
+                'database.default' => 'mysql',
+                'database.connections.mysql.driver' => 'mysql',
+                'database.connections.mysql.host' => $request->database_hostname,
+                'database.connections.mysql.port' => $request->database_port,
                 'database.connections.mysql.database' => $request->database_name,
                 'database.connections.mysql.username' => $request->database_username,
                 'database.connections.mysql.password' => $request->database_password,
@@ -128,19 +128,19 @@ class InstallController extends Controller
 
             // // Save environment settings
             $environmentManager->saveEnv([
-                'APP_NAME'                 => $request->app_name,
-                'APP_KEY'                  => $appKey,
-                'IDENTIFICATION_KEY'       => $identificationKey,
-                'APP_URL'                  => $request->app_url,
-                'APP_DEBUG'                => 'true',
-                'DB_CONNECTION'            => 'mysql',
-                'DB_HOST'                  => $request->database_hostname,
-                'DB_PORT'                  => $request->database_port,
-                'DB_DATABASE'              => $request->database_name,
-                'DB_USERNAME'              => $request->database_username,
-                'DB_PASSWORD'              => $request->database_password,
-                'SESSION_DRIVER'           => 'database',
-                'QUEUE_CONNECTION'         => 'database',
+                'APP_NAME' => $request->app_name,
+                'APP_KEY' => $appKey,
+                'IDENTIFICATION_KEY' => $identificationKey,
+                'APP_URL' => $request->app_url,
+                'APP_DEBUG' => 'true',
+                'DB_CONNECTION' => 'mysql',
+                'DB_HOST' => $request->database_hostname,
+                'DB_PORT' => $request->database_port,
+                'DB_DATABASE' => $request->database_name,
+                'DB_USERNAME' => $request->database_username,
+                'DB_PASSWORD' => $request->database_password,
+                'SESSION_DRIVER' => 'database',
+                'QUEUE_CONNECTION' => 'database',
                 'WHATSAPP_LOGGING_ENABLED' => 'false',
             ]);
 
@@ -179,10 +179,10 @@ class InstallController extends Controller
             // Store admin data in session
             session([
                 'admin_firstname' => $request->firstname ?? null,
-                'admin_lastname'  => $request->lastname  ?? null,
-                'admin_email'     => $request->email,
-                'admin_password'  => $request->password,
-                'admin_timezone'  => $request->timezone,
+                'admin_lastname' => $request->lastname ?? null,
+                'admin_email' => $request->email,
+                'admin_password' => $request->password,
+                'admin_timezone' => $request->timezone,
             ]);
 
             // Run installer finalizer
@@ -191,10 +191,10 @@ class InstallController extends Controller
 
             $result = $finalizer->handle([
                 'firstname' => $request->firstname ?? null,
-                'lastname'  => $request->lastname  ?? null,
-                'email'     => $request->email,
-                'password'  => $request->password,
-                'timezone'  => $request->timezone,
+                'lastname' => $request->lastname ?? null,
+                'email' => $request->email,
+                'password' => $request->password,
+                'timezone' => $request->timezone,
             ]);
 
             if (! $result['success']) {
@@ -241,17 +241,17 @@ class InstallController extends Controller
             // Configure a test connection
             $testConnection = 'installer_test';
             Config::set("database.connections.$testConnection", [
-                'driver'    => 'mysql',
-                'host'      => $hostname,
-                'port'      => $port,
-                'database'  => $database,
-                'username'  => $username,
-                'password'  => $password,
-                'charset'   => 'utf8mb4',
+                'driver' => 'mysql',
+                'host' => $hostname,
+                'port' => $port,
+                'database' => $database,
+                'username' => $username,
+                'password' => $password,
+                'charset' => 'utf8mb4',
                 'collation' => 'utf8mb4_unicode_ci',
-                'prefix'    => '',
-                'strict'    => true,
-                'engine'    => 'InnoDB',
+                'prefix' => '',
+                'strict' => true,
+                'engine' => 'InnoDB',
             ]);
 
             // Try to connect
@@ -260,7 +260,7 @@ class InstallController extends Controller
             // If we reached here, connection succeeded
             // Now test database privileges
             $databaseTest = new DatabaseTest(DB::connection($testConnection));
-            $testResults  = $databaseTest->runAllTests();
+            $testResults = $databaseTest->runAllTests();
 
             // Check if all required privileges are granted
             $missingPrivileges = array_filter($testResults, function ($result) {
@@ -269,14 +269,14 @@ class InstallController extends Controller
 
             if (! empty($missingPrivileges)) {
                 $missingPrivilegeNames = array_keys($missingPrivileges);
-                throw new Exception('Database user is missing required privileges: ' . implode(', ', $missingPrivilegeNames));
+                throw new Exception('Database user is missing required privileges: '.implode(', ', $missingPrivilegeNames));
             }
 
             return true;
 
         } catch (PDOException $e) {
             // Connection failed
-            throw new Exception('Database connection failed: ' . $e->getMessage());
+            throw new Exception('Database connection failed: '.$e->getMessage());
         } finally {
             // Clean up the test connection
             DB::purge($testConnection);
@@ -310,8 +310,8 @@ class InstallController extends Controller
     public function license()
     {
         // Check if license is already verified to pre-fill the form
-        $licenseData  = session('license_data', []);
-        $username     = $licenseData['username']      ?? '';
+        $licenseData = session('license_data', []);
+        $username = $licenseData['username'] ?? '';
         $purchaseCode = $licenseData['purchase_code'] ?? '';
 
         return view('installer::installation.license', compact('username', 'purchaseCode'));
@@ -327,19 +327,19 @@ class InstallController extends Controller
         try {
             // Get the domain for validation
             $environmentManager = new EnvironmentManager;
-            $activatedDomain    = $environmentManager::guessUrl();
+            $activatedDomain = $environmentManager::guessUrl();
 
             // Step 1: Pre-validate the license
-            $apiEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . '/pre-validate';
+            $apiEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/').'/pre-validate';
 
             $response = Http::timeout(60)
                 ->withHeaders([
-                    'Accept'       => 'application/json',
+                    'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                 ])
                 ->post($apiEndpoint, [
-                    'purchase_code'    => $request->purchase_code,
-                    'username'         => $request->username,
+                    'purchase_code' => $request->purchase_code,
+                    'username' => $request->username,
                     'activated_domain' => $activatedDomain,
                 ]);
 
@@ -368,25 +368,25 @@ class InstallController extends Controller
             $userAgent = request()->header('User-Agent');
             // Prepare data for registration
             $registrationData = [
-                'user_agent'        => $this->getBrowserFromUserAgent($userAgent),
-                'activated_domain'  => $activatedDomain,
-                'requested_at'      => now()->format('Y-m-d H:i:s'),
-                'ip'                => request()->ip(),
-                'os'                => $this->getOSFromUserAgent($userAgent),
-                'purchase_code'     => $request->purchase_code,
+                'user_agent' => $this->getBrowserFromUserAgent($userAgent),
+                'activated_domain' => $activatedDomain,
+                'requested_at' => now()->format('Y-m-d H:i:s'),
+                'ip' => request()->ip(),
+                'os' => $this->getOSFromUserAgent($userAgent),
+                'purchase_code' => $request->purchase_code,
                 'installed_version' => config('installer.license_verification.current_version'),
-                'envato_res'        => $envatoRes,
-                'username'          => $request->username,
+                'envato_res' => $envatoRes,
+                'username' => $request->username,
             ];
 
             $supported_until = $envatoRes['supported_until'];
 
             // Send registration request
-            $registrationEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . '/register';
+            $registrationEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/').'/register';
 
             $registrationResponse = Http::timeout(60)
                 ->withHeaders([
-                    'Accept'       => 'application/json',
+                    'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                 ])
                 ->post($registrationEndpoint, $registrationData);
@@ -404,13 +404,13 @@ class InstallController extends Controller
             // Store all license data in session
             session([
                 'license_data' => [
-                    'username'        => $request->username,
-                    'purchase_code'   => $request->purchase_code,
-                    'verified'        => true,
-                    'details'         => $responseData['data']                                ?? [],
-                    'token'           => $registrationResponseData['data']['token']           ?? '',
+                    'username' => $request->username,
+                    'purchase_code' => $request->purchase_code,
+                    'verified' => true,
+                    'details' => $responseData['data'] ?? [],
+                    'token' => $registrationResponseData['data']['token'] ?? '',
                     'verification_id' => $registrationResponseData['data']['verification_id'] ?? '',
-                    'support_until'   => $supported_until,
+                    'support_until' => $supported_until,
                 ],
             ]);
 
@@ -421,14 +421,14 @@ class InstallController extends Controller
             // If there was an error with the API request
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['general' => 'Error connecting to license verification server: ' . $e->getMessage()]);
+                ->withErrors(['general' => 'Error connecting to license verification server: '.$e->getMessage()]);
         }
     }
 
     /**
      * Extract OS information from User-Agent
      *
-     * @param  string $userAgent
+     * @param  string  $userAgent
      * @return string
      */
     private function getOSFromUserAgent($userAgent)
@@ -436,29 +436,29 @@ class InstallController extends Controller
         $os = 'Unknown OS';
 
         $osPlatforms = [
-            '/windows nt 10/i'      => 'Windows 10',
-            '/windows nt 6.3/i'     => 'Windows 8.1',
-            '/windows nt 6.2/i'     => 'Windows 8',
-            '/windows nt 6.1/i'     => 'Windows 7',
-            '/windows nt 6.0/i'     => 'Windows Vista',
-            '/windows nt 5.2/i'     => 'Windows Server 2003/XP x64',
-            '/windows nt 5.1/i'     => 'Windows XP',
-            '/windows xp/i'         => 'Windows XP',
-            '/windows nt 5.0/i'     => 'Windows 2000',
-            '/windows me/i'         => 'Windows ME',
-            '/win98/i'              => 'Windows 98',
-            '/win95/i'              => 'Windows 95',
-            '/win16/i'              => 'Windows 3.11',
+            '/windows nt 10/i' => 'Windows 10',
+            '/windows nt 6.3/i' => 'Windows 8.1',
+            '/windows nt 6.2/i' => 'Windows 8',
+            '/windows nt 6.1/i' => 'Windows 7',
+            '/windows nt 6.0/i' => 'Windows Vista',
+            '/windows nt 5.2/i' => 'Windows Server 2003/XP x64',
+            '/windows nt 5.1/i' => 'Windows XP',
+            '/windows xp/i' => 'Windows XP',
+            '/windows nt 5.0/i' => 'Windows 2000',
+            '/windows me/i' => 'Windows ME',
+            '/win98/i' => 'Windows 98',
+            '/win95/i' => 'Windows 95',
+            '/win16/i' => 'Windows 3.11',
             '/macintosh|mac os x/i' => 'Mac OS X',
-            '/mac_powerpc/i'        => 'Mac OS 9',
-            '/linux/i'              => 'Linux',
-            '/ubuntu/i'             => 'Ubuntu',
-            '/iphone/i'             => 'iPhone',
-            '/ipod/i'               => 'iPod',
-            '/ipad/i'               => 'iPad',
-            '/android/i'            => 'Android',
-            '/blackberry/i'         => 'BlackBerry',
-            '/webos/i'              => 'Mobile',
+            '/mac_powerpc/i' => 'Mac OS 9',
+            '/linux/i' => 'Linux',
+            '/ubuntu/i' => 'Ubuntu',
+            '/iphone/i' => 'iPhone',
+            '/ipod/i' => 'iPod',
+            '/ipad/i' => 'iPad',
+            '/android/i' => 'Android',
+            '/blackberry/i' => 'BlackBerry',
+            '/webos/i' => 'Mobile',
         ];
 
         foreach ($osPlatforms as $regex => $value) {
@@ -474,7 +474,7 @@ class InstallController extends Controller
     /**
      * Extract browser information from User-Agent
      *
-     * @param  string $userAgent
+     * @param  string  $userAgent
      * @return string
      */
     private function getBrowserFromUserAgent($userAgent)
@@ -482,16 +482,16 @@ class InstallController extends Controller
         $browser = 'Unknown Browser';
 
         $browsers = [
-            '/msie/i'      => 'Internet Explorer',
-            '/firefox/i'   => 'Firefox',
-            '/safari/i'    => 'Safari',
-            '/chrome/i'    => 'Chrome',
-            '/edge/i'      => 'Edge',
-            '/opera/i'     => 'Opera',
-            '/netscape/i'  => 'Netscape',
-            '/maxthon/i'   => 'Maxthon',
+            '/msie/i' => 'Internet Explorer',
+            '/firefox/i' => 'Firefox',
+            '/safari/i' => 'Safari',
+            '/chrome/i' => 'Chrome',
+            '/edge/i' => 'Edge',
+            '/opera/i' => 'Opera',
+            '/netscape/i' => 'Netscape',
+            '/maxthon/i' => 'Maxthon',
             '/konqueror/i' => 'Konqueror',
-            '/mobile/i'    => 'Mobile Browser',
+            '/mobile/i' => 'Mobile Browser',
         ];
 
         foreach ($browsers as $regex => $value) {
@@ -504,9 +504,9 @@ class InstallController extends Controller
         // Get version number
         $knownBrowsers = ['Firefox', 'Chrome', 'Safari', 'Opera', 'Edge'];
         if (in_array($browser, $knownBrowsers)) {
-            $pattern = '#(?<browser>' . preg_quote($browser, '#') . ')[/ ]+(?<version>[0-9.|a-zA-Z.]*)#';
+            $pattern = '#(?<browser>'.preg_quote($browser, '#').')[/ ]+(?<version>[0-9.|a-zA-Z.]*)#';
             if (preg_match($pattern, $userAgent, $matches)) {
-                $browser = $browser . ' ' . $matches['version'];
+                $browser = $browser.' '.$matches['version'];
             }
         }
 
@@ -515,7 +515,7 @@ class InstallController extends Controller
 
     public function validate()
     {
-        $username      = '';
+        $username = '';
         $purchase_code = '';
 
         if (get_setting('whats-mark.wm_validate') == true) {
@@ -530,21 +530,21 @@ class InstallController extends Controller
         try {
             // Get the domain for validation
             $environmentManager = new EnvironmentManager;
-            $activatedDomain    = $environmentManager::guessUrl();
+            $activatedDomain = $environmentManager::guessUrl();
 
             $installer = new Installer;
 
             // Step 1: Pre-validate the license
-            $apiEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . '/pre-validate';
+            $apiEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/').'/pre-validate';
 
             $response = Http::timeout(60)
                 ->withHeaders([
-                    'Accept'       => 'application/json',
+                    'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                 ])
                 ->post($apiEndpoint, [
-                    'purchase_code'    => $request->purchase_code,
-                    'username'         => $request->username,
+                    'purchase_code' => $request->purchase_code,
+                    'username' => $request->username,
                     'activated_domain' => $activatedDomain,
                 ]);
 
@@ -557,7 +557,7 @@ class InstallController extends Controller
 
                 if (is_array($errorMessages) && isset($errorMessages['purchase_code'])) {
                     session()->flash('notification', [
-                        'type'    => 'danger',
+                        'type' => 'danger',
                         'message' => $errorMessages['purchase_code'][0] ?? 'Invalid purchase code',
                     ]);
 
@@ -565,7 +565,7 @@ class InstallController extends Controller
                 }
 
                 session()->flash('notification', [
-                    'type'    => 'danger',
+                    'type' => 'danger',
                     'message' => $responseData['message'] ?? 'License validation failed',
                 ]);
 
@@ -579,25 +579,25 @@ class InstallController extends Controller
             $userAgent = request()->header('User-Agent');
             // Prepare data for registration
             $registrationData = [
-                'user_agent'        => $this->getBrowserFromUserAgent($userAgent),
-                'activated_domain'  => $activatedDomain,
-                'requested_at'      => now()->format('Y-m-d H:i:s'),
-                'ip'                => request()->ip(),
-                'os'                => $this->getOSFromUserAgent($userAgent),
-                'purchase_code'     => $request->purchase_code,
+                'user_agent' => $this->getBrowserFromUserAgent($userAgent),
+                'activated_domain' => $activatedDomain,
+                'requested_at' => now()->format('Y-m-d H:i:s'),
+                'ip' => request()->ip(),
+                'os' => $this->getOSFromUserAgent($userAgent),
+                'purchase_code' => $request->purchase_code,
                 'installed_version' => config('installer.license_verification.current_version'),
-                'envato_res'        => $envatoRes,
-                'username'          => $request->username,
+                'envato_res' => $envatoRes,
+                'username' => $request->username,
             ];
 
             $supported_until = $envatoRes['supported_until'];
 
             // Send registration request
-            $registrationEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/') . '/register';
+            $registrationEndpoint = rtrim(base64_decode(config('installer.license_verification.api_endpoint')), '/').'/register';
 
             $registrationResponse = Http::timeout(60)
                 ->withHeaders([
-                    'Accept'       => 'application/json',
+                    'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                 ])
                 ->post($registrationEndpoint, $registrationData);
@@ -608,7 +608,7 @@ class InstallController extends Controller
             // If registration failed
             if (! isset($registrationResponseData['success']) || $registrationResponseData['success'] !== true) {
                 session()->flash('notification', [
-                    'type'    => 'danger',
+                    'type' => 'danger',
                     'message' => $registrationResponseData['message'] ?? 'License registration failed',
                 ]);
 
@@ -616,16 +616,16 @@ class InstallController extends Controller
             }
 
             set_settings_batch('whats-mark', [
-                'wm_verification_id'    => base64_encode($registrationResponseData['data']['verification_id'] ?? ''),
-                'wm_verification_token' => base64_encode($registrationResponseData['data']['verification_id'] ?? '') . '|' . $registrationResponseData['data']['token'],
-                'wm_last_verification'  => now()->timestamp,
-                'wm_validate'           => true,
+                'wm_verification_id' => base64_encode($registrationResponseData['data']['verification_id'] ?? ''),
+                'wm_verification_token' => base64_encode($registrationResponseData['data']['verification_id'] ?? '').'|'.$registrationResponseData['data']['token'],
+                'wm_last_verification' => now()->timestamp,
+                'wm_validate' => true,
             ]);
 
             $installer->markAsInstalled();
 
             session()->flash('notification', [
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => 'License verified and registered successfully!',
             ]);
 
@@ -633,8 +633,8 @@ class InstallController extends Controller
 
         } catch (Exception $e) {
             session()->flash('notification', [
-                'type'    => 'danger',
-                'message' => 'Error connecting to license verification server: ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => 'Error connecting to license verification server: '.$e->getMessage(),
             ]);
 
             return redirect()->back();

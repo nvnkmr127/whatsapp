@@ -2,27 +2,35 @@
 
 namespace App\Livewire\Settings;
 
-use Livewire\Component;
-use Livewire\WithPagination;
 use App\Models\Category;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 class CategoryManager extends Component
 {
     use WithPagination;
 
     public $showCreateModal = false;
+
     public $showEditModal = false;
+
     public $editingCategoryId = null;
 
     public $name = '';
+
     public $description = '';
+
     public $color = '#3B82F6';
+
     public $icon = '📁';
+
     public $is_active = true;
+
     public $target_module = 'all';
 
     public $searchTerm = '';
+
     public $filterModule = '';
 
     protected $rules = [
@@ -36,7 +44,7 @@ class CategoryManager extends Component
 
     public function render()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return view('livewire.settings.category-manager', [
                 'categories' => collect(),
             ]);
@@ -44,8 +52,8 @@ class CategoryManager extends Component
 
         $categories = Category::where('team_id', Auth::user()->currentTeam->id)
             ->when($this->searchTerm, function ($query) {
-                $query->where('name', 'like', '%' . $this->searchTerm . '%')
-                    ->orWhere('description', 'like', '%' . $this->searchTerm . '%');
+                $query->where('name', 'like', '%'.$this->searchTerm.'%')
+                    ->orWhere('description', 'like', '%'.$this->searchTerm.'%');
             })
             ->when($this->filterModule, function ($query) {
                 $query->where('target_module', $this->filterModule);
@@ -70,7 +78,7 @@ class CategoryManager extends Component
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->resetForm();
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return;
         }
 
@@ -92,7 +100,7 @@ class CategoryManager extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate();
 
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return;
         }
 
@@ -122,7 +130,7 @@ class CategoryManager extends Component
     public function deleteCategory($id)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return;
         }
         $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
@@ -130,6 +138,7 @@ class CategoryManager extends Component
         // Check if category is in use
         if ($category->products()->count() > 0 || $category->contacts()->count() > 0) {
             session()->flash('error', 'Cannot delete category that is in use. Please reassign items first.');
+
             return;
         }
 
@@ -140,11 +149,11 @@ class CategoryManager extends Component
     public function toggleStatus($id)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return;
         }
         $category = Category::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
-        $category->update(['is_active' => !$category->is_active]);
+        $category->update(['is_active' => ! $category->is_active]);
     }
 
     private function resetForm()

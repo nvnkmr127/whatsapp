@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Consent;
 
-use App\Models\CampaignSnapshotContact;
 use App\Models\ConsentRegistry;
 use App\Models\Contact;
 use App\Models\Team;
@@ -13,9 +12,9 @@ use App\Services\ConsentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 use ZipArchive;
-use RuntimeException;
 
 /**
  * ConsentRollbackProtectionTest
@@ -40,6 +39,7 @@ class ConsentRollbackProtectionTest extends TestCase
     use RefreshDatabase;
 
     protected ConsentService $consentService;
+
     protected BackupService $backupService;
 
     protected function setUp(): void
@@ -67,7 +67,7 @@ class ConsentRollbackProtectionTest extends TestCase
     {
         $id = DB::table('contacts')->insertGetId(array_merge([
             'team_id' => $team->id,
-            'phone_number' => '+155500' . rand(10000, 99999),
+            'phone_number' => '+155500'.rand(10000, 99999),
             'opt_in_status' => 'opted_in',
             'created_at' => now(),
             'updated_at' => now(),
@@ -239,39 +239,45 @@ class ConsentRollbackProtectionTest extends TestCase
         // --- Simulate the backup SQL that will be "restored" ---
         // SQLite-compatible UPSERT (no TIMESTAMPDIFF involved in this raw SQL,
         // and clearTenantData will DELETE the contact, so backup SQL re-inserts it)
-        $sqlContent = "INSERT OR REPLACE INTO contacts "
-            . "(id, team_id, phone_number, opt_in_status, created_at, updated_at) "
-            . "VALUES ({$contact->id}, {$team->id}, '+15550000002', 'opted_in', datetime('now'), datetime('now'));";
+        $sqlContent = 'INSERT OR REPLACE INTO contacts '
+            .'(id, team_id, phone_number, opt_in_status, created_at, updated_at) '
+            ."VALUES ({$contact->id}, {$team->id}, '+15550000002', 'opted_in', datetime('now'), datetime('now'));";
 
         // --- Create an encrypted backup ZIP ---
-        $zipPath = storage_path('app/backup-temp/consent_test_' . $team->id . '.zip');
+        $zipPath = storage_path('app/backup-temp/consent_test_'.$team->id.'.zip');
         @mkdir(dirname($zipPath), 0755, true);
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         $zip->addFromString('database.sql', $sqlContent);
+        $innerSignature = hash_hmac('sha256', $sqlContent, config('app.key'));
+        $zip->addFromString('backup.signature', $innerSignature);
         $zip->close();
 
         $key = config('app.key');
-        if (str_starts_with($key, 'base64:'))
+        if (str_starts_with($key, 'base64:')) {
             $key = base64_decode(substr($key, 7));
-        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
-        $encrypted = openssl_encrypt(file_get_contents($zipPath), 'aes-256-cbc', $key, 0, $iv);
-        file_put_contents($zipPath . '.enc', $iv . $encrypted);
+        }
 
-        $backupFilename = 'consent_test_' . $team->id . '.zip.enc';
+        $teamKey = hash_hmac('sha256', (string) $team->id, $key, true);
+
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+        $encrypted = openssl_encrypt(file_get_contents($zipPath), 'aes-256-cbc', $teamKey, 0, $iv);
+        file_put_contents($zipPath.'.enc', $iv.$encrypted);
+
+        $backupFilename = 'consent_test_'.$team->id.'.zip.enc';
 
         $backup = TenantBackup::create([
             'team_id' => $team->id,
             'filename' => $backupFilename,
             'path' => "tenants/{$team->id}/",
             'status' => 'completed',
-            'checksum' => hash_file('sha256', $zipPath . '.enc'),
+            'checksum' => hash_file('sha256', $zipPath.'.enc'),
             'type' => 'tenant',
         ]);
 
         Storage::disk('local')->put(
             "backups/tenants/{$team->id}/{$backupFilename}",
-            file_get_contents($zipPath . '.enc')
+            file_get_contents($zipPath.'.enc')
         );
 
         // T+1: Contact sends STOP AFTER backup → OPT_OUT in registry
@@ -303,9 +309,10 @@ class ConsentRollbackProtectionTest extends TestCase
         $this->assertTrue(ConsentRegistry::isOptedOut($team->id, '+15550000002'));
 
         // Cleanup temp files
-        foreach ([$zipPath, $zipPath . '.enc'] as $f) {
-            if (file_exists($f))
+        foreach ([$zipPath, $zipPath.'.enc'] as $f) {
+            if (file_exists($f)) {
                 unlink($f);
+            }
         }
     }
 

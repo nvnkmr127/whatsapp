@@ -5,17 +5,17 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'whatsapp.wm_fb_app_id'               => '',
-        'whatsapp.wm_fb_app_secret'           => '',
-        'whatsapp.wm_business_account_id'     => '',
-        'whatsapp.wm_access_token'            => '',
-        'whatsapp.wm_default_phone_number'    => '',
+        'whatsapp.wm_fb_app_id' => '',
+        'whatsapp.wm_fb_app_secret' => '',
+        'whatsapp.wm_business_account_id' => '',
+        'whatsapp.wm_access_token' => '',
+        'whatsapp.wm_default_phone_number' => '',
         'whatsapp.wm_default_phone_number_id' => '',
-        'whatsapp.wm_health_check_time'       => '',
-        'whatsapp.wm_health_data'             => '',
-        'whatsapp.wm_profile_picture_url'     => '',
-        'whatsapp.is_webhook_connected'       => '0',
-        'whatsapp.is_whatsmark_connected'     => '0',
+        'whatsapp.wm_health_check_time' => '',
+        'whatsapp.wm_health_data' => '',
+        'whatsapp.wm_profile_picture_url' => '',
+        'whatsapp.is_webhook_connected' => '0',
+        'whatsapp.is_whatsmark_connected' => '0',
     ];
 
     public function up(): void
@@ -31,19 +31,19 @@ return new class extends SettingsMigration
         $this->migrator->add('whatsapp.webhook_verify_token', Str::random(16));
 
         $this->migrator->add('whatsapp.queue', json_encode([
-            'name'        => env('WHATSAPP_QUEUE', 'whatsapp-messages'),
-            'connection'  => env('WHATSAPP_QUEUE_CONNECTION', 'redis'),
+            'name' => env('WHATSAPP_QUEUE', 'whatsapp-messages'),
+            'connection' => env('WHATSAPP_QUEUE_CONNECTION', 'redis'),
             'retry_after' => 180,
-            'timeout'     => 60,
+            'timeout' => 60,
         ]));
 
         $this->migrator->add('whatsapp.paths', json_encode([
             'qrcodes' => storage_path('app/public/whatsapp/qrcodes'),
-            'media'   => storage_path('app/public/whatsapp/media'),
+            'media' => storage_path('app/public/whatsapp/media'),
         ]));
 
         $this->migrator->add('whatsapp.logging', json_encode([
-            'channel'  => env('WHATSAPP_LOG_CHANNEL', 'whatsapp'),
+            'channel' => env('WHATSAPP_LOG_CHANNEL', 'whatsapp'),
             'detailed' => env('WHATSAPP_DETAILED_LOGGING', true),
         ]));
     }

@@ -3,8 +3,8 @@
 namespace App\Listeners;
 
 use App\Events\MessageSent;
-use App\Services\ContactStateManager;
 use App\Models\ContactEvent;
+use App\Services\ContactStateManager;
 use Illuminate\Support\Facades\Cache;
 
 class UpdateContactStateOnMessageSent

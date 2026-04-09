@@ -29,7 +29,7 @@ class OnboardingService
             ->whereNotNull('whatsapp_access_token')
             ->where(function ($query) {
                 $query->whereNull('whatsapp_business_account_id')
-                      ->orWhereNull('whatsapp_phone_number_id');
+                    ->orWhereNull('whatsapp_phone_number_id');
             })
             ->orderByDesc('updated_at');
     }
@@ -54,9 +54,9 @@ class OnboardingService
             ->whereNotNull('whatsapp_phone_number_id')
             ->where(function ($query) {
                 $query->whereNull('last_webhook_received_at') // No inbound
-                      ->whereDoesntHave('messages', function (Builder $q) {
-                          $q->where('direction', 'outbound');
-                      }); // No outbound
+                    ->whereDoesntHave('messages', function (Builder $q) {
+                        $q->where('direction', 'outbound');
+                    }); // No outbound
             })
             ->orderByDesc('updated_at');
     }
@@ -78,13 +78,13 @@ class OnboardingService
                 // Filter out those who successfully signed up
                 $identifier = $log->identifier;
                 $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL);
-                
+
                 if ($isEmail) {
-                    return !\App\Models\User::where('email', $identifier)->exists();
+                    return ! \App\Models\User::where('email', $identifier)->exists();
                 }
-                
+
                 // For phone, simple check (might need formatting normalization in future)
-                return !\App\Models\User::where('phone', $identifier)->exists();
+                return ! \App\Models\User::where('phone', $identifier)->exists();
             })
             ->values(); // Reset keys
     }

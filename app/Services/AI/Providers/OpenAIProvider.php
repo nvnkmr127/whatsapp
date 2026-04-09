@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class OpenAIProvider implements AIProviderInterface
 {
     protected string $apiKey;
+
     protected string $baseUrl = 'https://api.openai.com/v1';
 
     public function __construct(string $apiKey)
@@ -42,8 +43,8 @@ class OpenAIProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/chat/completions", $payload);
 
             if ($response->failed()) {
-                Log::error("OpenAI API Failed: " . $response->body());
-                throw new \Exception("OpenAI API request failed: " . ($response->json('error.message') ?? 'Unknown error'));
+                Log::error('OpenAI API Failed: '.$response->body());
+                throw new \Exception('OpenAI API request failed: '.($response->json('error.message') ?? 'Unknown error'));
             }
 
             return [
@@ -54,7 +55,8 @@ class OpenAIProvider implements AIProviderInterface
                 'raw_response' => $response->json(),
             ];
         } catch (\Exception $e) {
-            Log::error("OpenAI Provider Error: " . $e->getMessage());
+            Log::error('OpenAI Provider Error: '.$e->getMessage());
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -84,7 +86,8 @@ class OpenAIProvider implements AIProviderInterface
 
             return $response->json('data.0.embedding') ?? [];
         } catch (\Exception $e) {
-            Log::error("OpenAI Embed Error: " . $e->getMessage());
+            Log::error('OpenAI Embed Error: '.$e->getMessage());
+
             return [];
         }
     }
@@ -93,10 +96,11 @@ class OpenAIProvider implements AIProviderInterface
     {
         $messages = [
             ['role' => 'system', 'content' => 'Summarize this text concisely.'],
-            ['role' => 'user', 'content' => $content]
+            ['role' => 'user', 'content' => $content],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
+
         return $response['content'] ?? '';
     }
 
@@ -105,10 +109,11 @@ class OpenAIProvider implements AIProviderInterface
         $categoriesStr = implode(', ', $categories);
         $messages = [
             ['role' => 'system', 'content' => "Classify into: {$categoriesStr}. Return only category name."],
-            ['role' => 'user', 'content' => $content]
+            ['role' => 'user', 'content' => $content],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
+
         return trim($response['content'] ?? '');
     }
 
@@ -120,12 +125,13 @@ class OpenAIProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/chat/completions", [
                     'model' => 'gpt-3.5-turbo',
                     'messages' => [['role' => 'user', 'content' => 'Hello']],
-                    'max_tokens' => 5
+                    'max_tokens' => 5,
                 ]);
 
             return $response->successful();
         } catch (\Exception $e) {
-            Log::error("OpenAI Connection Test Failed: " . $e->getMessage());
+            Log::error('OpenAI Connection Test Failed: '.$e->getMessage());
+
             return false;
         }
     }

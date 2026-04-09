@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\AuditLog;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class PruneAuditLogs extends Command
@@ -34,6 +34,7 @@ class PruneAuditLogs extends Command
 
         if ($count === 0) {
             $this->info("No logs found older than {$days} days.");
+
             return;
         }
 
@@ -43,10 +44,10 @@ class PruneAuditLogs extends Command
 
         // Log to laravel.log (wrap in try-catch due to potential permission issues seen earlier)
         try {
-            Log::info("Audit logs pruned", [
+            Log::info('Audit logs pruned', [
                 'count' => $count,
                 'retention_days' => $days,
-                'pruned_by' => 'system_command'
+                'pruned_by' => 'system_command',
             ]);
         } catch (\Exception $e) {
             // Silently ignore log failure for now as the core task is done

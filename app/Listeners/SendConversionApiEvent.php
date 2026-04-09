@@ -24,7 +24,7 @@ class SendConversionApiEvent implements ShouldQueue
 
         // 1. Filter for Conversion Events (Purchase)
         // We consider 'paid' (Prepaid) and 'confirmed' (COD verified) as conversions
-        if (!in_array($status, ['paid', 'confirmed'])) {
+        if (! in_array($status, ['paid', 'confirmed'])) {
             return;
         }
 
@@ -34,7 +34,7 @@ class SendConversionApiEvent implements ShouldQueue
             ->where('status', 'connected')
             ->first();
 
-        if (!$integration) {
+        if (! $integration) {
             return;
         }
 
@@ -42,10 +42,11 @@ class SendConversionApiEvent implements ShouldQueue
         // Assuming Pixel ID is stored in integration credentials or team settings
         // For this implementation, we'll look in integration credentials
         $pixelId = $integration->credentials['pixel_id'] ?? null;
-        
-        if (!$pixelId) {
+
+        if (! $pixelId) {
             // Log warning if integration exists but pixel is missing
             Log::warning("Meta CAPI: Missing Pixel ID for Team {$order->team_id}");
+
             return;
         }
 
@@ -55,7 +56,7 @@ class SendConversionApiEvent implements ShouldQueue
             // We look for messages with 'referral' metadata for this contact
             $attributionData = [];
             $contact = $order->contact;
-            
+
             $firstMessage = Message::where('contact_id', $contact->id)
                 ->where('direction', 'inbound')
                 ->whereNotNull('metadata->referral')
@@ -72,7 +73,7 @@ class SendConversionApiEvent implements ShouldQueue
             $userData = [
                 'ph' => [hash('sha256', $contact->phone_number)], // SHA256 hashed phone
             ];
-            
+
             if ($contact->email) {
                 $userData['em'] = [hash('sha256', strtolower($contact->email))];
             }
@@ -107,7 +108,7 @@ class SendConversionApiEvent implements ShouldQueue
             Log::info("Meta CAPI: Sent Purchase event for Order {$order->id}");
 
         } catch (\Exception $e) {
-            Log::error("Meta CAPI Error for Order {$order->id}: " . $e->getMessage());
+            Log::error("Meta CAPI Error for Order {$order->id}: ".$e->getMessage());
         }
     }
 }

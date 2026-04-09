@@ -32,8 +32,8 @@ class TestMail extends Mailable
     public function __construct($slug)
     {
         $this->template = mailTemplate($slug);
-        $this->subject  = $this->parseContent($this->template->merge_fields_groups, $this->template->subject);
-        $this->body     = $this->parseContent($this->template->merge_fields_groups, $this->template->message);
+        $this->subject = $this->parseContent($this->template->merge_fields_groups, $this->template->subject);
+        $this->body = $this->parseContent($this->template->merge_fields_groups, $this->template->message);
     }
 
     protected function parseContent($groups, $subject, $content = [])
@@ -64,7 +64,7 @@ class TestMail extends Mailable
             view: 'components.mail',
             with: [
                 'title' => $this->template->subject,
-                'body'  => $this->body,
+                'body' => $this->body,
             ]
         );
     }

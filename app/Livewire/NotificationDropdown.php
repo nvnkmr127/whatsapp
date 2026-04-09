@@ -2,13 +2,15 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class NotificationDropdown extends Component
 {
     public $notifications = [];
+
     public $unreadCount = 0;
+
     public $isOpen = false;
 
     // Refresh notifications every 10 seconds while open, or just on load/events
@@ -47,7 +49,7 @@ class NotificationDropdown extends Component
 
     public function toggle()
     {
-        $this->isOpen = !$this->isOpen;
+        $this->isOpen = ! $this->isOpen;
         if ($this->isOpen) {
             $this->loadNotifications();
         }

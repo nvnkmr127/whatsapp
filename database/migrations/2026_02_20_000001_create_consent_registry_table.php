@@ -27,7 +27,8 @@ use Illuminate\Support\Facades\Schema;
  * BackupService::rehydrateConsentFromRegistry() method will re-apply the most
  * recent registry row to the contacts table after every restore.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('consent_registry', function (Blueprint $table) {

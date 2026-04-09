@@ -23,8 +23,8 @@ class AiIntegrationSettings extends Component
 
     private array $keys = [
         'enable_openai_in_chat' => false,
-        'openai_secret_key'     => '',
-        'chat_model'            => '',
+        'openai_secret_key' => '',
+        'chat_model' => '',
     ];
 
     protected function rules()
@@ -67,8 +67,8 @@ class AiIntegrationSettings extends Component
         $settings = get_settings_by_group('whats-mark');
 
         $this->enable_openai_in_chat = $settings->enable_openai_in_chat ?? false;
-        $this->openai_secret_key     = $settings->openai_secret_key;
-        $this->chat_model            = $settings->chat_model;
+        $this->openai_secret_key = $settings->openai_secret_key;
+        $this->chat_model = $settings->chat_model;
     }
 
     public function save()
@@ -80,13 +80,13 @@ class AiIntegrationSettings extends Component
 
             $newSettings = [
                 'enable_openai_in_chat' => $this->enable_openai_in_chat,
-                'openai_secret_key'     => $this->openai_secret_key,
-                'chat_model'            => $this->chat_model,
+                'openai_secret_key' => $this->openai_secret_key,
+                'chat_model' => $this->chat_model,
             ];
 
             // Filter the settings that have been modified
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Save only modified settings

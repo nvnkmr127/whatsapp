@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Contact;
 use App\Models\Segment;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 class SegmentBuilder
 {
@@ -42,6 +41,7 @@ class SegmentBuilder
                 // Nested rules
                 if (isset($condition['operator']) && isset($condition['conditions'])) {
                     static::applyRules($q, $condition);
+
                     continue;
                 }
 
@@ -148,14 +148,14 @@ class SegmentBuilder
                 // Extract path from field (e.g., "custom_attributes.city")
                 $path = str_replace('custom_attributes.', '', $field);
                 $query->$method(function ($q) use ($path, $value) {
-                    $q->whereJsonContains('custom_attributes->' . $path, $value);
+                    $q->whereJsonContains('custom_attributes->'.$path, $value);
                 });
                 break;
 
             case 'CUSTOM_EXISTS':
                 $path = str_replace('custom_attributes.', '', $field);
                 $query->$method(function ($q) use ($path) {
-                    $q->whereNotNull('custom_attributes->' . $path);
+                    $q->whereNotNull('custom_attributes->'.$path);
                 });
                 break;
         }

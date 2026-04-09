@@ -12,8 +12,11 @@ class WhatsAppHealthNotification extends Notification
     use Queueable;
 
     protected $team;
+
     protected $alertType;
+
     protected $message;
+
     protected $metadata;
 
     public function __construct(Team $team, string $alertType, string $message, array $metadata = [])
@@ -42,9 +45,9 @@ class WhatsAppHealthNotification extends Notification
 
         return (new MailMessage)
             ->subject($subject)
-            ->greeting('Hello ' . $notifiable->name . ',')
+            ->greeting('Hello '.$notifiable->name.',')
             ->line($this->message)
-            ->action('View WhatsApp Dashboard', url('/teams/' . $this->team->id . '/whatsapp/setup'))
+            ->action('View WhatsApp Dashboard', url('/teams/'.$this->team->id.'/whatsapp/setup'))
             ->line('Failure to address this may result in service interruption or Meta account suspension.');
     }
 

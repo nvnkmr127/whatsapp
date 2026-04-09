@@ -10,9 +10,10 @@ use Exception;
 class CallException extends Exception
 {
     protected $errorCode;
+
     protected $context = [];
 
-    public function __construct(string $message = "", int $errorCode = 0, array $context = [], \Throwable $previous = null)
+    public function __construct(string $message = '', int $errorCode = 0, array $context = [], ?\Throwable $previous = null)
     {
         parent::__construct($message, 0, $previous);
         $this->errorCode = $errorCode;
@@ -47,7 +48,7 @@ class SDPValidationException extends CallException
 {
     const ERROR_CODE = 1001;
 
-    public function __construct(string $message, array $validationErrors = [], \Throwable $previous = null)
+    public function __construct(string $message, array $validationErrors = [], ?\Throwable $previous = null)
     {
         parent::__construct(
             $message,
@@ -65,7 +66,7 @@ class CallTimeoutException extends CallException
 {
     const ERROR_CODE = 1002;
 
-    public function __construct(string $callId, int $timeoutSeconds, \Throwable $previous = null)
+    public function __construct(string $callId, int $timeoutSeconds, ?\Throwable $previous = null)
     {
         parent::__construct(
             "Call operation timed out after {$timeoutSeconds} seconds",
@@ -83,7 +84,7 @@ class WebRTCConnectionException extends CallException
 {
     const ERROR_CODE = 1003;
 
-    public function __construct(string $message, string $connectionState = '', \Throwable $previous = null)
+    public function __construct(string $message, string $connectionState = '', ?\Throwable $previous = null)
     {
         parent::__construct(
             $message,
@@ -101,7 +102,7 @@ class InvalidCallStateException extends CallException
 {
     const ERROR_CODE = 1004;
 
-    public function __construct(string $currentState, string $expectedState, \Throwable $previous = null)
+    public function __construct(string $currentState, string $expectedState, ?\Throwable $previous = null)
     {
         parent::__construct(
             "Invalid call state. Current: {$currentState}, Expected: {$expectedState}",

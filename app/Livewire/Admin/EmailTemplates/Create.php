@@ -11,13 +11,21 @@ class Create extends Component
 {
     // Form fields
     public $slug;
+
     public $name;
+
     public $type;
+
     public $subject;
+
     public $content_html = '';
+
     public $content_text = '';
+
     public $description;
+
     public $variable_schema = []; // Array of strings
+
     public $variable_schema_input = ''; // Comma separated string for input
 
     // Validation rules
@@ -55,6 +63,7 @@ class Create extends Component
             $service->validateTemplateContent($this->content_html, $schema);
         } catch (\Exception $e) {
             $this->addError('content_html', $e->getMessage());
+
             return;
         }
 
@@ -72,6 +81,7 @@ class Create extends Component
         ]);
 
         session()->flash('success', 'Template created successfully.');
+
         return redirect()->route('admin.email-templates.index');
     }
 

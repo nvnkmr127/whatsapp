@@ -2,22 +2,26 @@
 
 namespace App\Livewire\Onboarding;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class BasicDetailsPopup extends Component
 {
     public $isOpen = false;
+
     public $phone;
+
     public $company_name;
+
     public $address;
+
     public $email;
 
     public function mount()
     {
         \Illuminate\Support\Facades\Log::debug('BasicDetailsPopup::mount started');
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -37,11 +41,11 @@ class BasicDetailsPopup extends Component
         // Open if company name is missing OR if team looks like default
         // We no longer force open on phone=null because it's optional
         // SUPER ADMINS are excluded from this onboarding flow.
-        if (!$user->isSuperAdmin() && (empty($user->company_name) || ($team && str_ends_with($team->name, "'s Team")))) {
+        if (! $user->isSuperAdmin() && (empty($user->company_name) || ($team && str_ends_with($team->name, "'s Team")))) {
             $this->isOpen = true;
             \Illuminate\Support\Facades\Log::debug('BasicDetailsPopup opening: company missing or default team name', [
                 'company' => $user->company_name,
-                'team_name' => $team?->name
+                'team_name' => $team?->name,
             ]);
         }
 
@@ -64,7 +68,7 @@ class BasicDetailsPopup extends Component
                 'company' => $this->company_name,
                 'email' => $this->email,
                 'address' => $this->address,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             $user = Auth::user();
@@ -77,7 +81,7 @@ class BasicDetailsPopup extends Component
                     \Illuminate\Validation\Rule::unique(\App\Models\User::class, 'phone')->ignore($user->id),
                 ],
                 'company_name' => 'required|string|max:255',
-                'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+                'email' => 'required|email|max:255|unique:users,email,'.$user->id,
                 'address' => 'nullable|string|max:500',
             ]);
 
@@ -92,7 +96,7 @@ class BasicDetailsPopup extends Component
             if ($user->allTeams()->isEmpty()) {
                 $team = \App\Models\Team::forceCreate([
                     'user_id' => $user->id,
-                    'name' => $this->company_name ?: (explode(' ', $user->name, 2)[0] . "'s Team"),
+                    'name' => $this->company_name ?: (explode(' ', $user->name, 2)[0]."'s Team"),
                     'personal_team' => true,
                     'subscription_status' => 'trial',
                     'trial_ends_at' => now()->addMonths(6),
@@ -106,7 +110,7 @@ class BasicDetailsPopup extends Component
             \Illuminate\Support\Facades\Log::info('User details saved');
 
             // Ensure current team is assigned if still missing
-            if (!$user->currentTeam && $user->allTeams()->isNotEmpty()) {
+            if (! $user->currentTeam && $user->allTeams()->isNotEmpty()) {
                 $user->forceFill(['current_team_id' => $user->allTeams()->first()->id])->save();
                 $user->refresh();
             }
@@ -130,8 +134,8 @@ class BasicDetailsPopup extends Component
             \Illuminate\Support\Facades\Log::warning('BasicDetailsPopup validation failed', $e->errors());
             throw $e;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('BasicDetailsPopup::save error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            \Illuminate\Support\Facades\Log::error('BasicDetailsPopup::save error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
             session()->flash('error', 'Something went wrong while saving your details.');
         }

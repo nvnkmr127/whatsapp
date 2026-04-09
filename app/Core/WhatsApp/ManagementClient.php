@@ -3,13 +3,12 @@
 namespace App\Core\WhatsApp;
 
 use App\Models\Team;
-use App\Models\WhatsappTemplate;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class ManagementClient
 {
     protected WhatsAppClient $client;
+
     protected CredentialResolver $resolver;
 
     public function __construct(WhatsAppClient $client, CredentialResolver $resolver)
@@ -24,6 +23,7 @@ class ManagementClient
     public function forTeam(Team $team): self
     {
         $this->client->forTeam($team);
+
         return $this;
     }
 
@@ -35,11 +35,11 @@ class ManagementClient
         $appId = config('whatsapp.app_id');
         $appSecret = config('whatsapp.app_secret');
 
-        if (!$appId || !$appSecret) {
+        if (! $appId || ! $appSecret) {
             return ['success' => false, 'error' => 'App ID or Secret missing'];
         }
 
-        $url = "https://graph.facebook.com/oauth/access_token";
+        $url = 'https://graph.facebook.com/oauth/access_token';
         $response = Http::get($url, [
             'grant_type' => 'fb_exchange_token',
             'client_id' => $appId,
@@ -60,7 +60,7 @@ class ManagementClient
     public function subscribeToWebhooks(string $wabaId, string $token): array
     {
         $appId = config('whatsapp.app_id');
-        $url = "https://graph.facebook.com/" . config('whatsapp.api_version', 'v21.0') . "/{$wabaId}/subscribed_apps";
+        $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}/subscribed_apps";
 
         $response = Http::withToken($token)->post($url, ['app_id' => $appId]);
 
@@ -76,9 +76,9 @@ class ManagementClient
      */
     public function getWabaStatus(string $wabaId, string $token): array
     {
-        $url = "https://graph.facebook.com/" . config('whatsapp.api_version', 'v21.0') . "/{$wabaId}";
+        $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}";
         $response = Http::withToken($token)->get($url, [
-            'fields' => 'id,name,account_review_status,business_verification_status'
+            'fields' => 'id,name,account_review_status,business_verification_status',
         ]);
 
         if ($response->failed()) {

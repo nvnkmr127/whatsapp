@@ -14,8 +14,7 @@ class WhatsAppHealthController extends Controller
 
     public function __construct(
         protected WhatsAppHealthMonitor $healthMonitor
-    ) {
-    }
+    ) {}
 
     /**
      * Get health status for a team
@@ -76,4 +75,3 @@ class WhatsAppHealthController extends Controller
         return $this->success([], 'Alert acknowledged successfully.');
     }
 }
-

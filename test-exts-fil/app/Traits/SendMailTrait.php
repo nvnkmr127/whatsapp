@@ -13,17 +13,17 @@ trait SendMailTrait
 
         foreach ($recipients as $email) {
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errorMessage = t('invalid_email_address') . ' : ' . $email;
+                $errorMessage = t('invalid_email_address').' : '.$email;
 
                 app_log($errorMessage, 'error', null, [
                     'recipients' => $recipients,
-                    'mailable'   => get_class($mailable),
-                    'file'       => __FILE__,
-                    'line'       => __LINE__,
+                    'mailable' => get_class($mailable),
+                    'file' => __FILE__,
+                    'line' => __LINE__,
                 ]);
 
                 return [
-                    'status'  => false,
+                    'status' => false,
                     'message' => $errorMessage,
                 ];
             }
@@ -33,23 +33,23 @@ trait SendMailTrait
             Mail::to($recipients)->send($mailable);
 
             return [
-                'status'  => true,
+                'status' => true,
                 'message' => t('mail_successfully_sent'),
             ];
 
         } catch (\Throwable $e) {
 
-            app_log(t('mail_sending_failed') . ' : ' . $e->getMessage(), 'error', $e, [
+            app_log(t('mail_sending_failed').' : '.$e->getMessage(), 'error', $e, [
                 'recipients' => $recipients,
-                'mailable'   => get_class($mailable),
-                'file'       => $e->getFile(),
-                'line'       => $e->getLine(),
+                'mailable' => get_class($mailable),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return [
-                'status'  => false,
+                'status' => false,
                 'message' => 'Failed to send mail.',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }

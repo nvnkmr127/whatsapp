@@ -3,9 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Team;
-use App\Models\Contact;
-use App\Models\Message;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -26,6 +23,7 @@ class WhatsAppWebhookController extends Controller
 
         if (empty($verifyToken)) {
             Log::error('WhatsApp webhook verify token not configured');
+
             return response('Webhook verify token not configured', 500);
         }
 
@@ -53,9 +51,9 @@ class WhatsAppWebhookController extends Controller
             try {
                 // Mask sensitive info for debug logs
                 $maskedData = $this->maskSensitiveData($data);
-                \Illuminate\Support\Facades\Log::channel('whatsapp')->debug("WhatsApp Webhook Received", $maskedData);
+                \Illuminate\Support\Facades\Log::channel('whatsapp')->debug('WhatsApp Webhook Received', $maskedData);
             } catch (\Exception $e) {
-                Log::warning("Failed to write to whatsapp log channel: " . $e->getMessage());
+                Log::warning('Failed to write to whatsapp log channel: '.$e->getMessage());
             }
         }
 
@@ -81,18 +79,19 @@ class WhatsAppWebhookController extends Controller
                 ->onQueue('webhooks');
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            Log::info("WhatsApp Webhook Handled", [
-                'payload_id' => $payloadRecord->id, 
+            Log::info('WhatsApp Webhook Handled', [
+                'payload_id' => $payloadRecord->id,
                 'trace_id' => $traceId,
-                'duration_ms' => $duration
+                'duration_ms' => $duration,
             ]);
 
         } catch (\Exception $e) {
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            Log::error("WhatsApp Webhook: Failed to store or dispatch", [
+            Log::error('WhatsApp Webhook: Failed to store or dispatch', [
                 'error' => $e->getMessage(),
-                'duration_ms' => $duration
+                'duration_ms' => $duration,
             ]);
+
             return response('Internal Error', 500);
         }
 
@@ -109,7 +108,7 @@ class WhatsAppWebhookController extends Controller
         array_walk_recursive($data, function (&$value, $key) use ($sensitiveKeys) {
             if (in_array(strtolower($key), $sensitiveKeys) && is_string($value)) {
                 if (in_array($key, ['phone', 'wa_id', 'from'])) {
-                    $value = substr($value, 0, 4) . '****' . substr($value, -2);
+                    $value = substr($value, 0, 4).'****'.substr($value, -2);
                 } else {
                     $value = '********';
                 }
@@ -118,5 +117,4 @@ class WhatsAppWebhookController extends Controller
 
         return $data;
     }
-
 }

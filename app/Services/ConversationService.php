@@ -17,8 +17,6 @@ class ConversationService
     /**
      * Try to acquire a lock for a conversation.
      *
-     * @param int $conversationId
-     * @param int $userId
      * @return array ['success' => bool, 'owner' => int|null, 'expires_in' => int]
      */
     public function acquireLock(int $conversationId, int $userId): array
@@ -31,7 +29,7 @@ class ConversationService
             return [
                 'success' => false,
                 'owner' => (int) $currentOwner,
-                'expires_in' => Redis::ttl($key)
+                'expires_in' => Redis::ttl($key),
             ];
         }
 
@@ -41,23 +39,19 @@ class ConversationService
         return [
             'success' => true,
             'owner' => $userId,
-            'expires_in' => self::LOCK_TTL
+            'expires_in' => self::LOCK_TTL,
         ];
     }
 
     /**
      * Force release a lock.
-     *
-     * @param int $conversationId
-     * @param int $userId
-     * @return void
      */
     public function releaseLock(int $conversationId, int $userId): void
     {
         $key = "conversation_lock:{$conversationId}";
         $currentOwner = Redis::get($key);
 
-        // Only owner can release, unless it's a force unlock (which we handle via acquire with overwrite if needed, 
+        // Only owner can release, unless it's a force unlock (which we handle via acquire with overwrite if needed,
         // but for polite release, check owner)
         if ($currentOwner && (int) $currentOwner === $userId) {
             Redis::del($key);
@@ -66,10 +60,6 @@ class ConversationService
 
     /**
      * Force take over a lock (break existing).
-     *
-     * @param int $conversationId
-     * @param int $userId
-     * @return void
      */
     public function forceTakeOver(int $conversationId, int $userId): void
     {
@@ -79,24 +69,22 @@ class ConversationService
 
     /**
      * Get current lock status.
-     *
-     * @param int $conversationId
-     * @return array|null
      */
     public function getLockStatus(int $conversationId): ?array
     {
         $key = "conversation_lock:{$conversationId}";
         $owner = Redis::get($key);
 
-        if (!$owner) {
+        if (! $owner) {
             return null;
         }
 
         return [
             'owner' => (int) $owner,
-            'expires_in' => Redis::ttl($key)
+            'expires_in' => Redis::ttl($key),
         ];
     }
+
     /**
      * Get the active conversation for a contact, or create a new one.
      */
@@ -122,7 +110,7 @@ class ConversationService
         try {
             \App\Events\ConversationOpened::dispatch($conversation);
         } catch (\Exception $e) {
-            Log::warning("ConversationOpened broadcast failed for conversation {$conversation->id}, but it was created successfully: " . $e->getMessage());
+            Log::warning("ConversationOpened broadcast failed for conversation {$conversation->id}, but it was created successfully: ".$e->getMessage());
         }
 
         return $conversation;
@@ -153,8 +141,8 @@ class ConversationService
             'status' => 'waiting_reply',
         ]);
 
-        if (!$isBot) {
-            (new BotHandoffService())->handleAgentActivity($conversation->contact);
+        if (! $isBot) {
+            (new BotHandoffService)->handleAgentActivity($conversation->contact);
         }
     }
 
@@ -168,12 +156,12 @@ class ConversationService
             'closed_at' => now(),
         ]);
 
-        (new BotHandoffService())->resume($conversation->contact);
+        (new BotHandoffService)->resume($conversation->contact);
 
         try {
             \App\Events\ConversationClosed::dispatch($conversation);
         } catch (\Exception $e) {
-            Log::warning("ConversationClosed broadcast failed for conversation {$conversation->id}, but it was closed successfully: " . $e->getMessage());
+            Log::warning("ConversationClosed broadcast failed for conversation {$conversation->id}, but it was closed successfully: ".$e->getMessage());
         }
     }
 }

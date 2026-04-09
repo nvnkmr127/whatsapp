@@ -31,7 +31,7 @@ class RedirectIfNotInstalled
     {
         // Skip redirect for install routes
         if (
-            $request->is(config('installer.routes.prefix') . '/*') || $request->is(config('installer.routes.prefix'))
+            $request->is(config('installer.routes.prefix').'/*') || $request->is(config('installer.routes.prefix'))
         ) {
             return $next($request);
         }

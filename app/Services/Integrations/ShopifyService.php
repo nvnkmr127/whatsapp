@@ -5,13 +5,14 @@ namespace App\Services\Integrations;
 use App\Models\Integration;
 use App\Models\Product;
 use App\Models\SyncSession;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class ShopifyService
 {
     protected $integration;
+
     protected $healthService;
 
     public function __construct(Integration $integration)
@@ -25,13 +26,13 @@ class ShopifyService
      */
     public function syncProducts()
     {
-        return Cache::lock('sync_integration_' . $this->integration->id, 600)->get(function () {
+        return Cache::lock('sync_integration_'.$this->integration->id, 600)->get(function () {
             $credentials = $this->integration->credentials;
             $domain = $credentials['domain'] ?? '';
             $accessToken = $credentials['access_token'] ?? '';
 
-            if (!$domain || !$accessToken) {
-                throw new \Exception("Missing Shopify credentials");
+            if (! $domain || ! $accessToken) {
+                throw new \Exception('Missing Shopify credentials');
             }
 
             $lastSync = $this->integration->last_synced_at;
@@ -54,7 +55,7 @@ class ShopifyService
                     $params['updated_at_min'] = $lastSync->toIso8601String();
                 }
 
-                if ($productMode === 'selective' && !empty($scope['collection_id'])) {
+                if ($productMode === 'selective' && ! empty($scope['collection_id'])) {
                     $params['collection_id'] = $scope['collection_id'];
                 }
 
@@ -67,7 +68,7 @@ class ShopifyService
                     ])->get($url, $params);
 
                     if ($response->failed()) {
-                        throw new \Exception("Shopify API Error: " . $response->status() . " " . $response->body());
+                        throw new \Exception('Shopify API Error: '.$response->status().' '.$response->body());
                     }
 
                     $shopifyProducts = $response->json()['products'] ?? [];
@@ -101,7 +102,7 @@ class ShopifyService
 
             $this->integration->update([
                 'last_synced_at' => now(),
-                'error_message' => null
+                'error_message' => null,
             ]);
 
             return $syncedCount;
@@ -128,10 +129,12 @@ class ShopifyService
         ];
 
         $inventoryScope = $scope['inventory'] ?? ['sync_stock' => true, 'sync_price' => true];
-        if (!($inventoryScope['sync_price'] ?? true))
+        if (! ($inventoryScope['sync_price'] ?? true)) {
             unset($updateData['price'], $updateData['currency']);
-        if (!($inventoryScope['sync_stock'] ?? true))
+        }
+        if (! ($inventoryScope['sync_stock'] ?? true)) {
             unset($updateData['availability']);
+        }
 
         $product = Product::where([
             'team_id' => $this->integration->team_id,
@@ -143,10 +146,10 @@ class ShopifyService
 
             // Log if fields were skipped
             $skipped = array_diff_key($updateData, $filteredData);
-            if (!empty($skipped)) {
+            if (! empty($skipped)) {
                 app(\App\Services\AuditService::class)->log(
                     'product.sync_conflict',
-                    "Skipped updating fields: " . implode(', ', array_keys($skipped)) . " due to local locks.",
+                    'Skipped updating fields: '.implode(', ', array_keys($skipped)).' due to local locks.',
                     $product
                 );
             }
@@ -177,11 +180,13 @@ class ShopifyService
 
     protected function getNextPageUrl($linkHeader)
     {
-        if (!$linkHeader)
+        if (! $linkHeader) {
             return null;
+        }
         if (preg_match('/<([^>]+)>;\s*rel="next"/', $linkHeader, $matches)) {
             return $matches[1];
         }
+
         return null;
     }
 }

@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property string                          $name
- * @property string                          $subject
- * @property string                          $slug
- * @property string                          $merge_fields_groups
- * @property string                          $message
- * @property int                             $is_active
+ * @property int $id
+ * @property string $name
+ * @property string $subject
+ * @property string $slug
+ * @property string $merge_fields_groups
+ * @property string $message
+ * @property int $is_active
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  *
@@ -45,7 +45,7 @@ class EmailTemplate extends Model
 
     protected $casts = [
         'merge_fields_groups' => 'array',
-        'is_active'           => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     public static function boot()
@@ -63,7 +63,7 @@ class EmailTemplate extends Model
                         $existingSlug = self::where('slug', $slug)->exists();
 
                         if ($existingSlug) {
-                            $slug .= '-' . time();
+                            $slug .= '-'.time();
                         }
                         $model->slug = $slug;
                     } else {

@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Facades\Auth;
 
 class EnsureTenantContext
 {
@@ -18,7 +17,7 @@ class EnsureTenantContext
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return $next($request);
         }
 
@@ -29,15 +28,17 @@ class EnsureTenantContext
             // Verify the user actually belongs to this team
             $tenant = $user->allTeams()->firstWhere('id', $requestedTenantId);
 
-            if (!$tenant) {
+            if (! $tenant) {
                 abort(403, 'You do not have access to the requested tenant.');
             }
 
+            // Temporarily set the current team ID without saving to DB
+            $user->current_team_id = $tenant->id;
             // Swapping the relation in memory for this request lifecycle
             $user->setRelation('currentTeam', $tenant);
         }
 
-        if (!$user->currentTeam) {
+        if (! $user->currentTeam) {
             if ($request->wantsJson()) {
                 abort(403, 'No tenant (team) selected for the current user.');
             }

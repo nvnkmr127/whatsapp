@@ -11,13 +11,13 @@ use Illuminate\Database\Eloquent\Model;
  * method) captured at registration. Read by UniqueIdentityService
  * to block duplicate accounts before a trial is assigned.
  *
- * @property string  $type           email_domain | signup_ip | payment_method
- * @property string  $fingerprint    HMAC-SHA256 hash (never raw PII for IPs)
- * @property ?int    $team_id
- * @property ?int    $user_id
- * @property bool    $is_blocked
+ * @property string $type email_domain | signup_ip | payment_method
+ * @property string $fingerprint HMAC-SHA256 hash (never raw PII for IPs)
+ * @property ?int $team_id
+ * @property ?int $user_id
+ * @property bool $is_blocked
  * @property ?string $blocked_reason
- * @property ?int    $blocked_by
+ * @property ?int $blocked_by
  * @property ?\Carbon\Carbon $blocked_at
  */
 class IdentityFingerprint extends Model
@@ -27,7 +27,9 @@ class IdentityFingerprint extends Model
     // ------------------------------------------------------------------
 
     public const TYPE_EMAIL_DOMAIN = 'email_domain';
+
     public const TYPE_SIGNUP_IP = 'signup_ip';
+
     public const TYPE_PAYMENT_METHOD = 'payment_method';
 
     public const TYPES = [

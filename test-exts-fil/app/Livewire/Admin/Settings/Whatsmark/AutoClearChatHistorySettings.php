@@ -24,7 +24,7 @@ class AutoClearChatHistorySettings extends Component
     protected function rules()
     {
         return [
-            'enable_auto_clear_chat'  => 'nullable|boolean',
+            'enable_auto_clear_chat' => 'nullable|boolean',
             'auto_clear_history_time' => [
                 'nullable',
                 'numeric',
@@ -48,8 +48,8 @@ class AutoClearChatHistorySettings extends Component
 
     protected function loadSettings()
     {
-        $settings                      = get_settings_by_group('whats-mark');
-        $this->enable_auto_clear_chat  = $settings->enable_auto_clear_chat ?? false;
+        $settings = get_settings_by_group('whats-mark');
+        $this->enable_auto_clear_chat = $settings->enable_auto_clear_chat ?? false;
         $this->auto_clear_history_time = $settings->auto_clear_history_time;
     }
 
@@ -61,12 +61,12 @@ class AutoClearChatHistorySettings extends Component
             $originalSettings = get_settings_by_group('whats-mark');
 
             $newSettings = [
-                'enable_auto_clear_chat'  => $this->enable_auto_clear_chat,
+                'enable_auto_clear_chat' => $this->enable_auto_clear_chat,
                 'auto_clear_history_time' => $this->auto_clear_history_time,
             ];
             // Filter the settings that have been modified
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
             // Save only modified settings
             if (! empty($modifiedSettings)) {
@@ -94,7 +94,7 @@ class AutoClearChatHistorySettings extends Component
             DB::beginTransaction();
 
             // Find messages older than the cutoff date
-            $oldMessages  = ChatMessage::where('time_sent', '<', $cutoffDate->format('Y-m-d H:i:s'))->get();
+            $oldMessages = ChatMessage::where('time_sent', '<', $cutoffDate->format('Y-m-d H:i:s'))->get();
             $messageCount = $oldMessages->count();
 
             if ($messageCount > 0) {
@@ -121,17 +121,17 @@ class AutoClearChatHistorySettings extends Component
                 );
 
                 $this->cleanupResults = [
-                    'messagesFound'        => $messageCount,
-                    'messagesDeleted'      => $messageCount,
+                    'messagesFound' => $messageCount,
+                    'messagesDeleted' => $messageCount,
                     'conversationsDeleted' => $emptyInteractionsCount,
-                    'status'               => 'success',
+                    'status' => 'success',
                 ];
             } else {
                 $this->cleanupResults = [
-                    'messagesFound'        => 0,
-                    'messagesDeleted'      => 0,
+                    'messagesFound' => 0,
+                    'messagesDeleted' => 0,
                     'conversationsDeleted' => 0,
-                    'status'               => 'success',
+                    'status' => 'success',
                 ];
             }
 
@@ -141,17 +141,17 @@ class AutoClearChatHistorySettings extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             app_log(
-                'Manual chat cleanup failed: ' . $e->getMessage(),
+                'Manual chat cleanup failed: '.$e->getMessage(),
                 'error',
                 $e
             );
 
             $this->cleanupResults = [
-                'status'       => 'error',
+                'status' => 'error',
                 'errorMessage' => $e->getMessage(),
             ];
             $this->showCleanupResults = true;
-            $this->notify(['type' => 'danger', 'message' => t('chat_cleanup_failed') . ': ' . $e->getMessage()]);
+            $this->notify(['type' => 'danger', 'message' => t('chat_cleanup_failed').': '.$e->getMessage()]);
         } finally {
             $this->isProcessing = false;
         }
@@ -160,7 +160,7 @@ class AutoClearChatHistorySettings extends Component
     public function dismissResults()
     {
         $this->showCleanupResults = false;
-        $this->cleanupResults     = null;
+        $this->cleanupResults = null;
     }
 
     public function render()

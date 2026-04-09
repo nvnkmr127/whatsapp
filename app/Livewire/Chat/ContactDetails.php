@@ -2,21 +2,27 @@
 
 namespace App\Livewire\Chat;
 
+use App\Models\Category;
 use App\Models\Conversation;
 use App\Services\ContactTimelineService;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Category;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class ContactDetails extends Component
 {
     public $conversationId;
+
     public $conversation;
+
     public $contact;
+
     public $timeline = [];
+
     public $mediaVault = [];
+
     public $heatmap = [];
+
     public $activeTab = 'timeline'; // Default tab
 
     public $newNoteBody = '';
@@ -38,13 +44,13 @@ class ContactDetails extends Component
             'contact.tags',
             'contact.attributedMessages.attributedCampaign',
             'notes.user',
-            'assignee'
+            'assignee',
         ])->find($this->conversationId);
 
         if ($this->conversation) {
             $this->contact = $this->conversation->contact;
             if ($this->contact) {
-                $this->timeline = $timelineService->getTimeline($this->contact, !Auth::user()?->is_super_admin);
+                $this->timeline = $timelineService->getTimeline($this->contact, ! Auth::user()?->is_super_admin);
                 $this->mediaVault = $timelineService->getMediaVault($this->contact);
                 $this->heatmap = $timelineService->getInteractionHeatmap($this->contact);
             } else {
@@ -82,8 +88,9 @@ class ContactDetails extends Component
 
         if ($this->conversation) {
             $this->conversation->notes()->create([
+                'team_id' => auth()->user()->currentTeam->id,
                 'user_id' => auth()->id(),
-                'content' => $this->newNoteBody
+                'content' => $this->newNoteBody,
             ]);
 
             $this->newNoteBody = '';
@@ -93,8 +100,9 @@ class ContactDetails extends Component
 
     public function toggleOptIn(\App\Services\ConsentService $consentService)
     {
-        if (!$this->conversation || !$this->contact)
+        if (! $this->conversation || ! $this->contact) {
             return;
+        }
 
         if ($this->contact->opt_in_status === 'opted_in') {
             $consentService->optOut($this->contact, 'MANUAL_AGENT', 'Agent toggled status in chat interface.');
@@ -107,25 +115,26 @@ class ContactDetails extends Component
 
     public function toggleConversationTag($categoryId)
     {
-        if (!$this->conversation)
+        if (! $this->conversation) {
             return;
+        }
 
         $this->conversation->refresh();
         $metadata = $this->conversation->metadata;
-        if (!is_array($metadata)) {
+        if (! is_array($metadata)) {
             $metadata = [];
         }
         $tags = $metadata['tags'] ?? [];
 
         if (in_array($categoryId, $tags)) {
-            $tags = array_values(array_filter($tags, fn($id) => $id != $categoryId));
+            $tags = array_values(array_filter($tags, fn ($id) => $id != $categoryId));
         } else {
             $tags[] = (int) $categoryId;
         }
 
         $metadata['tags'] = $tags;
         $this->conversation->update(['metadata' => $metadata]);
-        
+
         $this->dispatch('refresh-tags');
         $this->loadData();
     }
@@ -134,6 +143,7 @@ class ContactDetails extends Component
     public function availableTags()
     {
         $conversationTags = $this->conversation?->metadata['tags'] ?? [];
+
         return Category::where('team_id', auth()->user()->currentTeam->id)
             ->whereIn('target_module', ['chat', 'all'])
             ->where('is_active', true)
@@ -145,7 +155,10 @@ class ContactDetails extends Component
     public function activeTags()
     {
         $tagIds = $this->conversation?->metadata['tags'] ?? [];
-        if (empty($tagIds)) return collect();
+        if (empty($tagIds)) {
+            return collect();
+        }
+
         return Category::whereIn('id', $tagIds)->get();
     }
 

@@ -5,6 +5,7 @@ namespace App\Services;
 class TraceContext
 {
     protected static ?string $traceId = null;
+
     protected static ?string $parentId = null; // The span ID of the caller
 
     /**
@@ -47,9 +48,10 @@ class TraceContext
      */
     public static function ensureTraceId(): string
     {
-        if (!static::$traceId) {
+        if (! static::$traceId) {
             static::$traceId = (string) \Illuminate\Support\Str::uuid();
         }
+
         return static::$traceId;
     }
 }

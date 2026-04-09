@@ -5,27 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property string                          $name
- * @property string                          $rel_type
- * @property string                          $reply_text
- * @property int                             $reply_type
- * @property array<array-key, mixed>|null    $trigger
- * @property string|null                     $bot_header
- * @property string|null                     $bot_footer
- * @property string|null                     $button1
- * @property string|null                     $button1_id
- * @property string|null                     $button2
- * @property string|null                     $button2_id
- * @property string|null                     $button3
- * @property string|null                     $button3_id
- * @property string|null                     $button_name
- * @property string|null                     $button_url
- * @property int                             $addedfrom
- * @property int                             $is_bot_active
- * @property int                             $sending_count
- * @property string|null                     $filename
- * @property \Illuminate\Support\Carbon      $created_at
+ * @property int $id
+ * @property string $name
+ * @property string $rel_type
+ * @property string $reply_text
+ * @property int $reply_type
+ * @property array<array-key, mixed>|null $trigger
+ * @property string|null $bot_header
+ * @property string|null $bot_footer
+ * @property string|null $button1
+ * @property string|null $button1_id
+ * @property string|null $button2
+ * @property string|null $button2_id
+ * @property string|null $button3
+ * @property string|null $button3_id
+ * @property string|null $button_name
+ * @property string|null $button_url
+ * @property int $addedfrom
+ * @property int $is_bot_active
+ * @property int $sending_count
+ * @property string|null $filename
+ * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MessageBots newModelQuery()

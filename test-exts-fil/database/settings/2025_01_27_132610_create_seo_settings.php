@@ -5,7 +5,7 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'seo.meta_title'       => 'WhatsMark',
+        'seo.meta_title' => 'WhatsMark',
         'seo.meta_description' => 'WhatsMark',
     ];
 

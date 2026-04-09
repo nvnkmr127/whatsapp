@@ -2,14 +2,15 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\ScheduledReport;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SendScheduledReports extends Command
 {
     protected $signature = 'reports:send';
+
     protected $description = 'Send scheduled analytics reports to users via email';
 
     public function handle()
@@ -22,7 +23,7 @@ class SendScheduledReports extends Command
             // Check Frequency logic (Simplified for MVP: just check if NULL or > 1 min ago for testing, ideally > 7 days)
             // Let's assume 'weekly' means "it's Monday" or "7 days passed".
             $shouldSend = false;
-            if (!$report->last_sent_at) {
+            if (! $report->last_sent_at) {
                 $shouldSend = true;
             } else {
                 // If weekly, check 7 days

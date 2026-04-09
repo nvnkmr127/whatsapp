@@ -14,9 +14,13 @@ class BillingThresholdAlert extends Mailable
     use Queueable, SerializesModels;
 
     public $team;
+
     public $metric;
+
     public $level;
+
     public $percent;
+
     public $alertMessage;
 
     /**
@@ -36,7 +40,8 @@ class BillingThresholdAlert extends Mailable
      */
     public function envelope(): Envelope
     {
-        $subject = "[Alert] " . ucfirst($this->level) . ": Usage threshold reached for " . config('app.name');
+        $subject = '[Alert] '.ucfirst($this->level).': Usage threshold reached for '.config('app.name');
+
         return new Envelope(
             subject: $subject,
         );

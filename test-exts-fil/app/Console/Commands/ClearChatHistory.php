@@ -81,9 +81,9 @@ class ClearChatHistory extends Command
                     "Auto chat history cleanup: Deleted {$messageCount} messages and {$emptyInteractionsCount} empty chats older than {$daysToKeep} days.",
                     'info',
                     [
-                        'message_count'            => $messageCount,
+                        'message_count' => $messageCount,
                         'empty_interactions_count' => $emptyInteractionsCount,
-                        'days_to_keep'             => $daysToKeep,
+                        'days_to_keep' => $daysToKeep,
                     ]
                 );
             } else {
@@ -93,9 +93,9 @@ class ClearChatHistory extends Command
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->error('Error during chat history cleanup: ' . $e->getMessage());
+            $this->error('Error during chat history cleanup: '.$e->getMessage());
             whatsapp_log(
-                'Chat history cleanup failed: ' . $e->getMessage(),
+                'Chat history cleanup failed: '.$e->getMessage(),
                 'error',
                 [
                     'exception' => $e,

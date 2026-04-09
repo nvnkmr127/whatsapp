@@ -5,14 +5,13 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserIdentity;
-use App\Services\OTPService;
 use App\Services\AuditService;
-use App\Services\UniqueIdentityService;
 use App\Services\OfferEligibilityService;
+use App\Services\OTPService;
+use App\Services\UniqueIdentityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PasswordlessAuthController extends Controller
@@ -20,8 +19,7 @@ class PasswordlessAuthController extends Controller
     public function __construct(
         private readonly OTPService $otpService,
         private readonly UniqueIdentityService $identity,
-    ) {
-    }
+    ) {}
 
     /**
      * Request an OTP code.
@@ -34,7 +32,8 @@ class PasswordlessAuthController extends Controller
         $sent = $this->otpService->send($identifier, $type);
 
         if ($sent) {
-            AuditService::log('Auth.OTP.Request', null, $identifier, $type . '_otp');
+            AuditService::log('Auth.OTP.Request', null, $identifier, $type.'_otp');
+
             return response()->json(['message' => 'OTP sent successfully.']);
         }
 
@@ -51,11 +50,12 @@ class PasswordlessAuthController extends Controller
         $type = $request->type;
         $code = $request->code ?? null;
 
-        if (!$this->otpService->verify($identifier, $code)) {
-            AuditService::log('Auth.Failure', null, $identifier, $type . '_otp', ['reason' => 'Invalid or expired OTP']);
+        if (! $this->otpService->verify($identifier, $code)) {
+            AuditService::log('Auth.Failure', null, $identifier, $type.'_otp', ['reason' => 'Invalid or expired OTP']);
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Invalid or expired OTP.'], 422);
             }
+
             return redirect()->back()->withErrors(['code' => 'Invalid or expired code.']);
         }
 
@@ -75,7 +75,7 @@ class PasswordlessAuthController extends Controller
 
                 if ($existingIdentity) {
                     throw ValidationException::withMessages([
-                        'identifier' => "This " . ($type === 'email' ? 'email' : 'phone number') . " is already linked to another account."
+                        'identifier' => 'This '.($type === 'email' ? 'email' : 'phone number').' is already linked to another account.',
                     ]);
                 }
 
@@ -125,7 +125,7 @@ class PasswordlessAuthController extends Controller
                     $user = User::where('phone', $identifier)->first();
 
                     // If not found, try normalizing and searching again
-                    if (!$user) {
+                    if (! $user) {
                         try {
                             $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($identifier);
                             $user = User::where('phone', $normalizedPhone)->first();
@@ -135,7 +135,7 @@ class PasswordlessAuthController extends Controller
                     }
 
                     // If still not found, try a suffix match (last 10 digits)
-                    if (!$user && strlen($identifier) >= 10) {
+                    if (! $user && strlen($identifier) >= 10) {
                         $suffix = substr($identifier, -10);
                         $user = User::where('phone', 'like', "%{$suffix}")->first();
                     }
@@ -158,10 +158,11 @@ class PasswordlessAuthController extends Controller
                             'redirect' => route('dashboard'),
                         ]);
                     }
+
                     return redirect()->intended(route('dashboard'));
                 }
 
-                if (!$user) {
+                if (! $user) {
                     // ── Identity uniqueness check (mirrors CreateNewUser) ──────
                     $ip = $request->ip() ?? '0.0.0.0';
                     $identityResult = $this->identity->check(
@@ -169,7 +170,7 @@ class PasswordlessAuthController extends Controller
                         ip: $ip,
                     );
 
-                    if (!$identityResult->passed) {
+                    if (! $identityResult->passed) {
                         throw ValidationException::withMessages([
                             'identifier' => $identityResult->denial_reason,
                         ]);
@@ -187,7 +188,7 @@ class PasswordlessAuthController extends Controller
                     // ── Create team ─────────────────────────────────────────────
                     $team = \App\Models\Team::forceCreate([
                         'user_id' => $user->id,
-                        'name' => (($type === 'email') ? explode('@', $identifier)[0] : $identifier) . "'s Team",
+                        'name' => (($type === 'email') ? explode('@', $identifier)[0] : $identifier)."'s Team",
                         'personal_team' => true,
                         'subscription_plan' => 'trial',
                         'subscription_status' => 'trial',
@@ -219,7 +220,7 @@ class PasswordlessAuthController extends Controller
                             $utmData[$utm] = request()->cookie($utm);
                         }
                     }
-                    if (!empty($utmData)) {
+                    if (! empty($utmData)) {
                         $user->forceFill($utmData)->save();
                     }
 
@@ -227,7 +228,7 @@ class PasswordlessAuthController extends Controller
                     if (request()->hasCookie('referral_code')) {
                         $code = request()->cookie('referral_code');
                         $affiliate = \App\Models\Affiliate::where('code', $code)->first();
-                        
+
                         if ($affiliate) {
                             \App\Models\Referral::create([
                                 'affiliate_id' => $affiliate->id,

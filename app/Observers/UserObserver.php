@@ -81,7 +81,7 @@ class UserObserver
         // Resolve the current team for this user
         $team = $user->currentTeam ?? $user->ownedTeams()->first();
 
-        if (!$team) {
+        if (! $team) {
             return; // Guest / orphaned user – nothing to fingerprint
         }
 
@@ -112,6 +112,7 @@ class UserObserver
         if (count($parts) > 2) {
             $host = implode('.', array_slice($parts, -2));
         }
+
         return $host;
     }
 }

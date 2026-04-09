@@ -5,38 +5,53 @@ namespace App\Livewire\Ads;
 use App\Models\Integration;
 use App\Services\Integrations\MetaMarketingService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 class MetaAdsManager extends Component
 {
     #[Layout('layouts.app')]
     public $integrationId;
+
     public $adAccounts = [];
+
     public $selectedAdAccount = null;
+
     public $currency = '$'; // Default to $
 
     // Drill Down Data
     public $viewLevel = 'campaigns'; // campaigns, adsets, ads
+
     public $campaigns = [];
+
     public $adSets = [];
+
     public $ads = [];
+
     public $insights = [];
+
     public $roasMetrics = [];
+
     public $summaryStats = [];
+
     public $smartInsights = [];
 
     // Navigation State
     public $selectedCampaign = null;
+
     public $selectedAdSet = null;
 
     // UI State
     public $isLoading = false;
+
     public $error = null;
+
     public $datePreset = 'maximum'; // maximum, today, yesterday, last_7d, last_30d
+
     public $searchTerm = '';
+
     public $statusFilter = 'active_only'; // all, active_only, paused_only
+
     public $selectedIds = [];
 
     protected $listeners = ['integration-connected' => 'handleIntegrationConnected'];
@@ -79,7 +94,7 @@ class MetaAdsManager extends Component
                 $this->selectAdAccount($this->adAccounts[0]['id']);
             }
         } catch (\Exception $e) {
-            $this->error = "Failed to load Ad Accounts: " . $e->getMessage();
+            $this->error = 'Failed to load Ad Accounts: '.$e->getMessage();
         } finally {
             $this->isLoading = false;
         }
@@ -114,7 +129,8 @@ class MetaAdsManager extends Component
             'NGN' => '₦',
             'AED' => 'د.إ',
         ];
-        return $map[$code] ?? $code . ' ';
+
+        return $map[$code] ?? $code.' ';
     }
 
     public function setDatePreset($preset)
@@ -135,18 +151,20 @@ class MetaAdsManager extends Component
 
     protected function reloadCurrentView()
     {
-        if ($this->viewLevel === 'campaigns')
+        if ($this->viewLevel === 'campaigns') {
             $this->loadCampaigns();
-        elseif ($this->viewLevel === 'adsets')
+        } elseif ($this->viewLevel === 'adsets') {
             $this->viewAdSets($this->selectedCampaign['id']);
-        elseif ($this->viewLevel === 'ads')
+        } elseif ($this->viewLevel === 'ads') {
             $this->viewAds($this->selectedAdSet['id']);
+        }
     }
 
     public function loadCampaigns()
     {
-        if (!$this->selectedAdAccount || !$this->integrationId)
+        if (! $this->selectedAdAccount || ! $this->integrationId) {
             return;
+        }
 
         try {
             $this->isLoading = true;
@@ -174,7 +192,7 @@ class MetaAdsManager extends Component
             $this->generateSmartInsights($this->campaigns);
 
         } catch (\Exception $e) {
-            $this->error = "Failed to load Campaigns: " . $e->getMessage();
+            $this->error = 'Failed to load Campaigns: '.$e->getMessage();
         } finally {
             $this->isLoading = false;
         }
@@ -196,7 +214,7 @@ class MetaAdsManager extends Component
                         'type' => 'warning',
                         'title' => 'Low Clicks',
                         'message' => "Campaign '{$item['name']}' has very few clicks. Try changing your images or text.",
-                        'object_id' => $item['id']
+                        'object_id' => $item['id'],
                     ];
                 }
 
@@ -205,7 +223,7 @@ class MetaAdsManager extends Component
                         'type' => 'critical',
                         'title' => 'High Cost',
                         'message' => "Clicks for '{$item['name']}' are very expensive ({$this->currency}{$cpc}). Try showing your ad to more people.",
-                        'object_id' => $item['id']
+                        'object_id' => $item['id'],
                     ];
                 }
             }
@@ -216,8 +234,8 @@ class MetaAdsManager extends Component
             $this->smartInsights[] = [
                 'type' => 'info',
                 'title' => 'Doing Well',
-                'message' => "Your ads are doing fine right now. No need to change anything.",
-                'object_id' => null
+                'message' => 'Your ads are doing fine right now. No need to change anything.',
+                'object_id' => null,
             ];
         }
     }
@@ -245,7 +263,7 @@ class MetaAdsManager extends Component
             // 4. Update Summary Stats based on filtered adsets if needed or keep campaign level
 
         } catch (\Exception $e) {
-            $this->error = "Failed to load Ad Sets: " . $e->getMessage();
+            $this->error = 'Failed to load Ad Sets: '.$e->getMessage();
         } finally {
             $this->isLoading = false;
         }
@@ -272,7 +290,7 @@ class MetaAdsManager extends Component
             $this->mapInsightsToObjects($this->ads, $insightsData);
 
         } catch (\Exception $e) {
-            $this->error = "Failed to load Ads: " . $e->getMessage();
+            $this->error = 'Failed to load Ads: '.$e->getMessage();
         } finally {
             $this->isLoading = false;
         }
@@ -290,16 +308,17 @@ class MetaAdsManager extends Component
             // Reload current view to reflect changes
             $this->reloadCurrentView();
 
-            session()->flash('message', "Status updated successfully.");
+            session()->flash('message', 'Status updated successfully.');
         } catch (\Exception $e) {
-            $this->error = "Failed to update status: " . $e->getMessage();
+            $this->error = 'Failed to update status: '.$e->getMessage();
         }
     }
 
     public function bulkAction($action)
     {
-        if (empty($this->selectedIds))
+        if (empty($this->selectedIds)) {
             return;
+        }
 
         try {
             $status = ($action === 'pause') ? 'PAUSED' : 'ACTIVE';
@@ -312,9 +331,9 @@ class MetaAdsManager extends Component
 
             $this->selectedIds = [];
             $this->reloadCurrentView();
-            session()->flash('message', "Changes saved.");
+            session()->flash('message', 'Changes saved.');
         } catch (\Exception $e) {
-            $this->error = "Action failed: " . $e->getMessage();
+            $this->error = 'Action failed: '.$e->getMessage();
         }
     }
 
@@ -354,14 +373,16 @@ class MetaAdsManager extends Component
         if (isset($insightsData['data'])) {
             foreach ($insightsData['data'] as $row) {
                 $id = $row['campaign_id'] ?? $row['adset_id'] ?? $row['ad_id'] ?? null;
-                if ($id)
+                if ($id) {
                     $insightsMap[$id] = $row;
+                }
             }
         } elseif (is_array($insightsData)) {
             foreach ($insightsData as $row) {
                 $id = $row['campaign_id'] ?? $row['adset_id'] ?? $row['ad_id'] ?? null;
-                if ($id)
+                if ($id) {
                     $insightsMap[$id] = $row;
+                }
             }
         }
 
@@ -375,7 +396,7 @@ class MetaAdsManager extends Component
                 'cpc' => $insight['cpc'] ?? 0,
                 'ctr' => $insight['ctr'] ?? 0,
                 'conversions' => $insight['conversions'] ?? 0,
-                'cost_per_conversion' => $insight['cost_per_conversion'] ?? 0
+                'cost_per_conversion' => $insight['cost_per_conversion'] ?? 0,
             ];
         }
     }
@@ -393,7 +414,7 @@ class MetaAdsManager extends Component
             $this->roasMetrics[$campaign['id']] = [
                 'revenue' => $revenue,
                 'roas' => $spend > 0 ? round($revenue / $spend, 2) : 0,
-                'conversions' => $conversions
+                'conversions' => $conversions,
             ];
         }
     }

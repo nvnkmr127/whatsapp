@@ -11,26 +11,34 @@ class ConversationList extends Component
 {
     #[Modelable]
     public $activeConversationId;
+
     public $search = '';
+
     public $filterReadStatus = 'all'; // all, unread, read
+
     public $filterOptIn = 'all'; // all, yes, no
+
     public $filterBlocked = 'all'; // all, yes, no
+
     public $perPage = 25;
+
     public $availableCategories = [];
-    
+
     // Thresholds
     public $slaWarningMinutes = 60;
+
     public $pendingWarningLimit = 5;
 
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {
             return [
-                "echo-private:teams." . Auth::user()->currentTeam->id . ",.MessageReceived" => '$refresh',
+                'echo-private:teams.'.Auth::user()->currentTeam->id.',.MessageReceived' => '$refresh',
                 'chat-messages-read' => '$refresh',
                 'refresh-tags' => '$refresh',
             ];
         }
+
         return [];
     }
 
@@ -46,18 +54,20 @@ class ConversationList extends Component
 
     public function formatTime($time)
     {
-        if (!$time) return '';
-        
+        if (! $time) {
+            return '';
+        }
+
         $now = now();
-        
+
         if ($time->diffInHours($now) < 24) {
             return $time->diffForHumans(['parts' => 1, 'short' => true]);
         }
-        
+
         if ($time->isYesterday()) {
             return __('Yesterday');
         }
-        
+
         return $time->format('M d');
     }
 
@@ -88,7 +98,7 @@ class ConversationList extends Component
 
     public function getConversationsProperty()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return collect();
         }
 
@@ -97,19 +107,19 @@ class ConversationList extends Component
             ->withCount([
                 'messages as unread_count' => function ($query) {
                     $query->where('direction', 'inbound')->whereNull('read_at');
-                }
+                },
             ])
             ->where('team_id', Auth::user()->currentTeam->id)
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->whereHas('contact', function ($sub) {
-                        $sub->where('name', 'like', '%' . $this->search . '%')
-                            ->orWhere('phone_number', 'like', '%' . $this->search . '%')
-                            ->orWhere('custom_attributes', 'like', '%' . $this->search . '%');
+                        $sub->where('name', 'like', '%'.$this->search.'%')
+                            ->orWhere('phone_number', 'like', '%'.$this->search.'%')
+                            ->orWhere('custom_attributes', 'like', '%'.$this->search.'%');
                     })
-                    ->orWhereHas('messages', function ($sub) {
-                        $sub->where('content', 'like', '%' . $this->search . '%');
-                    });
+                        ->orWhereHas('messages', function ($sub) {
+                            $sub->where('content', 'like', '%'.$this->search.'%');
+                        });
                 });
             })
             ->when($this->filterReadStatus !== 'all', function ($query) {
@@ -128,9 +138,9 @@ class ConversationList extends Component
             })
             ->when($this->filterOptIn !== 'all', function ($query) {
                 if ($this->filterOptIn === 'yes') {
-                    $query->whereHas('contact', fn($q) => $q->where('opt_in_status', 'opted_in'));
+                    $query->whereHas('contact', fn ($q) => $q->where('opt_in_status', 'opted_in'));
                 } else {
-                    $query->whereHas('contact', fn($q) => $q->whereIn('opt_in_status', ['none', 'opted_out']));
+                    $query->whereHas('contact', fn ($q) => $q->whereIn('opt_in_status', ['none', 'opted_out']));
                 }
             })
             ->when($this->filterBlocked !== 'all', function ($query) {
@@ -147,7 +157,7 @@ class ConversationList extends Component
 
     public function getStatsProperty()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return [
                 'active' => 0,
                 'unassigned' => 0,

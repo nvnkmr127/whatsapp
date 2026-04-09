@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Models\SystemEvent;
+use App\Models\Team;
 use App\Models\WhatsAppSetupAudit;
 use Illuminate\Support\Facades\Log;
 
@@ -18,7 +18,7 @@ class WhatsAppEventBridge
             SystemEvent::create([
                 'event_id' => (string) \Illuminate\Support\Str::uuid(),
                 'team_id' => $team->id,
-                'event_type' => 'waba.' . $event,
+                'event_type' => 'waba.'.$event,
                 'source' => 'whatsapp',
                 'category' => in_array($status, ['failed', 'error', 'critical']) ? 'operational' : 'business',
                 'payload' => $payload,
@@ -31,7 +31,7 @@ class WhatsAppEventBridge
                 'is_signal' => in_array($status, ['failed', 'error', 'critical']),
             ]);
         } catch (\Exception $e) {
-            Log::error("WhatsAppEventBridge: Failed to log interaction: " . $e->getMessage());
+            Log::error('WhatsAppEventBridge: Failed to log interaction: '.$e->getMessage());
         }
     }
 
@@ -52,7 +52,7 @@ class WhatsAppEventBridge
                 'reference_id' => WhatsAppSetupAudit::generateReferenceId(),
             ]);
         } catch (\Exception $e) {
-            Log::error("WhatsAppEventBridge: Failed to log audit: " . $e->getMessage());
+            Log::error('WhatsAppEventBridge: Failed to log audit: '.$e->getMessage());
         }
     }
 }

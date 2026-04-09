@@ -64,29 +64,29 @@ class SendCampaignMessageJob implements ShouldQueue
 
             // Format parameters for template
             $template['header_message'] = $template['header_data_text'] ?? null;
-            $template['body_message']   = $template['body_data']        ?? null;
-            $template['footer_message'] = $template['footer_data']      ?? null;
+            $template['body_message'] = $template['body_data'] ?? null;
+            $template['footer_message'] = $template['footer_data'] ?? null;
 
             // Prepare data for sending
             $contact = \App\Models\Contact::where('id', $this->detail->rel_id)->first();
             if (! $contact) {
-                throw new \Exception('Contact not found: ' . $this->detail->rel_id);
+                throw new \Exception('Contact not found: '.$this->detail->rel_id);
             }
 
             // Build message parameters
             $rel_data = array_merge(
                 [
                     'rel_type' => $this->detail->rel_type,
-                    'rel_id'   => $contact->id,
+                    'rel_id' => $contact->id,
                 ],
                 $template,
                 [
-                    'campaign_id'        => $campaign->id,
+                    'campaign_id' => $campaign->id,
                     'header_data_format' => $template['header_data_format'] ?? null,
-                    'filename'           => $campaign->filename             ?? null,
-                    'header_params'      => $campaign->header_params,
-                    'body_params'        => $campaign->body_params,
-                    'footer_params'      => $campaign->footer_params,
+                    'filename' => $campaign->filename ?? null,
+                    'header_params' => $campaign->header_params,
+                    'body_params' => $campaign->body_params,
+                    'footer_params' => $campaign->footer_params,
                 ]
             );
 
@@ -100,16 +100,16 @@ class SendCampaignMessageJob implements ShouldQueue
 
                 // Update campaign detail
                 $this->detail->update([
-                    'status'           => 2,
-                    'message_status'   => 'sent',
-                    'whatsapp_id'      => $response['data']->messages[0]->id ?? null,
+                    'status' => 2,
+                    'message_status' => 'sent',
+                    'whatsapp_id' => $response['data']->messages[0]->id ?? null,
                     'response_message' => null,
                 ]);
             } else {
                 // Update detail with error
                 $this->detail->update([
-                    'status'           => 0,
-                    'message_status'   => 'failed',
+                    'status' => 0,
+                    'message_status' => 'failed',
                     'response_message' => $response['message'] ?? 'Unknown error occurred',
                 ]);
 
@@ -138,7 +138,7 @@ class SendCampaignMessageJob implements ShouldQueue
     {
         // Parse template parts
         $header = parseText($rel_data['rel_type'], 'header', $rel_data);
-        $body   = parseText($rel_data['rel_type'], 'body', $rel_data);
+        $body = parseText($rel_data['rel_type'], 'body', $rel_data);
         $footer = parseText($rel_data['rel_type'], 'footer', $rel_data);
 
         // Create buttons HTML if any
@@ -149,32 +149,32 @@ class SendCampaignMessageJob implements ShouldQueue
                 $buttonHtml = "<div class='flex flex-col mt-2 space-y-2'>";
                 foreach ($buttons as $button) {
                     $buttonHtml .= "<button class='bg-gray-100 text-green-500 px-3 py-2 rounded-lg flex items-center justify-center text-xs space-x-2 w-full
-                        dark:bg-gray-800 dark:text-green-400'>" . e($button->text) . '</button>';
+                        dark:bg-gray-800 dark:text-green-400'>".e($button->text).'</button>';
                 }
                 $buttonHtml .= '</div>';
             }
         }
 
         // Create header data HTML
-        $headerData     = '';
+        $headerData = '';
         $fileExtensions = get_meta_allowed_extension();
         if (! empty($rel_data['filename'])) {
             $extension = strtolower(pathinfo($rel_data['filename'], PATHINFO_EXTENSION));
-            $fileType  = array_key_first(array_filter($fileExtensions, fn ($data) => in_array('.' . $extension, explode(', ', $data['extension']))));
+            $fileType = array_key_first(array_filter($fileExtensions, fn ($data) => in_array('.'.$extension, explode(', ', $data['extension']))));
 
             if ($rel_data['header_data_format'] == 'IMAGE' && $fileType == 'image') {
-                $headerData = "<a href='" . asset('storage/' . $rel_data['filename']) . "' class=''>
-                    <img src='" . asset('storage/' . $rel_data['filename']) . "' class='img-responsive rounded-lg object-cover'>
+                $headerData = "<a href='".asset('storage/'.$rel_data['filename'])."' class=''>
+                    <img src='".asset('storage/'.$rel_data['filename'])."' class='img-responsive rounded-lg object-cover'>
                     </a>";
             } elseif ($rel_data['header_data_format'] == 'DOCUMENT') {
-                $headerData = "<a href='" . asset('storage/' . $rel_data['filename']) . "' target='_blank' class='btn btn-secondary w-full'>" . t('document') . '</a>';
+                $headerData = "<a href='".asset('storage/'.$rel_data['filename'])."' target='_blank' class='btn btn-secondary w-full'>".t('document').'</a>';
             } elseif ($rel_data['header_data_format'] == 'VIDEO') {
-                $headerData = "<video src='" . asset('storage/' . $rel_data['filename']) . "' controls class='rounded-lg w-full'></video>";
+                $headerData = "<video src='".asset('storage/'.$rel_data['filename'])."' controls class='rounded-lg w-full'></video>";
             }
         }
 
         if (empty($headerData) && ($rel_data['header_data_format'] == 'TEXT' || empty($rel_data['header_data_format'])) && ! empty($header)) {
-            $headerData = "<span class='font-bold mb-3'>" . nl2br(decodeWhatsAppSigns(e($header))) . '</span>';
+            $headerData = "<span class='font-bold mb-3'>".nl2br(decodeWhatsAppSigns(e($header))).'</span>';
         }
 
         // Find or create chat
@@ -186,40 +186,40 @@ class SendCampaignMessageJob implements ShouldQueue
         $chat_id = Chat::where('receiver_id', $phone)->value('id');
         if (empty($chat_id)) {
             $chat_id = Chat::insertGetId([
-                'receiver_id'  => $phone,
-                'wa_no'        => get_setting('whatsapp.wm_default_phone_number'),
-                'wa_no_id'     => get_setting('whatsapp.wm_default_phone_number_id'),
-                'name'         => $contact['firstname'] . ' ' . $contact['lastname'],
+                'receiver_id' => $phone,
+                'wa_no' => get_setting('whatsapp.wm_default_phone_number'),
+                'wa_no_id' => get_setting('whatsapp.wm_default_phone_number_id'),
+                'name' => $contact['firstname'].' '.$contact['lastname'],
                 'last_message' => $body ?? '',
-                'time_sent'    => now(),
-                'type'         => $contact['type'] ?? 'guest',
-                'type_id'      => $contact['id']   ?? '',
-                'created_at'   => now(),
-                'updated_at'   => now(),
+                'time_sent' => now(),
+                'type' => $contact['type'] ?? 'guest',
+                'type_id' => $contact['id'] ?? '',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 
         // Create chat message
         ChatMessage::create([
             'interaction_id' => $chat_id,
-            'sender_id'      => get_setting('whatsapp.wm_default_phone_number'),
-            'url'            => null,
-            'message'        => "
+            'sender_id' => get_setting('whatsapp.wm_default_phone_number'),
+            'url' => null,
+            'message' => "
                 $headerData
-                <p>" . nl2br(decodeWhatsAppSigns(e($body ?? ''))) . "</p>
-                <span class='text-gray-500 text-sm'>" . nl2br(decodeWhatsAppSigns(e($footer ?? ''))) . "</span>
+                <p>".nl2br(decodeWhatsAppSigns(e($body ?? '')))."</p>
+                <span class='text-gray-500 text-sm'>".nl2br(decodeWhatsAppSigns(e($footer ?? '')))."</span>
                 $buttonHtml
             ",
-            'status'     => 'sent',
-            'time_sent'  => now()->toDateTimeString(),
+            'status' => 'sent',
+            'time_sent' => now()->toDateTimeString(),
             'message_id' => $response['data']->messages[0]->id ?? null,
-            'staff_id'   => 0,
-            'type'       => 'text',
+            'staff_id' => 0,
+            'type' => 'text',
         ]);
 
         // Update Chat with last message and time
         Chat::where('id', $chat_id)->update([
-            'last_message'  => $body ?? '',
+            'last_message' => $body ?? '',
             'last_msg_time' => now(),
         ]);
     }
@@ -230,8 +230,8 @@ class SendCampaignMessageJob implements ShouldQueue
     protected function handleFailure(Throwable $e): void
     {
         $this->detail->update([
-            'status'           => 0,
-            'message_status'   => 'failed',
+            'status' => 0,
+            'message_status' => 'failed',
             'response_message' => $e->getMessage(),
         ]);
 
@@ -241,9 +241,9 @@ class SendCampaignMessageJob implements ShouldQueue
                 'error',
                 [
                     'campaign_id' => $this->detail->campaign_id,
-                    'detail_id'   => $this->detail->id,
-                    'error'       => $e->getMessage(),
-                    'trace'       => $e->getTraceAsString(),
+                    'detail_id' => $this->detail->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ],
                 $e
             );

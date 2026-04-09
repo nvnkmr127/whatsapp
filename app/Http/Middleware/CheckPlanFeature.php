@@ -23,15 +23,13 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class CheckPlanFeature
 {
-    public function __construct(private readonly EntitlementService $entitlements)
-    {
-    }
+    public function __construct(private readonly EntitlementService $entitlements) {}
 
     public function handle(Request $request, Closure $next, string $feature): Response
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login');
         }
 
@@ -42,13 +40,13 @@ class CheckPlanFeature
 
         $team = $user->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             abort(403, 'No active team found.');
         }
 
         $e = $this->entitlements->for($team);
 
-        if (!$e->hasFeature($feature)) {
+        if (! $e->hasFeature($feature)) {
             $reason = $e->denialReason($feature)
                 ?? "The '{$feature}' feature is not included in your current plan.";
 
@@ -58,7 +56,7 @@ class CheckPlanFeature
                     'feature' => $feature,
                     'message' => $reason,
                     'status_label' => $e->statusLabel(),
-                    'upgrade_required' => !$e->expired(), // expired = different CTA
+                    'upgrade_required' => ! $e->expired(), // expired = different CTA
                     'entitlement' => [
                         'active' => $e->active(),
                         'on_trial' => $e->onTrial(),

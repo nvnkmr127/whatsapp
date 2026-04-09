@@ -23,7 +23,7 @@ class PolicyEnforcementTest extends TestCase
         // Contact with old interaction
         $contact = Contact::create([
             'team_id' => $team->id,
-            'phone_number' => '15550000000',
+            'phone_number' => '+15550000000',
             'name' => 'Old Contact',
             'last_interaction_at' => now()->subHours(25),
         ]);
@@ -31,34 +31,40 @@ class PolicyEnforcementTest extends TestCase
         $this->actingAs($user);
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('24-hour window is closed');
+        $this->expectExceptionMessage('Message blocked by 24h policy');
 
-        $service = new WhatsAppService();
-        $service->setTeam($team)->sendText('15550000000', 'Hello');
+        $service = new WhatsAppService;
+        $service->setTeam($team)->sendText('+15550000000', 'Hello');
     }
 
     public function test_can_send_free_text_inside_24h_window()
     {
         $user = User::factory()->create();
-        $team = Team::factory()->create(['user_id' => $user->id, 'whatsapp_phone_number_id' => '123', 'whatsapp_access_token' => 'abc']);
+        $team = Team::factory()->create([
+            'user_id' => $user->id,
+            'whatsapp_phone_number_id' => '123',
+            'whatsapp_access_token' => 'abc',
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_connected' => true,
+        ]);
         $user->switchTeam($team);
 
         // Contact with recent interaction
         $contact = Contact::create([
             'team_id' => $team->id,
-            'phone_number' => '15550000000',
+            'phone_number' => '+15550000000',
             'name' => 'Active Contact',
             'last_interaction_at' => now()->subMinutes(10),
         ]);
 
         Http::fake([
-            '*' => Http::response(['success' => true], 200),
+            '*' => Http::response(['success' => true, 'data' => ['messages' => [['id' => '123']]]], 200),
         ]);
 
         $this->actingAs($user);
 
-        $service = new WhatsAppService();
-        $result = $service->setTeam($team)->sendText('15550000000', 'Hello');
+        $service = new WhatsAppService;
+        $result = $service->setTeam($team)->sendText('+15550000000', 'Hello');
 
         $this->assertTrue($result['success']);
     }

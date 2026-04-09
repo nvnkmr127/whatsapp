@@ -64,10 +64,10 @@ return [
     */
 
     'temporary_file_upload' => [
-        'disk'          => 'local',
-        'rules'         => 'max:102400',
-        'directory'     => 'livewire-tmp',
-        'middleware'    => null,
+        'disk' => 'local',
+        'rules' => 'max:102400',
+        'directory' => 'livewire-tmp',
+        'middleware' => null,
         'preview_mimes' => [
             'png',
             'gif',
@@ -87,7 +87,7 @@ return [
             'wma',
         ],
         'max_upload_time' => 5,
-        'cleanup'         => true,
+        'cleanup' => true,
     ],
 
     /*
@@ -141,7 +141,7 @@ return [
     */
 
     'navigate' => [
-        'show_progress_bar'  => true,
+        'show_progress_bar' => true,
         'progress_bar_color' => '#2299dd',
     ],
 

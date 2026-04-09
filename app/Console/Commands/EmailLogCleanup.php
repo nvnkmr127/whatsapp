@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\EmailLog;
+use Illuminate\Console\Command;
 
 class EmailLogCleanup extends Command
 {
     protected $signature = 'email:cleanup-logs {--days=30 : The number of days of logs to retain}';
+
     protected $description = 'Remove email logs older than a certain number of days';
 
     public function handle()

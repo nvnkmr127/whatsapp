@@ -64,8 +64,8 @@ class CsvCampaign extends Component
     public $isUploading = false;
 
     protected $listeners = [
-        'save'            => 'save',
-        'upload-started'  => 'setUploading',
+        'save' => 'save',
+        'upload-started' => 'setUploading',
         'upload-finished' => 'setUploadingComplete',
     ];
 
@@ -73,7 +73,7 @@ class CsvCampaign extends Component
     {
         return [
             'csv_campaign_name' => ['required', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'csvFile'           => 'required|file|mimes:csv,txt',
+            'csvFile' => 'required|file|mimes:csv,txt',
         ];
     }
 
@@ -91,8 +91,8 @@ class CsvCampaign extends Component
             $this->isDisconnected = true;
         }
 
-        $this->id          = $this->getId();
-        $this->templates   = WhatsappTemplate::query()->get();
+        $this->id = $this->getId();
+        $this->templates = WhatsappTemplate::query()->get();
         $this->mergeFields = json_encode([]);
     }
 
@@ -102,11 +102,11 @@ class CsvCampaign extends Component
     protected function getFileValidationRules($format)
     {
         return match ($format) {
-            'IMAGE'    => ['mimes:jpeg,png', 'max:8192'],
+            'IMAGE' => ['mimes:jpeg,png', 'max:8192'],
             'DOCUMENT' => ['mimes:pdf,doc,docx,txt,ppt,pptx,xlsx,xls', 'max:102400'],
-            'VIDEO'    => ['mimes:mp4,3gp', 'max:16384'],
-            'AUDIO'    => ['mimes:mp3,wav,aac,ogg', 'max:16384'],
-            default    => ['file', 'max:5120'],
+            'VIDEO' => ['mimes:mp4,3gp', 'max:16384'],
+            'AUDIO' => ['mimes:mp3,wav,aac,ogg', 'max:16384'],
+            default => ['file', 'max:5120'],
         };
     }
 
@@ -126,7 +126,7 @@ class CsvCampaign extends Component
     public function save()
     {
         try {
-            $data     = $this->all();
+            $data = $this->all();
             $template = $this->getTemplateData($data['template_name']);
 
             // Handle file upload if needed
@@ -153,8 +153,8 @@ class CsvCampaign extends Component
             $this->dispatch('close-loading-modal');
 
             $this->notify([
-                'type'    => ($valid != 0) ? 'success' : 'danger',
-                'message' => ($valid != 0) ? t('total_send_campaign_list') . ' : ' . $valid : t('please_add_valid_number_in_csv_file'),
+                'type' => ($valid != 0) ? 'success' : 'danger',
+                'message' => ($valid != 0) ? t('total_send_campaign_list').' : '.$valid : t('please_add_valid_number_in_csv_file'),
             ], true);
 
             // Delete the JSON file after campaign is complete
@@ -162,14 +162,14 @@ class CsvCampaign extends Component
                 unlink($jsonFilePath);
             }
         } catch (\Exception $e) {
-            whatsapp_log('Campaign Error: ' . $e->getMessage(), 'error', [
+            whatsapp_log('Campaign Error: '.$e->getMessage(), 'error', [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ], $e);
 
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('campaign_error') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('campaign_error').': '.$e->getMessage(),
             ], true);
         }
 
@@ -226,10 +226,10 @@ class CsvCampaign extends Component
     protected function prepareCampaignData($data, $template)
     {
         $data['header_params'] = json_encode(array_filter($this->headerInputs));
-        $data['body_params']   = json_encode(array_filter($this->bodyInputs));
+        $data['body_params'] = json_encode(array_filter($this->bodyInputs));
         $data['footer_params'] = json_encode(array_filter($this->footerInputs));
 
-        $data             = array_merge($data, $template);
+        $data = array_merge($data, $template);
         $data['filename'] = $this->filename;
         $data['filelink'] = $this->filelink;
 
@@ -245,16 +245,16 @@ class CsvCampaign extends Component
             throw new \Exception(t('no_campaign_data_found'));
         }
 
-        $jsonData     = file_get_contents($data['json_file_path']);
+        $jsonData = file_get_contents($data['json_file_path']);
         $campaignData = json_decode($jsonData, true);
 
-        $response  = [];
+        $response = [];
         $batchSize = 100;
-        $batches   = array_chunk($campaignData, $batchSize);
+        $batches = array_chunk($campaignData, $batchSize);
 
         foreach ($batches as $batch) {
             foreach ($batch as $campaign) {
-                $to     = $campaign['phone'];
+                $to = $campaign['phone'];
                 $result = $this->sendBulkCampaign($to, $data, $campaign);
                 array_push($response, $result);
             }
@@ -278,11 +278,11 @@ class CsvCampaign extends Component
     {
         try {
             $directory = match ($format) {
-                'IMAGE'    => 'csv/images',
+                'IMAGE' => 'csv/images',
                 'DOCUMENT' => 'csv/documents',
-                'VIDEO'    => 'csv/videos',
-                'AUDIO'    => 'csv/audio',
-                default    => 'csv',
+                'VIDEO' => 'csv/videos',
+                'AUDIO' => 'csv/audio',
+                default => 'csv',
             };
 
             $this->filelink = $this->file->storeAs(
@@ -292,8 +292,8 @@ class CsvCampaign extends Component
             );
             $this->filename = $this->generateFileName();
         } catch (\Exception $e) {
-            whatsapp_log('File upload error: ' . $e->getMessage(), 'error');
-            throw new \Exception(t('file_upload_failed') . ': ' . $e->getMessage());
+            whatsapp_log('File upload error: '.$e->getMessage(), 'error');
+            throw new \Exception(t('file_upload_failed').': '.$e->getMessage());
         }
     }
 
@@ -304,7 +304,7 @@ class CsvCampaign extends Component
     {
         $original = str_replace(' ', '_', $this->file->getClientOriginalName());
 
-        return pathinfo($original, PATHINFO_FILENAME) . '_' . time() . '.' . $this->file->extension();
+        return pathinfo($original, PATHINFO_FILENAME).'_'.time().'.'.$this->file->extension();
     }
 
     /**
@@ -312,8 +312,8 @@ class CsvCampaign extends Component
      */
     protected function resetCounters()
     {
-        $this->validRecords     = 0;
-        $this->invalidRecords   = 0;
+        $this->validRecords = 0;
+        $this->invalidRecords = 0;
         $this->processedRecords = 0;
     }
 
@@ -324,7 +324,7 @@ class CsvCampaign extends Component
     {
         try {
             // Sanitize input first
-            $sanitized        = filter_var($phoneNumber, FILTER_SANITIZE_NUMBER_INT);
+            $sanitized = filter_var($phoneNumber, FILTER_SANITIZE_NUMBER_INT);
             $normalizedNumber = preg_replace('/\D/', '', $sanitized);
 
             // Validate phone number format (minimal validation)
@@ -363,8 +363,8 @@ class CsvCampaign extends Component
                 whatsapp_log('Missing required columns', 'warning', ['missing_columns' => $missingColumns]);
 
                 return [
-                    'type'    => 'danger',
-                    'message' => t('missing_required_columns') . ': ' . implode(', ', $missingColumns),
+                    'type' => 'danger',
+                    'message' => t('missing_required_columns').': '.implode(', ', $missingColumns),
                 ];
             }
 
@@ -373,8 +373,8 @@ class CsvCampaign extends Component
             whatsapp_log('CSV Validation Error', 'error', ['exception' => $e->getMessage()], $e);
 
             return [
-                'type'    => 'danger',
-                'message' => t('invalid_csv_file') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('invalid_csv_file').': '.$e->getMessage(),
             ];
         }
     }
@@ -388,7 +388,7 @@ class CsvCampaign extends Component
 
         if (! $this->csvFile || $this->importInProgress) {
             $this->notify([
-                'type'    => 'danger',
+                'type' => 'danger',
                 'message' => t('please_select_csv_file'),
             ]);
 
@@ -403,7 +403,7 @@ class CsvCampaign extends Component
             $csv = Reader::createFromPath($this->csvFile->path());
             $csv->setHeaderOffset(0);
 
-            $records         = iterator_to_array($csv->getRecords());
+            $records = iterator_to_array($csv->getRecords());
             $filteredRecords = [];
 
             foreach ($records as $record) {
@@ -413,13 +413,13 @@ class CsvCampaign extends Component
                     continue;
                 }
 
-                $record['phone']   = $normalizedPhone;
+                $record['phone'] = $normalizedPhone;
                 $filteredRecords[] = array_filter($record, fn ($value) => ! empty($value));
             }
 
             if (! empty($filteredRecords)) {
-                $fileName = 'csv_' . Str::uuid() . '.json';
-                $filePath = storage_path('app/public/csv/' . $fileName);
+                $fileName = 'csv_'.Str::uuid().'.json';
+                $filePath = storage_path('app/public/csv/'.$fileName);
 
                 $directory = storage_path('app/public/csv');
                 if (! is_dir($directory)) {
@@ -429,31 +429,31 @@ class CsvCampaign extends Component
                 $jsonContent = json_encode($filteredRecords, JSON_PRETTY_PRINT);
                 file_put_contents($filePath, $jsonContent);
 
-                $this->validRecords   = count($filteredRecords);
+                $this->validRecords = count($filteredRecords);
                 $this->invalidRecords = count($records) - count($filteredRecords);
-                $this->totalRecords   = count($records);
+                $this->totalRecords = count($records);
                 $this->json_file_path = $filePath;
-                $this->fields         = $csv->getHeader();
+                $this->fields = $csv->getHeader();
 
                 $this->notify([
-                    'type'    => 'success',
+                    'type' => 'success',
                     'message' => t('csv_uploaded_successfully'),
                 ]);
             } else {
                 $this->notify([
-                    'type'    => 'danger',
+                    'type' => 'danger',
                     'message' => t('please_upload_valid_csv_file'),
                 ]);
             }
         } catch (\Exception $e) {
             whatsapp_log('CSV Import Error', 'error', [
-                'csvFile'   => $this->csvFile->getClientOriginalName(),
+                'csvFile' => $this->csvFile->getClientOriginalName(),
                 'exception' => $e->getMessage(),
             ], $e);
 
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('import_failed') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('import_failed').': '.$e->getMessage(),
             ]);
         } finally {
             $this->importInProgress = false;
@@ -471,7 +471,7 @@ class CsvCampaign extends Component
             mkdir($directory, 0775, true);
         }
 
-        $filePath    = $directory . '/' . $fileName;
+        $filePath = $directory.'/'.$fileName;
         $jsonContent = json_encode($data, JSON_PRETTY_PRINT);
 
         if (file_put_contents($filePath, $jsonContent) === false) {
@@ -493,8 +493,8 @@ class CsvCampaign extends Component
             try {
                 foreach ($this->fields as $key => $value) {
                     $prepareMergeFields[] = [
-                        'key'   => ucfirst($value),
-                        'value' => '{' . $value . '}',
+                        'key' => ucfirst($value),
+                        'value' => '{'.$value.'}',
                     ];
                 }
             } catch (\Throwable $e) {

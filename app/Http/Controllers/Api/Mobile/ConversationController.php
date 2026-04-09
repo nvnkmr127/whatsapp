@@ -16,7 +16,7 @@ class ConversationController extends Controller
         $user = $request->user();
         $team = $user->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return response()->json(['error' => 'No team associated'], 400);
         }
 
@@ -125,7 +125,7 @@ class ConversationController extends Controller
     public function getCannedMessages(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([]);
         }
 
@@ -174,7 +174,7 @@ class ConversationController extends Controller
 
     protected function authorizeConversation($user, $conversation)
     {
-        if ($conversation->team_id !== $user->currentTeam?->id && !$user->isSuperAdmin()) {
+        if ($conversation->team_id !== $user->currentTeam?->id && ! $user->isSuperAdmin()) {
             abort(403, 'Unauthorized access to this conversation.');
         }
     }

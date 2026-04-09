@@ -38,7 +38,7 @@ final class RoleAssigneeTable extends PowerGridComponent
         return PowerGrid::fields()
 
             ->add('firstname', function ($model) {
-                return $model->firstname . ' ' . $model->lastname;
+                return $model->firstname.' '.$model->lastname;
             });
 
     }

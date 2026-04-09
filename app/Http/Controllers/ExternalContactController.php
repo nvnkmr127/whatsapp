@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\Team;
+use App\Services\ConsentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use App\Services\ConsentService;
 
 class ExternalContactController extends Controller
 {
@@ -32,7 +32,7 @@ class ExternalContactController extends Controller
         // 1. Verify Team Access (if using Token assigned to User, check if User belongs to Team)
         // For simple MVP without team-specific API keys, we assume the Bearer token (User) has access.
         $user = $request->user();
-        if (!$user->belongsToTeam(Team::find($request->team_id)) && !$user->ownsTeam(Team::find($request->team_id))) {
+        if (! $user->belongsToTeam(Team::find($request->team_id)) && ! $user->ownsTeam(Team::find($request->team_id))) {
             return response()->json(['error' => 'Unauthorized access to this Team'], 403);
         }
 
@@ -60,7 +60,7 @@ class ExternalContactController extends Controller
         return response()->json([
             'success' => true,
             'contact' => $contact,
-            'message' => 'Contact subscribed successfully.'
+            'message' => 'Contact subscribed successfully.',
         ]);
     }
 }

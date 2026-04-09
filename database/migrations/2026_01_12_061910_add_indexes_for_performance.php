@@ -2,11 +2,11 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
-
+return new class extends Migration
+{
     private function indexExists($table, $indexName): bool
     {
         if (DB::getDriverName() === 'sqlite') {
@@ -16,11 +16,13 @@ return new class extends Migration {
                     return true;
                 }
             }
+
             return false;
         }
 
         $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
-        return !empty($indexes);
+
+        return ! empty($indexes);
     }
 
     /**
@@ -30,13 +32,13 @@ return new class extends Migration {
     {
         Schema::table('messages', function (Blueprint $table) {
             // Optimize "Show me all messages for this team sorted by time"
-            if (!$this->indexExists('messages', 'messages_team_id_created_at_index')) {
+            if (! $this->indexExists('messages', 'messages_team_id_created_at_index')) {
                 $table->index(['team_id', 'created_at']);
             }
             // Optimize "Show conversation messages" - only if conversation_id column exists
             if (
                 Schema::hasColumn('messages', 'conversation_id') &&
-                !$this->indexExists('messages', 'messages_conversation_id_created_at_index')
+                ! $this->indexExists('messages', 'messages_conversation_id_created_at_index')
             ) {
                 $table->index(['conversation_id', 'created_at']);
             }
@@ -44,14 +46,14 @@ return new class extends Migration {
 
         Schema::table('contacts', function (Blueprint $table) {
             // Optimize lookup by phone within team
-            if (!$this->indexExists('contacts', 'contacts_team_id_phone_number_index')) {
+            if (! $this->indexExists('contacts', 'contacts_team_id_phone_number_index')) {
                 $table->index(['team_id', 'phone_number']);
             }
         });
 
         Schema::table('webhook_payloads', function (Blueprint $table) {
             // Optimize cleanup of old logs
-            if (!$this->indexExists('webhook_payloads', 'webhook_payloads_created_at_index')) {
+            if (! $this->indexExists('webhook_payloads', 'webhook_payloads_created_at_index')) {
                 $table->index(['created_at']);
             }
         });

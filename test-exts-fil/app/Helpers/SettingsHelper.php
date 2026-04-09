@@ -20,7 +20,7 @@ if (! function_exists('get_settings_classes')) {
                 ->filter(fn ($file) => str_ends_with($file, 'Settings.php'))
                 ->mapWithKeys(function ($file) {
                     $className = str_replace('.php', '', $file);
-                    $group     = Str::kebab(str_replace('Settings', '', $className));
+                    $group = Str::kebab(str_replace('Settings', '', $className));
 
                     return [$group => "App\\Settings\\{$className}"];
                 })
@@ -96,7 +96,7 @@ if (! function_exists('set_setting')) {
     {
         try {
             [$group, $setting] = explode('.', $key);
-            $settingsClasses   = get_settings_classes();
+            $settingsClasses = get_settings_classes();
 
             if (! isset($settingsClasses[$group])) {
                 return false;
@@ -137,12 +137,12 @@ if (! function_exists('set_settings_batch')) {
                 return false;
             }
 
-            $settingsObject   = app($settingsClasses[$group]);
+            $settingsObject = app($settingsClasses[$group]);
             $settingsToUpdate = [];
 
             foreach ($settings as $key => $value) {
                 if (property_exists($settingsObject, $key)) {
-                    $settingsObject->$key   = $value;
+                    $settingsObject->$key = $value;
                     $settingsToUpdate[$key] = $value;
                 }
             }
@@ -171,9 +171,9 @@ if (! function_exists('get_setting')) {
      * This function fetches a setting by its "group.setting" key format.
      * It uses in-memory caching for quick access and caches the value for 30 minutes.
      *
-     * @param  string $key     The setting key in "group.setting" format.
-     * @param  mixed  $default The default value to return if the setting is not found.
-     * @return mixed  The setting value or the default value if the setting is not found.
+     * @param  string  $key  The setting key in "group.setting" format.
+     * @param  mixed  $default  The default value to return if the setting is not found.
+     * @return mixed The setting value or the default value if the setting is not found.
      */
     function get_setting(string $key, mixed $default = null): mixed
     {
@@ -225,10 +225,10 @@ if (! function_exists('test_settings')) {
         try {
             $settings = app(\App\Settings\GeneralSettings::class);
             ([
-                'settings'  => $settings,
+                'settings' => $settings,
                 'site_name' => $settings->site_name,
-                'cache'     => Cache::get('settings.system.site_name'),
-                'helper'    => settings('system.site_name'),
+                'cache' => Cache::get('settings.system.site_name'),
+                'helper' => settings('system.site_name'),
             ]);
         } catch (\Throwable $e) {
             return false;

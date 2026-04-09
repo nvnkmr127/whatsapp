@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Auth;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component;
 
 class AgentAvailabilityToggle extends Component
 {
@@ -13,8 +13,9 @@ class AgentAvailabilityToggle extends Component
     public function mount()
     {
         $user = Auth::user();
-        if (!$user || !$user->currentTeam) {
+        if (! $user || ! $user->currentTeam) {
             $this->isAvailable = false;
+
             return;
         }
 
@@ -25,7 +26,6 @@ class AgentAvailabilityToggle extends Component
 
         $this->isAvailable = $row ? (bool) $row->is_call_enabled : false;
 
-
     }
 
     public function toggleAvailability()
@@ -33,11 +33,12 @@ class AgentAvailabilityToggle extends Component
         $user = Auth::user();
         $team = $user->currentTeam;
 
-        if (!$team)
+        if (! $team) {
             return;
+        }
 
         // Toggle state
-        $this->isAvailable = !$this->isAvailable;
+        $this->isAvailable = ! $this->isAvailable;
 
         try {
             $affected = \Illuminate\Support\Facades\DB::table('team_user')
@@ -57,7 +58,7 @@ class AgentAvailabilityToggle extends Component
                     ->where('user_id', $user->id)
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     \Illuminate\Support\Facades\DB::table('team_user')->insert([
                         'team_id' => $team->id,
                         'user_id' => $user->id,
@@ -71,18 +72,16 @@ class AgentAvailabilityToggle extends Component
                 }
             }
 
-
-
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Status updated: ' . ($this->isAvailable ? 'Available for calls' : 'Calls disabled')
+                'message' => 'Status updated: '.($this->isAvailable ? 'Available for calls' : 'Calls disabled'),
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to update agent availability: " . $e->getMessage());
+            Log::error('Failed to update agent availability: '.$e->getMessage());
 
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Failed to sync status. Please check your connection.'
+                'message' => 'Failed to sync status. Please check your connection.',
             ]);
         }
     }

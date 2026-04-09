@@ -27,29 +27,29 @@ class OtherMergeFields
         return [
             [
                 'name' => 'Company Name',
-                'key'  => '{site_name}',
+                'key' => '{site_name}',
             ],
             [
                 'name' => 'Company Email',
-                'key'  => '{company_email}',
+                'key' => '{company_email}',
             ],
             [
-                'name'   => 'Dark Logo',
-                'key'    => '{dark_logo}',
+                'name' => 'Dark Logo',
+                'key' => '{dark_logo}',
                 'absent' => [
                     'password-reset',
                 ],
             ],
             [
-                'name'   => 'Light Logo',
-                'key'    => '{light_logo}',
+                'name' => 'Light Logo',
+                'key' => '{light_logo}',
                 'absent' => [
                     'password-reset',
                 ],
             ],
             [
                 'name' => 'Base Url',
-                'key'  => '{base_url}',
+                'key' => '{base_url}',
             ],
         ];
     }
@@ -57,13 +57,13 @@ class OtherMergeFields
     public function format(): array
     {
         return [
-            '{site_name}'     => get_setting('general.site_name', config('app.name')),
+            '{site_name}' => get_setting('general.site_name', config('app.name')),
             '{company_email}' => get_setting('email.sender_email', env('MAIL_FROM_ADDRESS')),
-            '{dark_logo}'     => get_setting('general.site_dark_logo') && Storage::disk('public')->exists(get_setting('general.site_dark_logo'))
-            ? asset('storage/' . get_setting('general.site_dark_logo'))
+            '{dark_logo}' => get_setting('general.site_dark_logo') && Storage::disk('public')->exists(get_setting('general.site_dark_logo'))
+            ? asset('storage/'.get_setting('general.site_dark_logo'))
             : asset('/img/dark_logo.png'),
             '{light_logo}' => get_setting('general.site_light_logo') && Storage::disk('public')->exists(get_setting('general.site_light_logo'))
-            ? asset('storage/' . get_setting('general.site_light_logo'))
+            ? asset('storage/'.get_setting('general.site_light_logo'))
             : asset('/img/light_logo.png'),
             '{base_url}' => url('/'),
         ];

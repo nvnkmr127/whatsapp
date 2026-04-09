@@ -43,7 +43,7 @@ class CheckSlaBreaches extends Command
                 'team_id' => $contact->team_id,
                 'user_id' => $contact->assigned_to ?? $contact->team->user_id, // Assigned agent or Team Owner
                 'body' => "⚠️ SLA ALERT: Customer has been waiting for more than {$hours} hours.",
-                'type' => 'system'
+                'type' => 'system',
             ]);
 
             // Dispatch notification to assigned agent or team owner

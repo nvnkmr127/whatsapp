@@ -11,7 +11,9 @@ use Livewire\Component;
 class TemplateHeatmap extends Component
 {
     public $selectedTemplateId = null;
+
     public $heatmap = [];
+
     public $insights = [];
 
     public function mount(): void
@@ -36,7 +38,7 @@ class TemplateHeatmap extends Component
     {
         $this->insights = [];
 
-        if (!empty($this->heatmap['best_slot']) && !empty($this->heatmap['selected_template_name'])) {
+        if (! empty($this->heatmap['best_slot']) && ! empty($this->heatmap['selected_template_name'])) {
             $slot = $this->heatmap['best_slot'];
             $this->insights[] = [
                 'type' => 'info',
@@ -51,13 +53,13 @@ class TemplateHeatmap extends Component
             ];
         }
 
-        if (!empty($this->heatmap['is_low_sample']) && !empty($this->heatmap['selected_template_name'])) {
+        if (! empty($this->heatmap['is_low_sample']) && ! empty($this->heatmap['selected_template_name'])) {
             $this->insights[] = [
                 'type' => 'warning',
                 'message' => __('Timing guidance for ":template" is based on only :count sends. Add :gap+ more sends for stronger confidence.', [
                     'template' => $this->heatmap['selected_template_name'],
                     'count' => (int) ($this->heatmap['sample_size'] ?? 0),
-                    'gap' => (int) ($this->heatmap['sample_gap'] ?? 0)
+                    'gap' => (int) ($this->heatmap['sample_gap'] ?? 0),
                 ]),
             ];
         }
@@ -66,7 +68,7 @@ class TemplateHeatmap extends Component
     protected function buildHeatmap(int $teamId, $selectedTemplateId = null): array
     {
         $driver = DB::getDriverName();
-        $sentTsExpr = "COALESCE(messages.sent_at, messages.created_at)";
+        $sentTsExpr = 'COALESCE(messages.sent_at, messages.created_at)';
         $dayExpr = $driver === 'sqlite'
             ? "CAST(strftime('%w', {$sentTsExpr}) AS INTEGER)"
             : "WEEKDAY({$sentTsExpr})";
@@ -87,7 +89,7 @@ class TemplateHeatmap extends Component
             : 'JSON_UNQUOTE(JSON_EXTRACT(messages.metadata, "$.template_name"))';
 
         $rawRows = $query
-            ->selectRaw("COALESCE(campaigns.template_id, 0) as campaign_template_id")
+            ->selectRaw('COALESCE(campaigns.template_id, 0) as campaign_template_id')
             ->selectRaw("{$metaNameExpr} as meta_template_name")
             ->selectRaw("{$dayExpr} as day_index")
             ->selectRaw("{$hourExpr} as hour_index")
@@ -102,17 +104,19 @@ class TemplateHeatmap extends Component
 
         // Map names to IDs for manual messages
         $allTemplates = WhatsappTemplate::where('team_id', $teamId)->pluck('id', 'name')->all();
-        
+
         $processedRows = [];
         $templateTotals = [];
 
         foreach ($rawRows as $row) {
             $tid = (int) $row->campaign_template_id;
-            if ($tid === 0 && !empty($row->meta_template_name)) {
+            if ($tid === 0 && ! empty($row->meta_template_name)) {
                 $tid = (int) ($allTemplates[$row->meta_template_name] ?? 0);
             }
 
-            if ($tid === 0) continue; // Skip if we can't resolve template
+            if ($tid === 0) {
+                continue;
+            } // Skip if we can't resolve template
 
             $dayIdx = $this->normalizeWeekday((int) $row->day_index, $driver);
             $hourIdx = (int) $row->hour_index;
@@ -120,19 +124,19 @@ class TemplateHeatmap extends Component
             $read = (int) $row->read_count;
 
             $key = "{$tid}_{$dayIdx}_{$hourIdx}";
-            if (!isset($processedRows[$key])) {
+            if (! isset($processedRows[$key])) {
                 $processedRows[$key] = [
                     'template_id' => $tid,
                     'day_index' => $dayIdx,
                     'hour_index' => $hourIdx,
                     'sent' => 0,
-                    'read' => 0
+                    'read' => 0,
                 ];
             }
             $processedRows[$key]['sent'] += $sent;
             $processedRows[$key]['read'] += $read;
 
-            if (!isset($templateTotals[$tid])) {
+            if (! isset($templateTotals[$tid])) {
                 $templateTotals[$tid] = ['sent' => 0, 'read' => 0];
             }
             $templateTotals[$tid]['sent'] += $sent;
@@ -144,18 +148,19 @@ class TemplateHeatmap extends Component
         }
 
         $availableIds = array_keys($templateTotals);
-        $selectedTemplateId = in_array((int)$selectedTemplateId, $availableIds) 
-            ? (int)$selectedTemplateId 
-            : (int)collect($templateTotals)->sortByDesc('sent')->keys()->first();
+        $selectedTemplateId = in_array((int) $selectedTemplateId, $availableIds)
+            ? (int) $selectedTemplateId
+            : (int) collect($templateTotals)->sortByDesc('sent')->keys()->first();
 
         $templateNames = WhatsappTemplate::whereIn('id', $availableIds)->pluck('name', 'id')->all();
 
         $templateOptions = collect($templateTotals)
             ->map(function ($totals, $tid) use ($templateNames) {
                 $sent = $totals['sent'];
+
                 return [
-                    'id' => (int)$tid,
-                    'name' => $templateNames[$tid] ?? ('Template #' . $tid),
+                    'id' => (int) $tid,
+                    'name' => $templateNames[$tid] ?? ('Template #'.$tid),
                     'sent' => $sent,
                     'read_rate' => $sent > 0 ? round(($totals['read'] / $sent) * 100, 1) : 0,
                 ];
@@ -245,7 +250,7 @@ class TemplateHeatmap extends Component
 
         return [
             'selected_template_id' => $selectedTemplateId,
-            'selected_template_name' => $templateNames[$selectedTemplateId] ?? ('Template #' . $selectedTemplateId),
+            'selected_template_name' => $templateNames[$selectedTemplateId] ?? ('Template #'.$selectedTemplateId),
             'template_options' => $templateOptions,
             'rows' => $rowsForView,
             'baseline_rate' => round($baselineRate, 1),
@@ -263,6 +268,7 @@ class TemplateHeatmap extends Component
         if ($driver === 'sqlite') {
             return ($dayIndex + 6) % 7;
         }
+
         return max(0, min(6, $dayIndex));
     }
 
@@ -274,6 +280,7 @@ class TemplateHeatmap extends Component
         if ($slotSamples >= 10 || ($totalSamples > 0 && ($slotSamples / $totalSamples) >= 0.06)) {
             return 'Medium';
         }
+
         return 'Low';
     }
 

@@ -4,11 +4,10 @@ namespace Tests\Unit;
 
 use App\Models\Team;
 use App\Models\WhatsappTemplate;
-use App\Validators\TemplateValidator;
 use App\Services\WhatsAppService;
+use App\Validators\TemplateValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Http;
 
 class ReadinessEngineTest extends TestCase
 {
@@ -23,10 +22,10 @@ class ReadinessEngineTest extends TestCase
             'language' => 'en_US',
             'category' => 'UTILITY',
             'status' => 'PENDING',
-            'components' => [['type' => 'BODY', 'text' => 'Hello']]
+            'components' => [['type' => 'BODY', 'text' => 'Hello there this is long enough']],
         ]);
 
-        $validator = new TemplateValidator();
+        $validator = new TemplateValidator;
         $validator->validate($template);
 
         $this->assertEquals(50, $template->readiness_score); // 100 - 50 for not APPROVED
@@ -45,7 +44,7 @@ class ReadinessEngineTest extends TestCase
             'language' => 'en_US',
             'category' => 'UTILITY',
             'status' => 'APPROVED',
-            'components' => [['type' => 'BODY', 'text' => '{{1}} and {{2}}']]
+            'components' => [['type' => 'BODY', 'text' => 'Here is your code {{1}} and your link {{2}}']],
         ]);
 
         // Jumbled sequence
@@ -55,10 +54,10 @@ class ReadinessEngineTest extends TestCase
             'language' => 'en_US',
             'category' => 'UTILITY',
             'status' => 'APPROVED',
-            'components' => [['type' => 'BODY', 'text' => '{{2}} and {{1}}']]
+            'components' => [['type' => 'BODY', 'text' => 'Here is your link {{2}} and your code {{1}}']],
         ]);
 
-        $validator = new TemplateValidator();
+        $validator = new TemplateValidator;
 
         $validator->validate($tpl1);
         $this->assertEquals(100, $tpl1->readiness_score);
@@ -70,7 +69,7 @@ class ReadinessEngineTest extends TestCase
     public function test_whatsapp_service_blocks_low_readiness_templates()
     {
         $team = Team::factory()->create([
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
         ]);
 
         $template = WhatsappTemplate::create([
@@ -79,7 +78,7 @@ class ReadinessEngineTest extends TestCase
             'language' => 'en_US',
             'category' => 'UTILITY',
             'status' => 'REJECTED', // Fatal for readiness
-            'components' => [['type' => 'BODY', 'text' => 'Hello']]
+            'components' => [['type' => 'BODY', 'text' => 'Hello']],
         ]);
 
         $service = new WhatsAppService($team);
@@ -99,17 +98,17 @@ class ReadinessEngineTest extends TestCase
             'category' => 'MARKETING',
             'status' => 'APPROVED',
             'components' => [
-                ['type' => 'BODY', 'text' => 'Hi'],
+                ['type' => 'BODY', 'text' => 'Hello there this is long enough'],
                 [
                     'type' => 'BUTTONS',
                     'buttons' => [
-                        ['type' => 'URL', 'text' => 'View', 'url' => 'https://site.com/{{2}}'] // Must be {{1}}
-                    ]
-                ]
-            ]
+                        ['type' => 'URL', 'text' => 'View', 'url' => 'https://site.com/{{2}}'], // Must be {{1}}
+                    ],
+                ],
+            ],
         ]);
 
-        $validator = new TemplateValidator();
+        $validator = new TemplateValidator;
         $validator->validate($template);
 
         $this->assertEquals(80, $template->readiness_score); // 100 - 20

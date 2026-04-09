@@ -32,7 +32,7 @@ class WooCommerceWebhookController extends Controller
 
         $webhookSource = $request->header('X-WC-Webhook-Source'); // http://example.com/
 
-        if (!$webhookSource) {
+        if (! $webhookSource) {
             return response()->json(['message' => 'Missing Source Header'], 400);
         }
 
@@ -44,8 +44,9 @@ class WooCommerceWebhookController extends Controller
             ->where('credentials->url', 'LIKE', "%$domain%")
             ->first();
 
-        if (!$integration) {
+        if (! $integration) {
             Log::info("Received WC webhook for unknown or suspended shop: {$domain}");
+
             return response()->json(['message' => 'Shop not integrated'], 200);
         }
 
@@ -53,8 +54,9 @@ class WooCommerceWebhookController extends Controller
         $secret = $integration->webhook_secret ?? config('services.woocommerce.webhook_secret');
         if ($secret && $signature) {
             $expectedSignature = base64_encode(hash_hmac('sha256', $data, $secret, true));
-            if (!hash_equals($signature, $expectedSignature)) {
+            if (! hash_equals($signature, $expectedSignature)) {
                 Log::error("WooCommerce Webhook Signature mismatch for integration: {$integration->id}");
+
                 return response()->json(['error' => 'Invalid signature'], 401);
             }
         }
@@ -64,7 +66,7 @@ class WooCommerceWebhookController extends Controller
 
         $payload = $request->all();
         $orderId = $payload['id'] ?? null;
-        if (!$orderId) {
+        if (! $orderId) {
             return response()->json(['message' => 'No Order ID'], 200);
         }
 
@@ -82,9 +84,9 @@ class WooCommerceWebhookController extends Controller
             default => 'placed'
         };
 
-        // Note: WC doesn't have a standard 'shipped' status in core. 
-        // It relies on 'completed' or plugins. 
-        // If 'completed', let's assume 'shipped' + 'delivered' logic? 
+        // Note: WC doesn't have a standard 'shipped' status in core.
+        // It relies on 'completed' or plugins.
+        // If 'completed', let's assume 'shipped' + 'delivered' logic?
         // Let's treat 'completed' as 'shipped' as it's the final action a merchant takes.
         if ($wcStatus === 'completed') {
             $status = 'shipped';
@@ -95,13 +97,13 @@ class WooCommerceWebhookController extends Controller
         $email = $billing['email'] ?? null;
         $phone = $billing['phone'] ?? null;
 
-        if (!$phone) {
+        if (! $phone) {
             return response()->json(['message' => 'No Customer Phone'], 200);
         }
 
         $contact = Contact::firstOrCreate(
             ['team_id' => $integration->team_id, 'phone_number' => $phone],
-            ['name' => $billing['first_name'] . ' ' . $billing['last_name'], 'email' => $email]
+            ['name' => $billing['first_name'].' '.$billing['last_name'], 'email' => $email]
         );
 
         $order = Order::updateOrCreate(
@@ -115,7 +117,7 @@ class WooCommerceWebhookController extends Controller
                 'total_amount' => $payload['total'] ?? 0,
                 'currency' => $payload['currency'] ?? 'USD',
                 'items' => $payload['line_items'] ?? [],
-                'payment_details' => ['method' => $payload['payment_method'] ?? 'woocommerce']
+                'payment_details' => ['method' => $payload['payment_method'] ?? 'woocommerce'],
             ]
         );
 

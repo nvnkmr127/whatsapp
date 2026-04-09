@@ -17,10 +17,10 @@ class UsersSeeder extends Seeder
     {
         foreach (range(1, 100) as $index) {
             User::create([
-                'name'       => 'User ' . $index,
-                'email'      => 'user' . $index . '@example.com',
-                'password'   => Hash::make('password'),
-                'role_id'    => rand(1, 5), // Assuming you have roles in the `roles` table
+                'name' => 'User '.$index,
+                'email' => 'user'.$index.'@example.com',
+                'password' => Hash::make('password'),
+                'role_id' => rand(1, 5), // Assuming you have roles in the `roles` table
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

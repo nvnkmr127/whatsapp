@@ -5,14 +5,14 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'email.mailer'          => '',
-        'email.smtp_port'       => '',
-        'email.smtp_username'   => '',
-        'email.smtp_password'   => '',
+        'email.mailer' => '',
+        'email.smtp_port' => '',
+        'email.smtp_username' => '',
+        'email.smtp_password' => '',
         'email.smtp_encryption' => '',
-        'email.sender_name'     => '',
-        'email.sender_email'    => '',
-        'email.smtp_host'       => '',
+        'email.sender_name' => '',
+        'email.sender_email' => '',
+        'email.smtp_host' => '',
     ];
 
     public function up(): void

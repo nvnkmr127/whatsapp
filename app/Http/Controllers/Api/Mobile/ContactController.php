@@ -45,7 +45,9 @@ class ContactController extends Controller
     public function getAvailableTags(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) return response()->json([]);
+        if (! $team) {
+            return response()->json([]);
+        }
 
         return response()->json(\App\Models\ContactTag::where('team_id', $team->id)->get());
     }
@@ -60,7 +62,7 @@ class ContactController extends Controller
         $request->validate(['tag_id' => 'required|exists:contact_tags,id']);
 
         $tag = \App\Models\ContactTag::findOrFail($request->tag_id);
-        
+
         // Security check for tag team
         if ($tag->team_id !== $contact->team_id) {
             abort(403);
@@ -82,14 +84,14 @@ class ContactController extends Controller
         $query = $request->input('query');
         $team = $request->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return response()->json([]);
         }
 
         $contacts = Contact::where('team_id', $team->id)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('phone_number', 'like', "%{$query}%");
+                    ->orWhere('phone_number', 'like', "%{$query}%");
             })
             ->take(20)
             ->get();
@@ -99,7 +101,7 @@ class ContactController extends Controller
 
     protected function authorizeContact($user, $contact)
     {
-        if ($contact->team_id !== $user->currentTeam?->id && !$user->isSuperAdmin()) {
+        if ($contact->team_id !== $user->currentTeam?->id && ! $user->isSuperAdmin()) {
             abort(403, 'Unauthorized access to this contact.');
         }
     }

@@ -14,19 +14,23 @@ trait StandardApiResponses
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data'    => $data,
+            'data' => $data,
         ], $code);
     }
 
     /**
      * Error response.
      */
-    protected function error(string $message = 'Error occurred', int $code = 400, $errors = null, string $internalCode = 'ERR_UNKNOWN'): JsonResponse
-    {
+    protected function error(
+        string $message = 'Error occurred',
+        int $code = 400,
+        mixed $errors = null,
+        string $internalCode = 'ERR_UNKNOWN'
+    ): JsonResponse {
         $response = [
             'success' => false,
             'message' => $message,
-            'code'    => $internalCode,
+            'code' => $internalCode,
         ];
 
         if ($errors) {
@@ -44,12 +48,12 @@ trait StandardApiResponses
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data'    => $paginator->items(),
+            'data' => $paginator->items(),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
             ],
         ]);
     }

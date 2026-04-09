@@ -20,8 +20,8 @@ class CredentialResolver
 
         // If team-level is missing, could fall back to global, but usually teams have their own.
         // The user recently added 'whatsapp_app_id' and 'whatsapp_verify_token' to teams table.
-        
-        if (!$token || !$phoneId) {
+
+        if (! $token || ! $phoneId) {
             Log::warning("WhatsApp credentials incomplete for team: {$team->id}");
         }
 

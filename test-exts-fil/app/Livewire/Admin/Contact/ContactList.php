@@ -24,9 +24,9 @@ class ContactList extends Component
     public bool $isBulckDelete = false;
 
     protected $listeners = [
-        'editContact'   => 'editContact',
+        'editContact' => 'editContact',
         'confirmDelete' => 'confirmDelete',
-        'viewContact'   => 'viewContact',
+        'viewContact' => 'viewContact',
     ];
 
     public function mount()
@@ -45,11 +45,11 @@ class ContactList extends Component
 
     public function viewContact($contactId)
     {
-        $this->contact               = Contact::with('notes')->findOrFail($contactId);
-        $country                     = collect(getCountryList())->firstWhere('id', (string) $this->contact->country_id);
+        $this->contact = Contact::with('notes')->findOrFail($contactId);
+        $country = collect(getCountryList())->firstWhere('id', (string) $this->contact->country_id);
         $this->contact->country_name = $country['short_name'] ?? null;
-        $this->notes                 = $this->contact->notes()->latest()->get();
-        $this->viewContactModal      = true;
+        $this->notes = $this->contact->notes()->latest()->get();
+        $this->viewContactModal = true;
     }
 
     public function importContact()
@@ -95,17 +95,17 @@ class ContactList extends Component
                 $this->contact_id = null;
                 $this->js('window.pgBulkActions.clearAll()');
                 $this->notify([
-                    'type'    => 'success',
+                    'type' => 'success',
                     'message' => t('contacts_delete_successfully'),
                 ]);
             } else {
 
-                $contact          = Contact::findOrFail($this->contact_id);
+                $contact = Contact::findOrFail($this->contact_id);
                 $this->contact_id = null;
                 $contact->delete();
 
                 $this->notify([
-                    'type'    => 'success',
+                    'type' => 'success',
                     'message' => t('contact_delete_success'),
                 ]);
             }
@@ -115,7 +115,7 @@ class ContactList extends Component
         } catch (\Exception $e) {
 
             $this->notify([
-                'type'    => 'danger',
+                'type' => 'danger',
                 'message' => t('an_error_occured_deleting_contact'),
             ]);
         }

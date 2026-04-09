@@ -24,12 +24,12 @@ class DatabaseSetupRequest extends FormRequest
     public function rules()
     {
         return [
-            'app_url'           => ['required', 'url'],
-            'app_name'          => ['required', 'string', 'max:255'],
-            'country'           => ['sometimes', 'integer'],
+            'app_url' => ['required', 'url'],
+            'app_name' => ['required', 'string', 'max:255'],
+            'country' => ['sometimes', 'integer'],
             'database_hostname' => ['required', 'string', 'max:255'],
-            'database_port'     => ['required', 'numeric'],
-            'database_name'     => ['required', 'string', 'max:255'],
+            'database_port' => ['required', 'numeric'],
+            'database_name' => ['required', 'string', 'max:255'],
             'database_username' => ['required', 'string', 'max:255'],
             'database_password' => ['required', 'string'],
         ];
@@ -43,12 +43,12 @@ class DatabaseSetupRequest extends FormRequest
     public function attributes()
     {
         return [
-            'app_url'           => 'Application URL',
-            'app_name'          => 'Application Name',
-            'country'           => 'Country',
+            'app_url' => 'Application URL',
+            'app_name' => 'Application Name',
+            'country' => 'Country',
             'database_hostname' => 'Database Hostname',
-            'database_port'     => 'Database Port',
-            'database_name'     => 'Database Name',
+            'database_port' => 'Database Port',
+            'database_name' => 'Database Name',
             'database_username' => 'Database Username',
             'database_password' => 'Database Password',
         ];

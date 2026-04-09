@@ -2,21 +2,22 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Events\CallAnswered;
+use App\Events\CallOffered;
+use App\Events\CallRejected;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\WhatsAppCall;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use App\Events\CallOffered;
-use App\Events\CallAnswered;
-use App\Events\CallRejected;
+use Tests\TestCase;
 
 class WhatsAppCallIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $team;
+
     protected $user;
 
     protected function setUp(): void
@@ -30,6 +31,18 @@ class WhatsAppCallIntegrationTest extends TestCase
         $this->team = Team::factory()->create([
             'whatsapp_phone_number_id' => '1234567890', // Ensure this matches logic in job
         ]);
+        $this->user->teams()->attach($this->team);
+    }
+
+    protected function postWebhook(array $payload)
+    {
+        config(['whatsapp.app_secret' => 'test_secret']);
+        $content = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $content, 'test_secret');
+
+        return $this->withHeaders([
+            'X-Hub-Signature-256' => $signature,
+        ])->postJson('/api/webhook/whatsapp/calls', $payload);
     }
 
     /** @test */
@@ -37,7 +50,7 @@ class WhatsAppCallIntegrationTest extends TestCase
     {
         Event::fake();
 
-        $callId = 'wacid.call_offer_' . rand(1000, 9999);
+        $callId = 'wacid.call_offer_'.rand(1000, 9999);
         $payload = [
             'entry' => [
                 [
@@ -72,9 +85,7 @@ class WhatsAppCallIntegrationTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson('/api/webhook/whatsapp/calls', $payload, [
-            'X-Hub-Signature-256' => 'sha256=dummy_signature'
-        ]);
+        $response = $this->postWebhook($payload);
 
         $response->assertJson(['status' => 'success']);
 
@@ -97,7 +108,7 @@ class WhatsAppCallIntegrationTest extends TestCase
     {
         Event::fake();
 
-        $callId = 'wacid.call_reject_' . rand(1000, 9999);
+        $callId = 'wacid.call_reject_'.rand(1000, 9999);
         $call = WhatsAppCall::factory()->create([
             'team_id' => $this->team->id,
             'call_id' => $callId,
@@ -131,9 +142,7 @@ class WhatsAppCallIntegrationTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson('/api/webhook/whatsapp/calls', $payload, [
-            'X-Hub-Signature-256' => 'sha256=dummy_signature'
-        ]);
+        $response = $this->postWebhook($payload);
         $response->assertJson(['status' => 'success']);
 
         $this->assertEquals(1, WhatsAppCall::count(), 'Should have only 1 call record');
@@ -150,7 +159,7 @@ class WhatsAppCallIntegrationTest extends TestCase
     {
         Event::fake();
 
-        $callId = 'wacid.outbound_' . rand(1000, 9999);
+        $callId = 'wacid.outbound_'.rand(1000, 9999);
         $call = WhatsAppCall::factory()->create([
             'team_id' => $this->team->id,
             'call_id' => $callId,
@@ -187,9 +196,7 @@ class WhatsAppCallIntegrationTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson('/api/webhook/whatsapp/calls', $payload, [
-            'X-Hub-Signature-256' => 'sha256=dummy_signature'
-        ]);
+        $response = $this->postWebhook($payload);
         $response->assertJson(['status' => 'success']);
 
         $call->refresh();

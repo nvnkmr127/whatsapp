@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\TenantBackup;
 use App\Services\BackupService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Exception;
 
 class RestoreController extends Controller
 {
@@ -44,7 +44,7 @@ class RestoreController extends Controller
 
         // 3. ENFORCE MODEL B ARCHITECTURE:
         // "Tenants must NOT access raw backups. Only platform-level access allowed."
-        if ($backup->isModelB() && !$user->isSuperAdmin()) {
+        if ($backup->isModelB() && ! $user->isSuperAdmin()) {
             return redirect()->back()->with('error', 'This backup is platform-managed. Restoration must be initiated by a system administrator.');
         }
 
@@ -54,7 +54,7 @@ class RestoreController extends Controller
         }
 
         // 5. Only restore from completed or verified backups
-        if (!in_array($backup->status, ['completed', 'verified', 'uploaded'])) {
+        if (! in_array($backup->status, ['completed', 'verified', 'uploaded'])) {
             return redirect()->back()->with('error', 'Only completed/verified backups can be restored.');
         }
 
@@ -96,8 +96,9 @@ class RestoreController extends Controller
                 ]
             );
 
-            logger()->error("Restoration failed for Team {$team->id}: " . $e->getMessage());
-            return redirect()->back()->with('error', 'Restoration failed: ' . $e->getMessage());
+            logger()->error("Restoration failed for Team {$team->id}: ".$e->getMessage());
+
+            return redirect()->back()->with('error', 'Restoration failed: '.$e->getMessage());
         }
     }
 
@@ -117,8 +118,8 @@ class RestoreController extends Controller
         $team = auth()->user()->currentTeam;
         $file = $request->file('backup_file');
 
-        $tempPath = $file->storeAs('backup-temp', 'manual_restore_' . time() . '.' . $file->extension());
-        $fullPath = storage_path('app/' . $tempPath);
+        $tempPath = $file->storeAs('backup-temp', 'manual_restore_'.time().'.'.$file->extension());
+        $fullPath = storage_path('app/'.$tempPath);
 
         $this->auditLog(
             $team->id,
@@ -152,7 +153,8 @@ class RestoreController extends Controller
                     'error' => $e->getMessage(),
                 ]
             );
-            return redirect()->back()->with('error', 'Manual restoration failed: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Manual restoration failed: '.$e->getMessage());
         }
     }
 
@@ -174,7 +176,7 @@ class RestoreController extends Controller
                 ]),
             ]);
         } catch (Exception $e) {
-            \Log::error("Restore audit log failed: " . $e->getMessage());
+            \Log::error('Restore audit log failed: '.$e->getMessage());
         }
     }
 }

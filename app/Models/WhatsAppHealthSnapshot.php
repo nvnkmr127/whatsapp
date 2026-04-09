@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WhatsAppHealthSnapshot extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $table = 'whatsapp_health_snapshots';
 

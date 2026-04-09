@@ -70,14 +70,14 @@ class ContactController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $contacts,
+                'data' => $contacts,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => t('failed_to_fetch_contact'),
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -123,35 +123,35 @@ class ContactController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'firstname' => 'required|string|max:255',
-                'lastname'  => 'required|string|max:255',
-                'email'     => 'required|email|unique:contacts',
-                'phone'     => 'required|string|max:20',
-                'type'      => 'required|in:lead,contact',
-                'source'    => 'nullable|string|max:50',
-                'status'    => 'nullable|string|max:50',
+                'lastname' => 'required|string|max:255',
+                'email' => 'required|email|unique:contacts',
+                'phone' => 'required|string|max:20',
+                'type' => 'required|in:lead,contact',
+                'source' => 'nullable|string|max:50',
+                'status' => 'nullable|string|max:50',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $contact = Contact::create($request->all());
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Contact created successfully',
-                'data'    => $contact,
+                'data' => $contact,
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to create contact',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -189,14 +189,14 @@ class ContactController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $contact,
+                'data' => $contact,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Contact not found',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 404);
         }
     }
@@ -234,35 +234,35 @@ class ContactController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'firstname' => 'sometimes|string|max:255',
-                'lastname'  => 'sometimes|string|max:255',
-                'email'     => 'sometimes|email|unique:contacts,email,' . $id,
-                'phone'     => 'sometimes|string|max:20',
-                'type'      => 'sometimes|in:lead,contact',
-                'source'    => 'nullable|string|max:50',
-                'status'    => 'nullable|string|max:50',
+                'lastname' => 'sometimes|string|max:255',
+                'email' => 'sometimes|email|unique:contacts,email,'.$id,
+                'phone' => 'sometimes|string|max:20',
+                'type' => 'sometimes|in:lead,contact',
+                'source' => 'nullable|string|max:50',
+                'status' => 'nullable|string|max:50',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $contact->update($request->all());
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Contact updated successfully',
-                'data'    => $contact,
+                'data' => $contact,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to update contact',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -290,15 +290,15 @@ class ContactController extends Controller
             $contact->delete();
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Contact deleted successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to delete contact',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

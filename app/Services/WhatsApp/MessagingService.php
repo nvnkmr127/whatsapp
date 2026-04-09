@@ -2,15 +2,14 @@
 
 namespace App\Services\WhatsApp;
 
-use App\Models\Team;
-use App\Models\Contact;
-use App\Models\Message;
 use App\Core\WhatsApp\WhatsAppClient;
-use Illuminate\Support\Facades\Log;
+use App\Models\Message;
+use App\Models\Team;
 
 class MessagingService
 {
     protected WhatsAppClient $client;
+
     protected ?Team $team = null;
 
     public function __construct(WhatsAppClient $client)
@@ -22,6 +21,7 @@ class MessagingService
     {
         $this->team = $team;
         $this->client->forTeam($team);
+
         return $this;
     }
 
@@ -35,7 +35,7 @@ class MessagingService
             'recipient_type' => 'individual',
             'to' => $to,
             'type' => 'text',
-            'text' => ['body' => $text]
+            'text' => ['body' => $text],
         ]);
     }
 
@@ -51,8 +51,8 @@ class MessagingService
             'template' => [
                 'name' => $templateName,
                 'language' => ['code' => $languageCode],
-                'components' => $components
-            ]
+                'components' => $components,
+            ],
         ]);
     }
 
@@ -61,9 +61,9 @@ class MessagingService
      */
     public function sendButtons(string $to, string $text, array $buttons, ?string $header = null, ?string $footer = null): array
     {
-        $btns = array_map(fn($btn) => [
+        $btns = array_map(fn ($btn) => [
             'type' => 'reply',
-            'reply' => ['id' => $btn['id'], 'title' => $btn['title']]
+            'reply' => ['id' => $btn['id'], 'title' => $btn['title']],
         ], $buttons);
 
         $payload = [
@@ -73,12 +73,16 @@ class MessagingService
             'interactive' => [
                 'type' => 'button',
                 'body' => ['text' => $text],
-                'action' => ['buttons' => $btns]
-            ]
+                'action' => ['buttons' => $btns],
+            ],
         ];
 
-        if ($header) $payload['interactive']['header'] = ['type' => 'text', 'text' => $header];
-        if ($footer) $payload['interactive']['footer'] = ['text' => $footer];
+        if ($header) {
+            $payload['interactive']['header'] = ['type' => 'text', 'text' => $header];
+        }
+        if ($footer) {
+            $payload['interactive']['footer'] = ['text' => $footer];
+        }
 
         return $this->client->sendRequest('messages', $payload);
     }

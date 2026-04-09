@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivityLog;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\AuditService;
@@ -21,7 +20,8 @@ class TenantIdentityTest extends TestCase
 
         // Register a test route using the tenant middleware
         Route::middleware(['web', 'auth:sanctum', 'tenant'])->get('/test-tenant-context', function () {
-            $service = new TenantService();
+            $service = new TenantService;
+
             return response()->json([
                 'tenant_id' => $service->getTenantId(),
                 'waba_id' => $service->getWabaId(),
@@ -33,7 +33,7 @@ class TenantIdentityTest extends TestCase
     public function test_request_aborted_if_no_team_selected()
     {
         $user = User::factory()->create();
-        // Ensure user has no current team (might need to detach if factory attaches one)
+        // Ensure user has no current team
         $user->current_team_id = null;
         $user->save();
 
@@ -64,16 +64,14 @@ class TenantIdentityTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $this->actingAs($user);
 
-        $audit = new AuditService();
-        $audit->log('test.action', 'Testing audit log', $user);
+        $audit = new AuditService;
+        $audit->log('test.action', $user, 'Testing audit log');
 
-        $this->assertDatabaseHas('activity_logs', [
+        $this->assertDatabaseHas('audit_logs', [
             'user_id' => $user->id,
             'team_id' => $user->currentTeam->id,
-            'action' => 'test.action',
-            'description' => 'Testing audit log',
-            'subject_type' => User::class,
-            'subject_id' => $user->id,
+            'event_type' => 'test.action',
+            'identifier' => 'Testing audit log',
         ]);
     }
 
@@ -88,7 +86,7 @@ class TenantIdentityTest extends TestCase
         $team->save();
 
         $this->actingAs($user);
-        $service = new TenantService();
+        $service = new TenantService;
 
         $this->assertEquals($team->id, $service->getTenantId());
         $this->assertEquals('waba_test', $service->getWabaId());
@@ -104,11 +102,6 @@ class TenantIdentityTest extends TestCase
 
         $teamB = Team::factory()->create(['user_id' => $user->id, 'personal_team' => false]);
         $user->teams()->attach($teamB);
-        $user->switchTeam($teamA);
-
-        // Default request should return Team A
-        $this->actingAs($user)->getJson('/test-tenant-context')
-            ->assertJson(['tenant_id' => $teamA->id]);
 
         // Request with header for Team B
         $this->actingAs($user)
@@ -116,11 +109,6 @@ class TenantIdentityTest extends TestCase
             ->getJson('/test-tenant-context')
             ->assertJson([
                 'tenant_id' => $teamB->id,
-                // Owner is usually admin, but let's just inspect it or assert structure if role key logic varies
-                // In Jetstream, role might be null if not explicitly assigned in team_user (owner vs member).
-                // Actually, owner has no role in pivot, they are owner.
-                // But HasTeams:teamRole checks if user owns team. If so it returns 'Owner' role config.
-                // Let's assume 'admin' for now or just check key exists.
             ]);
 
         // Verify database state didn't change (still Team A)

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class AnalyticsTest extends TestCase
@@ -29,7 +28,7 @@ class AnalyticsTest extends TestCase
         $this->actingAs($user)
             ->get(route('analytics'))
             ->assertStatus(200)
-            ->assertSee('Analytics Dashboard');
+            ->assertSee('Analytics &', false);
     }
 
     public function test_can_view_campaign_show()
@@ -41,7 +40,7 @@ class AnalyticsTest extends TestCase
             'team_id' => $user->currentTeam->id,
             'name' => 'Test Campaign',
             'campaign_name' => 'Test Campaign',
-            'status' => 'scheduled'
+            'status' => 'scheduled',
         ]);
 
         $this->actingAs($user)

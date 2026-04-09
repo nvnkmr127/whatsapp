@@ -10,16 +10,14 @@ use App\Services\OfferEligibilityService;
 use App\Services\UniqueIdentityService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-use Laravel\Socialite\Facades\Socialite; // Requires laravel/socialite
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Log; // Requires laravel/socialite
+use Laravel\Socialite\Facades\Socialite;
 
 class GoogleAuthController extends Controller
 {
     public function __construct(
         private readonly UniqueIdentityService $identity,
-    ) {
-    }
+    ) {}
 
     /**
      * Redirect to Google.
@@ -37,7 +35,8 @@ class GoogleAuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (\Exception $e) {
-            Log::error("Google OAuth error: " . $e->getMessage());
+            Log::error('Google OAuth error: '.$e->getMessage());
+
             return redirect()->route('login')->with('error', 'Failed to authenticate with Google.');
         }
 
@@ -90,14 +89,14 @@ class GoogleAuthController extends Controller
                 // 3. No identity, check if User exists by email (Account Linking)
                 $user = User::where('email', $googleUser->getEmail())->first();
 
-                if (!$user) {
+                if (! $user) {
                     $ip = $request->ip() ?? '0.0.0.0';
                     $identityResult = $this->identity->check(
                         email: $googleUser->getEmail(),
                         ip: $ip,
                     );
 
-                    if (!$identityResult->passed) {
+                    if (! $identityResult->passed) {
                         return redirect()->route('login')->withErrors(['oauth' => $identityResult->denial_reason]);
                     }
 
@@ -112,7 +111,7 @@ class GoogleAuthController extends Controller
                     // ── Create team ─────────────────────────────────────────────
                     $team = \App\Models\Team::forceCreate([
                         'user_id' => $user->id,
-                        'name' => ($user->name ?: 'Google') . "'s Team",
+                        'name' => ($user->name ?: 'Google')."'s Team",
                         'personal_team' => true,
                         'subscription_plan' => 'trial',
                         'subscription_status' => 'trial',
@@ -155,7 +154,7 @@ class GoogleAuthController extends Controller
             Auth::login($user, true);
 
             AuditService::log('Auth.Success', $user->id, $googleUser->getEmail(), 'google', [
-                'google_id' => $googleUser->getId()
+                'google_id' => $googleUser->getId(),
             ]);
 
             return redirect()->route('dashboard');

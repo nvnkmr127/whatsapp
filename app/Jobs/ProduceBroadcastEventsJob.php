@@ -27,8 +27,9 @@ class ProduceBroadcastEventsJob implements ShouldQueue
     {
         $snapshot = CampaignSnapshot::find($this->snapshotId);
 
-        if (!$snapshot) {
+        if (! $snapshot) {
             Log::error("Snapshot {$this->snapshotId} not found for event production.");
+
             return;
         }
 

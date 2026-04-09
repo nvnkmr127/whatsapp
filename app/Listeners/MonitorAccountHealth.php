@@ -3,11 +3,10 @@
 namespace App\Listeners;
 
 use App\Events\WhatsAppAccountRisk;
+use App\Models\Team;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
-use App\Models\Team;
-use Illuminate\Support\Facades\Mail;
 
 class MonitorAccountHealth implements ShouldQueue
 {

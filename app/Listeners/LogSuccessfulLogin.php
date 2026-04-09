@@ -3,7 +3,6 @@
 namespace App\Listeners;
 
 use Illuminate\Auth\Events\Login;
-use Illuminate\Support\Facades\Auth;
 
 class LogSuccessfulLogin
 {
@@ -22,12 +21,12 @@ class LogSuccessfulLogin
 
         // 2. Proactive Security Check
         $security = $user->security_metadata ?? ['known_ips' => [], 'known_devices' => []];
-        $isNewIp = !in_array($ip, $security['known_ips'] ?? []);
-        $isNewDevice = !in_array($userAgent, $security['known_devices'] ?? []);
+        $isNewIp = ! in_array($ip, $security['known_ips'] ?? []);
+        $isNewDevice = ! in_array($userAgent, $security['known_devices'] ?? []);
 
         if ($isNewIp || $isNewDevice) {
             // Only notify if there's history (don't alert on first ever login)
-            if (!empty($security['known_ips'])) {
+            if (! empty($security['known_ips'])) {
                 $user->notify(new \App\Notifications\LoginSecurityNotification($ip, $userAgent, now()->toDayDateTimeString()));
             }
 

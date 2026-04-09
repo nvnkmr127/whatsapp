@@ -20,7 +20,7 @@ class ManageAiPrompt extends Component
     public $prompt_id = null;
 
     protected $listeners = [
-        'editAiPrompt'  => 'editAiPrompt',
+        'editAiPrompt' => 'editAiPrompt',
         'confirmDelete' => 'confirmDelete',
     ];
 
@@ -48,7 +48,7 @@ class ManageAiPrompt extends Component
             'prompt.name' => [
                 'required',
                 'max:255',
-                'unique:ai_prompts,name,' . ($this->prompt->id ?? 'NULL'),
+                'unique:ai_prompts,name,'.($this->prompt->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
             ],
             'prompt.action' => ['required', new PurifiedInput(t('sql_injection_error'))],
@@ -85,7 +85,7 @@ class ManageAiPrompt extends Component
     public function editAiPrompt($promptId)
     {
         try {
-            $prompt       = AiPrompt::findOrFail($promptId);
+            $prompt = AiPrompt::findOrFail($promptId);
             $this->prompt = $prompt;
             $this->resetValidation();
             $this->showAiPromptModal = true;
@@ -97,7 +97,7 @@ class ManageAiPrompt extends Component
 
     public function confirmDelete($promptId)
     {
-        $this->prompt_id          = $promptId;
+        $this->prompt_id = $promptId;
         $this->confirmingDeletion = true;
     }
 

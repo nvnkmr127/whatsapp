@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Contact;
 use App\Models\ConsentRegistry;
+use App\Models\Contact;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -11,12 +11,11 @@ class ConsentService
 {
     /**
      * Opt-in a contact.
-     * 
-     * @param Contact $contact
-     * @param string $source Source of opt-in (e.g., 'API', 'MANUAL_ADMIN', 'START_KEYWORD')
-     * @param string|null $notes Additional notes for audit trail
-     * @param string|null $proofUrl URL to consent proof document
-     * @param int $expiryMonths Consent validity period (default: 24 months for GDPR)
+     *
+     * @param  string  $source  Source of opt-in (e.g., 'API', 'MANUAL_ADMIN', 'START_KEYWORD')
+     * @param  string|null  $notes  Additional notes for audit trail
+     * @param  string|null  $proofUrl  URL to consent proof document
+     * @param  int  $expiryMonths  Consent validity period (default: 24 months for GDPR)
      * @return bool True if opt-in was successful, false if already opted-in or blocked
      */
     public function optIn(Contact $contact, $source = 'MANUAL', $notes = null, $proofUrl = null, $expiryMonths = 24)
@@ -25,7 +24,8 @@ class ConsentService
         $this->logAction($contact, 'OPT_IN_ATTEMPT', $source, $notes, $proofUrl);
 
         if ($contact->opt_in_status === 'opted_in') {
-            \Illuminate\Support\Facades\Log::info("Contact already opted-in", ['contact_id' => $contact->id]);
+            \Illuminate\Support\Facades\Log::info('Contact already opted-in', ['contact_id' => $contact->id]);
+
             return false;
         }
 
@@ -33,8 +33,8 @@ class ConsentService
         if ($contact->opt_in_status === 'opted_out' && $source !== 'MANUAL_ADMIN') {
             // Meta Rule: Customer sending START keyword MUST override previous opt-outs.
             if ($source === 'START_KEYWORD') {
-                \Illuminate\Support\Facades\Log::info("Customer START keyword overriding previous opt-out state.", [
-                    'contact_id' => $contact->id
+                \Illuminate\Support\Facades\Log::info('Customer START keyword overriding previous opt-out state.', [
+                    'contact_id' => $contact->id,
                 ]);
             } else {
                 $lastOptOut = \App\Models\ConsentLog::where('contact_id', $contact->id)
@@ -43,9 +43,10 @@ class ConsentService
                     ->first();
 
                 if ($lastOptOut && $lastOptOut->source === 'MANUAL_ADMIN') {
-                    \Illuminate\Support\Facades\Log::warning("Cannot auto-opt-in contact with admin opt-out", [
-                        'contact_id' => $contact->id
+                    \Illuminate\Support\Facades\Log::warning('Cannot auto-opt-in contact with admin opt-out', [
+                        'contact_id' => $contact->id,
                     ]);
+
                     return false;
                 }
             }
@@ -78,11 +79,10 @@ class ConsentService
 
     /**
      * Opt-out a contact (STOP).
-     * 
-     * @param Contact $contact
-     * @param string $source Source of opt-out (e.g., 'STOP_KEYWORD', 'MANUAL_ADMIN')
-     * @param string|null $notes Additional notes for audit trail
-     * @param string|null $proofUrl URL to consent proof document
+     *
+     * @param  string  $source  Source of opt-out (e.g., 'STOP_KEYWORD', 'MANUAL_ADMIN')
+     * @param  string|null  $notes  Additional notes for audit trail
+     * @param  string|null  $proofUrl  URL to consent proof document
      * @return bool True if opt-out was successful, false if already opted-out
      */
     public function optOut(Contact $contact, $source = 'STOP_KEYWORD', $notes = null, $proofUrl = null)
@@ -91,7 +91,8 @@ class ConsentService
         $this->logAction($contact, 'OPT_OUT_ATTEMPT', $source, $notes, $proofUrl);
 
         if ($contact->opt_in_status === 'opted_out') {
-            \Illuminate\Support\Facades\Log::info("Contact already opted-out", ['contact_id' => $contact->id]);
+            \Illuminate\Support\Facades\Log::info('Contact already opted-out', ['contact_id' => $contact->id]);
+
             return false;
         }
 
@@ -131,10 +132,11 @@ class ConsentService
 
         // Check consent expiry for GDPR compliance
         if ($contact->opt_in_expires_at && $contact->opt_in_expires_at < now()) {
-            \Illuminate\Support\Facades\Log::warning("Consent expired for contact", [
+            \Illuminate\Support\Facades\Log::warning('Consent expired for contact', [
                 'contact_id' => $contact->id,
-                'expired_at' => $contact->opt_in_expires_at
+                'expired_at' => $contact->opt_in_expires_at,
             ]);
+
             return false;
         }
 
@@ -152,14 +154,14 @@ class ConsentService
                 ->where('status', 'pending')
                 ->update([
                     'status' => 'cancelled',
-                    'error' => 'Contact opted out'
+                    'error' => 'Contact opted out',
                 ]);
 
-            \Illuminate\Support\Facades\Log::info("Cancelled pending campaign messages for opted-out contact", [
-                'contact_id' => $contact->id
+            \Illuminate\Support\Facades\Log::info('Cancelled pending campaign messages for opted-out contact', [
+                'contact_id' => $contact->id,
             ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to cancel pending messages: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Failed to cancel pending messages: '.$e->getMessage());
         }
     }
 
@@ -221,7 +223,7 @@ class ConsentService
             $contact->phone_number
         );
 
-        if (!$latest) {
+        if (! $latest) {
             // No authoritative registry entry — nothing to enforce.
             return;
         }
@@ -275,6 +277,7 @@ class ConsentService
 
         if (empty($optedOutPhones)) {
             Log::info('ConsentRegistry rehydration: no override needed', ['team_id' => $teamId]);
+
             return;
         }
 
@@ -314,7 +317,7 @@ class ConsentService
         \App\Models\ConsentLog::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
-            'action' => $action,
+            'action' => strtoupper($action),
             'source' => $source,
             'notes' => $notes,
             'proof_url' => $proofUrl,

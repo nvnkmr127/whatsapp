@@ -21,7 +21,7 @@ class MarketingPreferences extends Component
 
         $user->marketing_opt_in = $this->marketing_opt_in;
 
-        if (!$user->unsubscribe_token) {
+        if (! $user->unsubscribe_token) {
             $user->unsubscribe_token = Str::random(40);
         }
 
@@ -30,7 +30,7 @@ class MarketingPreferences extends Component
         $this->dispatch('saved');
         $this->dispatch('notify', [
             'message' => 'Marketing preferences updated successfully.',
-            'style' => 'success'
+            'style' => 'success',
         ]);
     }
 

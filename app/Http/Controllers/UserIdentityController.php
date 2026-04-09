@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\UserIdentity;
 use App\Services\AuditService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class UserIdentityController extends Controller
@@ -20,7 +19,7 @@ class UserIdentityController extends Controller
         }
 
         // 2. Security Check: Cannot unlink last remaining identity
-        if (!$identity->isSafeToUnlink()) {
+        if (! $identity->isSafeToUnlink()) {
             return redirect()->back()->with('flash.banner', 'You cannot unlink your last remaining login method. Please add another first.')->with('flash.bannerStyle', 'danger');
         }
 

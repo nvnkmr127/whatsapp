@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Team;
 use App\Services\WhatsAppService;
+use Illuminate\Console\Command;
 
 class DisableSipCalling extends Command
 {
@@ -31,13 +31,15 @@ class DisableSipCalling extends Command
 
         $team = Team::find($teamId);
 
-        if (!$team) {
+        if (! $team) {
             $this->error("Team with ID {$teamId} not found.");
+
             return 1;
         }
 
-        if (!$team->whatsapp_phone_number_id) {
+        if (! $team->whatsapp_phone_number_id) {
             $this->error("Team {$teamId} does not have a WhatsApp phone number configured.");
+
             return 1;
         }
 
@@ -56,7 +58,7 @@ class DisableSipCalling extends Command
                 $data = $currentSettings['data'] ?? [];
                 $this->table(
                     ['Setting', 'Value'],
-                    collect($data)->map(fn($v, $k) => [$k, is_array($v) ? json_encode($v) : $v])->values()->toArray()
+                    collect($data)->map(fn ($v, $k) => [$k, is_array($v) ? json_encode($v) : $v])->values()->toArray()
                 );
 
                 // Check if SIP is currently enabled
@@ -67,12 +69,13 @@ class DisableSipCalling extends Command
                     $this->info("\n✓ SIP does not appear to be enabled.");
                 }
             } else {
-                $this->warn("Could not fetch current settings: " . json_encode($currentSettings['error'] ?? 'Unknown'));
+                $this->warn('Could not fetch current settings: '.json_encode($currentSettings['error'] ?? 'Unknown'));
             }
 
             // Confirm before proceeding
-            if (!$this->confirm('Do you want to disable SIP calling for this phone number?')) {
+            if (! $this->confirm('Do you want to disable SIP calling for this phone number?')) {
                 $this->info('Operation cancelled.');
+
                 return 0;
             }
 
@@ -81,8 +84,8 @@ class DisableSipCalling extends Command
             $response = $service->disableSipCalling();
 
             if ($response['success'] ?? false) {
-                $this->info("✅ SIP calling disabled successfully!");
-                $this->info("You can now use Graph API (WebRTC) for calls.");
+                $this->info('✅ SIP calling disabled successfully!');
+                $this->info('You can now use Graph API (WebRTC) for calls.');
 
                 // Verify the change
                 $this->info("\nVerifying new settings...");
@@ -90,19 +93,21 @@ class DisableSipCalling extends Command
                 if ($newSettings['success'] ?? false) {
                     $this->table(
                         ['Setting', 'Value'],
-                        collect($newSettings['data'] ?? [])->map(fn($v, $k) => [$k, is_array($v) ? json_encode($v) : $v])->values()->toArray()
+                        collect($newSettings['data'] ?? [])->map(fn ($v, $k) => [$k, is_array($v) ? json_encode($v) : $v])->values()->toArray()
                     );
                 }
 
                 return 0;
             } else {
-                $this->error("❌ Failed to disable SIP calling:");
+                $this->error('❌ Failed to disable SIP calling:');
                 $this->error(json_encode($response['error'] ?? 'Unknown error', JSON_PRETTY_PRINT));
+
                 return 1;
             }
 
         } catch (\Exception $e) {
-            $this->error("Error: " . $e->getMessage());
+            $this->error('Error: '.$e->getMessage());
+
             return 1;
         }
     }

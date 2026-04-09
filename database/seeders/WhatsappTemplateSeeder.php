@@ -19,7 +19,7 @@ class WhatsappTemplateSeeder extends Seeder
                 [
                     'type' => 'BODY',
                     'text' => 'Your verification code is {{1}}. It expires in 5 minutes.',
-                ]
+                ],
             ],
             'readiness_score' => 100,
             'is_paused' => false,

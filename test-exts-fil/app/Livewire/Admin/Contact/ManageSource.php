@@ -20,7 +20,7 @@ class ManageSource extends Component
     public $source_id = null;
 
     protected $listeners = [
-        'editSource'    => 'editSource',
+        'editSource' => 'editSource',
         'confirmDelete' => 'confirmDelete',
     ];
 
@@ -40,7 +40,7 @@ class ManageSource extends Component
         return [
             'source.name' => [
                 'required',
-                'unique:sources,name,' . ($this->source->id ?? 'NULL'),
+                'unique:sources,name,'.($this->source->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
                 'max:150',
             ],
@@ -73,12 +73,12 @@ class ManageSource extends Component
                     $this->showSourceModal = false;
                 }
             } catch (\Exception $e) {
-                app_log('Source save failed: ' . $e->getMessage(), 'error', $e, [
-                    'source_id'  => $this->source->id ?? null,
+                app_log('Source save failed: '.$e->getMessage(), 'error', $e, [
+                    'source_id' => $this->source->id ?? null,
                     'attributes' => $this->source->getAttributes(),
-                    'dirty'      => $this->source->getDirty(),
-                    'file'       => $e->getFile(),
-                    'line'       => $e->getLine(),
+                    'dirty' => $this->source->getDirty(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
 
                 $this->notify(['type' => 'danger', 'message' => t('source_save_failed')]);
@@ -88,7 +88,7 @@ class ManageSource extends Component
 
     public function editSource($sourceId)
     {
-        $source       = Source::findOrFail($sourceId);
+        $source = Source::findOrFail($sourceId);
         $this->source = $source;
         $this->resetValidation();
         $this->showSourceModal = true;
@@ -96,7 +96,7 @@ class ManageSource extends Component
 
     public function confirmDelete($sourceId)
     {
-        $this->source_id          = $sourceId;
+        $this->source_id = $sourceId;
         $this->confirmingDeletion = true;
     }
 
@@ -118,7 +118,7 @@ class ManageSource extends Component
                 $this->notify(['type' => 'success', 'message' => t('source_delete_successfully')]);
                 $this->dispatch('pg:eventRefresh-source-table-9hsleg-table');
             } catch (\Exception $e) {
-                app_log('Source deletion failed: ' . $e->getMessage(), 'error', $e, [
+                app_log('Source deletion failed: '.$e->getMessage(), 'error', $e, [
                     'source_id' => $this->source_id,
                 ]);
 

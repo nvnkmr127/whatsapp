@@ -18,7 +18,7 @@ class TemplateValidator
         'buy one',
         'promo',
         'coupon',
-        'exclusive'
+        'exclusive',
     ];
 
     /**
@@ -26,11 +26,11 @@ class TemplateValidator
      */
     public function validate(WhatsappTemplate $template, array|\App\DTOs\TemplateValidationParams $runtimeParams = []): ValidationResult
     {
-        $params = is_array($runtimeParams) 
+        $params = is_array($runtimeParams)
             ? \App\DTOs\TemplateValidationParams::fromArray($runtimeParams)
             : $runtimeParams;
 
-        $result = new ValidationResult();
+        $result = new ValidationResult;
         $errors = [];
         $score = 100;
 
@@ -40,7 +40,7 @@ class TemplateValidator
             $errors[] = [
                 'code' => 'STATUS_INELIGIBLE',
                 'description' => "Template status is {$template->status}, not APPROVED",
-                'severity' => 'error'
+                'severity' => 'error',
             ];
         }
 
@@ -48,8 +48,8 @@ class TemplateValidator
             $score -= 30;
             $errors[] = [
                 'code' => 'STATUS_PAUSED',
-                'description' => "Template is currently PAUSED by Meta",
-                'severity' => 'error'
+                'description' => 'Template is currently PAUSED by Meta',
+                'severity' => 'error',
             ];
         }
 
@@ -73,19 +73,19 @@ class TemplateValidator
                     $score -= 20; // Warn only
                     $errors[] = [
                         'code' => 'CAT_AUTH_MEDIA_DISALLOWED',
-                        'description' => "Authentication templates should not contain media headers",
-                        'severity' => 'warning'
+                        'description' => 'Authentication templates should not contain media headers',
+                        'severity' => 'warning',
                     ];
                 }
 
-                if ($component['type'] === 'BUTTONS' && !empty($component['buttons']) && is_array($component['buttons'])) {
+                if ($component['type'] === 'BUTTONS' && ! empty($component['buttons']) && is_array($component['buttons'])) {
                     foreach ($component['buttons'] as $btn) {
-                        if (!in_array($btn['type'] ?? '', ['OTP', 'COPY_CODE'])) {
+                        if (! in_array($btn['type'] ?? '', ['OTP', 'COPY_CODE'])) {
                             $score -= 20;
                             $errors[] = [
                                 'code' => 'CAT_AUTH_BUTTON_INVALID',
                                 'description' => "Authentication templates should uses OTP or COPY_CODE buttons. Found: {$btn['type']}",
-                                'severity' => 'warning'
+                                'severity' => 'warning',
                             ];
                         }
                     }
@@ -93,12 +93,12 @@ class TemplateValidator
             }
 
             if ($component['type'] === 'BODY' && isset($component['text'])) {
-                if (!$this->validateVariablesSequential($component['text'])) {
+                if (! $this->validateVariablesSequential($component['text'])) {
                     $score -= 40;
                     $errors[] = [
                         'code' => 'VARIABLE_SKEW',
-                        'description' => "Body placeholders must be sequential {{1}}, {{2}}...",
-                        'severity' => 'error'
+                        'description' => 'Body placeholders must be sequential {{1}}, {{2}}...',
+                        'severity' => 'error',
                     ];
                 }
 
@@ -107,8 +107,8 @@ class TemplateValidator
                     $score -= 30;
                     $errors[] = [
                         'code' => 'CONTENT_TOO_GENERIC',
-                        'description' => "Template body is too generic. Add more context around variables to avoid rejection.",
-                        'severity' => 'warning'
+                        'description' => 'Template body is too generic. Add more context around variables to avoid rejection.',
+                        'severity' => 'warning',
                     ];
                 }
             }
@@ -118,21 +118,21 @@ class TemplateValidator
                     $score -= 10; // Potentially unbound if no params provided
                     $errors[] = [
                         'code' => 'MEDIA_UNBOUND',
-                        'description' => "Media header requires a file handle/URL at runtime",
-                        'severity' => 'warning'
+                        'description' => 'Media header requires a file handle/URL at runtime',
+                        'severity' => 'warning',
                     ];
                 }
             }
 
-            if ($component['type'] === 'BUTTONS' && !empty($component['buttons']) && is_array($component['buttons'])) {
+            if ($component['type'] === 'BUTTONS' && ! empty($component['buttons']) && is_array($component['buttons'])) {
                 foreach ($component['buttons'] as $btn) {
                     if (($btn['type'] ?? '') === 'URL' && isset($btn['url']) && str_contains($btn['url'], '{{')) {
-                        if (!str_contains($btn['url'], '{{1}}')) {
+                        if (! str_contains($btn['url'], '{{1}}')) {
                             $score -= 20;
                             $errors[] = [
                                 'code' => 'BUTTON_VARIABLE_INVALID',
-                                'description' => "Dynamic buttons must use {{1}} suffix",
-                                'severity' => 'error'
+                                'description' => 'Dynamic buttons must use {{1}} suffix',
+                                'severity' => 'error',
                             ];
                         }
                     }
@@ -145,7 +145,7 @@ class TemplateValidator
                             $errors[] = [
                                 'code' => 'CTA_MISMATCH_RISK',
                                 'description' => "Utility template contains 'Shopping' related URL. May be re-categorized as Marketing.",
-                                'severity' => 'warning'
+                                'severity' => 'warning',
                             ];
                         }
                     }
@@ -155,37 +155,37 @@ class TemplateValidator
                         $flowId = $btn['flow_id'] ?? null;
                         if ($flowId) {
                             $flow = \App\Models\WhatsAppFlow::where('flow_id', $flowId)->first();
-                            if (!$flow) {
+                            if (! $flow) {
                                 $score -= 100;
                                 $errors[] = [
                                     'code' => 'FLOW_ORPHANED',
                                     'description' => "Linked Flow ID {$flowId} not found in system.",
-                                    'severity' => 'error'
+                                    'severity' => 'error',
                                 ];
                             } else {
                                 // Check Flow Readiness
-                                $fValidator = new \App\Validators\FlowReadinessValidator();
+                                $fValidator = new \App\Validators\FlowReadinessValidator;
                                 $fResult = $fValidator->validate($flow);
-                                if (!$fResult->isValid()) {
+                                if (! $fResult->isValid()) {
                                     $score -= 50;
                                     $reason = $fResult->getBlockingReason();
                                     $errors[] = [
                                         'code' => 'FLOW_NOT_READY',
                                         'description' => "Linked Flow is not ready: {$reason}",
-                                        'severity' => 'error'
+                                        'severity' => 'error',
                                     ];
                                 }
 
                                 // Check Entry Point
-                                $epValidator = new \App\Validators\FlowEntryPointValidator();
+                                $epValidator = new \App\Validators\FlowEntryPointValidator;
                                 $epResult = $epValidator->validate($flow, 'template');
-                                if (!$epResult->isValid()) {
+                                if (! $epResult->isValid()) {
                                     $score -= 50;
                                     $reason = $epResult->getBlockingReason();
                                     $errors[] = [
                                         'code' => 'FLOW_ENTRY_BLOCKED',
                                         'description' => "Flow cannot be used in Templates: {$reason}",
-                                        'severity' => 'error'
+                                        'severity' => 'error',
                                     ];
                                 }
                             }
@@ -197,7 +197,7 @@ class TemplateValidator
 
         $template->update([
             'readiness_score' => max(0, $score),
-            'validation_results' => $errors
+            'validation_results' => $errors,
         ]);
 
         foreach ($errors as $err) {
@@ -216,8 +216,9 @@ class TemplateValidator
         $warnings = [];
         foreach ($components as $component) {
             $text = '';
-            if (isset($component['text']))
+            if (isset($component['text'])) {
                 $text .= $component['text'];
+            }
 
             // Check headers too
 
@@ -227,7 +228,7 @@ class TemplateValidator
                         $warnings[] = [
                             'code' => 'CAT_UTILITY_MARKETING_DETECTED',
                             'description' => "Utility template contains marketing keyword '{$keyword}'. High risk of rejection or re-categorization.",
-                            'severity' => 'warning'
+                            'severity' => 'warning',
                         ];
                         // Break after first match to avoid noise
                         break;
@@ -235,6 +236,7 @@ class TemplateValidator
                 }
             }
         }
+
         return $warnings;
     }
 
@@ -255,17 +257,19 @@ class TemplateValidator
     protected function validateVariablesSequential(string $text): bool
     {
         if (preg_match_all('/\{\{(\d+)\}\}/', $text, $matches)) {
-            $indices = array_unique(array_map('intval', $matches[1]));
-            sort($indices);
+            $indices = array_map('intval', $matches[1]);
 
-            // Meta requires first to be {{1}}, second {{2}}...
-            // The set of unique indices must be exactly [1, 2, ..., count]
-            foreach ($indices as $i => $value) {
-                if ($value !== ($i + 1)) {
-                    return false;
+            // Meta requires variables to be named sequentially {{1}}, {{2}}...
+            // They can be reused, but a new variable cannot skip a number.
+            $maxSeen = 0;
+            foreach ($indices as $value) {
+                if ($value > $maxSeen + 1) {
+                    return false; // Skipped a number or out of order
                 }
+                $maxSeen = max($maxSeen, $value);
             }
         }
+
         return true;
     }
 }

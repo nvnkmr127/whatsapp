@@ -6,20 +6,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property int                             $template_id         id from api
- * @property string                          $template_name
- * @property string                          $language
- * @property string                          $status
- * @property string                          $category
- * @property string|null                     $header_data_format
- * @property string|null                     $header_data_text
- * @property int|null                        $header_params_count
- * @property string                          $body_data
- * @property int|null                        $body_params_count
- * @property string|null                     $footer_data
- * @property int|null                        $footer_params_count
- * @property string|null                     $buttons_data
+ * @property int $id
+ * @property int $template_id id from api
+ * @property string $template_name
+ * @property string $language
+ * @property string $status
+ * @property string $category
+ * @property string|null $header_data_format
+ * @property string|null $header_data_text
+ * @property int|null $header_params_count
+ * @property string $body_data
+ * @property int|null $body_params_count
+ * @property string|null $footer_data
+ * @property int|null $footer_params_count
+ * @property string|null $buttons_data
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  *

@@ -24,14 +24,14 @@ class ApiIntegrationTest extends TestCase
 
         $response = $this->postJson('/api/v1/embed-token', [
             'phone_number' => '1234567890',
-            'name' => 'John API'
+            'name' => 'John API',
         ]);
 
         $response->assertStatus(200)
             ->assertJsonStructure(['token', 'embed_url']);
 
         $token = $response->json('token');
-        $service = new EmbedTokenService();
+        $service = new EmbedTokenService;
         $payload = $service->validateToken($token);
 
         $this->assertNotNull($payload);
@@ -48,11 +48,11 @@ class ApiIntegrationTest extends TestCase
 
         $response = $this->postJson('/api/v1/embed-token', [
             'phone_number' => '1234567890',
-            'permissions' => ['read']
+            'permissions' => ['read'],
         ]);
 
         $token = $response->json('token');
-        $service = new EmbedTokenService();
+        $service = new EmbedTokenService;
         $payload = $service->validateToken($token);
 
         $this->assertEquals(['read'], $payload['permissions']);
@@ -63,10 +63,10 @@ class ApiIntegrationTest extends TestCase
         $team = Team::factory()->create();
         $contact = Contact::factory()->create(['team_id' => $team->id]);
 
-        $service = new EmbedTokenService();
+        $service = new EmbedTokenService;
         $token = $service->generateToken($contact);
 
-        $response = $this->get('/embed/chat?token=' . $token);
+        $response = $this->get('/embed/chat?token='.$token);
         $response->assertStatus(200);
         $response->assertSeeLivewire('chat.embedded-chat');
     }

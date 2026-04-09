@@ -12,15 +12,15 @@ class OrderStatusUpdated extends DomainEvent
 
     // Transient props for listeners
     public $order;
+
     public $status;
+
     public $context;
 
     /**
      * Create a new event instance.
      *
-     * @param Order $order
-     * @param string $status
-     * @param array $context Additional info
+     * @param  array  $context  Additional info
      */
     public function __construct(Order $order, string $status, array $context = [])
     {
@@ -31,7 +31,7 @@ class OrderStatusUpdated extends DomainEvent
         parent::__construct([
             'order_id' => $order->id,
             'status' => $status,
-            'context' => $context
+            'context' => $context,
         ], [
             'team_id' => $order->team_id,
             'actor_id' => auth()->id(),
@@ -53,7 +53,7 @@ class OrderStatusUpdated extends DomainEvent
         return [
             'order_id' => 'required|integer',
             'status' => 'required|string',
-            'context' => 'array'
+            'context' => 'array',
         ];
     }
 }

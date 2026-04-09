@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Campaign;
 use App\Services\BroadcastService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class ProcessScheduledCampaigns extends Command
@@ -36,6 +36,7 @@ class ProcessScheduledCampaigns extends Command
 
         if ($campaigns->isEmpty()) {
             $this->info('No due campaigns found.');
+
             return;
         }
 
@@ -44,11 +45,11 @@ class ProcessScheduledCampaigns extends Command
             try {
                 // Determine Logic: 'launch' updates status to 'processing' immediately
                 $service->launch($campaign);
-                $this->info("Launched successfully.");
+                $this->info('Launched successfully.');
             } catch (\Exception $e) {
-                Log::error("Failed to launch campaign {$campaign->id}: " . $e->getMessage());
+                Log::error("Failed to launch campaign {$campaign->id}: ".$e->getMessage());
                 $this->error("Failed to launch campaign {$campaign->id}");
-                // Mark as failed? Or retry? 
+                // Mark as failed? Or retry?
                 // Currently launch() handles its own state mostly.
             }
         }

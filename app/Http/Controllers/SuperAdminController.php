@@ -3,14 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Team;
-use App\Models\User;
-use App\Services\OfferAuditService;
-use App\Services\OfferEligibilityService;
 use Illuminate\Http\Request;
 
 class SuperAdminController extends Controller
 {
     protected $analytics;
+
     protected $tenantService;
 
     public function __construct(
@@ -38,6 +36,7 @@ class SuperAdminController extends Controller
     public function create()
     {
         $plans = \App\Models\Plan::all();
+
         return view('admin.tenants.create', compact('plans'));
     }
 
@@ -74,7 +73,7 @@ class SuperAdminController extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Failed to create tenant: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Failed to create tenant: '.$e->getMessage()]);
         }
     }
 
@@ -82,6 +81,7 @@ class SuperAdminController extends Controller
     {
         $team = Team::with(['owner', 'addOns', 'billingOverrides.creator'])->findOrFail($id);
         $plans = \App\Models\Plan::all();
+
         return view('admin.tenants.edit', compact('team', 'plans'));
     }
 
@@ -114,7 +114,7 @@ class SuperAdminController extends Controller
         $override = \App\Models\BillingOverride::where('team_id', $id)->findOrFail($overrideId);
         $override->delete();
 
-        return redirect()->back()->with('flash.banner', "Billing override removed.")->with('flash.bannerStyle', 'success');
+        return redirect()->back()->with('flash.banner', 'Billing override removed.')->with('flash.bannerStyle', 'success');
     }
 
     public function update(Request $request, $id)

@@ -3,14 +3,14 @@
 
 /**
  * Webhook & OTP Events Test Script
- * 
+ *
  * This script tests the webhook and OTP event system.
  * Run: php tests/webhook_test.php
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use App\Models\Team;
@@ -23,7 +23,7 @@ echo "============================\n\n";
 
 // Test 1: Check if WebhookService uses jobs
 echo "1. Testing WebhookService job dispatching...\n";
-$webhookService = new WebhookService();
+$webhookService = new WebhookService;
 $team = Team::first();
 
 if ($team) {
@@ -49,7 +49,7 @@ if ($team) {
         ]);
         echo "   ✓ Webhook dispatched (check queue for ExecuteOutboundWebhookJob)\n";
     } catch (\Exception $e) {
-        echo "   ✗ Error: " . $e->getMessage() . "\n";
+        echo '   ✗ Error: '.$e->getMessage()."\n";
     }
 } else {
     echo "   ✗ No teams found in database\n";
@@ -59,7 +59,7 @@ echo "\n";
 
 // Test 2: Check OTP events
 echo "2. Testing OTP event system...\n";
-$otpService = new OTPService();
+$otpService = new OTPService;
 
 // Check if OTP service has the new methods
 $reflection = new \ReflectionClass($otpService);
@@ -93,7 +93,7 @@ echo "\n";
 
 // Test 4: Check available webhook events
 echo "4. Checking available webhook events...\n";
-$webhookManager = new \App\Livewire\Developer\WebhookManager();
+$webhookManager = new \App\Livewire\Developer\WebhookManager;
 $availableEvents = $webhookManager->availableEvents;
 
 $expectedEvents = [

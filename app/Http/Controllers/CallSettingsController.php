@@ -17,7 +17,7 @@ class CallSettingsController extends Controller
     public function update(Request $request, string $phoneNumberId)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',
@@ -50,7 +50,7 @@ class CallSettingsController extends Controller
             $whatsappService = new WhatsAppService($team);
             $metaResponse = $whatsappService->updateSystemCallSettings($request->all());
 
-            if (!($metaResponse['success'] ?? false)) {
+            if (! ($metaResponse['success'] ?? false)) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Failed to update Meta settings',
@@ -106,7 +106,7 @@ class CallSettingsController extends Controller
     public function show(Request $request, string $phoneNumberId)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',
@@ -120,7 +120,7 @@ class CallSettingsController extends Controller
                 ->where('phone_number_id', $phoneNumberId)
                 ->first();
 
-            if (!$settings) {
+            if (! $settings) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Call settings not found',
@@ -171,7 +171,7 @@ class CallSettingsController extends Controller
     public function generateLink(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',

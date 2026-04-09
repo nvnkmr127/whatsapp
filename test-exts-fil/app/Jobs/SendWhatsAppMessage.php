@@ -33,7 +33,7 @@ class SendWhatsAppMessage implements ShouldQueue
         try {
             $whatsapp = new WhatsAppCloudApi([
                 'from_phone_number_id' => get_setting('whatsapp.wm_default_phone_number_id'),
-                'access_token'         => get_setting('whatsapp.wm_access_token'),
+                'access_token' => get_setting('whatsapp.wm_access_token'),
             ]);
 
             // Send the message without components
@@ -50,8 +50,8 @@ class SendWhatsAppMessage implements ShouldQueue
                 'info',
                 [
                     'message_id' => $result->messageId(),
-                    'recipient'  => $this->message->to,
-                    'template'   => $this->message->template,
+                    'recipient' => $this->message->to,
+                    'template' => $this->message->template,
                 ]
             );
         } catch (Throwable $e) {
@@ -59,17 +59,17 @@ class SendWhatsAppMessage implements ShouldQueue
                 t('whatsapp_message_failed'),
                 'error',
                 [
-                    'error'     => $e->getMessage(),
+                    'error' => $e->getMessage(),
                     'recipient' => $this->message->to,
-                    'template'  => $this->message->template,
-                    'attempt'   => $this->attempts(),
+                    'template' => $this->message->template,
+                    'attempt' => $this->attempts(),
                 ],
                 $e
             );
 
             if ($this->attempts() >= $this->tries) {
                 throw new WhatsAppException(
-                    t('failed_to_send_whatsapp_message') . $this->tries . t('attempts'),
+                    t('failed_to_send_whatsapp_message').$this->tries.t('attempts'),
                     ['message' => $this->message->toArray()]
                 );
             }
@@ -86,9 +86,9 @@ class SendWhatsAppMessage implements ShouldQueue
             t('whatsapp_message_failed_permanently'),
             'error',
             [
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'recipient' => $this->message->to,
-                'template'  => $this->message->template,
+                'template' => $this->message->template,
             ],
             $e
         );

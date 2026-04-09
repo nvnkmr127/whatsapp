@@ -58,11 +58,11 @@ class BlockTrialFieldsViaApi
             self::PROTECTED_FIELDS
         );
 
-        if (!empty($attempted)) {
+        if (! empty($attempted)) {
             $this->logTamperAttempt($request, $attempted);
 
             return response()->json([
-                'message' => 'The following fields cannot be set via the API: ' .
+                'message' => 'The following fields cannot be set via the API: '.
                     implode(', ', $attempted),
                 'fields' => $attempted,
             ], 422);
@@ -80,7 +80,7 @@ class BlockTrialFieldsViaApi
             'team_id' => $user?->current_team_id,
             'ip' => $request->ip(),
             'fields' => $fields,
-            'endpoint' => $request->method() . ' ' . $request->path(),
+            'endpoint' => $request->method().' '.$request->path(),
             'user_agent' => $request->userAgent(),
         ]);
 
@@ -90,7 +90,7 @@ class BlockTrialFieldsViaApi
             identifier: implode(', ', $fields),
             provider: 'api',
             metadata: [
-                'endpoint' => $request->method() . ' ' . $request->path(),
+                'endpoint' => $request->method().' '.$request->path(),
                 'fields' => $fields,
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),

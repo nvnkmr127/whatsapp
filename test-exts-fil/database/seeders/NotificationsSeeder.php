@@ -19,14 +19,14 @@ class NotificationsSeeder extends Seeder
 
         for ($i = 0; $i < 100; $i++) {
             DB::table('notifications')->insert([
-                'id'              => $faker->uuid,
-                'type'            => $faker->word,
+                'id' => $faker->uuid,
+                'type' => $faker->word,
                 'notifiable_type' => 'App\\Models\\User', // or any other model
-                'notifiable_id'   => $faker->randomNumber(),
-                'data'            => $faker->text,
-                'read_at'         => $faker->boolean ? now() : null,
-                'created_at'      => now(),
-                'updated_at'      => now(),
+                'notifiable_id' => $faker->randomNumber(),
+                'data' => $faker->text,
+                'read_at' => $faker->boolean ? now() : null,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

@@ -80,28 +80,28 @@ final class WmActivityTable extends PowerGridComponent
             ->add('category', fn ($model) => t($model->category))
             ->add(
                 'response_code',
-                fn ($model) => '<div class="flex justify-center">' . (
+                fn ($model) => '<div class="flex justify-center">'.(
                     $model->response_code === '200'
-                    ? '<span class="bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium">' . $model->response_code . '</span>'
+                    ? '<span class="bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium">'.$model->response_code.'</span>'
                     : (
                         $model->response_code === '400'
-                        ? '<span class="bg-red-100 text-red-800 dark:text-red-400 dark:bg-red-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium">' . $model->response_code . '</span>'
-                        : '<span class="bg-yellow-100 text-yellow-800 dark:text-yellow-400 dark:bg-yellow-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium">' . ($model->response_code ?? 'N/A') . '</span>'
+                        ? '<span class="bg-red-100 text-red-800 dark:text-red-400 dark:bg-red-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium">'.$model->response_code.'</span>'
+                        : '<span class="bg-yellow-100 text-yellow-800 dark:text-yellow-400 dark:bg-yellow-900/20 px-2.5 py-0.5 rounded-full text-xs font-medium">'.($model->response_code ?? 'N/A').'</span>'
                     )
-                ) . '</div>'
+                ).'</div>'
             )
             ->add('rel_type', function ($model) {
                 $class = $model->rel_type == 'lead'
                     ? 'bg-indigo-100 text-indigo-800 dark:text-indigo-400 dark:bg-indigo-900/20'
                     : 'bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20';
 
-                return '<div class="flex justify-center"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $class . '">' . ucfirst($model->rel_type) . '</span></div>';
+                return '<div class="flex justify-center"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium '.$class.'">'.ucfirst($model->rel_type).'</span></div>';
             })
 
             ->add('created_at_formatted', function ($model) {
                 return '<div class="relative group">
-                        <span class="cursor-default" data-tippy-content="' . format_date_time($model->created_at) . '">'
-                    . Carbon::parse($model->created_at)->setTimezone(config('app.timezone'))->diffForHumans(['options' => Carbon::JUST_NOW]) . '</span>
+                        <span class="cursor-default" data-tippy-content="'.format_date_time($model->created_at).'">'
+                    .Carbon::parse($model->created_at)->setTimezone(config('app.timezone'))->diffForHumans(['options' => Carbon::JUST_NOW]).'</span>
                     </div>';
             });
     }
@@ -162,9 +162,9 @@ final class WmActivityTable extends PowerGridComponent
         if (checkPermission('activity_log.delete')) {
             $buttons[] = Button::add('bulk-delete')
                 ->id()
-                ->slot(t('bulk_delete') . '(<span x-text="window.pgBulkActions.count(\'' . $this->tableName . '\')"></span>)')
+                ->slot(t('bulk_delete').'(<span x-text="window.pgBulkActions.count(\''.$this->tableName.'\')"></span>)')
                 ->class('inline-flex items-center justify-center px-3 py-2 text-sm border border-transparent rounded-md font-medium disabled:opacity-50 disabled:pointer-events-none transition bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 absolute md:top-0 top-[116px] left-[100px] lg:left-[255px] sm:left-[270px] sm:top-0 whitespace-nowrap')
-                ->dispatch('bulkDelete.' . $this->tableName, []);
+                ->dispatch('bulkDelete.'.$this->tableName, []);
         }
 
         return $buttons;

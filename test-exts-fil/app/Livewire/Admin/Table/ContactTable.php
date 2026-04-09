@@ -77,7 +77,7 @@ final class ContactTable extends PowerGridComponent
     {
         $buttons = [];
 
-        $defaultPositionClass     = 'absolute md:top-[4.75rem] sm:top-[4.75rem] top-[5.3rem] xs:top-[6.5rem] left-[199px] lg:left-[182px] md:left-[211px] sm:left-[207px]';
+        $defaultPositionClass = 'absolute md:top-[4.75rem] sm:top-[4.75rem] top-[5.3rem] xs:top-[6.5rem] left-[199px] lg:left-[182px] md:left-[211px] sm:left-[207px]';
         $alternativePositionClass = 'absolute md:top-[2.5rem] sm:top-[2.5rem] top-[3rem] xs:top-[3rem] left-[202px] sm:left-[210px] lg:left-[185px] md:left-[211px]';
 
         if (checkPermission(['contact.create', 'contact.bulk_import'])) {
@@ -94,9 +94,9 @@ final class ContactTable extends PowerGridComponent
             if ($contactCount > 0) {
                 $buttons[] = Button::add('bulk-delete')
                     ->id()
-                    ->slot(t('bulk_delete') . '(<span x-text="window.pgBulkActions.count(\'' . $this->tableName . '\')"></span>)')
+                    ->slot(t('bulk_delete').'(<span x-text="window.pgBulkActions.count(\''.$this->tableName.'\')"></span>)')
                     ->class("iinline-flex items-center justify-center px-3 py-2 text-sm border border-transparent rounded-md font-medium disabled:opacity-50 disabled:pointer-events-none transition bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 whitespace-nowrap $buttonClass")
-                    ->dispatch('bulkDelete.' . $this->tableName, []);
+                    ->dispatch('bulkDelete.'.$this->tableName, []);
             }
         }
 
@@ -135,16 +135,16 @@ final class ContactTable extends PowerGridComponent
             ->add('firstname', function ($contact) {
 
                 return view('components.contacts.name-with-actions', [
-                    'id'       => $contact->id,
-                    'fullName' => $contact->firstname . ' ' . $contact->lastname,
+                    'id' => $contact->id,
+                    'fullName' => $contact->firstname.' '.$contact->lastname,
                 ])->render();
             })
-            ->add('firstname_raw', fn ($contact) => e($contact->firstname . ' ' . $contact->lastname))
+            ->add('firstname_raw', fn ($contact) => e($contact->firstname.' '.$contact->lastname))
             ->add(
                 'status_id',
                 fn ($contact) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                    style="background-color: ' . e($contact->status->color) . '20; color: ' . e($contact->status->color) . ';">
-                    ' . e($contact->status->name) . '</span>'
+                    style="background-color: '.e($contact->status->color).'20; color: '.e($contact->status->color).';">
+                    '.e($contact->status->name).'</span>'
             )
             ->add(
                 'assigned_id',
@@ -157,13 +157,13 @@ final class ContactTable extends PowerGridComponent
                         ? Storage::url($contact->user->profile_image_url)
                         : asset('img/user-placeholder.jpg');
 
-                    $fullName = e($contact->user->firstname . ' ' . $contact->user->lastname);
+                    $fullName = e($contact->user->firstname.' '.$contact->user->lastname);
 
                     return '<div class="relative group flex items-center cursor-pointer">
-                        <a href="' . route('admin.users.details', ['userId' => $contact->assigned_id]) . '">
-                            <img src="' . $profileImage . '"
+                        <a href="'.route('admin.users.details', ['userId' => $contact->assigned_id]).'">
+                            <img src="'.$profileImage.'"
                                 class="w-9 h-9 rounded-full mx-3 object-cover"
-                                data-tippy-content="' . $fullName . '">
+                                data-tippy-content="'.$fullName.'">
                         </a>
                     </div>';
                 }
@@ -171,8 +171,8 @@ final class ContactTable extends PowerGridComponent
             ->add('source_id', fn ($contact) => $contact->source?->name ?? 'N/A')
             ->add('created_at_formatted', function ($contact) {
                 return '<div class="relative group">
-                        <span class="cursor-default" data-tippy-content="' . format_date_time($contact->created_at) . '">'
-                    . Carbon::parse($contact->created_at)->diffForHumans(['options' => Carbon::JUST_NOW]) . '</span>
+                        <span class="cursor-default" data-tippy-content="'.format_date_time($contact->created_at).'">'
+                    .Carbon::parse($contact->created_at)->diffForHumans(['options' => Carbon::JUST_NOW]).'</span>
                     </div>';
             })
             ->add('type', function ($contact) {
@@ -248,8 +248,8 @@ final class ContactTable extends PowerGridComponent
                             ->select(['id', 'firstname', 'lastname'])
                             ->get()
                             ->map(fn ($user) => [
-                                'id'   => $user->id,
-                                'name' => $user->firstname . ' ' . $user->lastname,
+                                'id' => $user->id,
+                                'name' => $user->firstname.' '.$user->lastname,
                             ]);
                     })
                 )
@@ -302,12 +302,12 @@ final class ContactTable extends PowerGridComponent
 
             $this->notify([
                 'message' => $value === '1' ? t('contact_enable_successfully') : t('contact_disabled_successfully'),
-                'type'    => 'success',
+                'type' => 'success',
             ]);
         } else {
             $this->notify([
                 'message' => t('no_permission_to_perform_action'),
-                'type'    => 'warning',
+                'type' => 'warning',
             ]);
         }
     }

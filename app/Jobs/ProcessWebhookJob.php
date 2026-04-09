@@ -2,8 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\Contact;
-use App\Models\Message;
 use App\Models\Team;
 use App\Models\WebhookPayload;
 use Illuminate\Bus\Queueable;
@@ -15,10 +13,11 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessWebhookJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
     use \App\Traits\ChecksTenantMaintenanceMode;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $payloadId;
+
     public $traceId;
 
     /**
@@ -45,7 +44,6 @@ class ProcessWebhookJob implements ShouldQueue
      */
     public $backoff = [10, 60, 300];
 
-
     /**
      * Execute the job.
      */
@@ -61,16 +59,21 @@ class ProcessWebhookJob implements ShouldQueue
         Log::info("ProcessWebhookJob (Producer) started for Payload ID: {$this->payloadId}");
         $payloadRecord = WebhookPayload::find($this->payloadId);
 
-        if (!$payloadRecord) return;
+        if (! $payloadRecord) {
+            return;
+        }
 
         $payloadRecord->update(['status' => 'processing']);
 
         try {
             $body = $payloadRecord->payload;
-            if (is_string($body)) $body = json_decode($body, true);
+            if (is_string($body)) {
+                $body = json_decode($body, true);
+            }
 
             if (empty($body['entry'][0]['changes'][0]['value'])) {
                 $payloadRecord->update(['status' => 'processed']);
+
                 return;
             }
 
@@ -79,15 +82,19 @@ class ProcessWebhookJob implements ShouldQueue
             $phoneId = $metadata['phone_number_id'] ?? null;
             $teamId = $this->resolveTeamId($body, $change, $phoneId);
 
-            if ($teamId && $this->isTeamUnderMaintenance($teamId, 'release', 60)) return;
+            if ($teamId && $this->isTeamUnderMaintenance($teamId, 'release', 60)) {
+                return;
+            }
 
-            if (!$teamId) {
+            if (! $teamId) {
                 // Handle retry for unresolved team
                 if ($this->attempts() < $this->tries) {
                     $this->release($this->backoff[$this->attempts() - 1] ?? 60);
+
                     return;
                 }
                 $payloadRecord->update(['status' => 'failed', 'error_message' => 'Team ID resolution failed']);
+
                 return;
             }
 
@@ -98,7 +105,7 @@ class ProcessWebhookJob implements ShouldQueue
             $payloadRecord->update(['status' => 'processed']);
 
         } catch (\Exception $e) {
-            Log::error("Webhook Producer Failed: " . $e->getMessage());
+            Log::error('Webhook Producer Failed: '.$e->getMessage());
             $payloadRecord->update(['error_message' => $e->getMessage()]);
             throw $e;
         }
@@ -108,18 +115,25 @@ class ProcessWebhookJob implements ShouldQueue
     {
         $resolve = function ($col, $val) {
             $key = "team_id_by_{$col}:{$val}";
+
             return \Illuminate\Support\Facades\Cache::remember($key, 3600, function () use ($col, $val) {
                 return Team::where($col, $val)->value('id');
             });
         };
 
-        if ($phoneId) return $resolve('whatsapp_phone_number_id', $phoneId);
-        
+        if ($phoneId) {
+            return $resolve('whatsapp_phone_number_id', $phoneId);
+        }
+
         $entryId = $body['entry'][0]['id'] ?? null;
-        if ($entryId) return $resolve('whatsapp_business_account_id', $entryId);
+        if ($entryId) {
+            return $resolve('whatsapp_business_account_id', $entryId);
+        }
 
         $wabaId = $change['waba_id'] ?? $change['waba_info']['waba_id'] ?? null;
-        if ($wabaId) return $resolve('whatsapp_business_account_id', $wabaId);
+        if ($wabaId) {
+            return $resolve('whatsapp_business_account_id', $wabaId);
+        }
 
         return null;
     }
@@ -132,7 +146,7 @@ class ProcessWebhookJob implements ShouldQueue
         Log::error("ProcessWebhookJob FAILED for Payload ID {$this->payloadId}");
         WebhookPayload::where('id', $this->payloadId)->update([
             'status' => 'failed',
-            'error_message' => $exception->getMessage()
+            'error_message' => $exception->getMessage(),
         ]);
     }
 }

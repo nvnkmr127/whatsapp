@@ -57,7 +57,7 @@ class AppServiceProvider extends ServiceProvider
         Component::macro('notify', function ($message, $isAfterRedirect = false) {
             $payload = [
                 'message' => $message['message'] ?? '',
-                'type'    => $message['type']    ?? 'info',
+                'type' => $message['type'] ?? 'info',
             ];
 
             if ($isAfterRedirect) {
@@ -79,7 +79,7 @@ class AppServiceProvider extends ServiceProvider
                 config(['broadcasting.connections.pusher' => $pusherSettings->toArray()]);
             }
         } catch (\Exception $e) {
-            Log::warning('Failed to load Pusher settings: ' . $e->getMessage());
+            Log::warning('Failed to load Pusher settings: '.$e->getMessage());
         }
     }
 
@@ -105,19 +105,19 @@ class AppServiceProvider extends ServiceProvider
         date_default_timezone_set($timezone);
 
         // Get date and time formats
-        $dateFormat        = get_setting('general.date_format', 'Y-m-d');
+        $dateFormat = get_setting('general.date_format', 'Y-m-d');
         $timeFormatSetting = get_setting('general.time_format', '24');
-        $timeFormat        = $timeFormatSetting === '12' ? 'h:i A' : 'H:i';
+        $timeFormat = $timeFormatSetting === '12' ? 'h:i A' : 'H:i';
 
         Config::set('app.date_format', $dateFormat);
         Config::set('app.time_format', $timeFormat);
 
         // Share with all views but only evaluate once
         View::share('dateTimeSettings', [
-            'timezone'   => $timezone,
+            'timezone' => $timezone,
             'dateFormat' => $dateFormat,
             'timeFormat' => $timeFormat,
-            'is24Hour'   => $timeFormatSetting === '24',
+            'is24Hour' => $timeFormatSetting === '24',
         ]);
     }
 

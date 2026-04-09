@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-use \App\Traits\HasTeam;
 
 class WhatsAppCall extends Model
 {
@@ -104,7 +103,7 @@ class WhatsAppCall extends Model
             'validation_passed' => $validationResult['valid'] ?? true,
         ];
 
-        if (!empty($validationResult['warnings'])) {
+        if (! empty($validationResult['warnings'])) {
             $data['validation_warnings'] = $validationResult['warnings'];
         }
 
@@ -119,7 +118,6 @@ class WhatsAppCall extends Model
             $data
         );
     }
-
 
     /**
      * Scope a query to only include inbound calls.
@@ -167,7 +165,7 @@ class WhatsAppCall extends Model
     public function getFormattedDurationAttribute(): string
     {
         if ($this->duration_seconds < 60) {
-            return $this->duration_seconds . 's';
+            return $this->duration_seconds.'s';
         }
 
         $minutes = floor($this->duration_seconds / 60);
@@ -182,7 +180,8 @@ class WhatsAppCall extends Model
     public function getCostFormattedAttribute(): string
     {
         $symbol = function_exists('get_setting') ? get_setting('currency_symbol', '$') : '$';
-        return $symbol . number_format((float) $this->cost_amount, 2);
+
+        return $symbol.number_format((float) $this->cost_amount, 2);
     }
 
     /**
@@ -199,38 +198,46 @@ class WhatsAppCall extends Model
     /**
      * Mark the call as answered.
      */
-    public function markAsAnswered(): void
+    public function markAsAnswered()
     {
-        $this->update([
-            'status' => 'in_progress',
-            'answered_at' => now(),
-        ]);
+        if (! $this->answered_at) {
+            $this->answered_at = now();
+        }
+
+        $this->status = 'in_progress';
+        $this->save();
+
+        return $this;
     }
 
     /**
      * Mark the call as ended and calculate duration.
      */
-    public function markAsEnded(): void
+    public function markAsEnded()
     {
-        $endedAt = now();
-        $duration = 0;
+        if ($this->status !== 'completed') {
+            $endedAt = now();
+            $duration = 0;
 
-        if ($this->answered_at) {
-            $duration = $endedAt->diffInSeconds($this->answered_at);
+            if ($this->answered_at) {
+                $duration = $endedAt->diffInSeconds($this->answered_at);
+            }
+
+            $this->update([
+                'status' => 'completed',
+                'ended_at' => $endedAt,
+                'duration_seconds' => $duration,
+                'cost_amount' => $this->calculateCost($duration),
+            ]);
         }
 
-        $this->update([
-            'status' => 'completed',
-            'ended_at' => $endedAt,
-            'duration_seconds' => $duration,
-            'cost_amount' => $this->calculateCost($duration),
-        ]);
+        return $this;
     }
 
     /**
      * Mark the call as failed.
      */
-    public function markAsFailed(string $reason = null): void
+    public function markAsFailed(?string $reason = null): void
     {
         $this->update([
             'status' => 'failed',

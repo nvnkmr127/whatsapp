@@ -18,8 +18,7 @@ class DynamicSystemMail extends Mailable
         public string $htmlContent,
         public ?string $textContent = null,
         public array $headersArray = []
-    ) {
-    }
+    ) {}
 
     public function envelope(): Envelope
     {

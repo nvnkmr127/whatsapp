@@ -25,7 +25,7 @@ class HandleCallTimeoutJob implements ShouldQueue
             ->get();
 
         foreach ($zombieCalls as $call) {
-            Log::info("Auto-marking zombie call as missed/failed", [
+            Log::info('Auto-marking zombie call as missed/failed', [
                 'call_id' => $call->call_id,
                 'status' => $call->status,
                 'initiated_at' => $call->initiated_at,

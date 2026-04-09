@@ -10,11 +10,12 @@ use Illuminate\Support\Facades\Log;
 class TemplateService
 {
     protected $baseUrl;
+
     protected $team;
 
-    public function __construct(Team $team = null)
+    public function __construct(?Team $team = null)
     {
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
         $this->team = $team;
     }
 
@@ -31,7 +32,7 @@ class TemplateService
         $wabaId = $team->whatsapp_business_account_id;
         $accessToken = (string) $team->whatsapp_access_token;
 
-        if (!$wabaId || !$accessToken) {
+        if (! $wabaId || ! $accessToken) {
             throw new \Exception("WABA ID or Access Token missing for Team {$team->id}");
         }
 
@@ -47,7 +48,7 @@ class TemplateService
             $response = Http::withToken($accessToken)->get($nextUrl);
 
             if ($response->failed()) {
-                throw new \Exception("Failed to fetch templates: " . $response->body());
+                throw new \Exception('Failed to fetch templates: '.$response->body());
             }
 
             $data = $response->json();
@@ -66,7 +67,7 @@ class TemplateService
         } while ($nextUrl);
 
         $syncedNames = [];
-        $validator = new \App\Validators\TemplateValidator();
+        $validator = new \App\Validators\TemplateValidator;
 
         foreach ($allRemoteTemplates as $remote) {
             $template = $this->updateOrCreateTemplate($team, $remote);
@@ -78,10 +79,10 @@ class TemplateService
             // We update the readiness_score and validation_results columns based on scan
             // We do this via direct update to avoid triggering infinite save loops if any events exist
             $template->updateQuietly([
-                'readiness_score' => $valResult->isValid() ? 100 : 50, // Simplified score logic, specific score is inside validate() but not returned unless we change method signature or read from object if passed by ref. 
+                'readiness_score' => $valResult->isValid() ? 100 : 50, // Simplified score logic, specific score is inside validate() but not returned unless we change method signature or read from object if passed by ref.
                 // Wait, validate() returns ValidationResult object. It doesn't modify template unless we told it to?
                 // Looking at TemplateValidator::validate code...
-                // It does `$template->update(...)` at the end! 
+                // It does `$template->update(...)` at the end!
                 // So calling $validator->validate($template) ALREADY effectively saves the score!
                 // Let's verify that.
             ]);
@@ -121,8 +122,9 @@ class TemplateService
         if ($providedCount !== $expectedCount) {
             Log::warning("Template Validation Failed: {$template->name}", [
                 'expected' => $expectedCount,
-                'provided' => $providedCount
+                'provided' => $providedCount,
             ]);
+
             return false;
         }
 
@@ -138,6 +140,7 @@ class TemplateService
         if (preg_match_all('/\{\{(\d+)\}\}/', $text, $matches)) {
             return array_unique($matches[0]);
         }
+
         return [];
     }
 
@@ -164,10 +167,10 @@ class TemplateService
             // 1. Look up config
             $config = $schema[$placeholder] ?? null;
 
-            if (!$config) {
-                // Fallback: If no config, try to use the index as key? 
+            if (! $config) {
+                // Fallback: If no config, try to use the index as key?
                 // Or just expect the user provided raw positional array?
-                // For now, if no config, we can't map name -> value. 
+                // For now, if no config, we can't map name -> value.
                 // We will assume the value is null unless provided by index in namedData?
                 // No, namedData assumes keys are names.
                 $value = $namedData[$index] ?? null; // Allow mixed usage?
@@ -180,14 +183,14 @@ class TemplateService
                 // Strict mode could throw exception here
                 $varName = $config['name'] ?? 'unknown';
                 Log::warning("Missing value for variable {$placeholder} ({$varName}) in template {$template->name}");
-                $value = '{{' . $index . '}}'; // Keep placeholder? or empty? standard is empty string often, or validation fail.
+                $value = '{{'.$index.'}}'; // Keep placeholder? or empty? standard is empty string often, or validation fail.
                 // Whatsapp API will fail if we send {{n}} literal usually.
             }
 
             // Map to 0-indexed array for API (body_text params array)
-            // Note: Cloud API expects parameters list in order. 
+            // Note: Cloud API expects parameters list in order.
             // If body has {{1}} and {{3}}, we need list [v1, v2, v3] where v2 is unused?
-            // Actually standard regex is {{1}}, {{2}} sequential. 
+            // Actually standard regex is {{1}}, {{2}} sequential.
             // If strict validation passes, gaps shouldn't exist.
             $positionalData[$index - 1] = (string) $value;
         }
@@ -195,12 +198,13 @@ class TemplateService
         // Fill gaps if any (though strict validation prevents this)
         // param array must be dense
         for ($i = 0; $i < $maxIndex; $i++) {
-            if (!isset($positionalData[$i])) {
+            if (! isset($positionalData[$i])) {
                 $positionalData[$i] = ''; // Empty string for unused/skipped vars
             }
         }
 
         ksort($positionalData);
+
         return array_values($positionalData);
     }
 
@@ -246,7 +250,7 @@ class TemplateService
         $all = $this->extractAllPlaceholders($template);
 
         $components = $template->components;
-        
+
         if (is_iterable($components)) {
             foreach ($components as $component) {
                 // Text based placeholders in HEADER and BODY
@@ -274,6 +278,7 @@ class TemplateService
 
         return $count;
     }
+
     /**
      * Sanitize variables to ensure they meet Meta's constraints.
      * - Truncates to 1024 chars.
@@ -291,7 +296,7 @@ class TemplateService
             // 2. Handle Arrays (Prevent "Array to string conversion")
             if (is_array($var)) {
                 // If it's an array, we try to take the first element if it's a string,
-                // or just json_encode it if we must preserve it. 
+                // or just json_encode it if we must preserve it.
                 // Usually, this happens when a user maps a JSON field to a variable.
                 if (isset($var[0]) && count($var) === 1 && is_string($var[0])) {
                     $var = $var[0];
@@ -322,6 +327,7 @@ class TemplateService
         if (preg_match('/\s/', $variable)) {
             return false;
         }
+
         // Should probably be URL encoded, but if users pass "foo/bar" it might be valid for path extension.
         // We mainly want to block "foo bar" which breaks the link structure.
         return true;

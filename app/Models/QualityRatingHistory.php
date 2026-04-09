@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class QualityRatingHistory extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $table = 'quality_rating_history';
 

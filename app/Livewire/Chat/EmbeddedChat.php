@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Chat;
 
-use App\Models\Conversation;
 use App\Models\Contact;
+use App\Models\Conversation;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -14,10 +14,15 @@ class EmbeddedChat extends Component
     use WithFileUploads;
 
     public $contactId;
+
     public $permissions = [];
+
     public $token;
+
     public $conversation;
+
     public $messageBody = '';
+
     public $attachments = []; // Future usage
 
     protected $listeners = [
@@ -38,17 +43,17 @@ class EmbeddedChat extends Component
 
     protected function validateEmbedTokenOrAbort($fallbackPermissions, $fallbackContactId)
     {
-        if (!$this->token) {
+        if (! $this->token) {
             abort(403, 'Missing Token');
         }
 
         $payload = app(\App\Services\EmbedTokenService::class)->validateToken($this->token);
-        if (!$payload) {
+        if (! $payload) {
             abort(403, 'Invalid or Expired Token');
         }
 
         $this->contactId = $payload['contact_id'] ?? $fallbackContactId;
-        if (!$this->contactId) {
+        if (! $this->contactId) {
             abort(403, 'Invalid Token Contact');
         }
 
@@ -63,7 +68,7 @@ class EmbeddedChat extends Component
         // but Livewire component might not share the session auth if inside iframe without cookies?
         // Wait: The EmbedController validates the token. But Livewire requests come back as separate AJAX calls.
         // If the user is NOT logged in (Ghost Agent), standard Auth::user() won't work in Livewire subsequent requests.
-        // MVP Solution: 
+        // MVP Solution:
         // 1. We rely on the fact that if frames are on same domain/subdomain, cookies *might* work.
         // 2. OR we pass the token to Livewire and re-validate on every request (Safe).
         // For MVP: We assume the user viewing the iframe has a session (e.g. they are logged into the ERP which is also the App, or 3rd party cookie enabled).
@@ -73,7 +78,7 @@ class EmbeddedChat extends Component
             'messages' => function ($q) {
                 $q->orderBy('created_at', 'asc');
             },
-            'contact'
+            'contact',
         ])
             ->where('contact_id', $this->contactId)
             ->first();
@@ -81,7 +86,7 @@ class EmbeddedChat extends Component
 
     public function sendMessage()
     {
-        if (!in_array('write', $this->permissions)) {
+        if (! in_array('write', $this->permissions)) {
             return; // Silently fail block or throw exception
         }
 
@@ -89,13 +94,14 @@ class EmbeddedChat extends Component
             'messageBody' => 'required_without:attachments|string',
         ]);
 
-        if (!$this->conversation) {
+        if (! $this->conversation) {
             // Create conversation on the fly? Or wait for inbound?
             // Usually outbound to a contact starts a conversation.
             // We need to fetch the contact to get the phone number.
             $contact = Contact::find($this->contactId);
-            if (!$contact)
+            if (! $contact) {
                 return;
+            }
 
             // We need a 'Team' context.
             // Implied from contact->team_id.
@@ -107,7 +113,7 @@ class EmbeddedChat extends Component
             $team = $this->conversation->team;
         }
 
-        $waService = new WhatsAppService();
+        $waService = new WhatsAppService;
         $waService->setTeam($team);
 
         try {
@@ -134,6 +140,7 @@ class EmbeddedChat extends Component
                 "echo:conversation.{$this->conversation->id},MessageReceived" => 'handleIncomingMessage',
             ];
         }
+
         return [];
     }
 

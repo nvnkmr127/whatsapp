@@ -24,7 +24,7 @@ class LicenseVerificationRequest extends FormRequest
     public function rules()
     {
         return [
-            'username'      => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255'],
             'purchase_code' => [
                 'required',
                 'string',
@@ -53,7 +53,7 @@ class LicenseVerificationRequest extends FormRequest
     public function attributes()
     {
         return [
-            'username'      => 'Envato Username',
+            'username' => 'Envato Username',
             'purchase_code' => 'Purchase Code',
         ];
     }

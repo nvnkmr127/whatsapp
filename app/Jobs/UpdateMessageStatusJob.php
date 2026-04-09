@@ -2,21 +2,22 @@
 
 namespace App\Jobs;
 
-use App\Models\Message;
 use App\Models\Campaign;
+use App\Models\Message;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class UpdateMessageStatusJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $data;
+
     public $traceId;
 
     /**
@@ -36,8 +37,7 @@ class UpdateMessageStatusJob implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param array $data ['provider_message_id', 'status', 'timestamp', 'details']
-     * @param string|null $traceId
+     * @param  array  $data  ['provider_message_id', 'status', 'timestamp', 'details']
      */
     public function __construct(array $data, ?string $traceId = null)
     {
@@ -66,29 +66,31 @@ class UpdateMessageStatusJob implements ShouldQueue
 
         $message = Message::where('whatsapp_message_id', $providerMessageId)->first();
 
-        if (!$message) {
+        if (! $message) {
             // Race condition check: If webhook arrives before SendMessageJob saves the ID
             if ($this->attempts() < $this->tries) {
                 Log::warning("UpdateMessageStatusJob: Message not found for provider ID: {$providerMessageId}. Retrying in 2s...");
                 $this->release(2);
+
                 return;
             }
 
             Log::warning("UpdateMessageStatusJob: Message not found for provider ID: {$providerMessageId} after {$this->tries} attempts. Giving up.");
+
             return;
         }
 
         $oldStatus = $message->status;
 
         // --- STATUS STICKINESS GUARD (UC-SAFE-01) ---
-        // WhatsApp webhooks are not guaranteed to be FIFO. We must prevent 
+        // WhatsApp webhooks are not guaranteed to be FIFO. We must prevent
         // backward transitions (e.g., 'read' -> 'delivered').
         $statusRanks = [
-            'queued'    => 0,
-            'sent'      => 1,
+            'queued' => 0,
+            'sent' => 1,
             'delivered' => 2,
-            'read'      => 3,
-            'failed'    => 4, // Terminal
+            'read' => 3,
+            'failed' => 4, // Terminal
         ];
 
         $currentRank = $statusRanks[$oldStatus] ?? 0;
@@ -98,6 +100,7 @@ class UpdateMessageStatusJob implements ShouldQueue
         // or if the new status is 'failed' (can happen after 'sent')
         if ($newRank < $currentRank && $status !== 'failed') {
             Log::info("UpdateMessageStatusJob: Ignoring backward status transition from '{$oldStatus}' to '{$status}' for message '{$providerMessageId}'");
+
             return;
         }
 
@@ -137,11 +140,11 @@ class UpdateMessageStatusJob implements ShouldQueue
                     app(\App\Services\AutomationService::class)->checkSpecialTriggers($message->contact, 'campaign_message_read', [
                         'campaign_id' => $message->campaign_id,
                         'message_id' => $message->id,
-                        'template_id' => $message->template_id
+                        'template_id' => $message->template_id,
                     ]);
                 }
             } catch (\Exception $e) {
-                Log::debug("T11 Trigger failed (Ignored): " . $e->getMessage());
+                Log::debug('T11 Trigger failed (Ignored): '.$e->getMessage());
             }
         }
 
@@ -157,8 +160,9 @@ class UpdateMessageStatusJob implements ShouldQueue
     protected function updateCampaignStats(Message $message, $oldStatus, $newStatus)
     {
         $campaign = Campaign::find($message->campaign_id);
-        if (!$campaign)
+        if (! $campaign) {
             return;
+        }
 
         // 1. Sync individual CampaignDetail row status
         // We use phone number and campaign_id to find the matching detail
@@ -166,14 +170,14 @@ class UpdateMessageStatusJob implements ShouldQueue
             ->where('phone', $message->contact->phone_number ?? $message->to)
             ->update([
                 'status' => $newStatus,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
         // 2. Logic to prevent double counting on Campaign totals
         // We only increment if it's the first time reaching this state
         if ($newStatus === 'delivered' || $newStatus === 'read') {
             // If it wasn't delivered or read before, increment del_count
-            if (!in_array($oldStatus, ['delivered', 'read'])) {
+            if (! in_array($oldStatus, ['delivered', 'read'])) {
                 $campaign->increment('del_count');
             }
         }

@@ -27,9 +27,9 @@ class PersistDomainEvents implements ShouldQueue
 
     /**
      * Handle the event.
-     * 
-     * @param string|object $event
-     * @param array $payload
+     *
+     * @param  string|object  $event
+     * @param  array  $payload
      */
     public function handle($event, $payload = []): void
     {
@@ -40,18 +40,18 @@ class PersistDomainEvents implements ShouldQueue
 
         if (is_object($event)) {
             $eventObj = $event;
-        } elseif (is_string($event) && !empty($payload)) {
+        } elseif (is_string($event) && ! empty($payload)) {
             // Wildcard mode: $event is the string name, $payload is array containing the event object(s)
             $eventObj = $payload[0] ?? null;
         }
 
         // Only handle DomainEvents
-        if (!($eventObj instanceof DomainEventContract)) {
+        if (! ($eventObj instanceof DomainEventContract)) {
             return;
         }
 
         // Sampling Logic
-        if (!$this->shouldPersist($eventObj)) {
+        if (! $this->shouldPersist($eventObj)) {
             return;
         }
 

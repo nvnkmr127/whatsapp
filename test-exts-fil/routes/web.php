@@ -42,4 +42,4 @@ Route::middleware('auth')->group(function () {
 Route::match(['get', 'post'], '/whatsapp/webhook', [WhatsAppWebhookController::class, '__invoke'])
     ->name('whatsapp.webhook');
 // Authentication Routes
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

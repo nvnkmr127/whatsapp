@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\TraceContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
-use App\Services\TraceContext;
 
 class AssignCorrelationId
 {

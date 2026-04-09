@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class GeminiProvider implements AIProviderInterface
 {
     protected string $apiKey;
+
     protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
     public function __construct(string $apiKey)
@@ -27,7 +28,7 @@ class GeminiProvider implements AIProviderInterface
             $role = $message['role'] === 'assistant' ? 'model' : 'user';
             $contents[] = [
                 'role' => $role,
-                'parts' => [['text' => $message['content']]]
+                'parts' => [['text' => $message['content']]],
             ];
         }
 
@@ -36,7 +37,7 @@ class GeminiProvider implements AIProviderInterface
             'generationConfig' => [
                 'temperature' => $temperature,
                 'maxOutputTokens' => $maxTokens,
-            ]
+            ],
         ];
 
         try {
@@ -44,8 +45,8 @@ class GeminiProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/models/{$model}:generateContent?key={$this->apiKey}", $payload);
 
             if ($response->failed()) {
-                Log::error("Gemini API Failed: " . $response->body());
-                throw new \Exception("Gemini API request failed: " . ($response->json('error.message') ?? 'Unknown error'));
+                Log::error('Gemini API Failed: '.$response->body());
+                throw new \Exception('Gemini API request failed: '.($response->json('error.message') ?? 'Unknown error'));
             }
 
             $content = $response->json('candidates.0.content.parts.0.text');
@@ -58,7 +59,8 @@ class GeminiProvider implements AIProviderInterface
                 'raw_response' => $response->json(),
             ];
         } catch (\Exception $e) {
-            Log::error("Gemini Provider Error: " . $e->getMessage());
+            Log::error('Gemini Provider Error: '.$e->getMessage());
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -80,8 +82,8 @@ class GeminiProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/models/{$model}:embedContent?key={$this->apiKey}", [
                     'model' => "models/{$model}",
                     'content' => [
-                        'parts' => [['text' => is_array($text) ? implode("\n", $text) : $text]]
-                    ]
+                        'parts' => [['text' => is_array($text) ? implode("\n", $text) : $text]],
+                    ],
                 ]);
 
             if ($response->failed()) {
@@ -90,7 +92,8 @@ class GeminiProvider implements AIProviderInterface
 
             return $response->json('embedding.values') ?? [];
         } catch (\Exception $e) {
-            Log::error("Gemini Embed Error: " . $e->getMessage());
+            Log::error('Gemini Embed Error: '.$e->getMessage());
+
             return [];
         }
     }
@@ -98,10 +101,11 @@ class GeminiProvider implements AIProviderInterface
     public function summarize(string $content, array $options = []): string
     {
         $messages = [
-            ['role' => 'user', 'content' => "Summarize this: {$content}"]
+            ['role' => 'user', 'content' => "Summarize this: {$content}"],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
+
         return $response['content'] ?? '';
     }
 
@@ -109,10 +113,11 @@ class GeminiProvider implements AIProviderInterface
     {
         $categoriesStr = implode(', ', $categories);
         $messages = [
-            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"]
+            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
+
         return trim($response['content'] ?? '');
     }
 
@@ -122,13 +127,14 @@ class GeminiProvider implements AIProviderInterface
             $response = Http::timeout(10)
                 ->post("{$this->baseUrl}/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
                     'contents' => [
-                        ['role' => 'user', 'parts' => [['text' => 'Hello']]]
-                    ]
+                        ['role' => 'user', 'parts' => [['text' => 'Hello']]],
+                    ],
                 ]);
 
             return $response->successful();
         } catch (\Exception $e) {
-            Log::error("Gemini Connection Test Failed: " . $e->getMessage());
+            Log::error('Gemini Connection Test Failed: '.$e->getMessage());
+
             return false;
         }
     }

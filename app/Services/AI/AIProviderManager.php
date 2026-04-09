@@ -2,10 +2,10 @@
 
 namespace App\Services\AI;
 
-use App\Services\AI\Providers\OpenAIProvider;
+use App\Models\Team;
 use App\Services\AI\Providers\AnthropicProvider;
 use App\Services\AI\Providers\GeminiProvider;
-use App\Models\Team;
+use App\Services\AI\Providers\OpenAIProvider;
 use Illuminate\Support\Facades\Log;
 
 class AIProviderManager
@@ -28,17 +28,20 @@ class AIProviderManager
             $apiKey = config("services.ai.{$provider}.api_key");
         }
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             Log::warning("No API key found for AI provider: {$provider}");
+
             return null;
         }
 
-        if (!isset(self::PROVIDERS[$provider])) {
+        if (! isset(self::PROVIDERS[$provider])) {
             Log::error("Unknown AI provider: {$provider}");
+
             return null;
         }
 
         $providerClass = self::PROVIDERS[$provider];
+
         return new $providerClass($apiKey);
     }
 
@@ -54,25 +57,25 @@ class AIProviderManager
 
     public static function testConnection(string $provider, string $apiKey): bool
     {
-        if (!isset(self::PROVIDERS[$provider])) {
+        if (! isset(self::PROVIDERS[$provider])) {
             return false;
         }
 
         $providerClass = self::PROVIDERS[$provider];
         $providerInstance = new $providerClass($apiKey);
-        
+
         return $providerInstance->testConnection($apiKey);
     }
 
     public static function getModelsForProvider(string $provider): array
     {
-        if (!isset(self::PROVIDERS[$provider])) {
+        if (! isset(self::PROVIDERS[$provider])) {
             return [];
         }
 
         $providerClass = self::PROVIDERS[$provider];
         $tempInstance = new $providerClass('temp-key');
-        
+
         return $tempInstance->getAvailableModels();
     }
 
@@ -89,12 +92,14 @@ class AIProviderManager
     public static function summarize(Team $team, string $content, array $options = []): string
     {
         $result = self::executeWithFallback($team, 'summarize', [$content, $options]);
+
         return is_string($result) ? $result : ($result['content'] ?? '');
     }
 
     public static function classify(Team $team, string $content, array $categories, array $options = []): string
     {
         $result = self::executeWithFallback($team, 'classify', [$content, $categories, $options]);
+
         return is_string($result) ? $result : ($result['content'] ?? '');
     }
 
@@ -102,21 +107,21 @@ class AIProviderManager
     {
         $teamId = $team->id;
         $primaryProviderName = get_setting("ai_provider_{$teamId}", 'openai');
-        
+
         try {
             return self::execute($team, $primaryProviderName, $method, $args);
         } catch (\Exception $e) {
             $fallbackProviderName = get_setting("ai_fallback_provider_{$teamId}");
-            
+
             if ($fallbackProviderName && $fallbackProviderName !== $primaryProviderName) {
-                Log::warning("AI Primary Provider ({$primaryProviderName}) failed. Falling back to {$fallbackProviderName}. Error: " . $e->getMessage());
+                Log::warning("AI Primary Provider ({$primaryProviderName}) failed. Falling back to {$fallbackProviderName}. Error: ".$e->getMessage());
                 try {
                     return self::execute($team, $fallbackProviderName, $method, $args);
                 } catch (\Exception $fe) {
-                    Log::error("AI Fallback Provider ({$fallbackProviderName}) also failed: " . $fe->getMessage());
+                    Log::error("AI Fallback Provider ({$fallbackProviderName}) also failed: ".$fe->getMessage());
                 }
             }
-            
+
             throw $e;
         }
     }
@@ -124,22 +129,22 @@ class AIProviderManager
     protected static function execute(Team $team, string $providerName, string $method, array $args): mixed
     {
         $provider = self::getProvider($team, $providerName);
-        
-        if (!$provider) {
+
+        if (! $provider) {
             throw new \Exception("AI provider {$providerName} not configured correctly.");
         }
 
         // Apply team-specific model if not provided in args
         if ($method === 'chat' || $method === 'streamChat') {
             $options = $args[1] ?? [];
-            if (!isset($options['model'])) {
+            if (! isset($options['model'])) {
                 $options['model'] = get_setting("ai_model_{$team->id}");
             }
             $args[1] = $options;
         }
 
         $result = $provider->$method(...$args);
-        
+
         // Log usage if successful and returns usage data
         if (is_array($result) && isset($result['usage'])) {
             self::logUsage($team, $providerName, $result, $method);
@@ -153,7 +158,7 @@ class AIProviderManager
         try {
             $usage = $result['usage'] ?? [];
             $model = $result['model'] ?? 'unknown';
-            
+
             // Normalize tokens
             $promptTokens = $usage['prompt_tokens'] ?? $usage['promptTokenCount'] ?? $usage['input_tokens'] ?? 0;
             $completionTokens = $usage['completion_tokens'] ?? $usage['candidatesTokenCount'] ?? $usage['output_tokens'] ?? 0;
@@ -173,7 +178,7 @@ class AIProviderManager
                 ],
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to log AI usage: " . $e->getMessage());
+            Log::error('Failed to log AI usage: '.$e->getMessage());
         }
     }
 }

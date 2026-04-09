@@ -50,30 +50,30 @@ class CampaignDetails extends Component
         }
         $campaignId = request()->route('campaignId');
 
-        $this->campaign              = Campaign::findOrFail($campaignId);
-        $this->template_name         = WhatsappTemplate::select('template_name')->where('template_id', $this->campaign->template_id)->first()->template_name;
-        $this->totalCount            = CampaignDetail::where('campaign_id', $campaignId)->count();
-        $this->totalContacts         = Contact::where('type', $this->campaign->rel_type)->count();
+        $this->campaign = Campaign::findOrFail($campaignId);
+        $this->template_name = WhatsappTemplate::select('template_name')->where('template_id', $this->campaign->template_id)->first()->template_name;
+        $this->totalCount = CampaignDetail::where('campaign_id', $campaignId)->count();
+        $this->totalContacts = Contact::where('type', $this->campaign->rel_type)->count();
         $this->totalCampaignsPercent = ! empty($this->totalContacts) ? round(($this->totalCount / $this->totalContacts) * 100, 2) : 0;
-        $this->isRetryAble           = false;
+        $this->isRetryAble = false;
 
         if ($this->totalCount > 0) {
             $this->deliverCount = CampaignDetail::where('campaign_id', $campaignId)->where('status', 2)->count();
-            $this->readCount    = CampaignDetail::where('campaign_id', $campaignId)->where('message_status', 'read')->count();
-            $this->failedCount  = CampaignDetail::where('campaign_id', $campaignId)->where('status', 0)->count();
-            $this->isInQueue    = CampaignDetail::where('campaign_id', $campaignId)->where('status', 1)->exists();
+            $this->readCount = CampaignDetail::where('campaign_id', $campaignId)->where('message_status', 'read')->count();
+            $this->failedCount = CampaignDetail::where('campaign_id', $campaignId)->where('status', 0)->count();
+            $this->isInQueue = CampaignDetail::where('campaign_id', $campaignId)->where('status', 1)->exists();
 
             $scheduledTime = $this->campaign->scheduled_send_time;
 
-            $givenTime     = Carbon::parse($scheduledTime, (! empty(get_setting('general.timezone'))) ? get_setting('general.timezone') : 'Asia/kolkata');
+            $givenTime = Carbon::parse($scheduledTime, (! empty(get_setting('general.timezone'))) ? get_setting('general.timezone') : 'Asia/kolkata');
             $thresholdTime = $givenTime->copy()->addMinutes(5);
-            $currentTime   = Carbon::now((! empty(get_setting('general.timezone'))) ? get_setting('general.timezone') : 'Asia/kolkata');
+            $currentTime = Carbon::now((! empty(get_setting('general.timezone'))) ? get_setting('general.timezone') : 'Asia/kolkata');
 
             if ($this->campaign->is_sent == true && ($this->failedCount > 0 || (! ($this->totalCount == $this->deliverCount) && $currentTime->gt($thresholdTime)))) {
                 $this->isRetryAble = true;
             }
-            $this->totalFailedPercent    = ! empty($this->totalCount) ? round(($this->failedCount / $this->totalCount) * 100, 2) : 0;
-            $this->totalReadPercent      = ! empty($this->totalCount) ? round(($this->readCount / $this->totalCount) * 100, 2) : 0;
+            $this->totalFailedPercent = ! empty($this->totalCount) ? round(($this->failedCount / $this->totalCount) * 100, 2) : 0;
+            $this->totalReadPercent = ! empty($this->totalCount) ? round(($this->readCount / $this->totalCount) * 100, 2) : 0;
             $this->totalDeliveredPercent = ! empty($this->totalCount) ? round(($this->deliverCount / $this->totalCount) * 100, 2) : 0;
 
             // Determine campaign status
@@ -87,10 +87,10 @@ class CampaignDetails extends Component
                 $this->campaignStatus = 'pending';
             }
         } else {
-            $this->totalFailedPercent    = 0;
-            $this->totalReadPercent      = 0;
+            $this->totalFailedPercent = 0;
+            $this->totalReadPercent = 0;
             $this->totalDeliveredPercent = 0;
-            $this->campaignStatus        = 'Failed';
+            $this->campaignStatus = 'Failed';
         }
     }
 

@@ -14,9 +14,7 @@ class SendMessageSentWebhook implements ShouldQueue
 
     public $tries = 3;
 
-    public function __construct(protected WebhookService $webhookService)
-    {
-    }
+    public function __construct(protected WebhookService $webhookService) {}
 
     /**
      * Handle the event.
@@ -26,7 +24,7 @@ class SendMessageSentWebhook implements ShouldQueue
         $message = $event->message;
         $team = $message->team;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -49,7 +47,7 @@ class SendMessageSentWebhook implements ShouldQueue
         try {
             $this->webhookService->dispatch($team->id, 'message.sent', $data);
         } catch (\Exception $e) {
-            Log::error("Failed to dispatch message.sent webhook: " . $e->getMessage());
+            Log::error('Failed to dispatch message.sent webhook: '.$e->getMessage());
         }
     }
 }

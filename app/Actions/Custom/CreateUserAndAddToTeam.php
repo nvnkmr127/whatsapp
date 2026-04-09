@@ -15,9 +15,6 @@ class CreateUserAndAddToTeam
     /**
      * Create a new user and add them to the team.
      *
-     * @param  \App\Models\User  $creator
-     * @param  \App\Models\Team  $team
-     * @param  array  $input
      * @return void
      */
     public function create(User $creator, Team $team, array $input)
@@ -31,7 +28,7 @@ class CreateUserAndAddToTeam
                 : null,
         ])->validateWithBag('createUser');
 
-        DB::transaction(function () use ($creator, $team, $input) {
+        DB::transaction(function () use ($team, $input) {
             $user = User::create([
                 'name' => $input['name'],
                 'email' => $input['email'],
@@ -43,7 +40,7 @@ class CreateUserAndAddToTeam
                 $user,
                 [
                     'role' => $input['role'],
-                    'receives_tickets' => $input['role'] === 'agent'
+                    'receives_tickets' => $input['role'] === 'agent',
                 ]
             );
 
@@ -63,7 +60,7 @@ class CreateUserAndAddToTeam
     {
         $user->ownedTeams()->save(Team::forceCreate([
             'user_id' => $user->id,
-            'name' => explode(' ', $user->name, 2)[0] . "'s Team",
+            'name' => explode(' ', $user->name, 2)[0]."'s Team",
             'personal_team' => true,
         ]));
     }

@@ -4,11 +4,12 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            if (!Schema::hasColumn('messages', 'automation_id')) {
+            if (! Schema::hasColumn('messages', 'automation_id')) {
                 $table->foreignId('automation_id')
                     ->nullable()
                     ->after('webhook_source_id')
@@ -16,7 +17,7 @@ return new class extends Migration {
                     ->nullOnDelete();
             }
 
-            if (!Schema::hasColumn('messages', 'automation_run_id')) {
+            if (! Schema::hasColumn('messages', 'automation_run_id')) {
                 $table->foreignId('automation_run_id')
                     ->nullable()
                     ->after('automation_id')

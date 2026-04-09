@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WhatsappTemplate extends Model
 {
     use SoftDeletes;
+
     protected $guarded = [];
 
     protected $casts = [
@@ -45,6 +45,7 @@ class WhatsappTemplate extends Model
         // If it's a JSON string, decode it
         if (is_string($value)) {
             $decoded = json_decode($value, true);
+
             return is_array($decoded) ? $decoded : [];
         }
 
@@ -58,7 +59,7 @@ class WhatsappTemplate extends Model
     {
         $content = [];
         $components = $this->components;
-        
+
         if (is_iterable($components)) {
             foreach ($components as $component) {
                 if (isset($component['text'])) {

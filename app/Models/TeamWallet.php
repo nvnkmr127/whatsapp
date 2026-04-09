@@ -65,9 +65,9 @@ class TeamWallet extends Model
     {
         $dirty = $this->getDirty();
 
-        if (isset($dirty['balance']) && !$this->allowBalanceMutation) {
+        if (isset($dirty['balance']) && ! $this->allowBalanceMutation) {
             throw new \RuntimeException(
-                'Direct manipulation of TeamWallet::balance is forbidden. ' .
+                'Direct manipulation of TeamWallet::balance is forbidden. '.
                 'Use strictDeduct() for charges or BillingService::deposit() for credits.'
             );
         }
@@ -83,16 +83,47 @@ class TeamWallet extends Model
      */
     public function strictDeduct(float $cost): void
     {
-        if ($cost <= 0)
+        if ($cost <= 0) {
             return;
+        }
 
-        if ($this->balance < $cost) {
-            throw new \Exception("Insufficient wallet balance. Have: {$this->balance}, Need: {$cost}. No negative wallet allowed.");
+        // Force reload from database to avoid caching issues
+        // Using direct DB query bypasses Eloquent's caching
+        $currentBalanceQuery = \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id);
+
+        // In tests we might not be in a transaction
+        if (\Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+            $currentBalanceQuery->lockForUpdate();
+        }
+
+        $currentBalance = (float) $currentBalanceQuery->value('balance');
+
+        // Use string comparison with BC Math if available, otherwise round
+        $currentBalanceStr = number_format($currentBalance, 4, '.', '');
+        $costToDeductStr = number_format($cost, 4, '.', '');
+
+        if (bccomp($currentBalanceStr, $costToDeductStr, 4) === -1) {
+            throw new \Exception("Insufficient wallet balance. Have: {$currentBalanceStr}, Need: {$costToDeductStr}. No negative wallet allowed.");
         }
 
         $this->allowBalanceMutation = true;
-        $this->balance -= $cost;
-        $this->save();
+
+        $newBalance = bcsub($currentBalanceStr, $costToDeductStr, 4);
+
+        $affected = \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->where('balance', '>=', (float) $costToDeductStr - 0.0001)
+            ->update(['balance' => $newBalance]);
+
+        if ($affected === 0) {
+            $this->allowBalanceMutation = false;
+            throw new \Exception('Failed to deduct wallet balance due to concurrent update or insufficient funds.');
+        }
+
+        // We MUST update the current instance's balance so tests/callers see the new value
+        $this->balance = (float) $newBalance;
+
         $this->allowBalanceMutation = false;
     }
 
@@ -100,7 +131,7 @@ class TeamWallet extends Model
      * Safely increments the wallet balance.
      * Should only be called from BillingService::deposit().
      *
-     * @param float $amount Amount to credit. Must be positive.
+     * @param  float  $amount  Amount to credit. Must be positive.
      */
     public function incrementBalance(float $amount): void
     {

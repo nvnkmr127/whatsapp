@@ -2,13 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\Email\CentralEmailService;
-use App\Models\User;
+use Illuminate\Console\Command;
 
 class TestEmailDelivery extends Command
 {
     protected $signature = 'email:test-otp {email}';
+
     protected $description = 'Test the decentralized email OTP delivery';
 
     public function handle(CentralEmailService $service)
@@ -20,11 +20,11 @@ class TestEmailDelivery extends Command
             $service->sendOtp($email, [
                 'name' => 'Tester',
                 'code' => '999999',
-                'expiry' => '5 minutes'
+                'expiry' => '5 minutes',
             ]);
-            $this->info("Success! OTP queued for delivery.");
+            $this->info('Success! OTP queued for delivery.');
         } catch (\Exception $e) {
-            $this->error("Failed: " . $e->getMessage());
+            $this->error('Failed: '.$e->getMessage());
         }
     }
 }

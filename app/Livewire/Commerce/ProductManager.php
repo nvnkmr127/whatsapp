@@ -2,10 +2,10 @@
 
 namespace App\Livewire\Commerce;
 
-use App\Models\Product;
 use App\Models\Integration;
-use App\Services\WhatsAppCommerceService;
+use App\Models\Product;
 use App\Services\Integrations\MetaCommerceService;
+use App\Services\WhatsAppCommerceService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -16,9 +16,33 @@ class ProductManager extends Component
     use WithPagination;
 
     public $search = '';
-    public $name, $description, $price, $currency = 'USD', $retailer_id, $image_url, $url, $category_id;
-    public $stock_quantity = 0, $manage_stock = false, $availability = 'in stock', $is_active = true;
+
+    public $name;
+
+    public $description;
+
+    public $price;
+
+    public $currency = 'USD';
+
+    public $retailer_id;
+
+    public $image_url;
+
+    public $url;
+
+    public $category_id;
+
+    public $stock_quantity = 0;
+
+    public $manage_stock = false;
+
+    public $availability = 'in stock';
+
+    public $is_active = true;
+
     public $editingProductId = null;
+
     public $showCreateModal = false;
 
     // Reset pagination when searching
@@ -32,7 +56,7 @@ class ProductManager extends Component
         return [
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'retailer_id' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_]+$/|unique:products,retailer_id,' . $this->editingProductId . ',id',
+            'retailer_id' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_]+$/|unique:products,retailer_id,'.$this->editingProductId.',id',
             'image_url' => 'required|url', // Meta requires image
             'category_id' => 'nullable|exists:categories,id',
             'stock_quantity' => 'required_if:manage_stock,true|numeric|min:0',
@@ -134,14 +158,14 @@ class ProductManager extends Component
                 $service->syncSingleProduct($product);
             } else {
                 // 2. Fallback to basic WhatsApp commerce using Team tokens
-                $service = new WhatsAppCommerceService();
+                $service = new WhatsAppCommerceService;
                 $service->setTeam(Auth::user()->currentTeam);
                 $service->syncProductToMeta($product);
             }
 
             session()->flash('success', 'Product synced to Meta Catalog.');
         } catch (\Exception $e) {
-            session()->flash('error', 'Sync Failed: ' . $e->getMessage());
+            session()->flash('error', 'Sync Failed: '.$e->getMessage());
         }
     }
 
@@ -152,8 +176,9 @@ class ProductManager extends Component
             ->where('status', 'active')
             ->first();
 
-        if (!$integration) {
+        if (! $integration) {
             session()->flash('error', 'No active Meta Commerce integration found.');
+
             return;
         }
 
@@ -177,8 +202,8 @@ class ProductManager extends Component
     {
         $products = Product::where('team_id', Auth::user()->currentTeam->id)
             ->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('retailer_id', 'like', '%' . $this->search . '%');
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('retailer_id', 'like', '%'.$this->search.'%');
             })
             ->orderBy('created_at', 'desc')
             ->paginate(12);
@@ -189,7 +214,7 @@ class ProductManager extends Component
 
         return view('livewire.commerce.product-manager', [
             'products' => $products,
-            'categories' => $categories
+            'categories' => $categories,
         ]);
     }
 }

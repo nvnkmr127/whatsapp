@@ -18,13 +18,13 @@ return new class extends Migration
             $table->dateTime('due_date')->nullable();
             $table->string('status')->default('pending'); // pending, in_progress, completed, cancelled
             $table->string('priority')->default('medium'); // low, medium, high, urgent
-            
+
             $table->foreignId('assigned_to_id')->nullable()->constrained('users')->nullOnDelete(); // Admin assigned
             $table->foreignId('created_by_id')->constrained('users'); // Admin who created
-            
+
             // Polymorphic relation to Team or User (the customer)
             $table->nullableMorphs('related_to');
-            
+
             $table->dateTime('completed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

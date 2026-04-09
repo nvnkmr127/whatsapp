@@ -26,12 +26,12 @@ class PusherSettings extends Component
     protected function rules()
     {
         return [
-            'app_id'                    => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
-            'app_key'                   => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
-            'app_secret'                => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
-            'cluster'                   => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
-            'real_time_notify'          => ['nullable', 'boolean'],
-            'desk_notify'               => ['nullable', 'boolean'],
+            'app_id' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'app_key' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'app_secret' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'cluster' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'real_time_notify' => ['nullable', 'boolean'],
+            'desk_notify' => ['nullable', 'boolean'],
             'dismiss_desk_notification' => ['nullable', 'integer', new PurifiedInput(t('sql_injection_error'))],
         ];
     }
@@ -45,12 +45,12 @@ class PusherSettings extends Component
         }
         $settings = get_settings_by_group('pusher');
 
-        $this->app_id                    = $settings->app_id ?? false;
-        $this->app_key                   = $settings->app_key;
-        $this->app_secret                = $settings->app_secret;
-        $this->cluster                   = $settings->cluster;
-        $this->real_time_notify          = $settings->real_time_notify;
-        $this->desk_notify               = $settings->desk_notify;
+        $this->app_id = $settings->app_id ?? false;
+        $this->app_key = $settings->app_key;
+        $this->app_secret = $settings->app_secret;
+        $this->cluster = $settings->cluster;
+        $this->real_time_notify = $settings->real_time_notify;
+        $this->desk_notify = $settings->desk_notify;
         $this->dismiss_desk_notification = $settings->dismiss_desk_notification;
     }
 
@@ -62,18 +62,18 @@ class PusherSettings extends Component
             $originalSettings = get_settings_by_group('pusher');
 
             $newSettings = [
-                'app_id'                    => $this->app_id,
-                'app_key'                   => $this->app_key,
-                'app_secret'                => $this->app_secret,
-                'cluster'                   => $this->cluster,
-                'real_time_notify'          => $this->real_time_notify,
-                'desk_notify'               => $this->desk_notify,
+                'app_id' => $this->app_id,
+                'app_key' => $this->app_key,
+                'app_secret' => $this->app_secret,
+                'cluster' => $this->cluster,
+                'real_time_notify' => $this->real_time_notify,
+                'desk_notify' => $this->desk_notify,
                 'dismiss_desk_notification' => $this->dismiss_desk_notification,
             ];
 
             // Filter the settings that have been modified
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Save only if there are modifications
@@ -93,7 +93,7 @@ class PusherSettings extends Component
     {
         if (! get_setting('pusher.app_key') || ! get_setting('pusher.app_secret') || ! get_setting('pusher.app_id')) {
             $this->notify([
-                'type'    => 'danger',
+                'type' => 'danger',
                 'message' => t('fill_required_pusher_credential'),
             ]);
 
@@ -102,7 +102,7 @@ class PusherSettings extends Component
 
         if (! $pusherService->isPusherReady()) {
             $this->notify([
-                'type'    => 'danger',
+                'type' => 'danger',
                 'message' => t('pusher_is_not_initialized'),
             ]);
 
@@ -113,25 +113,25 @@ class PusherSettings extends Component
 
         try {
             $result = $pusherService->trigger('whatsmark-test-channel', 'whatsmark-test-event', [
-                'title'       => '🌟 WhatsMark Notification Test',
-                'message'     => t('hello') . ' ' . $user->firstname . ' ' . $user->lastname . ' ' . t('your_real_time_notification'),
+                'title' => '🌟 WhatsMark Notification Test',
+                'message' => t('hello').' '.$user->firstname.' '.$user->lastname.' '.t('your_real_time_notification'),
                 'autoDismiss' => $this->dismiss_desk_notification,
             ]);
 
             $this->notify([
-                'type'    => $result['status'] ? 'success' : 'danger',
+                'type' => $result['status'] ? 'success' : 'danger',
                 'message' => $result['message'],
             ]);
         } catch (\Exception $e) {
             app_log(
-                t('pusher_test_connection_error') . $e->getMessage(),
+                t('pusher_test_connection_error').$e->getMessage(),
                 'error',
                 $e
             );
 
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('pusher_test_connection_failed') . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('pusher_test_connection_failed').$e->getMessage(),
             ]);
         }
     }

@@ -5,13 +5,14 @@ namespace App\Services\Integrations;
 use App\Models\Integration;
 use App\Models\Product;
 use App\Models\SyncSession;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class WooCommerceService
 {
     protected $integration;
+
     protected $healthService;
 
     public function __construct(Integration $integration)
@@ -22,14 +23,14 @@ class WooCommerceService
 
     public function syncProducts()
     {
-        return Cache::lock('sync_integration_' . $this->integration->id, 600)->get(function () {
+        return Cache::lock('sync_integration_'.$this->integration->id, 600)->get(function () {
             $credentials = $this->integration->credentials;
             $apiUrl = rtrim($credentials['url'] ?? '', '/');
             $consumerKey = $credentials['consumer_key'] ?? '';
             $consumerSecret = $credentials['consumer_secret'] ?? '';
 
-            if (!$apiUrl || !$consumerKey || !$consumerSecret) {
-                throw new \Exception("Missing WooCommerce credentials");
+            if (! $apiUrl || ! $consumerKey || ! $consumerSecret) {
+                throw new \Exception('Missing WooCommerce credentials');
             }
 
             $lastSync = $this->integration->last_synced_at;
@@ -54,7 +55,7 @@ class WooCommerceService
                     $params['after'] = $lastSync->toIso8601String();
                 }
 
-                if ($productMode === 'selective' && !empty($scope['category_id'])) {
+                if ($productMode === 'selective' && ! empty($scope['category_id'])) {
                     $params['category'] = $scope['category_id'];
                 }
 
@@ -67,12 +68,13 @@ class WooCommerceService
                         ->get("{$apiUrl}/wp-json/wc/v3/products", $params);
 
                     if ($response->failed()) {
-                        throw new \Exception("WooCommerce API Error: " . $response->status() . " " . $response->body());
+                        throw new \Exception('WooCommerce API Error: '.$response->status().' '.$response->body());
                     }
 
                     $products = $response->json();
-                    if (empty($products))
+                    if (empty($products)) {
                         break;
+                    }
 
                     $session->increment('total_entities', count($products));
 
@@ -104,7 +106,7 @@ class WooCommerceService
 
             $this->integration->update([
                 'last_synced_at' => now(),
-                'error_message' => null
+                'error_message' => null,
             ]);
 
             return $syncedCount;
@@ -130,10 +132,12 @@ class WooCommerceService
         ];
 
         $inventoryScope = $scope['inventory'] ?? ['sync_stock' => true, 'sync_price' => true];
-        if (!($inventoryScope['sync_price'] ?? true))
+        if (! ($inventoryScope['sync_price'] ?? true)) {
             unset($updateData['price'], $updateData['currency']);
-        if (!($inventoryScope['sync_stock'] ?? true))
+        }
+        if (! ($inventoryScope['sync_stock'] ?? true)) {
             unset($updateData['availability']);
+        }
 
         $product = Product::where([
             'team_id' => $this->integration->team_id,
@@ -145,10 +149,10 @@ class WooCommerceService
 
             // Log if fields were skipped
             $skipped = array_diff_key($updateData, $filteredData);
-            if (!empty($skipped)) {
+            if (! empty($skipped)) {
                 app(\App\Services\AuditService::class)->log(
                     'product.sync_conflict',
-                    "Skipped updating fields: " . implode(', ', array_keys($skipped)) . " due to local locks.",
+                    'Skipped updating fields: '.implode(', ', array_keys($skipped)).' due to local locks.',
                     $product
                 );
             }

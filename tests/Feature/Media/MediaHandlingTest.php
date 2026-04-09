@@ -25,7 +25,7 @@ class MediaHandlingTest extends TestCase
 
         $team = Team::factory()->create([
             'whatsapp_phone_number_id' => '123456789',
-            'whatsapp_access_token' => 'valid-token'
+            'whatsapp_access_token' => 'valid-token',
         ]);
 
         $payload = [
@@ -46,32 +46,33 @@ class MediaHandlingTest extends TestCase
                                             'mime_type' => 'image/jpeg',
                                             'sha' => 'sha123',
                                             'id' => '12345',
-                                            'caption' => 'Check this out'
-                                        ]
-                                    ]
+                                            'caption' => 'Check this out',
+                                        ],
+                                    ],
                                 ],
-                                'contacts' => [['profile' => ['name' => 'Alice']]]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                'contacts' => [['profile' => ['name' => 'Alice']]],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payloadRecord = WebhookPayload::create([
             'payload' => json_encode($payload),
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Run Job
-        (new ProcessWebhookJob($payloadRecord->id))->handle();
+        $job = new ProcessWebhookJob($payloadRecord->id);
+        app()->call([$job, 'handle']);
 
         // Assertions
         $this->assertDatabaseHas('messages', [
             'type' => 'image',
             'caption' => 'Check this out',
             'media_id' => '12345',
-            'media_type' => 'image/jpeg'
+            'media_type' => 'image/jpeg',
         ]);
 
         $message = Message::first();

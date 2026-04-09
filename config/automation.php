@@ -5,7 +5,7 @@ return [
     |--------------------------------------------------------------------------
     | Automation Flow Safeguards
     |--------------------------------------------------------------------------
-    | Maximum number of node executions allowed in a single flow run 
+    | Maximum number of node executions allowed in a single flow run
     | before the system terminates it (to prevent infinite loops).
     |
     */

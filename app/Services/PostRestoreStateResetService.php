@@ -8,11 +8,10 @@ use App\Models\Campaign;
 use App\Models\FlowSession;
 use App\Models\Team;
 use App\Models\WhatsAppCall;
-use Illuminate\Support\Facades\Artisan;
+use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 /**
  * PostRestoreStateResetService
@@ -126,9 +125,9 @@ class PostRestoreStateResetService
 
             $count = $halted->count();
             $this->counters['campaigns_halted'] = $count;
-            $this->trail("step1_campaigns", "Halted {$count} in-flight campaigns (status → interrupted).");
+            $this->trail('step1_campaigns', "Halted {$count} in-flight campaigns (status → interrupted).");
         } catch (Exception $e) {
-            $this->trailError("step1_campaigns", $e);
+            $this->trailError('step1_campaigns', $e);
         }
     }
 
@@ -163,9 +162,9 @@ class PostRestoreStateResetService
 
             $count = $aborted->count();
             $this->counters['automation_runs_aborted'] = $count;
-            $this->trail("step2_automations", "Aborted {$count} active automation runs.");
+            $this->trail('step2_automations', "Aborted {$count} active automation runs.");
         } catch (Exception $e) {
-            $this->trailError("step2_automations", $e);
+            $this->trailError('step2_automations', $e);
         }
     }
 
@@ -191,9 +190,9 @@ class PostRestoreStateResetService
                 ]);
 
             $this->counters['flow_sessions_cleared'] = $count;
-            $this->trail("step3_flow_sessions", "Terminated {$count} active flow sessions.");
+            $this->trail('step3_flow_sessions', "Terminated {$count} active flow sessions.");
         } catch (Exception $e) {
-            $this->trailError("step3_flow_sessions", $e);
+            $this->trailError('step3_flow_sessions', $e);
         }
     }
 
@@ -216,9 +215,9 @@ class PostRestoreStateResetService
                 ]);
 
             $this->counters['calls_terminated'] = $count;
-            $this->trail("step4_calls", "Terminated {$count} active calls.");
+            $this->trail('step4_calls', "Terminated {$count} active calls.");
         } catch (Exception $e) {
-            $this->trailError("step4_calls", $e);
+            $this->trailError('step4_calls', $e);
         }
     }
 
@@ -265,12 +264,12 @@ class PostRestoreStateResetService
                     $flushed++;
                 }
             } catch (Exception $e) {
-                Log::warning("[PostRestoreReset] Failed to flush cache key '{$key}': " . $e->getMessage());
+                Log::warning("[PostRestoreReset] Failed to flush cache key '{$key}': ".$e->getMessage());
             }
         }
 
         $this->counters['cache_keys_flushed'] = $flushed;
-        $this->trail("step5_cache", "Flushed {$flushed} of " . count($keysToFlush) . " known tenant cache keys.");
+        $this->trail('step5_cache', "Flushed {$flushed} of ".count($keysToFlush).' known tenant cache keys.');
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -294,19 +293,19 @@ class PostRestoreStateResetService
             if ($driver === 'database') {
                 // DB queue: safe to inspect and delete by payload content
                 $deleted = DB::table('jobs')
-                    ->where('payload', 'LIKE', '%"team_id":' . $team->id . '%')
-                    ->orWhere('payload', 'LIKE', '%"teamId":' . $team->id . '%')
+                    ->where('payload', 'LIKE', '%"team_id":'.$team->id.'%')
+                    ->orWhere('payload', 'LIKE', '%"teamId":'.$team->id.'%')
                     ->delete();
 
                 // Also clear failed jobs for this team
                 $failedDeleted = DB::table('failed_jobs')
-                    ->where('payload', 'LIKE', '%"team_id":' . $team->id . '%')
-                    ->orWhere('payload', 'LIKE', '%"teamId":' . $team->id . '%')
+                    ->where('payload', 'LIKE', '%"team_id":'.$team->id.'%')
+                    ->orWhere('payload', 'LIKE', '%"teamId":'.$team->id.'%')
                     ->delete();
 
                 $total = $deleted + $failedDeleted;
                 $this->counters['queue_jobs_cleared'] = $total;
-                $this->trail("step6_queue", "Cleared {$total} queued/failed jobs from DB queue for team.");
+                $this->trail('step6_queue', "Cleared {$total} queued/failed jobs from DB queue for team.");
             } else {
                 // Redis/SQS/etc: cannot safely introspect by team_id
                 // Log a warning so ops team knows to investigate
@@ -314,10 +313,10 @@ class PostRestoreStateResetService
                     'team_id' => $team->id,
                     'driver' => $driver,
                 ]);
-                $this->trail("step6_queue", "⚠ Queue driver is '{$driver}'. Automatic job clearance skipped. Manual flush recommended.");
+                $this->trail('step6_queue', "⚠ Queue driver is '{$driver}'. Automatic job clearance skipped. Manual flush recommended.");
             }
         } catch (Exception $e) {
-            $this->trailError("step6_queue", $e);
+            $this->trailError('step6_queue', $e);
         }
     }
 
@@ -353,21 +352,21 @@ class PostRestoreStateResetService
             if ($team->whatsapp_token_expires_at && $team->whatsapp_token_expires_at->isPast()) {
                 $updates['whatsapp_connected'] = false;
                 $updates['whatsapp_setup_state'] = \App\Enums\IntegrationState::DISCONNECTED;
-                $this->trail("step7_waba", "WhatsApp token was expired. Marked as disconnected.");
+                $this->trail('step7_waba', 'WhatsApp token was expired. Marked as disconnected.');
             } else {
                 // Token may be valid, but degrade state until re-validated
                 if ($team->whatsapp_connected) {
                     $updates['whatsapp_setup_state'] = \App\Enums\IntegrationState::DEGRADED;
-                    $this->trail("step7_waba", "WhatsApp token validity cleared. Setup state set to DEGRADED pending re-validation.");
+                    $this->trail('step7_waba', 'WhatsApp token validity cleared. Setup state set to DEGRADED pending re-validation.');
                 } else {
-                    $this->trail("step7_waba", "WhatsApp not connected. No token state changes needed.");
+                    $this->trail('step7_waba', 'WhatsApp not connected. No token state changes needed.');
                 }
             }
 
             // Use DB::table to avoid Eloquent events and casts interfering
             DB::table('teams')->where('id', $team->id)->update($updates);
         } catch (Exception $e) {
-            $this->trailError("step7_waba", $e);
+            $this->trailError('step7_waba', $e);
         }
     }
 
@@ -383,9 +382,9 @@ class PostRestoreStateResetService
 
     private function trailError(string $step, Exception $e): void
     {
-        $msg = "ERROR: " . $e->getMessage();
+        $msg = 'ERROR: '.$e->getMessage();
         $this->auditTrail[$step] = $msg;
-        Log::error("[PostRestoreReset] {$step} failed: " . $e->getMessage(), [
+        Log::error("[PostRestoreReset] {$step} failed: ".$e->getMessage(), [
             'exception' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
         ]);
@@ -403,7 +402,7 @@ class PostRestoreStateResetService
                 'properties' => $properties,
             ]);
         } catch (Exception $e) {
-            Log::error("[PostRestoreReset] Failed to write audit log: " . $e->getMessage());
+            Log::error('[PostRestoreReset] Failed to write audit log: '.$e->getMessage());
         }
     }
 }

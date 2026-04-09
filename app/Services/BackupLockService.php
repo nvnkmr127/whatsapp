@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Models\Team;
+use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 /**
  * BackupLockService
@@ -91,10 +91,10 @@ class BackupLockService
     {
         $lock = $this->getLock($team, 'backup', self::BACKUP_LOCK_TTL);
 
-        if (!$lock->get()) {
+        if (! $lock->get()) {
             throw new BackupAlreadyRunningException(
-                "A backup or restore is already in progress for Team {$team->id}. " .
-                "Please wait for it to complete before starting another."
+                "A backup or restore is already in progress for Team {$team->id}. ".
+                'Please wait for it to complete before starting another.'
             );
         }
 
@@ -119,10 +119,10 @@ class BackupLockService
 
         $lock = $this->getLock($team, 'restore', self::RESTORE_LOCK_TTL);
 
-        if (!$lock->get()) {
+        if (! $lock->get()) {
             throw new BackupAlreadyRunningException(
-                "A backup or restore is already in progress for Team {$team->id}. " .
-                "Cannot restore while another operation is running. Please try again shortly."
+                "A backup or restore is already in progress for Team {$team->id}. ".
+                'Cannot restore while another operation is running. Please try again shortly.'
             );
         }
 
@@ -143,7 +143,7 @@ class BackupLockService
             $lock->release();
             Log::info("[BackupLock] Lock released for Team {$team->id}");
         } catch (Exception $e) {
-            Log::warning("[BackupLock] Failed to release lock for Team {$team->id}: " . $e->getMessage());
+            Log::warning("[BackupLock] Failed to release lock for Team {$team->id}: ".$e->getMessage());
         }
 
         $this->disableMaintenanceMode($team);
@@ -157,10 +157,11 @@ class BackupLockService
     {
         // Check the auto-expiry safety cache key first (fastest path)
         $safetyKey = $this->maintenanceSafetyKey($teamId);
-        if (!Cache::has($safetyKey)) {
+        if (! Cache::has($safetyKey)) {
             // Auto-expiry key is gone — maintenance mode must have expired or never set.
             // Clean up the setting to stay consistent.
             $this->clearMaintenanceSetting($teamId);
+
             return false;
         }
 
@@ -174,6 +175,7 @@ class BackupLockService
     private function getLock(Team $team, string $type, int $ttl): \Illuminate\Cache\Lock
     {
         $lockName = "backup_mutex_{$type}_{$team->id}";
+
         return Cache::lock($lockName, $ttl);
     }
 
@@ -212,9 +214,9 @@ class BackupLockService
             set_setting($settingKey, '0', 'backup');
             Cache::forget($safetyKey);
             // Also clear the setting cache to ensure next read is fresh
-            Cache::forget('setting_' . $settingKey);
+            Cache::forget('setting_'.$settingKey);
         } catch (Exception $e) {
-            Log::error("[BackupLock] Failed to clear maintenance setting for Team {$teamId}: " . $e->getMessage());
+            Log::error("[BackupLock] Failed to clear maintenance setting for Team {$teamId}: ".$e->getMessage());
         }
     }
 
@@ -241,20 +243,20 @@ class BackupLockService
             ]);
 
             throw new RestoreWhileAgentsOnlineException(
-                "Cannot restore while {$activeLockCount} agent(s) have active conversations. " .
-                "Please wait for all agents to close their sessions, or use Super Admin override."
+                "Cannot restore while {$activeLockCount} agent(s) have active conversations. ".
+                'Please wait for all agents to close their sessions, or use Super Admin override.'
             );
         }
     }
 
     private function maintenanceSettingKey(int $teamId): string
     {
-        return self::MAINTENANCE_KEY_PREFIX . $teamId;
+        return self::MAINTENANCE_KEY_PREFIX.$teamId;
     }
 
     private function maintenanceSafetyKey(int $teamId): string
     {
-        return 'backup_maintenance_safety_' . $teamId;
+        return 'backup_maintenance_safety_'.$teamId;
     }
 }
 
@@ -262,10 +264,6 @@ class BackupLockService
 // Custom Exceptions — used by controllers/tests to give precise error messages
 // ─────────────────────────────────────────────────────────────────────────────
 
-class BackupAlreadyRunningException extends \RuntimeException
-{
-}
+class BackupAlreadyRunningException extends \RuntimeException {}
 
-class RestoreWhileAgentsOnlineException extends \RuntimeException
-{
-}
+class RestoreWhileAgentsOnlineException extends \RuntimeException {}

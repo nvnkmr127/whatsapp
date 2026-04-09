@@ -8,9 +8,10 @@ class PhoneNumberHelper
 {
     /**
      * Normalize phone number to E.164 format.
-     * 
-     * @param string $phone Raw phone number input
+     *
+     * @param  string  $phone  Raw phone number input
      * @return string Normalized phone number with + prefix
+     *
      * @throws InvalidArgumentException If phone number is invalid
      */
     public static function normalize(string $phone): string
@@ -20,7 +21,7 @@ class PhoneNumberHelper
 
         // Handle empty input
         if (empty($phone)) {
-            throw new InvalidArgumentException("Phone number cannot be empty");
+            throw new InvalidArgumentException('Phone number cannot be empty');
         }
 
         // If already has + prefix, validate and return
@@ -38,26 +39,27 @@ class PhoneNumberHelper
         $numericCode = ltrim($defaultCode, '+');
         if (str_starts_with($phone, $numericCode) && strlen($phone) > strlen($numericCode) + 8) {
             // Assume it already has the code, just add +
-            return self::validate('+' . $phone);
+            return self::validate('+'.$phone);
         }
 
         // Construct E.164 format
-        $normalized = $defaultCode . $phone;
+        $normalized = $defaultCode.$phone;
 
         return self::validate($normalized);
     }
 
     /**
      * Validate phone number format.
-     * 
-     * @param string $phone Phone number to validate
+     *
+     * @param  string  $phone  Phone number to validate
      * @return string Validated phone number
+     *
      * @throws InvalidArgumentException If format is invalid
      */
     protected static function validate(string $phone): string
     {
         // E.164 format: + followed by 10-15 digits
-        if (!preg_match('/^\+\d{10,15}$/', $phone)) {
+        if (! preg_match('/^\+\d{10,15}$/', $phone)) {
             throw new InvalidArgumentException(
                 "Invalid phone number format: {$phone}. Expected E.164 format (+[country code][number])"
             );
@@ -68,10 +70,6 @@ class PhoneNumberHelper
 
     /**
      * Check if two phone numbers are equivalent.
-     * 
-     * @param string $phone1
-     * @param string $phone2
-     * @return bool
      */
     public static function areEqual(string $phone1, string $phone2): bool
     {
@@ -84,9 +82,9 @@ class PhoneNumberHelper
 
     /**
      * Format phone number for display.
-     * 
-     * @param string $phone E.164 formatted phone number
-     * @param string $format Display format (e.g., 'international', 'national')
+     *
+     * @param  string  $phone  E.164 formatted phone number
+     * @param  string  $format  Display format (e.g., 'international', 'national')
      * @return string Formatted phone number
      */
     public static function format(string $phone, string $format = 'international'): string

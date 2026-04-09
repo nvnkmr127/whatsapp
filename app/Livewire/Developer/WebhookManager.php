@@ -10,7 +10,18 @@ class WebhookManager extends Component
 {
     use WithPagination;
 
-    public $name, $url, $secret, $events = [], $is_active = true, $is_system = false;
+    public $name;
+
+    public $url;
+
+    public $secret;
+
+    public $events = [];
+
+    public $is_active = true;
+
+    public $is_system = false;
+
     public $editingId = null;
 
     public $availableEvents = [
@@ -34,7 +45,7 @@ class WebhookManager extends Component
     {
         $events = $this->availableEvents;
 
-        if (!auth()->user()->isSuperAdmin()) {
+        if (! auth()->user()->isSuperAdmin()) {
             unset($events['auth.otp.login']);
         }
 
@@ -55,7 +66,7 @@ class WebhookManager extends Component
         $this->validate();
 
         // Security check for system-only events
-        if (!empty($this->events) && in_array('auth.otp.login', $this->events) && !auth()->user()->isSuperAdmin()) {
+        if (! empty($this->events) && in_array('auth.otp.login', $this->events) && ! auth()->user()->isSuperAdmin()) {
             $this->events = array_diff($this->events, ['auth.otp.login']);
         }
 
@@ -68,7 +79,7 @@ class WebhookManager extends Component
             'secret' => $this->secret,
             'events' => empty($this->events) ? null : $this->events,
             'is_active' => $this->is_active,
-            'is_system' => $this->is_system || (!empty($this->events) && in_array('auth.otp.login', $this->events)),
+            'is_system' => $this->is_system || (! empty($this->events) && in_array('auth.otp.login', $this->events)),
         ]);
 
         $this->reset(['name', 'url', 'secret', 'events', 'is_active']);
@@ -94,7 +105,7 @@ class WebhookManager extends Component
         $this->validate();
 
         // Security check for system-only events
-        if (!empty($this->events) && in_array('auth.otp.login', $this->events) && !auth()->user()->isSuperAdmin()) {
+        if (! empty($this->events) && in_array('auth.otp.login', $this->events) && ! auth()->user()->isSuperAdmin()) {
             $this->events = array_diff($this->events, ['auth.otp.login']);
         }
 
@@ -107,7 +118,7 @@ class WebhookManager extends Component
             'secret' => $this->secret,
             'events' => empty($this->events) ? null : $this->events,
             'is_active' => $this->is_active,
-            'is_system' => $this->is_system || (!empty($this->events) && in_array('auth.otp.login', $this->events)),
+            'is_system' => $this->is_system || (! empty($this->events) && in_array('auth.otp.login', $this->events)),
         ]);
 
         $this->reset(['editingId', 'name', 'url', 'secret', 'events', 'is_active']);
@@ -133,7 +144,7 @@ class WebhookManager extends Component
         $subscription = WebhookSubscription::findOrFail($id);
         $this->authorize('update', $subscription);
 
-        $subscription->update(['is_active' => !$subscription->is_active]);
+        $subscription->update(['is_active' => ! $subscription->is_active]);
     }
 
     public function generateSecret()
@@ -155,7 +166,7 @@ class WebhookManager extends Component
         }
 
         $this->dispatch('notify', 'Webhook signing secret rotated successfully.');
-        audit('webhook.secret_rotated', "Secret rotated for webhook: {$subscription->name} by " . auth()->user()->name);
+        audit('webhook.secret_rotated', "Secret rotated for webhook: {$subscription->name} by ".auth()->user()->name);
     }
 
     public function testWebhook($id)
@@ -163,7 +174,7 @@ class WebhookManager extends Component
         $subscription = WebhookSubscription::findOrFail($id);
         $this->authorize('view', $subscription);
 
-        $webhookService = new \App\Services\WebhookService();
+        $webhookService = new \App\Services\WebhookService;
 
         $testData = [
             'id' => 999,
@@ -181,7 +192,7 @@ class WebhookManager extends Component
 
             $this->dispatch('notify', 'Test webhook sent successfully! Check your endpoint.');
         } catch (\Exception $e) {
-            $this->dispatch('notify', 'Test webhook failed: ' . $e->getMessage());
+            $this->dispatch('notify', 'Test webhook failed: '.$e->getMessage());
         }
     }
 
@@ -192,7 +203,7 @@ class WebhookManager extends Component
 
         $query = WebhookSubscription::query()->with('deliveries');
 
-        if ($team && !$user->isSuperAdmin()) {
+        if ($team && ! $user->isSuperAdmin()) {
             $query->where('team_id', $team->id);
         }
 

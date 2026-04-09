@@ -11,13 +11,18 @@ class CannedMessageManager extends Component
     use WithPagination;
 
     public $search = '';
+
     public $showModal = false;
+
     public $confirmingDeletion = false;
+
     public $messageIdBeingDeleted;
 
     // Form inputs
     public $cannedMessageId;
+
     public $shortcut;
+
     public $content;
 
     protected $rules = [
@@ -27,7 +32,7 @@ class CannedMessageManager extends Component
 
     public function render()
     {
-        if (!auth()->check() || !auth()->user()->currentTeam) {
+        if (! auth()->check() || ! auth()->user()->currentTeam) {
             return view('livewire.settings.canned-message-manager', [
                 'messages' => collect(),
             ]);
@@ -37,8 +42,8 @@ class CannedMessageManager extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('shortcut', 'like', '%' . $this->search . '%')
-                    ->orWhere('content', 'like', '%' . $this->search . '%');
+                $q->where('shortcut', 'like', '%'.$this->search.'%')
+                    ->orWhere('content', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -57,7 +62,7 @@ class CannedMessageManager extends Component
     public function edit($id)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
-        if (!auth()->user()->currentTeam) {
+        if (! auth()->user()->currentTeam) {
             return;
         }
 
@@ -73,7 +78,7 @@ class CannedMessageManager extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
         $this->validate();
 
-        if (!auth()->user()->currentTeam) {
+        if (! auth()->user()->currentTeam) {
             return;
         }
 
@@ -82,8 +87,9 @@ class CannedMessageManager extends Component
                 ->where('team_id', auth()->user()->currentTeam->id)
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 $this->dispatch('notify', message: 'Unauthorized or Message not found.', type: 'error');
+
                 return;
             }
         }
@@ -97,6 +103,7 @@ class CannedMessageManager extends Component
 
             if ($exists) {
                 $this->addError('shortcut', 'This shortcut is already used.');
+
                 return;
             }
         }
@@ -124,7 +131,7 @@ class CannedMessageManager extends Component
     public function delete()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
-        if (!auth()->user()->currentTeam) {
+        if (! auth()->user()->currentTeam) {
             return;
         }
 

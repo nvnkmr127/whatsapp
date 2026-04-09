@@ -10,6 +10,7 @@ use Livewire\Component;
 class ManageIdentities extends Component
 {
     public $confirmingIdentityUnlink = false;
+
     public $identityIdBeingUnlinked = null;
 
     /**
@@ -37,12 +38,13 @@ class ManageIdentities extends Component
             abort(403);
         }
 
-        if (!$identity->isSafeToUnlink()) {
+        if (! $identity->isSafeToUnlink()) {
             $this->confirmingIdentityUnlink = false;
             $this->dispatch('notify', [
                 'message' => 'You cannot unlink your last remaining login method.',
-                'style' => 'danger'
+                'style' => 'danger',
             ]);
+
             return;
         }
 
@@ -60,14 +62,14 @@ class ManageIdentities extends Component
 
         $this->dispatch('notify', [
             'message' => "Successfully unlinked your {$provider} account.",
-            'style' => 'success'
+            'style' => 'success',
         ]);
     }
 
     public function render()
     {
         return view('livewire.profile.manage-identities', [
-            'identities' => Auth::user()->identities()->latest()->limit(50)->get()
+            'identities' => Auth::user()->identities()->latest()->limit(50)->get(),
         ]);
     }
 }

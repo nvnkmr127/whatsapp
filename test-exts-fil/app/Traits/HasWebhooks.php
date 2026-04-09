@@ -48,12 +48,12 @@ trait HasWebhooks
         $payload = [
             'event' => $event,
             'model' => get_class($model),
-            'data'  => [
-                'id'         => $model->id,
+            'data' => [
+                'id' => $model->id,
                 'attributes' => $model->attributesToArray(),
-                'relations'  => $relations,
+                'relations' => $relations,
             ],
-            'original'  => $original,
+            'original' => $original,
             'timestamp' => now()->toIso8601String(),
         ];
 
@@ -80,7 +80,7 @@ trait HasWebhooks
         $actionMappings = [
             'contacts' => 'contacts_actions',
             'statuses' => 'status_actions',
-            'sources'  => 'source_actions',
+            'sources' => 'source_actions',
         ];
 
         $settingKey = $actionMappings[$modelTable] ?? null;
@@ -130,10 +130,10 @@ trait HasWebhooks
         try {
             return \Carbon\Carbon::parse($timestamp)->format($toFormat);
         } catch (\Exception $e) {
-            whatsapp_log('Failed to convert timestamp: ' . $e->getMessage(), 'error', [
+            whatsapp_log('Failed to convert timestamp: '.$e->getMessage(), 'error', [
                 'timestamp' => $timestamp,
-                'file'      => $e->getFile(),
-                'line'      => $e->getLine(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return $timestamp;

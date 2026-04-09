@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\UserFcmToken;
+use Illuminate\Http\Request;
 
 class FCMTokenController extends Controller
 {

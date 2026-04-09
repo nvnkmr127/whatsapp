@@ -1,4 +1,5 @@
 <?php
+
 /** @var \Illuminate\Database\Eloquent\Factory $factory */
 
 namespace Database\Factories;
@@ -8,17 +9,18 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MessageFactory extends Factory
 {
-    protected $model = Message;
+    protected $model = Message::class;
 
     public function definition()
     {
         return [
-            'team_id' => 1,
+            'team_id' => \App\Models\Team::factory(),
+            'contact_id' => \App\Models\Contact::factory(),
             'content' => $this->faker->sentence,
             'type' => 'text',
             'status' => 'sent',
-            'is_outbound' => false,
-            'message_id' => 'mid.' . $this->faker->uuid,
+            'direction' => 'outbound',
+            'whatsapp_message_id' => 'mid.'.$this->faker->uuid,
         ];
     }
 }

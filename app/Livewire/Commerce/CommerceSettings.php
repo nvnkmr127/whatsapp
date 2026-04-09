@@ -2,12 +2,10 @@
 
 namespace App\Livewire\Commerce;
 
-use Livewire\Component;
-use Livewire\Attributes\Layout;
-use App\Models\WhatsappTemplate;
-use App\Models\Order;
 use App\Models\Integration;
-use Illuminate\Support\Facades\Log;
+use App\Models\Order;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 #[Layout('layouts.app')]
 class CommerceSettings extends Component
@@ -16,13 +14,18 @@ class CommerceSettings extends Component
 
     // Store Settings
     public $currency = 'USD';
+
     public $allow_guest_checkout = false;
+
     public $cod_enabled = false;
+
     public $min_order_value = 0;
 
     // Cart Engine Settings
     public $cart_expiry_minutes = 60; // Default 1 hour
+
     public $cart_reminder_minutes = 30; // Reminder 30 mins after abandonment
+
     public $cart_merge_strategy = 'merge'; // merge or replace
 
     // Agent Notifications Default
@@ -56,10 +59,15 @@ class CommerceSettings extends Component
 
     // Audit & Safety State
     public $has_orders = false;
+
     public $ai_assistant_enabled = false;
+
     public $commerce_policy_accepted = false;
+
     public $show_confirmation = false;
+
     public $pending_action = null; // 'save_with_risk'
+
     public $risk_messages = [];
 
     protected $currencies = ['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'SAR'];
@@ -103,7 +111,7 @@ class CommerceSettings extends Component
         $this->pending_action = null;
 
         $this->validate([
-            'currency' => 'required|string|size:3|in:' . implode(',', $this->currencies),
+            'currency' => 'required|string|size:3|in:'.implode(',', $this->currencies),
             'min_order_value' => 'required|numeric|min:0|max:1000000',
             'cart_expiry_minutes' => 'required|integer|min:1|max:10080',
             'cart_reminder_minutes' => 'required|integer|min:0|lt:cart_expiry_minutes',
@@ -118,12 +126,13 @@ class CommerceSettings extends Component
             if ($this->has_orders) {
                 $this->currency = $oldCurrency;
                 $this->addError('currency', 'Currency is immutable when order history exists.');
+
                 return;
             }
             $this->risk_messages[] = [
                 'type' => 'High Risk',
                 'title' => 'Currency Re-alignment',
-                'body' => 'Changing store currency will not auto-convert existing product prices. You must manually update your catalog to reflect ' . $this->currency . ' rates.'
+                'body' => 'Changing store currency will not auto-convert existing product prices. You must manually update your catalog to reflect '.$this->currency.' rates.',
             ];
         }
 
@@ -134,35 +143,35 @@ class CommerceSettings extends Component
                 $this->risk_messages[] = [
                     'type' => 'Blocked',
                     'title' => 'AI Engine Failure',
-                    'body' => 'You cannot activate the AI Assistant without an OpenAI API Key. Please visit AI Settings first.'
+                    'body' => 'You cannot activate the AI Assistant without an OpenAI API Key. Please visit AI Settings first.',
                 ];
             }
         }
 
         // 3. IMPACT PREVIEW: Payment Vulnerability
         $oldCod = $config['cod_enabled'] ?? false;
-        if ($oldCod && !$this->cod_enabled) {
+        if ($oldCod && ! $this->cod_enabled) {
             $hasPaymentIntegration = Integration::where('team_id', $this->team->id)
                 ->whereIn('type', ['stripe', 'razorpay', 'paystack', 'paypal'])
                 ->where('status', 'active')
                 ->exists();
 
-            if (!$hasPaymentIntegration) {
+            if (! $hasPaymentIntegration) {
                 $this->risk_messages[] = [
                     'type' => 'Critical',
                     'title' => 'Checkout Blockage',
-                    'body' => 'Disabling Cash on Delivery without an active Digital Payment Gateway will prevent 100% of your customers from completing orders.'
+                    'body' => 'Disabling Cash on Delivery without an active Digital Payment Gateway will prevent 100% of your customers from completing orders.',
                 ];
             }
         }
 
         // 4. UX COPY: Guest Checkout Warning
         $oldGuest = $config['allow_guest_checkout'] ?? false;
-        if (!$oldGuest && $this->allow_guest_checkout) {
+        if (! $oldGuest && $this->allow_guest_checkout) {
             $this->risk_messages[] = [
                 'type' => 'Notice',
                 'title' => 'Data Privacy Change',
-                'body' => 'Allowing guest checkouts increases conversion but significantly reduces lead data quality for your CRM and retargeting campaigns.'
+                'body' => 'Allowing guest checkouts increases conversion but significantly reduces lead data quality for your CRM and retargeting campaigns.',
             ];
         }
 
@@ -171,6 +180,7 @@ class CommerceSettings extends Component
 
         if (count($this->risk_messages) > 0) {
             $this->show_confirmation = true;
+
             return;
         }
 
@@ -183,7 +193,7 @@ class CommerceSettings extends Component
             $this->risk_messages[] = [
                 'type' => 'Operational',
                 'title' => 'Silent Orders',
-                'body' => 'No "Order Placed" template is mapped. New customers will not receive any WhatsApp confirmation after payment.'
+                'body' => 'No "Order Placed" template is mapped. New customers will not receive any WhatsApp confirmation after payment.',
             ];
         }
     }
@@ -203,7 +213,8 @@ class CommerceSettings extends Component
             if ($risk['type'] === 'Blocked') {
                 $this->show_confirmation = false;
                 $this->risk_messages = [];
-                session()->flash('error', 'Configuration blocked: ' . $risk['title']);
+                session()->flash('error', 'Configuration blocked: '.$risk['title']);
+
                 return;
             }
         }
@@ -226,11 +237,11 @@ class CommerceSettings extends Component
             'lifecycle_notifications' => $this->lifecycle_notifications,
             'ai_assistant_enabled' => $this->ai_assistant_enabled,
             'commerce_policy_accepted' => $this->commerce_policy_accepted,
-            'templates' => $this->notifications
+            'templates' => $this->notifications,
         ];
 
         $this->team->forceFill([
-            'commerce_config' => $config
+            'commerce_config' => $config,
         ])->save();
 
         $this->dispatch('saved');
@@ -254,16 +265,16 @@ class CommerceSettings extends Component
             'stateColors' => [
                 'READY' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20',
                 'WARNING' => 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-                'BLOCKED' => 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                'BLOCKED' => 'bg-rose-500/10 text-rose-600 border-rose-500/20',
             ],
             'typeStyles' => [
                 'High Risk' => 'bg-amber-100 text-amber-600',
                 'Critical' => 'bg-rose-100 text-rose-600',
                 'Blocked' => 'bg-slate-900 text-white',
                 'Operational' => 'bg-indigo-100 text-indigo-600',
-                'Notice' => 'bg-blue-100 text-blue-600'
+                'Notice' => 'bg-blue-100 text-blue-600',
             ],
-            'isBlocked' => collect($this->risk_messages)->contains('type', 'Blocked')
+            'isBlocked' => collect($this->risk_messages)->contains('type', 'Blocked'),
         ]);
     }
 }

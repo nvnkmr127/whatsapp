@@ -35,19 +35,19 @@ class TemplateList extends Component
                 $response = $this->loadTemplatesFromWhatsApp();
                 $this->notify([
                     'message' => $response['message'],
-                    'type'    => $response['status'] ? 'success' : 'danger',
+                    'type' => $response['status'] ? 'success' : 'danger',
                 ]);
 
                 $this->dispatch('pg:eventRefresh-whatspp-template-table-sgz2iu-table', [], 'window');
             } catch (\Exception $e) {
-                whatsapp_log('Error loading WhatsApp templates: ' . $e->getMessage(), 'error', [
+                whatsapp_log('Error loading WhatsApp templates: '.$e->getMessage(), 'error', [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ], $e);
 
                 $this->notify([
-                    'message' => t('template_load_failed') . ': ' . $e->getMessage(),
-                    'type'    => 'danger',
+                    'message' => t('template_load_failed').': '.$e->getMessage(),
+                    'type' => 'danger',
                 ]);
             }
         }

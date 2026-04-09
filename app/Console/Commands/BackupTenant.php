@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Team;
 use App\Jobs\ProcessTenantBackupJob;
+use App\Models\Team;
+use Illuminate\Console\Command;
 
 class BackupTenant extends Command
 {
@@ -30,8 +30,9 @@ class BackupTenant extends Command
         $id = $this->argument('id');
         $team = Team::find($id);
 
-        if (!$team) {
+        if (! $team) {
             $this->error("Team with ID {$id} not found.");
+
             return 1;
         }
 
@@ -39,7 +40,7 @@ class BackupTenant extends Command
 
         ProcessTenantBackupJob::dispatch($team);
 
-        $this->info("Backup job has been dispatched to the queue.");
+        $this->info('Backup job has been dispatched to the queue.');
 
         return 0;
     }

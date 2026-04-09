@@ -3,8 +3,8 @@
 namespace App\Http\View\Composers;
 
 use App\Models\Setting;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\View\View;
 
 class GlobalSettingsComposer
 {

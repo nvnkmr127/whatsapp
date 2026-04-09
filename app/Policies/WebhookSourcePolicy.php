@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\WebhookSource;
-use Illuminate\Auth\Access\Response;
 
 class WebhookSourcePolicy
 {
@@ -92,4 +91,3 @@ class WebhookSourcePolicy
         return $user->currentTeam && $user->currentTeam->id === $webhookSource->team_id;
     }
 }
-

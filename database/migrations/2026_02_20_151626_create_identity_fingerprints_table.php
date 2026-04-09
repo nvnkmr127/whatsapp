@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\Schema;
  *   payment_method – opaque fingerprint provided by the payment gateway
  *                    (e.g. Stripe card fingerprint)
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('identity_fingerprints', function (Blueprint $table) {

@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Queue;
 use App\Services\TraceContext;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             if ($traceId) {
                 return ['trace_id' => $traceId];
             }
+
             return [];
         });
 
@@ -62,7 +63,7 @@ class AppServiceProvider extends ServiceProvider
         Queue::before(function (\Illuminate\Queue\Events\JobProcessing $event) {
             $payload = $event->job->payload();
             $traceId = $payload['trace_id'] ?? null;
-            
+
             if ($traceId) {
                 TraceContext::set($traceId);
             } else {
@@ -87,6 +88,7 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             // Limit by Team ID if authenticated, otherwise IP
             $key = $request->user()?->current_team_id ?: $request->ip();
+
             // 600 requests per minute per Team (10 req/sec)
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(600)->by($key);
         });
@@ -157,16 +159,18 @@ class AppServiceProvider extends ServiceProvider
 
                 $team = $user->currentTeam ?? $user->allTeams()->first();
 
-                if (!$team) {
+                if (! $team) {
                     \Illuminate\Support\Facades\Log::warning("Gate check failed: User {$user->id} has no team association for permission {$permission}");
+
                     return false;
                 }
 
                 $ownsTeam = $user->ownsTeam($team);
                 $hasPermission = $user->hasTeamPermission($team, $permission);
 
-                if (!$ownsTeam && !$hasPermission) {
-                    \Illuminate\Support\Facades\Log::warning("Gate check failed: User {$user->id} does not have permission {$permission} on team {$team->id}. Owns team: " . ($ownsTeam ? 'YES' : 'NO') . ", Has direct permission: " . ($hasPermission ? 'YES' : 'NO'));
+                if (! $ownsTeam && ! $hasPermission) {
+                    \Illuminate\Support\Facades\Log::warning("Gate check failed: User {$user->id} does not have permission {$permission} on team {$team->id}. Owns team: ".($ownsTeam ? 'YES' : 'NO').', Has direct permission: '.($hasPermission ? 'YES' : 'NO'));
+
                     return false;
                 }
 

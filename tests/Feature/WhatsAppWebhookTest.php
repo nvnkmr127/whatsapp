@@ -16,6 +16,7 @@ class WhatsAppWebhookTest extends TestCase
         parent::setUp();
         // Clear cache before each test
         Cache::flush();
+        \Illuminate\Support\Facades\Config::set('whatsapp.webhook_verify_token', 'my-secret-token');
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -114,7 +115,7 @@ class WhatsAppWebhookTest extends TestCase
 
         // Act & Assert
         $response = $this->withHeaders([
-            'X-Hub-Signature-256' => 'sha256=invalid_hash'
+            'X-Hub-Signature-256' => 'sha256=invalid_hash',
         ])->postJson('/api/webhook/whatsapp', $payload);
 
         $response->assertStatus(403);
@@ -129,11 +130,11 @@ class WhatsAppWebhookTest extends TestCase
         config(['whatsapp.app_secret' => $secret]);
         $payload = ['object' => 'whatsapp_business_account', 'entry' => []];
         $jsonPayload = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $jsonPayload, $secret);
+        $signature = 'sha256='.hash_hmac('sha256', $jsonPayload, $secret);
 
         // Act
         $response = $this->withHeaders([
-            'X-Hub-Signature-256' => $signature
+            'X-Hub-Signature-256' => $signature,
         ])->postJson('/api/webhook/whatsapp', $payload);
 
         // Assert

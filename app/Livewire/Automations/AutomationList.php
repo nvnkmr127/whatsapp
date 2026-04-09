@@ -2,20 +2,20 @@
 
 namespace App\Livewire\Automations;
 
-use App\Models\MessageBot;
-use App\Models\TemplateBot;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
-use Livewire\WithPagination;
 use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Title('Automations')]
 class AutomationList extends Component
 {
-    use WithPagination, \App\Livewire\Automations\Traits\HasTemplates;
+    use \App\Livewire\Automations\Traits\HasTemplates, WithPagination;
 
     public $search = '';
+
     public $confirmingDeletion = false;
+
     public $deletionId = null;
 
     protected $queryString = ['search'];
@@ -35,7 +35,7 @@ class AutomationList extends Component
             $this->dispatch('notify', 'Automation deleted successfully.');
         } catch (\Exception $e) {
             $this->confirmingDeletion = false;
-            $this->addError('base', 'Unable to delete automation: ' . $e->getMessage());
+            $this->addError('base', 'Unable to delete automation: '.$e->getMessage());
         }
     }
 
@@ -44,13 +44,13 @@ class AutomationList extends Component
         try {
             $original = \App\Models\Automation::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
             $clone = $original->replicate();
-            $clone->name = $original->name . ' (Copy)';
+            $clone->name = $original->name.' (Copy)';
             $clone->is_active = false; // Default to inactive for safety
             $clone->save();
 
             $this->dispatch('notify', 'Automation duplicated successfully.');
         } catch (\Exception $e) {
-            $this->addError('base', 'Unable to duplicate: ' . $e->getMessage());
+            $this->addError('base', 'Unable to duplicate: '.$e->getMessage());
         }
     }
 
@@ -66,15 +66,15 @@ class AutomationList extends Component
                 'trigger_config' => $automation->trigger_config,
                 'flow_data' => $automation->flow_data,
                 'exported_at' => now()->toIso8601String(),
-                'version' => '1.0'
+                'version' => '1.0',
             ];
 
             return response()->streamDownload(function () use ($exportData) {
                 echo json_encode($exportData, JSON_PRETTY_PRINT);
-            }, \Illuminate\Support\Str::slug($automation->name) . '-export.json');
+            }, \Illuminate\Support\Str::slug($automation->name).'-export.json');
 
         } catch (\Exception $e) {
-            $this->addError('base', 'Unable to export: ' . $e->getMessage());
+            $this->addError('base', 'Unable to export: '.$e->getMessage());
         }
     }
 
@@ -86,7 +86,7 @@ class AutomationList extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%');
+                $q->where('name', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -97,13 +97,13 @@ class AutomationList extends Component
         $stats = [
             'total' => \App\Models\Automation::where('team_id', $teamId)->count(),
             'active' => \App\Models\Automation::where('team_id', $teamId)->where('is_active', true)->count(),
-            'total_runs' => \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $teamId))->count(),
-            'completion_rate' => \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $teamId))->where('status', 'completed')->count() / max(1, \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $teamId))->count()) * 100,
+            'total_runs' => \App\Models\AutomationRun::whereHas('automation', fn ($q) => $q->where('team_id', $teamId))->count(),
+            'completion_rate' => \App\Models\AutomationRun::whereHas('automation', fn ($q) => $q->where('team_id', $teamId))->where('status', 'completed')->count() / max(1, \App\Models\AutomationRun::whereHas('automation', fn ($q) => $q->where('team_id', $teamId))->count()) * 100,
         ];
 
         return view('livewire.automations.automation-list', [
             'bots' => $automations,
-            'stats' => $stats
+            'stats' => $stats,
         ]);
     }
 }

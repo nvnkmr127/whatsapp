@@ -55,7 +55,7 @@ class TeamTransaction extends Model
     protected function performUpdate(\Illuminate\Database\Eloquent\Builder $query): bool
     {
         throw new \RuntimeException(
-            'TeamTransaction is an immutable financial ledger. ' .
+            'TeamTransaction is an immutable financial ledger. '.
             'Records cannot be updated. Create a correcting entry instead.'
         );
     }
@@ -69,7 +69,7 @@ class TeamTransaction extends Model
     protected function performDeleteOnModel(): void
     {
         throw new \RuntimeException(
-            'TeamTransaction is an immutable financial ledger. ' .
+            'TeamTransaction is an immutable financial ledger. '.
             'Records cannot be deleted. This operation is not permitted.'
         );
     }

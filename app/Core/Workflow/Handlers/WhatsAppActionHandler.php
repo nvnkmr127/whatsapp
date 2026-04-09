@@ -3,8 +3,8 @@
 namespace App\Core\Workflow\Handlers;
 
 use App\Core\Workflow\ActionHandlerInterface;
-use App\Services\WhatsAppService;
 use App\Models\Contact;
+use App\Services\WhatsAppService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -13,12 +13,12 @@ class WhatsAppActionHandler implements ActionHandlerInterface
     public function handle(array $config, Model $subject, array $context): void
     {
         $templateName = $config['template_name'] ?? null;
-        if (!$templateName) {
+        if (! $templateName) {
             return;
         }
 
         $team = $subject->team ?? $subject->currentTeam ?? null;
-        if (!$team && method_exists($subject, 'ownedTeams')) {
+        if (! $team && method_exists($subject, 'ownedTeams')) {
             $team = $subject->ownedTeams()->first();
         }
 
@@ -44,7 +44,7 @@ class WhatsAppActionHandler implements ActionHandlerInterface
                 );
                 Log::info("Workflow sent WhatsApp template {$templateName} to {$to}");
             } catch (\Exception $e) {
-                Log::error("Workflow failed to send WhatsApp template: " . $e->getMessage());
+                Log::error('Workflow failed to send WhatsApp template: '.$e->getMessage());
             }
         }
     }

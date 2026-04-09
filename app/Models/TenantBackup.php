@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Model;
 
 class TenantBackup extends Model
 {
-    use HasUuids;
     use \App\Traits\HasTeam;
+    use HasUuids;
 
     protected $fillable = [
         'team_id',
@@ -36,14 +35,13 @@ class TenantBackup extends Model
      * Get the team that owns the backup.
      */
 
-
     /**
      * Model A: Tenant connects their own Drive.
      * Identified by having a remote_account_id (tenant-specific).
      */
     public function isModelA(): bool
     {
-        return !empty($this->remote_account_id);
+        return ! empty($this->remote_account_id);
     }
 
     /**

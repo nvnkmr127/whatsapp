@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -28,7 +29,7 @@ return new class extends Migration {
                 'read_receipts_enabled',
                 'welcome_message_enabled',
                 'welcome_message',
-                'ai_auto_reply_enabled'
+                'ai_auto_reply_enabled',
             ]);
         });
     }

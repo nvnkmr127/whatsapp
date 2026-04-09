@@ -2,22 +2,23 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\Contact;
 use App\Models\Team;
 use App\Models\User;
-use App\Models\Contact;
 use App\Models\WhatsAppCall;
-use App\Services\CallService;
-use App\Services\CallEligibilityService;
 use App\Services\CallConsentService;
+use App\Services\CallEligibilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class CallInitiationTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $team;
+
     protected $user;
+
     protected $contact;
 
     protected function setUp(): void
@@ -26,8 +27,37 @@ class CallInitiationTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->team = Team::factory()->create([
-            'calling_enabled' => true,
-            'max_call_minutes_per_month' => 1000,
+            'whatsapp_phone_number_id' => '1234567890',
+        ]);
+
+        \App\Models\Plan::firstOrCreate(
+            ['name' => 'test_plan'],
+            ['monthly_price' => 0, 'features' => ['calling' => true, 'max_call_minutes_per_month' => 1000]]
+        );
+        $this->team->update([
+            'subscription_plan' => 'test_plan',
+            'subscription_status' => 'active', // Ensure it's active
+        ]);
+
+        \App\Models\BillingOverride::updateOrCreate(
+            ['team_id' => $this->team->id, 'type' => 'feature_enable', 'key' => 'calling'],
+            ['expires_at' => now()->addDays(30), 'value' => 'true', 'reason' => 'test']
+        );
+
+        \App\Models\BillingOverride::updateOrCreate(
+            ['team_id' => $this->team->id, 'type' => 'limit_increase', 'key' => 'max_call_minutes_per_month'],
+            ['expires_at' => now()->addDays(30), 'value' => '1000', 'reason' => 'test']
+        );
+
+        // Disable the full_access_all logic for these tests
+        config(['app.full_access_all' => false]);
+
+        // Ensure entitlement cache is completely clean before setting up plans
+        app(\App\Services\EntitlementService::class)->flush($this->team);
+
+        \App\Models\TeamWallet::create([
+            'team_id' => $this->team->id,
+            'balance' => 100.00,
         ]);
 
         $this->team->users()->attach($this->user, ['role' => 'admin']);
@@ -36,23 +66,53 @@ class CallInitiationTest extends TestCase
 
         $this->contact = Contact::factory()->create([
             'team_id' => $this->team->id,
+            'phone_number' => '1234567890',
             'opt_in_status' => 'opted_in',
+            'custom_attributes' => ['calling_consent' => true],
+        ]);
+
+        $conversation = \App\Models\Conversation::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $this->contact->id,
+            'status' => 'open',
+            'last_message_at' => now(),
+        ]);
+
+        \App\Models\Message::factory()->create([
+            'team_id' => $this->team->id,
+            'conversation_id' => $conversation->id,
+            'direction' => 'inbound',
+            'type' => 'text',
+        ]);
+
+        \App\Models\CallSettings::create([
+            'team_id' => $this->team->id,
+            'phone_number_id' => '1234567890',
+            'calling_enabled' => true,
         ]);
     }
 
     /** @test */
     public function it_can_initiate_call_with_valid_eligibility()
     {
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => \Illuminate\Support\Facades\Http::response([
+                'messages' => [['id' => 'wamid.123']],
+                'id' => 'call.123',
+            ], 200),
+        ]);
+
         $this->actingAs($this->user);
 
-        $response = $this->postJson('/api/calls/initiate', [
-            'phone_number' => $this->contact->phone_number,
-        ]);
+        $response = $this->withHeader('X-Tenant-ID', $this->team->id)
+            ->postJson('/api/v1/calls/initiate', [
+                'phone_number' => $this->contact->phone_number,
+            ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('whatsapp_calls', [
             'team_id' => $this->team->id,
-            'to_number' => $this->contact->phone_number,
+            'to_number' => \App\Helpers\PhoneNumberHelper::normalize($this->contact->phone_number),
             'direction' => 'outbound',
         ]);
     }
@@ -62,12 +122,33 @@ class CallInitiationTest extends TestCase
     {
         $this->team->update(['calling_enabled' => false]);
         $this->actingAs($this->user);
+        \App\Models\CallSettings::where('team_id', $this->team->id)->update(['calling_enabled' => false]);
 
-        $response = $this->postJson('/api/calls/initiate', [
-            'phone_number' => $this->contact->phone_number,
+        \App\Models\Plan::firstOrCreate(
+            ['name' => 'test_plan_no_calling'],
+            ['monthly_price' => 0, 'features' => ['calling' => false], 'max_call_minutes_per_month' => 1000]
+        );
+        $this->team->update([
+            'subscription_plan' => 'test_plan_no_calling',
+            'subscription_status' => 'active',
         ]);
 
-        $response->assertStatus(400);
+        // Ensure entitlement cache is clean
+        app(\App\Services\EntitlementService::class)->flush($this->team);
+
+        // Delete the billing override to ensure it uses the plan
+        \App\Models\BillingOverride::where('team_id', $this->team->id)->where('key', 'calling')->delete();
+
+        $response = $this->withHeader('X-Tenant-ID', $this->team->id)
+            ->postJson('/api/v1/calls/initiate', [
+                'phone_number' => $this->contact->phone_number,
+            ]);
+
+        if ($response->status() === 404) {
+            dump($response->content());
+        }
+
+        $response->assertStatus(400); // Because we changed our API controller to always return 400 for eligibility block instead of 403
         $response->assertJson([
             'success' => false,
         ]);
@@ -79,34 +160,45 @@ class CallInitiationTest extends TestCase
         $this->contact->update(['opt_in_status' => 'opted_out']);
         $this->actingAs($this->user);
 
-        $response = $this->postJson('/api/calls/initiate', [
-            'phone_number' => $this->contact->phone_number,
-        ]);
+        $response = $this->withHeader('X-Tenant-ID', $this->team->id)
+            ->postJson('/api/v1/calls/initiate', [
+                'phone_number' => $this->contact->phone_number,
+            ]);
 
-        $response->assertStatus(400);
-        $response->assertJsonPath('block_reason', 'CONTACT_OPTED_OUT');
+        $response->assertStatus(400); // Same reason as above
+        $response->assertJsonPath('code', 'CONTACT_OPTED_OUT');
     }
 
     /** @test */
     public function it_blocks_call_when_monthly_limit_reached()
     {
-        $this->team->update(['max_call_minutes_per_month' => 10]);
-
-        // Create calls that exceed the limit
-        WhatsAppCall::factory()->create([
-            'team_id' => $this->team->id,
-            'duration_seconds' => 600, // 10 minutes
-            'created_at' => now(),
-        ]);
+        \App\Models\TeamWallet::where('team_id', $this->team->id)->update(['balance' => 0.00]);
 
         $this->actingAs($this->user);
 
-        $response = $this->postJson('/api/calls/initiate', [
+        \App\Models\Plan::firstOrCreate(
+            ['name' => 'test_plan_0'],
+            ['monthly_price' => 0, 'features' => ['calling' => true], 'max_call_minutes_per_month' => 0]
+        );
+        $this->team->update([
+            'subscription_plan' => 'test_plan_0',
+            'subscription_status' => 'active',
+        ]);
+
+        // Ensure entitlement limits are cached/flushed correctly
+        app(\App\Services\EntitlementService::class)->flush($this->team);
+
+        // Delete the billing override to ensure it uses the plan
+        \App\Models\BillingOverride::where('team_id', $this->team->id)->where('key', 'max_call_minutes_per_month')->delete();
+
+        $response = $this->withHeader('X-Tenant-ID', $this->team->id)->postJson('/api/v1/calls/initiate', [
             'phone_number' => $this->contact->phone_number,
         ]);
 
-        $response->assertStatus(400);
-        $response->assertJsonPath('block_reason', 'MONTHLY_LIMIT_REACHED');
+        dump($response->content());
+
+        $response->assertStatus(400); // It returns 400 now
+        $response->assertJsonPath('code', 'MONTHLY_LIMIT_REACHED');
     }
 
     /** @test */
@@ -294,14 +386,23 @@ class CallInitiationTest extends TestCase
         $this->assertArrayHasKey('trigger_consent', $result['checks']);
         $this->assertArrayHasKey('phone_readiness', $result['checks']);
         $this->assertArrayHasKey('quality_rating', $result['checks']);
+    }
+
     /** @test */
     public function it_can_initiate_call_with_sdp_offer()
     {
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => \Illuminate\Support\Facades\Http::response([
+                'messages' => [['id' => 'wamid.123']],
+                'id' => 'call.123',
+            ], 200),
+        ]);
+
         $this->actingAs($this->user);
 
-        $sdp = "v=0\r\no=- 4710103639581977931 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111 103 104 9 0 8 106 105 13 110 112 113 126\r\nc=IN IP4 0.0.0.0\r\n";
-        
-        $response = $this->postJson('/api/calls/initiate', [
+        $sdp = "v=0\r\no=- 123456 123456 IN IP4 127.0.0.1\r\ns=-\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 50000 RTP/AVP 0\r\na=rtpmap:0 PCMU/8000\r\n";
+
+        $response = $this->withHeader('X-Tenant-ID', $this->team->id)->postJson('/api/v1/calls/initiate', [
             'phone_number' => $this->contact->phone_number,
             'sdp' => $sdp,
         ]);
@@ -309,10 +410,10 @@ class CallInitiationTest extends TestCase
         $response->assertStatus(200);
         $this->assertDatabaseHas('whatsapp_calls', [
             'team_id' => $this->team->id,
-            'to_number' => $this->contact->phone_number,
+            'to_number' => \App\Helpers\PhoneNumberHelper::normalize($this->contact->phone_number),
         ]);
 
-        $call = WhatsAppCall::where('to_number', $this->contact->phone_number)->first();
+        $call = WhatsAppCall::where('to_number', \App\Helpers\PhoneNumberHelper::normalize($this->contact->phone_number))->first();
         $this->assertNotNull($call->metadata['sdp']);
         $this->assertStringContainsString('v=0', $call->metadata['sdp']);
     }
@@ -320,19 +421,26 @@ class CallInitiationTest extends TestCase
     /** @test */
     public function it_fails_initiation_with_invalid_sdp()
     {
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => \Illuminate\Support\Facades\Http::response([
+                'messages' => [['id' => 'wamid.123']],
+                'id' => 'call.123',
+            ], 200),
+        ]);
+
         $this->actingAs($this->user);
 
-        $invalidSdp = "INVALID_SDP_FORMAT";
-        
-        $response = $this->postJson('/api/calls/initiate', [
+        $invalidSdp = 'INVALID_SDP_FORMAT';
+
+        $response = $this->withHeader('X-Tenant-ID', $this->team->id)->postJson('/api/v1/calls/initiate', [
             'phone_number' => $this->contact->phone_number,
             'sdp' => $invalidSdp,
         ]);
 
-        // Depending on implementation, it might sanitize or fail. 
+        // Depending on implementation, it might sanitize or fail.
         // WhatsAppService::initiateCall calls SDPValidator::sanitize.
         // If sanitize returns empty or null, it might still send it or fail.
-        
+
         $response->assertStatus(200); // Sanitize might just clear it if it's not strictly validating here.
     }
 }

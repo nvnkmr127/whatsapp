@@ -17,7 +17,7 @@ class OnboardingObserver
             $onboardingStatus->ai_training_completed
         ) {
 
-            if (!$onboardingStatus->onboarding_completed) {
+            if (! $onboardingStatus->onboarding_completed) {
                 $onboardingStatus->onboarding_completed = true;
 
                 // If they completed it AFTER at least one reminder, mark as recovered
@@ -40,8 +40,9 @@ class OnboardingObserver
     {
         $engine = app(\App\Services\WorkflowEngine::class);
         $user = $onboardingStatus->user;
-        if (!$user)
+        if (! $user) {
             return;
+        }
 
         if ($onboardingStatus->wasChanged('whatsapp_connected') && $onboardingStatus->whatsapp_connected) {
             $engine->trigger('whatsapp_connected', $user);

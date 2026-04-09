@@ -85,8 +85,8 @@ class ProcessScheduledCampaigns extends Command
                 $this->error("Error processing campaign {$campaign->name}: {$e->getMessage()}");
                 Log::error('Campaign scheduling error', [
                     'campaign_id' => $campaign->id,
-                    'error'       => $e->getMessage(),
-                    'trace'       => $e->getTraceAsString(),
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }

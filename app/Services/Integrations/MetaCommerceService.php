@@ -5,16 +5,20 @@ namespace App\Services\Integrations;
 use App\Models\Integration;
 use App\Models\Product;
 use App\Models\SyncSession;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class MetaCommerceService
 {
     protected $integration;
+
     protected $healthService;
+
     protected $baseUrl;
+
     protected $accessToken;
+
     protected $catalogId;
 
     public function __construct(Integration $integration)
@@ -34,16 +38,16 @@ class MetaCommerceService
      */
     public function syncProducts()
     {
-        return Cache::lock('sync_integration_' . $this->integration->id, 600)->get(function () {
-            if (!$this->accessToken || !$this->catalogId) {
-                throw new \Exception("Missing Meta Commerce credentials (Access Token or Catalog ID)");
+        return Cache::lock('sync_integration_'.$this->integration->id, 600)->get(function () {
+            if (! $this->accessToken || ! $this->catalogId) {
+                throw new \Exception('Missing Meta Commerce credentials (Access Token or Catalog ID)');
             }
 
             $session = SyncSession::create([
                 'integration_id' => $this->integration->id,
                 'type' => 'products_push',
                 'metadata' => ['catalog_id' => $this->catalogId],
-                'status' => 'processing'
+                'status' => 'processing',
             ]);
 
             try {
@@ -55,7 +59,7 @@ class MetaCommerceService
                 $session->update(['total_entities' => $products->count()]);
                 $syncedCount = 0;
 
-                // Meta Batch API supports up to 50 requests per batch, 
+                // Meta Batch API supports up to 50 requests per batch,
                 // but for product feed it's better to use the batch upload endpoint.
                 // For simplicity, we'll do them in chunks here.
                 foreach ($products->chunk(50) as $chunk) {
@@ -71,7 +75,7 @@ class MetaCommerceService
                             $product->update([
                                 'sync_state' => 'synced',
                                 'last_external_update_at' => now(),
-                                'sync_errors' => null
+                                'sync_errors' => null,
                             ]);
                             $syncedCount++;
                             $session->increment('processed_entities');
@@ -80,11 +84,11 @@ class MetaCommerceService
                         foreach ($chunk as $product) {
                             $product->update([
                                 'sync_state' => 'failed',
-                                'sync_errors' => $e->getMessage()
+                                'sync_errors' => $e->getMessage(),
                             ]);
                             $session->increment('failed_entities');
                         }
-                        Log::error("Meta Sync Batch Failed: " . $e->getMessage());
+                        Log::error('Meta Sync Batch Failed: '.$e->getMessage());
                     }
                 }
 
@@ -101,7 +105,7 @@ class MetaCommerceService
 
             $this->integration->update([
                 'last_synced_at' => now(),
-                'error_message' => null
+                'error_message' => null,
             ]);
 
             return $syncedCount;
@@ -113,8 +117,8 @@ class MetaCommerceService
      */
     public function syncSingleProduct(Product $product)
     {
-        if (!$this->accessToken || !$this->catalogId) {
-            throw new \Exception("Missing Meta Commerce credentials");
+        if (! $this->accessToken || ! $this->catalogId) {
+            throw new \Exception('Missing Meta Commerce credentials');
         }
 
         try {
@@ -124,14 +128,14 @@ class MetaCommerceService
             $product->update([
                 'sync_state' => 'synced',
                 'last_external_update_at' => now(),
-                'sync_errors' => null
+                'sync_errors' => null,
             ]);
 
             return true;
         } catch (\Exception $e) {
             $product->update([
                 'sync_state' => 'failed',
-                'sync_errors' => $e->getMessage()
+                'sync_errors' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -150,9 +154,9 @@ class MetaCommerceService
                 'price' => (int) ($product->price * 100),
                 'currency' => $product->currency ?: 'USD',
                 'image_url' => $product->image_url,
-                'url' => $product->url ?: 'https://wa.me/' . ($product->team->whatsapp_phone_number ?? ''),
+                'url' => $product->url ?: 'https://wa.me/'.($product->team->whatsapp_phone_number ?? ''),
                 'brand' => $this->integration->team->name,
-            ]
+            ],
         ];
     }
 
@@ -160,15 +164,15 @@ class MetaCommerceService
     {
         // Meta Graph API batch upload endpoint
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->accessToken,
+            'Authorization' => 'Bearer '.$this->accessToken,
             'Content-Type' => 'application/json',
         ])->post("{$this->baseUrl}/{$this->catalogId}/batch", [
-                    'allow_upsert' => true,
-                    'requests' => $requests
-                ]);
+            'allow_upsert' => true,
+            'requests' => $requests,
+        ]);
 
         if ($response->failed()) {
-            throw new \Exception("Meta API Error: " . $response->status() . " " . $response->body());
+            throw new \Exception('Meta API Error: '.$response->status().' '.$response->body());
         }
 
         return $response->json();

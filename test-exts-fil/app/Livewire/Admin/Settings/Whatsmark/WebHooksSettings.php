@@ -57,9 +57,9 @@ class WebHooksSettings extends Component
     {
         $settings = get_settings_by_group('whats-mark');
 
-        $this->enable_webhook_resend   = $settings->enable_webhook_resend ?? false;
-        $this->only_agents_can_chat    = $settings->only_agents_can_chat  ?? false;
-        $this->webhook_resend_method   = $settings->webhook_resend_method;
+        $this->enable_webhook_resend = $settings->enable_webhook_resend ?? false;
+        $this->only_agents_can_chat = $settings->only_agents_can_chat ?? false;
+        $this->webhook_resend_method = $settings->webhook_resend_method;
         $this->whatsapp_data_resend_to = $settings->whatsapp_data_resend_to;
     }
 
@@ -69,9 +69,9 @@ class WebHooksSettings extends Component
             $this->validate();
 
             $originalSettings = [
-                'enable_webhook_resend'   => get_setting('whats-mark.enable_webhook_resend', false),
-                'only_agents_can_chat'    => get_setting('whats-mark.only_agents_can_chat', false),
-                'webhook_resend_method'   => get_setting('whats-mark.webhook_resend_method'),
+                'enable_webhook_resend' => get_setting('whats-mark.enable_webhook_resend', false),
+                'only_agents_can_chat' => get_setting('whats-mark.only_agents_can_chat', false),
+                'webhook_resend_method' => get_setting('whats-mark.webhook_resend_method'),
                 'whatsapp_data_resend_to' => get_setting('whats-mark.whatsapp_data_resend_to'),
             ];
 

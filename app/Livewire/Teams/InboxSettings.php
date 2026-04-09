@@ -7,37 +7,50 @@ use Livewire\Component;
 
 class InboxSettings extends Component
 {
-
     public $readReceiptsEnabled = true;
+
     public $welcomeMessageEnabled = false;
+
     public $welcomeMessage = '';
+
     public $offHoursMessageEnabled = false;
+
     public $offHoursMessage = '';
+
     public $aiAutoReplyEnabled = false;
 
     // Working Hours: Array of [open, close] or null if closed
     public $workingHours = [];
+
     public $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
     // Modal Config
     public $configModalOpen = false;
+
     public $editingType = null; // 'welcome' or 'off-hours'
 
     // Config State
     public $configMsgType = 'regular'; // 'regular' or 'template'
+
     public $regularType = 'text'; // 'text', 'image', 'video', 'audio', 'document'
+
     public $regularContent = '';
+
     public $regularMediaUrl = '';
+
     public $regularCaption = '';
+
     public $templateName = '';
+
     public $templateLanguage = 'en_US';
+
     public $availableTemplates = [];
 
     public function mount()
     {
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -75,7 +88,7 @@ class InboxSettings extends Component
         $this->editingType = $type;
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -109,7 +122,7 @@ class InboxSettings extends Component
         // Fetch templates if not already loaded (and if we have credentials)
         if (empty($this->availableTemplates)) {
             try {
-                $service = new \App\Services\WhatsAppService();
+                $service = new \App\Services\WhatsAppService;
                 $service->setTeam($team);
                 $response = $service->getTemplates();
 
@@ -121,7 +134,7 @@ class InboxSettings extends Component
                             return [
                                 'name' => $tpl['name'],
                                 'language' => $tpl['language'],
-                                'category' => $tpl['category']
+                                'category' => $tpl['category'],
                             ];
                         })->values()->toArray();
                 }
@@ -138,12 +151,12 @@ class InboxSettings extends Component
     {
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
         $newConfig = [
-            'type' => $this->configMsgType
+            'type' => $this->configMsgType,
         ];
 
         $summaryText = '';
@@ -156,12 +169,12 @@ class InboxSettings extends Component
             } else {
                 $newConfig['media_url'] = $this->regularMediaUrl;
                 $newConfig['caption'] = $this->regularCaption;
-                $summaryText = "[" . strtoupper($this->regularType) . "] " . $this->regularCaption;
+                $summaryText = '['.strtoupper($this->regularType).'] '.$this->regularCaption;
             }
         } else {
             $newConfig['template_name'] = $this->templateName;
             $newConfig['language'] = $this->templateLanguage;
-            $summaryText = "[TEMPLATE] " . $this->templateName;
+            $summaryText = '[TEMPLATE] '.$this->templateName;
         }
 
         $data = [];
@@ -181,12 +194,11 @@ class InboxSettings extends Component
         $this->dispatch('saved-config');
     }
 
-
     public function save()
     {
         $team = Auth::user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -195,7 +207,7 @@ class InboxSettings extends Component
             if ($this->workingHours[$day]['enabled']) {
                 $businessHours[$day] = [
                     $this->workingHours[$day]['open'],
-                    $this->workingHours[$day]['close']
+                    $this->workingHours[$day]['close'],
                 ];
             }
         }
@@ -216,9 +228,10 @@ class InboxSettings extends Component
 
     public function render()
     {
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return view('livewire.teams.inbox-settings')->layout('layouts.app');
         }
+
         return view('livewire.teams.inbox-settings');
     }
 }

@@ -3,13 +3,13 @@
 namespace App\Console\Commands;
 
 use App\Models\Team;
-use App\Models\User;
 use App\Services\WorkflowEngine;
 use Illuminate\Console\Command;
 
 class CheckOnboardingWorkflows extends Command
 {
     protected $signature = 'workflows:check-onboarding';
+
     protected $description = 'Check for incomplete onboarding and trigger workflows';
 
     public function handle(WorkflowEngine $engine)
@@ -28,7 +28,7 @@ class CheckOnboardingWorkflows extends Command
             // (The engine handles idempotency if we design it right, but let's be safe)
             // Ideally, we check a "flag" or the workflow logs.
             // For now, we fire the event and let the engine decide based on logs.
-            
+
             $engine->trigger('onboarding_incomplete_24h', $team->owner);
             $this->info("Triggered incomplete setup for Team {$team->id}");
         }

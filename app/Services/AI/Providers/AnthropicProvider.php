@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Log;
 class AnthropicProvider implements AIProviderInterface
 {
     protected string $apiKey;
+
     protected string $baseUrl = 'https://api.anthropic.com/v1';
+
     protected string $apiVersion = '2023-06-01';
 
     public function __construct(string $apiKey)
@@ -58,8 +60,8 @@ class AnthropicProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/messages", $payload);
 
             if ($response->failed()) {
-                Log::error("Anthropic API Failed: " . $response->body());
-                throw new \Exception("Anthropic API request failed: " . ($response->json('error.message') ?? 'Unknown error'));
+                Log::error('Anthropic API Failed: '.$response->body());
+                throw new \Exception('Anthropic API request failed: '.($response->json('error.message') ?? 'Unknown error'));
             }
 
             $content = $response->json('content.0.text');
@@ -72,7 +74,8 @@ class AnthropicProvider implements AIProviderInterface
                 'raw_response' => $response->json(),
             ];
         } catch (\Exception $e) {
-            Log::error("Anthropic Provider Error: " . $e->getMessage());
+            Log::error('Anthropic Provider Error: '.$e->getMessage());
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -88,17 +91,19 @@ class AnthropicProvider implements AIProviderInterface
 
     public function embed(string|array $text, array $options = []): array
     {
-        Log::warning("Anthropic does not support embeddings.");
+        Log::warning('Anthropic does not support embeddings.');
+
         return [];
     }
 
     public function summarize(string $content, array $options = []): string
     {
         $messages = [
-            ['role' => 'user', 'content' => "Summarize this: {$content}"]
+            ['role' => 'user', 'content' => "Summarize this: {$content}"],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
+
         return $response['content'] ?? '';
     }
 
@@ -106,10 +111,11 @@ class AnthropicProvider implements AIProviderInterface
     {
         $categoriesStr = implode(', ', $categories);
         $messages = [
-            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"]
+            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
+
         return trim($response['content'] ?? '');
     }
 
@@ -125,12 +131,13 @@ class AnthropicProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/messages", [
                     'model' => 'claude-3-5-sonnet-20241022',
                     'messages' => [['role' => 'user', 'content' => 'Hello']],
-                    'max_tokens' => 10
+                    'max_tokens' => 10,
                 ]);
 
             return $response->successful();
         } catch (\Exception $e) {
-            Log::error("Anthropic Connection Test Failed: " . $e->getMessage());
+            Log::error('Anthropic Connection Test Failed: '.$e->getMessage());
+
             return false;
         }
     }

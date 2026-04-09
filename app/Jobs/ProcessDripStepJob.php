@@ -5,27 +5,28 @@ namespace App\Jobs;
 use App\Models\Campaign;
 use App\Models\CampaignDetail;
 use App\Models\Contact;
-use App\Models\Message;
 use App\Services\WhatsAppService;
-use App\Services\ConversationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class ProcessDripStepJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $campaignId;
+
     protected $contactId;
+
     protected $stepIndex;
+
     protected $traceId;
 
     public $tries = 3;
+
     public $backoff = [60, 300, 600];
 
     public function __construct($campaignId, $contactId, $stepIndex = 0, $traceId = null)
@@ -48,26 +49,30 @@ class ProcessDripStepJob implements ShouldQueue
             ->where('contact_id', $this->contactId)
             ->first();
 
-        if (!$campaign || !$contact || !$detail) {
+        if (! $campaign || ! $contact || ! $detail) {
             return;
         }
 
         if ($campaign->status === 'paused') {
             $this->release(60);
+
             return;
         }
 
         $steps = $campaign->steps ?? [];
-        if (!isset($steps[$this->stepIndex])) {
+        if (! isset($steps[$this->stepIndex])) {
             Log::info("ProcessDripStepJob: Step index {$this->stepIndex} not found for Campaign {$this->campaignId}");
+
             return;
         }
 
         $step = $steps[$this->stepIndex];
         $templateName = $step['template_name'] ?? null;
-        if (!$templateName) return;
+        if (! $templateName) {
+            return;
+        }
 
-        $waService = new WhatsAppService();
+        $waService = new WhatsAppService;
         $waService->setTeam($campaign->team);
 
         $bodyVars = $step['variables'] ?? [];
@@ -89,10 +94,10 @@ class ProcessDripStepJob implements ShouldQueue
                 $campaign->id
             );
 
-            if (!empty($response['success']) && $response['success']) {
+            if (! empty($response['success']) && $response['success']) {
                 $detail->update([
                     'current_step' => $this->stepIndex + 1,
-                    'status' => 'sent'
+                    'status' => 'sent',
                 ]);
 
                 // Schedule next step if exists
@@ -123,40 +128,40 @@ class ProcessDripStepJob implements ShouldQueue
             $maxRetries = (int) ($retryConfig['max_retries'] ?? 3);
             $currentRetryCount = (int) ($detail->retry_count ?? 0);
 
-            Log::error("Drip Campaign {$this->campaignId} Step {$this->stepIndex} Failed for Contact {$this->contactId}: " . $e->getMessage());
+            Log::error("Drip Campaign {$this->campaignId} Step {$this->stepIndex} Failed for Contact {$this->contactId}: ".$e->getMessage());
 
             if ($retryEnabled && $currentRetryCount < $maxRetries && $this->shouldRetry($e)) {
                 $newRetryCount = $currentRetryCount + 1;
                 $interval = (int) ($retryConfig['retry_interval'] ?? 60);
                 $strategy = $retryConfig['retry_strategy'] ?? 'exponential';
 
-                $delaySeconds = ($strategy === 'exponential') 
-                    ? $interval * pow(2, $currentRetryCount) 
+                $delaySeconds = ($strategy === 'exponential')
+                    ? $interval * pow(2, $currentRetryCount)
                     : $interval;
-                
+
                 $nextRetryAt = now()->addSeconds($delaySeconds);
 
                 $detail->update([
                     'status' => 'failed',
                     'retry_count' => $newRetryCount,
                     'last_retry_at' => $nextRetryAt,
-                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                    'last_error' => $e->getMessage()."\n".$e->getTraceAsString(),
                 ]);
 
                 // Reschedule for retry
                 self::dispatch($this->campaignId, $this->contactId, $this->stepIndex, $this->traceId)
                     ->delay($nextRetryAt);
 
-                Log::info("Drip step rescheduled for retry", [
+                Log::info('Drip step rescheduled for retry', [
                     'campaign_id' => $this->campaignId,
                     'contact_id' => $this->contactId,
                     'step' => $this->stepIndex,
-                    'retry_count' => $newRetryCount
+                    'retry_count' => $newRetryCount,
                 ]);
             } else {
                 $detail->update([
                     'status' => 'failed',
-                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                    'last_error' => $e->getMessage()."\n".$e->getTraceAsString(),
                 ]);
             }
         }
@@ -167,8 +172,11 @@ class ProcessDripStepJob implements ShouldQueue
         $message = strtolower($e->getMessage());
         $permanentErrors = ['template not found', 'blocked by policy', 'marketing requires opt-in', 'invalid parameter'];
         foreach ($permanentErrors as $error) {
-            if (str_contains($message, $error)) return false;
+            if (str_contains($message, $error)) {
+                return false;
+            }
         }
+
         return true;
     }
 }

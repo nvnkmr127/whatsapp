@@ -7,10 +7,10 @@ use App\Models\ActivityLog;
 use App\Models\Integration;
 use App\Models\TenantBackup;
 use App\Services\BackupService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
-use Exception;
 
 class BackupController extends Controller
 {
@@ -34,7 +34,7 @@ class BackupController extends Controller
         $hasAccess = $team ? $team->hasFeature('backups') : false;
         $hasCloudAccess = $team ? $team->hasFeature('cloud_backups') : false;
 
-        if (!$team) {
+        if (! $team) {
             return redirect()->route('teams.create')->with('flash.banner', 'Please create a team to access backups.');
         }
 
@@ -77,7 +77,7 @@ class BackupController extends Controller
         } catch (Exception $e) {
             return redirect()
                 ->back()
-                ->with('flash.banner', 'Failed to start backup: ' . $e->getMessage())
+                ->with('flash.banner', 'Failed to start backup: '.$e->getMessage())
                 ->with('flash.bannerStyle', 'danger');
         }
     }
@@ -110,7 +110,7 @@ class BackupController extends Controller
 
         // 3. ENFORCE MODEL B ARCHITECTURE:
         // "Tenants must NOT access raw backups. Only platform-level access allowed."
-        if ($backup->isModelB() && !$user->isSuperAdmin()) {
+        if ($backup->isModelB() && ! $user->isSuperAdmin()) {
             return redirect()
                 ->back()
                 ->with('flash.banner', 'This backup is platform-managed and cannot be downloaded directly. Please contact support for assistance.')
@@ -118,7 +118,7 @@ class BackupController extends Controller
         }
 
         // 4. Only allow download of completed or verified backups
-        if (!in_array($backup->status, ['completed', 'verified', 'uploaded'])) {
+        if (! in_array($backup->status, ['completed', 'verified', 'uploaded'])) {
             return redirect()
                 ->back()
                 ->with('flash.banner', 'Only completed backups can be downloaded.')
@@ -127,7 +127,7 @@ class BackupController extends Controller
 
         // 4. Verify the file actually exists on disk before issuing a URL
         $path = "backups/{$backup->path}{$backup->filename}";
-        if (!\Storage::disk('local')->exists($path)) {
+        if (! \Storage::disk('local')->exists($path)) {
             return redirect()
                 ->back()
                 ->with('flash.banner', 'Backup file not found on server.')
@@ -173,7 +173,7 @@ class BackupController extends Controller
             ]);
         } catch (Exception $e) {
             // Audit failures must never block the main operation, but must be logged.
-            \Log::error("Backup audit log failed: " . $e->getMessage(), [
+            \Log::error('Backup audit log failed: '.$e->getMessage(), [
                 'team_id' => $teamId,
                 'action' => $action,
             ]);

@@ -36,7 +36,7 @@ class SystemManagement
 
                 return $result ? trim($result) : 'N/A';
             } catch (\Exception $e) {
-                app_log(t('error_executing_shell_command') . ' ' . $e->getMessage(), 'error');
+                app_log(t('error_executing_shell_command').' '.$e->getMessage(), 'error');
 
                 return 'N/A (error)';
             }
@@ -44,82 +44,82 @@ class SystemManagement
 
         try {
             $dbConnection = DB::connection();
-            $pdo          = $dbConnection->getPdo();
+            $pdo = $dbConnection->getPdo();
 
             $dbInfo = [
-                'version'          => $pdo->query('SELECT version() as version')->fetch()['version'],
-                'sql_mode'         => DB::select('SELECT @@sql_mode as sql_mode')[0]->sql_mode,
-                'max_connections'  => DB::select('SELECT @@max_connections as max_conn')[0]->max_conn,
-                'timezone'         => DB::select('SELECT @@time_zone as timezone')[0]->timezone,
-                'character_set'    => DB::select('SELECT @@character_set_database as charset')[0]->charset,
-                'collation'        => DB::select('SELECT @@collation_database as collation')[0]->collation,
-                'wait_timeout'     => DB::select('SELECT @@wait_timeout as timeout')[0]->timeout . ' seconds',
-                'max_packet_size'  => $this->formatSize(DB::select('SELECT @@max_allowed_packet as packet')[0]->packet),
+                'version' => $pdo->query('SELECT version() as version')->fetch()['version'],
+                'sql_mode' => DB::select('SELECT @@sql_mode as sql_mode')[0]->sql_mode,
+                'max_connections' => DB::select('SELECT @@max_connections as max_conn')[0]->max_conn,
+                'timezone' => DB::select('SELECT @@time_zone as timezone')[0]->timezone,
+                'character_set' => DB::select('SELECT @@character_set_database as charset')[0]->charset,
+                'collation' => DB::select('SELECT @@collation_database as collation')[0]->collation,
+                'wait_timeout' => DB::select('SELECT @@wait_timeout as timeout')[0]->timeout.' seconds',
+                'max_packet_size' => $this->formatSize(DB::select('SELECT @@max_allowed_packet as packet')[0]->packet),
                 'buffer_pool_size' => $this->formatSize(DB::select('SELECT @@innodb_buffer_pool_size as buffer')[0]->buffer),
             ];
         } catch (\Exception $e) {
-            $dbInfo = ['status' => t('unable_to_retrieve_database_information') . ' ' . $e->getMessage()];
-            app_log(t('database_info_retrieval_failed') . ' ' . $e->getMessage(), 'error');
+            $dbInfo = ['status' => t('unable_to_retrieve_database_information').' '.$e->getMessage()];
+            app_log(t('database_info_retrieval_failed').' '.$e->getMessage(), 'error');
         }
 
         $info = [
             'laravel' => [
-                'version'        => app()->version(),
-                'environment'    => app()->environment(),
-                'debug'          => config('app.debug'),
-                'maintenance'    => app()->isDownForMaintenance(),
-                'timezone'       => config('app.timezone'),
-                'locale'         => app()->getLocale(),
-                'cache_driver'   => config('cache.default'),
-                'log_channel'    => config('logging.default'),
-                'queue_driver'   => config('queue.default'),
+                'version' => app()->version(),
+                'environment' => app()->environment(),
+                'debug' => config('app.debug'),
+                'maintenance' => app()->isDownForMaintenance(),
+                'timezone' => config('app.timezone'),
+                'locale' => app()->getLocale(),
+                'cache_driver' => config('cache.default'),
+                'log_channel' => config('logging.default'),
+                'queue_driver' => config('queue.default'),
                 'session_driver' => config('session.driver'),
-                'storage_path'   => storage_path(),
+                'storage_path' => storage_path(),
             ],
 
             'php' => [
-                'version'             => PHP_VERSION,
-                'interface'           => PHP_SAPI,
-                'memory_limit'        => ini_get('memory_limit'),
-                'max_execution_time'  => ini_get('max_execution_time') . ' seconds',
+                'version' => PHP_VERSION,
+                'interface' => PHP_SAPI,
+                'memory_limit' => ini_get('memory_limit'),
+                'max_execution_time' => ini_get('max_execution_time').' seconds',
                 'upload_max_filesize' => ini_get('upload_max_filesize'),
-                'post_max_size'       => ini_get('post_max_size'),
-                'max_input_vars'      => ini_get('max_input_vars'),
-                'display_errors'      => ini_get('display_errors'),
-                'error_reporting'     => ini_get('error_reporting'),
-                'opcache_enabled'     => ini_get('opcache.enable'),
-                'timezone'            => ini_get('date.timezone'),
+                'post_max_size' => ini_get('post_max_size'),
+                'max_input_vars' => ini_get('max_input_vars'),
+                'display_errors' => ini_get('display_errors'),
+                'error_reporting' => ini_get('error_reporting'),
+                'opcache_enabled' => ini_get('opcache.enable'),
+                'timezone' => ini_get('date.timezone'),
             ],
 
             'server' => [
-                'software'         => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
-                'os'               => php_uname(),
-                'os_version'       => php_uname('r'),
-                'architecture'     => php_uname('m'),
-                'hostname'         => gethostname(),
-                'ssl'              => request()->isSecure(),
-                'ip'               => request()->server('SERVER_ADDR') ?? request()->server('SERVER_NAME'),
-                'port'             => request()->server('SERVER_PORT'),
-                'document_root'    => request()->server('DOCUMENT_ROOT'),
-                'server_admin'     => request()->server('SERVER_ADMIN') ?? 'N/A',
+                'software' => $_SERVER['SERVER_SOFTWARE'] ?? 'N/A',
+                'os' => php_uname(),
+                'os_version' => php_uname('r'),
+                'architecture' => php_uname('m'),
+                'hostname' => gethostname(),
+                'ssl' => request()->isSecure(),
+                'ip' => request()->server('SERVER_ADDR') ?? request()->server('SERVER_NAME'),
+                'port' => request()->server('SERVER_PORT'),
+                'document_root' => request()->server('DOCUMENT_ROOT'),
+                'server_admin' => request()->server('SERVER_ADMIN') ?? 'N/A',
                 'total_disk_space' => $this->formatSize(disk_total_space('/')),
-                'free_disk_space'  => $this->formatSize(disk_free_space('/')),
-                'cpu_cores'        => php_sapi_name() === 'cli' ? $safeShellExec('nproc') : 'N/A',
-                'total_ram'        => php_sapi_name() === 'cli' ? $safeShellExec('grep MemTotal /proc/meminfo') : 'N/A',
+                'free_disk_space' => $this->formatSize(disk_free_space('/')),
+                'cpu_cores' => php_sapi_name() === 'cli' ? $safeShellExec('nproc') : 'N/A',
+                'total_ram' => php_sapi_name() === 'cli' ? $safeShellExec('grep MemTotal /proc/meminfo') : 'N/A',
             ],
 
             'database' => $dbInfo,
 
             'permissions' => [
-                'storage_writeable'         => is_writable(storage_path()),
-                'cache_writeable'           => is_writable(storage_path('framework/cache')),
-                'logs_writeable'            => is_writable(storage_path('logs')),
-                'framework_writeable'       => is_writable(storage_path('framework')),
+                'storage_writeable' => is_writable(storage_path()),
+                'cache_writeable' => is_writable(storage_path('framework/cache')),
+                'logs_writeable' => is_writable(storage_path('logs')),
+                'framework_writeable' => is_writable(storage_path('framework')),
                 'bootstrap_cache_writeable' => is_writable(base_path('bootstrap/cache')),
             ],
 
             'env_status' => [
-                'file_exists'   => File::exists(base_path('.env')),
+                'file_exists' => File::exists(base_path('.env')),
                 'last_modified' => File::exists(base_path('.env'))
                 ? date('Y-m-d H:i:s', File::lastModified(base_path('.env')))
                 : null,
@@ -144,21 +144,21 @@ class SystemManagement
         foreach ($extensions as $ext) {
             $info['extensions'][$ext] = [
                 'installed' => extension_loaded($ext),
-                'version'   => phpversion($ext),
+                'version' => phpversion($ext),
             ];
         }
 
         if (extension_loaded('redis')) {
             try {
-                $redis         = Cache::store('redis')->connection();
+                $redis = Cache::store('redis')->connection();
                 $info['redis'] = [
                     'connected' => $redis->ping(),
-                    'version'   => $redis->info()['redis_version']     ?? 'N/A',
-                    'memory'    => $redis->info()['used_memory_human'] ?? 'N/A',
+                    'version' => $redis->info()['redis_version'] ?? 'N/A',
+                    'memory' => $redis->info()['used_memory_human'] ?? 'N/A',
                 ];
             } catch (\Exception $e) {
-                $info['redis'] = t('redis_connection_failed') . ' ' . $e->getMessage();
-                app_log(t('redis_connection_failed') . ' ' . $e->getMessage(), 'error');
+                $info['redis'] = t('redis_connection_failed').' '.$e->getMessage();
+                app_log(t('redis_connection_failed').' '.$e->getMessage(), 'error');
             }
         }
 
@@ -169,18 +169,18 @@ class SystemManagement
     {
         return [
             'versions' => [
-                'core'      => $this->getCoreVersion(),
+                'core' => $this->getCoreVersion(),
                 'framework' => app()->version(),
             ],
             'environment' => [
                 'timezone' => config('app.timezone'),
-                'debug'    => config('app.debug'),
+                'debug' => config('app.debug'),
             ],
             'storage' => [
                 'directory_writable' => File::isWritable(storage_path()),
-                'cache_writable'     => File::isWritable(storage_path('framework/cache')),
-                'app_size'           => $this->formatSize($this->calculateSize(base_path())),
-                'disk_space'         => sprintf(
+                'cache_writable' => File::isWritable(storage_path('framework/cache')),
+                'app_size' => $this->formatSize($this->calculateSize(base_path())),
+                'disk_space' => sprintf(
                     '%s/%s',
                     $this->formatSize(disk_free_space('/')),
                     $this->formatSize(disk_total_space('/'))
@@ -197,7 +197,7 @@ class SystemManagement
 
     protected function calculateSize(string $path): float
     {
-        return cache()->remember('app_size_' . md5($path), now()->addHour(), function () use ($path) {
+        return cache()->remember('app_size_'.md5($path), now()->addHour(), function () use ($path) {
             return collect(File::allFiles($path))->sum->getSize();
         });
     }

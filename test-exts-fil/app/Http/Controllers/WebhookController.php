@@ -13,13 +13,13 @@ class WebhookController extends Controller
 
     public function handle(Request $request)
     {
-        $payload   = $request->all();
+        $payload = $request->all();
         $signature = $request->header('X-Webhook-Signature');
         $modelType = $payload['model'] ?? '';
 
         // Get model table name from class
         $modelInstance = new $modelType;
-        $tableName     = $modelInstance->getTable();
+        $tableName = $modelInstance->getTable();
 
         // Get secret for this model
         $secret = config("webhooks.models.{$tableName}.secret", config('webhooks.signing_secret'));

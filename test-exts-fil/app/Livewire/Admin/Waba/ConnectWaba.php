@@ -25,10 +25,10 @@ class ConnectWaba extends Component
     public $webhook_verify_token;
 
     protected $messages = [
-        'wm_fb_app_id.required'           => 'The Facebook App ID is required.',
-        'wm_fb_app_secret.required'       => 'The Facebook App Secret is required.',
+        'wm_fb_app_id.required' => 'The Facebook App ID is required.',
+        'wm_fb_app_secret.required' => 'The Facebook App Secret is required.',
         'wm_business_account_id.required' => 'The Whatsapp Business Account ID is required.',
-        'wm_access_token.required'        => 'The Whatsapp Access Token is required.',
+        'wm_access_token.required' => 'The Whatsapp Access Token is required.',
     ];
 
     public function mount()
@@ -38,14 +38,14 @@ class ConnectWaba extends Component
 
             return redirect()->route('admin.dashboard');
         }
-        $whatsapp_settings            = get_settings_by_group('whatsapp');
-        $this->wm_fb_app_id           = $whatsapp_settings->wm_fb_app_id;
-        $this->wm_fb_app_secret       = $whatsapp_settings->wm_fb_app_secret;
+        $whatsapp_settings = get_settings_by_group('whatsapp');
+        $this->wm_fb_app_id = $whatsapp_settings->wm_fb_app_id;
+        $this->wm_fb_app_secret = $whatsapp_settings->wm_fb_app_secret;
         $this->wm_business_account_id = $whatsapp_settings->wm_business_account_id;
-        $this->wm_access_token        = $whatsapp_settings->wm_access_token;
-        $this->is_webhook_connected   = $whatsapp_settings->is_webhook_connected;
+        $this->wm_access_token = $whatsapp_settings->wm_access_token;
+        $this->is_webhook_connected = $whatsapp_settings->is_webhook_connected;
         $this->is_whatsmark_connected = $whatsapp_settings->is_whatsmark_connected;
-        $this->webhook_verify_token   = $whatsapp_settings->webhook_verify_token;
+        $this->webhook_verify_token = $whatsapp_settings->webhook_verify_token;
 
         if (empty($this->webhook_verify_token)) {
             $this->webhook_verify_token = Str::random(16);
@@ -60,7 +60,7 @@ class ConnectWaba extends Component
     public function webhookConnect()
     {
         $this->validate([
-            'wm_fb_app_id'     => 'required',
+            'wm_fb_app_id' => 'required',
             'wm_fb_app_secret' => 'required',
         ]);
 
@@ -73,7 +73,7 @@ class ConnectWaba extends Component
 
             $this->notify([
                 'message' => $response['message'] ?? t('webhook_connect_successfully'),
-                'type'    => $response['status'] ? 'success' : 'danger',
+                'type' => $response['status'] ? 'success' : 'danger',
             ], true);
 
             return redirect()->route('admin.connect');
@@ -88,7 +88,7 @@ class ConnectWaba extends Component
     {
         $this->validate([
             'wm_business_account_id' => 'required',
-            'wm_access_token'        => 'required',
+            'wm_access_token' => 'required',
         ]);
 
         try {
@@ -102,7 +102,7 @@ class ConnectWaba extends Component
 
             $this->notify([
                 'message' => $response['status'] ? t('account_connect_successfully') : $response['message'],
-                'type'    => $response['status'] ? 'success' : 'danger',
+                'type' => $response['status'] ? 'success' : 'danger',
             ], true);
 
             return $this->redirect(route('admin.connect'));
@@ -120,7 +120,7 @@ class ConnectWaba extends Component
             $response = $this->disconnectWebhook();
             $this->notify([
                 'message' => $response['status'] ? t('webhook_discoonected_successfully') : $response['message'],
-                'type'    => $response['status'] ? 'success' : 'danger',
+                'type' => $response['status'] ? 'success' : 'danger',
             ]);
         } catch (\Exception $e) {
             whatsapp_log('Webhook Disconnection Failed', 'error', [], $e);

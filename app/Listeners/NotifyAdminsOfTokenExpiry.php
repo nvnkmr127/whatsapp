@@ -21,11 +21,11 @@ class NotifyAdminsOfTokenExpiry implements ShouldQueue
         // In a real implementation, we would fetch admins and send notifications.
         // For now, we log a critical alert which can be picked up by monitoring tools.
 
-        Log::critical("WHATSAPP TOKEN EXPIRING SOON", [
+        Log::critical('WHATSAPP TOKEN EXPIRING SOON', [
             'team_id' => $team->id,
             'team_name' => $team->name,
             'expires_at' => $team->whatsapp_token_expires_at,
-            'days_remaining' => $team->whatsapp_token_expires_at ? (int) $team->whatsapp_token_expires_at->diffInDays() : 'Unknown'
+            'days_remaining' => $team->whatsapp_token_expires_at ? (int) $team->whatsapp_token_expires_at->diffInDays() : 'Unknown',
         ]);
 
         // Future: Notification::send($team->admins, new WhatsAppTokenExpiryNotification($team));

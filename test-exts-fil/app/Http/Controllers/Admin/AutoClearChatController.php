@@ -10,12 +10,12 @@ class AutoClearChatController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'enable_auto_clear_chat'  => 'boolean',
+            'enable_auto_clear_chat' => 'boolean',
             'auto_clear_history_time' => 'required_if:enable_auto_clear_chat,1|nullable|integer|min:1',
         ]);
 
         $settings = [
-            'enable_auto_clear_chat'  => $validated['enable_auto_clear_chat']  ?? false,
+            'enable_auto_clear_chat' => $validated['enable_auto_clear_chat'] ?? false,
             'auto_clear_history_time' => $validated['auto_clear_history_time'] ?? null,
         ];
 
@@ -23,7 +23,7 @@ class AutoClearChatController extends Controller
         set_settings_batch('whats-mark', $settings);
 
         // Check if cron is properly configured
-        $lastCronRun    = get_setting('cron-job.last_cron_run');
+        $lastCronRun = get_setting('cron-job.last_cron_run');
         $cronConfigured = $lastCronRun && Carbon::parse($lastCronRun)->isAfter(Carbon::now()->subDay());
 
         if ($validated['enable_auto_clear_chat'] && ! $cronConfigured) {
@@ -38,7 +38,7 @@ class AutoClearChatController extends Controller
         $settings = get_settings_by_group('whats-mark');
 
         return view('admin.settings.auto-clear-chat', [
-            'enable_auto_clear_chat'  => $settings->enable_auto_clear_chat  ?? false,
+            'enable_auto_clear_chat' => $settings->enable_auto_clear_chat ?? false,
             'auto_clear_history_time' => $settings->auto_clear_history_time ?? null,
         ]);
     }

@@ -14,7 +14,7 @@ class StopBotSettings extends Component
     protected function rules()
     {
         return [
-            'stop_bots_keyword'  => ['required', 'array', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'stop_bots_keyword' => ['required', 'array', 'max:255', new PurifiedInput(t('sql_injection_error'))],
             'restart_bots_after' => 'nullable|numeric|min:0',
         ];
     }
@@ -33,7 +33,7 @@ class StopBotSettings extends Component
     {
         $settings = get_settings_by_group('whats-mark');
 
-        $this->stop_bots_keyword  = $settings->stop_bots_keyword ?? [];
+        $this->stop_bots_keyword = $settings->stop_bots_keyword ?? [];
         $this->restart_bots_after = $settings->restart_bots_after;
     }
 
@@ -42,10 +42,10 @@ class StopBotSettings extends Component
         if (checkPermission('whatsmark_settings.edit')) {
             $this->validate();
 
-            $originalStopBotsKeyword  = get_setting('whats-mark.stop_bots_keyword', []);
+            $originalStopBotsKeyword = get_setting('whats-mark.stop_bots_keyword', []);
             $originalRestartBotsAfter = get_setting('whats-mark.restart_bots_after', null);
 
-            $newStopBotsKeyword  = $this->stop_bots_keyword;
+            $newStopBotsKeyword = $this->stop_bots_keyword;
             $newRestartBotsAfter = $this->restart_bots_after;
 
             $modifiedSettings = [];

@@ -21,7 +21,7 @@ class WhatsAppServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/whatsapp.php' => config_path('whatsapp.php'),
+                __DIR__.'/../config/whatsapp.php' => config_path('whatsapp.php'),
             ], 'whatsapp-config');
         }
 
@@ -33,7 +33,7 @@ class WhatsAppServiceProvider extends ServiceProvider
                     'error',
                     [
                         'exception' => $event->exception->getMessage(),
-                        'job'       => $event->job->payload(),
+                        'job' => $event->job->payload(),
                     ],
                     $event->exception
                 );

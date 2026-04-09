@@ -44,7 +44,7 @@ final class StatusTable extends PowerGridComponent
     public function fields(): PowerGridFields
     {
         return PowerGrid::fields()
-            ->add('color', fn ($value) => $value->color === $value->color ? '<span class="inline-flex items-center rounded-full px-2 py-2" style="background-color: ' . e($value->color) . ';"></span>' : 'N/A');
+            ->add('color', fn ($value) => $value->color === $value->color ? '<span class="inline-flex items-center rounded-full px-2 py-2" style="background-color: '.e($value->color).';"></span>' : 'N/A');
     }
 
     public function columns(): array

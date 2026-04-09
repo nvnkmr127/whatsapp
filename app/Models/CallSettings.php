@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class CallSettings extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -44,13 +43,12 @@ class CallSettings extends Model
      * Relationships
      */
 
-
     /**
      * Check if current time is within configured business hours
      */
     public function isWithinBusinessHours(?Carbon $time = null): bool
     {
-        if (!$this->business_hours) {
+        if (! $this->business_hours) {
             return true; // No restrictions if business hours not configured
         }
 
@@ -81,7 +79,7 @@ class CallSettings extends Model
     public function canReceiveCalls(): bool
     {
         return $this->calling_enabled &&
-            !$this->is_restricted &&
+            ! $this->is_restricted &&
             $this->isWithinBusinessHours();
     }
 
@@ -94,7 +92,7 @@ class CallSettings extends Model
             return false;
         }
 
-        if (!$this->calling_enabled || $this->is_restricted) {
+        if (! $this->calling_enabled || $this->is_restricted) {
             return false;
         }
 
@@ -103,7 +101,7 @@ class CallSettings extends Model
             $showFor = $this->call_icons_config['show_for_countries'] ?? [];
             $hideFor = $this->call_icons_config['hide_for_countries'] ?? [];
 
-            if (!empty($showFor) && !in_array($countryCode, $showFor)) {
+            if (! empty($showFor) && ! in_array($countryCode, $showFor)) {
                 return false;
             }
 
@@ -162,6 +160,7 @@ class CallSettings extends Model
     {
         // Format: https://wa.me/{phone_number}?call=1
         $phoneNumber = str_replace('+', '', $this->phone_number_id);
+
         return "https://wa.me/{$phoneNumber}?call=1";
     }
 }

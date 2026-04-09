@@ -20,7 +20,7 @@ class EnvWatcher
             return;
         }
 
-        $lastModified      = File::lastModified($envPath);
+        $lastModified = File::lastModified($envPath);
         $lastKnownModified = Cache::get(self::CACHE_KEY);
 
         if ($lastKnownModified !== $lastModified) {
@@ -53,7 +53,7 @@ class EnvWatcher
             }
 
         } catch (\Exception $e) {
-            app_log(t('failed_to_clear_cache_after_env_change') . ' ' . $e->getMessage(), 'error');
+            app_log(t('failed_to_clear_cache_after_env_change').' '.$e->getMessage(), 'error');
         }
     }
 }

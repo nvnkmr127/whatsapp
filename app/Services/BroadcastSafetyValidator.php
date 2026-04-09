@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Segment;
 use App\Models\Campaign;
+use App\Models\Segment;
 use Illuminate\Support\Facades\DB;
 
 class BroadcastSafetyValidator
@@ -17,7 +17,7 @@ class BroadcastSafetyValidator
 
         // 1. Check segment size limits
         if ($segment->member_count > config('broadcast.max_recipients')) {
-            $errors[] = "Segment too large ({$segment->member_count} contacts). Max: " . config('broadcast.max_recipients');
+            $errors[] = "Segment too large ({$segment->member_count} contacts). Max: ".config('broadcast.max_recipients');
         }
 
         // 2. Check rate limits
@@ -73,6 +73,7 @@ class BroadcastSafetyValidator
         }
 
         $query = \App\Services\SegmentBuilder::buildQuery($segment->rules, $segment->team_id);
+
         return $query->where('opt_in_status', 'opted_out')->count();
     }
 
@@ -92,6 +93,7 @@ class BroadcastSafetyValidator
         }
 
         $query = \App\Services\SegmentBuilder::buildQuery($segment->rules, $segment->team_id);
+
         return $query->select('phone_number', DB::raw('COUNT(*) as count'))
             ->groupBy('phone_number')
             ->having('count', '>', 1)
@@ -112,6 +114,7 @@ class BroadcastSafetyValidator
         }
 
         $query = \App\Services\SegmentBuilder::buildQuery($segment->rules, $segment->team_id);
+
         return $query->where('is_within_24h_window', false)->count();
     }
 
@@ -129,6 +132,7 @@ class BroadcastSafetyValidator
         }
 
         $query = \App\Services\SegmentBuilder::buildQuery($segment->rules, $segment->team_id);
+
         return $query->where('is_consent_expired', true)->count();
     }
 
@@ -137,7 +141,7 @@ class BroadcastSafetyValidator
      */
     public function deduplicate(Segment $segment): void
     {
-        if (!$segment->isLargeSegment()) {
+        if (! $segment->isLargeSegment()) {
             return; // Only needed for materialized views
         }
 

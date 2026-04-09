@@ -9,7 +9,7 @@ class DatabaseUpgrade extends Controller
     public function index()
     {
         $data = [
-            'currentVersion'  => config('installer.license_verification.current_version'), // Replace with your actual version source
+            'currentVersion' => config('installer.license_verification.current_version'), // Replace with your actual version source
             'requiredVersion' => get_setting('whats-mark.wm_version'),
         ];
 
@@ -30,14 +30,14 @@ class DatabaseUpgrade extends Controller
 
             // Return a redirect URL instead of redirect()
             return response()->json([
-                'message'      => t('database_upgraded_successfully'),
+                'message' => t('database_upgraded_successfully'),
                 'redirect_url' => route('admin.dashboard'),
-                'success'      => true,
+                'success' => true,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => t('database_upgrade_failed') . ': ' . $e->getMessage(),
+                'message' => t('database_upgrade_failed').': '.$e->getMessage(),
             ], 500);
         }
     }

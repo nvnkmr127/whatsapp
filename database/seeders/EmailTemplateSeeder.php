@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\EmailTemplate;
 use App\Enums\EmailUseCase;
+use App\Models\EmailTemplate;
 use Illuminate\Database\Seeder;
 
 class EmailTemplateSeeder extends Seeder
@@ -58,7 +58,7 @@ class EmailTemplateSeeder extends Seeder
                 'is_locked' => true,
                 'is_active' => true,
                 'description' => 'Sent when a team\'s WhatsApp health degrades.',
-            ]
+            ],
         ];
 
         foreach ($templates as $tmpl) {

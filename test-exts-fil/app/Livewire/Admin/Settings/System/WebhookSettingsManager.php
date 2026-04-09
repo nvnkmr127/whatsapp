@@ -25,21 +25,21 @@ class WebhookSettingsManager extends Component
         }
         $settings = get_settings_by_group('webhook');
 
-        $this->webhook_enabled  = $settings->webhook_enabled  ?? false;
-        $this->webhook_url      = $settings->webhook_url      ?? '';
+        $this->webhook_enabled = $settings->webhook_enabled ?? false;
+        $this->webhook_url = $settings->webhook_url ?? '';
         $this->contacts_actions = $settings->contacts_actions ?? [];
-        $this->status_actions   = $settings->status_actions   ?? [];
-        $this->source_actions   = $settings->source_actions   ?? [];
+        $this->status_actions = $settings->status_actions ?? [];
+        $this->source_actions = $settings->source_actions ?? [];
     }
 
     protected function rules()
     {
         return [
-            'webhook_enabled'  => 'boolean',
-            'webhook_url'      => 'required_if:webhook_enabled,true|url',
+            'webhook_enabled' => 'boolean',
+            'webhook_url' => 'required_if:webhook_enabled,true|url',
             'contacts_actions' => 'array',
-            'status_actions'   => 'array',
-            'source_actions'   => 'array',
+            'status_actions' => 'array',
+            'source_actions' => 'array',
         ];
     }
 
@@ -51,16 +51,16 @@ class WebhookSettingsManager extends Component
             $originalSettings = get_settings_by_group('webhook');
 
             $newSettings = [
-                'webhook_enabled'  => $this->webhook_enabled,
-                'webhook_url'      => $this->webhook_url,
+                'webhook_enabled' => $this->webhook_enabled,
+                'webhook_url' => $this->webhook_url,
                 'contacts_actions' => $this->contacts_actions,
-                'status_actions'   => $this->status_actions,
-                'source_actions'   => $this->source_actions,
+                'status_actions' => $this->status_actions,
+                'source_actions' => $this->source_actions,
             ];
 
             // Filter the settings that have been modified
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Save only if there are modifications
@@ -68,7 +68,7 @@ class WebhookSettingsManager extends Component
                 set_settings_batch('webhook', $modifiedSettings);
 
                 $this->notify([
-                    'type'    => 'success',
+                    'type' => 'success',
                     'message' => 'Webhook settings updated successfully.',
                 ]);
             }

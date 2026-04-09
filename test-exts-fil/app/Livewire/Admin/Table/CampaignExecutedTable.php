@@ -54,47 +54,47 @@ final class CampaignExecutedTable extends PowerGridComponent
             ->add('id')
             ->add('campaign_id')
             ->add('rel_id', fn ($model) => ($contact = Contact::find($model->rel_id)) ?
-                $contact->firstname . ' ' . $contact->lastname :
+                $contact->firstname.' '.$contact->lastname :
                 $model->rel_id)
             ->add('rel_type')
             ->add('header_message')
             ->add(
                 'body_message',
-                fn ($model) => ($model->header_message ? $model->header_message . "\n\n" : '') .
-                    ($model->body_message ?? '') .
-                    ($model->footer_message ? "\n\n" . $model->footer_message : '')
+                fn ($model) => ($model->header_message ? $model->header_message."\n\n" : '').
+                    ($model->body_message ?? '').
+                    ($model->footer_message ? "\n\n".$model->footer_message : '')
             )
             ->add('footer_message')
             ->add(
                 'status',
-                fn ($message) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' .
+                fn ($message) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium '.
                     match ($message->status) {
-                        0       => 'bg-red-100 text-red-800 dark:text-red-400 dark:bg-red-900/20',
-                        1       => 'bg-yellow-100 text-yellow-800 dark:text-yellow-400 dark:bg-yellow-900/20',
-                        2       => 'bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20',
+                        0 => 'bg-red-100 text-red-800 dark:text-red-400 dark:bg-red-900/20',
+                        1 => 'bg-yellow-100 text-yellow-800 dark:text-yellow-400 dark:bg-yellow-900/20',
+                        2 => 'bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20',
                         default => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    } .
-                    '">' . match ($message->status) {
-                        0       => 'Failed',
-                        1       => 'Pending',
-                        2       => 'Success',
+                    }.
+                    '">'.match ($message->status) {
+                        0 => 'Failed',
+                        1 => 'Pending',
+                        2 => 'Success',
                         default => 'N/A'
-                    } . '</span>'
+                    }.'</span>'
             )
             ->add('response_message')
             ->add('whatsapp_id')
             ->add(
                 'message_status',
-                fn ($model) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' .
+                fn ($model) => '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium '.
                     match ($model->message_status) {
-                        'sent'      => 'bg-blue-100 text-blue-800 dark:text-blue-400 dark:bg-blue-900/20',
+                        'sent' => 'bg-blue-100 text-blue-800 dark:text-blue-400 dark:bg-blue-900/20',
                         'delivered' => 'bg-green-100 text-green-800 dark:text-green-400 dark:bg-green-900/20',
-                        'read'      => 'bg-purple-100 text-purple-800 dark:text-purple-400 dark:bg-purple-900/20',
-                        'failed'    => 'bg-red-100 text-red-800 dark:text-red-400 dark:bg-red-900/20',
-                        'pending'   => 'bg-yellow-100 text-yellow-800 dark:text-yellow-400 dark:bg-yellow-900/20',
-                        default     => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    } .
-                    '">' . ucfirst($model->message_status ?? 'N/A') . '</span>'
+                        'read' => 'bg-purple-100 text-purple-800 dark:text-purple-400 dark:bg-purple-900/20',
+                        'failed' => 'bg-red-100 text-red-800 dark:text-red-400 dark:bg-red-900/20',
+                        'pending' => 'bg-yellow-100 text-yellow-800 dark:text-yellow-400 dark:bg-yellow-900/20',
+                        default => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }.
+                    '">'.ucfirst($model->message_status ?? 'N/A').'</span>'
             )
             ->add('created_at');
     }

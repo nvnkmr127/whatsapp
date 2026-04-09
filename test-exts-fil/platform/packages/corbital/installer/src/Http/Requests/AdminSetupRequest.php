@@ -24,7 +24,7 @@ class AdminSetupRequest extends FormRequest
     public function rules()
     {
         $rules = [
-            'email'    => ['required', 'string', 'email', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'timezone' => ['required', 'string'],
         ];
@@ -50,10 +50,10 @@ class AdminSetupRequest extends FormRequest
     {
         return [
             'firstname' => 'First Name',
-            'lastname'  => 'Last Name',
-            'email'     => 'Email Address',
-            'password'  => 'Password',
-            'timezone'  => 'Timezone',
+            'lastname' => 'Last Name',
+            'email' => 'Email Address',
+            'password' => 'Password',
+            'timezone' => 'Timezone',
         ];
     }
 }

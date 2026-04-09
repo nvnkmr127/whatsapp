@@ -5,8 +5,8 @@ namespace App\Listeners;
 use App\Events\MessageReceived;
 use App\Services\AutomationService;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AutomationTriggerListener
 {
@@ -29,6 +29,7 @@ class AutomationTriggerListener
         $idempotencyKey = "automation_triggered_msg_{$message->id}";
         if (Cache::has($idempotencyKey)) {
             Log::info("AutomationTriggerListener: Message {$message->id} already processed. Skipping.");
+
             return;
         }
         Cache::put($idempotencyKey, true, 3600); // 1 hour window
@@ -43,7 +44,7 @@ class AutomationTriggerListener
 
         try {
             $automationService = app(AutomationService::class);
-            $handoffService = new \App\Services\BotHandoffService();
+            $handoffService = new \App\Services\BotHandoffService;
 
             // 1. Global Handoff Keywords
             $handoffKeywords = ['human', 'agent', 'person', 'representative', 'help', 'support', 'talk to someone'];
@@ -51,7 +52,8 @@ class AutomationTriggerListener
             foreach ($handoffKeywords as $kw) {
                 if ($cleanContent === $kw) {
                     $handoffService->pause($contact, 'keyword_trigger');
-                    (new \App\Services\AssignmentService())->assign($contact);
+                    (new \App\Services\AssignmentService)->assign($contact);
+
                     return;
                 }
             }
@@ -59,6 +61,7 @@ class AutomationTriggerListener
             // 2. Check active flow
             if ($automationService->handleReply($contact, $content, $message)) {
                 Log::info("AutomationTriggerListener: Handled as reply for contact {$contact->id}");
+
                 return;
             }
 
@@ -67,6 +70,7 @@ class AutomationTriggerListener
             if (isset($metadata['referral'])) {
                 if ($automationService->checkReferralTriggers($contact, $metadata['referral'])) {
                     Log::info("AutomationTriggerListener: Referral trigger matched for contact {$contact->id}");
+
                     return;
                 }
             }
@@ -79,10 +83,9 @@ class AutomationTriggerListener
             }
 
         } catch (\Exception $e) {
-            Log::error("Automation Failure for Message {$message->id}: " . $e->getMessage(), [
-                'exception' => $e
+            Log::error("Automation Failure for Message {$message->id}: ".$e->getMessage(), [
+                'exception' => $e,
             ]);
         }
     }
 }
-

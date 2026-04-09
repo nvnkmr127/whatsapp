@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Services\WhatsAppFlowService;
 use App\Services\FlowEncryptionService;
+use App\Services\WhatsAppFlowService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppFlowController extends Controller
@@ -17,18 +17,18 @@ class WhatsAppFlowController extends Controller
             $encryptedAesKey = $request->input('encrypted_aes_key');
             $initialVector = $request->input('initial_vector');
 
-            if (!$encryptedFlowData || !$encryptedAesKey || !$initialVector) {
+            if (! $encryptedFlowData || ! $encryptedAesKey || ! $initialVector) {
                 return response()->json(['error' => 'Missing encryption parameters'], 400);
             }
 
             // 2. Decrypt
-            $encryptor = new FlowEncryptionService();
+            $encryptor = new FlowEncryptionService;
             $decryptedData = $encryptor->decryptRequest($encryptedFlowData, $encryptedAesKey, $initialVector);
 
-            Log::info("Flow Request Decrypted", ['data' => $decryptedData]);
+            Log::info('Flow Request Decrypted', ['data' => $decryptedData]);
 
             // 3. Process Logic
-            $service = new WhatsAppFlowService();
+            $service = new WhatsAppFlowService;
             $responsePayload = $service->handleRequest($decryptedData);
 
             // 4. Encrypt Response
@@ -38,7 +38,8 @@ class WhatsAppFlowController extends Controller
                 ->header('Content-Type', 'text/plain');
 
         } catch (\Exception $e) {
-            Log::error("Flow Endpoint Error: " . $e->getMessage());
+            Log::error('Flow Endpoint Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }

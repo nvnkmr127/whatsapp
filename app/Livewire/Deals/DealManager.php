@@ -5,14 +5,17 @@ namespace App\Livewire\Deals;
 use App\Models\Deal;
 use App\Models\Pipeline;
 use App\Models\PipelineStage;
-use Livewire\Component;
 use Livewire\Attributes\On;
+use Livewire\Component;
 
 class DealManager extends Component
 {
     public $pipelineId;
+
     public $searchTerm = '';
+
     public $filterOwner = '';
+
     public $filterStatus = 'open';
 
     public function mount()
@@ -21,7 +24,7 @@ class DealManager extends Component
             ->where('is_default', true)
             ->first();
 
-        if (!$defaultPipeline) {
+        if (! $defaultPipeline) {
             // Create default pipeline if none exists
             $defaultPipeline = $this->createDefaultPipeline();
         }
@@ -69,10 +72,10 @@ class DealManager extends Component
 
             if ($this->searchTerm) {
                 $query->where(function ($q) {
-                    $q->where('title', 'like', '%' . $this->searchTerm . '%')
-                      ->orWhereHas('contact', function ($c) {
-                          $c->where('name', 'like', '%' . $this->searchTerm . '%');
-                      });
+                    $q->where('title', 'like', '%'.$this->searchTerm.'%')
+                        ->orWhereHas('contact', function ($c) {
+                            $c->where('name', 'like', '%'.$this->searchTerm.'%');
+                        });
                 });
             }
 
@@ -107,9 +110,9 @@ class DealManager extends Component
 
         if ($deal && $stage && $deal->pipeline_id === $stage->pipeline_id) {
             $deal->moveTo($stage);
-            $this->dispatch('notify', 
-                type: 'success', 
-                message: 'Deal moved to ' . $stage->name
+            $this->dispatch('notify',
+                type: 'success',
+                message: 'Deal moved to '.$stage->name
             );
         }
     }

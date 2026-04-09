@@ -21,7 +21,7 @@ class Installer
      */
     public static function installedFileLocation(): string
     {
-        return base_path(config('installer.storage_path', 'storage') . '/' . config('installer.installed_file', '.installed'));
+        return base_path(config('installer.storage_path', 'storage').'/'.config('installer.installed_file', '.installed'));
     }
 
     /**
@@ -78,12 +78,12 @@ class Installer
         }
 
         $content = file_get_contents($file);
-        $lines   = explode("\n", $content);
-        $info    = [];
+        $lines = explode("\n", $content);
+        $info = [];
 
         foreach ($lines as $line) {
             if (strpos($line, ':') !== false) {
-                [$key, $value]    = explode(':', $line, 2);
+                [$key, $value] = explode(':', $line, 2);
                 $info[trim($key)] = trim($value);
             }
         }

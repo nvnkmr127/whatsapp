@@ -77,40 +77,40 @@ class CampaignCreator extends Component
 
     protected $listeners = [
         'refreshComponent' => '$refresh',
-        'save'             => 'save',
-        'upload-started'   => 'setUploading',
-        'upload-finished'  => 'setUploadingComplete',
+        'save' => 'save',
+        'upload-started' => 'setUploading',
+        'upload-finished' => 'setUploadingComplete',
     ];
 
     public $mergeFields;
 
     protected $messages = [
-        'rel_type.required'                     => 'Please select a relationship type',
-        'rel_type.in'                           => 'Invalid relationship type selected',
+        'rel_type.required' => 'Please select a relationship type',
+        'rel_type.in' => 'Invalid relationship type selected',
         'relation_type_dynamic.required_unless' => 'Please select contacts for the campaign',
-        'campaign_name.required'                => 'Campaign name is required',
-        'campaign_name.min'                     => 'Campaign name must be at least 3 characters',
-        'template_id.required'                  => 'Please select a template',
-        'scheduled_send_time.required_if'       => 'Please set a schedule time for the campaign',
+        'campaign_name.required' => 'Campaign name is required',
+        'campaign_name.min' => 'Campaign name must be at least 3 characters',
+        'template_id.required' => 'Please select a template',
+        'scheduled_send_time.required_if' => 'Please set a schedule time for the campaign',
     ];
 
     protected function rules()
     {
         return [
-            'rel_type'              => 'required|in:lead,customer',
+            'rel_type' => 'required|in:lead,customer',
             'relation_type_dynamic' => 'required_unless:isChecked,true',
-            'headerInputs.*'        => [new PurifiedInput(t('dynamic_input_error'))],
-            'bodyInputs.*'          => [new PurifiedInput(t('dynamic_input_error'))],
-            'footerInputs.*'        => [new PurifiedInput(t('dynamic_input_error'))],
-            'campaign_name'         => [
+            'headerInputs.*' => [new PurifiedInput(t('dynamic_input_error'))],
+            'bodyInputs.*' => [new PurifiedInput(t('dynamic_input_error'))],
+            'footerInputs.*' => [new PurifiedInput(t('dynamic_input_error'))],
+            'campaign_name' => [
                 'required',
                 'min:3',
                 'max:255',
                 new PurifiedInput(t('sql_injection_error')),
             ],
-            'template_id'         => 'required',
+            'template_id' => 'required',
             'scheduled_send_time' => 'required_if:send_now,false',
-            'file'                => 'nullable|file',
+            'file' => 'nullable|file',
         ];
     }
 
@@ -126,7 +126,7 @@ class CampaignCreator extends Component
             $this->isDisconnected = true;
         }
 
-        $this->id   = $this->getId();
+        $this->id = $this->getId();
         $campaignId = request()->route('campaignId') ?? null;
 
         if ($campaignId) {
@@ -150,32 +150,32 @@ class CampaignCreator extends Component
         $this->reset('mergeFields');
 
         $this->mergeFields = json_encode(array_map(fn ($value) => [
-            'key'   => ucfirst($value['name']),
+            'key' => ucfirst($value['name']),
             'value' => $value['key'],
         ], $field));
     }
 
     private function loadExistingCampaign($campaignId)
     {
-        $this->campaign      = Campaign::findOrFail($campaignId);
-        $this->campaign_id   = $this->campaign->id;
+        $this->campaign = Campaign::findOrFail($campaignId);
+        $this->campaign_id = $this->campaign->id;
         $this->campaign_name = $this->campaign->name;
-        $this->rel_type      = $this->campaign->rel_type;
-        $this->template_id   = $this->campaign->template_id;
-        $this->send_now      = $this->campaign->send_now;
-        $this->isChecked     = $this->campaign->select_all;
-        $this->contactCount  = $this->campaign->sending_count;
-        $this->headerInputs  = json_decode($this->campaign->header_params, true) ?? [];
-        $this->bodyInputs    = json_decode($this->campaign->body_params, true)   ?? [];
-        $this->footerInputs  = json_decode($this->campaign->footer_params, true) ?? [];
-        $this->filename      = $this->campaign->filename;
+        $this->rel_type = $this->campaign->rel_type;
+        $this->template_id = $this->campaign->template_id;
+        $this->send_now = $this->campaign->send_now;
+        $this->isChecked = $this->campaign->select_all;
+        $this->contactCount = $this->campaign->sending_count;
+        $this->headerInputs = json_decode($this->campaign->header_params, true) ?? [];
+        $this->bodyInputs = json_decode($this->campaign->body_params, true) ?? [];
+        $this->footerInputs = json_decode($this->campaign->footer_params, true) ?? [];
+        $this->filename = $this->campaign->filename;
 
         // Handle scheduled_send_time when it's null
         $this->scheduled_send_time = $this->campaign->scheduled_send_time
             ? format_date_time($this->campaign->scheduled_send_time)
             : null;
 
-        $relData           = json_decode($this->campaign->rel_data, true);
+        $relData = json_decode($this->campaign->rel_data, true);
         $this->status_name = $relData['status_id'] ?? '';
         $this->source_name = $relData['source_id'] ?? '';
 
@@ -205,9 +205,9 @@ class CampaignCreator extends Component
 
     private function initializeNewCampaign()
     {
-        $this->campaign     = new Campaign;
-        $this->send_now     = false;
-        $this->isChecked    = false;
+        $this->campaign = new Campaign;
+        $this->send_now = false;
+        $this->isChecked = false;
         $this->contactCount = 0;
     }
 
@@ -219,7 +219,7 @@ class CampaignCreator extends Component
     public function loadContacts()
     {
         if (! $this->rel_type) {
-            $this->contacts     = [];
+            $this->contacts = [];
             $this->contactCount = 0;
 
             return;
@@ -335,10 +335,10 @@ class CampaignCreator extends Component
     public function updatedRelType($value)
     {
         $this->relation_type_dynamic = [];
-        $this->status_name           = '';
-        $this->source_name           = '';
-        $this->contacts              = [];
-        $this->contactCount          = 0;
+        $this->status_name = '';
+        $this->source_name = '';
+        $this->contacts = [];
+        $this->contactCount = 0;
 
         if ($this->isChecked) {
             $this->countOfContacts();
@@ -363,7 +363,7 @@ class CampaignCreator extends Component
             $this->validate();
             try {
 
-                $template     = WhatsappTemplate::where('template_id', $this->template_id)->firstOrFail();
+                $template = WhatsappTemplate::where('template_id', $this->template_id)->firstOrFail();
                 $headerFormat = $template->header_data_format ?? 'TEXT';
 
                 // Handle file validation
@@ -399,14 +399,14 @@ class CampaignCreator extends Component
 
                 return redirect()->route('admin.campaigns.list');
             } catch (\Exception $e) {
-                whatsapp_log('Error during campaign save: ' . $e->getMessage(), 'error', [
+                whatsapp_log('Error during campaign save: '.$e->getMessage(), 'error', [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ], $e);
 
                 $this->notify([
-                    'type'    => 'danger',
-                    'message' => t('campaign_save_failed') . ': ' . $e->getMessage(),
+                    'type' => 'danger',
+                    'message' => t('campaign_save_failed').': '.$e->getMessage(),
                 ], true);
             }
         }
@@ -439,7 +439,7 @@ class CampaignCreator extends Component
             // Convert from "d-m-Y h:i A" (12-hour format) to "Y-m-d H:i:s" (24-hour format)
             $dateformat = get_setting('general.date_format');
             $timeformat = get_setting('general.time_format') == '12' ? 'h:i A' : 'h:i';
-            $format     = $dateformat . ' ' . $timeformat;
+            $format = $dateformat.' '.$timeformat;
 
             $scheduledTime = Carbon::createFromFormat($format, $this->scheduled_send_time)
                 ->format('Y-m-d H:i:s');
@@ -447,10 +447,10 @@ class CampaignCreator extends Component
             return $scheduledTime;
         } catch (\Exception $e) {
             $this->addError('scheduled_send_time', 'Invalid date/time format. Use DD-MM-YYYY HH:MM AM/PM');
-            whatsapp_log('Error processing scheduled time: ' . $e->getMessage(), 'error', [
+            whatsapp_log('Error processing scheduled time: '.$e->getMessage(), 'error', [
                 'input_time' => $this->scheduled_send_time,
-                'file'       => $e->getFile(),
-                'line'       => $e->getLine(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ], $e);
 
             return false;
@@ -461,31 +461,31 @@ class CampaignCreator extends Component
     {
         try {
             $this->header_params = json_encode(array_values(array_filter($this->headerInputs)));
-            $this->body_params   = json_encode(array_values(array_filter($this->bodyInputs)));
+            $this->body_params = json_encode(array_values(array_filter($this->bodyInputs)));
             $this->footer_params = json_encode(array_values(array_filter($this->footerInputs)));
 
             $this->campaign = Campaign::updateOrCreate(
                 ['id' => $this->campaign_id ?? null],
                 [
-                    'name'                => $this->campaign_name,
-                    'rel_type'            => $this->rel_type,
-                    'template_id'         => $this->template_id,
+                    'name' => $this->campaign_name,
+                    'rel_type' => $this->rel_type,
+                    'template_id' => $this->template_id,
                     'scheduled_send_time' => $scheduledTime,
-                    'send_now'            => $this->send_now,
-                    'header_params'       => json_encode(array_values(array_filter($this->headerInputs))),
-                    'body_params'         => json_encode(array_values(array_filter($this->bodyInputs))),
-                    'footer_params'       => json_encode(array_values(array_filter($this->footerInputs))),
-                    'select_all'          => $this->isChecked,
-                    'sending_count'       => $this->isChecked ? $this->contactCount : count($this->relation_type_dynamic ?? []),
-                    'filename'            => $this->campaign->filename ?? null, // Avoid error if $this->campaign is null
-                    'rel_data'            => json_encode([
+                    'send_now' => $this->send_now,
+                    'header_params' => json_encode(array_values(array_filter($this->headerInputs))),
+                    'body_params' => json_encode(array_values(array_filter($this->bodyInputs))),
+                    'footer_params' => json_encode(array_values(array_filter($this->footerInputs))),
+                    'select_all' => $this->isChecked,
+                    'sending_count' => $this->isChecked ? $this->contactCount : count($this->relation_type_dynamic ?? []),
+                    'filename' => $this->campaign->filename ?? null, // Avoid error if $this->campaign is null
+                    'rel_data' => json_encode([
                         'status_id' => $this->status_name,
                         'source_id' => $this->source_name,
                     ]),
                 ]
             );
         } catch (\Exception $e) {
-            whatsapp_log('Error in updateCampaignModel: ' . $e->getMessage(), 'error', [
+            whatsapp_log('Error in updateCampaignModel: '.$e->getMessage(), 'error', [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ], $e);
@@ -530,9 +530,9 @@ class CampaignCreator extends Component
             $template = $template->toArray();
 
             $campaignDetailId = CampaignDetail::insertGetId([
-                'campaign_id'    => $this->campaign->id,
-                'rel_id'         => $contact->id,
-                'rel_type'       => $this->rel_type,
+                'campaign_id' => $this->campaign->id,
+                'rel_id' => $contact->id,
+                'rel_type' => $this->rel_type,
                 'header_message' => $this->parseMessage(
                     $template['header_data_text'],
                     $this->headerInputs,
@@ -548,13 +548,13 @@ class CampaignCreator extends Component
                     $this->footerInputs,
                     $contact
                 ),
-                'status'           => $status['status'] ?? 1,
-                'message_status'   => 'sent',
-                'whatsapp_id'      => $status['whatsapp_id']      ?? null,
+                'status' => $status['status'] ?? 1,
+                'message_status' => 'sent',
+                'whatsapp_id' => $status['whatsapp_id'] ?? null,
                 'response_message' => $status['response_message'] ?? '',
             ]);
         } catch (\Exception $e) {
-            whatsapp_log('Error in createCampaignDetail: ' . $e->getMessage(), 'error', [
+            whatsapp_log('Error in createCampaignDetail: '.$e->getMessage(), 'error', [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ], $e);
@@ -570,8 +570,8 @@ class CampaignCreator extends Component
 
         $parsedMessage = $message;
         foreach ((array) $params as $index => $param) {
-            $placeholder   = '{{' . ($index + 1) . '}}';
-            $value         = $param ?? '';
+            $placeholder = '{{'.($index + 1).'}}';
+            $value = $param ?? '';
             $parsedMessage = str_replace($placeholder, $value, $parsedMessage);
         }
 
@@ -581,7 +581,7 @@ class CampaignCreator extends Component
     private function showSuccessNotification()
     {
         $this->notify([
-            'type'    => 'success',
+            'type' => 'success',
             'message' => $this->campaign->wasRecentlyCreated
                 ? t('campaign_created_successfully')
                 : t('campaign_update_successfully'),
@@ -591,11 +591,11 @@ class CampaignCreator extends Component
     protected function getFileValidationRules($format)
     {
         return match ($format) {
-            'IMAGE'    => ['mimes:jpeg,png', 'max:8192'],
+            'IMAGE' => ['mimes:jpeg,png', 'max:8192'],
             'DOCUMENT' => ['mimes:pdf,doc,docx,txt,ppt,pptx,xlsx,xls', 'max:102400'],
-            'VIDEO'    => ['mimes:mp4,3gp', 'max:16384'],
-            'AUDIO'    => ['mimes:mp3,wav,aac,ogg', 'max:16384'],
-            default    => ['file', 'max:5120'],
+            'VIDEO' => ['mimes:mp4,3gp', 'max:16384'],
+            'AUDIO' => ['mimes:mp3,wav,aac,ogg', 'max:16384'],
+            default => ['file', 'max:5120'],
         };
     }
 
@@ -607,11 +607,11 @@ class CampaignCreator extends Component
         }
 
         $directory = match ($format) {
-            'IMAGE'    => 'campaign/images',
+            'IMAGE' => 'campaign/images',
             'DOCUMENT' => 'campaign/documents',
-            'VIDEO'    => 'campaign/videos',
-            'AUDIO'    => 'campaign/audio',
-            default    => 'campaign',
+            'VIDEO' => 'campaign/videos',
+            'AUDIO' => 'campaign/audio',
+            default => 'campaign',
         };
 
         $this->campaign->filename = $this->file->storeAs(
@@ -625,7 +625,7 @@ class CampaignCreator extends Component
     {
         $original = str_replace(' ', '_', $this->file->getClientOriginalName());
 
-        return pathinfo($original, PATHINFO_FILENAME) . '_' . time() . '.' . $this->file->extension();
+        return pathinfo($original, PATHINFO_FILENAME).'_'.time().'.'.$this->file->extension();
     }
 
     public function setUploading()

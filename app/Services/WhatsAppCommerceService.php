@@ -5,18 +5,20 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\Team;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class WhatsAppCommerceService
 {
     protected $baseUrl;
+
     protected $team;
+
     protected $token;
+
     protected $catalogId;
 
-    public function __construct(Team $team = null)
+    public function __construct(?Team $team = null)
     {
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
         if ($team) {
             $this->setTeam($team);
         }
@@ -26,9 +28,10 @@ class WhatsAppCommerceService
     {
         $this->team = $team;
         $this->token = $team->whatsapp_access_token;
-        // Assuming catalog_id is stored in team metadata or settings. 
+        // Assuming catalog_id is stored in team metadata or settings.
         // For now, let's look for it in team config or require it passed.
-        $this->catalogId = "123456789"; // Placeholder or fetch from DB
+        $this->catalogId = '123456789'; // Placeholder or fetch from DB
+
         return $this;
     }
 
@@ -36,16 +39,16 @@ class WhatsAppCommerceService
     {
         // 1. Audit Readiness
         $audit = $product->readiness;
-        if (!$audit['is_ready']) {
+        if (! $audit['is_ready']) {
             $product->update([
                 'sync_state' => 'failed',
-                'sync_errors' => implode(", ", $audit['issues'])
+                'sync_errors' => implode(', ', $audit['issues']),
             ]);
-            throw new \Exception("Product not ready for sync: " . implode(", ", $audit['issues']));
+            throw new \Exception('Product not ready for sync: '.implode(', ', $audit['issues']));
         }
 
-        if (!$this->token) {
-            throw new \Exception("WhatsApp credentials missing for this team.");
+        if (! $this->token) {
+            throw new \Exception('WhatsApp credentials missing for this team.');
         }
 
         $product->update(['sync_state' => 'syncing']);
@@ -69,16 +72,16 @@ class WhatsAppCommerceService
 
             // For demo purposes, we simulate success
             $product->update([
-                'meta_product_id' => 'META_' . strtoupper(bin2hex(random_bytes(4))),
+                'meta_product_id' => 'META_'.strtoupper(bin2hex(random_bytes(4))),
                 'sync_state' => 'synced',
-                'sync_errors' => null
+                'sync_errors' => null,
             ]);
 
             return true;
         } catch (\Exception $e) {
             $product->update([
                 'sync_state' => 'failed',
-                'sync_errors' => $e->getMessage()
+                'sync_errors' => $e->getMessage(),
             ]);
             throw $e;
         }

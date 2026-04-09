@@ -31,8 +31,8 @@ class ProcessCallBilling implements ShouldQueue
             // Record call usage and deduct from wallet
             $success = $this->billingService->recordCallUsage($team, $call);
 
-            if (!$success) {
-                Log::warning("Call billing failed - insufficient balance", [
+            if (! $success) {
+                Log::warning('Call billing failed - insufficient balance', [
                     'team_id' => $team->id,
                     'call_id' => $call->call_id,
                     'cost' => $call->cost_amount,
@@ -41,7 +41,7 @@ class ProcessCallBilling implements ShouldQueue
                 // Optionally notify team about insufficient balance
                 // You could dispatch a notification event here
             } else {
-                Log::info("Call successfully billed", [
+                Log::info('Call successfully billed', [
                     'team_id' => $team->id,
                     'call_id' => $call->call_id,
                     'cost' => $call->cost_amount,
@@ -49,7 +49,7 @@ class ProcessCallBilling implements ShouldQueue
                 ]);
             }
         } catch (\Exception $e) {
-            Log::error("Error processing call billing", [
+            Log::error('Error processing call billing', [
                 'team_id' => $team->id,
                 'call_id' => $call->call_id,
                 'error' => $e->getMessage(),
@@ -66,7 +66,7 @@ class ProcessCallBilling implements ShouldQueue
      */
     public function failed(CallEnded $event, \Throwable $exception): void
     {
-        Log::error("Call billing job failed permanently", [
+        Log::error('Call billing job failed permanently', [
             'call_id' => $event->call->call_id,
             'error' => $exception->getMessage(),
         ]);

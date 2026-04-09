@@ -12,7 +12,9 @@ class LoginSecurityNotification extends Notification implements ShouldQueue
     use Queueable;
 
     protected $ip;
+
     protected $userAgent;
+
     protected $time;
 
     /**
@@ -43,14 +45,14 @@ class LoginSecurityNotification extends Notification implements ShouldQueue
         return (new MailMessage)
             ->mailer(\App\Enums\EmailUseCase::ALERT->getMailer())
             ->subject('Security Alert: New Login Detected')
-            ->greeting('Hello ' . $notifiable->name . '!')
+            ->greeting('Hello '.$notifiable->name.'!')
             ->line('A new login was detected for your account from an unrecognized device or location.')
-            ->line('**Time:** ' . $this->time)
-            ->line('**IP Address:** ' . $this->ip)
-            ->line('**Device:** ' . $this->userAgent)
+            ->line('**Time:** '.$this->time)
+            ->line('**IP Address:** '.$this->ip)
+            ->line('**Device:** '.$this->userAgent)
             ->action('Review Recent Activity', route('dashboard'))
             ->line('If this was you, you can safely ignore this message. If not, please change your security settings immediately.')
-            ->salutation('Stay secure, ' . config('app.name'));
+            ->salutation('Stay secure, '.config('app.name'));
     }
 
     /**

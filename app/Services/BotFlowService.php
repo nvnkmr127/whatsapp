@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Contact;
 use App\Models\Flow;
 use App\Models\FlowSession;
-use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Log;
 
 class BotFlowService
@@ -25,7 +24,7 @@ class BotFlowService
             ->where('trigger_keyword', 'LIKE', $keyword) // SQLite is case-insensitive by default for ASCII
             ->first();
 
-        if (!$flow) {
+        if (! $flow) {
             // Check PHP side logic (strtoupper compare) if DB ILIKE not reliable
             return false;
         }
@@ -45,10 +44,11 @@ class BotFlowService
             'contact_id' => $contact->id,
             'current_step_id' => $flow->nodes[0]['id'] ?? null, // Start node
             'state' => [],
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         $this->executeStep($session);
+
         return true;
     }
 
@@ -58,8 +58,9 @@ class BotFlowService
             ->where('status', 'active')
             ->first();
 
-        if (!$session)
+        if (! $session) {
             return false;
+        }
 
         $flow = $session->flow;
         $currentNodeId = $session->current_step_id;
@@ -89,8 +90,9 @@ class BotFlowService
         $flow = $session->flow;
         $node = $this->findNode($flow, $session->current_step_id);
 
-        if (!$node) {
+        if (! $node) {
             $session->update(['status' => 'failed']);
+
             return;
         }
 
@@ -98,13 +100,13 @@ class BotFlowService
         $content = $node['data']['content'] ?? '';
 
         // Execute Action
-        $waService = new WhatsAppService();
+        $waService = new WhatsAppService;
         $waService->setTeam($flow->team); // Assuming Flow has Team
 
         try {
             $waService->sendText($session->contact->phone_number, $content);
         } catch (\Exception $e) {
-            Log::error("Bot Execution Error: " . $e->getMessage());
+            Log::error('Bot Execution Error: '.$e->getMessage());
         }
 
         // Decisions
@@ -124,18 +126,18 @@ class BotFlowService
             $session->update(['status' => 'completed']);
             // Update active conversation to 'open' (needs human)
             $conversation = $session->contact->activeConversation;
-            if (!$conversation) {
+            if (! $conversation) {
                 // If no active convo, resolve one? Or create new?
                 // Usually we just mark it.
                 // For now, if no convo, create one?
-                $conversation = (new \App\Services\ConversationService())->ensureActiveConversation($session->contact);
+                $conversation = (new \App\Services\ConversationService)->ensureActiveConversation($session->contact);
             }
             // Logic: Handover means unassign bot, maybe assign to 'Support' queue?
             $conversation->update(['status' => 'open', 'assigned_to' => null]);
             // Maybe add a note?
             $conversation->internalNotes()->create([
                 'content' => 'Bot: Handed over to human agent.',
-                'user_id' => null // System
+                'user_id' => null, // System
             ]);
         } elseif ($type === 'add_tag') {
             $tag = $node['data']['tag'] ?? null;
@@ -159,9 +161,11 @@ class BotFlowService
     {
         $nodes = $flow->nodes ?? [];
         foreach ($nodes as $node) {
-            if (($node['id'] ?? '') === $nodeId)
+            if (($node['id'] ?? '') === $nodeId) {
                 return $node;
+            }
         }
+
         return null;
     }
 
@@ -173,6 +177,7 @@ class BotFlowService
                 return $edge['target'] ?? null;
             }
         }
+
         return null;
     }
 }

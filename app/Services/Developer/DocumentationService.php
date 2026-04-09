@@ -42,12 +42,12 @@ class DocumentationService
                             'email' => 'jane@company.com',
                             'custom_attributes' => [
                                 'tier' => 'enterprise',
-                                'referred_by' => 'partner_a'
+                                'referred_by' => 'partner_a',
                             ],
-                            'opt_in' => true
-                        ]
-                    ]
-                ]
+                            'opt_in' => true,
+                        ],
+                    ],
+                ],
             ],
             [
                 'id' => 'messages',
@@ -64,8 +64,8 @@ class DocumentationService
                                 'json' => [
                                     'to' => '+1...',
                                     'type' => 'text',
-                                    'text' => ['body' => 'Protocol engaged.']
-                                ]
+                                    'text' => ['body' => 'Protocol engaged.'],
+                                ],
                             ],
                             [
                                 'label' => 'Marketing Template',
@@ -78,15 +78,15 @@ class DocumentationService
                                         'components' => [
                                             [
                                                 'type' => 'body',
-                                                'parameters' => [['type' => 'text', 'text' => '8812']]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
+                                                'parameters' => [['type' => 'text', 'text' => '8812']],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
             [
                 'id' => 'templates',
@@ -100,8 +100,8 @@ class DocumentationService
                         'curl' => 'curl -X GET "{base_url}/templates" \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Accept: application/json"',
-                    ]
-                ]
+                    ],
+                ],
             ],
             [
                 'id' => 'inbound-sources',

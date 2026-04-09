@@ -10,21 +10,21 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
- * @property int                             $id
- * @property string                          $firstname
- * @property string                          $lastname
- * @property string                          $phone
- * @property string|null                     $default_language
- * @property string|null                     $profile_image_url
- * @property string                          $email
+ * @property int $id
+ * @property string $firstname
+ * @property string $lastname
+ * @property string $phone
+ * @property string|null $default_language
+ * @property string|null $profile_image_url
+ * @property string $email
  * @property \Illuminate\Support\Carbon|null $email_verified_at
- * @property string                          $password
- * @property int|null                        $role_id
- * @property int                             $is_admin
- * @property string|null                     $remember_token
+ * @property string $password
+ * @property int|null $role_id
+ * @property int $is_admin
+ * @property string|null $remember_token
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property string|null                     $banned_at
+ * @property string|null $banned_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Contact> $contacts
  * @property-read int|null $contacts_count
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
@@ -34,7 +34,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Role> $roles
  * @property-read int|null $roles_count
  *
- * @method static \Database\Factories\UserFactory                    factory($count = null, $state = [])
+ * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User permission($permissions, $without = false)
@@ -64,6 +64,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
     use HasRoles;
 
     /**
@@ -103,7 +104,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
+            'password' => 'hashed',
         ];
     }
 

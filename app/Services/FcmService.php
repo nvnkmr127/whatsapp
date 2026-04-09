@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
 
 class FcmService
 {
@@ -37,22 +37,23 @@ class FcmService
 
         try {
             $report = $messaging->sendMulticast($message, $tokens);
-            
+
             if ($report->hasFailures()) {
                 foreach ($report->failures() as $failure) {
                     $token = $failure->targetIdentifier();
-                    Log::warning("FCM delivery failed for token: {$token}. Error: " . $failure->error()->getMessage());
-                    
+                    Log::warning("FCM delivery failed for token: {$token}. Error: ".$failure->error()->getMessage());
+
                     // Cleanup invalid tokens
                     if ($failure->error()->getMessage() === 'Requested entity was not found.') {
-                         \App\Models\UserFcmToken::where('token', $token)->delete();
+                        \App\Models\UserFcmToken::where('token', $token)->delete();
                     }
                 }
             }
 
             return $report;
         } catch (\Exception $e) {
-            Log::error("FCM Delivery Error: " . $e->getMessage());
+            Log::error('FCM Delivery Error: '.$e->getMessage());
+
             return null;
         }
     }

@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
-
-use \App\Traits\HasTeam;
 
 class Cart extends Model
 {
@@ -21,7 +20,7 @@ class Cart extends Model
         'context_key',
         'expires_at',
         'reminder_sent_at',
-        'meta_data'
+        'meta_data',
     ];
 
     protected $casts = [
@@ -69,6 +68,7 @@ class Cart extends Model
     public function getCartItems()
     {
         $items = $this->items ?? [];
+
         return collect($items)->map(function ($item) {
             return CartItem::fromArray($item);
         });
@@ -87,7 +87,7 @@ class Cart extends Model
             $items->push($newItem);
         }
 
-        $this->items = $items->map(fn($item) => $item->toArray())->values()->all();
+        $this->items = $items->map(fn ($item) => $item->toArray())->values()->all();
         $this->save();
     }
 
@@ -98,7 +98,7 @@ class Cart extends Model
             return $item->product_id == $productId;
         });
 
-        $this->items = $items->map(fn($item) => $item->toArray())->values()->all();
+        $this->items = $items->map(fn ($item) => $item->toArray())->values()->all();
         $this->save();
     }
 

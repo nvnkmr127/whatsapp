@@ -4,13 +4,13 @@ namespace App\Jobs;
 
 use App\Models\Campaign;
 use App\Models\WhatsappTemplate;
+use App\Services\TemplateHealthService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use App\Services\TemplateHealthService;
 
 class AggregateTemplateStatsJob implements ShouldQueue
 {
@@ -35,7 +35,7 @@ class AggregateTemplateStatsJob implements ShouldQueue
         // To avoid re-summing everything every time, we could:
         // 1. Only look at campaigns updated recently (incremental) -> Hard to manage state.
         // 2. Full re-calc (Expensive for large scale).
-        // 3. Simple approach: Group by template_id on Campaigns table. 
+        // 3. Simple approach: Group by template_id on Campaigns table.
         //    Campaign has sent_count, read_count.
 
         $stats = Campaign::query()
@@ -45,8 +45,9 @@ class AggregateTemplateStatsJob implements ShouldQueue
             ->get();
 
         foreach ($stats as $stat) {
-            if (!$stat->template_id)
+            if (! $stat->template_id) {
                 continue;
+            }
 
             $template = WhatsappTemplate::find($stat->template_id);
             if ($template) {

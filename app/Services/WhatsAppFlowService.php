@@ -18,16 +18,16 @@ class WhatsAppFlowService
         'CONTACT_US',
         'CUSTOMER_SUPPORT',
         'SURVEY',
-        'OTHER'
+        'OTHER',
     ];
 
     protected CredentialResolver $resolver;
 
-    public function __construct(WhatsAppService $whatsappService = null, Team $team = null, CredentialResolver $resolver = null)
+    public function __construct(?WhatsAppService $whatsappService = null, ?Team $team = null, ?CredentialResolver $resolver = null)
     {
         $this->whatsappService = $whatsappService ?: app(WhatsAppService::class);
         $this->resolver = $resolver ?: app(CredentialResolver::class);
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
         if ($team) {
             $this->setTeam($team);
         }
@@ -40,8 +40,8 @@ class WhatsAppFlowService
         $this->token = $creds['token'];
         $this->wabaId = $creds['waba_id'];
 
-        if (!$this->token || !$this->wabaId) {
-            throw new \Exception("WhatsApp Business Account credentials missing.");
+        if (! $this->token || ! $this->wabaId) {
+            throw new \Exception('WhatsApp Business Account credentials missing.');
         }
 
         return $this;
@@ -59,7 +59,7 @@ class WhatsAppFlowService
             ]);
 
         if ($response->failed()) {
-            throw new \Exception("Meta Flow Creation Failed: " . $response->body());
+            throw new \Exception('Meta Flow Creation Failed: '.$response->body());
         }
 
         $data = $response->json();
@@ -82,13 +82,13 @@ class WhatsAppFlowService
 
         // 1. Generate Meta-compatible JSON (v3.0/v6.0)
         $metaJson = $this->generateMetaJson([
-            'screens' => $designData['screens']
+            'screens' => $designData['screens'],
         ], $flow->uses_data_endpoint);
 
         $jsonContent = json_encode($metaJson, JSON_PRETTY_PRINT);
 
         // 2. Create a temporary file for the upload
-        $tempPath = sys_get_temp_dir() . '/flow_' . $flow->id . '.json';
+        $tempPath = sys_get_temp_dir().'/flow_'.$flow->id.'.json';
         file_put_contents($tempPath, $jsonContent);
 
         // 3. Upload to Meta Assets Endpoint (multipart/form-data)
@@ -103,19 +103,19 @@ class WhatsAppFlowService
         @unlink($tempPath);
 
         if ($response->failed()) {
-            throw new \Exception("Meta Asset Upload Failed: " . $response->body());
+            throw new \Exception('Meta Asset Upload Failed: '.$response->body());
         }
 
         $result = $response->json();
 
         // Check for validation errors from Meta
-        if (isset($result['validation_errors']) && !empty($result['validation_errors'])) {
+        if (isset($result['validation_errors']) && ! empty($result['validation_errors'])) {
             $errors = json_encode($result['validation_errors']);
             throw new \Exception("Flow Validation Errors: {$errors}");
         }
 
-        if (!$result['success']) {
-            throw new \Exception("Unknown Meta Error: " . json_encode($result));
+        if (! $result['success']) {
+            throw new \Exception('Unknown Meta Error: '.json_encode($result));
         }
 
         // Save local copy
@@ -140,24 +140,24 @@ class WhatsAppFlowService
             $subcode = $error['error']['error_subcode'] ?? 0;
 
             // Handle Missing Public Key (Error 139002 / Subcode 4233012)
-            if (($subcode == 4233012 || $code == 139002) && !$isRetry) {
+            if (($subcode == 4233012 || $code == 139002) && ! $isRetry) {
                 try {
                     if ($this->ensurePublicKeyUploaded()) {
                         return $this->publishFlow($flow, true);
                     }
                 } catch (\Exception $e) {
-                    throw new \Exception("Meta Flow Publish Failed: " . $body . " | Auto-repair failed with error: " . $e->getMessage());
+                    throw new \Exception('Meta Flow Publish Failed: '.$body.' | Auto-repair failed with error: '.$e->getMessage());
                 }
             }
 
-            throw new \Exception("Meta Flow Publish Failed: " . $body);
+            throw new \Exception('Meta Flow Publish Failed: '.$body);
         }
 
         // 2. Create Internal Version Snapshot
         $newVersionNumber = $flow->latest_version_number + 1;
 
         // Hash content for integrity checks
-        $contentHash = md5(json_encode($flow->design_data) . json_encode($flow->flow_json));
+        $contentHash = md5(json_encode($flow->design_data).json_encode($flow->flow_json));
 
         $version = \App\Models\WhatsAppFlowVersion::create([
             'whatsapp_flow_id' => $flow->id,
@@ -167,14 +167,14 @@ class WhatsAppFlowService
             'meta_publish_id' => $response->json()['id'] ?? null,
             'design_data' => $flow->design_data,
             'flow_json' => $flow->flow_json,
-            'entry_point_config' => $flow->entry_point_config
+            'entry_point_config' => $flow->entry_point_config,
         ]);
 
         // 3. Update Flow Head
         $flow->update([
             'status' => 'PUBLISHED', // Sync status
             'active_version_id' => $version->id,
-            'latest_version_number' => $newVersionNumber
+            'latest_version_number' => $newVersionNumber,
         ]);
 
         return $response->json();
@@ -189,25 +189,25 @@ class WhatsAppFlowService
         try {
             // 1. Generate RSA Key Pair (2048-bit)
             $res = openssl_pkey_new([
-                "private_key_bits" => 2048,
-                "private_key_type" => OPENSSL_KEYTYPE_RSA,
+                'private_key_bits' => 2048,
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
             ]);
 
-            if (!$res) {
-                throw new \Exception("OpenSSL key generation failed: " . openssl_error_string());
+            if (! $res) {
+                throw new \Exception('OpenSSL key generation failed: '.openssl_error_string());
             }
 
             openssl_pkey_export($res, $privateKey);
             $publicKeyData = openssl_pkey_get_details($res);
-            if (!$publicKeyData) {
-                throw new \Exception("Failed to get public key details from OpenSSL.");
+            if (! $publicKeyData) {
+                throw new \Exception('Failed to get public key details from OpenSSL.');
             }
-            $publicKey = $publicKeyData["key"];
+            $publicKey = $publicKeyData['key'];
 
             // 2. Upload to Meta Business Account Public Key Endpoint
             // Note: Meta documentation says public_key is managed at WABA account level for Flows.
-            if (!$this->wabaId) {
-                throw new \Exception("WhatsApp Business Account ID (WABA) is missing. Please check your system settings.");
+            if (! $this->wabaId) {
+                throw new \Exception('WhatsApp Business Account ID (WABA) is missing. Please check your system settings.');
             }
 
             $response = Http::withToken((string) $this->token)
@@ -216,7 +216,7 @@ class WhatsAppFlowService
                 ]);
 
             if ($response->failed()) {
-                throw new \Exception("Meta Public Key Upload API Failed (WABA: {$this->wabaId}): " . $response->body());
+                throw new \Exception("Meta Public Key Upload API Failed (WABA: {$this->wabaId}): ".$response->body());
             }
 
             // 3. Persist keys to Team Settings (for future decryption)
@@ -230,7 +230,7 @@ class WhatsAppFlowService
 
             return true;
         } catch (\Exception $e) {
-            Log::error("Flow Public Key Repair Failed: " . $e->getMessage());
+            Log::error('Flow Public Key Repair Failed: '.$e->getMessage());
             throw $e; // Re-throw to be caught by publishFlow
         }
     }
@@ -240,8 +240,9 @@ class WhatsAppFlowService
      */
     protected function sanitizeId($id)
     {
-        if (!$id)
+        if (! $id) {
             return $id;
+        }
         // Meta requires [a-zA-Z_]+
         // Map 0-9 to g-p to avoid collisions with hex 'a-f' from uniqid()
         $map = [
@@ -254,8 +255,9 @@ class WhatsAppFlowService
             '6' => 'm',
             '7' => 'n',
             '8' => 'o',
-            '9' => 'p'
+            '9' => 'p',
         ];
+
         return strtr((string) $id, $map);
     }
 
@@ -285,6 +287,7 @@ class WhatsAppFlowService
                 }
             }
         }
+
         return $design;
     }
 
@@ -323,8 +326,9 @@ class WhatsAppFlowService
 
                 // Map
                 $mapped = $this->mapComponent($comp, $nextScreenId);
-                if ($mapped)
+                if ($mapped) {
                     $children[] = $mapped;
+                }
             }
 
             // Logic to determine if this screen is strictly terminal
@@ -332,14 +336,15 @@ class WhatsAppFlowService
             // If it has 'next' action but NO next screen, it MUST be terminal (fallback).
             if ($hasCompleteAction) {
                 $isTerminal = true;
-            } elseif ($hasNavigationAction && !$nextScreenId) {
+            } elseif ($hasNavigationAction && ! $nextScreenId) {
                 $isTerminal = true;
-            } else if (!$hasNavigationAction && !$hasCompleteAction) {
-                // Screen with no actions? Maybe strict validation fails, but let's assume valid static screen? 
-                // No, a screen must have navigation. 
+            } elseif (! $hasNavigationAction && ! $hasCompleteAction) {
+                // Screen with no actions? Maybe strict validation fails, but let's assume valid static screen?
+                // No, a screen must have navigation.
                 // Let's assume if it's the last one, it's terminal.
-                if (!$nextScreenId)
+                if (! $nextScreenId) {
                     $isTerminal = true;
+                }
             }
 
             // Screen Definition
@@ -349,25 +354,25 @@ class WhatsAppFlowService
                 'data' => (object) [],
                 'layout' => [
                     'type' => 'SingleColumnLayout',
-                    'children' => $children
+                    'children' => $children,
                 ],
-                'terminal' => $isTerminal
+                'terminal' => $isTerminal,
             ];
 
             if ($isTerminal) {
                 $screenDef['success'] = true;
                 $terminalScreens[] = $screenId;
-                // Terminal screens MUST NOT have routing entries in strict mode? 
+                // Terminal screens MUST NOT have routing entries in strict mode?
                 // Docs say: "Routes can be empty for a screen if there is no forward route from it."
                 // "All routes must end at the terminal screen."
                 $routing[$screenId] = [];
             } else {
-                // Non-terminal screens must route somewhere. 
+                // Non-terminal screens must route somewhere.
                 // In our linear model, they route to the next screen.
                 if ($nextScreenId) {
                     $routing[$screenId] = [$nextScreenId];
                 } else {
-                    // Startling case: Non-terminal but no next screen? 
+                    // Startling case: Non-terminal but no next screen?
                     // Should have been caught by "fallback terminal" logic above.
                     $routing[$screenId] = [];
                 }
@@ -384,28 +389,32 @@ class WhatsAppFlowService
             $mediaPickers = 0;
             $images = 0;
             foreach ($children as $c) {
-                if (in_array($c['type'], ['PhotoPicker', 'DocumentPicker']))
+                if (in_array($c['type'], ['PhotoPicker', 'DocumentPicker'])) {
                     $mediaPickers++;
-                if ($c['type'] === 'Image')
+                }
+                if ($c['type'] === 'Image') {
                     $images++;
+                }
             }
-            if ($mediaPickers > 1)
+            if ($mediaPickers > 1) {
                 throw new \Exception("Constraint Violation: Multiple Media Pickers in '{$screen['title']}'");
-            if ($images > 3)
+            }
+            if ($images > 3) {
                 throw new \Exception("Constraint Violation: Too many images in '{$screen['title']}'");
+            }
         }
 
         // Validate Routing: Ensure Entry Screen exists (screen with no inbound edges)
         // In our linear logic ($routing[$id] = [$nextId]), Screen[0] is never a target, so it is the entry.
         // Screen[1] is target of Screen[0], etc.
-        // This guarantees: 
+        // This guarantees:
         // 1. One Entry Screen (Screen[0])
         // 2. No Loops (forward only)
         // 3. Termination (last screen is terminal)
 
         $json = [
             'version' => '6.0',
-            'screens' => $screens
+            'screens' => $screens,
         ];
 
         if ($usesEndpoint) {
@@ -424,13 +433,13 @@ class WhatsAppFlowService
             case 'TextBody':
                 return [
                     'type' => 'TextBody',
-                    'text' => $comp['text']
+                    'text' => $comp['text'],
                 ];
-            // ... (keep intermediate cases same, skip to Footer)
+                // ... (keep intermediate cases same, skip to Footer)
 
-            // Actually I shouldn't replace the whole thing if I can help it, but mapComponent start is far away.
-            // I'll replace the Switch start and the Footer case separately? No, function signature needs change.
-            // I will replace the start of mapComponent first.
+                // Actually I shouldn't replace the whole thing if I can help it, but mapComponent start is far away.
+                // I'll replace the Switch start and the Footer case separately? No, function signature needs change.
+                // I will replace the start of mapComponent first.
 
             case 'TextInput':
                 return [
@@ -438,14 +447,14 @@ class WhatsAppFlowService
                     'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
-                    'input-type' => 'text' // Default
+                    'input-type' => 'text', // Default
                 ];
             case 'TextArea':
                 return [
                     'type' => 'TextArea', // Meta supports TextArea
                     'name' => $this->sanitizeId($comp['name']),
                     'label' => $comp['label'],
-                    'required' => $comp['required'] ?? false
+                    'required' => $comp['required'] ?? false,
                 ];
             case 'CheckboxGroup':
                 return [
@@ -457,7 +466,7 @@ class WhatsAppFlowService
                     'max-selected-items' => 5,
                     'data-source' => array_map(function ($opt) {
                         return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
-                    }, $comp['options'] ?? [])
+                    }, $comp['options'] ?? []),
                 ];
             case 'RadioGroup':
                 return [
@@ -467,7 +476,7 @@ class WhatsAppFlowService
                     'required' => $comp['required'] ?? false,
                     'data-source' => array_map(function ($opt) {
                         return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
-                    }, $comp['options'] ?? [])
+                    }, $comp['options'] ?? []),
                 ];
             case 'Select':
             case 'Dropdown':
@@ -478,7 +487,7 @@ class WhatsAppFlowService
                     'required' => $comp['required'] ?? false,
                     'data-source' => array_map(function ($opt) {
                         return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
-                    }, $comp['options'] ?? [])
+                    }, $comp['options'] ?? []),
                 ];
             case 'DateField':
                 return [
@@ -494,7 +503,7 @@ class WhatsAppFlowService
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'photo-source' => $comp['photo_source'] ?? 'camera,gallery',
-                    'max-file-size' => 25 * 1024 * 1024 // 25MB Max
+                    'max-file-size' => 25 * 1024 * 1024, // 25MB Max
                 ];
             case 'DocumentPicker':
                 return [
@@ -503,14 +512,14 @@ class WhatsAppFlowService
                     'label' => $comp['label'],
                     'required' => $comp['required'] ?? false,
                     'max-file-size' => 25 * 1024 * 1024, // 25MB Max
-                    'allowed-types' => $comp['allowed_types'] ?? ['application/pdf', 'image/jpeg', 'image/png']
+                    'allowed-types' => $comp['allowed_types'] ?? ['application/pdf', 'image/jpeg', 'image/png'],
                 ];
             case 'Image':
                 return [
                     'type' => 'Image',
                     'src' => $comp['src'], // Must be HTTPS URL
                     'height' => (int) ($comp['height'] ?? 200),
-                    'scale-type' => 'cover' // Default
+                    'scale-type' => 'cover', // Default
                 ];
             case 'Footer':
                 // Meta Footer is valid.
@@ -520,7 +529,7 @@ class WhatsAppFlowService
                     if ($comp['on_click_action'] === 'complete') {
                         $action = [
                             'name' => 'complete',
-                            'payload' => (object) [] // Empty object for payload
+                            'payload' => (object) [], // Empty object for payload
                         ];
                     } elseif ($comp['on_click_action'] === 'next') {
                         // "next" implies navigation to the sequential next screen
@@ -529,15 +538,15 @@ class WhatsAppFlowService
                                 'name' => 'navigate',
                                 'next' => [
                                     'type' => 'screen',
-                                    'name' => $nextScreenId
+                                    'name' => $nextScreenId,
                                 ],
-                                'payload' => (object) []
+                                'payload' => (object) [],
                             ];
                         } else {
                             // No next screen available? Fallback to complete.
                             $action = [
                                 'name' => 'complete',
-                                'payload' => (object) []
+                                'payload' => (object) [],
                             ];
                         }
                     }
@@ -546,7 +555,7 @@ class WhatsAppFlowService
                 return [
                     'type' => 'Footer',
                     'label' => $comp['label'],
-                    'on-click-action' => $action
+                    'on-click-action' => $action,
                 ];
             default:
                 return null;
@@ -564,14 +573,14 @@ class WhatsAppFlowService
         $action = $request['action'] ?? null;
 
         // Log raw request for debugging (in prod, mask sensitive data)
-        Log::info("Flow Handle Request: " . $action, $request);
+        Log::info('Flow Handle Request: '.$action, $request);
 
         switch ($action) {
             case 'INIT':
                 // INIT request is used to load initial data for the Flow.
                 return [
                     'screen' => 'screen_welcome', // Optional: force start screen? usually not needed for v3
-                    'data' => []
+                    'data' => [],
                 ];
 
             case 'data_exchange':
@@ -580,14 +589,14 @@ class WhatsAppFlowService
 
                 // 1. Context Resolution
                 $tokenData = json_decode($flowToken, true);
-                if (!$tokenData || !isset($tokenData['id'])) {
+                if (! $tokenData || ! isset($tokenData['id'])) {
                     // Fallback check if token is just ID string (Legacy)
                     if (is_numeric($flowToken)) {
                         $flowId = $flowToken;
                         $versionNum = null;
                     } else {
-                        Log::error("Invalid Flow Token format", ['token' => $flowToken]);
-                        throw new \Exception("Invalid Flow Token");
+                        Log::error('Invalid Flow Token format', ['token' => $flowToken]);
+                        throw new \Exception('Invalid Flow Token');
                     }
                 } else {
                     $flowId = $tokenData['id'];
@@ -603,36 +612,36 @@ class WhatsAppFlowService
                 }
 
                 // Fallback to active version if specific version not found (or not provided)
-                if (!$version) {
+                if (! $version) {
                     $flow = WhatsAppFlow::where('id', $flowId)->where('team_id', $tokenData['t'] ?? $request['team_id'] ?? null)->first();
                     if ($flow && $flow->active_version_id) {
                         $version = $flow->activeVersion;
                     }
                 }
 
-                if (!$version) {
+                if (! $version) {
                     // Critical Error: No definition found.
                     // Return a generic error to the user interface in WhatsApp
                     return [
                         'screen' => 'SUCCESS', // Fallback? Or TERMINAL error screen?
                         'data' => [
-                            'extension_error' => 'Flow definition not found. Please contact support.'
-                        ]
+                            'extension_error' => 'Flow definition not found. Please contact support.',
+                        ],
                     ];
                 }
 
                 // 3. Downstream Enforcement: Schema Validation
-                $validator = new \App\Validators\FlowSubmissionValidator();
+                $validator = new \App\Validators\FlowSubmissionValidator;
                 $validation = $validator->validate($submissionData, $version);
 
-                if (!$validation['isValid']) {
+                if (! $validation['isValid']) {
                     // Return Validation Errors to Flow (Interactive Feedback)
                     // The error structure matches Meta's expectation for field errors
                     // However, for simple flows, we might just want to show a toast or error screen.
                     // Using standard error response for data_exchange
                     return [
                         'error_message' => 'Please fix the errors below.',
-                        'field_errors' => $validation['errors']
+                        'field_errors' => $validation['errors'],
                     ];
                 }
 
@@ -645,9 +654,10 @@ class WhatsAppFlowService
                         if (preg_match('/\b(?:\d[ -]*?){13,16}\b/', $val)) {
                             // Possible CC number?
                             // Block it.
-                            Log::warning("Potential Sensitive Data (PCI) blocked in flow submission", ['flow_id' => $flowId]);
+                            Log::warning('Potential Sensitive Data (PCI) blocked in flow submission', ['flow_id' => $flowId]);
+
                             return [
-                                'error_message' => 'Security Alert: Payment information cannot be processed in this form.'
+                                'error_message' => 'Security Alert: Payment information cannot be processed in this form.',
                             ];
                         }
                     }
@@ -659,7 +669,7 @@ class WhatsAppFlowService
                     'whatsapp_flow_id' => $flowId,
                     'whatsapp_flow_version_id' => $version->id,
                     'contact_id' => $tokenData['c'] ?? null,
-                    'response_data' => $validation['cleanedData']
+                    'response_data' => $validation['cleanedData'],
                 ]);
 
                 // Trigger automation
@@ -669,7 +679,7 @@ class WhatsAppFlowService
                         $this->whatsappService->setTeam($this->team)->sendText($contact->phone_number, "Thank you! We've received your form submission.");
                     }
                 } catch (\Exception $e) {
-                    Log::error('Flow Automation Trigger Failed: ' . $e->getMessage());
+                    Log::error('Flow Automation Trigger Failed: '.$e->getMessage());
                 }
 
                 // Determine next step
@@ -681,16 +691,16 @@ class WhatsAppFlowService
                         'extension_message_response' => [
                             'params' => [
                                 'flow_token' => $flowToken,
-                            ]
-                        ]
-                    ]
+                            ],
+                        ],
+                    ],
                 ];
 
             case 'ping':
                 return [
                     'data' => [
-                        'status' => 'active'
-                    ]
+                        'status' => 'active',
+                    ],
                 ];
 
             default:
@@ -706,11 +716,11 @@ class WhatsAppFlowService
         $response = Http::withToken((string) $this->token)
             ->get("{$this->baseUrl}/{$this->wabaId}/flows", [
                 'fields' => 'id,name,status,categories',
-                'limit' => 100
+                'limit' => 100,
             ]);
 
         if ($response->failed()) {
-            throw new \Exception("Failed to fetch flows from Meta: " . $response->body());
+            throw new \Exception('Failed to fetch flows from Meta: '.$response->body());
         }
 
         return $response->json()['data'] ?? [];
@@ -741,13 +751,13 @@ class WhatsAppFlowService
             'health',
             'medical',
             'prescription',
-            'patient'
+            'patient',
         ];
 
         foreach ($design['screens'] ?? [] as $screen) {
             foreach ($screen['components'] ?? [] as $comp) {
                 // Check Label and Text
-                $textToCheck = ($comp['label'] ?? '') . ' ' . ($comp['text'] ?? '') . ' ' . ($comp['name'] ?? '');
+                $textToCheck = ($comp['label'] ?? '').' '.($comp['text'] ?? '').' '.($comp['name'] ?? '');
                 $textLower = strtolower($textToCheck);
 
                 foreach ($restrictedKeywords as $keyword) {
@@ -758,6 +768,7 @@ class WhatsAppFlowService
             }
         }
     }
+
     /**
      * Fetch and Parse Flow JSON from Meta.
      */
@@ -768,7 +779,7 @@ class WhatsAppFlowService
             ->get("{$this->baseUrl}/{$flowId}/assets");
 
         if ($response->failed()) {
-            throw new \Exception("Failed to fetch flow assets: " . $response->body());
+            throw new \Exception('Failed to fetch flow assets: '.$response->body());
         }
 
         $assets = $response->json()['data'] ?? [];
@@ -781,12 +792,13 @@ class WhatsAppFlowService
             }
         }
 
-        if (!$jsonAsset) {
+        if (! $jsonAsset) {
             return null; // No design found
         }
 
         // 2. Download valid JSON content
         $jsonContent = Http::get($jsonAsset['download_url'])->body();
+
         return json_decode($jsonContent, true);
     }
 
@@ -807,7 +819,7 @@ class WhatsAppFlowService
             $screens[] = [
                 'id' => $screen['id'],
                 'title' => $screen['title'] ?? $screen['id'],
-                'components' => $components
+                'components' => $components,
             ];
         }
 
@@ -849,12 +861,15 @@ class WhatsAppFlowService
         $comp = [];
 
         // Common fields mapping
-        if (isset($child['label']))
+        if (isset($child['label'])) {
             $comp['label'] = $child['label'];
-        if (isset($child['name']))
+        }
+        if (isset($child['name'])) {
             $comp['name'] = $child['name'];
-        if (isset($child['required']))
+        }
+        if (isset($child['required'])) {
             $comp['required'] = $child['required'];
+        }
 
         switch ($type) {
             case 'TextHeading':
@@ -864,11 +879,13 @@ class WhatsAppFlowService
                 $comp['type'] = 'TextBody';
                 $comp['text'] = $child['text'] ?? ($child['text-content'] ?? ''); // Meta variable naming check
                 // If it's a heading, maybe prepend markdown?
-                if ($type === 'TextHeading')
-                    $comp['text'] = "**" . $comp['text'] . "**";
+                if ($type === 'TextHeading') {
+                    $comp['text'] = '**'.$comp['text'].'**';
+                }
                 // Ensure text is set
-                if (!isset($comp['text']))
+                if (! isset($comp['text'])) {
                     $comp['text'] = 'Text content';
+                }
                 break;
 
             case 'TextInput':
@@ -927,8 +944,9 @@ class WhatsAppFlowService
                 $comp['type'] = 'Footer';
                 $actionName = $child['on-click-action']['name'] ?? 'next';
                 $comp['on_click_action'] = $actionName === 'complete' ? 'complete' : 'next';
-                if (!isset($comp['label']))
-                    $comp['label'] = $child['label'] ?? 'Next'; // Fallback
+                if (! isset($comp['label'])) {
+                    $comp['label'] = $child['label'] ?? 'Next';
+                } // Fallback
                 break;
 
             case 'OptIn':

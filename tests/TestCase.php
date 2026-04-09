@@ -8,21 +8,21 @@ abstract class TestCase extends BaseTestCase
 {
     public function createApplication()
     {
-        $app = require __DIR__ . '/../bootstrap/app.php';
+        $app = require __DIR__.'/../bootstrap/app.php';
 
         // Fix permission issues by using a temp directory
         $path = '/tmp/laravel_storage_test';
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             mkdir($path, 0777, true);
         }
-        if (!file_exists($path . '/framework/views')) {
-            mkdir($path . '/framework/views', 0777, true);
+        if (! file_exists($path.'/framework/views')) {
+            mkdir($path.'/framework/views', 0777, true);
         }
-        if (!file_exists($path . '/framework/cache')) {
-            mkdir($path . '/framework/cache', 0777, true);
+        if (! file_exists($path.'/framework/cache')) {
+            mkdir($path.'/framework/cache', 0777, true);
         }
-        if (!file_exists($path . '/framework/sessions')) {
-            mkdir($path . '/framework/sessions', 0777, true);
+        if (! file_exists($path.'/framework/sessions')) {
+            mkdir($path.'/framework/sessions', 0777, true);
         }
         $app->useStoragePath($path);
 

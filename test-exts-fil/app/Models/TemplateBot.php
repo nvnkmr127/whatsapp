@@ -6,20 +6,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property string                          $name
- * @property string                          $rel_type
- * @property int|null                        $template_id
- * @property array<array-key, mixed>|null    $header_params
- * @property array<array-key, mixed>|null    $body_params
- * @property array<array-key, mixed>|null    $footer_params
- * @property string|null                     $filename
- * @property array<array-key, mixed>|null    $trigger
- * @property int                             $reply_type
- * @property int                             $is_bot_active
- * @property \Illuminate\Support\Carbon      $created_at
+ * @property int $id
+ * @property string $name
+ * @property string $rel_type
+ * @property int|null $template_id
+ * @property array<array-key, mixed>|null $header_params
+ * @property array<array-key, mixed>|null $body_params
+ * @property array<array-key, mixed>|null $footer_params
+ * @property string|null $filename
+ * @property array<array-key, mixed>|null $trigger
+ * @property int $reply_type
+ * @property int $is_bot_active
+ * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property int                             $sending_count
+ * @property int $sending_count
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|TemplateBot newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|TemplateBot newQuery()
@@ -60,9 +60,9 @@ class TemplateBot extends Model
 
     protected $casts = [
         'header_params' => 'array',
-        'body_params'   => 'array',
+        'body_params' => 'array',
         'footer_params' => 'array',
-        'trigger'       => 'array',
+        'trigger' => 'array',
     ];
 
     public static function getTemplateBotsByRelType($relType, $message, $replyType = null)

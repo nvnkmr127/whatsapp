@@ -4,11 +4,12 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         // 1. SaaS Plans
-        if (!Schema::hasTable('plans')) {
+        if (! Schema::hasTable('plans')) {
             Schema::create('plans', function (Blueprint $table) {
                 $table->id();
                 $table->string('name'); // Basic, Pro, Enterprise
@@ -20,7 +21,7 @@ return new class extends Migration {
         }
 
         // 2. Wallets (Prepaid Credits for WhatsApp Conversations)
-        if (!Schema::hasTable('team_wallets')) {
+        if (! Schema::hasTable('team_wallets')) {
             Schema::create('team_wallets', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('team_id')->constrained()->cascadeOnDelete();
@@ -31,7 +32,7 @@ return new class extends Migration {
         }
 
         // 3. Transactions (Invoices/Usage)
-        if (!Schema::hasTable('team_transactions')) {
+        if (! Schema::hasTable('team_transactions')) {
             Schema::create('team_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('team_id')->constrained()->cascadeOnDelete();
@@ -44,7 +45,7 @@ return new class extends Migration {
         }
 
         // 4. WhatsApp Conversation Windows (Meta Billing)
-        if (!Schema::hasTable('whatsapp_conversations')) {
+        if (! Schema::hasTable('whatsapp_conversations')) {
             Schema::create('whatsapp_conversations', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('team_id')->constrained()->cascadeOnDelete();
@@ -63,13 +64,13 @@ return new class extends Migration {
 
         // 5. White-label Settings
         Schema::table('teams', function (Blueprint $table) {
-            if (!Schema::hasColumn('teams', 'branding_config')) {
+            if (! Schema::hasColumn('teams', 'branding_config')) {
                 $table->json('branding_config')->nullable(); // Logo, Colors, Domain
             }
-            if (!Schema::hasColumn('teams', 'gst_number')) {
+            if (! Schema::hasColumn('teams', 'gst_number')) {
                 $table->string('gst_number')->nullable();
             }
-            if (!Schema::hasColumn('teams', 'billing_address')) {
+            if (! Schema::hasColumn('teams', 'billing_address')) {
                 $table->string('billing_address')->nullable();
             }
         });

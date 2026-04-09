@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Contact;
-use App\Models\WhatsAppCall;
 use App\Models\Note;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;

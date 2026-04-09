@@ -2,14 +2,14 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
-use App\Models\Team;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 class CreateTestUser extends Command
 {
     protected $signature = 'user:test';
+
     protected $description = 'Create a test user for smoke testing';
 
     public function handle()
@@ -22,11 +22,11 @@ class CreateTestUser extends Command
             ]
         );
 
-        if (!$user->currentTeam) {
+        if (! $user->currentTeam) {
             $team = \App\Models\Team::where('user_id', $user->id)->first();
 
-            if (!$team) {
-                $team = new \App\Models\Team();
+            if (! $team) {
+                $team = new \App\Models\Team;
                 $team->user_id = $user->id;
                 $team->name = 'Test Team';
                 $team->personal_team = true;

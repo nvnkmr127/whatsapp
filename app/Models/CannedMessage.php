@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CannedMessage extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',

@@ -13,22 +13,31 @@ class AutomationCreator extends Component
     use WithFileUploads;
 
     public $type = 'keyword'; // 'keyword' or 'template' (from query param)
+
     public $bot_name;
+
     public $trigger_keywords = []; // Array of strings
+
     public $is_active = true;
 
     // Keyword Bot Specifics
     public $reply_text;
+
     public $reply_type = 1; // 1=text
 
     // Template Bot Specifics
     public $template_id; // Local template ID (or string if Meta ID used as FK)
+
     public $header_params = [];
+
     public $body_params = [];
+
     public $footer_params = [];
 
     public $selectedTemplate;
+
     public $headerParamCount = 0;
+
     public $bodyParamCount = 0;
 
     protected $rules = [
@@ -57,7 +66,7 @@ class AutomationCreator extends Component
     // Helper to add keyword
     public function addKeyword($keyword)
     {
-        if ($keyword && !in_array($keyword, $this->trigger_keywords)) {
+        if ($keyword && ! in_array($keyword, $this->trigger_keywords)) {
             $this->trigger_keywords[] = $keyword;
         }
     }
@@ -117,14 +126,15 @@ class AutomationCreator extends Component
             ->whereNotNull('whatsapp_template_id')
             ->orderBy('name')
             ->get();
+
         return view('livewire.automations.automation-creator', [
-            'templates' => $templates
+            'templates' => $templates,
         ]);
     }
 
     protected function getTemplateVariableCount(?WhatsappTemplate $template, string $componentType): int
     {
-        if (!$template) {
+        if (! $template) {
             return 0;
         }
 
@@ -142,6 +152,7 @@ class AutomationCreator extends Component
         }
 
         $variables = array_unique($variables);
+
         return count($variables);
     }
 }

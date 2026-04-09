@@ -1,15 +1,15 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
-$app = require_once __DIR__ . '/bootstrap/app.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 echo "=== INSPECTING PAYLOAD 290 ===\n\n";
 
 $payload = \App\Models\WebhookPayload::find(290);
 
-if (!$payload) {
+if (! $payload) {
     echo "❌ Payload 290 not found.\n";
     exit(1);
 }
@@ -19,10 +19,10 @@ echo "Event Type: {$payload->event_type}\n";
 echo "Status: {$payload->status}\n\n";
 
 echo "=== RAW PAYLOAD ===\n";
-echo json_encode($payload->payload, JSON_PRETTY_PRINT) . "\n\n";
+echo json_encode($payload->payload, JSON_PRETTY_PRINT)."\n\n";
 
 echo "=== MAPPED DATA ===\n";
-echo json_encode($payload->mapped_data, JSON_PRETTY_PRINT) . "\n\n";
+echo json_encode($payload->mapped_data, JSON_PRETTY_PRINT)."\n\n";
 
 echo "=== TESTING EXTRACTION ===\n";
 
@@ -38,7 +38,7 @@ $paths = [
 foreach ($paths as $path) {
     $value = data_get($payload->payload, $path);
     $status = $value !== null ? '✓' : '✗';
-    echo "{$status} {$path}: " . json_encode($value) . "\n";
+    echo "{$status} {$path}: ".json_encode($value)."\n";
 }
 
 echo "\n=== DIAGNOSIS ===\n";

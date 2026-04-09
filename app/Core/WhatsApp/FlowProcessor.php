@@ -2,9 +2,6 @@
 
 namespace App\Core\WhatsApp;
 
-use App\Models\WhatsAppFlow;
-use Illuminate\Support\Facades\Log;
-
 class FlowProcessor
 {
     /**
@@ -26,21 +23,26 @@ class FlowProcessor
 
             foreach ($screen['components'] as $comp) {
                 if (isset($comp['on_click_action'])) {
-                    if ($comp['on_click_action'] === 'complete') $hasCompleteAction = true;
-                    elseif ($comp['on_click_action'] === 'next') $hasNavigationAction = true;
+                    if ($comp['on_click_action'] === 'complete') {
+                        $hasCompleteAction = true;
+                    } elseif ($comp['on_click_action'] === 'next') {
+                        $hasNavigationAction = true;
+                    }
                 }
                 $mapped = $this->mapComponent($comp, $nextScreenId);
-                if ($mapped) $children[] = $mapped;
+                if ($mapped) {
+                    $children[] = $mapped;
+                }
             }
 
-            $isTerminal = $hasCompleteAction || ($hasNavigationAction && !$nextScreenId) || (!$hasNavigationAction && !$nextScreenId);
+            $isTerminal = $hasCompleteAction || ($hasNavigationAction && ! $nextScreenId) || (! $hasNavigationAction && ! $nextScreenId);
 
             $screenDef = [
                 'id' => $screenId,
                 'title' => $screen['title'],
                 'data' => (object) [],
-                'layout' => [ 'type' => 'SingleColumnLayout', 'children' => $children ],
-                'terminal' => $isTerminal
+                'layout' => ['type' => 'SingleColumnLayout', 'children' => $children],
+                'terminal' => $isTerminal,
             ];
 
             if ($isTerminal) {
@@ -54,7 +56,7 @@ class FlowProcessor
             $screens[] = $screenDef;
         }
 
-        $json = [ 'version' => '6.0', 'screens' => $screens ];
+        $json = ['version' => '6.0', 'screens' => $screens];
         if ($usesEndpoint) {
             $json['data_api_version'] = '3.0';
             $json['routing_model'] = (object) $routing;
@@ -69,11 +71,11 @@ class FlowProcessor
     protected function mapComponent(array $comp, ?string $nextScreenId = null): ?array
     {
         $type = $comp['type'];
-        $base = [ 'type' => $type ];
+        $base = ['type' => $type];
 
         switch ($type) {
             case 'TextBody':
-                return array_merge($base, [ 'text' => $comp['text'] ]);
+                return array_merge($base, ['text' => $comp['text']]);
             case 'TextInput':
             case 'TextArea':
                 return array_merge($base, [
@@ -90,18 +92,19 @@ class FlowProcessor
                     'required' => $comp['required'] ?? false,
                     'data-source' => array_map(function ($opt) {
                         return ['id' => $this->sanitizeId($opt['value']), 'title' => $opt['label']];
-                    }, $comp['options'] ?? [])
+                    }, $comp['options'] ?? []),
                 ]);
             case 'Footer':
-                $action = [ 'name' => 'complete', 'payload' => (object) [] ];
+                $action = ['name' => 'complete', 'payload' => (object) []];
                 if (($comp['on_click_action'] ?? '') === 'next' && $nextScreenId) {
                     $action = [
                         'name' => 'navigate',
-                        'next' => [ 'type' => 'screen', 'name' => $nextScreenId ],
-                        'payload' => (object) []
+                        'next' => ['type' => 'screen', 'name' => $nextScreenId],
+                        'payload' => (object) [],
                     ];
                 }
-                return array_merge($base, [ 'label' => $comp['label'], 'on-click-action' => $action ]);
+
+                return array_merge($base, ['label' => $comp['label'], 'on-click-action' => $action]);
             default:
                 return null;
         }
@@ -112,20 +115,29 @@ class FlowProcessor
      */
     public function deepSanitize(array $design): array
     {
-        if (!isset($design['screens'])) return $design;
+        if (! isset($design['screens'])) {
+            return $design;
+        }
         foreach ($design['screens'] as &$screen) {
-            if (isset($screen['id'])) $screen['id'] = $this->sanitizeId($screen['id']);
+            if (isset($screen['id'])) {
+                $screen['id'] = $this->sanitizeId($screen['id']);
+            }
             if (isset($screen['components'])) {
                 foreach ($screen['components'] as &$comp) {
-                    if (isset($comp['name'])) $comp['name'] = $this->sanitizeId($comp['name']);
+                    if (isset($comp['name'])) {
+                        $comp['name'] = $this->sanitizeId($comp['name']);
+                    }
                     if (isset($comp['options'])) {
                         foreach ($comp['options'] as &$opt) {
-                            if (isset($opt['value'])) $opt['value'] = $this->sanitizeId($opt['value']);
+                            if (isset($opt['value'])) {
+                                $opt['value'] = $this->sanitizeId($opt['value']);
+                            }
                         }
                     }
                 }
             }
         }
+
         return $design;
     }
 
@@ -134,8 +146,11 @@ class FlowProcessor
      */
     protected function sanitizeId(?string $id): ?string
     {
-        if (!$id) return $id;
-        $map = [ '0' => 'g', '1' => 'h', '2' => 'i', '3' => 'j', '4' => 'k', '5' => 'l', '6' => 'm', '7' => 'n', '8' => 'o', '9' => 'p' ];
+        if (! $id) {
+            return $id;
+        }
+        $map = ['0' => 'g', '1' => 'h', '2' => 'i', '3' => 'j', '4' => 'k', '5' => 'l', '6' => 'm', '7' => 'n', '8' => 'o', '9' => 'p'];
+
         return strtr((string) $id, $map);
     }
 }

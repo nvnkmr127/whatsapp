@@ -2,9 +2,8 @@
 
 namespace Tests\Feature\Conversation;
 
-use App\Models\Conversation;
-use App\Models\Team;
 use App\Models\Contact;
+use App\Models\Conversation;
 use App\Services\ConversationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,7 +15,7 @@ class ConversationFlowTest extends TestCase
     public function test_ensure_active_conversation_creates_new_if_none_exist()
     {
         $contact = Contact::factory()->create();
-        $service = new ConversationService();
+        $service = new ConversationService;
 
         $conversation = $service->ensureActiveConversation($contact);
 
@@ -31,10 +30,10 @@ class ConversationFlowTest extends TestCase
         $existing = Conversation::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
-            'status' => 'open'
+            'status' => 'open',
         ]);
 
-        $service = new ConversationService();
+        $service = new ConversationService;
         $conversation = $service->ensureActiveConversation($contact);
 
         $this->assertEquals($existing->id, $conversation->id);
@@ -47,10 +46,10 @@ class ConversationFlowTest extends TestCase
         $conversation = Conversation::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
-            'status' => 'waiting_reply'
+            'status' => 'waiting_reply',
         ]);
 
-        $service = new ConversationService();
+        $service = new ConversationService;
         $service->handleIncomingMessage($conversation);
 
         $this->assertEquals('open', $conversation->fresh()->status);
@@ -63,10 +62,10 @@ class ConversationFlowTest extends TestCase
         $conversation = Conversation::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
-            'status' => 'open'
+            'status' => 'open',
         ]);
 
-        $service = new ConversationService();
+        $service = new ConversationService;
         $service->close($conversation);
 
         $this->assertEquals('closed', $conversation->fresh()->status);

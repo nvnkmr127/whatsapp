@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Segment;
-use App\Models\Contact;
 use App\Jobs\PrecomputeSegmentMembership;
+use App\Models\Contact;
+use App\Models\Segment;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SegmentService
@@ -48,7 +48,7 @@ class SegmentService
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
             ->get()
-            ->map(fn($contact) => Contact::hydrate([(array) $contact])->first());
+            ->map(fn ($contact) => Contact::hydrate([(array) $contact])->first());
     }
 
     /**
@@ -130,7 +130,7 @@ class SegmentService
                 })
                 ->select('c.*')
                 ->get()
-                ->map(fn($contact) => Contact::hydrate([(array) $contact])->first());
+                ->map(fn ($contact) => Contact::hydrate([(array) $contact])->first());
         }
 
         // For small/medium segments, compute with consent filter

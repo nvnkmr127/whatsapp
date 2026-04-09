@@ -1,14 +1,14 @@
 <?php
 
-use App\Models\Team;
-use App\Models\WhatsappTemplate;
-use App\Models\WhatsAppHealthSnapshot;
-use App\Models\WhatsAppHealthAlert;
-use App\Models\WhatsAppSetupAudit;
-use App\Models\Message;
-use App\Models\Conversation;
-use Illuminate\Support\Facades\DB;
 use App\Enums\IntegrationState;
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\Team;
+use App\Models\WhatsAppHealthAlert;
+use App\Models\WhatsAppHealthSnapshot;
+use App\Models\WhatsAppSetupAudit;
+use App\Models\WhatsappTemplate;
+use Illuminate\Support\Facades\DB;
 
 echo "Starting WhatsApp Data Reset...\n";
 
@@ -36,7 +36,7 @@ try {
             Message::query()->delete();
             Conversation::query()->delete();
         } catch (\Throwable $e) {
-            echo "Warning deleting messages: " . $e->getMessage() . "\n";
+            echo 'Warning deleting messages: '.$e->getMessage()."\n";
         }
 
         // 5. Reset Team Configuration
@@ -62,7 +62,7 @@ try {
     });
     echo "WhatsApp Data Reset Complete.\n";
 } catch (\Throwable $e) {
-    echo "Error resetting data: " . $e->getMessage() . "\n";
+    echo 'Error resetting data: '.$e->getMessage()."\n";
     try {
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     } catch (\Throwable $ex) {

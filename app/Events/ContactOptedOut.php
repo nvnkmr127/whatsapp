@@ -15,9 +15,9 @@ class ContactOptedOut extends DomainEvent
 
         parent::__construct([
             'contact_id' => $contact->id,
-            'phone_number' => $contact->phone_number
+            'phone_number' => $contact->phone_number,
         ], [
-            'team_id' => $contact->team_id
+            'team_id' => $contact->team_id,
         ]);
     }
 
@@ -35,7 +35,7 @@ class ContactOptedOut extends DomainEvent
     {
         return [
             'contact_id' => 'required|integer',
-            'phone_number' => 'required|string'
+            'phone_number' => 'required|string',
         ];
     }
 }

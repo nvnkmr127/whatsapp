@@ -7,7 +7,6 @@ use App\Mail\BillingThresholdAlert;
 use App\Services\WebhookService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class NotifyTeamOfBillingAlert implements ShouldQueue
@@ -15,6 +14,7 @@ class NotifyTeamOfBillingAlert implements ShouldQueue
     use InteractsWithQueue;
 
     protected $webhookService;
+
     protected $emailDispatcher;
 
     public function __construct(WebhookService $webhookService, \App\Services\Email\EmailDispatcher $emailDispatcher)
@@ -37,7 +37,7 @@ class NotifyTeamOfBillingAlert implements ShouldQueue
 
         if ($team->user_id) {
             $owner = \App\Models\User::find($team->user_id);
-            if ($owner && !$recipients->contains($owner)) {
+            if ($owner && ! $recipients->contains($owner)) {
                 $recipients->push($owner);
             }
         }
@@ -56,7 +56,7 @@ class NotifyTeamOfBillingAlert implements ShouldQueue
                     )
                 );
             } catch (\Exception $e) {
-                Log::error("Failed to send billing alert email to {$recipient->email}: " . $e->getMessage());
+                Log::error("Failed to send billing alert email to {$recipient->email}: ".$e->getMessage());
             }
         }
 

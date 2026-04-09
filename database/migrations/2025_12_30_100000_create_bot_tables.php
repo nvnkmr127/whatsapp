@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -41,8 +42,8 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->string('rel_type')->nullable();
-            $table->string('template_id'); // ID from whatsapp_templates table (usually a string ID from Meta or local ID?) 
-            // Reference query joins on 'template_id' column of whatsapp_templates. 
+            $table->string('template_id'); // ID from whatsapp_templates table (usually a string ID from Meta or local ID?)
+            // Reference query joins on 'template_id' column of whatsapp_templates.
             // My WhatsappTemplate migration uses 'template_id' as Meta ID (string/bigint) and 'id' as local PK.
             // Reference Join: template_bots.template_id = whatsapp_templates.template_id
             // So this should be the Meta Template ID string.

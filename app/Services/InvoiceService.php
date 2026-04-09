@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Models\Plan;
+use App\Models\Team;
 use App\Models\TeamInvoice;
 use App\Models\TeamInvoiceItem;
 use App\Models\WhatsAppConversation;
@@ -22,7 +22,7 @@ class InvoiceService
         return DB::transaction(function () use ($team, $billingStart, $billingEnd) {
             $invoice = TeamInvoice::create([
                 'team_id' => $team->id,
-                'invoice_number' => 'INV-' . strtoupper(bin2hex(random_bytes(4))),
+                'invoice_number' => 'INV-'.strtoupper(bin2hex(random_bytes(4))),
                 'status' => 'draft',
                 'period_start' => $billingStart,
                 'period_end' => $billingEnd,
@@ -95,7 +95,7 @@ class InvoiceService
             'unit_price' => -$refundAmount,
             'amount' => -$refundAmount,
             'is_prorated' => true,
-            'metadata' => ['days_remaining' => $daysRemaining, 'base_price' => $oldPlan->monthly_price]
+            'metadata' => ['days_remaining' => $daysRemaining, 'base_price' => $oldPlan->monthly_price],
         ]);
 
         // Charge for new plan portion
@@ -108,7 +108,7 @@ class InvoiceService
             'unit_price' => $chargeAmount,
             'amount' => $chargeAmount,
             'is_prorated' => true,
-            'metadata' => ['days' => $daysRemaining, 'base_price' => $newPlan->monthly_price]
+            'metadata' => ['days' => $daysRemaining, 'base_price' => $newPlan->monthly_price],
         ]);
     }
 
@@ -129,7 +129,7 @@ class InvoiceService
                 'team_invoice_id' => $invoice->id,
                 'type' => 'usage',
                 'feature_key' => 'message',
-                'label' => "WhatsApp: " . ucfirst($item->category) . " Conversations",
+                'label' => 'WhatsApp: '.ucfirst($item->category).' Conversations',
                 'description' => "Aggregated charges for {$item->qty} {$item->category} conversation windows.",
                 'quantity' => $item->qty,
                 'unit_price' => $item->total / $item->qty,

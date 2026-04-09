@@ -5,16 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property string                          $event
- * @property string                          $model
- * @property string                          $url
- * @property string                          $status
- * @property int                             $attempt
- * @property array<array-key, mixed>         $payload
- * @property array<array-key, mixed>|null    $response
- * @property string|null                     $error_message
- * @property int|null                        $status_code
+ * @property int $id
+ * @property string $event
+ * @property string $model
+ * @property string $url
+ * @property string $status
+ * @property int $attempt
+ * @property array<array-key, mixed> $payload
+ * @property array<array-key, mixed>|null $response
+ * @property string|null $error_message
+ * @property int|null $status_code
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read bool $is_successful
@@ -38,7 +38,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookLog whereUrl($value)
  *
  * @property string|null $job_id
- * @property int|null    $entity_id
+ * @property int|null $entity_id
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookLog whereEntityId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookLog whereJobId($value)
@@ -60,9 +60,9 @@ class WebhookLog extends Model
     ];
 
     protected $casts = [
-        'payload'     => 'array',
-        'response'    => 'array',
-        'attempt'     => 'integer',
+        'payload' => 'array',
+        'response' => 'array',
+        'attempt' => 'integer',
         'status_code' => 'integer',
     ];
 

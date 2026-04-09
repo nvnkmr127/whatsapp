@@ -6,18 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property int                             $isread
- * @property int                             $isread_inline
- * @property string                          $date
- * @property string                          $description
- * @property int                             $fromuserid
- * @property int                             $fromclientid
- * @property string                          $from_fullname
- * @property int                             $touserid
- * @property int|null                        $fromcompany
- * @property string|null                     $link
- * @property string|null                     $additional_data
+ * @property int $id
+ * @property int $isread
+ * @property int $isread_inline
+ * @property string $date
+ * @property string $description
+ * @property int $fromuserid
+ * @property int $fromclientid
+ * @property string $from_fullname
+ * @property int $touserid
+ * @property int|null $fromcompany
+ * @property string|null $link
+ * @property string|null $additional_data
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  *

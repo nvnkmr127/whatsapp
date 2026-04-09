@@ -1,31 +1,538 @@
 
-   FAIL  Tests\Feature\Integrations\GoogleDriveBackupTest
-  ⨯ google drive upload flow                                             1.51s  
-  ⨯ token refresh handled                                                0.01s  
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_can_initiate_call_with_valid_eligibility(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_blocks_call_when_calling_disabled(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_blocks_call_when_contact_opted_out(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_blocks_call_when_monthly_limit_reached(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_validates_user_initiated_trigger(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_requires_explicit_consent_for_agent_offered(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_blocks_user_initiated_without_keywords(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_blocks_agent_offered_with_negative_response(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_blocks_agent_offered_with_expired_consent(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_detects_various_affirmative_responses(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_detects_call_request_keywords(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_logs_consent_to_audit_trail(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_checks_eligibility_with_all_validations(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_can_initiate_call_with_sdp_offer(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallInitiationTest::it_fails_initiation_with_invalid_sdp(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallWebhookTest::it_handles_incoming_call_webhook(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallWebhookTest::it_handles_call_answered_webhook(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallWebhookTest::it_handles_call_ended_webhook(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallWebhookTest::it_calculates_call_cost_on_completion(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\CallWebhookTest::it_verifies_webhook_challenge(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\WhatsAppCallIntegrationTest::it_handles_incoming_call_with_sdp_offer(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\WhatsAppCallIntegrationTest::it_handles_call_rejection(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   WARN  Metadata found in doc-comment for method Tests\Feature\WhatsAppCallIntegrationTest::it_handles_outbound_call_answer_with_sdp(). Metadata in doc-comments is deprecated and will no longer be supported in PHPUnit 12. Update your test code to use attributes instead.
+
+   PASS  Tests\Unit\BackupTest
+  ✓ tenant backup creates record and encrypted file                      0.57s  
+  ✓ retention policy removes old records and files                       0.01s  
+
+   PASS  Tests\Unit\CategoryGuardrailsTest
+  ✓ auth category blocks media                                           0.02s  
+  ✓ auth category blocks invalid buttons                                 0.01s  
+  ✓ marketing blocked without consent                                    0.02s  
+  ✓ utility blocked for opted out                                        0.01s  
+
+   FAIL  Tests\Unit\EmailServiceTest
+  ⨯ dispatcher uses transactional mailer for otp                         0.03s  
+  ⨯ dispatcher uses marketing mailer for marketing                       0.01s  
+  ✓ all use cases have valid mailers defined in config                   0.02s  
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true is true
+
+   PASS  Tests\Unit\Models\TeamSecurityTest
+  ✓ sensitive attributes are guarded against mass assignment             0.01s  
+
+   FAIL  Tests\Unit\OTPServiceTest
+  ✓ send does not cache email otp when delivery fails                    0.01s  
+  ✓ send caches email otp after successful delivery                      0.02s  
+  ✓ send custom whatsapp otp caches after successful template send       0.01s  
+  ✓ send custom whatsapp otp does not cache when template send fails     0.01s  
+  ⨯ find sending team skips teams without send message access            0.01s  
+  ⨯ find sending team with system env uses real team id not zero         0.01s  
+
+   PASS  Tests\Unit\PickerTest
+  ✓ it filters unsafe templates by default                               0.04s  
+  ✓ category filtering                                                   0.02s  
+  ✓ warning logic                                                        0.02s  
+
+   PASS  Tests\Unit\PolicyServiceTest
+  ✓ can send free message returns true within 24h                        0.01s  
+  ✓ can send free message returns false after 24h                        0.01s  
+  ✓ can send free message returns false if opted out                     0.01s  
+  ✓ can send template marketing requires opt in                          0.01s  
+  ✓ can send template utility allowed implicitly                         0.01s  
+  ✓ can send template blocked globally if opted out                      0.01s  
+
+   FAIL  Tests\Unit\ReadinessEngineTest
+  ✓ template status affects readiness score                              0.01s  
+  ⨯ sequential variable validation                                       0.01s  
+  ✓ whatsapp service blocks low readiness templates                      0.01s  
+  ✓ dynamic button validation                                            0.01s  
+
+   PASS  Tests\Unit\TemplateAuditVerificationTest
+  ✓ count placeholders includes buttons                                  0.01s  
+  ✓ send template does not steal body variables                          0.03s  
+
+   PASS  Tests\Unit\TemplateServiceTest
+  ✓ validate variables returns true for match                            0.01s  
+  ✓ validate variables returns false for mismatch                        0.01s  
+
+   PASS  Tests\Unit\VariableSchemaTest
+  ✓ variable extraction                                                  0.01s  
+  ✓ hydration logic                                                      0.01s  
+  ✓ hydration fallback                                                   0.01s  
+  ✓ variable config storage                                              0.01s  
+
+   PASS  Tests\Feature\API\ApiIntegrationTest
+  ✓ generate embed token                                                 0.02s  
+  ✓ generate embed token with permissions                                0.01s  
+  ✓ embed view loads with valid token                                    0.02s  
+  ✓ api read conversation                                                0.02s  
+
+   FAIL  Tests\Feature\AnalyticsTest
+  ⨯ can view analytics dashboard                                         0.10s  
+  ✓ can view campaign show                                               0.05s  
+
+   PASS  Tests\Feature\AntigravityVerificationTest
+  ✓ whatsapp service template formatting                                 0.02s  
+  ✓ billing plan limits                                                  0.02s  
+  ✓ automation api variable substitution                                 0.01s  
+  ✓ reporting schedule                                                   0.01s  
+
+   PASS  Tests\Feature\ApiTokenPermissionsTest
+  ✓ api token permissions can be updated                                 0.12s  
+
+   FAIL  Tests\Feature\AsyncJobChainTest
+  ⨯ process webhook job dispatches messages async                        0.01s  
+  ✓ handle incoming workflow job dispatches ai async                     0.01s  
+
+   FAIL  Tests\Feature\AutoLoginTest
+  ⨯ can login as admin via dev route                                     0.02s  
+  ✓ cannot login as non existent user                                    0.01s  
+
+   PASS  Tests\Feature\AutomationBuilderTest
+  ✓ can load automation builder                                          0.03s  
+  ✓ can add node to automation                                           0.04s  
+  ✓ can add edge and fail validation if incomplete                       0.08s  
+  ✓ can save valid automation                                            0.09s  
+  ✓ ab split validation                                                  0.05s  
+
+   PASS  Tests\Feature\AutomationRecursionTest
+  ✓ automation steps dispatch async                                      0.01s  
+
+   PASS  Tests\Feature\AutomationRedundancyTest
+  ✓ persist message job does not dispatch workflow job sync              0.01s  
+
+   PASS  Tests\Feature\AutomationTest
+  ✓ can process keyword trigger                                          0.02s  
+  ✓ can process branching                                                0.02s  
+  ✓ can save automation builder                                          0.06s  
+
+   FAIL  Tests\Feature\Backup\FeatureGatingTest
+  ⨯ basic plan cannot use cloud backups                                  0.01s  
+  ✓ pro plan can use cloud backups                                       0.01s  
+  ⨯ addon enables restricted feature                                     0.01s  
+  ⨯ expired subscription blocks all features                             0.01s  
+  ⨯ backup service throws on restricted access                           0.04s  
+
+   PASS  Tests\Feature\Backup\RestoreTest
+  ✓ tenant restore atomic success                                        0.08s  
+  ✓ restore fails on wrong confirmation                                  0.02s  
+
+   PASS  Tests\Feature\BasicDetailsPopupTest
+  ✓ it saves valid details                                               0.02s  
+
+   PASS  Tests\Feature\BillingConcurrencyTest
+  ✓ concurrent billing requests do not exceed balance                    0.02s  
+
+   PASS  Tests\Feature\BotEngineTest
+  ✓ matches keyword and starts flow                                      0.02s  
+  ✓ processes input for question node                                    0.01s  
+
+   PASS  Tests\Feature\BroadcastConsumerPerformanceTest
+  ✓ consumer dispatches persist job asynchronously                       2.02s  
+
+   PASS  Tests\Feature\BrowserSessionsTest
+  ✓ other browser sessions can be logged out                             0.04s  
+"{"success":false,"message":"Monthly quota of 0 for max_call_minutes_per_month has been reached. Please top-up your wallet to send more messages.","code":"MONTHLY_LIMIT_REACHED","errors":{"upgrade_required":true}}" // tests/Feature/CallInitiationTest.php:195
+
+   FAIL  Tests\Feature\CallInitiationTest
+  ✓ it can initiate call with valid eligibility                          0.04s  
+  ⨯ it blocks call when calling disabled                                 0.02s  
+  ✓ it blocks call when contact opted out                                0.04s  
+  ✓ it blocks call when monthly limit reached                            0.02s  
+  ✓ it validates user initiated trigger                                  0.02s  
+  ✓ it requires explicit consent for agent offered                       0.02s  
+  ✓ it blocks user initiated without keywords                            0.01s  
+  ✓ it blocks agent offered with negative response                       0.02s  
+  ✓ it blocks agent offered with expired consent                         0.02s  
+  ✓ it detects various affirmative responses                             0.02s  
+  ✓ it detects call request keywords                                     0.01s  
+  ✓ it logs consent to audit trail                                       0.01s  
+  ✓ it checks eligibility with all validations                           0.02s  
+  ✓ it can initiate call with sdp offer                                  0.03s  
+  ✓ it fails initiation with invalid sdp                                 0.02s  
+
+   PASS  Tests\Feature\CallWebhookTest
+  ✓ it handles incoming call webhook                                     0.01s  
+  ✓ it handles call answered webhook                                     0.02s  
+  ✓ it handles call ended webhook                                        0.02s  
+  ✓ it calculates call cost on completion                                0.01s  
+  ✓ it verifies webhook challenge                                        0.01s  
+
+   FAIL  Tests\Feature\CampaignTest
+  ⨯ can process campaign and dispatch jobs                               0.02s  
+  ⨯ campaign audiences filtering                                         0.02s  
+
+   PASS  Tests\Feature\Consent\ConsentProofTest
+  ✓ opt in stores proof url                                              0.02s  
+
+   PASS  Tests\Feature\Consent\ConsentRollbackProtectionTest
+  ✓ consent registry row cannot be updated                               0.01s  
+  ✓ consent registry row cannot be deleted                               0.01s  
+  ✓ consent log row cannot be updated                                    0.01s  
+  ✓ opt out is written to consent registry                               0.01s  
+  ✓ is opted out reads from registry                                     0.02s  
+  ✓ restore cannot revert later opt out                                  0.06s  
+  ✓ rehydration cancels pending messages for opted out contacts          0.01s  
+  ✓ latest authoritative state is chronologically correct                0.01s  
+
+   PASS  Tests\Feature\Contact\ContactImportTest
+  ✓ can create and manage custom fields                                  0.01s  
+  ✓ import service handles csv with custom fields                        0.02s  
+  ✓ can generate sample csv with custom fields                           0.05s  
+
+   PASS  Tests\Feature\Contact\ContactManagementTest
+  ✓ create or update merges attributes                                   0.01s  
+  ✓ sync tags creates and assigns                                        0.01s  
+  ✓ add tags preserves existing                                          0.01s  
+  ✓ can view contact details                                             0.06s  
+
+   PASS  Tests\Feature\Conversation\ConversationFlowTest
+  ✓ ensure active conversation creates new if none exist                 0.01s  
+  ✓ ensure active conversation returns existing open one                 0.01s  
+  ✓ incoming message updates status to open                              0.01s  
+  ✓ close conversation                                                   0.01s  
+
+   PASS  Tests\Feature\CreateApiTokenTest
+  ✓ api tokens can be created                                            0.08s  
+
+   PASS  Tests\Feature\CreateTeamTest
+  ✓ teams can be created                                                 0.02s  
+
+   PASS  Tests\Feature\DeleteAccountTest
+  ✓ user accounts can be deleted                                         0.02s  
+  ✓ correct password must be provided before account can be deleted      0.02s  
+
+   PASS  Tests\Feature\DeleteApiTokenTest
+  ✓ api tokens can be deleted                                            0.08s  
+
+   PASS  Tests\Feature\DeleteTeamTest
+  ✓ teams can be deleted                                                 0.02s  
+  ✓ personal teams cant be deleted                                       0.02s  
+
+   FAIL  Tests\Feature\DomainReviewFixesTest
+  ⨯ wallet overage is allowed if cost is above zero                      0.01s  
+  ✓ workflow recursion limit                                             0.01s  
+  ✓ start keyword overrides admin opt out                                0.01s  
+  ✓ broadcast launch fails if zero contacts                              0.01s  
+
+   PASS  Tests\Feature\Events\EventBusTest
+  ✓ conversation opened event dispatched on creation                     0.01s  
+  ✓ conversation closed event dispatched on close                        0.01s  
+  ✓ contact opted out event dispatched                                   0.01s  
+
+   PASS  Tests\Feature\ExampleTest
+  ✓ the application returns a successful response                        0.01s  
+
+   PASS  Tests\Feature\HumanInboxTest
+  ✓ can assign conversation to self                                      0.02s  
+  ✓ can add internal note                                                0.02s  
+  ✓ can view internal notes                                              0.04s  
+  ✓ can close conversation with reason                                   0.04s  
+
+   PASS  Tests\Feature\InboundMessageTest
+  ✓ inbound message persistence and retrieval                            0.01s  
+
+   PASS  Tests\Feature\Integrations\GoogleDriveBackupTest
+  ✓ google drive upload flow                                             0.01s  
+  ✓ token refresh handled                                                0.01s  
+
+   PASS  Tests\Feature\InviteTeamMemberTest
+  ✓ team members can be invited to team                                  0.05s  
+  ✓ team member invitations can be cancelled                             0.06s  
+
+   PASS  Tests\Feature\LeaveTeamTest
+  ✓ users can leave teams                                                0.02s  
+  ✓ team owners cant leave their own team                                0.03s  
+
+   PASS  Tests\Feature\Media\MediaHandlingTest
+  ✓ incoming image webhook downloads and links media                     0.03s  
+
+   PASS  Tests\Feature\PolicyEnforcementTest
+  ✓ cannot send free text outside 24h window                             0.01s  
+  ✓ can send free text inside 24h window                                 0.02s  
+
+   PASS  Tests\Feature\ProfileInformationTest
+  ✓ current profile information is available                             0.01s  
+  ✓ profile information can be updated                                   0.01s  
+
+   PASS  Tests\Feature\RemoveTeamMemberTest
+  ✓ team members can be removed from teams                               0.05s  
+  ✓ only team owner can remove team members                              0.02s  
+
+   PASS  Tests\Feature\TemplateConsentFinalizationTest
+  ✓ language fallback logic                                              0.02s  
+  ✓ stop keyword enforcement via policy                                  0.01s  
+  ✓ marketing template requires explicit opt in                          0.01s  
+  ✓ immutable consent logs                                               0.02s  
+
+   PASS  Tests\Feature\TenantCreationTest
+  ✓ super admin can access tenant creation page                          0.02s  
+  ✓ non super admin cannot access tenant creation page                   0.01s  
+  ✓ successful tenant creation with valid data                           0.02s  
+  ✓ validation errors with invalid data                                  0.01s  
+  ✓ unique email constraint                                              0.01s  
+  ✓ tenant creation creates logs                                         0.01s  
+  ✓ subscription ends at is set                                          0.01s  
+
+   PASS  Tests\Feature\TenantIdentityTest
+  ✓ request aborted if no team selected                                  0.01s  
+  ✓ request succeeds with team                                           0.01s  
+  ✓ audit service logs action                                            0.01s  
+  ✓ tenant service methods                                               0.01s  
+  ✓ context switching via header                                         0.01s  
+  ✓ context switching forbidden for non member teams                     0.01s  
+
+   PASS  Tests\Feature\TwoFactorAuthenticationSettingsTest
+  ✓ two factor authentication can be enabled                             0.05s  
+  ✓ recovery codes can be regenerated                                    0.06s  
+  ✓ two factor authentication can be disabled                            0.03s  
+
+   PASS  Tests\Feature\UpdatePasswordTest
+  ✓ password can be updated                                              0.02s  
+  ✓ current password must be correct                                     0.02s  
+  ✓ new passwords must match                                             0.02s  
+
+   PASS  Tests\Feature\UpdateTeamMemberRoleTest
+  ✓ team member roles can be updated                                     0.06s  
+  ✓ only team owner can update team member roles                         0.02s  
+
+   PASS  Tests\Feature\UpdateTeamNameTest
+  ✓ team names can be updated                                            0.04s  
+
+   PASS  Tests\Feature\WebhookComplianceTest
+  ✓ handling stop keyword opts out contact                               0.02s  
+
+   PASS  Tests\Feature\WebhookInboundAuthTest
+  ✓ webhook requires correct api key                                     0.01s  
+  ✓ webhook auth handles string config gracefully                        0.01s  
+
+   PASS  Tests\Feature\WebhookReliabilityTest
+  ✓ it detects duplicate messages and skips processing                   0.01s  
+  ✓ it throws exception if eventbus fails to publish                     0.03s  
+
+   PASS  Tests\Feature\WebhookSourcePolicyTest
+  ✓ super admin can update any webhook source                            0.01s  
+  ✓ user can update their own team webhook source                        0.01s  
+  ✓ user cannot update other team webhook source                         0.01s  
+
+   PASS  Tests\Feature\WhatsApp\WebhookPipelineTest
+  ✓ signature verification succeeds with valid signature                 0.01s  
+  ✓ webhook storage and job dispatch                                     0.01s  
+  ✓ job processes message successfully                                   0.03s  
+  ✓ job handles duplicate message idempotently                           0.01s  
+  ✓ job extracts rich media content correctly                            0.03s  
+  ✓ job handles stop keyword                                             0.03s  
+
+   PASS  Tests\Feature\WhatsAppCallIntegrationTest
+  ✓ it handles incoming call with sdp offer                              0.01s  
+  ✓ it handles call rejection                                            0.02s  
+  ✓ it handles outbound call answer with sdp                             0.01s  
+
+   PASS  Tests\Feature\WhatsAppWebhookTest
+  ✓ it verifies webhook with correct token from database                 0.01s  
+  ✓ it rejects webhook with incorrect token                              0.01s  
+  ✓ it rejects webhook with wrong mode                                   0.01s  
+  ✓ it falls back to config when database token is empty                 0.01s  
+  ✓ it reads token from settings table not config                        0.01s  
+  ✓ it rejects webhook post with invalid signature                       0.01s  
+  ✓ it accepts webhook post with valid signature                         0.01s  
   ────────────────────────────────────────────────────────────────────────────  
-   FAILED  Tests\Feature\Integrations\GoogleDriveBackupTest > goo…  Exception   
-  Google token refresh failed: {
-  "error": "invalid_request",
-  "error_description": "Could not determine client ID from request."
-}
+   FAILED  Tests\Unit\EmailServiceTest > dispatcher uses transactional maile…   
+  The expected [Illuminate\Mail\Mailable@anonymous\/Users/naveenadicharla/Documents/Whatsapp Business API/tests/Unit/EmailServiceTest.php:54$129] mailable was not sent.
+Failed asserting that false is true.
 
-  at app/Services/Integrations/GoogleDriveService.php:120
-    116▕                 $this->integration->update([
-    117▕                     'status' => 'error',
-    118▕                     'error_message' => 'Failed to refresh Google Drive token.'
-    119▕                 ]);
-  ➜ 120▕                 throw new Exception("Google token refresh failed: " . $response->body());
-    121▕             }
-    122▕ 
-    123▕             $data = $response->json();
-    124▕             $credentials['access_token'] = $data['access_token'];
+  at vendor/laravel/framework/src/Illuminate/Support/Testing/Fakes/MailFake.php:92
+     88▕ 
+     89▕             return;
+     90▕         }
+     91▕ 
+  ➜  92▕         PHPUnit::assertTrue(
+     93▕             $this->sent($mailable, $callback)->count() > 0,
+     94▕             "The expected [{$mailable}] mailable was not sent.".$suggestion
+     95▕         );
+     96▕     }
 
-  1   app/Services/Integrations/GoogleDriveService.php:120
-  2   app/Services/Integrations/GoogleDriveService.php:27
+      [2m+2 vendor frames [22m
+  3   tests/Unit/EmailServiceTest.php:62
 
   ────────────────────────────────────────────────────────────────────────────  
-   FAILED  Tests\Feature\Integrations\GoogleDriveBackupTest…   QueryException   
-  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: integrations.name (Connection: sqlite, Database: :memory:, SQL: insert into "integrations" ("team_id", "type", "credentials", "status", "updated_at", "created_at") values (1, google_drive, eyJpdiI6IkxzM3NLYjI4TVNobGRNTk1KKzFaSEE9PSIsInZhbHVlIjoib1o3MlVQNy9FSTYrWGMvRStyVXRWcjdaVDZ6N0hMd0pIVlpiTU5jRTdHL1RMNXlDRHVGT0tPeHJtNWRnMGEybytaRk5DRE9FUjFaWnVjNEtkNHY5Q2Exc1hxV3NDVGJkcEZSNWwyNTh1dmVlUDdQVSs2UUUzNldVUmdRZ3UyNE4iLCJtYWMiOiIxZGFhMmU1OTdkZGNlYWM0OTQ3YzFjODEzYTU3OWE1ODhkNjc5NzlkMjZlN2Q2YzU1MTk2NzNjNmMwYWZlMDQ1IiwidGFnIjoiIn0=, active, 2026-01-20 04:09:29, 2026-01-20 04:09:29))
+   FAILED  Tests\Unit\EmailServiceTest > dispatcher uses marketing mailer fo…   
+  The expected [Illuminate\Mail\Mailable@anonymous\/Users/naveenadicharla/Documents/Whatsapp Business API/tests/Unit/EmailServiceTest.php:72$12a] mailable was not sent.
+Failed asserting that false is true.
+
+  at vendor/laravel/framework/src/Illuminate/Support/Testing/Fakes/MailFake.php:92
+     88▕ 
+     89▕             return;
+     90▕         }
+     91▕ 
+  ➜  92▕         PHPUnit::assertTrue(
+     93▕             $this->sent($mailable, $callback)->count() > 0,
+     94▕             "The expected [{$mailable}] mailable was not sent.".$suggestion
+     95▕         );
+     96▕     }
+
+      [2m+2 vendor frames [22m
+  3   tests/Unit/EmailServiceTest.php:80
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\OTPServiceTest > find sending team ski…  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: whatsapp_templates.category (Connection: sqlite, Database: :memory:, SQL: insert into "whatsapp_templates" ("team_id", "name", "language", "status", "updated_at", "created_at") values (1, verification, en, APPROVED, 2026-04-09 09:03:21, 2026-04-09 09:03:21))
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:838
+    834▕             $exceptionType = $this->isUniqueConstraintError($e)
+    835▕                 ? UniqueConstraintViolationException::class
+    836▕                 : QueryException::class;
+    837▕ 
+  ➜ 838▕             throw new $exceptionType(
+    839▕                 $this->getNameWithReadWriteType(),
+    840▕                 $query,
+    841▕                 $this->prepareBindings($bindings),
+    842▕                 $e,
+
+      [2m+16 vendor frames [22m
+  17  tests/Unit/OTPServiceTest.php:151
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\OTPServiceTest > find sending team with system env use…   
+  Failed asserting that two strings are identical.
+  -'sys-token-abc'
+  +'original-token'
+  
+
+  at tests/Unit/OTPServiceTest.php:238
+    234▕ 
+    235▕         $this->assertNotNull($selectedTeam);
+    236▕         $this->assertNotEquals(0, $selectedTeam->id, 'System team must not be id=0 (breaks template lookup)');
+    237▕         $this->assertSame($dbTeam->id, $selectedTeam->id);
+  ➜ 238▕         $this->assertSame('sys-token-abc', (string) $selectedTeam->whatsapp_access_token);
+    239▕         $this->assertSame('sys-phone-123', $selectedTeam->whatsapp_phone_number_id);
+    240▕ 
+    241▕         putenv('WHATSAPP_SYSTEM_ACCESS_TOKEN');
+    242▕         putenv('WHATSAPP_SYSTEM_PHONE_NUMBER_ID');
+
+  1   tests/Unit/OTPServiceTest.php:238
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Unit\ReadinessEngineTest > sequential variable validation      
+  Failed asserting that 100 matches expected 60.
+
+  at tests/Unit/ReadinessEngineTest.php:67
+     63▕         $validator->validate($tpl1);
+     64▕         $this->assertEquals(100, $tpl1->readiness_score);
+     65▕ 
+     66▕         $validator->validate($tpl2);
+  ➜  67▕         $this->assertEquals(60, $tpl2->readiness_score); // 100 - 40 for VARIABLE_SKEW
+     68▕     }
+     69▕ 
+     70▕     public function test_whatsapp_service_blocks_low_readiness_templates()
+     71▕     {
+
+  1   tests/Unit/ReadinessEngineTest.php:67
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\AnalyticsTest > can view analytics dashboard           
+  Expected: <!DOCTYPE html>\n
+  <html lang="en">\n
+  \n
+  ... (3089 more lines)
+
+  To contain: Analytics &amp;
+
+  at tests/Feature/AnalyticsTest.php:32
+     28▕ 
+     29▕         $this->actingAs($user)
+     30▕             ->get(route('analytics'))
+     31▕             ->assertStatus(200)
+  ➜  32▕             ->assertSee('Analytics &');
+     33▕     }
+     34▕ 
+     35▕     public function test_can_view_campaign_show()
+     36▕     {
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\AsyncJobChainTest > process webhook job dispatches…    
+  The expected [App\Jobs\PersistMessageJob] job was not dispatched.
+Failed asserting that false is true.
+
+  at vendor/laravel/framework/src/Illuminate/Support/Testing/Fakes/BusFake.php:128
+    124▕         if (is_numeric($callback)) {
+    125▕             return $this->assertDispatchedTimes($command, $callback);
+    126▕         }
+    127▕ 
+  ➜ 128▕         PHPUnit::assertTrue(
+    129▕             $this->dispatched($command, $callback)->count() > 0 ||
+    130▕             $this->dispatchedAfterResponse($command, $callback)->count() > 0 ||
+    131▕             $this->dispatchedSync($command, $callback)->count() > 0,
+    132▕             "The expected [{$command}] job was not dispatched."
+
+      [2m+2 vendor frames [22m
+  3   tests/Feature/AsyncJobChainTest.php:68
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\AutoLoginTest > can login as admin via dev route       
+  Expected response status code [201, 301, 302, 303, 307, 308] but received 404.
+Failed asserting that false is true.
+
+  at tests/Feature/AutoLoginTest.php:20
+     16▕         $this->seed(AutoLoginSeeder::class);
+     17▕ 
+     18▕         $response = $this->get('/dev/login/admin@example.com');
+     19▕ 
+  ➜  20▕         $response->assertRedirect('/dashboard');
+     21▕         $this->assertAuthenticatedAs(User::where('email', 'admin@example.com')->first());
+     22▕     }
+     23▕ 
+     24▕     public function test_cannot_login_as_non_existent_user()
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Backup\FeatureGatingTest > basic pl…  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: billing_overrides.reason (Connection: sqlite, Database: :memory:, SQL: insert into "billing_overrides" ("team_id", "type", "key", "value", "updated_at", "created_at") values (1, feature, cloud_backups, 0, 2026-04-09 09:03:22, 2026-04-09 09:03:22))
 
   at vendor/laravel/framework/src/Illuminate/Database/Connection.php:838
     834▕             $exceptionType = $this->isUniqueConstraintError($e)
@@ -39,9 +546,129 @@
     842▕                 $e,
 
       [2m+19 vendor frames [22m
-  20  tests/Feature/Integrations/GoogleDriveBackupTest.php:64
+  20  tests/Feature/Backup/FeatureGatingTest.php:45
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Backup\FeatureGatingTest > addon en…  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: billing_overrides.reason (Connection: sqlite, Database: :memory:, SQL: insert into "billing_overrides" ("team_id", "type", "key", "value", "updated_at", "created_at") values (1, feature, cloud_backups, 0, 2026-04-09 09:03:22, 2026-04-09 09:03:22))
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:838
+    834▕             $exceptionType = $this->isUniqueConstraintError($e)
+    835▕                 ? UniqueConstraintViolationException::class
+    836▕                 : QueryException::class;
+    837▕ 
+  ➜ 838▕             throw new $exceptionType(
+    839▕                 $this->getNameWithReadWriteType(),
+    840▕                 $query,
+    841▕                 $this->prepareBindings($bindings),
+    842▕                 $e,
+
+      [2m+19 vendor frames [22m
+  20  tests/Feature/Backup/FeatureGatingTest.php:61
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Backup\FeatureGatingTest > expired…   QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: billing_overrides.reason (Connection: sqlite, Database: :memory:, SQL: insert into "billing_overrides" ("team_id", "type", "key", "value", "updated_at", "created_at") values (1, feature, backups, 0, 2026-04-09 09:03:22, 2026-04-09 09:03:22))
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:838
+    834▕             $exceptionType = $this->isUniqueConstraintError($e)
+    835▕                 ? UniqueConstraintViolationException::class
+    836▕                 : QueryException::class;
+    837▕ 
+  ➜ 838▕             throw new $exceptionType(
+    839▕                 $this->getNameWithReadWriteType(),
+    840▕                 $query,
+    841▕                 $this->prepareBindings($bindings),
+    842▕                 $e,
+
+      [2m+19 vendor frames [22m
+  20  tests/Feature/Backup/FeatureGatingTest.php:82
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Backup\FeatureGatingTest > backup service throws on…   
+  Failed asserting that exception of type "Exception" is thrown.
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\CallInitiationTest > it blocks call when calling di…   
+  Expected response status code [400] but received 403.
+Failed asserting that 403 is identical to 400.
+
+The following errors occurred during the last request:
+
+{
+    "success": false,
+    "message": "Plan does not support 'calling'.",
+    "code": "ERR_FEATURE_LOCKED",
+    "errors": {
+        "upgrade_required": true
+    }
+}
+
+  at tests/Feature/CallInitiationTest.php:150
+    146▕         if ($response->status() === 404) {
+    147▕             dump($response->content());
+    148▕         }
+    149▕ 
+  ➜ 150▕         $response->assertStatus(400); // Because we changed our API controller to always return 400 for eligibility block instead of 403
+    151▕         $response->assertJson([
+    152▕             'success' => false,
+    153▕         ]);
+    154▕     }
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\CampaignTest > can process campaign and…   Exception   
+  Campaign launch aborted (PRE-QUEUE): Monthly quota of 0 for message_limit has been reached. Please top-up your wallet to send more messages. [Code: ERR_QUOTA_EXCEEDED]
+
+  at app/Services/BroadcastService.php:61
+     57▕         );
+     58▕ 
+     59▕         if (!$preflight['allowed']) {
+     60▕             $campaign->update(['status' => 'failed', 'error_message' => $preflight['reason']]);
+  ➜  61▕             throw new \Exception("Campaign launch aborted (PRE-QUEUE): {$preflight['reason']} [Code: {$preflight['code']}]");
+     62▕         }
+     63▕ 
+     64▕ 
+     65▕         // 0.1 WhatsApp Health Check (CRITICAL)
+
+  1   app/Services/BroadcastService.php:61
+  2   app/Jobs/ProcessCampaignJob.php:38
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\CampaignTest > campaign audiences filter…  Exception   
+  Campaign launch aborted (PRE-QUEUE): Monthly quota of 0 for message_limit has been reached. Please top-up your wallet to send more messages. [Code: ERR_QUOTA_EXCEEDED]
+
+  at app/Services/BroadcastService.php:61
+     57▕         );
+     58▕ 
+     59▕         if (!$preflight['allowed']) {
+     60▕             $campaign->update(['status' => 'failed', 'error_message' => $preflight['reason']]);
+  ➜  61▕             throw new \Exception("Campaign launch aborted (PRE-QUEUE): {$preflight['reason']} [Code: {$preflight['code']}]");
+     62▕         }
+     63▕ 
+     64▕ 
+     65▕         // 0.1 WhatsApp Health Check (CRITICAL)
+
+  1   app/Services/BroadcastService.php:61
+  2   app/Jobs/ProcessCampaignJob.php:38
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\DomainReviewFixesTest > wallet overage is allowed i…   
+  Failed asserting that false is true.
+
+  at tests/Feature/DomainReviewFixesTest.php:61
+     57▕ 
+     58▕         // 2. PAID message (cost>0) should be ALLOWED even if over limit (if balance exists)
+     59▕         TeamWallet::updateOrCreate(['team_id' => $team->id], ['balance' => 10.00]);
+     60▕         $result = $service->authorize($team, 'send_message', 'message_limit', 1000, 0.10);
+  ➜  61▕         $this->assertTrue($result['allowed']);
+     62▕     }
+     63▕ 
+     64▕     public function test_workflow_recursion_limit()
+     65▕     {
+
+  1   tests/Feature/DomainReviewFixesTest.php:61
 
 
-  Tests:    2 failed (0 assertions)
-  Duration: 1.54s
+  Tests:    16 failed, 185 passed (456 assertions)
+  Duration: 6.82s
 

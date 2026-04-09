@@ -7,7 +7,6 @@ use App\Models\CartItem;
 use App\Models\Contact;
 use App\Models\Product;
 use App\Models\Team;
-use Illuminate\Support\Facades\Log;
 
 class CartService
 {
@@ -30,6 +29,7 @@ class CartService
         // 2. If exists, refresh expiry and return
         if ($cart) {
             $this->refreshExpiry($cart, $team);
+
             return $cart;
         }
 
@@ -52,6 +52,7 @@ class CartService
                 $existingAnyCart->context_key = $contextKey; // Switch context
                 $this->refreshExpiry($existingAnyCart, $team);
                 $existingAnyCart->save();
+
                 return $existingAnyCart;
             }
         }
@@ -64,7 +65,7 @@ class CartService
             'status' => 'active',
             'currency' => $config['currency'] ?? 'USD',
             'items' => [],
-            'total_amount' => 0
+            'total_amount' => 0,
         ]);
 
         $this->refreshExpiry($cart, $team);
@@ -120,6 +121,7 @@ class CartService
     {
         $cart->removeItem($productId);
         $this->calculateTotal($cart);
+
         return $cart->fresh();
     }
 
@@ -129,6 +131,7 @@ class CartService
     public function clearCart(Cart $cart)
     {
         $cart->clear();
+
         return $cart->fresh();
     }
 

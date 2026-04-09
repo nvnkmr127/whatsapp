@@ -2,13 +2,12 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Jobs\PersistMessageJob;
 use App\Models\Team;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
-use App\Jobs\PersistMessageJob;
-use App\Jobs\UpdateMessageStatusJob;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class BroadcastConsumerPerformanceTest extends TestCase
 {
@@ -35,7 +34,7 @@ class BroadcastConsumerPerformanceTest extends TestCase
         // 2. Run Command (only 1 count to process our event)
         $this->artisan('broadcast:consume', [
             '--count' => 1,
-            '--seconds' => 1 // Limit run time
+            '--seconds' => 1, // Limit run time
         ]);
 
         // 3. Assert Job Pushed (Not Sync)
@@ -43,8 +42,8 @@ class BroadcastConsumerPerformanceTest extends TestCase
 
         // 4. Verification of "Zero Latency" intent:
         // If it was sync, the command would have executed the job logic inline.
-        // Since we are mocking Queue, if it was dispatchSync, it might still fire, 
-        // but Queue::fake() interacts differently with sync. 
+        // Since we are mocking Queue, if it was dispatchSync, it might still fire,
+        // but Queue::fake() interacts differently with sync.
         // Specifically, we want to ensure it went to the 'messages' queue.
         Queue::assertPushedOn('messages', PersistMessageJob::class);
     }

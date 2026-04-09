@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
-
-use \App\Traits\HasTeam;
 
 class Order extends Model
 {
@@ -18,7 +17,7 @@ class Order extends Model
         'total_amount',
         'currency',
         'status',
-        'payment_details'
+        'payment_details',
     ];
 
     protected $casts = [
@@ -30,7 +29,7 @@ class Order extends Model
     protected static function booted()
     {
         static::saving(function ($order) {
-            if (!$order->isDirty('status')) {
+            if (! $order->isDirty('status')) {
                 return;
             }
 
@@ -39,15 +38,15 @@ class Order extends Model
 
             // Terminal Status Restriction
             if ($oldStatus === 'cancelled' && $newStatus !== 'cancelled') {
-                throw new \Exception("Cannot transition out of terminal state: cancelled");
+                throw new \Exception('Cannot transition out of terminal state: cancelled');
             }
 
             if ($oldStatus === 'shipped' && in_array($newStatus, ['pending', 'paid'])) {
-                 throw new \Exception("Cannot revert order to {$newStatus} once it has been shipped.");
+                throw new \Exception("Cannot revert order to {$newStatus} once it has been shipped.");
             }
 
             if ($oldStatus === 'paid' && $newStatus === 'pending') {
-                 throw new \Exception("Cannot revert paid order to pending status.");
+                throw new \Exception('Cannot revert paid order to pending status.');
             }
         });
 
@@ -67,9 +66,9 @@ class Order extends Model
                     $wasPending = $order->getOriginal('status') === 'pending';
                     if ($order->wasChanged('status') && $order->status === 'paid' && $wasPending) {
                         app(\App\Services\WorkflowEngine::class)->trigger('payment_received', $order, [
-                            'amount' => $order->total_amount, 
+                            'amount' => $order->total_amount,
                             'currency' => $order->currency,
-                            'transition' => 'pending_to_paid'
+                            'transition' => 'pending_to_paid',
                         ]);
                     }
                 }

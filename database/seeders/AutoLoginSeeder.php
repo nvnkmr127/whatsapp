@@ -6,7 +6,6 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Jetstream\Jetstream;
 
 class AutoLoginSeeder extends Seeder
 {
@@ -22,7 +21,7 @@ class AutoLoginSeeder extends Seeder
             ]
         );
 
-        if (!$superAdmin->ownedTeams()->where('personal_team', true)->exists()) {
+        if (! $superAdmin->ownedTeams()->where('personal_team', true)->exists()) {
             $superAdmin->ownedTeams()->save(Team::forceCreate([
                 'user_id' => $superAdmin->id,
                 'name' => "Admin's Team",
@@ -44,10 +43,10 @@ class AutoLoginSeeder extends Seeder
             ]
         );
 
-        if (!$manager->ownedTeams()->where('personal_team', true)->exists()) {
+        if (! $manager->ownedTeams()->where('personal_team', true)->exists()) {
             $manager->ownedTeams()->save(Team::forceCreate([
                 'user_id' => $manager->id,
-                'name' => "Marketing Team",
+                'name' => 'Marketing Team',
                 'personal_team' => true,
             ]));
         }
@@ -67,7 +66,7 @@ class AutoLoginSeeder extends Seeder
         );
 
         // Add Agent to Manager's Team
-        if (!$managerTeam->users->contains($agent->id)) {
+        if (! $managerTeam->users->contains($agent->id)) {
             $managerTeam->users()->attach($agent, ['role' => 'agent']);
         }
 

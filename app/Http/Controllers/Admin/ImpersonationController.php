@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
@@ -19,7 +18,7 @@ class ImpersonationController extends Controller
         $admin = Auth::user();
 
         // 1. Security Check: Only Super Admins can impersonate
-        if (!$admin->isSuperAdmin()) {
+        if (! $admin->isSuperAdmin()) {
             abort(403, 'Unauthorized impersonation attempt.');
         }
 
@@ -43,7 +42,7 @@ class ImpersonationController extends Controller
      */
     public function exit()
     {
-        if (!Session::has('impersonated_by')) {
+        if (! Session::has('impersonated_by')) {
             return redirect()->route('dashboard');
         }
 
@@ -62,6 +61,6 @@ class ImpersonationController extends Controller
         // 3. Log back in as admin
         Auth::guard('web')->login($admin);
 
-        return redirect()->route('admin.dashboard')->with('status', "Impersonation ended.");
+        return redirect()->route('admin.dashboard')->with('status', 'Impersonation ended.');
     }
 }

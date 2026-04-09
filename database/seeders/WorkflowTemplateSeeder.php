@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class WorkflowTemplateSeeder extends Seeder
@@ -27,7 +26,7 @@ class WorkflowTemplateSeeder extends Seeder
                         'config' => [
                             'field' => 'onboarding.whatsapp_connected',
                             'operator' => 'eq',
-                            'value' => false
+                            'value' => false,
                         ],
                         'true_nodes' => [
                             [
@@ -37,10 +36,10 @@ class WorkflowTemplateSeeder extends Seeder
                                 'config' => [
                                     'template_name' => 'onboarding_remote_reminder',
                                     'language' => 'en_US',
-                                    'variables' => ['{name}']
-                                ]
-                            ]
-                        ]
+                                    'variables' => ['{name}'],
+                                ],
+                            ],
+                        ],
                     ],
                     [
                         'id' => 'node_2',
@@ -49,7 +48,7 @@ class WorkflowTemplateSeeder extends Seeder
                         'config' => [
                             'field' => 'onboarding.business_profile_completed',
                             'operator' => 'eq',
-                            'value' => false
+                            'value' => false,
                         ],
                         'true_nodes' => [
                             [
@@ -59,10 +58,10 @@ class WorkflowTemplateSeeder extends Seeder
                                 'config' => [
                                     'template_name' => 'onboarding_profile_reminder',
                                     'language' => 'en_US',
-                                    'variables' => ['{name}']
-                                ]
-                            ]
-                        ]
+                                    'variables' => ['{name}'],
+                                ],
+                            ],
+                        ],
                     ],
                     [
                         'id' => 'node_3',
@@ -71,7 +70,7 @@ class WorkflowTemplateSeeder extends Seeder
                         'config' => [
                             'field' => 'onboarding.first_campaign_created',
                             'operator' => 'eq',
-                            'value' => false
+                            'value' => false,
                         ],
                         'true_nodes' => [
                             [
@@ -81,12 +80,12 @@ class WorkflowTemplateSeeder extends Seeder
                                 'config' => [
                                     'template_name' => 'onboarding_campaign_tutorial',
                                     'language' => 'en_US',
-                                    'variables' => ['{name}']
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
+                                    'variables' => ['{name}'],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ]
         );
     }

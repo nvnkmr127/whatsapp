@@ -9,31 +9,49 @@ use Livewire\WithPagination;
 
 class TemplateList extends Component
 {
+    use \Livewire\WithFileUploads;
     use WhatsApp;
     use WithPagination;
-    use \Livewire\WithFileUploads;
 
     public $search = '';
+
     public $filterStatus = '';
+
     public $filterCategory = '';
+
     public $syncing = false;
+
     public $showCreateModal = false;
+
     public $showViewModal = false;
 
     // Form Fields (Shared for Create/View, View is Read-Only)
     public $name = '';
+
     public $category = 'UTILITY';
+
     public $language = 'en_US';
+
     public $headerType = 'NONE'; // NONE, TEXT
+
     public $headerText = '';
+
     public $body = '';
+
     public $footer = '';
+
     public $buttons = [];
+
     public $headerMedia; // For file uploads
+
     public $exampleMediaUrl = ''; // Keep for view-only or fallback
+
     public $copyCode = '';
+
     public $variableConfig = [];
+
     public $validationWarnings = [];
+
     public $ignoreWarnings = false;
 
     public $languages = [
@@ -144,9 +162,20 @@ class TemplateList extends Component
     }
 
     // Reset pagination when searching or filtering
-    public function updatedSearch()       { $this->resetPage(); }
-    public function updatedFilterStatus()  { $this->resetPage(); }
-    public function updatedFilterCategory(){ $this->resetPage(); }
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterCategory()
+    {
+        $this->resetPage();
+    }
 
     public function updatedCategory($value)
     {
@@ -158,9 +187,9 @@ class TemplateList extends Component
 
             // Ensure we have a COPY_CODE button as it's required for Authentication
             $hasCopyCode = collect($this->buttons)->contains('type', 'COPY_CODE');
-            if (!$hasCopyCode) {
+            if (! $hasCopyCode) {
                 $this->buttons = [
-                    ['type' => 'COPY_CODE', 'text' => 'Copy Code', 'url' => '', 'phoneNumber' => '', 'copyCode' => '']
+                    ['type' => 'COPY_CODE', 'text' => 'Copy Code', 'url' => '', 'phoneNumber' => '', 'copyCode' => ''],
                 ];
             }
         }
@@ -202,10 +231,10 @@ class TemplateList extends Component
 
                 $this->dispatch('notify', message: 'Templates synced and pruned successfully!', type: 'success');
             } else {
-                $this->dispatch('notify', message: 'Sync failed: ' . json_encode($response['error']), type: 'error');
+                $this->dispatch('notify', message: 'Sync failed: '.json_encode($response['error']), type: 'error');
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', message: 'Error: ' . $e->getMessage(), type: 'error');
+            $this->dispatch('notify', message: 'Error: '.$e->getMessage(), type: 'error');
         }
         $this->syncing = false;
     }
@@ -226,8 +255,9 @@ class TemplateList extends Component
         // Hard Limit: 10 total (WhatsApp limit), but usually less relative to mix.
         // We will default to QUICK_REPLY unless we already have CTAs.
 
-        if (count($this->buttons) >= 10)
+        if (count($this->buttons) >= 10) {
             return;
+        }
 
         $type = 'QUICK_REPLY';
         if ($this->category === 'AUTHENTICATION') {
@@ -259,15 +289,15 @@ class TemplateList extends Component
 
     public function detectVariables()
     {
-        $text = $this->body . ' ' . ($this->headerType === 'TEXT' ? $this->headerText : '');
+        $text = $this->body.' '.($this->headerType === 'TEXT' ? $this->headerText : '');
 
         foreach ($this->buttons as $btn) {
             if (($btn['type'] ?? '') === 'URL') {
-                $text .= ' ' . ($btn['url'] ?? '');
+                $text .= ' '.($btn['url'] ?? '');
             }
         }
 
-        $service = new \App\Services\TemplateService();
+        $service = new \App\Services\TemplateService;
         $vars = $service->extractVariables($text);
 
         // Sync config: Add new, remove old
@@ -280,7 +310,7 @@ class TemplateList extends Component
                     'name' => $var,
                     'type' => 'TEXT',
                     'fallback' => '',
-                    'sample' => ''
+                    'sample' => '',
                 ];
             }
         }
@@ -300,7 +330,7 @@ class TemplateList extends Component
         // 2. Replace Variables with highlighting and samples
         foreach ($this->variableConfig as $var => $config) {
             $sample = $config['sample'] ?: ($config['fallback'] ?: $var);
-            $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">' . e($sample) . '</span>';
+            $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">'.e($sample).'</span>';
             $text = str_replace(e($var), $replacement, $text);
         }
 
@@ -321,15 +351,16 @@ class TemplateList extends Component
     public function getPreviewHeaderProperty()
     {
         $text = $this->headerText;
-        if (empty($text))
+        if (empty($text)) {
             return '';
+        }
 
         $text = e($text);
 
         // Replace Variables
         foreach ($this->variableConfig as $var => $config) {
             $sample = $config['sample'] ?: ($config['fallback'] ?: $var);
-            $text = str_replace(e($var), '<strong>' . e($sample) . '</strong>', $text);
+            $text = str_replace(e($var), '<strong>'.e($sample).'</strong>', $text);
         }
 
         // WhatsApp Markdown
@@ -346,8 +377,9 @@ class TemplateList extends Component
             ->where('team_id', auth()->user()->current_team_id)
             ->first();
 
-        if (!$template) {
+        if (! $template) {
             $this->dispatch('notify', message: 'Template not found or unauthorized.', type: 'error');
+
             return;
         }
 
@@ -399,8 +431,8 @@ class TemplateList extends Component
         // Add dynamic rules for variables
         $rules = $this->rules(); // Check method now
         foreach ($this->variableConfig as $var => $config) {
-            $rules['variableConfig.' . $var . '.name'] = 'required|regex:/^[a-z0-9_{}]+$/|max:50';
-            $rules['variableConfig.' . $var . '.sample'] = 'required|max:100';
+            $rules['variableConfig.'.$var.'.name'] = 'required|regex:/^[a-z0-9_{}]+$/|max:50';
+            $rules['variableConfig.'.$var.'.sample'] = 'required|max:100';
         }
 
         // Custom Validation for Mixed Buttons
@@ -409,14 +441,17 @@ class TemplateList extends Component
 
         if ($qrCount > 0 && $ctaCount > 0) {
             $this->addError('buttons', 'Cannot mix Quick Reply and Call-to-Action buttons.');
+
             return;
         }
         if ($qrCount > 3) {
             $this->addError('buttons', 'Max 3 Quick Reply buttons allowed.');
+
             return;
         }
         if ($ctaCount > 2) {
             $this->addError('buttons', 'Max 2 Call-to-Action buttons allowed.');
+
             return;
         }
 
@@ -434,24 +469,25 @@ class TemplateList extends Component
             if ($this->headerType === 'TEXT') {
                 $header['text'] = $this->headerText;
                 // HEADER VARIABLES
-                $service = new \App\Services\TemplateService();
+                $service = new \App\Services\TemplateService;
                 $vars = $service->extractVariables($this->headerText);
-                if (!empty($vars)) {
+                if (! empty($vars)) {
                     $examples = [];
                     foreach ($vars as $var) {
                         $examples[] = $this->variableConfig[$var]['sample'] ?? 'sample';
                     }
                     $header['example'] = ['header_text' => $examples];
                 }
-            } else if (in_array($this->headerType, ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+            } elseif (in_array($this->headerType, ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
                 // UPLOAD MEDIA TO META
                 try {
                     $handle = $whatsapp->uploadMediaForTemplate($this->headerMedia);
                     $header['example'] = [
-                        'header_handle' => [$handle]
+                        'header_handle' => [$handle],
                     ];
                 } catch (\Exception $e) {
-                    $this->addError('headerMedia', 'Upload Failed: ' . $e->getMessage());
+                    $this->addError('headerMedia', 'Upload Failed: '.$e->getMessage());
+
                     return;
                 }
             }
@@ -460,7 +496,7 @@ class TemplateList extends Component
 
         // Body
         $bodyComponent = [
-            'type' => 'BODY'
+            'type' => 'BODY',
         ];
 
         if ($this->category === 'AUTHENTICATION') {
@@ -469,9 +505,9 @@ class TemplateList extends Component
             $bodyComponent['text'] = $this->body;
 
             // BODY VARIABLES
-            $service = new \App\Services\TemplateService(); // Reuse or new
+            $service = new \App\Services\TemplateService; // Reuse or new
             $vars = $service->extractVariables($this->body);
-            if (!empty($vars)) {
+            if (! empty($vars)) {
                 $examples = [];
                 foreach ($vars as $var) {
                     $examples[] = $this->variableConfig[$var]['sample'] ?? 'sample';
@@ -487,59 +523,59 @@ class TemplateList extends Component
         if ($this->footer) {
             $components[] = [
                 'type' => 'FOOTER',
-                'text' => $this->footer
+                'text' => $this->footer,
             ];
         }
 
         // Buttons
-        if (!empty($this->buttons)) {
+        if (! empty($this->buttons)) {
             $buttonComponents = [];
             foreach ($this->buttons as $btn) {
                 if ($btn['type'] === 'QUICK_REPLY') {
                     $buttonComponents[] = [
                         'type' => 'QUICK_REPLY',
-                        'text' => $btn['text']
+                        'text' => $btn['text'],
                     ];
                 } elseif ($btn['type'] === 'URL') {
                     $buttonComponents[] = [
                         'type' => 'URL',
                         'text' => $btn['text'],
-                        'url' => $btn['url']
+                        'url' => $btn['url'],
                     ];
                 } elseif ($btn['type'] === 'PHONE_NUMBER') {
                     $buttonComponents[] = [
                         'type' => 'PHONE_NUMBER',
                         'text' => $btn['text'],
-                        'phone_number' => $btn['phoneNumber']
+                        'phone_number' => $btn['phoneNumber'],
                     ];
                 } elseif ($btn['type'] === 'COPY_CODE') {
                     if ($this->category === 'AUTHENTICATION') {
                         $buttonComponents[] = [
                             'type' => 'OTP',
                             'otp_type' => 'COPY_CODE',
-                            'text' => $btn['text'] ?: 'Copy Code'
+                            'text' => $btn['text'] ?: 'Copy Code',
                         ];
                     } else {
                         $buttonComponents[] = [
                             'type' => 'COPY_CODE',
-                            'example' => $btn['copyCode']
+                            'example' => $btn['copyCode'],
                         ];
                     }
                 } elseif ($btn['type'] === 'CATALOG') {
                     $buttonComponents[] = [
                         'type' => 'CATALOG',
-                        'text' => $btn['text']
+                        'text' => $btn['text'],
                     ];
                 } elseif ($btn['type'] === 'MPM') {
                     $buttonComponents[] = [
                         'type' => 'MPM',
-                        'text' => $btn['text']
+                        'text' => $btn['text'],
                     ];
                 }
             }
             $components[] = [
                 'type' => 'BUTTONS',
-                'buttons' => $buttonComponents
+                'buttons' => $buttonComponents,
             ];
         }
 
@@ -551,28 +587,29 @@ class TemplateList extends Component
         ];
 
         // --- PRE-SUBMISSION LINTING ---
-        if (!$this->ignoreWarnings) {
+        if (! $this->ignoreWarnings) {
             $tempTemplate = new WhatsappTemplate([
                 'name' => $this->name,
                 'category' => $this->category,
                 'status' => 'APPROVED', // Assume approved for lifecycle checks
                 'is_paused' => false,
-                'components' => $components // Model casts this to array/json automatically if configured? 
-                // Wait, model might expect JSON string or array depending on casts. 
+                'components' => $components, // Model casts this to array/json automatically if configured?
+                // Wait, model might expect JSON string or array depending on casts.
                 // Let's pass array, assuming strict validation handles it or we cast to array manually in validator.
                 // TemplateValidator expects array for components in logic: $template->components ?? []
             ]);
             // Force component attribute storage if model doesn't cast on fill
             $tempTemplate->components = $components;
 
-            $validator = new \App\Validators\TemplateValidator();
+            $validator = new \App\Validators\TemplateValidator;
             // We pass [] for runtimeParams as this is static check
             $result = $validator->validate($tempTemplate, []);
 
-            if (!$result->isValid()) {
+            if (! $result->isValid()) {
                 $this->validationWarnings = array_map(function ($e) {
                     return ['code' => $e->code, 'message' => $e->message, 'severity' => $e->severity];
                 }, $result->getErrors());
+
                 return; // HALT for user review
             }
         }
@@ -601,10 +638,10 @@ class TemplateList extends Component
                 $this->dispatch('notify', message: 'Template submitted and schema saved!', type: 'success');
             } else {
                 $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
-                $this->dispatch('notify', message: 'Meta Error: ' . $errorMsg, type: 'error');
+                $this->dispatch('notify', message: 'Meta Error: '.$errorMsg, type: 'error');
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', message: 'Error: ' . $e->getMessage(), type: 'error');
+            $this->dispatch('notify', message: 'Error: '.$e->getMessage(), type: 'error');
         }
     }
 
@@ -614,8 +651,9 @@ class TemplateList extends Component
             ->where('team_id', auth()->user()->current_team_id)
             ->first();
 
-        if (!$template) {
+        if (! $template) {
             $this->dispatch('notify', message: 'Template not found or unauthorized.', type: 'error');
+
             return;
         }
 
@@ -631,10 +669,10 @@ class TemplateList extends Component
                 // If template not found on Meta, maybe just delete local?
                 // For now, respect error.
                 $errorMsg = $response['error']['message'] ?? json_encode($response['error']);
-                $this->dispatch('notify', message: 'Meta Error: ' . $errorMsg, type: 'error');
+                $this->dispatch('notify', message: 'Meta Error: '.$errorMsg, type: 'error');
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', 'Error: ' . $e->getMessage());
+            $this->dispatch('notify', 'Error: '.$e->getMessage());
         }
     }
 
@@ -646,22 +684,27 @@ class TemplateList extends Component
                 return $c['format'] ?? 'TEXT';
             }
         }
+
         return 'NONE';
     }
 
     public function getHealthStatus($template)
     {
         // 1. Meta-driven status (New Reputation feature 7)
-        if ($template->quality_rating === 'RED' || $template->is_paused_by_meta)
+        if ($template->quality_rating === 'RED' || $template->is_paused_by_meta) {
             return 'CRITICAL';
-        if ($template->quality_rating === 'YELLOW')
+        }
+        if ($template->quality_rating === 'YELLOW') {
             return 'WARNING';
+        }
 
         // 2. Lifecycle Status
-        if (in_array($template->status, ['REJECTED', 'FLAGGED', 'DISABLED']))
+        if (in_array($template->status, ['REJECTED', 'FLAGGED', 'DISABLED'])) {
             return 'CRITICAL';
-        if ($template->is_paused)
+        }
+        if ($template->is_paused) {
             return 'WARNING';
+        }
 
         // 3. Readiness Score (Internal linting)
         if ($template->readiness_score !== null && $template->readiness_score < 70) {
@@ -678,8 +721,8 @@ class TemplateList extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('category', 'like', '%' . $this->search . '%');
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('category', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -708,7 +751,7 @@ class TemplateList extends Component
 
         return view('livewire.templates.template-list', [
             'templates' => $templates,
-            'stats' => $stats
+            'stats' => $stats,
         ]);
     }
 }

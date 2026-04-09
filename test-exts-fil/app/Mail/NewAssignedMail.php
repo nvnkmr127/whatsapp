@@ -37,8 +37,8 @@ class NewAssignedMail extends Mailable
      */
     public function __construct($gretting, $slug, $userId = null, $contactId = null)
     {
-        $this->gretting  = $gretting;
-        $this->userId    = $userId;
+        $this->gretting = $gretting;
+        $this->userId = $userId;
         $this->contactId = $contactId;
 
         $this->template = mailTemplate($slug);
@@ -75,8 +75,8 @@ class NewAssignedMail extends Mailable
         return new Content(
             view: 'components.mail',
             with: [
-                'title'    => $this->template->subject,
-                'body'     => $this->body,
+                'title' => $this->template->subject,
+                'body' => $this->body,
                 'greeting' => $this->gretting,
             ]
         );

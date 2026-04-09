@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property string                          $id
- * @property string                          $type
- * @property string                          $notifiable_type
- * @property int                             $notifiable_id
- * @property array<array-key, mixed>         $data
+ * @property string $id
+ * @property string $type
+ * @property string $notifiable_type
+ * @property int $notifiable_id
+ * @property array<array-key, mixed> $data
  * @property \Illuminate\Support\Carbon|null $read_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -49,7 +49,7 @@ class Notification extends Model
      * @var array
      */
     protected $casts = [
-        'data'    => 'array',
+        'data' => 'array',
         'read_at' => 'datetime',
     ];
 
@@ -121,7 +121,7 @@ class Notification extends Model
     /**
      * Scope a query to only include unread notifications.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeUnread($query)
@@ -132,7 +132,7 @@ class Notification extends Model
     /**
      * Scope a query to only include read notifications.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeRead($query)

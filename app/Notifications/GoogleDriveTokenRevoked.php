@@ -13,6 +13,7 @@ class GoogleDriveTokenRevoked extends Notification implements ShouldQueue
     use Queueable;
 
     public $team;
+
     public $errorMessage;
 
     /**
@@ -42,8 +43,8 @@ class GoogleDriveTokenRevoked extends Notification implements ShouldQueue
         return (new MailMessage)
             ->error()
             ->subject('CRITICAL: Google Drive Backup Disconnected')
-            ->line('The Google Drive integration for your team "' . $this->team->name . '" has been disconnected or the access was revoked.')
-            ->line('Reason: ' . ($this->errorMessage ?: 'Authentication failed.'))
+            ->line('The Google Drive integration for your team "'.$this->team->name.'" has been disconnected or the access was revoked.')
+            ->line('Reason: '.($this->errorMessage ?: 'Authentication failed.'))
             ->line('Your automated backups will NOT be uploaded to Google Drive until this is resolved.')
             ->action('Reconnect Google Drive', url('/settings/integrations'))
             ->line('Please reconnect immediately to ensure your data is safe.');

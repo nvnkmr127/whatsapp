@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WhatsAppHealthAlert extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $table = 'whatsapp_health_alerts';
 
@@ -33,8 +33,6 @@ class WhatsAppHealthAlert extends Model
         'acknowledged_at' => 'datetime',
         'resolved_at' => 'datetime',
     ];
-
-
 
     public function acknowledgedByUser()
     {

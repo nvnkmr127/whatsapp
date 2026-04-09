@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * OfferSettingsService
@@ -257,11 +256,12 @@ class OfferSettingsService
     {
         $raw = get_setting('offer_included_features');
 
-        if (!$raw) {
+        if (! $raw) {
             return (array) $this->findSchema('offer_included_features')['default'];
         }
 
         $decoded = json_decode($raw, true);
+
         return is_array($decoded) ? $decoded : [];
     }
 
@@ -275,6 +275,7 @@ class OfferSettingsService
     {
         return collect(self::SCHEMA)->map(function (array $entry) {
             $entry['current'] = $this->get($entry['key'], $entry['default']);
+
             return $entry;
         });
     }
@@ -284,7 +285,7 @@ class OfferSettingsService
      */
     public function schemaGroup(string $group): Collection
     {
-        return $this->schema()->filter(fn($e) => $e['group'] === $group)->values();
+        return $this->schema()->filter(fn ($e) => $e['group'] === $group)->values();
     }
 
     /**
@@ -308,6 +309,7 @@ class OfferSettingsService
                 return $entry;
             }
         }
+
         return null;
     }
 

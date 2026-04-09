@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Enums\IntegrationState;
+use App\Models\Team;
 use App\Traits\WhatsApp;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +23,7 @@ class WhatsAppVerificationEngine
     public function setTeam(Team $team): self
     {
         $this->team = $team;
+
         return $this;
     }
 
@@ -31,21 +32,23 @@ class WhatsAppVerificationEngine
      */
     public function verify(): array
     {
-        if (!$this->team->whatsapp_access_token) {
+        if (! $this->team->whatsapp_access_token) {
             return $this->updateState(IntegrationState::DISCONNECTED, ['error' => 'No token provided']);
         }
 
         // Tier 1: Identity & Token Validity
         $results['tier1'] = $this->verifyTier1Identity();
-        if (!$results['tier1']['status']) {
+        if (! $results['tier1']['status']) {
             $finalState = $this->determineFinalState($results);
+
             return $this->updateState($finalState, $results);
         }
 
         // Tier 2: Entity Verification (Phone Number)
         $results['tier2'] = $this->verifyTier2Entity();
-        if (!$results['tier2']['status']) {
+        if (! $results['tier2']['status']) {
             $finalState = $this->determineFinalState($results);
+
             return $this->updateState($finalState, $results);
         }
 
@@ -67,7 +70,7 @@ class WhatsAppVerificationEngine
         $wabaId = $this->team->whatsapp_business_account_id;
 
         $debug = $this->debugToken($token);
-        if (!$debug['status']) {
+        if (! $debug['status']) {
             // Fallback for Manual Tokens: Try a direct API call to verify functionality
             Log::info("debugToken failed for team {$this->team->id}, attempting direct API fallback.");
 
@@ -83,7 +86,7 @@ class WhatsAppVerificationEngine
                     'status' => true,
                     'is_expiring_soon' => false,
                     'is_manual_fallback' => true,
-                    'note' => 'Verified via functional API call (Manual token)'
+                    'note' => 'Verified via functional API call (Manual token)',
                 ];
             }
 
@@ -104,9 +107,9 @@ class WhatsAppVerificationEngine
         $required = ['whatsapp_business_messaging', 'whatsapp_business_management'];
         $missing = array_diff($required, $scopes);
 
-        if (!empty($missing)) {
+        if (! empty($missing)) {
             // Log missing scopes but don't hard-fail if there's no scope metadata (common in some manual system tokens)
-            Log::warning("Token missing recommended scopes for team {$this->team->id}: " . implode(', ', $missing));
+            Log::warning("Token missing recommended scopes for team {$this->team->id}: ".implode(', ', $missing));
         }
 
         // Rule 2: Token Grace Period check
@@ -127,16 +130,16 @@ class WhatsAppVerificationEngine
     protected function verifyTier2Entity(): array
     {
         $phoneId = $this->team->whatsapp_phone_number_id;
-        if (!$phoneId) {
+        if (! $phoneId) {
             return ['status' => false, 'error' => 'No phone number configured', 'category' => 'ENTITY_MISMATCH'];
         }
 
         $details = $this->getPhoneNumberDetails($phoneId);
-        if (!$details['status']) {
+        if (! $details['status']) {
             return ['status' => false, 'error' => $details['message'], 'category' => 'ENTITY_MISMATCH'];
         }
 
-        // Potential check if phone belongs to WABA? 
+        // Potential check if phone belongs to WABA?
         // Usually if getPhoneNumberDetails works with the WABA's token, it belongs.
 
         $data = $details['data'];
@@ -157,8 +160,9 @@ class WhatsAppVerificationEngine
         $wabaId = $this->team->whatsapp_business_account_id;
         $token = $this->team->whatsapp_access_token;
 
-        if (!$wabaId)
+        if (! $wabaId) {
             return ['status' => false, 'error' => 'No WABA ID'];
+        }
 
         // Webhook check
         $webhook = $this->checkWebhookSubscription($wabaId, $token);
@@ -186,14 +190,18 @@ class WhatsAppVerificationEngine
 
     protected function determineFinalState(array $results): IntegrationState
     {
-        if (!($results['tier1']['status'] ?? false))
+        if (! ($results['tier1']['status'] ?? false)) {
             return IntegrationState::SUSPENDED;
-        if (!($results['tier2']['status'] ?? false))
+        }
+        if (! ($results['tier2']['status'] ?? false)) {
             return IntegrationState::AUTHENTICATED;
-        if (!($results['tier3']['status'] ?? false) || !($results['tier3']['webhook_subscribed'] ?? false))
+        }
+        if (! ($results['tier3']['status'] ?? false) || ! ($results['tier3']['webhook_subscribed'] ?? false)) {
             return IntegrationState::PROVISIONED;
-        if (!($results['tier4']['status'] ?? false))
+        }
+        if (! ($results['tier4']['status'] ?? false)) {
             return IntegrationState::RESTRICTED;
+        }
 
         // Check for READY_WARNING (Rule 2)
         if ($results['tier1']['is_expiring_soon'] ?? false) {

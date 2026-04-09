@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\WhatsAppSetupState;
 use App\Models\Team;
 use App\Services\WhatsAppSetupStateMachine;
 use Illuminate\Console\Command;
@@ -64,7 +63,7 @@ class DetectStuckSetups extends Command
 
         $this->warn("Team {$team->id}: Stuck in {$currentState->value} for {$elapsed} minutes");
 
-        Log::warning("Stuck WhatsApp setup detected", [
+        Log::warning('Stuck WhatsApp setup detected', [
             'team_id' => $team->id,
             'state' => $currentState->value,
             'elapsed_minutes' => $elapsed,
@@ -76,7 +75,7 @@ class DetectStuckSetups extends Command
                 // Rollback to NOT_CONFIGURED
                 $stateMachine->rollback($team);
 
-                $this->info("  → Rolled back to NOT_CONFIGURED");
+                $this->info('  → Rolled back to NOT_CONFIGURED');
                 $fixedCount++;
 
                 // Notify team owner about stuck setup
@@ -84,14 +83,14 @@ class DetectStuckSetups extends Command
                     $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                         $team,
                         'setup_stuck',
-                        "Your WhatsApp setup was detected as stuck and has been reset. Please restart the setup process.",
+                        'Your WhatsApp setup was detected as stuck and has been reset. Please restart the setup process.',
                         ['reset_at' => now()]
                     ));
                 }
 
             } catch (\Exception $e) {
                 $this->error("  → Failed to fix: {$e->getMessage()}");
-                Log::error("Failed to fix stuck setup", [
+                Log::error('Failed to fix stuck setup', [
                     'team_id' => $team->id,
                     'error' => $e->getMessage(),
                 ]);

@@ -57,13 +57,15 @@ class CheckOnboardingInactivityJob implements ShouldQueue
     {
         foreach ($statuses as $status) {
             $user = $status->user;
-            if (!$user || !$user->phone)
+            if (! $user || ! $user->phone) {
                 continue;
+            }
 
             // Use the first team this user belongs to for context
             $team = $user->ownedTeams()->first() ?? $user->teams()->first();
-            if (!$team)
+            if (! $team) {
                 continue;
+            }
 
             try {
                 // Parse Variables
@@ -95,14 +97,14 @@ class CheckOnboardingInactivityJob implements ShouldQueue
                     $variables
                 );
 
-                \Illuminate\Support\Facades\Log::info("Onboarding reminder ({$templateName}) sent to user: {$user->id} with vars: " . implode(',', $variables));
+                \Illuminate\Support\Facades\Log::info("Onboarding reminder ({$templateName}) sent to user: {$user->id} with vars: ".implode(',', $variables));
 
                 // Update activity to prevent duplicate reminders in the next 10m run
                 // and increment internal reminder counter
                 $status->increment('reminders_sent_count');
                 $status->update(['last_activity_at' => now()]);
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to send onboarding reminder to user {$user->id}: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error("Failed to send onboarding reminder to user {$user->id}: ".$e->getMessage());
             }
         }
     }

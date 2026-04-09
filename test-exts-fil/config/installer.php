@@ -60,10 +60,10 @@ return [
     |
     */
     'permissions' => [
-        'storage/app'       => '0755',
+        'storage/app' => '0755',
         'storage/framework' => '0755',
-        'storage/logs'      => '0755',
-        'bootstrap/cache'   => '0755',
+        'storage/logs' => '0755',
+        'bootstrap/cache' => '0755',
     ],
 
     /*
@@ -75,9 +75,9 @@ return [
     |
     */
     'routes' => [
-        'prefix'     => 'install',
+        'prefix' => 'install',
         'middleware' => ['web'],
-        'as'         => 'install.',
+        'as' => 'install.',
     ],
 
     /*
@@ -89,19 +89,19 @@ return [
     |
     */
     'admin_setup' => [
-        'model'  => '\App\Models\User',
+        'model' => '\App\Models\User',
         'fields' => [
             'firstname' => true,
-            'lastname'  => true,
-            'email'     => true,
-            'password'  => true,
-            'timezone'  => true,
+            'lastname' => true,
+            'email' => true,
+            'password' => true,
+            'timezone' => true,
         ],
-        'role_field'           => 'role_id',
-        'admin_role_value'     => null,
-        'admin_flag_field'     => 'is_admin',
-        'admin_flag_value'     => 1,
-        'verified_field'       => 'email_verified_at',
+        'role_field' => 'role_id',
+        'admin_role_value' => null,
+        'admin_flag_field' => 'is_admin',
+        'admin_flag_value' => 1,
+        'verified_field' => 'email_verified_at',
         'verified_field_value' => now(),
     ],
 
@@ -144,14 +144,14 @@ return [
     |
     */
     'license_verification' => [
-        'product_id'        => '57276107',
-        'api_endpoint'      => 'aHR0cHM6Ly9wYXNzdGhlY29kZS5jb3JiaXRhbHRlY2guZGV2L2FwaS92Mw==',
-        'required'          => true,
-        'current_version'   => '1.0.3',
-        'verify_type'       => 'envato',
-        'root_path'         => storage_path('app/public/updates/'),
-        'module_name'       => 'WhatsBot - WhatsApp Marketing, Bot, Chat & AI Personal Assistant Module for Perfex CRM',
-        'support_url'       => 'aHR0cHM6Ly9zdXBwb3J0LmNvcmJpdGFsdGVjaC5kZXYvbG9naW4',
+        'product_id' => '57276107',
+        'api_endpoint' => 'aHR0cHM6Ly9wYXNzdGhlY29kZS5jb3JiaXRhbHRlY2guZGV2L2FwaS92Mw==',
+        'required' => true,
+        'current_version' => '1.0.3',
+        'verify_type' => 'envato',
+        'root_path' => storage_path('app/public/updates/'),
+        'module_name' => 'WhatsBot - WhatsApp Marketing, Bot, Chat & AI Personal Assistant Module for Perfex CRM',
+        'support_url' => 'aHR0cHM6Ly9zdXBwb3J0LmNvcmJpdGFsdGVjaC5kZXYvbG9naW4',
         'renew_support_url' => 'https://codecanyon.net/item/whatsmark-whatsapp-marketing-and-automation-platform-with-bots-chats-bulk-sender-ai/57276107',
     ],
 ];

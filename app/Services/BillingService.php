@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Team;
-use App\Models\TeamWallet;
 use App\Models\TeamTransaction;
+use App\Models\TeamWallet;
 use App\Models\WhatsAppConversation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -17,11 +17,11 @@ use Illuminate\Support\Facades\Log;
  * 1. Trial Includes Usage Limit Separate From Wallet:
  *    - A trial restricts how many units you can consume (e.g. 5,000 active contacts).
  *    - The Wallet funds the underlying Meta wholesale costs. Two separate layers.
- * 
+ *
  * 2. Wallet Credit Usage Rules Clearly Defined:
  *    - Wallet strictly manages pre-paid balance.
- *    - No differentiation exists between "promotional startup credit" vs "purchased credit". 
- * 
+ *    - No differentiation exists between "promotional startup credit" vs "purchased credit".
+ *
  * 3. No Double Benefit Stacking:
  *    - Being on a "Free Trial" DOES NOT wave the cost of sending messages/calls.
  *    - The user simply bleeds down the initial signup credit (or top-ups).
@@ -39,8 +39,9 @@ class BillingService
     {
         $limit = $team->getPlanLimit('message_limit', 1000);
 
-        if ($limit == 0)
-            return 0; // Unlimited
+        if ($limit == 0) {
+            return 0;
+        } // Unlimited
 
         $usage = \App\Models\Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
@@ -58,8 +59,9 @@ class BillingService
     {
         $limit = $team->getPlanLimit('message_limit', 1000);
 
-        if ($limit === 0)
-            return true; // Unlimited
+        if ($limit === 0) {
+            return true;
+        } // Unlimited
 
         // 2. Count Usage (Current Month)
         $usage = \App\Models\Message::where('team_id', $team->id)
@@ -86,6 +88,7 @@ class BillingService
                 'team_id' => $team->id,
                 'category' => $category,
             ]);
+
             return true;
         }
 
@@ -93,8 +96,9 @@ class BillingService
         // If a limit is exceeded, we should return false early.
         // However, if the team has an override or special offer status, this check needs to be robust.
         // The checkPlanLimits method already uses EntitlementService, which respects offer snapshots.
-        if (!$this->checkPlanLimits($team)) {
+        if (! $this->checkPlanLimits($team)) {
             Log::warning("Team {$team->id} exceeded monthly message limit.");
+
             return false;
         }
 
@@ -116,25 +120,27 @@ class BillingService
             $cost = $this->getCategoryCost($category);
 
             // 3. Check Balance with Lock
-            // We use lockForUpdate() to ensure no other transaction modifies the balance 
+            // We use lockForUpdate() to ensure no other transaction modifies the balance
             // after we read it but before we deduct.
             $wallet = TeamWallet::firstOrCreate(
                 ['team_id' => $team->id],
                 ['balance' => 0]
             );
 
-            // Lock the wallet row
+            // Lock the wallet row explicitly with a fresh instance
             $wallet = TeamWallet::where('id', $wallet->id)->lockForUpdate()->first();
 
-            if ($wallet->balance < $cost) {
+            // Re-read cost inside lock to be absolutely sure
+            $cost = $this->getCategoryCost($category);
+
+            try {
+                $wallet->strictDeduct($cost);
+            } catch (\Exception $e) {
                 // Strict Prepaid: Block. No negative wallet allowed.
                 // UNLESS the team has a 'negative_balance_allowed' override or feature.
                 // For now, strict prepaid is the business rule.
                 return false;
             }
-
-            // 4. Deduct & Transact
-            $wallet->strictDeduct($cost);
 
             TeamTransaction::create([
                 'team_id' => $team->id,
@@ -181,28 +187,28 @@ class BillingService
                     ->count(),
                 'limit' => $team->getPlanLimit('message_limit', 1000),
                 'label' => 'Outbound Messages',
-                'type' => 'monthly'
+                'type' => 'monthly',
             ],
             'agents' => [
                 'usage' => $team->users()->count() + $team->teamInvitations()->count(),
                 'limit' => $team->getPlanLimit('agent_limit', 2),
                 'label' => 'Team Agents',
-                'type' => 'provisioned'
+                'type' => 'provisioned',
             ],
             'automations' => [
-                'usage' => \App\Models\AutomationRun::whereHas('automation', fn($q) => $q->where('team_id', $team->id))
+                'usage' => \App\Models\AutomationRun::whereHas('automation', fn ($q) => $q->where('team_id', $team->id))
                     ->whereMonth('created_at', now()->month)
                     ->whereYear('created_at', now()->year)
                     ->count(),
                 'limit' => $team->getPlanLimit('automation_run_limit', 100),
                 'label' => 'Automation Runs',
-                'type' => 'monthly'
+                'type' => 'monthly',
             ],
             'contacts' => [
                 'usage' => $team->contacts()->count(),
                 'limit' => $team->getPlanLimit('contact_limit', 1000),
                 'label' => 'CRM Contacts',
-                'type' => 'total'
+                'type' => 'total',
             ],
             'ai_conversations' => [
                 'usage' => \App\Models\ActivityLog::where('team_id', $team->id)
@@ -212,7 +218,7 @@ class BillingService
                     ->count(),
                 'limit' => $team->getPlanLimit('ai_conversation_limit', 50),
                 'label' => 'AI Interactions',
-                'type' => 'monthly'
+                'type' => 'monthly',
             ],
         ];
     }
@@ -226,12 +232,13 @@ class BillingService
         $warnings = [];
 
         foreach ($stats as $key => $data) {
-            if ($data['limit'] === 0)
-                continue; // Unlimited
+            if ($data['limit'] === 0) {
+                continue;
+            } // Unlimited
 
             $percent = ($data['usage'] / $data['limit']) * 100;
             $level = null;
-            $message = "";
+            $message = '';
 
             if ($percent >= 100) {
                 $level = 'danger';
@@ -249,7 +256,7 @@ class BillingService
                     'level' => $level,
                     'metric' => $key,
                     'message' => $message,
-                    'percent' => $percent
+                    'percent' => $percent,
                 ];
 
                 // Cooldown: Only dispatch event if level has increased
@@ -257,7 +264,7 @@ class BillingService
                 $lastLevel = \Illuminate\Support\Facades\Cache::get($cacheKey);
 
                 $levels = ['info' => 1, 'warning' => 2, 'danger' => 3];
-                if (!$lastLevel || ($levels[$level] > ($levels[$lastLevel] ?? 0))) {
+                if (! $lastLevel || ($levels[$level] > ($levels[$lastLevel] ?? 0))) {
                     \App\Events\UsageThresholdReached::dispatch($team, $key, $level, $percent, $message);
                     \Illuminate\Support\Facades\Cache::put($cacheKey, $level, now()->addHours(24));
                 }
@@ -270,7 +277,7 @@ class BillingService
     public function deposit(Team $team, $amount, $note = 'Deposit')
     {
         if ($amount <= 0) {
-            throw new \InvalidArgumentException("Deposit amount must be positive.");
+            throw new \InvalidArgumentException('Deposit amount must be positive.');
         }
 
         $wallet = TeamWallet::firstOrCreate(
@@ -286,7 +293,7 @@ class BillingService
             'amount' => $amount,
             'type' => 'deposit',
             'description' => $note,
-            'invoice_number' => 'INV-' . strtoupper(uniqid()),
+            'invoice_number' => 'INV-'.strtoupper(uniqid()),
         ]);
     }
 
@@ -312,8 +319,8 @@ class BillingService
     public function createOverride(Team $team, string $type, string $key, $value, string $reason, $durationDays = 30)
     {
         // Permission check should be done in controller/middleware, but double check here.
-        if (!auth()->user()?->is_super_admin) {
-            throw new \Exception("Unauthorized: Only Super Admins can create billing overrides.");
+        if (! auth()->user()?->is_super_admin) {
+            throw new \Exception('Unauthorized: Only Super Admins can create billing overrides.');
         }
 
         $override = \App\Models\BillingOverride::create([
@@ -329,7 +336,7 @@ class BillingService
         $this->logBillingEvent($team, 'override_created', "Manual override created for {$key}", [
             'type' => $type,
             'value' => $value,
-            'expires_at' => $override->expires_at
+            'expires_at' => $override->expires_at,
         ]);
 
         return $override;
@@ -367,7 +374,7 @@ class BillingService
                 'cost' => $cost,
                 'balance' => $wallet->balance,
             ]);
-            
+
             // We do NOT deduct if it would go negative (Rule 4)
             // But we mark the call as 'billing_failed' in metadata if possible
             return false;
@@ -395,7 +402,7 @@ class BillingService
                 ];
             } else {
                 // Fallback: Append call ID to description if metadata column is missing
-                $transactionData['description'] .= " [Ref: " . substr($call->call_id, -8) . "]";
+                $transactionData['description'] .= ' [Ref: '.substr($call->call_id, -8).']';
             }
 
             TeamTransaction::create($transactionData);
@@ -445,7 +452,7 @@ class BillingService
      */
     public function checkCallLimits(Team $team): array
     {
-        if (!$team->max_call_minutes_per_month) {
+        if (! $team->max_call_minutes_per_month) {
             return [
                 'has_limit' => false,
                 'allowed' => true,

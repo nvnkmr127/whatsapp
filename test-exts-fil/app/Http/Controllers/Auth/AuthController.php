@@ -86,7 +86,7 @@ class AuthController extends Controller
 
         return URL::temporarySignedRoute(
             'password.reset',
-            Carbon::now()->addMinutes(Config::get('auth.passwords.' . config('auth.defaults.passwords') . '.expire', 60)),
+            Carbon::now()->addMinutes(Config::get('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60)),
             ['token' => $token, 'email' => $user->email]
         );
     }

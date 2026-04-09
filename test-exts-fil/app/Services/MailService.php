@@ -17,15 +17,15 @@ class MailService
             }
 
             config([
-                'mail.default'                 => 'smtp',
-                'mail.mailers.smtp.driver'     => get_setting('email.mailer', 'smtp'),
-                'mail.mailers.smtp.host'       => get_setting('email.smtp_host'),
-                'mail.mailers.smtp.port'       => (int) get_setting('email.smtp_port', 587),
-                'mail.mailers.smtp.username'   => get_setting('email.smtp_username'),
-                'mail.mailers.smtp.password'   => get_setting('email.smtp_password'),
+                'mail.default' => 'smtp',
+                'mail.mailers.smtp.driver' => get_setting('email.mailer', 'smtp'),
+                'mail.mailers.smtp.host' => get_setting('email.smtp_host'),
+                'mail.mailers.smtp.port' => (int) get_setting('email.smtp_port', 587),
+                'mail.mailers.smtp.username' => get_setting('email.smtp_username'),
+                'mail.mailers.smtp.password' => get_setting('email.smtp_password'),
                 'mail.mailers.smtp.encryption' => get_setting('email.smtp_encryption', 'tls'),
-                'mail.from.address'            => get_setting('email.sender_email', ''),
-                'mail.from.name'               => get_setting('email.sender_name', ''),
+                'mail.from.address' => get_setting('email.sender_email', ''),
+                'mail.from.name' => get_setting('email.sender_name', ''),
             ]);
 
             return true;
@@ -49,7 +49,7 @@ class MailService
 
             return ['type' => 'success', 'message' => t('email_sent_successfully')];
         } catch (\Exception $e) {
-            return ['type' => 'danger', 'message' => t('failed_to_send_email') . ' ' . $e->getMessage()];
+            return ['type' => 'danger', 'message' => t('failed_to_send_email').' '.$e->getMessage()];
         }
     }
 }

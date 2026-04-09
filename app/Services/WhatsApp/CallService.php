@@ -2,14 +2,14 @@
 
 namespace App\Services\WhatsApp;
 
-use App\Models\Team;
-use App\Models\Contact;
 use App\Core\WhatsApp\WhatsAppClient;
-use Illuminate\Support\Facades\Log;
+use App\Models\Contact;
+use App\Models\Team;
 
 class CallService
 {
     protected WhatsAppClient $client;
+
     protected ?Team $team = null;
 
     public function __construct(WhatsAppClient $client)
@@ -21,6 +21,7 @@ class CallService
     {
         $this->team = $team;
         $this->client->forTeam($team);
+
         return $this;
     }
 
@@ -36,8 +37,8 @@ class CallService
             'call' => [
                 'id' => $callId,
                 'offer_token' => $offerToken,
-                'action' => 'invite'
-            ]
+                'action' => 'invite',
+            ],
         ]);
     }
 
@@ -51,8 +52,8 @@ class CallService
             'type' => 'call',
             'call' => [
                 'id' => $callId,
-                'action' => 'end'
-            ]
+                'action' => 'end',
+            ],
         ]);
     }
 }

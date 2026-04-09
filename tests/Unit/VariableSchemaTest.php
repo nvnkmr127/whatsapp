@@ -2,11 +2,11 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Models\Team;
 use App\Models\WhatsappTemplate;
 use App\Services\TemplateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class VariableSchemaTest extends TestCase
 {
@@ -14,8 +14,8 @@ class VariableSchemaTest extends TestCase
 
     public function test_variable_extraction()
     {
-        $service = new TemplateService();
-        $text = "Hello {{1}}, your order {{2}} is ready.";
+        $service = new TemplateService;
+        $text = 'Hello {{1}}, your order {{2}} is ready.';
         $vars = $service->extractVariables($text);
 
         $this->assertCount(2, $vars);
@@ -25,7 +25,7 @@ class VariableSchemaTest extends TestCase
 
     public function test_hydration_logic()
     {
-        $template = new WhatsappTemplate();
+        $template = new WhatsappTemplate;
         $template->name = 'order_update';
 
         // Mock Schema
@@ -36,13 +36,13 @@ class VariableSchemaTest extends TestCase
 
         // Mock Components to ensure extraction works
         $template->components = [
-            ['type' => 'BODY', 'text' => 'Hi {{1}}, order {{2}} confirmed.']
+            ['type' => 'BODY', 'text' => 'Hi {{1}}, order {{2}} confirmed.'],
         ];
 
-        $service = new TemplateService();
+        $service = new TemplateService;
         $data = [
             'customer_name' => 'John',
-            'order_id' => 'ORD-123'
+            'order_id' => 'ORD-123',
         ];
 
         $result = $service->hydrateTemplate($template, $data);
@@ -55,13 +55,13 @@ class VariableSchemaTest extends TestCase
 
     public function test_hydration_fallback()
     {
-        $template = new WhatsappTemplate();
+        $template = new WhatsappTemplate;
         $template->components = [['type' => 'BODY', 'text' => 'Hi {{1}}']];
         $template->variable_config = [
             '{{1}}' => ['name' => 'customer_name', 'fallback' => 'Friend'],
         ];
 
-        $service = new TemplateService();
+        $service = new TemplateService;
         $data = []; // No name provided
 
         $result = $service->hydrateTemplate($template, $data);
@@ -79,8 +79,8 @@ class VariableSchemaTest extends TestCase
             'status' => 'APPROVED',
             'components' => [],
             'variable_config' => [
-                '{{1}}' => ['name' => 'test_var', 'type' => 'CURRENCY']
-            ]
+                '{{1}}' => ['name' => 'test_var', 'type' => 'CURRENCY'],
+            ],
         ]);
 
         $this->assertIsArray($template->variable_config);

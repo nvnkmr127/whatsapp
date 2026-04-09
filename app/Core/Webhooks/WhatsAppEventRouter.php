@@ -6,13 +6,14 @@ use App\Models\Team;
 use App\Models\WhatsappTemplate;
 use App\Services\EventBusService;
 use App\Services\WhatsAppCallProcessor;
-use App\Services\CallPermissionService;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppEventRouter
 {
     protected EventBusService $eventBus;
+
     protected ?int $teamId;
+
     protected ?string $phoneId;
 
     public function __construct(EventBusService $eventBus, ?int $teamId, ?string $phoneId)
@@ -71,13 +72,16 @@ class WhatsAppEventRouter
     {
         foreach ($messages as $messageData) {
             $wamid = $messageData['id'] ?? null;
-            if (!$wamid) continue;
+            if (! $wamid) {
+                continue;
+            }
 
             $lockKey = "webhook_lock:{$wamid}";
             $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 10);
 
-            if (!$lock->get()) {
+            if (! $lock->get()) {
                 Log::info("Router: Parallel execution detected for {$wamid}. Skipping.");
+
                 continue;
             }
 
@@ -104,7 +108,7 @@ class WhatsAppEventRouter
                 'provider_message_id' => $statusData['id'],
                 'status' => $statusData['status'],
                 'timestamp' => $statusData['timestamp'] ?? time(),
-                'details' => $statusData
+                'details' => $statusData,
             ];
 
             \App\Jobs\UpdateMessageStatusJob::dispatch($payload, \App\Services\TraceContext::getTraceId())
@@ -141,7 +145,7 @@ class WhatsAppEventRouter
     {
         $status = $change['new_status'] ?? 'UNKNOWN';
         $quality = $change['new_quality_score'] ?? 'UNKNOWN';
-        
+
         Log::info("WhatsApp Quality Update: Status={$status}, Quality={$quality}");
 
         if (in_array($status, ['FLAGGED', 'RESTRICTED']) || $quality === 'RED') {
@@ -152,20 +156,26 @@ class WhatsAppEventRouter
 
     protected function handleCalls(array $calls): void
     {
-        if (!$this->teamId) return;
+        if (! $this->teamId) {
+            return;
+        }
 
         $team = Team::find($this->teamId);
         if ($team) {
-            (new WhatsAppCallProcessor())->process($team, $calls);
+            (new WhatsAppCallProcessor)->process($team, $calls);
         }
     }
 
     protected function handleAccountLifecycle(array $change): void
     {
-        if (!$this->teamId || !$this->phoneId) return;
+        if (! $this->teamId || ! $this->phoneId) {
+            return;
+        }
 
         $team = Team::find($this->teamId);
-        if (!$team) return;
+        if (! $team) {
+            return;
+        }
 
         if (($change['field'] ?? '') === 'account_settings_update') {
             $this->updateLocalCallSettings($team, $this->phoneId, $change);
@@ -194,7 +204,9 @@ class WhatsAppEventRouter
             if (isset($callingData['callback_permission_status'])) {
                 $updates['callback_permission_enabled'] = strtoupper($callingData['callback_permission_status']) === 'ENABLED';
             }
-            if (!empty($updates)) $settings->update($updates);
+            if (! empty($updates)) {
+                $settings->update($updates);
+            }
         }
     }
 
@@ -217,10 +229,14 @@ class WhatsAppEventRouter
 
     protected function handleInteractiveResponse(array $messageData): void
     {
-        if (!$this->teamId) return;
+        if (! $this->teamId) {
+            return;
+        }
 
         $buttonReply = $messageData['interactive']['button_reply'] ?? null;
-        if (!$buttonReply) return;
+        if (! $buttonReply) {
+            return;
+        }
 
         $payload = json_decode($buttonReply['payload'] ?? '{}', true);
         if (($payload['action'] ?? '') === 'grant_call_permission') {
@@ -228,7 +244,7 @@ class WhatsAppEventRouter
             if ($permissionId) {
                 $permission = \App\Models\CallPermission::find($permissionId);
                 if ($permission && $permission->permission_status === 'requested') {
-                    (new \App\Services\CallPermissionService())->grantPermission($permission);
+                    (new \App\Services\CallPermissionService)->grantPermission($permission);
                 }
             }
         }

@@ -38,7 +38,7 @@ class OtpNotification extends Notification
         return (new MailMessage)
             ->mailer(\App\Enums\EmailUseCase::OTP->getMailer())
             ->subject('Your Verification Code')
-            ->line('Your verification code is: ' . $this->code)
+            ->line('Your verification code is: '.$this->code)
             ->line('This code will expire in 5 minutes.')
             ->line('If you did not request this code, no further action is required.');
     }

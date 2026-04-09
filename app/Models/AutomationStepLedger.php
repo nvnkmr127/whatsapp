@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class AutomationStepLedger extends Model
 {
     protected $table = 'automation_step_ledger';
+
     protected $guarded = [];
 
     protected $casts = [
-        'output_state' => 'array'
+        'output_state' => 'array',
     ];
 
     public function run()

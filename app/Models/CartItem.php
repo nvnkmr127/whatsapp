@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
-
-
 class CartItem
 {
     public $product_id;
+
     public $quantity;
+
     public $price;
+
     public $metadata;
 
     public function __construct($product_id, $quantity, $price, $metadata = [])

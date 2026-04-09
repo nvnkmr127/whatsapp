@@ -2,28 +2,30 @@
 
 namespace App\Jobs;
 
+use App\Events\CampaignProgressUpdated;
 use App\Models\Campaign;
 use App\Models\Contact;
 use App\Models\Message;
-use App\Services\WhatsAppService;
 use App\Services\ConversationService;
 use App\Services\RateLimitService;
+use App\Services\WhatsAppService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use App\Events\CampaignProgressUpdated;
+use Illuminate\Support\Facades\Log;
 
 class SendCampaignMessageJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $campaignId;
+
     protected $contactId;
+
     protected $traceId;
 
     /**
@@ -51,7 +53,7 @@ class SendCampaignMessageJob implements ShouldQueue
         return [
             // Throttle: 20 messages per second per team to avoid hitting WhatsApp rate limits
             // and to stay within API tier boundaries.
-            new \Illuminate\Queue\Middleware\ThrottlesExceptions(10, 5)
+            new \Illuminate\Queue\Middleware\ThrottlesExceptions(10, 5),
         ];
     }
 
@@ -67,20 +69,22 @@ class SendCampaignMessageJob implements ShouldQueue
         $campaign = Campaign::find($this->campaignId);
         $contact = Contact::find($this->contactId);
 
-        if (!$campaign || !$contact) {
+        if (! $campaign || ! $contact) {
             return;
         }
 
         // --- PAUSE CHECK ---
         if ($campaign->status === 'paused') {
             $this->release(60); // Check again in 60 seconds
+
             return;
         }
 
         // --- IDEMPOTENCY CHECK ---
         $lockKey = "campaign_send_lock:{$this->campaignId}:{$this->contactId}";
-        if (!Cache::add($lockKey, true, 60)) {
+        if (! Cache::add($lockKey, true, 60)) {
             Log::info("Job already being processed for Campaign {$this->campaignId} to Contact {$this->contactId}");
+
             return;
         }
 
@@ -92,10 +96,11 @@ class SendCampaignMessageJob implements ShouldQueue
 
         if ($existingMessage) {
             Log::info("Message already sent for Campaign {$this->campaignId} to Contact {$this->contactId}");
+
             return;
         }
 
-        $waService = new WhatsAppService();
+        $waService = new WhatsAppService;
         $waService->setTeam($campaign->team);
 
         $bodyVars = $campaign->template_variables ?? [];
@@ -124,7 +129,7 @@ class SendCampaignMessageJob implements ShouldQueue
                 cost: 0 // Detailed costing handled atomically by BillingService downstream, but trial/limits checked here.
             );
 
-            if (!$preflight['allowed']) {
+            if (! $preflight['allowed']) {
                 throw new \Exception("Preflight re-check failed mid-queue: {$preflight['reason']} [Code: {$preflight['code']}]");
             }
 
@@ -154,7 +159,7 @@ class SendCampaignMessageJob implements ShouldQueue
                 $message // Pass existing if any
             );
 
-            if (!empty($response['success']) && $response['success']) {
+            if (! empty($response['success']) && $response['success']) {
                 $campaign->increment('sent_count');
 
                 // --- STORE ATTRIBUTION POINTER ---
@@ -173,16 +178,16 @@ class SendCampaignMessageJob implements ShouldQueue
             $retryEnabled = $retryConfig['enabled'] ?? false;
             $maxRetries = (int) ($retryConfig['max_retries'] ?? 3);
 
-            Log::error("Campaign {$this->campaignId} Send Failed to Contact {$this->contactId}: " . $e->getMessage());
+            Log::error("Campaign {$this->campaignId} Send Failed to Contact {$this->contactId}: ".$e->getMessage());
 
             // Get or create message record
             $msg = Message::where('campaign_id', $this->campaignId)
                 ->where('contact_id', $this->contactId)
                 ->first();
 
-            if (!$msg) {
+            if (! $msg) {
                 try {
-                    $conversationService = new ConversationService();
+                    $conversationService = new ConversationService;
                     $conversation = $conversationService->ensureActiveConversation($contact);
 
                     $msg = Message::create([
@@ -196,7 +201,7 @@ class SendCampaignMessageJob implements ShouldQueue
                         'content' => "Template: {$campaign->template_name}",
                     ]);
                 } catch (\Exception $createEx) {
-                    Log::error("Failed to create error message record: " . $createEx->getMessage());
+                    Log::error('Failed to create error message record: '.$createEx->getMessage());
                 }
             }
 
@@ -209,32 +214,32 @@ class SendCampaignMessageJob implements ShouldQueue
                 $strategy = $retryConfig['retry_strategy'] ?? 'exponential';
 
                 // Calculate delay
-                $delaySeconds = ($strategy === 'exponential') 
-                    ? $interval * pow(2, $currentRetryCount) 
+                $delaySeconds = ($strategy === 'exponential')
+                    ? $interval * pow(2, $currentRetryCount)
                     : $interval;
-                
+
                 $nextRetryAt = now()->addSeconds($delaySeconds);
 
                 if ($msg) {
                     $msg->update([
                         'status' => 'failed',
                         'error_message' => substr($e->getMessage(), 0, 255),
-                        'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                        'last_error' => $e->getMessage()."\n".$e->getTraceAsString(),
                         'retry_count' => $newRetryCount,
                         'next_retry_at' => $nextRetryAt,
                     ]);
                 }
 
                 // Re-dispatch if batch is NOT cancelled
-                if (!$this->batch()?->cancelled()) {
+                if (! $this->batch()?->cancelled()) {
                     self::dispatch($this->campaignId, $this->contactId, $this->traceId)
                         ->delay($nextRetryAt);
 
-                    Log::info("Campaign message rescheduled for retry", [
+                    Log::info('Campaign message rescheduled for retry', [
                         'campaign_id' => $this->campaignId,
                         'contact_id' => $this->contactId,
                         'retry_count' => $newRetryCount,
-                        'next_retry_at' => $nextRetryAt->toDateTimeString()
+                        'next_retry_at' => $nextRetryAt->toDateTimeString(),
                     ]);
                 }
             } else {
@@ -243,7 +248,7 @@ class SendCampaignMessageJob implements ShouldQueue
                     $msg->update([
                         'status' => 'failed',
                         'error_message' => substr($e->getMessage(), 0, 255),
-                        'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                        'last_error' => $e->getMessage()."\n".$e->getTraceAsString(),
                         'next_retry_at' => null,
                     ]);
                 }
@@ -251,10 +256,10 @@ class SendCampaignMessageJob implements ShouldQueue
 
             // Report failure to RateLimitService for adaptive throttling if it looks like a rate limit error
             if (str_contains(strtolower($e->getMessage()), 'rate limit') || str_contains($e->getMessage(), '429')) {
-                (new RateLimitService())->reportCriticalFailure($campaign->team_id, $contact->phone_number);
+                (new RateLimitService)->reportCriticalFailure($campaign->team_id, $contact->phone_number);
             }
 
-            // Do NOT throw if we handled it ourselves via rescheduling, 
+            // Do NOT throw if we handled it ourselves via rescheduling,
             // unless we want the queue to also see it as an attempt (but we use custom retry_count)
             // If the job is in a batch, failing it might fail the whole batch depending on logic.
             // Our logic in updateCampaignProgress uses counts from the messages table.
@@ -282,7 +287,7 @@ class SendCampaignMessageJob implements ShouldQueue
                 ]);
 
                 if ($status === 'completed_with_errors') {
-                    app(\App\Services\CampaignAlertService::class)->notifyFailure($campaign, "Campaign completed with " . $campaign->messages()->where('status', 'failed')->count() . " errors.");
+                    app(\App\Services\CampaignAlertService::class)->notifyFailure($campaign, 'Campaign completed with '.$campaign->messages()->where('status', 'failed')->count().' errors.');
                 }
 
                 Log::info("Campaign {$this->campaignId} marked as {$status}.");
@@ -314,7 +319,7 @@ class SendCampaignMessageJob implements ShouldQueue
             'plan limit reached',
             'insufficient funds',
             'invalid parameter',
-            '400 bad request'
+            '400 bad request',
         ];
 
         foreach ($permanentErrors as $error) {

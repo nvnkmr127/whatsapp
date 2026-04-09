@@ -27,7 +27,7 @@ class AuditTemplateCompliance extends Command
      */
     public function handle(TemplateValidator $validator)
     {
-        $this->info("Starting Compliance Audit...");
+        $this->info('Starting Compliance Audit...');
 
         $templates = WhatsappTemplate::all();
         $bar = $this->output->createProgressBar($templates->count());
@@ -36,14 +36,14 @@ class AuditTemplateCompliance extends Command
             'total' => 0,
             'passed' => 0,
             'failed' => 0,
-            'warnings' => 0
+            'warnings' => 0,
         ];
 
         foreach ($templates as $template) {
             $stats['total']++;
             $result = $validator->validate($template);
 
-            if (!$result->isValid()) {
+            if (! $result->isValid()) {
                 $stats['failed']++;
 
                 $issues = [];
@@ -57,7 +57,7 @@ class AuditTemplateCompliance extends Command
                     'category' => $template->category,
                     'status' => $template->status,
                     'is_paused' => $template->is_paused ? 'YES' : 'NO',
-                    'issues' => implode(' | ', $issues)
+                    'issues' => implode(' | ', $issues),
                 ];
             } else {
                 $stats['passed']++;
@@ -69,19 +69,19 @@ class AuditTemplateCompliance extends Command
         $bar->finish();
         $this->newLine(2);
 
-        $this->info("Audit Complete.");
+        $this->info('Audit Complete.');
         $this->table(['Total', 'Passed', 'Failed/Warn'], [
-            [$stats['total'], $stats['passed'], $stats['failed']]
+            [$stats['total'], $stats['passed'], $stats['failed']],
         ]);
 
         if (count($violations) > 0) {
-            $this->error("Found " . count($violations) . " templates with compliance risks:");
+            $this->error('Found '.count($violations).' templates with compliance risks:');
             $this->table(
                 ['ID', 'Name', 'Category', 'Status', 'Paused', 'Issues'],
                 $violations
             );
         } else {
-            $this->info("Zero compliance violations found! Great job.");
+            $this->info('Zero compliance violations found! Great job.');
         }
 
         return 0;

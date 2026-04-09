@@ -47,7 +47,7 @@ class DealProduct extends Model
         $subtotal = $this->unit_price * $this->quantity;
         $discountAmount = $subtotal * ($this->discount / 100);
         $taxAmount = ($subtotal - $discountAmount) * ($this->tax / 100);
-        
+
         $this->total = $subtotal - $discountAmount + $taxAmount;
     }
 }

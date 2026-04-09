@@ -14,7 +14,7 @@ class ConsentProofTest extends TestCase
     public function test_opt_in_stores_proof_url()
     {
         $contact = Contact::factory()->create(['opt_in_status' => 'none']);
-        $service = new ConsentService();
+        $service = new ConsentService;
 
         $proofUrl = 'https://s3.bucket/proof.png';
         $service->optIn($contact, 'API', 'User consented via form', $proofUrl);
@@ -23,7 +23,7 @@ class ConsentProofTest extends TestCase
         $this->assertDatabaseHas('consent_logs', [
             'contact_id' => $contact->id,
             'action' => 'OPT_IN',
-            'proof_url' => $proofUrl
+            'proof_url' => $proofUrl,
         ]);
     }
 }

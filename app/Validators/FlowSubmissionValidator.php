@@ -9,8 +9,8 @@ class FlowSubmissionValidator
     /**
      * Validate submission data against the Flow Version Schema.
      *
-     * @param array $submissionData Key-value pair of field_id => user_input
-     * @param WhatsAppFlowVersion $version The snapshot version of the flow
+     * @param  array  $submissionData  Key-value pair of field_id => user_input
+     * @param  WhatsAppFlowVersion  $version  The snapshot version of the flow
      * @return array ['isValid' => bool, 'errors' => array, 'cleanedData' => array]
      */
     public function validate(array $submissionData, WhatsAppFlowVersion $version)
@@ -35,6 +35,7 @@ class FlowSubmissionValidator
             // 1. Required Check
             if (($config['required'] ?? false) && empty($value)) {
                 $errors[$fieldId] = "Field '{$config['label']}' is required.";
+
                 continue;
             }
 
@@ -47,8 +48,8 @@ class FlowSubmissionValidator
             switch ($config['type']) {
                 case 'TextInput':
                 case 'TextArea':
-                    if (!is_string($value)) {
-                        $errors[$fieldId] = "Invalid format. Expected text.";
+                    if (! is_string($value)) {
+                        $errors[$fieldId] = 'Invalid format. Expected text.';
                     }
                     // Future: Add Regex pattern check if defined in config
                     break;
@@ -58,19 +59,19 @@ class FlowSubmissionValidator
                 case 'RadioGroup':
                     // Verify if value exists in options
                     $validOptions = array_column($config['options'] ?? [], 'value');
-                    if (!in_array($value, $validOptions)) {
-                        $errors[$fieldId] = "Invalid selection.";
+                    if (! in_array($value, $validOptions)) {
+                        $errors[$fieldId] = 'Invalid selection.';
                     }
                     break;
 
                 case 'CheckboxGroup':
                     // Value should be array of selected IDs
-                    if (!is_array($value)) {
-                        $errors[$fieldId] = "Invalid format. Expected list of selections.";
+                    if (! is_array($value)) {
+                        $errors[$fieldId] = 'Invalid format. Expected list of selections.';
                     } else {
                         $validOptions = array_column($config['options'] ?? [], 'value');
                         foreach ($value as $v) {
-                            if (!in_array($v, $validOptions)) {
+                            if (! in_array($v, $validOptions)) {
                                 $errors[$fieldId] = "Invalid selection: $v";
                             }
                         }
@@ -87,7 +88,7 @@ class FlowSubmissionValidator
         return [
             'isValid' => empty($errors),
             'errors' => $errors,
-            'cleanedData' => $cleanedData
+            'cleanedData' => $cleanedData,
         ];
     }
 }

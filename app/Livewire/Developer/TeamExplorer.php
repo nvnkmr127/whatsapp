@@ -11,8 +11,11 @@ class TeamExplorer extends Component
     use WithPagination;
 
     public $search = '';
+
     public $filterPlan = '';
+
     public $selectedTeam = null;
+
     public $showDetailsModal = false;
 
     protected $queryString = ['search', 'filterPlan'];
@@ -47,13 +50,14 @@ class TeamExplorer extends Component
     public function impersonateOwner($teamId)
     {
         $team = Team::findOrFail($teamId);
+
         return redirect()->route('admin.impersonate.enter', $team->user_id);
     }
 
     #[\Livewire\Attributes\Layout('components.layouts.app')]
     public function render()
     {
-        if (!auth()->user()->isSuperAdmin()) {
+        if (! auth()->user()->isSuperAdmin()) {
             abort(403);
         }
 
@@ -63,10 +67,10 @@ class TeamExplorer extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
+                $q->where('name', 'like', '%'.$this->search.'%')
                     ->orWhereHas('owner', function ($q) {
-                        $q->where('email', 'like', '%' . $this->search . '%')
-                            ->orWhere('name', 'like', '%' . $this->search . '%');
+                        $q->where('email', 'like', '%'.$this->search.'%')
+                            ->orWhere('name', 'like', '%'.$this->search.'%');
                     });
             });
         }
@@ -81,7 +85,7 @@ class TeamExplorer extends Component
 
         return view('livewire.developer.team-explorer', [
             'teams' => $teams,
-            'plans' => $plans
+            'plans' => $plans,
         ]);
     }
 }

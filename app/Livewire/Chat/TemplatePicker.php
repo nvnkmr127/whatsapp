@@ -9,10 +9,15 @@ use Livewire\Component;
 class TemplatePicker extends Component
 {
     public $conversationId;
+
     public $showTemplateListModal = false;
+
     public $showTemplatePreviewModal = false;
+
     public $templateSearch = '';
+
     public $selectedTemplateId = null;
+
     public $templateVariables = [];
 
     protected $listeners = [
@@ -29,13 +34,15 @@ class TemplatePicker extends Component
         $this->selectedTemplateId = $id;
         $template = WhatsappTemplate::find($id);
 
-        if (!$template) return;
+        if (! $template) {
+            return;
+        }
 
         $this->templateVariables = [];
         foreach ($template->components ?? [] as $component) {
             if ($component['type'] === 'BODY') {
                 preg_match_all('/{{(\d+)}}/', $component['text'], $matches);
-                if (!empty($matches[1])) {
+                if (! empty($matches[1])) {
                     foreach ($matches[1] as $index) {
                         $this->templateVariables[$index] = '';
                     }
@@ -60,7 +67,9 @@ class TemplatePicker extends Component
     public function sendTemplate()
     {
         $template = WhatsappTemplate::find($this->selectedTemplateId);
-        if (!$template) return;
+        if (! $template) {
+            return;
+        }
 
         $this->dispatch('templateSelected', [
             'template_name' => $template->name,
@@ -73,14 +82,14 @@ class TemplatePicker extends Component
 
     public function getFilteredTemplatesProperty()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return collect();
         }
 
         return WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
             ->where('status', 'APPROVED')
             ->when($this->templateSearch, function ($query) {
-                $query->where('name', 'like', '%' . $this->templateSearch . '%');
+                $query->where('name', 'like', '%'.$this->templateSearch.'%');
             })
             ->latest()
             ->get();

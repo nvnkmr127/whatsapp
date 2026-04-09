@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
-use \App\Traits\HasTeam;
 
 class WhatsAppFlow extends Model
 {
@@ -15,7 +14,7 @@ class WhatsAppFlow extends Model
     protected static function booted()
     {
         static::saving(function ($flow) {
-            if (!$flow->isDirty('status')) {
+            if (! $flow->isDirty('status')) {
                 return;
             }
 
@@ -24,17 +23,18 @@ class WhatsAppFlow extends Model
 
             // Terminal status: DEPRECATED
             if ($oldStatus === 'DEPRECATED' && $newStatus !== 'DEPRECATED') {
-                throw new \Exception("Cannot transition out of terminal state: DEPRECATED.");
+                throw new \Exception('Cannot transition out of terminal state: DEPRECATED.');
             }
 
             // Safety: cannot move back to draft once published (risk of sync error with Meta)
             if ($oldStatus === 'PUBLISHED' && $newStatus === 'DRAFT') {
-                throw new \Exception("Cannot revert a PUBLISHED flow to DRAFT. Use a new version instead.");
+                throw new \Exception('Cannot revert a PUBLISHED flow to DRAFT. Use a new version instead.');
             }
         });
     }
 
     protected $table = 'whatsapp_flows';
+
     protected $guarded = [];
 
     public $fillable = ['team_id', 'flow_id', 'name', 'category', 'status', 'design_data', 'flow_json', 'uses_data_endpoint', 'entry_point_config', 'active_version_id', 'latest_version_number'];

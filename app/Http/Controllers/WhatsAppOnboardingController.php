@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppOnboardingController extends Controller
@@ -26,27 +25,27 @@ class WhatsAppOnboardingController extends Controller
             // Use Trait method directly instead of non-existent Service method
             $result = $this->exchangeForLongLivedToken($shortLivedToken);
 
-            if (!$result['status']) {
+            if (! $result['status']) {
                 $errorMsg = $result['message'] ?? 'Unknown error';
                 $referenceId = \App\Models\WhatsAppSetupAudit::generateReferenceId();
 
                 // Log interaction for failed token exchange
                 if ($team) {
                     $endpoint = 'token_exchange';
-                    $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8) . '...'];
+                    $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8).'...'];
                     \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => $errorMsg]);
                 }
 
                 Log::error('WhatsApp Token Exchange Failed', [
                     'error' => $errorMsg,
-                    'reference_id' => $referenceId
+                    'reference_id' => $referenceId,
                 ]);
 
                 return response()->json([
                     'status' => false,
-                    'message' => 'Token Exchange Failed: ' . $errorMsg,
+                    'message' => 'Token Exchange Failed: '.$errorMsg,
                     'retry_allowed' => true,
-                    'reference_id' => $referenceId
+                    'reference_id' => $referenceId,
                 ], 400);
             }
 
@@ -54,13 +53,14 @@ class WhatsAppOnboardingController extends Controller
             $longLivedToken = $result['access_token'] ?? null;
             $expiresIn = $result['expires_in'] ?? 5184000; // 60 days default
 
-            if (!$longLivedToken) {
+            if (! $longLivedToken) {
                 // Log interaction for missing token in successful response
                 if ($team) {
                     $endpoint = 'token_exchange';
-                    $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8) . '...'];
+                    $payload = ['short_lived_token_preview' => substr($shortLivedToken, 0, 8).'...'];
                     \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => 'No access token received.']);
                 }
+
                 return response()->json(['status' => false, 'message' => 'No access token received from Facebook.'], 400);
             }
 
@@ -78,9 +78,9 @@ class WhatsAppOnboardingController extends Controller
                 // 1. Try Granular Scopes (System Users / Explicit Grants)
                 $debug = $this->debugToken($longLivedToken);
                 $foundInScopes = false;
-                if ($debug['status'] && !empty($debug['data']['granular_scopes'])) {
+                if ($debug['status'] && ! empty($debug['data']['granular_scopes'])) {
                     foreach ($debug['data']['granular_scopes'] as $scope) {
-                        if ($scope['scope'] === 'whatsapp_business_management' && !empty($scope['target_ids'])) {
+                        if ($scope['scope'] === 'whatsapp_business_management' && ! empty($scope['target_ids'])) {
                             $wabaId = $scope['target_ids'][0]; // Take the first WABA ID found
                             $foundInScopes = true;
                             Log::info("WhatsApp Onboarding: Auto-discovered WABA ID {$wabaId} from token scopes.");
@@ -91,9 +91,9 @@ class WhatsAppOnboardingController extends Controller
 
                 // 2. Fallback: Fetch Accessible WABA IDs (Standard Users)
                 // If the frontend sent a User ID (which is common mistake), or we didn't find one in scopes
-                if (!$foundInScopes) {
+                if (! $foundInScopes) {
                     $accessibleWabas = $this->getAccessibleWabaIds($longLivedToken);
-                    if (!empty($accessibleWabas)) {
+                    if (! empty($accessibleWabas)) {
                         // If we have exactly one, use it.
                         // If we have multiple, and the input looks like a user ID (short), pick the first one.
                         // If the input matches one of them, use that.
@@ -126,9 +126,9 @@ class WhatsAppOnboardingController extends Controller
 
                 \App\Services\WhatsAppEventBridge::auditConfig($team, 'token_exchange', 'completed', [
                     'expires_at' => now()->addSeconds($expiresIn)->toDateTimeString(),
-                    'token_preview' => substr($longLivedToken, 0, 8) . '...',
+                    'token_preview' => substr($longLivedToken, 0, 8).'...',
                     'waba_id' => $wabaId,
-                    'facebook_business_id' => $fbBusinessId ?? null
+                    'facebook_business_id' => $fbBusinessId ?? null,
                 ]);
 
                 Log::info("WhatsApp Token & WABA ID Persisted for Team {$team->id}");
@@ -140,7 +140,7 @@ class WhatsAppOnboardingController extends Controller
                 'access_token' => $longLivedToken,
                 'waba_id' => $wabaId ?? $team->whatsapp_business_account_id,
                 'expires_in' => $expiresIn,
-                'expires_at' => now()->addSeconds($expiresIn)->toIso8601String()
+                'expires_at' => now()->addSeconds($expiresIn)->toIso8601String(),
             ]);
 
         } catch (\Exception $e) {
@@ -148,13 +148,13 @@ class WhatsAppOnboardingController extends Controller
 
             Log::error('WhatsApp Onboarding Exception', [
                 'exception' => $e->getMessage(),
-                'reference_id' => $referenceId
+                'reference_id' => $referenceId,
             ]);
 
             return response()->json([
                 'status' => false,
                 'message' => 'Server error during token exchange.',
-                'reference_id' => $referenceId
+                'reference_id' => $referenceId,
             ], 500);
         }
     }
@@ -170,7 +170,7 @@ class WhatsAppOnboardingController extends Controller
             190 => 'Access token expired or invalid. Please reconnect your Facebook account.',
             100 => 'Invalid App ID or Secret. Please check your configuration.',
             102 => 'Session expired. Please try logging in again.',
-            default => 'Connection failed: ' . ($errorDetails['error']['message'] ?? 'Unknown error')
+            default => 'Connection failed: '.($errorDetails['error']['message'] ?? 'Unknown error')
         };
     }
 }

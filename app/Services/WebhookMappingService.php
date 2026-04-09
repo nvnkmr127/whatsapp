@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Arr;
-use libphonenumber\PhoneNumberUtil;
-use libphonenumber\PhoneNumberFormat;
 
 class WebhookMappingService
 {
@@ -19,6 +17,7 @@ class WebhookMappingService
             // Check for direct static value (prefixed with "STATIC:")
             if (str_starts_with($externalPath, 'STATIC:')) {
                 $mappedData[$internalField] = substr($externalPath, 7);
+
                 continue;
             }
 
@@ -90,10 +89,11 @@ class WebhookMappingService
             return \App\Helpers\PhoneNumberHelper::normalize($phone);
         } catch (\Exception $e) {
             // If normalization fails, return original or log
-            \Illuminate\Support\Facades\Log::warning("Webhook mapping phone normalization failed", [
+            \Illuminate\Support\Facades\Log::warning('Webhook mapping phone normalization failed', [
                 'phone' => $phone,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $phone;
         }
     }
@@ -196,7 +196,7 @@ class WebhookMappingService
 
         // Additional custom validation rules can be added here
         foreach ($rules as $field => $rule) {
-            if (!isset($data[$field]) && $rule === 'required') {
+            if (! isset($data[$field]) && $rule === 'required') {
                 return false;
             }
         }

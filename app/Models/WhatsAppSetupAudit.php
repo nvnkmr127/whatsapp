@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class WhatsAppSetupAudit extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $table = 'whatsapp_setup_audit';
 
@@ -35,6 +35,6 @@ class WhatsAppSetupAudit extends Model
 
     public static function generateReferenceId(): string
     {
-        return 'WA-' . strtoupper(substr(uniqid(), -8));
+        return 'WA-'.strtoupper(substr(uniqid(), -8));
     }
 }

@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Campaign;
 use App\Jobs\ProduceBroadcastEventsJob;
+use App\Models\Campaign;
 use Illuminate\Support\Facades\Log;
 
 class BroadcastService
 {
     protected $snapshotService;
+
     protected $healthMonitor;
 
     public function __construct(CampaignSnapshotService $snapshotService, WhatsAppHealthMonitor $healthMonitor)
@@ -25,16 +26,17 @@ class BroadcastService
         Log::info("Launching Event-Driven Campaign {$campaign->id}");
 
         $expectedCount = $campaign->total_contacts ?? 0;
-        
+
         if ($expectedCount === 0) {
             $campaign->update(['status' => 'failed', 'error_message' => 'Campaign has no contacts.']);
+
             return null;
         }
 
         // 0. Complete Billing & Plan Preflight Validation (BEFORE QUEUE DISPATCH)
-        
+
         // Cache the message count for 5 minutes (300s) to avoid expensive DB scans on huge message tables
-        $cacheKey = "team_msg_count_month:{$campaign->team_id}:" . now()->format('Y-m');
+        $cacheKey = "team_msg_count_month:{$campaign->team_id}:".now()->format('Y-m');
         $messagesUsed = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($campaign) {
             return \App\Models\Message::where('team_id', $campaign->team_id)
                 ->where('direction', 'outbound')
@@ -45,7 +47,7 @@ class BroadcastService
 
         // Calculate maximum potential cost (using unified config pricing)
         $category = $campaign->template ? strtolower($campaign->template->category) : 'marketing';
-        $costPerMessage = config("whatsapp.pricing.{$category}", 0.05); 
+        $costPerMessage = config("whatsapp.pricing.{$category}", 0.05);
         $estimatedCost = $expectedCount * $costPerMessage;
 
         $preflight = app(\App\Services\OutboundPreflightService::class)->authorize(
@@ -56,11 +58,10 @@ class BroadcastService
             cost: $estimatedCost
         );
 
-        if (!$preflight['allowed']) {
+        if (! $preflight['allowed']) {
             $campaign->update(['status' => 'failed', 'error_message' => $preflight['reason']]);
             throw new \Exception("Campaign launch aborted (PRE-QUEUE): {$preflight['reason']} [Code: {$preflight['code']}]");
         }
-
 
         // 0.1 WhatsApp Health Check (CRITICAL)
         $this->verifyHealth($campaign->team);
@@ -87,7 +88,7 @@ class BroadcastService
 
     public function cancel(Campaign $campaign)
     {
-        // In an event-driven system, we might place a "cancellation" flag in Redis 
+        // In an event-driven system, we might place a "cancellation" flag in Redis
         // that consumers check before processing an event from this campaign.
         $campaign->update(['status' => 'cancelled']);
         Log::info("Campaign {$campaign->id} marked as cancelled.");
@@ -100,7 +101,7 @@ class BroadcastService
         // Check for specific blocking issues from Health Monitor
         $issues = $this->healthMonitor->getBlockingIssues($team);
 
-        if (!empty($issues)) {
+        if (! empty($issues)) {
             $reason = implode(', ', $issues);
             Log::warning("Campaign Launch Blocked for Team {$team->id}: {$reason}");
             // Throwing exception here to be caught by Controller/Job

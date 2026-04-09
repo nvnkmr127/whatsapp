@@ -1,4 +1,5 @@
 <?php
+
 /** @var \Illuminate\Database\Eloquent\Factory $factory */
 
 namespace Database\Factories;
@@ -13,7 +14,7 @@ class ContactFactory extends Factory
     public function definition()
     {
         return [
-            'team_id' => 1,
+            'team_id' => \App\Models\Team::factory(),
             'name' => $this->faker->name,
             'phone_number' => $this->faker->phoneNumber,
             'opt_in_status' => 'opted_in',

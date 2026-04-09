@@ -11,7 +11,9 @@ class ContactLifecycleChanged extends DomainEvent
     use InteractsWithSockets;
 
     public $contact;
+
     public $oldState;
+
     public $newState;
 
     public function __construct(Contact $contact, string $oldState, string $newState)
@@ -23,9 +25,9 @@ class ContactLifecycleChanged extends DomainEvent
         parent::__construct([
             'contact_id' => $contact->id,
             'old_state' => $oldState,
-            'new_state' => $newState
+            'new_state' => $newState,
         ], [
-            'team_id' => $contact->team_id
+            'team_id' => $contact->team_id,
         ]);
     }
 
@@ -44,7 +46,7 @@ class ContactLifecycleChanged extends DomainEvent
         return [
             'contact_id' => 'required|integer',
             'old_state' => 'required|string',
-            'new_state' => 'required|string'
+            'new_state' => 'required|string',
         ];
     }
 }

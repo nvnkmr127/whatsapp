@@ -54,7 +54,7 @@ class LogContactEvents implements ShouldQueue
     {
         $contact = $event->contact;
 
-        $idempotencyKey = "log_optout:{$contact->id}:" . now()->timestamp;
+        $idempotencyKey = "log_optout:{$contact->id}:".now()->timestamp;
 
         ContactEvent::create([
             'team_id' => $contact->team_id,

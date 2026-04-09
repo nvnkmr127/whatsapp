@@ -15,13 +15,13 @@ class ContactManagementTest extends TestCase
     public function test_create_or_update_merges_attributes()
     {
         $team = Team::factory()->create();
-        $service = new ContactService();
+        $service = new ContactService;
 
         // 1. Create with initial attribute
         $contact = $service->createOrUpdate([
             'team_id' => $team->id,
             'phone_number' => '123456789',
-            'custom_attributes' => ['plan' => 'free']
+            'custom_attributes' => ['plan' => 'free'],
         ]);
 
         $this->assertEquals('free', $contact->custom_attributes['plan']);
@@ -30,7 +30,7 @@ class ContactManagementTest extends TestCase
         $service->createOrUpdate([
             'team_id' => $team->id,
             'phone_number' => '123456789',
-            'custom_attributes' => ['verified' => true]
+            'custom_attributes' => ['verified' => true],
         ]);
 
         $contact->refresh();
@@ -42,7 +42,7 @@ class ContactManagementTest extends TestCase
     {
         $team = Team::factory()->create();
         $contact = Contact::factory()->create(['team_id' => $team->id]);
-        $service = new ContactService();
+        $service = new ContactService;
 
         // Sync by name
         $service->syncTags($contact, ['VIP', 'Lead']);
@@ -55,7 +55,7 @@ class ContactManagementTest extends TestCase
     {
         $team = Team::factory()->create();
         $contact = Contact::factory()->create(['team_id' => $team->id]);
-        $service = new ContactService();
+        $service = new ContactService;
 
         $service->syncTags($contact, ['VIP']);
         $service->addTags($contact, ['Lead']);
@@ -65,6 +65,7 @@ class ContactManagementTest extends TestCase
         $this->assertTrue($contact->tags->contains('name', 'VIP'));
         $this->assertTrue($contact->tags->contains('name', 'Lead'));
     }
+
     public function test_can_view_contact_details()
     {
         $team = Team::factory()->create();

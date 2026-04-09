@@ -7,9 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class BroadcastEventProducer
 {
-    public function __construct(protected EventBusService $eventBus)
-    {
-    }
+    public function __construct(protected EventBusService $eventBus) {}
 
     /**
      * Produce message.queued events for all contacts in a snapshot in efficient batches.
@@ -47,7 +45,7 @@ class BroadcastEventProducer
                             'header_params' => $snapshot->header_params,
                             'footer_params' => $snapshot->footer_params,
                         ],
-                    ]
+                    ],
                 ];
             }
 

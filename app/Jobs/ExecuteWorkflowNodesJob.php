@@ -19,12 +19,17 @@ class ExecuteWorkflowNodesJob implements ShouldQueue
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $workflow;
+
     public $nodes;
+
     public $subject;
+
     public $context;
+
     public $log;
 
     public $tries = 3;
+
     public $maxExceptions = 3;
 
     /**
@@ -50,8 +55,9 @@ class ExecuteWorkflowNodesJob implements ShouldQueue
             return;
         }
 
-        if (!$this->subject) {
-            Log::warning("Workflow Execute Nodes Job: Subject deleted or missing, skipping.");
+        if (! $this->subject) {
+            Log::warning('Workflow Execute Nodes Job: Subject deleted or missing, skipping.');
+
             return;
         }
 
@@ -69,7 +75,7 @@ class ExecuteWorkflowNodesJob implements ShouldQueue
             $this->subject,
             $this->context,
             $this->workflow,
-            $this->log
+            $this->log,
         ]);
     }
 }

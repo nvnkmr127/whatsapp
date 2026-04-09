@@ -47,8 +47,8 @@ return [
     */
 
     'rate_limiting' => [
-        'enabled'       => env('API_RATE_LIMIT_ENABLED', true),
-        'max_attempts'  => env('API_RATE_LIMIT_MAX', 60),
+        'enabled' => env('API_RATE_LIMIT_ENABLED', true),
+        'max_attempts' => env('API_RATE_LIMIT_MAX', 60),
         'decay_minutes' => env('API_RATE_LIMIT_DECAY', 1),
     ],
 

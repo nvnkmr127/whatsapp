@@ -19,7 +19,7 @@ class RequirementsChecker
      */
     public function __construct(?array $requirements = null, ?string $minPhpVersion = null)
     {
-        $this->requirements  = $requirements  ?? config('installer.requirements', []);
+        $this->requirements = $requirements ?? config('installer.requirements', []);
         $this->minPhpVersion = $minPhpVersion ?? config('installer.minPhpVersion', '8.1');
     }
 
@@ -89,7 +89,7 @@ class RequirementsChecker
                     break;
 
                 case 'recommended':
-                    $results['recommended']['php']       = $this->checkPHPRequirements($this->requirements[$type]['php'] ?? []);
+                    $results['recommended']['php'] = $this->checkPHPRequirements($this->requirements[$type]['php'] ?? []);
                     $results['recommended']['functions'] = $this->checkPHPFunctions($this->requirements[$type]['functions'] ?? []);
                     break;
             }
@@ -110,18 +110,18 @@ class RequirementsChecker
 
         if ($this->isApacheServer()) {
             return [
-                'name'    => 'Apache',
+                'name' => 'Apache',
                 'version' => $this->extractServerVersion($serverSoftware),
             ];
         } elseif ($this->isNginxServer()) {
             return [
-                'name'    => 'Nginx',
+                'name' => 'Nginx',
                 'version' => $this->extractServerVersion($serverSoftware),
             ];
         }
 
         return [
-            'name'    => $serverSoftware,
+            'name' => $serverSoftware,
             'version' => $this->extractServerVersion($serverSoftware),
         ];
     }
@@ -229,9 +229,9 @@ class RequirementsChecker
         $currentPhpVersion = static::getPhpVersionInfo();
 
         return [
-            'full'      => $currentPhpVersion['full'],
-            'current'   => $currentPhpVersion['version'],
-            'minimum'   => $this->minPhpVersion,
+            'full' => $currentPhpVersion['full'],
+            'current' => $currentPhpVersion['version'],
+            'minimum' => $this->minPhpVersion,
             'supported' => $this->isSupportedPHPVersion($currentPhpVersion['version']),
         ];
     }
@@ -270,7 +270,7 @@ class RequirementsChecker
         $currentVersion = $filtered[0];
 
         return [
-            'full'    => $currentVersionFull,
+            'full' => $currentVersionFull,
             'version' => $currentVersion,
         ];
     }
@@ -282,13 +282,13 @@ class RequirementsChecker
     {
         return [
             'results' => [
-                'php'       => [],
+                'php' => [],
                 'functions' => [],
-                'apache'    => [],
-                'nginx'     => [],
+                'apache' => [],
+                'nginx' => [],
             ],
             'recommended' => [
-                'php'       => [],
+                'php' => [],
                 'functions' => [],
             ],
             'errors' => false,

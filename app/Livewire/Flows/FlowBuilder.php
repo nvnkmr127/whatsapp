@@ -5,19 +5,27 @@ namespace App\Livewire\Flows;
 use App\Models\WhatsAppFlow;
 use App\Services\WhatsAppFlowService;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 class FlowBuilder extends Component
 {
     public $flowId;
+
     public $name;
+
     public $category = 'OTHER';
+
     public $usesDataEndpoint = true;
+
     public $screens = [];
+
     public $selectedScreenIndex = 0;
+
     public $selectedComponentIndex = null;
+
     public $after_submit_action = 'none';
+
     public $allowed_entry_points = ['template'];
 
     public $categories = [
@@ -28,7 +36,7 @@ class FlowBuilder extends Component
         'CONTACT_US',
         'CUSTOMER_SUPPORT',
         'SURVEY',
-        'OTHER'
+        'OTHER',
     ];
 
     protected function generateValidId($prefix = '')
@@ -39,7 +47,8 @@ class FlowBuilder extends Component
         for ($i = 0; $i < 10; $i++) {
             $random .= $chars[rand(0, strlen($chars) - 1)];
         }
-        return $prefix . $random;
+
+        return $prefix.$random;
     }
 
     protected $rules = [
@@ -82,9 +91,9 @@ class FlowBuilder extends Component
                 'components' => [
                     ['type' => 'TextBody', 'text' => 'Welcome to our service! Please fill out the form below.'],
                     ['type' => 'TextInput', 'label' => 'Your Name', 'name' => 'user_name', 'required' => true],
-                    ['type' => 'Footer', 'label' => 'Next', 'on_click_action' => 'next']
-                ]
-            ]
+                    ['type' => 'Footer', 'label' => 'Next', 'on_click_action' => 'next'],
+                ],
+            ],
         ];
     }
 
@@ -96,8 +105,8 @@ class FlowBuilder extends Component
             'title' => 'New Screen',
             'components' => [
                 ['type' => 'TextBody', 'text' => 'Enter your content here...'],
-                ['type' => 'Footer', 'label' => 'Submit', 'on_click_action' => 'complete']
-            ]
+                ['type' => 'Footer', 'label' => 'Submit', 'on_click_action' => 'complete'],
+            ],
         ];
         $this->selectedScreenIndex = count($this->screens) - 1;
     }
@@ -121,10 +130,10 @@ class FlowBuilder extends Component
         }
 
         // Guard: Ensure selected index is valid
-        if (!isset($this->screens[$this->selectedScreenIndex])) {
+        if (! isset($this->screens[$this->selectedScreenIndex])) {
             $this->selectedScreenIndex = 0;
             // Re-check 0
-            if (!isset($this->screens[0])) {
+            if (! isset($this->screens[0])) {
                 $this->screens = $this->defaultScreens();
             }
         }
@@ -170,6 +179,7 @@ class FlowBuilder extends Component
                 foreach ($this->screens[$this->selectedScreenIndex]['components'] as $c) {
                     if (in_array($c['type'], ['PhotoPicker', 'DocumentPicker'])) {
                         $this->addError('components', 'Only one media picker is allowed per screen.');
+
                         return; // Prevent addition
                     }
                 }
@@ -181,6 +191,7 @@ class FlowBuilder extends Component
                 foreach ($this->screens[$this->selectedScreenIndex]['components'] as $c) {
                     if (in_array($c['type'], ['PhotoPicker', 'DocumentPicker'])) {
                         $this->addError('components', 'Only one media picker is allowed per screen.');
+
                         return; // Prevent addition
                     }
                 }
@@ -192,11 +203,13 @@ class FlowBuilder extends Component
                 // Check limit
                 $count = 0;
                 foreach ($this->screens[$this->selectedScreenIndex]['components'] as $c) {
-                    if ($c['type'] === 'Image')
+                    if ($c['type'] === 'Image') {
                         $count++;
+                    }
                 }
                 if ($count >= 3) {
                     $this->addError('components', 'Max 3 images allowed per screen.');
+
                     return;
                 }
                 $component['src'] = 'https://via.placeholder.com/800x400';
@@ -235,7 +248,7 @@ class FlowBuilder extends Component
     {
         $this->screens[$screenIndex]['components'][$componentIndex]['options'][] = [
             'label' => 'New Option',
-            'value' => $this->generateValidId('opt_')
+            'value' => $this->generateValidId('opt_'),
         ];
     }
 
@@ -259,8 +272,8 @@ class FlowBuilder extends Component
                 'after_submit_action' => $this->after_submit_action,
             ],
             'entry_point_config' => [
-                'allowed_entry_points' => $this->allowed_entry_points
-            ]
+                'allowed_entry_points' => $this->allowed_entry_points,
+            ],
         ];
 
         if ($this->flowId) {
@@ -272,11 +285,11 @@ class FlowBuilder extends Component
         }
 
         // Readiness Validation
-        $validator = new \App\Validators\FlowReadinessValidator();
+        $validator = new \App\Validators\FlowReadinessValidator;
         $result = $validator->validate($flow);
 
-        if (!$result->isValid()) {
-            $warnings = implode(' ', array_map(fn($e) => $e->message, $result->getBlockingErrors()));
+        if (! $result->isValid()) {
+            $warnings = implode(' ', array_map(fn ($e) => $e->message, $result->getBlockingErrors()));
             session()->flash('warning', "Saved, but flow has issues: {$warnings}");
         } else {
             session()->flash('success', 'Flow design saved and Validated!');
@@ -292,17 +305,18 @@ class FlowBuilder extends Component
             $service = app(WhatsAppFlowService::class);
             $service->setTeam(Auth::user()->currentTeam);
 
-            if (!$flow->flow_id) {
+            if (! $flow->flow_id) {
                 $service->createFlowOnMeta($flow);
                 $flow->refresh(); // Reload to get flow_id
             }
 
             // Readiness Check before Publish
-            $validator = new \App\Validators\FlowReadinessValidator();
+            $validator = new \App\Validators\FlowReadinessValidator;
             $result = $validator->validate($flow);
-            if (!$result->isValid()) {
+            if (! $result->isValid()) {
                 $reason = $result->getBlockingReason();
-                session()->flash('error', "Cannot deploy: " . $reason);
+                session()->flash('error', 'Cannot deploy: '.$reason);
+
                 return;
             }
 
@@ -323,7 +337,7 @@ class FlowBuilder extends Component
         $version = \App\Models\WhatsAppFlowVersion::where('whatsapp_flow_id', $this->flowId)->findOrFail($versionId);
 
         // 2. Load Design Data from Version
-        if (!empty($version->design_data['screens'])) {
+        if (! empty($version->design_data['screens'])) {
             $this->screens = $version->design_data['screens'];
             $this->after_submit_action = $version->design_data['after_submit_action'] ?? 'none';
         }
@@ -349,7 +363,7 @@ class FlowBuilder extends Component
         }
 
         return view('livewire.flows.flow-builder', [
-            'versions' => $versions
+            'versions' => $versions,
         ]);
     }
 }

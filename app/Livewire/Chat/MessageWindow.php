@@ -5,8 +5,8 @@ namespace App\Livewire\Chat;
 use App\Models\Conversation;
 // use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -15,18 +15,28 @@ class MessageWindow extends Component
     use WithFileUploads;
 
     public $conversationId;
+
     public $messageBody = '';
+
     public $newAttachment;
+
     public $selectedTemplateId;
+
     public $showEmojiPicker = false;
+
     public $conversation;
+
     public $activeAgents = [];
+
     public $availableCategories = [];
 
     // Legacy template preview modal state (still referenced by message-window view)
     public $templateMediaUrl = '';
+
     public $showTemplatePreviewModal = false;
+
     public $selectedTemplate = null;
+
     public $templateVariables = [];
 
     protected $listeners = [
@@ -48,28 +58,37 @@ class MessageWindow extends Component
 
     // New properties for transfer modal and refactored media/message
     public $activeAgentIds = [];
+
     public $showTransferModal = false;
+
     public $transferSearch = '';
+
     public $activeAgentsFull = [];
 
     // Media and Templates (Now handled by sub-components)
     public $newAttachmentData = null;
+
     public $msgBody = '';
+
     public $isNoteMode = false;
 
     // Interactive Buttons State
     public $showInteractiveButtonsModal = false;
+
     public $buttonBody = '';
+
     public $interactiveButtons = []; // Array of titles
 
     // Lightbox State
     public $lightboxOpen = false;
+
     public $lightboxImage = '';
 
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {
             $teamId = Auth::user()->currentTeam->id;
+
             return [
                 "echo-private:teams.{$teamId},.MessageReceived" => 'handleIncomingMessage',
                 "echo-private:teams.{$teamId},.MessageStatusUpdated" => 'handleStatusUpdate',
@@ -85,6 +104,7 @@ class MessageWindow extends Component
                 "echo-presence:conversation.{$this->conversationId},leaving" => 'handlePresenceLeave',
             ];
         }
+
         return [];
     }
 
@@ -95,6 +115,7 @@ class MessageWindow extends Component
     }
 
     public $chatMessages = []; // Dedicated property
+
     public $lastMessageId = null;
 
     public function mount($conversationId)
@@ -150,7 +171,7 @@ class MessageWindow extends Component
                             try {
                                 $wa->markRead($msg->whatsapp_message_id);
                             } catch (\Exception $e) {
-                                Log::warning("Failed to mark message {$msg->whatsapp_message_id} as read on WhatsApp: " . $e->getMessage());
+                                Log::warning("Failed to mark message {$msg->whatsapp_message_id} as read on WhatsApp: ".$e->getMessage());
                             }
                         }
                     }
@@ -169,10 +190,12 @@ class MessageWindow extends Component
 
     public function handleTemplateSelected($payload)
     {
-        if (!$this->conversation) return;
+        if (! $this->conversation) {
+            return;
+        }
 
         $wa = new \App\Services\WhatsAppService(Auth::user()->currentTeam);
-        
+
         // Extract variables (header + body)
         $variables = $payload['variables'];
         $headerParams = [];
@@ -224,7 +247,7 @@ class MessageWindow extends Component
         $template = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
             ->find($templateId);
 
-        if (!$template) {
+        if (! $template) {
             return;
         }
 
@@ -237,7 +260,7 @@ class MessageWindow extends Component
 
     public function sendTemplateWithVariables()
     {
-        if (!$this->selectedTemplate) {
+        if (! $this->selectedTemplate) {
             return;
         }
 
@@ -252,7 +275,7 @@ class MessageWindow extends Component
 
     public function parseTemplateVariables()
     {
-        if (!$this->selectedTemplate) {
+        if (! $this->selectedTemplate) {
             return;
         }
 
@@ -274,7 +297,7 @@ class MessageWindow extends Component
         }
 
         preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
-        if (!empty($matches[1])) {
+        if (! empty($matches[1])) {
             foreach ($matches[1] as $num) {
                 $this->templateVariables[(string) $num] = $this->templateVariables[(string) $num] ?? '';
             }
@@ -288,12 +311,12 @@ class MessageWindow extends Component
     public function getLivePreviewTextProperty()
     {
         $template = $this->selectedTemplate;
-        if (!$template && $this->selectedTemplateId) {
+        if (! $template && $this->selectedTemplateId) {
             $template = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
                 ->find($this->selectedTemplateId);
         }
 
-        if (!$template) {
+        if (! $template) {
             return e('Template preview unavailable.');
         }
 
@@ -321,7 +344,7 @@ class MessageWindow extends Component
                 continue;
             }
 
-            $placeholder = '{{' . $key . '}}';
+            $placeholder = '{{'.$key.'}}';
             $replacement = $value !== '' ? e($value) : $placeholder;
             $text = str_replace(e($placeholder), $replacement, $text);
         }
@@ -335,18 +358,19 @@ class MessageWindow extends Component
 
     public function sendMessage()
     {
-        Log::info("MessageWindow: sendMessage called", [
+        Log::info('MessageWindow: sendMessage called', [
             'body' => $this->msgBody,
             'has_attachment' => $this->newAttachmentData ? true : false,
-            'conversation_id' => $this->conversationId
+            'conversation_id' => $this->conversationId,
         ]);
         $this->validate([
             'msgBody' => 'nullable|required_without:newAttachmentData|string',
             'newAttachmentData' => 'nullable|array', // Validate as array from sub-component
         ]);
 
-        if (!$this->conversation)
+        if (! $this->conversation) {
             return;
+        }
 
         // 1. Pre-persist for immediate UI feedback (Optimistic Update)
         $msgData = [
@@ -405,12 +429,16 @@ class MessageWindow extends Component
 
     private function getMediaType($mime)
     {
-        if (str_starts_with($mime, 'image/'))
+        if (str_starts_with($mime, 'image/')) {
             return 'image';
-        if (str_starts_with($mime, 'video/'))
+        }
+        if (str_starts_with($mime, 'video/')) {
             return 'video';
-        if (str_starts_with($mime, 'audio/'))
+        }
+        if (str_starts_with($mime, 'audio/')) {
             return 'audio';
+        }
+
         return 'document';
     }
 
@@ -420,8 +448,9 @@ class MessageWindow extends Component
             'msgBody' => 'required|string',
         ]);
 
-        if (!$this->conversation)
+        if (! $this->conversation) {
             return;
+        }
 
         $message = \App\Models\Message::create([
             'team_id' => Auth::user()->currentTeam->id,
@@ -441,12 +470,14 @@ class MessageWindow extends Component
 
     public function transferConversation($agentId)
     {
-        if (!$this->conversation)
+        if (! $this->conversation) {
             return;
+        }
 
         $agent = Auth::user()->currentTeam->users()->find($agentId);
-        if (!$agent)
+        if (! $agent) {
             return;
+        }
 
         $this->conversation->update([
             'assigned_to' => $agentId,
@@ -470,18 +501,17 @@ class MessageWindow extends Component
         $this->loadConversation();
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => "Conversation transferred to {$agent->name}"
+            'message' => "Conversation transferred to {$agent->name}",
         ]);
     }
-
-
 
     public function sendVoiceNote($audioFile)
     {
         // This is called after Livewire finishes uploading the blob
         $file = $audioFile ?: $this->newAttachmentData; // Changed from newAttachment
-        if (!$this->conversation || !$file)
+        if (! $this->conversation || ! $file) {
             return;
+        }
 
         $path = $file->store('voice-notes', 'public');
 
@@ -519,7 +549,7 @@ class MessageWindow extends Component
             $this->conversation->update([
                 'status' => 'closed',
                 'closed_at' => now(),
-                'close_reason' => $reason
+                'close_reason' => $reason,
             ]);
             // Dispatch event for UI updates if needed
             $this->dispatch('conversation-closed');
@@ -533,7 +563,7 @@ class MessageWindow extends Component
             $this->conversation->update([
                 'status' => 'open',
                 'closed_at' => null,
-                'close_reason' => null
+                'close_reason' => null,
             ]);
 
             // Create internal note
@@ -544,13 +574,13 @@ class MessageWindow extends Component
                 'direction' => 'outbound',
                 'status' => 'sent',
                 'type' => 'internal_note',
-                'content' => "Conversation reopened by " . Auth::user()->name,
+                'content' => 'Conversation reopened by '.Auth::user()->name,
                 'metadata' => ['type' => 'reopen', 'reopened_by' => Auth::user()->name],
             ]);
 
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Conversation reopened successfully'
+                'message' => 'Conversation reopened successfully',
             ]);
             $this->loadConversation();
         }
@@ -567,7 +597,7 @@ class MessageWindow extends Component
             $this->conversation->update([
                 'metadata' => $metadata,
                 'status' => 'closed',
-                'close_reason' => 'spam'
+                'close_reason' => 'spam',
             ]);
 
             // Create internal note
@@ -578,13 +608,13 @@ class MessageWindow extends Component
                 'direction' => 'outbound',
                 'status' => 'sent',
                 'type' => 'internal_note',
-                'content' => "Conversation marked as spam by " . Auth::user()->name,
+                'content' => 'Conversation marked as spam by '.Auth::user()->name,
                 'metadata' => ['type' => 'spam', 'marked_by' => Auth::user()->name],
             ]);
 
             $this->dispatch('notify', [
                 'type' => 'warning',
-                'message' => 'Conversation marked as spam'
+                'message' => 'Conversation marked as spam',
             ]);
             $this->loadConversation();
         }
@@ -596,12 +626,12 @@ class MessageWindow extends Component
             $this->conversation->contact->update([
                 'is_blocked' => true,
                 'blocked_at' => now(),
-                'blocked_by' => Auth::id()
+                'blocked_by' => Auth::id(),
             ]);
 
             $this->conversation->update([
                 'status' => 'closed',
-                'close_reason' => 'contact_blocked'
+                'close_reason' => 'contact_blocked',
             ]);
 
             // Create internal note
@@ -612,13 +642,13 @@ class MessageWindow extends Component
                 'direction' => 'outbound',
                 'status' => 'sent',
                 'type' => 'internal_note',
-                'content' => "Contact blocked by " . Auth::user()->name,
+                'content' => 'Contact blocked by '.Auth::user()->name,
                 'metadata' => ['type' => 'block', 'blocked_by' => Auth::user()->name],
             ]);
 
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Contact has been blocked'
+                'message' => 'Contact has been blocked',
             ]);
             $this->loadConversation();
         }
@@ -626,10 +656,12 @@ class MessageWindow extends Component
 
     public function exportConversation()
     {
-        if (!$this->conversation) return;
+        if (! $this->conversation) {
+            return;
+        }
 
         $messages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
-        $filename = "conversation_{$this->conversation->id}_" . now()->format('Y-m-d_H-i-s') . ".csv";
+        $filename = "conversation_{$this->conversation->id}_".now()->format('Y-m-d_H-i-s').'.csv';
 
         return response()->streamDownload(function () use ($messages) {
             $handle = fopen('php://output', 'w');
@@ -643,11 +675,11 @@ class MessageWindow extends Component
             foreach ($messages as $msg) {
                 $sender = $msg->direction === 'inbound'
                     ? ($this->conversation->contact->name ?? $this->conversation->contact->phone_number)
-                    : (isset($msg->metadata['agent_name']) ? "Agent ({$msg->metadata['agent_name']})" : "System/Agent");
+                    : (isset($msg->metadata['agent_name']) ? "Agent ({$msg->metadata['agent_name']})" : 'System/Agent');
 
                 $content = $msg->content;
                 if ($msg->type !== 'text') {
-                    $content = "[{$msg->type}] " . ($msg->caption ?? "Media asset: " . ($msg->media_url ?? 'N/A'));
+                    $content = "[{$msg->type}] ".($msg->caption ?? 'Media asset: '.($msg->media_url ?? 'N/A'));
                 }
 
                 fputcsv($handle, [
@@ -655,7 +687,7 @@ class MessageWindow extends Component
                     $sender,
                     ucfirst($msg->type),
                     $content,
-                    ucfirst($msg->status)
+                    ucfirst($msg->status),
                 ]);
             }
 
@@ -671,7 +703,7 @@ class MessageWindow extends Component
 
         if ($message) {
             $metadata = $message->metadata;
-            if (!is_array($metadata)) {
+            if (! is_array($metadata)) {
                 $metadata = [];
             }
             $metadata['agent_note'] = $note;
@@ -680,14 +712,14 @@ class MessageWindow extends Component
 
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Call note updated.'
+                'message' => 'Call note updated.',
             ]);
         }
     }
 
     public function handleIncomingMessage($event)
     {
-        Log::info("MessageWindow: handleIncomingMessage received", ['event' => $event]);
+        Log::info('MessageWindow: handleIncomingMessage received', ['event' => $event]);
         if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
             $this->loadConversation();
             $this->dispatch('chat-scroll-bottom');
@@ -702,7 +734,7 @@ class MessageWindow extends Component
 
     public function handlePresenceJoin($user)
     {
-        if (!collect($this->activeAgents)->contains('id', $user['id'])) {
+        if (! collect($this->activeAgents)->contains('id', $user['id'])) {
             $this->activeAgents[] = $user;
         }
     }
@@ -710,7 +742,7 @@ class MessageWindow extends Component
     public function handlePresenceLeave($user)
     {
         $this->activeAgents = collect($this->activeAgents)
-            ->filter(fn($u) => $u['id'] != $user['id'])
+            ->filter(fn ($u) => $u['id'] != $user['id'])
             ->values()
             ->all();
     }
@@ -723,11 +755,12 @@ class MessageWindow extends Component
 
     public function toggleBot()
     {
-        if (!$this->conversation || !$this->conversation->contact)
+        if (! $this->conversation || ! $this->conversation->contact) {
             return;
+        }
 
         $contact = $this->conversation->contact;
-        $handoff = new \App\Services\BotHandoffService();
+        $handoff = new \App\Services\BotHandoffService;
 
         if ($contact->is_bot_paused) {
             $handoff->resume($contact);
@@ -748,17 +781,18 @@ class MessageWindow extends Component
 
     public function toggleCategory($categoryId)
     {
-        if (!$this->conversation)
+        if (! $this->conversation) {
             return;
+        }
 
         $metadata = $this->conversation->metadata;
-        if (!is_array($metadata)) {
+        if (! is_array($metadata)) {
             $metadata = [];
         }
         $tags = $metadata['tags'] ?? [];
 
         if (in_array($categoryId, $tags)) {
-            $tags = array_values(array_filter($tags, fn($id) => $id != $categoryId));
+            $tags = array_values(array_filter($tags, fn ($id) => $id != $categoryId));
         } else {
             $tags[] = $categoryId;
         }
@@ -771,22 +805,23 @@ class MessageWindow extends Component
 
     public function addReaction($messageId, $emoji)
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return;
         }
 
         $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
             ->find($messageId);
-        if (!$message)
+        if (! $message) {
             return;
+        }
 
         $metadata = $message->metadata;
-        if (!is_array($metadata)) {
+        if (! is_array($metadata)) {
             $metadata = [];
         }
 
         $reactions = $metadata['reactions'] ?? [];
-        if (!is_array($reactions)) {
+        if (! is_array($reactions)) {
             $reactions = [];
         }
 
@@ -813,7 +848,7 @@ class MessageWindow extends Component
             ->map(function ($msg) {
                 return [
                     'code' => $msg->shortcut,
-                    'text' => $msg->content
+                    'text' => $msg->content,
                 ];
             });
     }
@@ -827,10 +862,11 @@ class MessageWindow extends Component
 
     public function getIsSessionOpenProperty()
     {
-        if (!$this->conversation || !$this->conversation->contact) {
+        if (! $this->conversation || ! $this->conversation->contact) {
             return false;
         }
         $lastMsg = $this->conversation->contact->last_customer_message_at;
+
         return $lastMsg && $lastMsg->gt(now()->subHours(24));
     }
 
@@ -1004,14 +1040,15 @@ class MessageWindow extends Component
             'interactiveButtons.*' => 'required|string|max:20',
         ]);
 
-        if (!$this->conversation)
+        if (! $this->conversation) {
             return;
+        }
 
         try {
             // Prepare buttons
             $buttons = [];
             foreach ($this->interactiveButtons as $title) {
-                $id = 'btn_' . \Illuminate\Support\Str::slug($title);
+                $id = 'btn_'.\Illuminate\Support\Str::slug($title);
                 $buttons[$id] = $title;
             }
 
@@ -1028,7 +1065,6 @@ class MessageWindow extends Component
             ]);
 
             // 2. Dispatch
-
 
             \App\Jobs\SendMessageJob::dispatch(
                 Auth::user()->currentTeam->id,
@@ -1057,14 +1093,15 @@ class MessageWindow extends Component
     #[\Livewire\Attributes\Renderless]
     public function loadMessagesJson($offset = 0, $limit = 50)
     {
-        if (!$this->conversation) {
+        if (! $this->conversation) {
             if ($this->conversationId) {
                 // Try to reload conversation if missing (Hydration issue safety)
                 $this->loadConversation();
             }
 
-            if (!$this->conversation) {
+            if (! $this->conversation) {
                 \Log::error('MessageWindow: loadMessagesJson failed - No conversation found', ['id' => $this->conversationId]);
+
                 return [];
             }
         }
@@ -1076,10 +1113,10 @@ class MessageWindow extends Component
             ->take($limit)
             ->get();
 
-        \Log::info("MessageWindow: loadMessagesJson", [
+        \Log::info('MessageWindow: loadMessagesJson', [
             'conversation_id' => $this->conversationId,
             'count' => $messages->count(),
-            'offset' => $offset
+            'offset' => $offset,
         ]);
 
         return $messages
@@ -1112,13 +1149,12 @@ class MessageWindow extends Component
     #[\Livewire\Attributes\Renderless]
     public function sendMessageJson($body, $tempId)
     {
-        if (empty($body) || !$this->conversation) {
+        if (empty($body) || ! $this->conversation) {
             return ['status' => 'error', 'message' => 'Invalid session'];
         }
 
         // Removed strict collision check to allow rapid messaging by same agent.
         // Was causing false positives when sending multiple messages quickly.
-
 
         // 2. Check Lock Ownership (Optional strictness)
         $lockKey = "conversation_lock:{$this->conversation->id}";
@@ -1137,7 +1173,7 @@ class MessageWindow extends Component
             'direction' => 'outbound',
             'status' => 'queued',
             'type' => 'text',
-            'content' => $body
+            'content' => $body,
         ];
 
         $message = \App\Models\Message::create($msgData);
@@ -1173,7 +1209,7 @@ class MessageWindow extends Component
             'isSessionOpen' => $this->isSessionOpen,
             'templates' => $this->isSessionOpen ? [] : $this->templates,
             'quickReplies' => $this->quickReplies,
-            'agents' => $this->agents
+            'agents' => $this->agents,
         ]);
     }
 }

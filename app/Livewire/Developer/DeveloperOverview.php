@@ -9,7 +9,7 @@ class DeveloperOverview extends Component
     public function toggleSandboxMode()
     {
         $team = auth()->user()->currentTeam;
-        $team->is_sandbox_mode = !$team->is_sandbox_mode;
+        $team->is_sandbox_mode = ! $team->is_sandbox_mode;
         $team->save();
 
         $mode = $team->is_sandbox_mode ? 'enabled' : 'disabled';

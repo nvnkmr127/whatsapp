@@ -110,7 +110,7 @@ trait HasNodeEditing
                     foreach ($contacts as $c) {
                         $this->nodeContacts[] = [
                             'name' => $c['name']['formatted_name'] ?? '',
-                            'phone' => $c['phones'][0]['phone'] ?? ''
+                            'phone' => $c['phones'][0]['phone'] ?? '',
                         ];
                     }
                 } elseif ($type === 'carousel') {
@@ -188,7 +188,9 @@ trait HasNodeEditing
         $this->validate(['uploadFile' => 'file|max:10240']);
 
         $node = collect($this->nodes)->firstWhere('id', $this->selectedNodeId);
-        if (!$node) return;
+        if (! $node) {
+            return;
+        }
 
         $type = $node['type'];
         if ($type === 'image') {
@@ -201,7 +203,7 @@ trait HasNodeEditing
 
         $path = $this->uploadFile->store('automation-uploads', 'public');
         $this->nodeUrl = Storage::url($path);
-        
+
         $this->reset('uploadFile');
         $this->updateNodeData();
     }
@@ -210,7 +212,7 @@ trait HasNodeEditing
     {
         foreach ($this->nodes as &$node) {
             if ($node['type'] === 'trigger') {
-                $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)) . ' Trigger';
+                $node['data']['label'] = ucfirst(str_replace(['_', 'trigger'], [' ', ''], $this->triggerType)).' Trigger';
                 $node['data']['trigger_type'] = $this->triggerType;
                 $node['data']['keywords'] = $this->triggerConfig['keywords'] ?? [];
                 $node['data']['add_tags'] = $this->triggerConfig['add_tags'] ?? [];
@@ -235,7 +237,9 @@ trait HasNodeEditing
             }
         }
 
-        if (!$this->selectedNodeId) return;
+        if (! $this->selectedNodeId) {
+            return;
+        }
 
         foreach ($this->nodes as &$node) {
             if ($node['id'] === $this->selectedNodeId) {

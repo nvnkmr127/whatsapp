@@ -12,21 +12,21 @@ class WebhookSettings extends Settings
 
     public array $contacts_actions = [
         'create' => false,
-        'read'   => false,
+        'read' => false,
         'update' => false,
         'delete' => false,
     ];
 
     public array $status_actions = [
         'create' => false,
-        'read'   => false,
+        'read' => false,
         'update' => false,
         'delete' => false,
     ];
 
     public array $source_actions = [
         'create' => false,
-        'read'   => false,
+        'read' => false,
         'update' => false,
         'delete' => false,
     ];

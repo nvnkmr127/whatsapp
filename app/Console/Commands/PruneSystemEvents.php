@@ -8,11 +8,12 @@ use Illuminate\Console\Command;
 class PruneSystemEvents extends Command
 {
     protected $signature = 'events:prune';
+
     protected $description = 'Prune old system events based on retention policy';
 
     public function handle()
     {
-        $this->info("Starting System Event Pruning...");
+        $this->info('Starting System Event Pruning...');
 
         // 1. Prune Debug/Noise (7 Days)
         $count = SystemEvent::where('category', 'debug')
@@ -34,6 +35,6 @@ class PruneSystemEvents extends Command
             ->delete();
         $this->info("Deleted {$count} old Business events.");
 
-        $this->info("Pruning Complete.");
+        $this->info('Pruning Complete.');
     }
 }

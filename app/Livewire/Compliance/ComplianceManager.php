@@ -2,26 +2,28 @@
 
 namespace App\Livewire\Compliance;
 
+use App\Models\ConsentLog;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Models\ConsentLog;
-use App\Models\Contact;
-use Illuminate\Support\Facades\Auth;
 
 class ComplianceManager extends Component
 {
     use WithPagination;
 
     public $activeTab = 'logs'; // 'logs' or 'registry'
+
     public $searchTerm = '';
+
     public $filterStatus = 'all';
+
     public $filterDateRange = '30';
 
     public $showExportModal = false;
 
     public function render()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return view('livewire.compliance.compliance-manager', [
                 'consentLogs' => collect(),
                 'stats' => ['total' => 0, 'granted' => 0, 'revoked' => 0, 'rate' => 0],
@@ -33,8 +35,8 @@ class ComplianceManager extends Component
         $consentLogs = ConsentLog::where('team_id', $teamId)
             ->when($this->searchTerm, function ($query) {
                 $query->whereHas('contact', function ($q) {
-                    $q->where('name', 'like', '%' . $this->searchTerm . '%')
-                        ->orWhere('phone_number', 'like', '%' . $this->searchTerm . '%');
+                    $q->where('name', 'like', '%'.$this->searchTerm.'%')
+                        ->orWhere('phone_number', 'like', '%'.$this->searchTerm.'%');
                 });
             })
             ->when($this->filterStatus !== 'all', function ($query) {
@@ -72,12 +74,12 @@ class ComplianceManager extends Component
 
     public function exportCompliance()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return;
         }
 
         $teamId = Auth::user()->currentTeam->id;
-        $fileName = 'compliance_logs_' . now()->format('Y_m_d_His') . '.csv';
+        $fileName = 'compliance_logs_'.now()->format('Y_m_d_His').'.csv';
 
         // Capture current state variables for the closure
         $searchTerm = $this->searchTerm;
@@ -91,8 +93,8 @@ class ComplianceManager extends Component
             ConsentLog::where('team_id', $teamId)
                 ->when($searchTerm, function ($query) use ($searchTerm) {
                     $query->whereHas('contact', function ($q) use ($searchTerm) {
-                        $q->where('name', 'like', '%' . $searchTerm . '%')
-                            ->orWhere('phone_number', 'like', '%' . $searchTerm . '%');
+                        $q->where('name', 'like', '%'.$searchTerm.'%')
+                            ->orWhere('phone_number', 'like', '%'.$searchTerm.'%');
                     });
                 })
                 ->when($filterStatus !== 'all', function ($query) use ($filterStatus) {

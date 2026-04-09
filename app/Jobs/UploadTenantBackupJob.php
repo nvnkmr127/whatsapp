@@ -16,6 +16,7 @@ class UploadTenantBackupJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $backupRecord;
+
     protected $localFilePath;
 
     /**
@@ -36,8 +37,8 @@ class UploadTenantBackupJob implements ShouldQueue
             $backupService->uploadBackup($this->backupRecord, $this->localFilePath);
             Log::info("Asynchronous upload completed for Backup ID: {$this->backupRecord->id}");
         } catch (\Exception $e) {
-            Log::error("Asynchronous upload failed for Backup ID: {$this->backupRecord->id}. Error: " . $e->getMessage());
-            // No need to throw if BackupService already handled status update, 
+            Log::error("Asynchronous upload failed for Backup ID: {$this->backupRecord->id}. Error: ".$e->getMessage());
+            // No need to throw if BackupService already handled status update,
             // unless we want Laravel to retry. Given large files, retry might be tricky.
             throw $e;
         }

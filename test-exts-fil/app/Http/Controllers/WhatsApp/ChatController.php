@@ -40,17 +40,17 @@ class ChatController extends Controller
 
         // Load all necessary data for the view
         $data = [
-            'chats'               => $chats,
-            'ai_prompt'           => AiPrompt::select('id', 'name', 'action')->get(),
-            'canned_reply'        => CannedReply::select('id', 'added_from', 'description', 'title', 'is_public')->get(),
-            'users'               => User::select('id', 'firstname', 'lastname', 'is_admin')->get(),
-            'sources'             => Source::all(),
-            'languages'           => Languages::all(),
-            'selectedAgent'       => [],
-            'readOnlyPermission'  => (! (Auth::user()->is_admin) && checkPermission('chat.read_only')) ? 0 : 1,
-            'user_is_admin'       => Auth::user()->is_admin,
+            'chats' => $chats,
+            'ai_prompt' => AiPrompt::select('id', 'name', 'action')->get(),
+            'canned_reply' => CannedReply::select('id', 'added_from', 'description', 'title', 'is_public')->get(),
+            'users' => User::select('id', 'firstname', 'lastname', 'is_admin')->get(),
+            'sources' => Source::all(),
+            'languages' => Languages::all(),
+            'selectedAgent' => [],
+            'readOnlyPermission' => (! (Auth::user()->is_admin) && checkPermission('chat.read_only')) ? 0 : 1,
+            'user_is_admin' => Auth::user()->is_admin,
             'enable_supportagent' => get_setting('whats-mark.only_agents_can_chat'),
-            'login_user'          => Auth::id(),
+            'login_user' => Auth::id(),
 
         ];
 
@@ -74,7 +74,7 @@ class ChatController extends Controller
             ->get()
             ->map(function ($message) {
                 if (! empty($message->url)) {
-                    $message->url = asset('storage/whatsapp-attachments/' . ltrim($message->url, '/'));
+                    $message->url = asset('storage/whatsapp-attachments/'.ltrim($message->url, '/'));
                 }
 
                 return $message;
@@ -152,36 +152,36 @@ class ChatController extends Controller
             $chat->update([
                 'agent' => json_encode([
                     'assign_id' => $assign_id ?? 0,
-                    'agents_id' => $agents    ?? '',
+                    'agents_id' => $agents ?? '',
                 ]),
             ]);
 
             $agent_layout = $this->getSupportAgentView($chatId, true);
 
             return response()->json([
-                'success'      => true,
-                'message'      => t('support_agent_assigned_successfully'),
+                'success' => true,
+                'message' => t('support_agent_assigned_successfully'),
                 'agent_layout' => $agent_layout['agent_layout'],
             ]);
         } catch (\Throwable $e) {
             // Log the error with context
-            whatsapp_log('Error assigning support agent: ' . $e->getMessage(), 'error', [
+            whatsapp_log('Error assigning support agent: '.$e->getMessage(), 'error', [
                 'selected_agent' => $request->input('agent_ids'),
-                'chat_id'        => $chatId,
-                'file'           => $e->getFile(),
-                'line'           => $e->getLine(),
+                'chat_id' => $chatId,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to assign agent: ' . $e->getMessage(),
+                'message' => 'Failed to assign agent: '.$e->getMessage(),
             ]);
         }
     }
 
     public function userInformation(Request $request)
     {
-        $type       = $request->input('type');
+        $type = $request->input('type');
         $contact_id = $request->input('type_Id');
         if (! empty($contact_id) && $type != 'guest') {
             return Contact::where(['type' => $type, 'id' => $contact_id])->get()->toArray();
@@ -227,23 +227,23 @@ class ChatController extends Controller
                         <div class="flex items-center">';
 
         if ($users->count() === 1) {
-            $user         = $users->first();
+            $user = $users->first();
             $profileImage = $this->getProfileImage($user->profile_image_url);
-            $fullName     = e(trim($user->firstname . ' ' . $user->lastname));
+            $fullName = e(trim($user->firstname.' '.$user->lastname));
 
             $layout .= "<img src='{$profileImage}' class='rounded-full h-7 w-7 object-cover ring-1 bg-gray-200 dark:bg-gray-700 cursor-pointer'
                         x-on:click.prevent='openDropdown = !openDropdown' data-tippy-content='{$fullName}'>";
         } else {
-            $isMobile  = request()->header('User-Agent') && preg_match('/(Mobile|Android|iPhone|iPad)/i', request()->header('User-Agent'));
+            $isMobile = request()->header('User-Agent') && preg_match('/(Mobile|Android|iPhone|iPad)/i', request()->header('User-Agent'));
             $maxToShow = $isMobile ? 0 : 3;
-            $i         = 0;
+            $i = 0;
 
             foreach ($users as $user) {
                 if ($i >= $maxToShow) {
                     break;
                 }
                 $profileImage = $this->getProfileImage($user->profile_image_url);
-                $fullName     = e(trim($user->firstname . ' ' . $user->lastname));
+                $fullName = e(trim($user->firstname.' '.$user->lastname));
 
                 $layout .= "<img src='{$profileImage}' class='rounded-full h-7 w-7 object-cover ring-1 -ml-2 first:ml-0'
                             x-on:click.prevent='openDropdown = !openDropdown' data-tippy-content='{$fullName}'>";
@@ -267,7 +267,7 @@ class ChatController extends Controller
 
         foreach ($users as $user) {
             $profileImage = $this->getProfileImage($user->profile_image_url);
-            $fullName     = e(trim($user->firstname . ' ' . $user->lastname));
+            $fullName = e(trim($user->firstname.' '.$user->lastname));
 
             $layout .= "<div class='flex items-center space-x-2 shrink-0'>
                             <img src='{$profileImage}' class='rounded-full h-8 w-8 object-cover ring-1 text-xs my-2' data-tippy-content='{$fullName}'>
@@ -281,13 +281,13 @@ class ChatController extends Controller
 
         if ($isReturn ?? false) {
             return [
-                'chat_id'      => $chatId,
+                'chat_id' => $chatId,
                 'agent_layout' => $layout,
             ];
         }
 
         return response()->json([
-            'chat_id'      => $chatId,
+            'chat_id' => $chatId,
             'agent_layout' => $layout,
         ]);
 
@@ -300,8 +300,8 @@ class ChatController extends Controller
     {
         try {
             $data = [
-                'menu'      => $request->input('menu'),
-                'submenu'   => $request->input('submenu'),
+                'menu' => $request->input('menu'),
+                'submenu' => $request->input('submenu'),
                 'input_msg' => $request->input('input_msg'),
             ];
 
@@ -319,12 +319,12 @@ class ChatController extends Controller
                 ]);
             }
         } catch (\Throwable $e) {
-            whatsapp_log('Exception in AI response processing: ' . $e->getMessage(), 'error', [
-                'menu'      => $request->input('menu'),
-                'submenu'   => $request->input('submenu'),
+            whatsapp_log('Exception in AI response processing: '.$e->getMessage(), 'error', [
+                'menu' => $request->input('menu'),
+                'submenu' => $request->input('submenu'),
                 'input_msg' => $request->input('input_msg'),
-                'file'      => $e->getFile(),
-                'line'      => $e->getLine(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return response()->json([
@@ -351,7 +351,7 @@ class ChatController extends Controller
         }
 
         $mergeFields = array_map(fn ($value) => [
-            'key'   => ucfirst($value['name']),
+            'key' => ucfirst($value['name']),
             'value' => $value['key'],
         ], $field);
 
@@ -378,7 +378,7 @@ class ChatController extends Controller
         // Modify message URLs after retrieval
         $chat->messages->transform(function ($message) {
             if (! empty($message->url)) {
-                $message->url = asset('storage/whatsapp-attachments/' . ltrim($message->url, '/'));
+                $message->url = asset('storage/whatsapp-attachments/'.ltrim($message->url, '/'));
             }
 
             return $message;
@@ -393,7 +393,7 @@ class ChatController extends Controller
     private function getProfileImage($profileUrl)
     {
         return $profileUrl
-            ? asset('storage/' . $profileUrl)
+            ? asset('storage/'.$profileUrl)
             : asset('img/avatar-agent.svg');
     }
 

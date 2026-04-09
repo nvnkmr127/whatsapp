@@ -6,18 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property int                             $interaction_id
- * @property string                          $sender_id
- * @property string|null                     $url
- * @property string                          $message
- * @property string|null                     $status
- * @property string                          $time_sent
- * @property string|null                     $message_id
- * @property string|null                     $staff_id
- * @property string|null                     $type
- * @property int                             $is_read
- * @property string|null                     $ref_message_id
+ * @property int $id
+ * @property int $interaction_id
+ * @property string $sender_id
+ * @property string|null $url
+ * @property string $message
+ * @property string|null $status
+ * @property string $time_sent
+ * @property string|null $message_id
+ * @property string|null $staff_id
+ * @property string|null $type
+ * @property int $is_read
+ * @property string|null $ref_message_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Chat|null $chat

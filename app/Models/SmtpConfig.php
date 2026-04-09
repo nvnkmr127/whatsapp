@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Support\Facades\Crypt;
 
 class SmtpConfig extends Model
 {
@@ -25,7 +24,7 @@ class SmtpConfig extends Model
         'is_active',
         'health_status',
         'last_checked_at',
-        'failure_count'
+        'failure_count',
     ];
 
     protected $casts = [

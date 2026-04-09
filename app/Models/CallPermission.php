@@ -5,12 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class CallPermission extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -43,8 +42,6 @@ class CallPermission extends Model
     /**
      * Relationships
      */
-
-
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class);
@@ -140,13 +137,13 @@ class CallPermission extends Model
         $now = now();
 
         // Reset 24h counter if window has passed
-        if (!$this->first_request_in_24h || $this->first_request_in_24h->diffInHours($now) >= 24) {
+        if (! $this->first_request_in_24h || $this->first_request_in_24h->diffInHours($now) >= 24) {
             $this->first_request_in_24h = $now;
             $this->requests_in_24h = 0;
         }
 
         // Reset 7d counter if window has passed
-        if (!$this->first_request_in_7d || $this->first_request_in_7d->diffInDays($now) >= 7) {
+        if (! $this->first_request_in_7d || $this->first_request_in_7d->diffInDays($now) >= 7) {
             $this->first_request_in_7d = $now;
             $this->requests_in_7d = 0;
         }

@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class LeadCaptureWidget extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -56,12 +56,10 @@ class LeadCaptureWidget extends Model
         'business_hours' => 'array',
     ];
 
-
-
     public function getWaMeLinkAttribute()
     {
         $phone = $this->team->whatsapp_phone_display;
-        if (!$phone) {
+        if (! $phone) {
             return null;
         }
 
@@ -71,7 +69,7 @@ class LeadCaptureWidget extends Model
         // Append unique tracker to track conversion on webhook
         $message .= " [ref:{$this->slug}]";
 
-        return "https://wa.me/{$phone}?text=" . urlencode($message);
+        return "https://wa.me/{$phone}?text=".urlencode($message);
     }
 
     public function getQrCodeUrlAttribute()

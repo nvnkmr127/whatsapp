@@ -47,7 +47,7 @@ class CheckSetupHealth extends Command
             if ($duration > 24) {
                 $this->warn("Team {$team->id}: In DEGRADED state for {$duration} hours");
 
-                Log::warning("Setup degraded for extended period", [
+                Log::warning('Setup degraded for extended period', [
                     'team_id' => $team->id,
                     'duration_hours' => $duration,
                 ]);
@@ -61,7 +61,7 @@ class CheckSetupHealth extends Command
         foreach ($suspendedTeams as $team) {
             $this->error("Team {$team->id}: SUSPENDED");
 
-            Log::critical("Setup suspended", [
+            Log::critical('Setup suspended', [
                 'team_id' => $team->id,
                 'quality_rating' => $team->wm_quality_rating,
             ]);
@@ -76,7 +76,7 @@ class CheckSetupHealth extends Command
         foreach ($failedRetries as $team) {
             $this->warn("Team {$team->id}: {$team->whatsapp_setup_retry_count} failed retries");
 
-            Log::warning("Multiple setup retry failures", [
+            Log::warning('Multiple setup retry failures', [
                 'team_id' => $team->id,
                 'retry_count' => $team->whatsapp_setup_retry_count,
                 'state' => $team->whatsapp_setup_state,
@@ -111,10 +111,12 @@ class CheckSetupHealth extends Command
 
         if ($totalIssues > 0) {
             $this->warn("\nTotal issues found: {$totalIssues}");
+
             return Command::FAILURE;
         }
 
         $this->info("\n✓ All setups healthy");
+
         return Command::SUCCESS;
     }
 }

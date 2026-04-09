@@ -2,14 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\PersistMessageJob;
-use App\Jobs\HandleIncomingWorkflowJob;
 use App\Events\MessageReceived;
+use App\Jobs\HandleIncomingWorkflowJob;
+use App\Jobs\PersistMessageJob;
 use App\Models\Team;
-use App\Models\Contact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class AutomationRedundancyTest extends TestCase

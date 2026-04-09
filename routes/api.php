@@ -45,7 +45,6 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     // Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
     // Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
 
-
     // Inbox Contact Integration
     Route::prefix('inbox/contacts')->group(function () {
         Route::get('resolve', [\App\Http\Controllers\Api\InboxContactController::class, 'resolve']);

@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Add this use statement
-use App\Models\Team; // Add this use statement for the relationship
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model; // Add this use statement
+
+// Add this use statement for the relationship
 
 class AiUsageLog extends Model
 {

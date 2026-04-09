@@ -19,8 +19,8 @@ class DatabaseBackupService
     public function createBackup(): bool
     {
         try {
-            $filename = 'backup-' . Carbon::now()->format('Y-m-d-H-i-s') . '.sql';
-            $path     = Storage::disk('backups')->path($filename);
+            $filename = 'backup-'.Carbon::now()->format('Y-m-d-H-i-s').'.sql';
+            $path = Storage::disk('backups')->path($filename);
 
             MySql::create()
                 ->setDbName(config('database.connections.mysql.database'))
@@ -38,7 +38,7 @@ class DatabaseBackupService
 
             return true;
         } catch (\Exception $e) {
-            app_log(t('backup_failed') . ' ' . $e->getMessage(), 'error');
+            app_log(t('backup_failed').' '.$e->getMessage(), 'error');
 
             return false;
         }
@@ -46,14 +46,14 @@ class DatabaseBackupService
 
     public function getBackups(): array
     {
-        $files   = Storage::disk('backups')->files();
+        $files = Storage::disk('backups')->files();
         $backups = [];
 
         foreach ($files as $file) {
             if (str_ends_with($file, '.sql')) {
                 $backups[] = [
-                    'filename'   => $file,
-                    'size'       => Storage::disk('backups')->size($file),
+                    'filename' => $file,
+                    'size' => Storage::disk('backups')->size($file),
                     'created_at' => Storage::disk('backups')->lastModified($file),
                 ];
             }
@@ -81,7 +81,7 @@ class DatabaseBackupService
         try {
             return Storage::disk('backups')->delete($filename);
         } catch (\Exception $e) {
-            app_log(t('failed_to_delete_backup') . ' ' . $e->getMessage(), 'error');
+            app_log(t('failed_to_delete_backup').' '.$e->getMessage(), 'error');
 
             return false;
         }

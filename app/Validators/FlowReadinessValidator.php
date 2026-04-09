@@ -10,24 +10,22 @@ class FlowReadinessValidator
 {
     /**
      * Validate Flow and return a comprehensive readiness profile.
-     * 
-     * @param WhatsAppFlow $flow
-     * @param bool $checkRemote Whether to perform remote API checks (e.g. status sync)
-     * @return ValidationResult
+     *
+     * @param  bool  $checkRemote  Whether to perform remote API checks (e.g. status sync)
      */
     public function validate(WhatsAppFlow $flow, bool $checkRemote = false): ValidationResult
     {
-        $result = new ValidationResult();
+        $result = new ValidationResult;
         $errors = [];
         $score = 100;
 
         // 1. Definition Integrity
-        if (!$flow->flow_id) {
+        if (! $flow->flow_id) {
             $score = 0;
             $errors[] = [
                 'code' => 'NOT_SYNCED',
-                'description' => "Flow is not synced with Meta (missing Flow ID).",
-                'severity' => 'error'
+                'description' => 'Flow is not synced with Meta (missing Flow ID).',
+                'severity' => 'error',
             ];
         }
 
@@ -38,7 +36,7 @@ class FlowReadinessValidator
             $errors[] = [
                 'code' => 'STATUS_NOT_LIVE',
                 'description' => "Flow status is {$flow->status}. Only testers can see this flow.",
-                'severity' => 'warning'
+                'severity' => 'warning',
             ];
         }
 
@@ -48,20 +46,20 @@ class FlowReadinessValidator
             $score = 0;
             $errors[] = [
                 'code' => 'NO_SCREENS',
-                'description' => "Flow has no screens defined.",
-                'severity' => 'error'
+                'description' => 'Flow has no screens defined.',
+                'severity' => 'error',
             ];
         } else {
             // Deep Screen Validation
             $screenIds = array_column($design['screens'], 'id');
             $entryScreenId = $design['screens'][0]['id'] ?? null;
 
-            if (!$entryScreenId) {
+            if (! $entryScreenId) {
                 $score -= 50;
                 $errors[] = [
                     'code' => 'NO_ENTRY_SCREEN',
-                    'description' => "Could not determine entry screen.",
-                    'severity' => 'error'
+                    'description' => 'Could not determine entry screen.',
+                    'severity' => 'error',
                 ];
             }
 
@@ -69,12 +67,12 @@ class FlowReadinessValidator
                 // Check components
                 if (empty($screen['children']) && empty($screen['components'])) {
                     // Internal builder uses 'components', Meta uses 'layout.children'
-                    // We check our builder format 'components' 
+                    // We check our builder format 'components'
                     $score -= 10;
                     $errors[] = [
                         'code' => 'EMPTY_SCREEN',
                         'description' => "Screen '{$screen['title']}' has no components.",
-                        'severity' => 'warning'
+                        'severity' => 'warning',
                     ];
                 }
 
@@ -90,7 +88,7 @@ class FlowReadinessValidator
                     }
                 }
 
-                // This is a loose check; strict graph traversal is complex for linear builder 
+                // This is a loose check; strict graph traversal is complex for linear builder
                 // but we know FlowService forces linear topology.
             }
         }
@@ -108,8 +106,8 @@ class FlowReadinessValidator
         }
 
         // 5. Update Model Score
-        // We act on the model but don't save it inside the validator usually, 
-        // to keep it pure. But TemplateValidator did update it. 
+        // We act on the model but don't save it inside the validator usually,
+        // to keep it pure. But TemplateValidator did update it.
         // We'll follow the pattern if desired, but typically we return the result.
         // Let's return result for caller to save.
 

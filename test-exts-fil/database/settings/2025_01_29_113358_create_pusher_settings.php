@@ -5,12 +5,12 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'pusher.app_id'                    => null,
-        'pusher.app_key'                   => null,
-        'pusher.app_secret'                => null,
-        'pusher.cluster'                   => 'ap2',
-        'pusher.real_time_notify'          => false,
-        'pusher.desk_notify'               => false,
+        'pusher.app_id' => null,
+        'pusher.app_key' => null,
+        'pusher.app_secret' => null,
+        'pusher.cluster' => 'ap2',
+        'pusher.real_time_notify' => false,
+        'pusher.desk_notify' => false,
         'pusher.dismiss_desk_notification' => 5,
     ];
 

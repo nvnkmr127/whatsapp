@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CallPermission;
 use App\Models\Contact;
 use App\Models\Team;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class CallPermissionService
@@ -28,7 +27,7 @@ class CallPermissionService
     public function validatePermissionRequest(Contact $contact, Team $team): array
     {
         // 1. Check tier eligibility
-        if (!$this->checkTierEligibility($team)) {
+        if (! $this->checkTierEligibility($team)) {
             return [
                 'allowed' => false,
                 'reason' => 'tier_requirement',
@@ -37,7 +36,7 @@ class CallPermissionService
         }
 
         // 2. Check geographic restrictions
-        if (!$this->validateGeographicRestrictions($contact)) {
+        if (! $this->validateGeographicRestrictions($contact)) {
             return [
                 'allowed' => false,
                 'reason' => 'geographic_restriction',
@@ -63,7 +62,7 @@ class CallPermissionService
             }
 
             // Check rate limits
-            if (!$existingPermission->canRequestPermission()) {
+            if (! $existingPermission->canRequestPermission()) {
                 return [
                     'allowed' => false,
                     'reason' => 'rate_limit',
@@ -73,7 +72,7 @@ class CallPermissionService
         }
 
         // 4. Check if there's an active conversation
-        if (!$this->hasActiveConversation($contact, $team)) {
+        if (! $this->hasActiveConversation($contact, $team)) {
             return [
                 'allowed' => false,
                 'reason' => 'no_active_conversation',
@@ -98,7 +97,7 @@ class CallPermissionService
             ->latest()
             ->first();
 
-        if (!$permission) {
+        if (! $permission) {
             $permission = CallPermission::create([
                 'team_id' => $team->id,
                 'phone_number_id' => $phoneNumberId,
@@ -137,6 +136,7 @@ class CallPermissionService
     public function checkTierEligibility(Team $team): bool
     {
         $messagingTier = $team->whatsapp_settings['messaging_tier'] ?? 0;
+
         return $messagingTier >= self::MINIMUM_TIER;
     }
 
@@ -147,11 +147,11 @@ class CallPermissionService
     {
         $countryCode = $this->extractCountryCode($contact->phone);
 
-        if (!$countryCode) {
+        if (! $countryCode) {
             return true; // Allow if country code cannot be determined
         }
 
-        return !in_array($countryCode, self::RESTRICTED_COUNTRIES);
+        return ! in_array($countryCode, self::RESTRICTED_COUNTRIES);
     }
 
     /**

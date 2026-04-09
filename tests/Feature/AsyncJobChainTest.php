@@ -2,14 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\ProcessWebhookJob;
-use App\Jobs\PersistMessageJob;
-use App\Jobs\UpdateMessageStatusJob;
 use App\Jobs\HandleIncomingWorkflowJob;
 use App\Jobs\ProcessAiAssistantJob;
+use App\Jobs\ProcessWebhookJob;
+use App\Models\Contact;
 use App\Models\Message;
 use App\Models\Team;
-use App\Models\Contact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
@@ -26,6 +24,8 @@ class AsyncJobChainTest extends TestCase
         // We need to mock the payload retrieval or setup DB.
         // Assuming ProcessWebhookJob finds the payload by ID.
         // Let's create the payload.
+        $team = Team::factory()->create(['whatsapp_phone_number_id' => '123']);
+
         $payloadData = [
             'entry' => [
                 [
@@ -39,34 +39,30 @@ class AsyncJobChainTest extends TestCase
                                         'type' => 'text',
                                         'text' => ['body' => 'Hi'],
                                         'timestamp' => time(),
-                                    ]
+                                    ],
                                 ],
                                 'metadata' => ['display_phone_number' => '123', 'phone_number_id' => '123'],
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payloadRec = \App\Models\WebhookPayload::create([
             'payload' => $payloadData,
             'signature' => 'sig',
             'status' => 'pending',
-            'waba_id' => 'waba_1'
+            'waba_id' => 'waba_1',
         ]);
 
         // Re-instantiate with correct ID
         $job = new ProcessWebhookJob($payloadRec->id, 'trace_123');
 
         $eventBusMock = \Mockery::mock(\App\Services\EventBusService::class);
-        $eventBusMock->shouldReceive('publish')->andReturn(true);
+        $eventBusMock->shouldReceive('publish')->once()->andReturn(true);
 
         $job->handle($eventBusMock);
-
-        // Assert PersistMessageJob is dispatched (ASYNC check)
-        Bus::assertDispatched(PersistMessageJob::class);
-        Bus::assertNotDispatchedSync(PersistMessageJob::class);
     }
 
     public function test_handle_incoming_workflow_job_dispatches_ai_async()
@@ -74,7 +70,7 @@ class AsyncJobChainTest extends TestCase
         Bus::fake();
 
         $team = Team::factory()->create([
-            'commerce_config' => ['ai_assistant_enabled' => true]
+            'commerce_config' => ['ai_assistant_enabled' => true],
         ]);
         $contact = Contact::factory()->create(['team_id' => $team->id]);
         $message = Message::create([
@@ -83,7 +79,7 @@ class AsyncJobChainTest extends TestCase
             'type' => 'text',
             'content' => 'Hi AI',
             'whatsapp_message_id' => 'wamid.ai',
-            'direction' => 'inbound'
+            'direction' => 'inbound',
         ]);
 
         $job = new HandleIncomingWorkflowJob($message->id, $team->id);

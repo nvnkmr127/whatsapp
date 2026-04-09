@@ -14,7 +14,7 @@ class RateLimitService
         '1K' => 0.04,  // ~1000 per day / 86400s
         '10K' => 0.4,  // ~10000 per day
         '100K' => 4,   // ~100000 per day
-        'UNLIMITED' => 50
+        'UNLIMITED' => 50,
     ];
 
     /**
@@ -31,7 +31,7 @@ class RateLimitService
         $tier = $this->getWabaTier($phoneNumber);
         $dailyLimit = $this->getTierDailyLimit($tier);
 
-        $todayKey = "ratelimit:daily:{$phoneNumber}:" . now()->format('Y-m-d');
+        $todayKey = "ratelimit:daily:{$phoneNumber}:".now()->format('Y-m-d');
         $dailyCount = Cache::increment($todayKey);
         if ($dailyCount === 1) {
             Cache::put($todayKey, 1, 86400); // 24h checks
@@ -39,6 +39,7 @@ class RateLimitService
 
         if ($dailyLimit !== -1 && $dailyCount > $dailyLimit) {
             Log::warning("RateLimit: Daily Limit ({$dailyLimit}) hit for {$phoneNumber}");
+
             return false;
         }
 
@@ -65,13 +66,13 @@ class RateLimitService
      */
     public function canSendCampaign(int $campaignId, ?int $sendRate): bool
     {
-        if (!$sendRate || $sendRate <= 0) {
+        if (! $sendRate || $sendRate <= 0) {
             return true;
         }
 
         // messages per hour -> messages per second
         $rpsLimit = max(0.1, $sendRate / 3600);
-        $key = "ratelimit:campaign:{$campaignId}:" . now()->timestamp;
+        $key = "ratelimit:campaign:{$campaignId}:".now()->timestamp;
 
         $current = Cache::increment($key);
         if ($current === 1) {
@@ -141,8 +142,9 @@ class RateLimitService
     {
         $failures = (int) Cache::get("ratelimit:backoff:{$phoneNumber}", 0);
 
-        if ($failures === 0)
+        if ($failures === 0) {
             return 1.0;
+        }
 
         // Reduce RPS by 20% for each failure, capped at 90% reduction
         $reduction = min(0.9, $failures * 0.2);
@@ -155,8 +157,9 @@ class RateLimitService
      */
     public function setWabaTier(string $phoneNumber, string $tier): void
     {
-        if (!isset($this->tiers[$tier]))
+        if (! isset($this->tiers[$tier])) {
             return;
+        }
         Cache::forever("waba_tier:{$phoneNumber}", $tier);
     }
 
@@ -166,7 +169,7 @@ class RateLimitService
     public function pauseSystem(): void
     {
         Cache::forever('broadcast_system_paused', true);
-        Log::alert("RateLimit: BROADCAST SYSTEM PAUSED GLOBALLY.");
+        Log::alert('RateLimit: BROADCAST SYSTEM PAUSED GLOBALLY.');
     }
 
     /**
@@ -175,7 +178,7 @@ class RateLimitService
     public function resumeSystem(): void
     {
         Cache::forget('broadcast_system_paused');
-        Log::info("RateLimit: Broadcast system resumed.");
+        Log::info('RateLimit: Broadcast system resumed.');
     }
 
     /**
@@ -184,16 +187,19 @@ class RateLimitService
     public function isPaused(int $teamId = 0, string $phoneNumber = ''): bool
     {
         // 1. Global system pause
-        if (Cache::get('broadcast_system_paused'))
+        if (Cache::get('broadcast_system_paused')) {
             return true;
+        }
 
         // 2. Tenant level block
-        if ($teamId > 0 && Cache::get("tenant_paused:{$teamId}"))
+        if ($teamId > 0 && Cache::get("tenant_paused:{$teamId}")) {
             return true;
+        }
 
         // 3. Selective phone number block (optional)
-        if ($phoneNumber && Cache::get("number_paused:{$phoneNumber}"))
+        if ($phoneNumber && Cache::get("number_paused:{$phoneNumber}")) {
             return true;
+        }
 
         return false;
     }
@@ -216,8 +222,9 @@ class RateLimitService
 
         $key = "ratelimit:critical_failures:{$teamId}";
         $count = Cache::increment($key, 1);
-        if ($count === 1)
+        if ($count === 1) {
             Cache::put($key, 1, 60);
+        }
 
         // Circuit Breaker: If 10 critical failures occur in 60s, pause the tenant
         if ($count >= 10) {
@@ -230,11 +237,11 @@ class RateLimitService
             if ($team && $team->owner) {
                 try {
                     $team->owner->notify(new \App\Notifications\CampaignFailedNotification(
-                        (object)['id' => 0, 'name' => 'System Auto-Pause'], 
-                        "Your WhatsApp account is experiencing high failure rates and has been paused for 5 minutes to protect your quality rating."
+                        (object) ['id' => 0, 'name' => 'System Auto-Pause'],
+                        'Your WhatsApp account is experiencing high failure rates and has been paused for 5 minutes to protect your quality rating.'
                     ));
                 } catch (\Exception $e) {
-                    Log::error("Failed to notify tenant pause: " . $e->getMessage());
+                    Log::error('Failed to notify tenant pause: '.$e->getMessage());
                 }
             }
         }

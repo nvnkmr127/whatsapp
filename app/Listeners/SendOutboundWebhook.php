@@ -5,8 +5,6 @@ namespace App\Listeners;
 use App\Events\MessageReceived;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class SendOutboundWebhook implements ShouldQueue
 {
@@ -27,12 +25,12 @@ class SendOutboundWebhook implements ShouldQueue
         $message = $event->message;
         $team = $message->team;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
         // Use the new WebhookService
-        $webhookService = new \App\Services\WebhookService();
+        $webhookService = new \App\Services\WebhookService;
 
         $data = [
             'id' => $message->id,

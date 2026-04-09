@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Contact;
 use App\Models\Category;
+use App\Models\Contact;
 use App\Models\Team;
 use Illuminate\Support\Facades\Log;
 use League\Csv\Reader;
@@ -12,12 +12,13 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class ContactImportService
 {
     protected $team;
+
     protected $contactService;
 
     public function __construct(Team $team)
     {
         $this->team = $team;
-        $this->contactService = new ContactService();
+        $this->contactService = new ContactService;
     }
 
     /**
@@ -39,6 +40,7 @@ class ContactImportService
         if (in_array($extension, ['csv', 'txt'])) {
             $csv = Reader::createFromPath($filePath, 'r');
             $csv->setHeaderOffset(0);
+
             return $csv->getHeader();
         }
 
@@ -47,20 +49,22 @@ class ContactImportService
             $spreadsheet = IOFactory::load($filePath);
             $worksheet = $spreadsheet->getActiveSheet();
             $highestColumn = $worksheet->getHighestColumn();
-            $headers = $worksheet->rangeToArray('A1:' . $highestColumn . '1', NULL, TRUE, FALSE);
+            $headers = $worksheet->rangeToArray('A1:'.$highestColumn.'1', null, true, false);
+
             return $headers[0] ?? [];
         } catch (\Exception $e) {
-            Log::error("Failed to load Excel headers: " . $e->getMessage());
+            Log::error('Failed to load Excel headers: '.$e->getMessage());
+
             return [];
         }
     }
 
     /**
      * Import contacts from file.
-     * 
-     * @param string $filePath Path to file
-     * @param array $columnMapping Mapping of columns to contact fields
-     * @param array $options Import options including consent information
+     *
+     * @param  string  $filePath  Path to file
+     * @param  array  $columnMapping  Mapping of columns to contact fields
+     * @param  array  $options  Import options including consent information
      * @return array Results with success count and errors
      */
     public function import(string $filePath, array $columnMapping, array $options = [])
@@ -89,7 +93,7 @@ class ContactImportService
                 $spreadsheet = IOFactory::load($filePath);
                 $worksheet = $spreadsheet->getActiveSheet();
                 $data = $worksheet->toArray(null, true, true, true);
-                
+
                 $headers = array_shift($data);
                 foreach ($data as $row) {
                     $record = [];
@@ -98,12 +102,12 @@ class ContactImportService
                             $record[$header] = $row[$colLetter] ?? null;
                         }
                     }
-                    if (!empty(array_filter($record))) {
+                    if (! empty(array_filter($record))) {
                         $records[] = $record;
                     }
                 }
             } catch (\Exception $e) {
-                return ['success_count' => 0, 'errors' => ["Excel load error: " . $e->getMessage()]];
+                return ['success_count' => 0, 'errors' => ['Excel load error: '.$e->getMessage()]];
             }
         }
 
@@ -136,7 +140,7 @@ class ContactImportService
             }
 
             $phonesToCheck = array_values(array_unique($phonesToCheck));
-            if (!empty($phonesToCheck)) {
+            if (! empty($phonesToCheck)) {
                 foreach (array_chunk($phonesToCheck, 1000) as $chunk) {
                     $existing = Contact::where('team_id', $this->team->id)
                         ->whereIn('phone_number', $chunk)
@@ -159,7 +163,7 @@ class ContactImportService
 
         foreach ($records as $index => $record) {
             try {
-                \Illuminate\Support\Facades\Log::info("Importing Row " . ($index + 1), [
+                \Illuminate\Support\Facades\Log::info('Importing Row '.($index + 1), [
                     'team_id' => $this->team->id,
                     'raw_record' => $record,
                 ]);
@@ -167,36 +171,39 @@ class ContactImportService
                 $contactData = $this->mapRecordToContactData($record, $columnMapping);
 
                 if (empty($contactData['phone_number'])) {
-                    \Illuminate\Support\Facades\Log::warning("Skipping Row " . ($index + 1) . ": No phone number found", [
+                    \Illuminate\Support\Facades\Log::warning('Skipping Row '.($index + 1).': No phone number found', [
                         'mapped_data' => $contactData,
                     ]);
-                    $errors[] = "Row " . ($index + 1) . ": Phone number is required.";
+                    $errors[] = 'Row '.($index + 1).': Phone number is required.';
+
                     continue;
                 }
 
                 $originalPhone = (string) $contactData['phone_number'];
                 $contactData['phone_number'] = \App\Helpers\PhoneNumberHelper::normalize($originalPhone);
-                
-                \Illuminate\Support\Facades\Log::debug("Normalized Phone", [
+
+                \Illuminate\Support\Facades\Log::debug('Normalized Phone', [
                     'original' => $originalPhone,
                     'normalized' => $contactData['phone_number'],
                 ]);
 
                 if ($onDuplicate === 'skip') {
                     if (isset($seenPhones[$contactData['phone_number']])) {
-                        \Illuminate\Support\Facades\Log::info("Row " . ($index + 1) . ": Skipping duplicate in file", [
+                        \Illuminate\Support\Facades\Log::info('Row '.($index + 1).': Skipping duplicate in file', [
                             'phone' => $contactData['phone_number'],
                         ]);
                         $skippedCount++;
+
                         continue;
                     }
                     $seenPhones[$contactData['phone_number']] = true;
 
                     if (isset($existingPhones[$contactData['phone_number']])) {
-                        \Illuminate\Support\Facades\Log::info("Row " . ($index + 1) . ": Skipping existing contact", [
+                        \Illuminate\Support\Facades\Log::info('Row '.($index + 1).': Skipping existing contact', [
                             'phone' => $contactData['phone_number'],
                         ]);
                         $skippedCount++;
+
                         continue;
                     }
                 }
@@ -215,8 +222,8 @@ class ContactImportService
                         ->first();
                 }
 
-                \Illuminate\Support\Facades\Log::info("Processing Contact for Row " . ($index + 1), [
-                    'is_update' => (bool)$existingContact,
+                \Illuminate\Support\Facades\Log::info('Processing Contact for Row '.($index + 1), [
+                    'is_update' => (bool) $existingContact,
                     'contact_data' => $contactData,
                 ]);
 
@@ -232,7 +239,7 @@ class ContactImportService
                         'contact_id' => $contact->id,
                         'action' => 'OPT_IN',
                         'source' => $consentSource,
-                        'notes' => "Imported from " . strtoupper($extension) . ": " . basename($filePath),
+                        'notes' => 'Imported from '.strtoupper($extension).': '.basename($filePath),
                         'proof_url' => $consentProof,
                     ]);
                 }
@@ -243,17 +250,17 @@ class ContactImportService
                 } else {
                     $createdCount++;
                 }
-                
-                \Illuminate\Support\Facades\Log::info("Successfully processed Row " . ($index + 1), [
+
+                \Illuminate\Support\Facades\Log::info('Successfully processed Row '.($index + 1), [
                     'contact_id' => $contact->id,
                 ]);
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed Row " . ($index + 1), [
+                \Illuminate\Support\Facades\Log::error('Failed Row '.($index + 1), [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                     'row_data' => $record ?? null,
                 ]);
-                $errors[] = "Row " . ($index + 1) . ": " . $e->getMessage();
+                $errors[] = 'Row '.($index + 1).': '.$e->getMessage();
             }
         }
 
@@ -297,7 +304,7 @@ class ContactImportService
                             $record[$header] = $row[$colLetter] ?? null;
                         }
                     }
-                    if (!empty(array_filter($record))) {
+                    if (! empty(array_filter($record))) {
                         $records[] = $record;
                     }
                 }
@@ -305,7 +312,7 @@ class ContactImportService
                 return [
                     'total_rows' => 0,
                     'valid_rows' => 0,
-                    'errors' => ["Excel load error: " . $e->getMessage()],
+                    'errors' => ['Excel load error: '.$e->getMessage()],
                     'duplicates_existing' => [],
                     'duplicates_in_file' => [],
                 ];
@@ -324,6 +331,7 @@ class ContactImportService
 
                 if (empty($contactData['phone_number'])) {
                     $errors[] = "Row {$rowNo}: Phone number is required.";
+
                     continue;
                 }
 
@@ -331,7 +339,7 @@ class ContactImportService
                 $phones[] = $normalized;
 
                 $incomingTags = $contactData['tags'] ?? [];
-                if (!is_array($incomingTags)) {
+                if (! is_array($incomingTags)) {
                     $incomingTags = [];
                 }
                 $incomingTags = array_values(array_filter(array_map('trim', $incomingTags), fn ($t) => $t !== ''));
@@ -344,18 +352,18 @@ class ContactImportService
                     'tags' => $incomingTags,
                 ];
 
-                if (!isset($rowsByPhone[$normalized])) {
+                if (! isset($rowsByPhone[$normalized])) {
                     $rowsByPhone[$normalized] = [];
                 }
                 $rowsByPhone[$normalized][] = $rowNo;
             } catch (\Exception $e) {
-                $errors[] = "Row " . ($index + 1) . ": " . $e->getMessage();
+                $errors[] = 'Row '.($index + 1).': '.$e->getMessage();
             }
         }
 
         $phones = array_values(array_unique($phones));
         $existingByPhone = [];
-        if (!empty($phones)) {
+        if (! empty($phones)) {
             foreach (array_chunk($phones, 1000) as $chunk) {
                 $existing = Contact::where('team_id', $this->team->id)
                     ->whereIn('phone_number', $chunk)
@@ -381,7 +389,7 @@ class ContactImportService
                     'phone_number' => $r['phone_number'],
                     'incoming_name' => $r['name'],
                     'incoming_email' => $r['email'],
-                    'incoming_tags' => !empty($r['tags']) ? $r['tags'] : null,
+                    'incoming_tags' => ! empty($r['tags']) ? $r['tags'] : null,
                     'existing' => $existing,
                 ];
             }
@@ -416,8 +424,9 @@ class ContactImportService
 
         foreach ($mapping as $csvHeader => $targetField) {
             $value = $record[$csvHeader] ?? null;
-            if (empty($value))
+            if (empty($value)) {
                 continue;
+            }
 
             $targetField = (string) $targetField;
 
@@ -447,7 +456,7 @@ class ContactImportService
         $tags = $data['tags'] ?? [];
         unset($data['tags']);
 
-        if (!empty($data['category_name'])) {
+        if (! empty($data['category_name'])) {
             $categoryName = trim((string) $data['category_name']);
             if ($categoryName !== '') {
                 $category = Category::firstOrCreate(
@@ -470,7 +479,7 @@ class ContactImportService
 
         $contact = $this->contactService->createOrUpdate($data);
 
-        if (!empty($tags)) {
+        if (! empty($tags)) {
             $onDuplicateTag = $options['on_duplicate_tag'] ?? 'add';
             $isDuplicateExisting = (bool) ($options['is_duplicate_existing'] ?? false);
 

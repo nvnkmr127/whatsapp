@@ -3,24 +3,12 @@
 namespace App\Services;
 
 use App\Models\Contact;
-use App\Models\Message;
-use App\Models\Note;
-use App\Models\ContactEvent;
-use App\Models\CrmActivity;
-use App\Models\ActivityLog;
-use App\Models\Deal;
-use App\Models\Order;
-use App\Models\WorkflowLog;
 use Illuminate\Support\Collection;
 
 class ContactTimelineService
 {
     /**
      * Build a unified timeline for a contact.
-     *
-     * @param Contact $contact
-     * @param bool $excludeSuperAdmin
-     * @return Collection
      */
     public function getTimeline(Contact $contact, bool $excludeSuperAdmin = true): Collection
     {
@@ -30,7 +18,7 @@ class ContactTimelineService
         $contact->messages()->latest()->take(50)->get()->each(function ($message) use ($timeline) {
             $timeline->push([
                 'type' => 'message',
-                'id' => 'msg-' . $message->id,
+                'id' => 'msg-'.$message->id,
                 'title' => $message->direction === 'inbound' ? 'Message Received' : 'Message Sent',
                 'description' => $message->content,
                 'occurred_at' => $message->sent_at ?? $message->created_at,
@@ -38,7 +26,7 @@ class ContactTimelineService
                     'direction' => $message->direction,
                     'status' => $message->status,
                     'type' => $message->type,
-                ]
+                ],
             ]);
         });
 
@@ -49,7 +37,7 @@ class ContactTimelineService
             }
             $timeline->push([
                 'type' => 'note',
-                'id' => 'note-' . $note->id,
+                'id' => 'note-'.$note->id,
                 'title' => 'Note Added',
                 'description' => $note->content,
                 'occurred_at' => $note->created_at,
@@ -61,7 +49,7 @@ class ContactTimelineService
         $contact->contactEvents()->get()->each(function ($event) use ($timeline) {
             $timeline->push([
                 'type' => 'event',
-                'id' => 'event-' . $event->id,
+                'id' => 'event-'.$event->id,
                 'title' => str_replace('_', ' ', ucfirst($event->event_type)),
                 'description' => $event->event_data['description'] ?? '',
                 'occurred_at' => $event->occurred_at ?? $event->created_at,
@@ -76,7 +64,7 @@ class ContactTimelineService
             }
             $timeline->push([
                 'type' => 'crm_activity',
-                'id' => 'crm-' . $activity->id,
+                'id' => 'crm-'.$activity->id,
                 'title' => str_replace('_', ' ', ucfirst($activity->activity_type)),
                 'description' => $activity->description,
                 'occurred_at' => $activity->performed_at ?? $activity->created_at,
@@ -89,9 +77,9 @@ class ContactTimelineService
         $contact->orders()->get()->each(function ($order) use ($timeline) {
             $timeline->push([
                 'type' => 'order',
-                'id' => 'order-' . $order->id,
-                'title' => 'Order Placed: #' . ($order->order_id ?? $order->id),
-                'description' => "Amount: {$order->total_amount} {$order->currency} - Status: " . ucfirst($order->status),
+                'id' => 'order-'.$order->id,
+                'title' => 'Order Placed: #'.($order->order_id ?? $order->id),
+                'description' => "Amount: {$order->total_amount} {$order->currency} - Status: ".ucfirst($order->status),
                 'occurred_at' => $order->created_at,
                 'metadata' => $order->toArray(),
             ]);
@@ -101,9 +89,9 @@ class ContactTimelineService
         $contact->deals()->get()->each(function ($deal) use ($timeline) {
             $timeline->push([
                 'type' => 'deal',
-                'id' => 'deal-' . $deal->id,
-                'title' => 'Deal Created: ' . $deal->title,
-                'description' => "Value: {$deal->value} {$deal->currency} - Status: " . ucfirst($deal->status),
+                'id' => 'deal-'.$deal->id,
+                'title' => 'Deal Created: '.$deal->title,
+                'description' => "Value: {$deal->value} {$deal->currency} - Status: ".ucfirst($deal->status),
                 'occurred_at' => $deal->created_at,
                 'metadata' => $deal->toArray(),
             ]);
@@ -113,9 +101,9 @@ class ContactTimelineService
         $contact->workflowLogs()->with('workflow')->get()->each(function ($log) use ($timeline) {
             $timeline->push([
                 'type' => 'automation',
-                'id' => 'auto-' . $log->id,
-                'title' => 'Automation Triggered: ' . ($log->workflow->name ?? 'Workflow'),
-                'description' => "Status: " . ucfirst($log->status),
+                'id' => 'auto-'.$log->id,
+                'title' => 'Automation Triggered: '.($log->workflow->name ?? 'Workflow'),
+                'description' => 'Status: '.ucfirst($log->status),
                 'occurred_at' => $log->started_at ?? $log->created_at,
                 'metadata' => $log->execution_data,
             ]);
@@ -128,7 +116,7 @@ class ContactTimelineService
             }
             $timeline->push([
                 'type' => 'activity_log',
-                'id' => 'act-' . $log->id,
+                'id' => 'act-'.$log->id,
                 'title' => 'Action Logged',
                 'description' => $log->description ?? 'System activity occurred',
                 'occurred_at' => $log->created_at,
@@ -156,8 +144,14 @@ class ContactTimelineService
      */
     public function getInteractionHeatmap(Contact $contact): array
     {
+        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+
+        $selectRaw = $isSqlite
+            ? "strftime('%w', created_at) + 1 as day, strftime('%H', created_at) as hour, COUNT(*) as count"
+            : 'DAYOFWEEK(created_at) as day, HOUR(created_at) as hour, COUNT(*) as count';
+
         $interactions = $contact->messages()
-            ->selectRaw('DAYOFWEEK(created_at) as day, HOUR(created_at) as hour, COUNT(*) as count')
+            ->selectRaw($selectRaw)
             ->groupBy('day', 'hour')
             ->get();
 

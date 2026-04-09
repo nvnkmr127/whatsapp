@@ -2,7 +2,6 @@
 
 namespace App\Services\Email;
 
-use App\Enums\EmailUseCase;
 use App\Models\EmailTemplate;
 use Illuminate\Support\Facades\Log;
 
@@ -14,11 +13,12 @@ class EmailTemplateService
     public function preview(EmailTemplate $template): array
     {
         $dummyData = $this->generateDummyData($template->variable_schema);
+
         return [
             'subject' => $this->replaceVariables($template->subject, $dummyData),
             'html' => $this->replaceVariables($template->content_html ?? '', $dummyData),
             'text' => $this->replaceVariables($template->content_text ?? '', $dummyData),
-            'data' => $dummyData
+            'data' => $dummyData,
         ];
     }
 
@@ -31,7 +31,7 @@ class EmailTemplateService
             ->where('is_active', true)
             ->first();
 
-        if (!$template) {
+        if (! $template) {
             Log::warning("Email template not found: {$slug}");
             throw new \Exception("Active email template not found for slug: {$slug}");
         }
@@ -56,13 +56,13 @@ class EmailTemplateService
         // Check for missing required variables (assuming all in schema are required)
         $missing = array_diff($allowedKeys, array_keys($data));
 
-        if (!empty($missing)) {
+        if (! empty($missing)) {
             // We log warning but don't fail hard to avoid breaking prod auth flows if a minor var is missing,
             // unless strict enforcement is desired. Requirement says "Strict variable schema".
             // Let's Log Critical.
-            Log::error("Email Template Render Missing Variables", [
+            Log::error('Email Template Render Missing Variables', [
                 'slug' => $template->slug,
-                'missing' => $missing
+                'missing' => $missing,
             ]);
         }
 
@@ -80,8 +80,8 @@ class EmailTemplateService
 
         $invalid = array_diff($usedVariables, $allowedSchema);
 
-        if (!empty($invalid)) {
-            throw new \Exception("Template contains invalid variables: " . implode(', ', $invalid));
+        if (! empty($invalid)) {
+            throw new \Exception('Template contains invalid variables: '.implode(', ', $invalid));
         }
 
         return true;
@@ -94,7 +94,7 @@ class EmailTemplateService
 
         foreach ($data as $key => $value) {
             $val = is_scalar($value) ? (string) $value : '';
-            $content = str_replace(['{{ ' . $key . ' }}', '{{' . $key . '}}'], $val, $content);
+            $content = str_replace(['{{ '.$key.' }}', '{{'.$key.'}}'], $val, $content);
         }
 
         return $content;
@@ -102,12 +102,14 @@ class EmailTemplateService
 
     protected function generateDummyData(?array $schema): array
     {
-        if (!$schema)
+        if (! $schema) {
             return [];
+        }
         $data = [];
         foreach ($schema as $key) {
             $data[$key] = "[{$key}]";
         }
+
         return $data;
     }
 }

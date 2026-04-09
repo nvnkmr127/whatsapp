@@ -31,13 +31,13 @@ class TemplateAuditVerificationTest extends TestCase
                 [
                     'type' => 'BUTTONS',
                     'buttons' => [
-                        ['type' => 'URL', 'text' => 'Claim', 'url' => 'https://site.com/{{1}}']
-                    ]
-                ]
-            ]
+                        ['type' => 'URL', 'text' => 'Claim', 'url' => 'https://site.com/{{1}}'],
+                    ],
+                ],
+            ],
         ]);
 
-        $service = new TemplateService();
+        $service = new TemplateService;
         $this->assertTrue($service->validateVariables($template, ['token123']));
     }
 
@@ -47,7 +47,9 @@ class TemplateAuditVerificationTest extends TestCase
     public function test_send_template_does_not_steal_body_variables()
     {
         $team = Team::factory()->create([
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
+            'whatsapp_access_token' => 'token',
+            'whatsapp_phone_number_id' => '12345',
         ]);
 
         $template = WhatsappTemplate::create([
@@ -58,12 +60,12 @@ class TemplateAuditVerificationTest extends TestCase
             'status' => 'APPROVED',
             'components' => [
                 ['type' => 'HEADER', 'format' => 'IMAGE'],
-                ['type' => 'BODY', 'text' => 'Hello {{1}}']
-            ]
+                ['type' => 'BODY', 'text' => 'Hello {{1}}'],
+            ],
         ]);
 
         Http::fake([
-            '*' => Http::response(['success' => true, 'messages' => [['id' => 'wam_123']]], 200)
+            '*' => Http::response(['success' => true, 'messages' => [['id' => 'wam_123']]], 200),
         ]);
 
         // Mock Billing and Policy to bypass checks

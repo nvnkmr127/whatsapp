@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Message extends Model
 {
-    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use \App\Traits\HasTeam;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $guarded = [];
 
@@ -51,17 +51,17 @@ class Message extends Model
     {
         return $this->belongsTo(WebhookWorkflow::class);
     }
-    
+
     public function webhookSource()
     {
         return $this->belongsTo(WebhookSource::class);
     }
-    
+
     public function automation()
     {
         return $this->belongsTo(Automation::class);
     }
-    
+
     public function automationRun()
     {
         return $this->belongsTo(AutomationRun::class);

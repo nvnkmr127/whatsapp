@@ -21,7 +21,7 @@ class WorkflowEventSubscriber
     public function handleMessageReceived($event)
     {
         if ($event->message->direction === 'inbound') {
-            // Provide the Contact as the primary Subject 
+            // Provide the Contact as the primary Subject
             if ($event->message->contact) {
                 Log::info("WorkflowEventSubscriber: Firing message_received for contact {$event->message->contact->id}");
                 $this->workflowEngine->trigger('message_received', $event->message->contact, [
@@ -38,7 +38,7 @@ class WorkflowEventSubscriber
     public function handleOrderStatusUpdated($event)
     {
         if (isset($event->order) && isset($event->order->contact)) {
-            Log::info("WorkflowEventSubscriber: Firing order status event");
+            Log::info('WorkflowEventSubscriber: Firing order status event');
             $this->workflowEngine->trigger('order_placed', $event->order->contact, [
                 'order_status' => $event->order->status ?? 'pending',
                 'order_amount' => $event->order->total ?? 0,

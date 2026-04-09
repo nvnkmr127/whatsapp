@@ -27,22 +27,22 @@ class DealObserver
                 try {
                     app(\App\Services\AutomationService::class)->checkSpecialTriggers($deal->contact, 'deal_stage_changed');
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Automation [deal_stage_changed] Trigger Failed: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error('Automation [deal_stage_changed] Trigger Failed: '.$e->getMessage());
                 }
             }
         }
         if ($deal->wasChanged('status')) {
             $status = $deal->status;
             if (in_array($status, ['won', 'lost']) && $deal->contact) {
-                 try {
-                     app(\App\Services\AutomationService::class)->checkSpecialTriggers($deal->contact, 'deal_' . $status, [
+                try {
+                    app(\App\Services\AutomationService::class)->checkSpecialTriggers($deal->contact, 'deal_'.$status, [
                         'deal_id' => $deal->id,
                         'deal_title' => $deal->title,
-                        'deal_value' => $deal->value
-                     ]);
-                 } catch (\Exception $e) {
-                     \Illuminate\Support\Facades\Log::error("Automation [deal_$status] Trigger Failed: " . $e->getMessage());
-                 }
+                        'deal_value' => $deal->value,
+                    ]);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Automation [deal_$status] Trigger Failed: ".$e->getMessage());
+                }
             }
         }
     }

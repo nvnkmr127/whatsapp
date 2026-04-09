@@ -24,7 +24,7 @@ class ShortLinkController extends Controller
             'user_agent' => $request->userAgent(),
             'metadata' => [
                 'referer' => $request->header('referer'),
-            ]
+            ],
         ]);
 
         // Increment Click Count

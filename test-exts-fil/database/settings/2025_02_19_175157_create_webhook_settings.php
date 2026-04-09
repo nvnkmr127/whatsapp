@@ -10,19 +10,19 @@ class CreateWebhookSettings extends SettingsMigration
         $this->migrator->add('webhook.webhook_url', '');
         $this->migrator->add('webhook.contacts_actions', [
             'create' => false,
-            'read'   => false,
+            'read' => false,
             'update' => false,
             'delete' => false,
         ]);
         $this->migrator->add('webhook.status_actions', [
             'create' => false,
-            'read'   => false,
+            'read' => false,
             'update' => false,
             'delete' => false,
         ]);
         $this->migrator->add('webhook.source_actions', [
             'create' => false,
-            'read'   => false,
+            'read' => false,
             'update' => false,
             'delete' => false,
         ]);

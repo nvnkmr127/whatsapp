@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Settings;
 
-use App\Models\Setting;
 use App\Services\AI\AIProviderManager;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -10,36 +9,61 @@ use Livewire\Component;
 class AiSettings extends Component
 {
     public $ai_provider = 'openai';
+
     public $openai_api_key;
+
     public $anthropic_api_key;
+
     public $gemini_api_key;
+
     public $deepseek_api_key;
+
     public $ai_model;
+
     public $ai_fallback_provider;
+
     public $ai_fallback_model;
+
     public $ai_persona;
+
     public $available_models = [];
 
     // New Advanced Settings
     public $temperature = 0.7;
+
     public $instruction_type = 'custom';
+
     public $header_message;
+
     public $footer_message;
+
     public $stop_keywords;
+
     public $retry_attempts = 1;
+
     public $fallback_message;
+
     public $use_kb = false;
+
     public $kb_scope = 'all';
+
     public $kb_source_ids = [];
+
     public $kb_strict = true;
+
     public $available_kb_sources = [];
 
     // Toggles
     public $show_header = false;
+
     public $show_footer = false;
+
     public $show_stop = false;
+
     public $show_retry = false;
+
     public $show_fallback = false;
+
     public $ai_auto_reply_enabled = false;
 
     public $presets = [
@@ -61,13 +85,13 @@ class AiSettings extends Component
         $this->anthropic_api_key = get_setting("ai_anthropic_api_key_$teamId");
         $this->gemini_api_key = get_setting("ai_gemini_api_key_$teamId");
         $this->deepseek_api_key = get_setting("ai_deepseek_api_key_$teamId");
-        
+
         $this->updateAvailableModels();
         $this->ai_model = get_setting("ai_model_$teamId");
-        
+
         $this->ai_fallback_provider = get_setting("ai_fallback_provider_$teamId", 'openai');
         $this->ai_fallback_model = get_setting("ai_fallback_model_$teamId");
-        
+
         $this->ai_persona = get_setting("ai_persona_$teamId", $this->presets['support']);
 
         $this->temperature = (float) get_setting("ai_temperature_$teamId", 0.7);
@@ -113,8 +137,6 @@ class AiSettings extends Component
             $this->ai_persona = $this->presets[$value];
         }
     }
-
-
 
     public function save()
     {
@@ -173,6 +195,7 @@ class AiSettings extends Component
         $apiKeyField = "{$this->ai_provider}_api_key";
         if (empty($this->$apiKeyField)) {
             session()->flash('test_error', 'Please enter an API key first.');
+
             return;
         }
 
@@ -185,16 +208,19 @@ class AiSettings extends Component
                 session()->flash('test_error', 'Connection Failed: Invalid API key or service unavailable.');
             }
         } catch (\Exception $e) {
-            session()->flash('test_error', 'Connection Failed: ' . $e->getMessage());
+            session()->flash('test_error', 'Connection Failed: '.$e->getMessage());
         }
     }
 
     public function getCreativityLevelProperty()
     {
-        if ($this->temperature > 0.7)
+        if ($this->temperature > 0.7) {
             return 'High';
-        if ($this->temperature < 0.3)
+        }
+        if ($this->temperature < 0.3) {
             return 'Low';
+        }
+
         return 'Normal';
     }
 

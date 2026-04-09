@@ -5,7 +5,7 @@ return [
     |--------------------------------------------------------------------------
     | Broadcast Campaign Safety Limits
     |--------------------------------------------------------------------------
-    | These limits are designed to prevent accidental bulk messaging 
+    | These limits are designed to prevent accidental bulk messaging
     | that could lead to account bans or excessive costs.
     |
     */

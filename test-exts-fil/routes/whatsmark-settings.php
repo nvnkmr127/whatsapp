@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\Route;
 Route::middleware([AdminMiddleware::class, SanitizeInputs::class])->group(function () {
     // Define settings routes dynamically
     $settings = [
-        'whatsapp-auto-lead'      => App\Livewire\Admin\Settings\Whatsmark\WhatsappAutoLeadSettings::class,
-        'stop-bot'                => App\Livewire\Admin\Settings\Whatsmark\StopBotSettings::class,
-        'web-hooks'               => App\Livewire\Admin\Settings\Whatsmark\WebHooksSettings::class,
-        'support-agent'           => App\Livewire\Admin\Settings\Whatsmark\SupportAgentSettings::class,
-        'notification-sound'      => App\Livewire\Admin\Settings\Whatsmark\NotificationSoundSettings::class,
-        'ai-integration'          => App\Livewire\Admin\Settings\Whatsmark\AiIntegrationSettings::class,
+        'whatsapp-auto-lead' => App\Livewire\Admin\Settings\Whatsmark\WhatsappAutoLeadSettings::class,
+        'stop-bot' => App\Livewire\Admin\Settings\Whatsmark\StopBotSettings::class,
+        'web-hooks' => App\Livewire\Admin\Settings\Whatsmark\WebHooksSettings::class,
+        'support-agent' => App\Livewire\Admin\Settings\Whatsmark\SupportAgentSettings::class,
+        'notification-sound' => App\Livewire\Admin\Settings\Whatsmark\NotificationSoundSettings::class,
+        'ai-integration' => App\Livewire\Admin\Settings\Whatsmark\AiIntegrationSettings::class,
         'auto-clear-chat-history' => App\Livewire\Admin\Settings\Whatsmark\AutoClearChatHistorySettings::class,
     ];
 

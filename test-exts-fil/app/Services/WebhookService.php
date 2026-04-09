@@ -20,7 +20,7 @@ class WebhookService
 
         return array_merge($defaultHeaders, [
             'X-Webhook-Signature' => $this->generateSignature($payload, $secret),
-            'X-Webhook-Event'     => $payload['event'],
+            'X-Webhook-Event' => $payload['event'],
             'X-Webhook-Timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -28,26 +28,26 @@ class WebhookService
     public function send(string $url, array $payload, string $secret): bool
     {
         $maxAttempts = config('webhooks.retry.max_attempts', 3);
-        $timeout     = config('webhooks.retry.timeout', 30);
-        $attempt     = 1;
-        $success     = false;
+        $timeout = config('webhooks.retry.timeout', 30);
+        $attempt = 1;
+        $success = false;
 
         do {
             try {
-                $headers  = $this->getHeaders($payload, $secret);
+                $headers = $this->getHeaders($payload, $secret);
                 $response = Http::timeout($timeout)
                     ->withHeaders($headers)
                     ->post($url, $payload);
 
                 $this->logWebhook([
-                    'event'         => $payload['event'],
-                    'model'         => $payload['model'],
-                    'url'           => $url,
-                    'status'        => $response->successful() ? 'success' : 'failed',
-                    'attempt'       => $attempt,
-                    'payload'       => $payload,
-                    'response'      => $response->json(),
-                    'status_code'   => $response->status(),
+                    'event' => $payload['event'],
+                    'model' => $payload['model'],
+                    'url' => $url,
+                    'status' => $response->successful() ? 'success' : 'failed',
+                    'attempt' => $attempt,
+                    'payload' => $payload,
+                    'response' => $response->json(),
+                    'status_code' => $response->status(),
                     'error_message' => $response->failed() ? $response->body() : null,
                 ]);
 
@@ -57,25 +57,25 @@ class WebhookService
                 }
 
                 whatsapp_log('Webhook failed', 'error', [
-                    'url'      => $url,
-                    'attempt'  => $attempt,
-                    'status'   => $response->status(),
+                    'url' => $url,
+                    'attempt' => $attempt,
+                    'status' => $response->status(),
                     'response' => $response->body(),
                 ]);
 
             } catch (\Throwable $e) {
                 $this->logWebhook([
-                    'event'         => $payload['event'],
-                    'model'         => $payload['model'],
-                    'url'           => $url,
-                    'status'        => 'error',
-                    'attempt'       => $attempt,
-                    'payload'       => $payload,
+                    'event' => $payload['event'],
+                    'model' => $payload['model'],
+                    'url' => $url,
+                    'status' => 'error',
+                    'attempt' => $attempt,
+                    'payload' => $payload,
                     'error_message' => $e->getMessage(),
                 ]);
 
                 whatsapp_log('Webhook error', 'error', [
-                    'url'     => $url,
+                    'url' => $url,
                     'attempt' => $attempt,
                 ], $e);
             }

@@ -63,7 +63,7 @@ final class AiPromptTable extends PowerGridComponent
 
     public function actions(AiPrompt $prompt)
     {
-        $user    = auth()->user();
+        $user = auth()->user();
         $actions = [];
         if ($user->can('ai_prompt.edit') || $user->is_admin == 1) {
             $actions[] = Button::add('edit')

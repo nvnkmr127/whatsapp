@@ -17,7 +17,7 @@ class EventFactory
         $metadata = $value['metadata'];
 
         return [
-            'event_id' => 'evt_' . Str::uuid(),
+            'event_id' => 'evt_'.Str::uuid(),
             'event_type' => 'message.inbound',
             'timestamp' => time(),
             'payload' => [
@@ -30,7 +30,7 @@ class EventFactory
                 'message_type' => $message['type'],
                 'content' => $message, // Raw message content (text, image, etc.)
                 'raw_payload' => $value, // Full context if needed
-            ]
+            ],
         ];
     }
 }

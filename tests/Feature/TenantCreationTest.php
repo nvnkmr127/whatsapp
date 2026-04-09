@@ -50,6 +50,8 @@ class TenantCreationTest extends TestCase
             'is_super_admin' => true,
         ]);
 
+        \App\Models\Plan::create(['name' => 'pro', 'monthly_price' => 10, 'features' => []]);
+
         $tenantData = [
             'company_name' => 'Test Company',
             'owner_name' => 'Test Owner',
@@ -170,6 +172,8 @@ class TenantCreationTest extends TestCase
             'email' => 'admin@example.com',
         ]);
 
+        \App\Models\Plan::create(['name' => 'enterprise', 'monthly_price' => 10, 'features' => []]);
+
         $tenantData = [
             'company_name' => 'Test Company',
             'owner_name' => 'Test Owner',
@@ -201,12 +205,14 @@ class TenantCreationTest extends TestCase
             'is_super_admin' => true,
         ]);
 
+        \App\Models\Plan::create(['name' => 'pro', 'monthly_price' => 10, 'features' => []]);
+
         $tenantData = [
             'company_name' => 'Test Company',
             'owner_name' => 'Test Owner',
             'owner_email' => 'owner@testcompany.com',
             'owner_password' => 'password123',
-            'plan' => 'basic',
+            'plan' => 'pro',
         ];
 
         $this->actingAs($superAdmin)

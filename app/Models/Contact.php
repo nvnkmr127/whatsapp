@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Contact extends Model
 {
-    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use \App\Traits\HasTeam;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected static function booted()
     {
@@ -143,5 +143,4 @@ class Contact extends Model
     {
         return $this->hasMany(AutomationRun::class);
     }
-
 }

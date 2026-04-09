@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Contact;
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Support\Collection;
 
 class AssignmentService
 {
@@ -23,6 +22,7 @@ class AssignmentService
 
         if ($result['agent']) {
             $this->performAssignment($contact, $result['agent'], $result['reason']);
+
             return $result['agent'];
         }
 
@@ -31,13 +31,13 @@ class AssignmentService
 
     /**
      * Simulate assignment for a contact without persisting changes.
-     * 
+     *
      * @return array [
-     *    'status' => 'success'|'no_agent'|'error',
-     *    'agent_name' => string|null,
-     *    'reason' => string,
-     *    'rule_matched' => string|null
-     * ]
+     *               'status' => 'success'|'no_agent'|'error',
+     *               'agent_name' => string|null,
+     *               'reason' => string,
+     *               'rule_matched' => string|null
+     *               ]
      */
     public function simulate(Contact $contact): array
     {
@@ -82,8 +82,8 @@ class AssignmentService
         if ($ruleAgent) {
             return [
                 'agent' => $ruleAgent,
-                'reason' => "Custom Rule Match",
-                'rule_id' => 'custom'
+                'reason' => 'Custom Rule Match',
+                'rule_id' => 'custom',
             ];
         }
 
@@ -101,7 +101,7 @@ class AssignmentService
      */
     protected function shouldStickyAssign(Contact $contact, array $config): bool
     {
-        return !empty($config['sticky_enabled']);
+        return ! empty($config['sticky_enabled']);
     }
 
     /**
@@ -146,8 +146,9 @@ class AssignmentService
      */
     protected function evaluateConditions(Contact $contact, array $conditions): bool
     {
-        if (empty($conditions))
+        if (empty($conditions)) {
             return false;
+        }
 
         foreach ($conditions as $condition) {
             $match = match ($condition['type'] ?? '') {
@@ -157,8 +158,9 @@ class AssignmentService
                 default => false
             };
 
-            if (!$match)
+            if (! $match) {
                 return false;
+            }
         }
 
         return true;
@@ -169,11 +171,13 @@ class AssignmentService
      */
     protected function resolveTarget(Team $team, $target): ?User
     {
-        if (!$target)
+        if (! $target) {
             return null;
+        }
 
         if (($target['type'] ?? '') === 'user') {
             $user = $team->users()->where('users.id', $target['id'])->first();
+
             return $this->isAgentAvailable($user) ? $user : null;
         }
 
@@ -214,7 +218,7 @@ class AssignmentService
                 'load' => Contact::where('team_id', $team->id)
                     ->where('assigned_to', $agent->id)
                     ->whereNotIn('status', ['resolved', 'closed'])
-                    ->count()
+                    ->count(),
             ];
         });
 
@@ -223,6 +227,7 @@ class AssignmentService
             if ($a['load'] === $b['load']) {
                 return $a['user']->id <=> $b['user']->id;
             }
+
             return $a['load'] <=> $b['load'];
         })->first();
 
@@ -249,7 +254,7 @@ class AssignmentService
             'team_id' => $contact->team_id,
             'user_id' => $user->id,
             'body' => "System Assignment: Assigned to {$user->name} via {$reason}.",
-            'type' => 'system'
+            'type' => 'system',
         ]);
     }
 }

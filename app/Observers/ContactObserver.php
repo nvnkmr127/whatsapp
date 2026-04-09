@@ -4,8 +4,6 @@ namespace App\Observers;
 
 use App\Models\Contact;
 use App\Services\ContactStateManager;
-use App\Services\ContactResolver;
-use App\Events\ContactUpdated;
 use Illuminate\Support\Facades\Log;
 
 class ContactObserver
@@ -32,13 +30,13 @@ class ContactObserver
             'conversation_count' => 0,
         ]);
 
-        Log::info("Contact created", ['contact_id' => $contact->id]);
+        Log::info('Contact created', ['contact_id' => $contact->id]);
 
         // T1: Automation Trigger for contact creation
         try {
             app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'contact_created');
         } catch (\Exception $e) {
-            Log::error("Automation [contact_created] Trigger Failed: " . $e->getMessage());
+            Log::error('Automation [contact_created] Trigger Failed: '.$e->getMessage());
         }
     }
 
@@ -64,26 +62,26 @@ class ContactObserver
         }
 
         // Broadcast update event for real-time UI updates
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             event(new \App\Events\ContactUpdated($contact, $changes));
-            
+
             // Automation Trigger for custom fields (T2)
             if ($contact->wasChanged('custom_attributes')) {
                 try {
                     $original = $contact->getOriginal('custom_attributes') ?? [];
                     $current = $contact->custom_attributes ?? [];
                     $diff = array_diff_assoc($current, $original);
-                    
+
                     foreach ($diff as $key => $value) {
                         app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'contact_field_updated', [
                             'field_name' => $key,
                             'new_value' => $value,
                             'old_value' => $original[$key] ?? null,
-                            $key => $value // For direct variable matching
+                            $key => $value, // For direct variable matching
                         ]);
                     }
                 } catch (\Exception $e) {
-                    Log::error("Automation [contact_field_updated] Trigger Failed: " . $e->getMessage());
+                    Log::error('Automation [contact_field_updated] Trigger Failed: '.$e->getMessage());
                 }
             }
 
@@ -95,7 +93,7 @@ class ContactObserver
                         'field_name' => $field,
                         'new_value' => $contact->{$field},
                         'old_value' => $contact->getOriginal($field),
-                        $field => $contact->{$field}
+                        $field => $contact->{$field},
                     ]);
                 }
             }
@@ -111,7 +109,7 @@ class ContactObserver
     public function updating(Contact $contact): void
     {
         // Increment version for optimistic locking
-        if ($contact->isDirty() && !$contact->isDirty('version')) {
+        if ($contact->isDirty() && ! $contact->isDirty('version')) {
             $contact->version++;
         }
     }

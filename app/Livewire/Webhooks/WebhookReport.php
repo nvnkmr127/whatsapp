@@ -9,7 +9,9 @@ class WebhookReport extends Component
     use \Livewire\WithPagination;
 
     public $workflowId;
+
     public $workflow;
+
     public $search = '';
 
     public function mount($workflowId)
@@ -46,7 +48,7 @@ class WebhookReport extends Component
 
         return view('livewire.webhooks.webhook-report', [
             'messages' => $messages,
-            'stats' => $this->stats
+            'stats' => $this->stats,
         ]);
     }
 }

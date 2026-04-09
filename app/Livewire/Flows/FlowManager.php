@@ -4,13 +4,14 @@ namespace App\Livewire\Flows;
 
 use App\Models\WhatsAppFlow;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Flows')]
 class FlowManager extends Component
 {
     public $flows = [];
+
     public $showCreateModal = false;
 
     public function mount()
@@ -26,7 +27,9 @@ class FlowManager extends Component
     }
 
     public $name;
+
     public $category = 'OTHER';
+
     public $usesDataEndpoint = true; // Default to true
 
     public function createFlow()
@@ -62,6 +65,7 @@ class FlowManager extends Component
                 // Determine which templates (optional, for better UX)
                 // $names = ...
                 session()->flash('error', 'Cannot delete Flow: It is currently linked to one or more Templates. Please remove the flow reference from your templates first.');
+
                 return;
             }
         }
@@ -84,7 +88,7 @@ class FlowManager extends Component
                 $wFlow = WhatsAppFlow::updateOrCreate(
                     [
                         'team_id' => Auth::user()->currentTeam->id,
-                        'flow_id' => $metaFlow['id']
+                        'flow_id' => $metaFlow['id'],
                     ],
                     [
                         'name' => $metaFlow['name'],

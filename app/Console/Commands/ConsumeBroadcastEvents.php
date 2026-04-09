@@ -2,15 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Campaign;
-use App\Models\CampaignSnapshot;
-use App\Models\Contact;
 use App\Jobs\SendCampaignMessageJob;
+use App\Models\Campaign;
 use App\Services\EventBusService;
 use App\Services\RateLimitService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ConsumeBroadcastEvents extends Command
 {
@@ -29,7 +27,9 @@ class ConsumeBroadcastEvents extends Command
     protected $description = 'Consume broadcast events from Redis Stream and dispatch jobs';
 
     protected $eventBus;
+
     protected $rateLimitService;
+
     protected $stream = 'whatsapp_broadcasts';
 
     public function __construct(EventBusService $eventBus, RateLimitService $rateLimitService)
@@ -63,14 +63,15 @@ class ConsumeBroadcastEvents extends Command
             try {
                 // Check if system is paused globally first
                 if ($this->rateLimitService->isPaused()) {
-                    $this->warn("Broadcasting is currently paused globally.");
+                    $this->warn('Broadcasting is currently paused globally.');
                     sleep(5);
+
                     continue;
                 }
 
                 // --- FAIR-SHARE FETCHING ---
                 // We want to avoid one tenant with 10k events blocking another with 1.
-                // Fetch up to $count events, but interleave them in PHP if needed, 
+                // Fetch up to $count events, but interleave them in PHP if needed,
                 // or just fetch by Team if there are many teams.
 
                 $dbEvents = collect();
@@ -85,8 +86,9 @@ class ConsumeBroadcastEvents extends Command
 
                     // 1. Process teams
                     foreach ($pendingTeams as $tId) {
-                        if (is_null($tId))
+                        if (is_null($tId)) {
                             continue;
+                        }
                         $teamEvents = \Illuminate\Support\Facades\DB::table('broadcast_events')
                             ->where('status', 'pending')
                             ->where('team_id', $tId)
@@ -133,17 +135,18 @@ class ConsumeBroadcastEvents extends Command
                                 'status' => 'processing',
                                 'group_name' => $group,
                                 'locked_at' => now(),
-                                'updated_at' => now()
+                                'updated_at' => now(),
                             ]);
 
                         if ($affected) {
                             $data = [
                                 'event_type' => $event->event_type,
-                                'payload' => $event->payload
+                                'payload' => $event->payload,
                             ];
                             $this->processEvent((string) $event->id, $data, $group);
                         }
                     }
+
                     continue;
                 }
 
@@ -151,7 +154,7 @@ class ConsumeBroadcastEvents extends Command
                 sleep(2);
 
             } catch (\Exception $e) {
-                $this->error("Consumer Loop Error: " . $e->getMessage());
+                $this->error('Consumer Loop Error: '.$e->getMessage());
                 sleep(5);
             }
         }
@@ -169,7 +172,7 @@ class ConsumeBroadcastEvents extends Command
                     break;
 
                 case 'message.inbound':
-                    Log::debug("BroadcastConsumer: Processing Inbound Message Event", ['event_id' => $id]);
+                    Log::debug('BroadcastConsumer: Processing Inbound Message Event', ['event_id' => $id]);
                     // Dispatch Job to persist inbound message
                     \App\Jobs\PersistMessageJob::dispatch($payload)->onQueue('messages');
                     $this->info("Dispatched PersistMessageJob for Event {$id}");
@@ -189,10 +192,10 @@ class ConsumeBroadcastEvents extends Command
                     break;
             }
         } catch (\Exception $e) {
-            $this->error("Failed to process event {$id}: " . $e->getMessage());
-            // Optionally release lock instead of acking if we want retry, 
-            // but for now we rely on the loop's error handling to retry naturally if it crashes, 
-            // or better, if it's a logic error, we shouldn't infinite loop. 
+            $this->error("Failed to process event {$id}: ".$e->getMessage());
+            // Optionally release lock instead of acking if we want retry,
+            // but for now we rely on the loop's error handling to retry naturally if it crashes,
+            // or better, if it's a logic error, we shouldn't infinite loop.
             // We'll leave it in 'processing' state (locked) to be retried or fixed manually?
             // Actually, safe bet for now is to LOG and maybe move to failed_events table later.
             // For this implementation, we will NOT ack, so it stays 'processing'.
@@ -206,9 +209,10 @@ class ConsumeBroadcastEvents extends Command
         $phoneNumber = $payload['phone_number'] ?? null;
         $teamId = $payload['meta']['team_id'] ?? 0;
 
-        if (!$campaignId || !$contactId || !$phoneNumber) {
+        if (! $campaignId || ! $contactId || ! $phoneNumber) {
             $this->warn("Malformed campaign event {$id}, skipping.");
             $this->eventBus->ack($this->stream, $group, [$id]);
+
             return;
         }
 
@@ -218,30 +222,33 @@ class ConsumeBroadcastEvents extends Command
         }
 
         // --- RATE LIMIT CHECK (Provider Level) ---
-        if (!$this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
+        if (! $this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
             usleep(200000); // 200ms backoff
-            if (!$this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
+            if (! $this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
                 $this->warn("Rate limit reached for provider/number {$phoneNumber}, backing off event {$id}");
+
                 return;
             }
         }
 
         // --- CAMPAIGN THROTTLE CHECK (Send Rate) ---
         $sendRate = $payload['meta']['send_rate'] ?? null;
-        if (!$this->rateLimitService->canSendCampaign((int) $campaignId, $sendRate)) {
+        if (! $this->rateLimitService->canSendCampaign((int) $campaignId, $sendRate)) {
             // Keep in DB (pending) to retry later
             // We need to revert the status from 'processing' to 'pending'
             \Illuminate\Support\Facades\DB::table('broadcast_events')
                 ->where('id', $id)
                 ->update(['status' => 'pending', 'updated_at' => now()]);
+
             return;
         }
 
         // --- IDEMPOTENCY CHECK ---
         $lockKey = "broadcast_event_processed:{$id}";
-        if (!Cache::add($lockKey, true, 3600)) {
+        if (! Cache::add($lockKey, true, 3600)) {
             $this->info("Event {$id} already processed, skipping.");
             $this->eventBus->ack($this->stream, $group, [$id]);
+
             return;
         }
 
@@ -250,7 +257,7 @@ class ConsumeBroadcastEvents extends Command
             $this->info("Dispatched Job for Campaign {$campaignId}, Contact {$contactId} (Event: {$id})");
             $this->eventBus->ack($this->stream, $group, [$id]);
         } catch (\Exception $e) {
-            $this->error("Failed to process event {$id}: " . $e->getMessage());
+            $this->error("Failed to process event {$id}: ".$e->getMessage());
             Cache::forget($lockKey);
             throw $e; // Rethrow to be caught by main loop
         }

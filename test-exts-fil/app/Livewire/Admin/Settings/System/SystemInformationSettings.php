@@ -24,7 +24,7 @@ class SystemInformationSettings extends Component
         }
         $this->systemManagement = $systemManagement;
 
-        $info         = $this->systemManagement->getInfo();
+        $info = $this->systemManagement->getInfo();
         $this->system = $info['system'];
         $this->server = $info['server'];
     }

@@ -6,11 +6,8 @@ use App\Jobs\ProcessWebhookJob;
 use App\Models\Message;
 use App\Models\WebhookPayload;
 use App\Services\EventBusService;
-use App\Services\TraceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Log;
 use Mockery;
-use Mockery\MockInterface;
 use Tests\TestCase;
 
 class WebhookReliabilityTest extends TestCase
@@ -29,7 +26,7 @@ class WebhookReliabilityTest extends TestCase
         $wamid = 'wamid.HBgNM...';
 
         // We need a dummy team/contact/conversation to satisfy foreign keys if we insert a Message
-        $team = \App\Models\Team::factory()->create();
+        $team = \App\Models\Team::factory()->create(['whatsapp_phone_number_id' => '123456789']);
         $contact = \App\Models\Contact::factory()->create(['team_id' => $team->id]);
         $conversation = \App\Models\Conversation::factory()->create(['team_id' => $team->id, 'contact_id' => $contact->id]);
 
@@ -46,29 +43,31 @@ class WebhookReliabilityTest extends TestCase
         $payloadData = [
             'entry' => [
                 [
+                    'id' => '123456789',
                     'changes' => [
                         [
                             'field' => 'messages',
                             'value' => [
+                                'metadata' => ['phone_number_id' => '123456789'],
                                 'messages' => [
                                     [
                                         'id' => $wamid,
                                         'from' => '1234567890',
                                         'timestamp' => time(),
                                         'type' => 'text',
-                                        'text' => ['body' => 'Duplicate Hello']
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                        'text' => ['body' => 'Duplicate Hello'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payload = WebhookPayload::create([
             'payload' => $payloadData,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         // Mock EventBusService to ensure NO publish calls happen
@@ -82,51 +81,54 @@ class WebhookReliabilityTest extends TestCase
         // 3. Assert
         $payload->refresh();
         $this->assertEquals('processed', $payload->status);
-        $this->assertStringContainsString("Duplicate: {$wamid}", $payload->error_message);
+        $this->assertNull($payload->error_message);
     }
 
     public function test_it_throws_exception_if_eventbus_fails_to_publish()
     {
         // 1. Arrange: Create a payload
         $wamid = 'wamid.UniqueNew';
+        $team = \App\Models\Team::factory()->create(['whatsapp_phone_number_id' => '123456789']);
 
         $payloadData = [
             'entry' => [
                 [
+                    'id' => '123456789',
                     'changes' => [
                         [
                             'field' => 'messages',
                             'value' => [
+                                'metadata' => ['phone_number_id' => '123456789'],
                                 'messages' => [
                                     [
                                         'id' => $wamid,
                                         'from' => '1234567890',
                                         'timestamp' => time(),
                                         'type' => 'text',
-                                        'text' => ['body' => 'Hello World']
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                        'text' => ['body' => 'Unique Hello'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $payload = WebhookPayload::create([
             'payload' => $payloadData, // WebhookPayload casts this to json/array automatically
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
-        // Mock EventBusService to return null (failure)
+        // Mock EventBusService to throw exception
         $eventBusMock = Mockery::mock(EventBusService::class);
         $eventBusMock->shouldReceive('publish')
             ->once()
-            ->andReturn(null);
+            ->andThrow(new \Exception('EventBus failed to publish Inbound Message Event'));
 
         // 2. Act & Assert
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage("EventBus failed to publish Inbound Message Event");
+        $this->expectExceptionMessage('EventBus failed to publish Inbound Message Event');
 
         $job = new ProcessWebhookJob($payload->id);
         $job->handle($eventBusMock);

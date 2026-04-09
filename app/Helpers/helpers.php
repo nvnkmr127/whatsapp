@@ -3,7 +3,7 @@
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
-if (!function_exists('is_setting_sensitive')) {
+if (! function_exists('is_setting_sensitive')) {
     function is_setting_sensitive($key)
     {
         $sensitiveKeywords = ['api_key', 'secret', 'password', 'token', 'private'];
@@ -12,16 +12,17 @@ if (!function_exists('is_setting_sensitive')) {
                 return true;
             }
         }
+
         return false;
     }
 }
 
-if (!function_exists('get_setting')) {
+if (! function_exists('get_setting')) {
     function get_setting($key, $default = null)
     {
-        return Cache::rememberForever('setting_' . $key, function () use ($key, $default) {
+        return Cache::rememberForever('setting_'.$key, function () use ($key, $default) {
             $setting = Setting::where('key', $key)->first();
-            if (!$setting) {
+            if (! $setting) {
                 return $default;
             }
 
@@ -34,12 +35,13 @@ if (!function_exists('get_setting')) {
                     return $value;
                 }
             }
+
             return $value;
         });
     }
 }
 
-if (!function_exists('set_setting')) {
+if (! function_exists('set_setting')) {
     function set_setting($key, $value, $group = null)
     {
         $storedValue = $value;
@@ -51,24 +53,24 @@ if (!function_exists('set_setting')) {
             ['key' => $key],
             ['value' => $storedValue, 'group' => $group]
         );
-        Cache::forget('setting_' . $key);
+        Cache::forget('setting_'.$key);
     }
 }
 
-if (!function_exists('t')) {
+if (! function_exists('t')) {
     function t($key)
     {
         return __($key);
     }
 }
 
-if (!function_exists('checkPermission')) {
+if (! function_exists('checkPermission')) {
     function checkPermission($permission)
     {
         $permissions = is_array($permission) ? $permission : [$permission];
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -82,26 +84,26 @@ if (!function_exists('checkPermission')) {
     }
 }
 
-if (!function_exists('whatsapp_log')) {
+if (! function_exists('whatsapp_log')) {
     function whatsapp_log($message, $level = 'info', $context = [], $exception = null)
     {
         if ($exception) {
             $context['exception'] = $exception->getMessage();
             $context['trace'] = $exception->getTraceAsString();
         }
-        \Illuminate\Support\Facades\Log::channel('daily')->log($level, "WA API: " . $message, $context);
+        \Illuminate\Support\Facades\Log::channel('daily')->log($level, 'WA API: '.$message, $context);
     }
 }
-if (!function_exists('audit')) {
+if (! function_exists('audit')) {
     function audit(string $event, $userId = null, $identifier = null, ?string $provider = null, array $metadata = [])
     {
         return \App\Services\AuditService::log($event, $userId, $identifier, $provider, $metadata);
     }
 }
 
-if (!function_exists('money')) {
+if (! function_exists('money')) {
     function money($amount, $currency = 'USD')
     {
-        return '$' . number_format((float) $amount, 2);
+        return '$'.number_format((float) $amount, 2);
     }
 }

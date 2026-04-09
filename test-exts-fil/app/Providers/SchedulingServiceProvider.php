@@ -69,8 +69,8 @@ class SchedulingServiceProvider extends ServiceProvider
                 })
                 ->after(function () {
                     try {
-                        $startTime     = (int) get_setting('cron-job.job_start_time', 0);
-                        $endTime       = now()->timestamp;
+                        $startTime = (int) get_setting('cron-job.job_start_time', 0);
+                        $endTime = now()->timestamp;
                         $executionTime = $endTime - $startTime;
 
                         set_setting('cron-job.status', 'completed');
@@ -109,8 +109,8 @@ class SchedulingServiceProvider extends ServiceProvider
                 })
                 ->after(function () {
                     try {
-                        $startTime     = (int) get_setting('cron-job.job_start_time', 0);
-                        $endTime       = now()->timestamp;
+                        $startTime = (int) get_setting('cron-job.job_start_time', 0);
+                        $endTime = now()->timestamp;
                         $executionTime = $endTime - $startTime;
 
                         set_setting('cron-job.status', 'completed');

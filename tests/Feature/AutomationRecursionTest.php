@@ -2,15 +2,15 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\Team;
-use App\Models\Contact;
+use App\Jobs\ExecuteAutomationNodeJob;
 use App\Models\Automation;
 use App\Models\AutomationRun;
+use App\Models\Contact;
+use App\Models\Team;
 use App\Services\AutomationService;
-use App\Jobs\ExecuteAutomationNodeJob;
-use Illuminate\Support\Facades\Queue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
 
 class AutomationRecursionTest extends TestCase
 {
@@ -28,11 +28,11 @@ class AutomationRecursionTest extends TestCase
         $flowData = [
             'nodes' => [
                 ['id' => 'node_1', 'type' => 'trigger'],
-                ['id' => 'node_2', 'type' => 'text', 'data' => ['text' => 'Hi']]
+                ['id' => 'node_2', 'type' => 'text', 'data' => ['text' => 'Hi']],
             ],
             'edges' => [
-                ['source' => 'node_1', 'target' => 'node_2']
-            ]
+                ['source' => 'node_1', 'target' => 'node_2'],
+            ],
         ];
 
         $automation = Automation::create([
@@ -40,14 +40,14 @@ class AutomationRecursionTest extends TestCase
             'name' => 'Test Automation',
             'trigger_type' => 'keyword',
             'is_active' => true,
-            'flow_data' => $flowData
+            'flow_data' => $flowData,
         ]);
 
         $run = AutomationRun::create([
             'automation_id' => $automation->id,
             'contact_id' => $contact->id,
             'status' => 'active',
-            'state_data' => ['current_node_id' => 'node_1']
+            'state_data' => ['current_node_id' => 'node_1'],
         ]);
 
         // 2. Execute Logic

@@ -2,29 +2,34 @@
 
 namespace App\Livewire\Analytics;
 
-use Livewire\Component;
-use Livewire\WithPagination;
-use App\Models\CustomerEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 class EventDashboard extends Component
 {
     use WithPagination;
 
     public $searchTerm = '';
+
     public $filterEventType = 'all';
+
     public $filterCategory = 'all';
+
     public $filterDateRange = '7'; // days
+
     public $selectedEvent = null;
+
     public $showDetailModal = false;
+
     public $lastRefresh;
 
     protected $queryString = ['searchTerm', 'filterEventType', 'filterCategory', 'filterDateRange'];
 
     public function render()
     {
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return view('livewire.analytics.event-dashboard', [
                 'events' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
                 'totalEvents' => 0,
@@ -33,7 +38,7 @@ class EventDashboard extends Component
                 'chartData' => ['labels' => [], 'datasets' => []],
                 'distData' => ['labels' => [], 'data' => []],
                 'categories' => collect(),
-                'lastUpdated' => now()
+                'lastUpdated' => now(),
             ]);
         }
 
@@ -48,8 +53,8 @@ class EventDashboard extends Component
         $events = \App\Models\SystemEvent::where('team_id', $teamId)
             ->when($this->searchTerm, function ($query) {
                 $query->where(function ($q) {
-                    $q->where('event_type', 'like', '%' . $this->searchTerm . '%')
-                        ->orWhere('payload', 'like', '%' . $this->searchTerm . '%')
+                    $q->where('event_type', 'like', '%'.$this->searchTerm.'%')
+                        ->orWhere('payload', 'like', '%'.$this->searchTerm.'%')
                         ->orWhere('trace_id', $this->searchTerm);
                 });
             })
@@ -92,25 +97,25 @@ class EventDashboard extends Component
             ->get();
 
         $chartData = [
-            'labels' => $timelineData->pluck('date')->map(fn($d) => \Carbon\Carbon::parse($d)->format('M d'))->toArray(),
+            'labels' => $timelineData->pluck('date')->map(fn ($d) => \Carbon\Carbon::parse($d)->format('M d'))->toArray(),
             'datasets' => [
                 [
                     'label' => 'Events',
                     'data' => $timelineData->pluck('count')->toArray(),
-                ]
-            ]
+                ],
+            ],
         ];
 
         // Distribution Data (By Category or Type)
         $distData = [
-            'labels' => $currentStats->pluck('event_type')->map(fn($t) => strtoupper(class_basename($t)))->toArray(),
+            'labels' => $currentStats->pluck('event_type')->map(fn ($t) => strtoupper(class_basename($t)))->toArray(),
             'data' => $currentStats->pluck('count')->toArray(),
         ];
 
         $categories = collect([
             (object) ['id' => 'business', 'name' => 'Business'],
             (object) ['id' => 'operational', 'name' => 'Operational'],
-            (object) ['id' => 'debug', 'name' => 'Debug']
+            (object) ['id' => 'debug', 'name' => 'Debug'],
         ]);
 
         $this->dispatch('refreshCharts', chartData: $chartData, distData: $distData);
@@ -123,7 +128,7 @@ class EventDashboard extends Component
             'chartData' => $chartData,
             'distData' => $distData,
             'categories' => $categories,
-            'lastUpdated' => \App\Models\SystemEvent::latest('occurred_at')->value('occurred_at') ?? now()
+            'lastUpdated' => \App\Models\SystemEvent::latest('occurred_at')->value('occurred_at') ?? now(),
         ]);
     }
 
@@ -142,13 +147,13 @@ class EventDashboard extends Component
 
     public function exportEvents()
     {
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return;
         }
 
         $teamId = Auth::user()->currentTeam->id;
         $events = \App\Models\SystemEvent::where('team_id', $teamId)
-            ->when($this->filterEventType !== 'all', fn($q) => $q->where('event_type', $this->filterEventType))
+            ->when($this->filterEventType !== 'all', fn ($q) => $q->where('event_type', $this->filterEventType))
             ->limit(1000)
             ->get();
 
@@ -156,7 +161,7 @@ class EventDashboard extends Component
         return response()->streamDownload(function () use ($events) {
             echo "ID,Time,Type,Category,Payload\n";
             foreach ($events as $e) {
-                echo "{$e->id},{$e->occurred_at},{$e->event_type},{$e->category},\"" . addslashes(json_encode($e->payload)) . "\"\n";
+                echo "{$e->id},{$e->occurred_at},{$e->event_type},{$e->category},\"".addslashes(json_encode($e->payload))."\"\n";
             }
         }, 'events.csv');
     }

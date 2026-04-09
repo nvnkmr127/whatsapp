@@ -4,27 +4,36 @@ namespace App\Livewire\Calls;
 
 use App\Models\Contact;
 use App\Models\WhatsAppCall;
-use Livewire\Component;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component;
 
 class CallOverlay extends Component
 {
     public $callId = null;
+
     public $status = 'idle'; // idle, ringing, active, ended
+
     public $direction = 'outbound';
+
     public $contactName = '';
+
     public $contactAvatar = '';
+
     public $startTime = null;
+
     public $offerSdp = null; // Store incoming offer SDP
+
     public $isLocked = false; // Prevents double actions
+
     public $occupiedBy = null; // Name of agent who took the call
+
     public $teamId;
 
     public function getListeners()
     {
         $teamId = auth()->check() ? auth()->user()->current_team_id : null;
 
-        if (!$teamId) {
+        if (! $teamId) {
             return ['initiate-whatsapp-call' => 'handleInitiation'];
         }
 
@@ -45,7 +54,7 @@ class CallOverlay extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -63,7 +72,7 @@ class CallOverlay extends Component
             $this->status = $activeCall->status === 'in_progress' ? 'active' : $activeCall->status;
             $this->direction = $activeCall->direction;
             $this->contactName = $activeCall->contact->name ?? $activeCall->from_number;
-            $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
+            $this->contactAvatar = 'https://api.dicebear.com/9.x/micah/svg?seed='.$this->contactName;
             $this->startTime = $activeCall->answered_at?->timestamp;
 
             // For recovery, we need to know if we have an offer or an answer
@@ -75,13 +84,13 @@ class CallOverlay extends Component
 
     public function handleInitiation($data)
     {
-        Log::info("CallOverlay: Received initiate-whatsapp-call event", ['data' => $data]);
+        Log::info('CallOverlay: Received initiate-whatsapp-call event', ['data' => $data]);
 
         // Robustly get contact ID and phone number
         $contactId = $data['contact_id'] ?? null;
         $phoneNumber = $data['phone_number'] ?? null;
 
-        if (!$phoneNumber && $contactId) {
+        if (! $phoneNumber && $contactId) {
             $contact = Contact::find($contactId);
             $phoneNumber = $contact->phone_number ?? null;
         }
@@ -97,10 +106,10 @@ class CallOverlay extends Component
 
     public function initiateWhatsAppCall($phoneNumber, $contactId, $sdp = null)
     {
-        Log::info("CallOverlay: initiateWhatsAppCall requested", [
+        Log::info('CallOverlay: initiateWhatsAppCall requested', [
             'to' => $phoneNumber,
             'contact_id' => $contactId,
-            'has_sdp' => !empty($sdp)
+            'has_sdp' => ! empty($sdp),
         ]);
 
         $teamId = auth()->user()?->currentTeam?->id;
@@ -109,24 +118,25 @@ class CallOverlay extends Component
             : null;
 
         // Fallback if phoneNumber is missing
-        if (!$phoneNumber && $contact) {
+        if (! $phoneNumber && $contact) {
             $phoneNumber = $contact->phone_number;
         }
 
-        if (!$phoneNumber) {
-            Log::error("CallOverlay: Phone number is missing", ['contact_id' => $contactId]);
+        if (! $phoneNumber) {
+            Log::error('CallOverlay: Phone number is missing', ['contact_id' => $contactId]);
             $this->handleFailed(['message' => 'Phone number is missing.']);
+
             return;
         }
 
         $this->status = 'ringing';
         $this->direction = 'outbound';
         $this->contactName = $contact->name ?? $phoneNumber;
-        $this->contactAvatar = "https://api.dicebear.com/9.x/micah/svg?seed=" . ($contact->name ?? $phoneNumber);
+        $this->contactAvatar = 'https://api.dicebear.com/9.x/micah/svg?seed='.($contact->name ?? $phoneNumber);
         $this->startTime = null;
 
         try {
-            if (!auth()->user()->currentTeam) {
+            if (! auth()->user()->currentTeam) {
                 throw new \Exception('No team selected.');
             }
             $whatsappService = new \App\Services\WhatsAppService(auth()->user()->currentTeam);
@@ -134,26 +144,26 @@ class CallOverlay extends Component
 
             if ($response['success']) {
                 $this->callId = $response['data']['id'] ?? $response['data']['calls'][0]['id'] ?? null;
-                Log::info("CallOverlay: Call initiate-request successful", ['call_id' => $this->callId]);
+                Log::info('CallOverlay: Call initiate-request successful', ['call_id' => $this->callId]);
             } else {
                 $this->handleFailed(['message' => $response['message'] ?? 'Failed to initiate call']);
             }
         } catch (\Exception $e) {
-            Log::error("CallOverlay: Failed to initiate call", ['error' => $e->getMessage()]);
+            Log::error('CallOverlay: Failed to initiate call', ['error' => $e->getMessage()]);
             $this->handleFailed(['message' => $e->getMessage()]);
         }
     }
 
     public function handleOffered($event)
     {
-        Log::info("CallOverlay: Received CallOffered event", ['event' => $event]);
+        Log::info('CallOverlay: Received CallOffered event', ['event' => $event]);
 
         $this->callId = $event['call_id'] ?? null;
         $this->status = 'ringing';
         $this->direction = $event['direction'] ?? 'inbound';
 
         $this->contactName = $event['contact_name'] ?? $event['from'] ?? 'Unknown';
-        $this->contactAvatar = $event['contact_avatar'] ?? "https://api.dicebear.com/9.x/micah/svg?seed=" . $this->contactName;
+        $this->contactAvatar = $event['contact_avatar'] ?? 'https://api.dicebear.com/9.x/micah/svg?seed='.$this->contactName;
         $this->startTime = null;
 
         // Capture SDP from the event (could be a call offer or a re-negotiation offer)
@@ -178,7 +188,7 @@ class CallOverlay extends Component
 
     public function handleAnswered($event)
     {
-        Log::info("CallOverlay: Received CallAnswered event", ['event' => $event]);
+        Log::info('CallOverlay: Received CallAnswered event', ['event' => $event]);
 
         $callData = $event['call'] ?? $event;
         $callId = $callData['call_id'] ?? null;
@@ -246,7 +256,7 @@ class CallOverlay extends Component
         $this->status = 'ended';
         $this->dispatch('notify', [
             'type' => 'error',
-            'message' => 'Call sequence failed.'
+            'message' => 'Call sequence failed.',
         ]);
         $this->resetOverlay();
     }
@@ -289,12 +299,13 @@ class CallOverlay extends Component
 
     public function answerCall($answerSdp = null)
     {
-        if (!$this->callId)
+        if (! $this->callId) {
             return;
+        }
 
         try {
             $team = auth()->user()->currentTeam;
-            if (!$team) {
+            if (! $team) {
                 throw new \Exception('No team selected.');
             }
             $whatsappService = new \App\Services\WhatsAppService($team);
@@ -303,7 +314,7 @@ class CallOverlay extends Component
             if ($answerSdp) {
                 $session = [
                     'sdp' => $answerSdp,
-                    'sdp_type' => 'answer'
+                    'sdp_type' => 'answer',
                 ];
             }
 
@@ -314,36 +325,38 @@ class CallOverlay extends Component
 
             if ($session) {
                 $preAccept = $whatsappService->preAcceptCall($this->callId, $session, $phoneNumberId);
-                Log::info("CallOverlay: Meta Pre-Accept Response", ['response' => $preAccept]);
+                Log::info('CallOverlay: Meta Pre-Accept Response', ['response' => $preAccept]);
             }
 
             $response = $whatsappService->answerCall($this->callId, $session, $phoneNumberId);
 
-            Log::info("CallOverlay: Meta Answer Response", ['response' => $response]);
+            Log::info('CallOverlay: Meta Answer Response', ['response' => $response]);
 
             if ($response['success']) {
                 $this->status = 'active';
                 $this->startTime = now()->timestamp;
             } else {
                 $errorMessage = $response['message'] ?? $response['error'] ?? 'Unknown error';
-                $this->dispatch('notify', ['type' => 'error', 'message' => "Meta refused answer: " . $errorMessage]);
-                Log::error("CallOverlay: Meta refused answer", ['message' => $errorMessage]);
+                $this->dispatch('notify', ['type' => 'error', 'message' => 'Meta refused answer: '.$errorMessage]);
+                Log::error('CallOverlay: Meta refused answer', ['message' => $errorMessage]);
             }
         } catch (\Exception $e) {
-            Log::error("CallOverlay: Answer Exception", ['error' => $e->getMessage()]);
+            Log::error('CallOverlay: Answer Exception', ['error' => $e->getMessage()]);
             $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
     public function recordConnectionEstablished($iceCandidatesCount = 0, $connectionType = null)
     {
-        if (!$this->callId)
+        if (! $this->callId) {
             return;
+        }
 
         try {
             $team = auth()->user()->currentTeam;
-            if (!$team)
+            if (! $team) {
                 return;
+            }
 
             $call = \App\Models\WhatsAppCall::where('call_id', $this->callId)
                 ->where('team_id', $team->id)
@@ -373,13 +386,15 @@ class CallOverlay extends Component
 
     public function rejectCall()
     {
-        if (!$this->callId)
+        if (! $this->callId) {
             return;
+        }
 
         try {
             $team = auth()->user()->currentTeam;
-            if (!$team)
+            if (! $team) {
                 return;
+            }
             $whatsappService = new \App\Services\WhatsAppService($team);
             $response = $whatsappService->rejectCall($this->callId);
 
@@ -394,15 +409,17 @@ class CallOverlay extends Component
 
     public function endCall()
     {
-        if (!$this->callId) {
+        if (! $this->callId) {
             $this->handleEnded([]);
+
             return;
         }
 
         try {
             $team = auth()->user()->currentTeam;
-            if (!$team)
+            if (! $team) {
                 return;
+            }
             $whatsappService = new \App\Services\WhatsAppService($team);
             $whatsappService->endCall($this->callId);
             $this->handleEnded([]);

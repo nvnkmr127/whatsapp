@@ -21,9 +21,9 @@ return [
     |
     */
     'headers' => [
-        'User-Agent'   => 'whatsmark-Webhook/1.0',
+        'User-Agent' => 'whatsmark-Webhook/1.0',
         'Content-Type' => 'application/json',
-        'Accept'       => 'application/json',
+        'Accept' => 'application/json',
     ],
 
     /*
@@ -36,6 +36,6 @@ return [
     */
     'retry' => [
         'max_attempts' => 3,
-        'timeout'      => 30,
+        'timeout' => 30,
     ],
 ];

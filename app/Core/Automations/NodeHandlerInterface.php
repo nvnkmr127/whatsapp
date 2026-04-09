@@ -2,8 +2,8 @@
 
 namespace App\Core\Automations;
 
-use App\Models\Contact;
 use App\Models\AutomationRun;
+use App\Models\Contact;
 
 interface NodeHandlerInterface
 {

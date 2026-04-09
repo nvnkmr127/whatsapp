@@ -22,12 +22,12 @@ class ManageApiTokens extends Component
 
             return redirect(route('admin.dashboard'));
         }
-        $this->isEnabled    = (bool) get_setting('api.enabled', false);
+        $this->isEnabled = (bool) get_setting('api.enabled', false);
         $this->currentToken = get_setting('api.token');
 
         // Store original state for isDirty check
         $this->originalState = [
-            'isEnabled'    => $this->isEnabled,
+            'isEnabled' => $this->isEnabled,
             'currentToken' => $this->currentToken,
         ];
     }
@@ -43,7 +43,7 @@ class ManageApiTokens extends Component
 
     public function generateNewToken()
     {
-        $this->currentToken      = hash('sha256', Str::random(64));
+        $this->currentToken = hash('sha256', Str::random(64));
         $this->newTokenGenerated = true;
     }
 
@@ -61,12 +61,12 @@ class ManageApiTokens extends Component
 
             $updates = [
                 'api.enabled' => $this->isEnabled,
-                'api.token'   => $this->currentToken,
+                'api.token' => $this->currentToken,
             ];
 
             if ($this->newTokenGenerated) {
                 $updates['api.token_generated_at'] = now();
-                $this->newTokenGenerated           = false;
+                $this->newTokenGenerated = false;
             }
 
             foreach ($updates as $key => $value) {
@@ -75,12 +75,12 @@ class ManageApiTokens extends Component
 
             // Update original state after saving
             $this->originalState = [
-                'isEnabled'    => $this->isEnabled,
+                'isEnabled' => $this->isEnabled,
                 'currentToken' => $this->currentToken,
             ];
 
             $this->notify([
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => t('api_setting_update_successfully'),
             ]);
         }

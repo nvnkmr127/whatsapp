@@ -14,6 +14,7 @@ class KnowledgeBaseService
      */
     /**
      * Extract text from a file (PDF or TXT).
+     *
      * @throws \Exception
      */
     public function extractFromFile(string $filePath, string $originalName)
@@ -21,7 +22,7 @@ class KnowledgeBaseService
         $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
         $content = '';
 
-        if (!Storage::disk('local')->exists($filePath)) {
+        if (! Storage::disk('local')->exists($filePath)) {
             throw new \Exception("File not found at path: $filePath");
         }
 
@@ -30,14 +31,14 @@ class KnowledgeBaseService
         } elseif ($extension === 'pdf') {
             if (class_exists(\Smalot\PdfParser\Parser::class)) {
                 try {
-                    $parser = new \Smalot\PdfParser\Parser();
+                    $parser = new \Smalot\PdfParser\Parser;
                     $pdf = $parser->parseFile(Storage::path($filePath));
                     $content = $pdf->getText();
                 } catch (\Exception $e) {
-                    throw new \Exception("PDF Parsing Error: " . $e->getMessage());
+                    throw new \Exception('PDF Parsing Error: '.$e->getMessage());
                 }
             } else {
-                throw new \Exception("PDF Parser not installed (smalot/pdfparser). Cannot extract content.");
+                throw new \Exception('PDF Parser not installed (smalot/pdfparser). Cannot extract content.');
             }
         } else {
             throw new \Exception("Unsupported file extension: $extension");
@@ -48,6 +49,7 @@ class KnowledgeBaseService
 
     /**
      * Scrape text from a URL with cleanup.
+     *
      * @throws \Exception
      */
     public function extractFromUrl(string $url)
@@ -58,21 +60,22 @@ class KnowledgeBaseService
                 $html = $response->body();
 
                 // Remove scripts, styles, navigation, footer, etc to reduce noise
-                $html = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $html);
-                $html = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', "", $html);
-                $html = preg_replace('/<nav\b[^>]*>(.*?)<\/nav>/is', "", $html);
-                $html = preg_replace('/<footer\b[^>]*>(.*?)<\/footer>/is', "", $html);
-                $html = preg_replace('/<!--(.*?)-->/s', "", $html);
+                $html = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $html);
+                $html = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', '', $html);
+                $html = preg_replace('/<nav\b[^>]*>(.*?)<\/nav>/is', '', $html);
+                $html = preg_replace('/<footer\b[^>]*>(.*?)<\/footer>/is', '', $html);
+                $html = preg_replace('/<!--(.*?)-->/s', '', $html);
 
                 $text = strip_tags($html, '<p><h1><h2><h3><h4><h5><h6><li><div>');
                 $text = html_entity_decode($text);
                 $text = preg_replace('/\s+/', ' ', $text); // Cleanup whitespace
+
                 return trim($text);
             } else {
-                throw new \Exception("HTTP request failed with status: " . $response->status());
+                throw new \Exception('HTTP request failed with status: '.$response->status());
             }
         } catch (\Exception $e) {
-            Log::error("URL Extraction Error ($url): " . $e->getMessage());
+            Log::error("URL Extraction Error ($url): ".$e->getMessage());
             throw $e;
         }
     }
@@ -87,7 +90,7 @@ class KnowledgeBaseService
             ->where('is_active', true)
             ->whereIn('status', [KnowledgeBaseSource::STATUS_READY, 'indexed']);
 
-        if (!empty($scopedSourceIds)) {
+        if (! empty($scopedSourceIds)) {
             $query->whereIn('id', $scopedSourceIds);
         }
 
@@ -109,7 +112,7 @@ class KnowledgeBaseService
         });
 
         if (empty($keywords)) {
-            return "No valid keywords found in query.";
+            return 'No valid keywords found in query.';
         }
 
         // 2. Database Search (Basic 'LIKE' fallback if no FullText)
@@ -117,7 +120,7 @@ class KnowledgeBaseService
             ->where('is_active', true)
             ->whereIn('status', [KnowledgeBaseSource::STATUS_READY, 'indexed']);
 
-        if (!empty($scopedSourceIds)) {
+        if (! empty($scopedSourceIds)) {
             $dbQuery->whereIn('id', $scopedSourceIds);
         }
 
@@ -152,22 +155,22 @@ class KnowledgeBaseService
                     'source' => $source->name,
                     'score' => $score,
                     'content' => $snippet,
-                    'synced' => $source->last_synced_at?->diffForHumans() ?? 'Unknown'
+                    'synced' => $source->last_synced_at?->diffForHumans() ?? 'Unknown',
                 ];
             }
         }
 
         // Sort by score desc
-        usort($hits, fn($a, $b) => $b['score'] <=> $a['score']);
+        usort($hits, fn ($a, $b) => $b['score'] <=> $a['score']);
 
         // Limit top 3
         $topHits = array_slice($hits, 0, 3);
 
         if (empty($topHits)) {
-            return "No specific business context found in knowledge base.";
+            return 'No specific business context found in knowledge base.';
         }
 
-        $context = "Found " . count($topHits) . " relevant sources:\n\n";
+        $context = 'Found '.count($topHits)." relevant sources:\n\n";
         foreach ($topHits as $hit) {
             $context .= "--- Source: {$hit['source']} (Synced: {$hit['synced']}) ---\n";
             $context .= "{$hit['content']}...\n\n";
@@ -175,6 +178,7 @@ class KnowledgeBaseService
 
         return $context;
     }
+
     /**
      * Log a knowledge gap for admin review.
      */
@@ -186,10 +190,10 @@ class KnowledgeBaseService
                 'query' => $query,
                 'gap_type' => $type,
                 'search_metadata' => $searchMetadata,
-                'status' => 'pending'
+                'status' => 'pending',
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to log knowledge gap: " . $e->getMessage());
+            Log::error('Failed to log knowledge gap: '.$e->getMessage());
         }
     }
 }

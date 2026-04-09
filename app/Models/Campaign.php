@@ -34,15 +34,15 @@ class Campaign extends Model
     {
         static::saving(function ($campaign) {
             // Fix field name mapping
-            if (empty($campaign->name) && !empty($campaign->campaign_name)) {
+            if (empty($campaign->name) && ! empty($campaign->campaign_name)) {
                 $campaign->name = $campaign->campaign_name;
             }
-            if (empty($campaign->campaign_name) && !empty($campaign->name)) {
+            if (empty($campaign->campaign_name) && ! empty($campaign->name)) {
                 $campaign->campaign_name = $campaign->name;
             }
 
             // --- CAMPAIGN LIFECYCLE GUARDS (UC-SAFE-08) ---
-            if (!$campaign->isDirty('status')) {
+            if (! $campaign->isDirty('status')) {
                 return;
             }
 
@@ -96,15 +96,19 @@ class Campaign extends Model
 
     public function getDeliveryPercentageAttribute()
     {
-        if (($this->total_contacts ?? 0) <= 0)
+        if (($this->total_contacts ?? 0) <= 0) {
             return 0;
+        }
+
         return ($this->sent_count / $this->total_contacts) * 100;
     }
 
     public function getReadPercentageAttribute()
     {
-        if (($this->sent_count ?? 0) <= 0)
+        if (($this->sent_count ?? 0) <= 0) {
             return 0;
+        }
+
         return ($this->read_count / $this->sent_count) * 100;
     }
 
@@ -143,7 +147,7 @@ class Campaign extends Model
         $clone->error_message = null;
         $clone->error_notified_at = null;
 
-        $cloneName = ($this->campaign_name ?? $this->name) . ' (Clone)';
+        $cloneName = ($this->campaign_name ?? $this->name).' (Clone)';
         $clone->campaign_name = $cloneName;
         $clone->name = $cloneName;
 

@@ -40,6 +40,7 @@ class DetectDuplicatesCommand extends Command
         // Validate threshold
         if ($threshold < 0 || $threshold > 100) {
             $this->error('Threshold must be between 0 and 100');
+
             return 1;
         }
 
@@ -48,14 +49,15 @@ class DetectDuplicatesCommand extends Command
 
         if ($teamId) {
             $team = Team::find($teamId);
-            if (!$team) {
+            if (! $team) {
                 $this->error("Team #{$teamId} not found");
+
                 return 1;
             }
             $query->where('team_id', $teamId);
             $this->info("Scanning team: {$team->name}");
         } else {
-            $this->info("Scanning all teams");
+            $this->info('Scanning all teams');
         }
 
         if ($limit) {
@@ -67,13 +69,15 @@ class DetectDuplicatesCommand extends Command
 
         if ($contacts->isEmpty()) {
             $this->info('No contacts to scan');
+
             return 0;
         }
 
         // Confirm auto-merge
         if ($autoMerge) {
-            if (!$this->confirm("Auto-merge enabled with threshold {$threshold}%. Continue?")) {
+            if (! $this->confirm("Auto-merge enabled with threshold {$threshold}%. Continue?")) {
                 $this->info('Aborted');
+
                 return 0;
             }
         }
@@ -137,7 +141,7 @@ class DetectDuplicatesCommand extends Command
             } catch (\Exception $e) {
                 $stats['errors']++;
                 $this->newLine();
-                $this->error("Error processing contact #{$contact->id}: " . $e->getMessage());
+                $this->error("Error processing contact #{$contact->id}: ".$e->getMessage());
             }
 
             $bar->advance();
@@ -161,8 +165,8 @@ class DetectDuplicatesCommand extends Command
 
         if ($stats['queued_for_review'] > 0) {
             $this->newLine();
-            $this->info("Review pending duplicates in the admin panel or run:");
-            $this->line("  php artisan contacts:review-duplicates");
+            $this->info('Review pending duplicates in the admin panel or run:');
+            $this->line('  php artisan contacts:review-duplicates');
         }
 
         return 0;
@@ -173,6 +177,6 @@ class DetectDuplicatesCommand extends Command
      */
     protected function getPairKey(int $id1, int $id2): string
     {
-        return min($id1, $id2) . '-' . max($id1, $id2);
+        return min($id1, $id2).'-'.max($id1, $id2);
     }
 }

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('type')->default('custom'); // organic, paid, referral, social, custom
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             $table->unique(['team_id', 'name']);
         });
 

@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Models\Contact;
-use App\Models\CallSettings;
-use App\Services\CallConsentService;
+use App\Models\Team;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -26,7 +24,7 @@ class CallEligibilityService
         $checks = [];
         // Only log info if it's a dry run to avoid spamming logs, or keep it if debugging is needed.
         // For now we keep it but maybe we can make it debug level if dryRun.
-        if (!$dryRun) {
+        if (! $dryRun) {
             Log::info("Starting eligibility check for contact {$contact->id}");
         }
 
@@ -34,10 +32,12 @@ class CallEligibilityService
         $consentService = new CallConsentService($this->team);
         $consentCheck = $consentService->validateCallTrigger($contact, $triggerType, $context, $dryRun);
 
-        if (!$consentCheck['allowed']) {
-            if (!$dryRun) {
-                Log::warning("Eligibility failed: Consent check failed", ['result' => $consentCheck]);
+        if (! $consentCheck['allowed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Consent check failed', ['result' => $consentCheck]);
             }
+            $consentCheck['block_code'] = $consentCheck['block_reason'] ?? 'CONSENT_FAILED'; // Ensure block_code exists
+
             return $consentCheck; // Return consent block immediately
         }
 
@@ -45,58 +45,72 @@ class CallEligibilityService
 
         // 1. Phone Number Readiness (Critical)
         $checks['phone_readiness'] = $this->checkPhoneReadiness();
-        if (!$checks['phone_readiness']['passed']) {
-            if (!$dryRun)
-                Log::warning("Eligibility failed: Phone readiness failed", ['result' => $checks['phone_readiness']]);
+        if (! $checks['phone_readiness']['passed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Phone readiness failed', ['result' => $checks['phone_readiness']]);
+            }
+
             return $this->buildBlockedResponse('phone_readiness', $checks);
         }
 
         // 2. Quality Rating (Critical)
         $checks['quality_rating'] = $this->checkQualityRating();
-        if (!$checks['quality_rating']['passed']) {
-            if (!$dryRun)
-                Log::warning("Eligibility failed: Quality rating failed", ['result' => $checks['quality_rating']]);
+        if (! $checks['quality_rating']['passed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Quality rating failed', ['result' => $checks['quality_rating']]);
+            }
+
             return $this->buildBlockedResponse('quality', $checks);
         }
 
         // 3. Consent & Opt-In (Legal) - Already checked above
         $checks['consent'] = $this->checkConsent($contact);
-        if (!$checks['consent']['passed']) {
-            if (!$dryRun)
-                Log::warning("Eligibility failed: Consent (checkConsent) failed", ['result' => $checks['consent']]);
+        if (! $checks['consent']['passed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Consent (checkConsent) failed', ['result' => $checks['consent']]);
+            }
+
             return $this->buildBlockedResponse('consent', $checks);
         }
 
         // 4. Agent Availability (Operational)
         $checks['agent_availability'] = $this->checkAgentAvailability();
-        if (!$checks['agent_availability']['passed']) {
-            if (!$dryRun)
-                Log::warning("Eligibility failed: Agent availability failed", ['result' => $checks['agent_availability']]);
+        if (! $checks['agent_availability']['passed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Agent availability failed', ['result' => $checks['agent_availability']]);
+            }
+
             return $this->buildBlockedResponse('agent', $checks);
         }
 
         // 5. Safeguards (Reliability)
-        if (!$dryRun)
-            Log::info("Checking safeguards...");
+        if (! $dryRun) {
+            Log::info('Checking safeguards...');
+        }
         $checks['safeguards'] = $this->checkSafeguards();
-        if (!$checks['safeguards']['passed']) {
-            if (!$dryRun)
-                Log::warning("Eligibility failed: Safeguards failed", ['result' => $checks['safeguards']]);
+        if (! $checks['safeguards']['passed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Safeguards failed', ['result' => $checks['safeguards']]);
+            }
+
             return $this->buildBlockedResponse('safeguards', $checks);
         }
 
         // 6. Usage Limits (Billing)
-        if (!$dryRun)
-            Log::info("Checking usage limits...");
+        if (! $dryRun) {
+            Log::info('Checking usage limits...');
+        }
         $checks['usage_limits'] = $this->checkUsageLimits();
-        if (!$checks['usage_limits']['passed']) {
-            if (!$dryRun)
-                Log::warning("Eligibility failed: Usage limits failed", ['result' => $checks['usage_limits']]);
+        if (! $checks['usage_limits']['passed']) {
+            if (! $dryRun) {
+                Log::warning('Eligibility failed: Usage limits failed', ['result' => $checks['usage_limits']]);
+            }
+
             return $this->buildBlockedResponse('limits', $checks);
         }
 
         // Log consent for audit trail ONLY if not a dry run
-        if (!$dryRun) {
+        if (! $dryRun) {
             $consentService->logConsent($contact, $triggerType, $context, $consentCheck);
             Log::info("Eligibility check passed for contact {$contact->id}");
         }
@@ -129,7 +143,7 @@ class CallEligibilityService
                 ->where('phone_number_id', $phoneNumberId)
                 ->first();
 
-            if (!$settings || !$settings->calling_enabled) {
+            if (! $settings || ! $settings->calling_enabled) {
                 return [
                     'passed' => false,
                     'block_code' => 'CALLING_NOT_ENABLED_FOR_NUMBER',
@@ -252,7 +266,7 @@ class CallEligibilityService
         $callingConsent = $contact->custom_attributes['calling_consent'] ?? true;
         $callingDeclined = $contact->custom_attributes['calling_declined'] ?? false;
 
-        if (!$callingConsent || $callingDeclined) {
+        if (! $callingConsent || $callingDeclined) {
             return [
                 'passed' => false,
                 'block_code' => $callingDeclined ? 'CALLING_EXPLICITLY_DECLINED' : 'NO_CALLING_CONSENT',
@@ -340,7 +354,7 @@ class CallEligibilityService
      */
     protected function checkUsageLimits(): array
     {
-        if (!$this->team->max_call_minutes_per_month) {
+        if (! $this->team->max_call_minutes_per_month) {
             return [
                 'passed' => true,
                 'block_code' => null,
@@ -391,10 +405,10 @@ class CallEligibilityService
      */
     protected function checkSafeguards(): array
     {
-        $safeguardService = new CallSafeguardService();
+        $safeguardService = new CallSafeguardService;
         $result = $safeguardService->evaluateOutboundEligibility($this->team);
 
-        if (!$result['allowed']) {
+        if (! $result['allowed']) {
             return [
                 'passed' => false,
                 'block_code' => $result['reason'],
@@ -509,7 +523,7 @@ class CallEligibilityService
 
         return $messages[$blockCode] ?? [
             'user' => 'Calling is currently unavailable.',
-            'admin' => 'Unknown block reason: ' . $blockCode,
+            'admin' => 'Unknown block reason: '.$blockCode,
         ];
     }
 

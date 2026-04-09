@@ -5,17 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int         $id
+ * @property int $id
  * @property string|null $phone_number_id
  * @property string|null $access_token
  * @property string|null $business_account_id
- * @property string      $response_code
- * @property int|null    $client_id
+ * @property string $response_code
+ * @property int|null $client_id
  * @property string|null $response_data
  * @property string|null $category
- * @property int|null    $category_id
+ * @property int|null $category_id
  * @property string|null $rel_type
- * @property int|null    $rel_id
+ * @property int|null $rel_id
  * @property string|null $category_params
  * @property string|null $raw_data
  * @property string|null $recorded_at

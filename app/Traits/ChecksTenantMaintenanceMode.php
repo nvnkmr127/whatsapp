@@ -47,10 +47,10 @@ trait ChecksTenantMaintenanceMode
      * If yes, releases or deletes the current job and returns true.
      * The caller must treat a true return as a hard stop (return immediately).
      *
-     * @param int    $teamId           The team to check
-     * @param string $releaseOrDelete  'release' (re-queue) or 'delete' (discard silently)
-     * @param int    $releaseDelay     Seconds to wait before re-processing (only for release)
-     * @return bool  True if under maintenance (job was released/deleted). False if safe to proceed.
+     * @param  int  $teamId  The team to check
+     * @param  string  $releaseOrDelete  'release' (re-queue) or 'delete' (discard silently)
+     * @param  int  $releaseDelay  Seconds to wait before re-processing (only for release)
+     * @return bool True if under maintenance (job was released/deleted). False if safe to proceed.
      */
     protected function isTeamUnderMaintenance(
         int $teamId,
@@ -60,7 +60,7 @@ trait ChecksTenantMaintenanceMode
         /** @var BackupLockService $lockService */
         $lockService = app(BackupLockService::class);
 
-        if (!$lockService->isUnderMaintenance($teamId)) {
+        if (! $lockService->isUnderMaintenance($teamId)) {
             return false;
         }
 

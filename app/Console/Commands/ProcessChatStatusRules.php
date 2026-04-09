@@ -33,16 +33,18 @@ class ProcessChatStatusRules extends Command
 
         foreach ($teams as $team) {
             $rules = $team->chat_status_rules;
-            if (empty($rules))
+            if (empty($rules)) {
                 continue;
+            }
 
             foreach ($rules as $rule) {
                 $statusIn = $rule['status_in'] ?? null;
                 $afterDays = (int) ($rule['after_days'] ?? 0);
                 $statusTo = $rule['status_to'] ?? null;
 
-                if (!$statusIn || !$statusTo || $afterDays <= 0)
+                if (! $statusIn || ! $statusTo || $afterDays <= 0) {
                     continue;
+                }
 
                 // Find contacts in this team with statusIn that haven't been updated in X days
                 $contacts = Contact::where('team_id', $team->id)
@@ -58,7 +60,7 @@ class ProcessChatStatusRules extends Command
                     $contact->notes()->create([
                         'team_id' => $team->id,
                         'body' => "Configuration: System automatically changed status from {$oldStatus} to {$statusTo} (Status Rule).",
-                        'type' => 'system'
+                        'type' => 'system',
                     ]);
 
                     $this->info("Team [{$team->name}]: Updated Contact [{$contact->name}] from {$oldStatus} to {$statusTo}");

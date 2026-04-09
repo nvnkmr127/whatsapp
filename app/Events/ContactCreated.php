@@ -12,13 +12,11 @@ class ContactCreated
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $contact;
+
     public $context;
 
     /**
      * Create a new event instance.
-     *
-     * @param Contact $contact
-     * @param array $context
      */
     public function __construct(Contact $contact, array $context = ['source' => 'system'])
     {

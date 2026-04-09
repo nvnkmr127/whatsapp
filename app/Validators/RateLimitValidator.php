@@ -48,7 +48,7 @@ class RateLimitValidator
      */
     public function validate(Team $team, int $messageCount): ValidationResult
     {
-        $result = new ValidationResult();
+        $result = new ValidationResult;
 
         $tier = $team->wm_messaging_limit ?? 'TIER_1K';
         $dailyLimit = $this->getTierLimit($tier);
@@ -64,7 +64,7 @@ class RateLimitValidator
                 field: 'message_count',
                 suggestion: $remaining > 0
                 ? "Reduce to {$remaining} messages or wait for limit reset"
-                : "Wait for limit reset or upgrade tier",
+                : 'Wait for limit reset or upgrade tier',
                 metadata: [
                     'tier' => $tier,
                     'daily_limit' => $dailyLimit,
@@ -103,6 +103,6 @@ class RateLimitValidator
      */
     protected function canUpgradeTier(string $currentTier): bool
     {
-        return !in_array($currentTier, ['TIER_UNLIMITED']);
+        return ! in_array($currentTier, ['TIER_UNLIMITED']);
     }
 }

@@ -2,20 +2,23 @@
 
 namespace App\Livewire\Crm;
 
-use App\Models\Contact;
-use App\Models\Deal;
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\CrmActivity;
-use Livewire\Component;
+use App\Models\Deal;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Component;
 
 class CrmDashboard extends Component
 {
     public $stats = [];
+
     public $recentDeals = [];
+
     public $recentActivities = [];
+
     public $pipelineDistribution = [];
 
     public function mount()

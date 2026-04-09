@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Contact;
 use App\Services\EmbedTokenService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class EmbedController extends Controller
 {
@@ -27,7 +26,7 @@ class EmbedController extends Controller
         ]);
 
         $user = $request->user();
-        if (!$user->currentTeam) {
+        if (! $user->currentTeam) {
             return response()->json(['error' => 'No Team Context'], 400);
         }
 
@@ -40,7 +39,7 @@ class EmbedController extends Controller
 
         $permissions = $request->input('permissions', ['read', 'write']);
 
-        if (!is_array($permissions) || array_diff($permissions, ['read', 'write'])) {
+        if (! is_array($permissions) || array_diff($permissions, ['read', 'write'])) {
             return response()->json(['error' => 'Invalid permissions. Allowed: read, write'], 422);
         }
 
@@ -60,13 +59,13 @@ class EmbedController extends Controller
     {
         $token = $request->query('token');
 
-        if (!$token) {
+        if (! $token) {
             abort(403, 'Missing Token');
         }
 
         $payload = $this->tokenService->validateToken($token);
 
-        if (!$payload) {
+        if (! $payload) {
             abort(403, 'Invalid or Expired Token');
         }
 

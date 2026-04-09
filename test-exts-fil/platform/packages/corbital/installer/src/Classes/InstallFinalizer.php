@@ -51,12 +51,12 @@ class InstallFinalizer
 
             return [
                 'success' => true,
-                'user'    => $user,
+                'user' => $user,
             ];
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -75,7 +75,7 @@ class InstallFinalizer
                 Artisan::call('storage:link');
             }
         } catch (\Exception $e) {
-            throw new \Exception('Failed to create storage link: ' . $e->getMessage());
+            throw new \Exception('Failed to create storage link: '.$e->getMessage());
         }
     }
 
@@ -91,7 +91,7 @@ class InstallFinalizer
             Artisan::call('migrate', ['--force' => true]);
 
         } catch (\Exception $e) {
-            throw new \Exception('Failed to run migrations: ' . $e->getMessage());
+            throw new \Exception('Failed to run migrations: '.$e->getMessage());
         }
     }
 
@@ -100,7 +100,7 @@ class InstallFinalizer
         try {
             Artisan::call('db:seed', ['--force' => true]);
         } catch (\Throwable $e) {
-            throw new \Exception('Failed to run migrations: ' . $e->getMessage());
+            throw new \Exception('Failed to run migrations: '.$e->getMessage());
         }
     }
 
@@ -118,9 +118,9 @@ class InstallFinalizer
             // Create admin user with proper fields
             $userData = [
                 'firstname' => $adminData['firstname'] ?? null,
-                'lastname'  => $adminData['lastname']  ?? null,
-                'email'     => $adminData['email'],
-                'password'  => Hash::make($adminData['password']),
+                'lastname' => $adminData['lastname'] ?? null,
+                'email' => $adminData['email'],
+                'password' => Hash::make($adminData['password']),
             ];
 
             // Add email verification if configured
@@ -151,7 +151,7 @@ class InstallFinalizer
                 $userData
             );
         } catch (\Exception $e) {
-            throw new \Exception('Failed to create admin user: ' . $e->getMessage());
+            throw new \Exception('Failed to create admin user: '.$e->getMessage());
         }
     }
 

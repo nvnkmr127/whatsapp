@@ -28,8 +28,8 @@ class AlertEngineSeeder extends Seeder
                 'trigger_conditions' => [
                     'metric' => 'cpu_usage',
                     'threshold' => 95,
-                    'duration' => '5m'
-                ]
+                    'duration' => '5m',
+                ],
             ]
         );
 

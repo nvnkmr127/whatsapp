@@ -16,14 +16,17 @@ use Illuminate\Support\Facades\Log;
 
 class ExecuteAutomationNodeJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
     use \App\Traits\ChecksTenantMaintenanceMode;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $runId;
+
     public $nodeId;
+
     public $attempt;
 
     public $tries = 3;
+
     public $backoff = [10, 60, 300];
 
     /**
@@ -52,18 +55,20 @@ class ExecuteAutomationNodeJob implements ShouldQueue
             ->whereIn('status', ['active', 'executing'])
             ->update([
                 'status' => 'executing',
-                'last_processed_at' => now()
+                'last_processed_at' => now(),
             ]);
 
-        if (!$updated) {
+        if (! $updated) {
             Log::warning("Atomic claim failed for Run #{$this->runId}. Job aborting.");
+
             return;
         }
 
         $run = AutomationRun::with('automation', 'contact')->find($this->runId);
 
-        if (!$run) {
+        if (! $run) {
             Log::warning("AutomationRun #{$this->runId} not found in database.");
+
             return;
         }
 
@@ -87,6 +92,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
         // 2. Deterministic State Check
         if ($run->state_data['current_node_id'] !== $this->nodeId) {
             Log::warning("Divergence detected: Run #{$this->runId} expected node {$run->state_data['current_node_id']}, Job ordered {$this->nodeId}. Correcting.");
+
             // Optional: Terminate or Correct. Let's correct to the expected state.
             return;
         }
@@ -102,7 +108,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
                 $run->increment('step_count');
 
                 if ($run->step_count > 50) {
-                    throw new \Exception("Max step limit reached for safety.");
+                    throw new \Exception('Max step limit reached for safety.');
                 }
 
                 // Execute logic
@@ -110,7 +116,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
             });
 
         } catch (\Exception $e) {
-            Log::error("Automation Step Error #{$this->runId} Node {$this->nodeId}: " . $e->getMessage());
+            Log::error("Automation Step Error #{$this->runId} Node {$this->nodeId}: ".$e->getMessage());
 
             // Record failure in ledger
             $executionKey = "{$this->runId}_{$this->nodeId}";
@@ -120,7 +126,7 @@ class ExecuteAutomationNodeJob implements ShouldQueue
                     'automation_run_id' => $this->runId,
                     'node_id' => $this->nodeId,
                     'status' => 'failed',
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]
             );
 

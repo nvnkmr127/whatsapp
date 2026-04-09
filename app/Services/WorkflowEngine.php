@@ -6,7 +6,6 @@ use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\Team;
 use App\Models\Workflow;
-use App\Models\WorkflowAction;
 use App\Models\WorkflowLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -46,18 +45,20 @@ class WorkflowEngine
         $lockKey = "workflow_trigger_lock:{$triggerType}:{$subjectId}";
         $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5); // 5s lock is enough for most transitions
 
-        if (!$lock->get()) {
+        if (! $lock->get()) {
             Log::info("WorkflowEngine: Parallel trigger detected for {$triggerType} on {$subjectId}. Skipping second execution.");
+
             return;
         }
 
         // --- Cyclic Trigger Protection ---
         $trackerKey = "{$triggerType}_{$subjectId}";
-        
+
         if (isset(self::$recursionTracker[$trackerKey])) {
             if (self::$recursionTracker[$trackerKey] > 3) { // Max depth 3
                 Log::warning("Workflow recursion limit reached for {$trackerKey}. Aborting chain.");
                 $lock->release();
+
                 return;
             }
             self::$recursionTracker[$trackerKey]++;
@@ -86,14 +87,14 @@ class WorkflowEngine
                     try {
                         $this->executeWorkflow($workflow, $subject, $context);
                     } catch (\Exception $e) {
-                        Log::error("Workflow '{$workflow->name}' ({$workflow->id}) trigger failed: " . $e->getMessage());
+                        Log::error("Workflow '{$workflow->name}' ({$workflow->id}) trigger failed: ".$e->getMessage());
                         $errors[] = $e;
                     }
                 }
             }
 
             // If we had errors, re-throw the first one to signal failure to the caller (e.g. a Job)
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 throw $errors[0];
             }
         } finally {
@@ -108,14 +109,15 @@ class WorkflowEngine
     /**
      * Trigger workflows for a massive batch of models securely via Job Batching.
      * Perfect for thousands of contacts to execute in parallel asynchronously.
-     * 
-     * @param Workflow $workflow The parent workflow
-     * @param \Illuminate\Database\Eloquent\Collection|array $subjects Array of models.
+     *
+     * @param  Workflow  $workflow  The parent workflow
+     * @param  \Illuminate\Database\Eloquent\Collection|array  $subjects  Array of models.
      */
     public function triggerBatch(Workflow $workflow, $subjects, array $context = [])
     {
         if (empty($workflow->definition)) {
-            Log::warning("Batch Trigger aborted. Only JSON node definition workflows supported.");
+            Log::warning('Batch Trigger aborted. Only JSON node definition workflows supported.');
+
             return null;
         }
 
@@ -141,13 +143,14 @@ class WorkflowEngine
             );
         }
 
-        if (empty($jobs))
+        if (empty($jobs)) {
             return null;
+        }
 
-        Log::info("Dispatching batch of " . count($jobs) . " identical workflow executions natively to Queue.");
+        Log::info('Dispatching batch of '.count($jobs).' identical workflow executions natively to Queue.');
 
         return \Illuminate\Support\Facades\Bus::batch($jobs)
-            ->name("Workflow Batch Trigger: " . $workflow->name)
+            ->name('Workflow Batch Trigger: '.$workflow->name)
             ->onQueue('workflows')
             ->dispatch();
     }
@@ -196,7 +199,7 @@ class WorkflowEngine
 
         try {
             // Check for JSON Definition (Advanced Workflow)
-            if (!empty($workflow->definition)) {
+            if (! empty($workflow->definition)) {
                 // Async Execution via Work Queue
                 \App\Jobs\ExecuteWorkflowNodesJob::dispatch(
                     $workflow,
@@ -208,11 +211,11 @@ class WorkflowEngine
             } else {
                 // Legacy Logic: Linear Actions
                 // UNIFIED: Linear actions are now treated as a simple node list to honor delays
-                $nodes = $workflow->actions->map(function($action) {
+                $nodes = $workflow->actions->map(function ($action) {
                     return [
                         'action_type' => $action->action_type,
                         'config' => $action->action_config ?? [],
-                        'delay' => $action->delay_minutes ?? 0
+                        'delay' => $action->delay_minutes ?? 0,
                     ];
                 })->toArray();
 
@@ -229,8 +232,8 @@ class WorkflowEngine
                 'completed_at' => now(),
             ]);
 
-            Log::error("Workflow {$workflow->id} failed: " . $e->getMessage());
-            
+            Log::error("Workflow {$workflow->id} failed: ".$e->getMessage());
+
             // Re-throw to ensure Jobs can retry and callers are aware of failures (UC-ERR-01)
             throw $e;
         }
@@ -244,10 +247,13 @@ class WorkflowEngine
         $iterations = 0;
         $maxIterations = 1000; // Safety cap
 
-        while (!empty($nodes)) {
+        while (! empty($nodes)) {
             if ($iterations++ > $maxIterations) {
                 Log::error("Workflow execution hit safety cap of {$maxIterations} nodes. Likely infinite loop in definition.");
-                if ($log) $log->update(['status' => 'failed', 'error_message' => 'Node execution safety cap reached.']);
+                if ($log) {
+                    $log->update(['status' => 'failed', 'error_message' => 'Node execution safety cap reached.']);
+                }
+
                 return;
             }
 
@@ -260,8 +266,9 @@ class WorkflowEngine
                     $node['delay'] = 0;
                     array_unshift($nodes, $node);
 
-                    if ($log)
+                    if ($log) {
                         $log->update(['status' => 'waiting']);
+                    }
                     Log::info("Workflow suspending for {$delayMinutes} minutes before executing node");
 
                     \App\Jobs\ExecuteWorkflowNodesJob::dispatch(
@@ -279,9 +286,9 @@ class WorkflowEngine
                     $isTrue = $this->evaluateCondition($node, $subject, $context);
 
                     // Prefix the resulting branch to the front of the queue to ensure sequential depth-first execution
-                    if ($isTrue && !empty($node['true_nodes'])) {
+                    if ($isTrue && ! empty($node['true_nodes'])) {
                         $nodes = array_merge($node['true_nodes'], $nodes);
-                    } elseif (!$isTrue && !empty($node['false_nodes'])) {
+                    } elseif (! $isTrue && ! empty($node['false_nodes'])) {
                         $nodes = array_merge($node['false_nodes'], $nodes);
                     }
                 } else {
@@ -290,13 +297,13 @@ class WorkflowEngine
 
                     if ($actionType === 'rate_limit') {
                         if ($workflow) {
-                            $key = 'workflow_limit_' . $workflow->id . '_' . $subject->id;
+                            $key = 'workflow_limit_'.$workflow->id.'_'.$subject->id;
                             $max = (int) ($config['max_executions'] ?? 1);
                             $period = (int) ($config['period_minutes'] ?? 60);
 
                             if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($key, $max)) {
                                 Log::warning("Workflow Node Rate Limited (failing workflow). Key: {$key}");
-                                throw new \Exception("Rate limit reached for workflow node.");
+                                throw new \Exception('Rate limit reached for workflow node.');
                             }
                             \Illuminate\Support\Facades\RateLimiter::hit($key, $period * 60);
                         }
@@ -311,13 +318,14 @@ class WorkflowEngine
 
                         // Analytics: Conversion Tracking
                         if ($actionType === 'mark_converted' || ($actionType === 'update_contact' && ($config['status'] ?? '') === 'converted')) {
-                            if ($workflow)
+                            if ($workflow) {
                                 $workflow->increment('conversions_count');
+                            }
                         }
                     }
                 } // close else
             } catch (\Exception $e) {
-                Log::error("Workflow Node Execution Error: " . $e->getMessage());
+                Log::error('Workflow Node Execution Error: '.$e->getMessage());
 
                 // --- Retry Logic ---
                 $maxRetries = (int) ($node['config']['retry_count'] ?? 0);
@@ -327,13 +335,14 @@ class WorkflowEngine
                     $node['current_attempt'] = $currentAttempt + 1;
                     $retryDelay = (int) ($node['config']['retry_delay_minutes'] ?? 0);
 
-                    Log::info("Workflow Node Retrying (Attempt {$node['current_attempt']} of {$maxRetries}) in {$retryDelay}m. Error: " . $e->getMessage());
+                    Log::info("Workflow Node Retrying (Attempt {$node['current_attempt']} of {$maxRetries}) in {$retryDelay}m. Error: ".$e->getMessage());
 
                     array_unshift($nodes, $node);
 
                     if ($workflow) {
-                        if ($log)
+                        if ($log) {
                             $log->update(['status' => 'waiting']);
+                        }
                         \App\Jobs\ExecuteWorkflowNodesJob::dispatch(
                             $workflow,
                             $nodes,
@@ -347,9 +356,10 @@ class WorkflowEngine
                 }
 
                 // --- Fallback (Error Path) ---
-                if (!empty($node['error_nodes'])) {
-                    Log::info("Workflow branching to Error/Fallback Path due to terminal node failure.");
+                if (! empty($node['error_nodes'])) {
+                    Log::info('Workflow branching to Error/Fallback Path due to terminal node failure.');
                     $nodes = array_merge($node['error_nodes'], $nodes);
+
                     continue;
                 }
 
@@ -384,7 +394,7 @@ class WorkflowEngine
             $conditions[] = [
                 'field' => $node['config']['field'],
                 'operator' => $node['config']['operator'] ?? '=',
-                'value' => $node['config']['value'] ?? ''
+                'value' => $node['config']['value'] ?? '',
             ];
         }
 
@@ -408,12 +418,12 @@ class WorkflowEngine
                 ? in_array($value, $actualValue)
                 : str_contains((string) $actualValue, (string) $value),
                 'not_contains' => is_array($actualValue)
-                ? !in_array($value, $actualValue)
-                : !str_contains((string) $actualValue, (string) $value),
+                ? ! in_array($value, $actualValue)
+                : ! str_contains((string) $actualValue, (string) $value),
                 default => false,
             };
 
-            if ($matchType === 'all' && !$isMatch) {
+            if ($matchType === 'all' && ! $isMatch) {
                 return false; // AND logic: fails immediately if one is false
             }
 
@@ -430,6 +440,7 @@ class WorkflowEngine
         // 1. Explicit Context Binding (e.g. context.message_content or context.order_amount)
         if (str_starts_with($field, 'context.')) {
             $contextKey = substr($field, 8);
+
             return data_get($context, $contextKey);
         }
 
@@ -441,6 +452,7 @@ class WorkflowEngine
         // 2.1 Onboarding Status Resolution
         if (str_starts_with($field, 'onboarding.') && $subject instanceof \App\Models\User) {
             $onboardingKey = substr($field, 11);
+
             return $subject->onboardingStatus?->{$onboardingKey};
         }
 
@@ -478,6 +490,7 @@ class WorkflowEngine
         if (isset($map[$actionType])) {
             $handler = app($map[$actionType]);
             $handler->handle($config, $subject, $context);
+
             return;
         }
 
@@ -545,19 +558,21 @@ class WorkflowEngine
             case 'send_email':
                 $email = $subject->email ?? ($subject instanceof Contact ? $subject->email : null);
                 if ($email) {
-                    Log::info("Workflow action: Sending email to " . $email);
+                    Log::info('Workflow action: Sending email to '.$email);
                 }
                 break;
 
             case 'webhook':
                 $url = $config['url'] ?? null;
-                if (!$url) break;
+                if (! $url) {
+                    break;
+                }
 
                 try {
                     $method = strtoupper($config['method'] ?? 'POST');
                     $headers = is_string($config['headers'] ?? '') ? json_decode($config['headers'], true) : ($config['headers'] ?? []);
                     $payload = is_string($config['payload'] ?? '') ? json_decode($config['payload'], true) : ($config['payload'] ?? []);
-                    
+
                     $payload['_subject_id'] = $subject->id;
                     $payload['_subject_type'] = get_class($subject);
                     $payload['_context'] = $context;
@@ -574,9 +589,9 @@ class WorkflowEngine
                     if ($response->failed()) {
                         throw new \Exception("HTTP Request failed with status {$response->status()}.");
                     }
-                    Log::info("Workflow Webhook Sent to {$url}. Status: " . $response->status());
+                    Log::info("Workflow Webhook Sent to {$url}. Status: ".$response->status());
                 } catch (\Exception $e) {
-                    Log::error("Workflow Webhook Error: " . $e->getMessage());
+                    Log::error('Workflow Webhook Error: '.$e->getMessage());
                     throw $e;
                 }
                 break;
@@ -589,14 +604,14 @@ class WorkflowEngine
                             ? $this->resolveFieldValue($subject, trim($matches[1]), $context) ?? ''
                             : $cell;
                     }, $rowData);
-                    Log::info("Workflow: Appending to Google Sheet $spreadsheetId: " . json_encode($mappedRow));
+                    Log::info("Workflow: Appending to Google Sheet $spreadsheetId: ".json_encode($mappedRow));
                 }
                 break;
 
             case 'shopify_update_order':
                 $orderId = $config['order_id'] ?? $context['order_id'] ?? null;
                 if ($orderId) {
-                    Log::info("Workflow: Mutating Shopify Order $orderId with tags: " . json_encode($config['tags'] ?? []));
+                    Log::info("Workflow: Mutating Shopify Order $orderId with tags: ".json_encode($config['tags'] ?? []));
                 }
                 break;
         }

@@ -12,12 +12,13 @@ class ProcessGaps extends Command
      * @var string
      */
     protected $signature = 'kb:process-gaps';
+
     protected $description = 'Analyze and attempt to fill missing knowledge base gaps';
 
     public function handle()
     {
         $gaps = \App\Models\KnowledgeBaseGap::where('status', 'pending')->limit(50)->get();
-        
+
         $this->info("Found {$gaps->count()} pending knowledge gaps.");
 
         foreach ($gaps as $gap) {
@@ -38,14 +39,15 @@ class ProcessGaps extends Command
             // Placeholder: In a real system, we might search new sources or re-verify.
             // For now, we simulate an AI review.
             $team = \App\Models\Team::find($gap->team_id);
-            if (!$team) {
+            if (! $team) {
                 $gap->update(['status' => 'failed', 'resolution_note' => 'Team not found']);
+
                 return;
             }
 
             // [AI Logic to check if gap is still a gap]
             // For now we mark for human review or mark as "resolved" if info exists now.
-            
+
             $gap->update([
                 'status' => 'resolved',
                 'resolution_note' => 'Auto-analyzed: No recent sources found to bridge this gap. Flagged for content creation.',
@@ -53,7 +55,7 @@ class ProcessGaps extends Command
 
             $this->info("Gap #{$gap->id} marked as resolved/analyzed.");
         } catch (\Exception $e) {
-            $this->error("Failed to process gap #{$gap->id}: " . $e->getMessage());
+            $this->error("Failed to process gap #{$gap->id}: ".$e->getMessage());
             $gap->update(['status' => 'pending']);
         }
     }

@@ -2,27 +2,31 @@
 
 namespace App\Livewire\Chat;
 
-use App\Models\Conversation;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ChatBeacon extends Component
 {
     public $unreadCount = 0;
+
     public $latestMessage = null;
+
     public $isOpen = false;
+
     public $activeConversationId = null;
 
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {
             $teamId = Auth::user()->currentTeam->id;
+
             return [
                 "echo-private:teams.{$teamId},.MessageReceived" => 'handleNewMessage',
                 "echo-private:teams.{$teamId},.ConversationAssigned" => 'handleAssignment',
                 'chat-messages-read' => 'refreshStats',
             ];
         }
+
         return [];
     }
 
@@ -33,8 +37,9 @@ class ChatBeacon extends Component
 
     public function refreshStats()
     {
-        if (!Auth::check() || !Auth::user()->currentTeam)
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return;
+        }
 
         $teamId = Auth::user()->currentTeam->id;
 
@@ -63,14 +68,14 @@ class ChatBeacon extends Component
             $this->dispatch('notify', [
                 'type' => 'info',
                 'title' => 'New Chat Assigned',
-                'message' => "{$event['assigned_by_name']} transferred a chat with {$event['contact_name']} to you."
+                'message' => "{$event['assigned_by_name']} transferred a chat with {$event['contact_name']} to you.",
             ]);
         }
     }
 
     public function toggleInbox()
     {
-        $this->isOpen = !$this->isOpen;
+        $this->isOpen = ! $this->isOpen;
         if ($this->isOpen) {
             $this->refreshStats();
         }

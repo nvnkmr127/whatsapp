@@ -2,16 +2,16 @@
 
 namespace App\Livewire\Campaigns;
 
+use App\Jobs\ProcessCampaignJob;
+use App\Models\Campaign;
 use App\Models\Contact;
 use App\Models\ContactTag;
 use App\Models\WhatsappTemplate;
-use App\Models\Campaign;
-use App\Jobs\ProcessCampaignJob;
+use Carbon\Carbon;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\Computed;
-use Carbon\Carbon;
 
 class Wizard extends Component
 {
@@ -21,31 +21,45 @@ class Wizard extends Component
 
     // Step 1: Details
     public $name;
+
     public $campaignType = 'broadcast'; // 'broadcast' or 'drip'
+
     public $scheduled_at;
+
     public $scheduleMode = 'now'; // 'now' or 'later'
 
     // Step 2: Audience
     public $audienceType = 'tags'; // 'tags', 'contacts', or 'all'
+
     public $selectedTags = [];
+
     public $selectedContacts = [];
+
     public $audienceCount = 0;
 
     // Step 3: Message
     public $selectedTemplateId;
+
     public $templateVars = []; // ['{{1}}' => 'value']
+
     public $headerMediaFile; // For IMAGE/VIDEO/DOCUMENT headers (Upload)
+
     public $headerMediaUrl; // For IMAGE/VIDEO/DOCUMENT headers (URL fallback)
+
     public $headerTextVar; // For TEXT header variable
-    
+
     // Drip Specific
     public $dripSteps = []; // [['template_id' => null, 'delay_minutes' => 0, 'variables' => [], 'template_name' => '', 'language' => 'en_US']]
+
     public $currentDripStep = 0;
-    
+
     // Step 1: Retry Configuration
     public $retry_enabled = false;
+
     public $max_retries = 3;
+
     public $retry_interval = 60; // seconds
+
     public $retry_strategy = 'exponential';
 
     // UI Helpers
@@ -63,7 +77,7 @@ class Wizard extends Component
 
     public function mount()
     {
-        $this->name = session('default_name', request('default_name', 'Campaign ' . date('Y-m-d H:i')));
+        $this->name = session('default_name', request('default_name', 'Campaign '.date('Y-m-d H:i')));
         $this->scheduled_at = now()->addMinutes(5)->format('Y-m-d\TH:i');
 
         if (session()->has('retarget_ids') || request()->has('retarget_ids')) {
@@ -120,11 +134,11 @@ class Wizard extends Component
     {
         $query = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id);
 
-        if ($this->audienceType === 'tags' && !empty($this->selectedTags)) {
+        if ($this->audienceType === 'tags' && ! empty($this->selectedTags)) {
             $query->whereHas('tags', function ($q) {
                 $q->whereIn('contact_tags.id', $this->selectedTags);
             });
-        } elseif ($this->audienceType === 'contacts' && !empty($this->selectedContacts)) {
+        } elseif ($this->audienceType === 'contacts' && ! empty($this->selectedContacts)) {
             $query->whereIn('id', $this->selectedContacts);
         } elseif ($this->audienceType === 'all') {
             // Keep all
@@ -132,12 +146,14 @@ class Wizard extends Component
             // No selection
             if ($this->audienceType !== 'all') {
                 $this->audienceCount = 0;
+
                 return;
             }
         }
 
         $this->audienceCount = $query->count();
     }
+
     public function addDripStep()
     {
         $this->dripSteps[] = [
@@ -161,7 +177,7 @@ class Wizard extends Component
     public function selectDripStep($index)
     {
         $this->currentDripStep = $index;
-        
+
         if ($index === 0) {
             // Main Campaign Template
             // (Props already in $this->selectedTemplateId etc.)
@@ -224,7 +240,7 @@ class Wizard extends Component
             'name' => 'required|min:3',
             'selectedTemplateId' => 'required',
             'audienceCount' => 'numeric|min:1',
-            'scheduled_at' => $this->scheduleMode === 'later' ? 'required|date|after:now' : 'nullable'
+            'scheduled_at' => $this->scheduleMode === 'later' ? 'required|date|after:now' : 'nullable',
         ]);
 
         if ($this->scheduleMode === 'now') {
@@ -237,7 +253,7 @@ class Wizard extends Component
         $finalHeaderMedia = null;
         if ($this->headerMediaFile) {
             $finalHeaderMedia = $this->headerMediaFile->store('campaigns/headers', 'public');
-            $finalHeaderMedia = asset('storage/' . $finalHeaderMedia);
+            $finalHeaderMedia = asset('storage/'.$finalHeaderMedia);
         } elseif ($this->headerMediaUrl) {
             $finalHeaderMedia = $this->headerMediaUrl;
         }
@@ -245,11 +261,11 @@ class Wizard extends Component
         // Prepare variables
         $finalVars = array_values($this->templateVars);
 
-        // If there's a header media, it usually goes as the first variable in some implementations, 
-        // but let's check how the backend expects it. 
+        // If there's a header media, it usually goes as the first variable in some implementations,
+        // but let's check how the backend expects it.
         // Based on previous code: if (!empty($this->headerMediaUrl)) { array_unshift($finalVars, $this->headerMediaUrl); }
         if ($finalHeaderMedia) {
-            // In some cases, we might want to store the media path separately in the DB 
+            // In some cases, we might want to store the media path separately in the DB
             // but for current ProcessCampaignJob logic, we'll stick to prepending.
             // array_unshift($finalVars, $finalHeaderMedia);
         }
@@ -270,15 +286,15 @@ class Wizard extends Component
                     'language' => $template->language,
                     'variables' => $finalVars,
                     'header_params' => $finalHeaderMedia ? [$finalHeaderMedia] : ($this->headerTextVar ? [$this->headerTextVar] : []),
-                    'delay_minutes' => 0
-                ]
+                    'delay_minutes' => 0,
+                ],
             ], $this->dripSteps) : null,
             'header_params' => $finalHeaderMedia ? [$finalHeaderMedia] : ($this->headerTextVar ? [$this->headerTextVar] : []),
             'audience_filters' => [
                 'type' => $this->audienceType,
                 'tags' => $this->selectedTags,
                 'contacts' => $this->selectedContacts,
-                'all' => $this->audienceType === 'all'
+                'all' => $this->audienceType === 'all',
             ],
             'scheduled_at' => $this->scheduled_at,
             'status' => 'scheduled',
@@ -304,18 +320,19 @@ class Wizard extends Component
         \App\Jobs\PrepareCampaignJob::dispatch($campaign->id, $criteria)->delay($delaySeconds);
 
         session()->flash('success', 'Campaign Launched Successfully!');
+
         return redirect()->route('campaigns.index');
     }
 
     #[Computed]
     public function templateInfo()
     {
-        if (!$this->selectedTemplateId) {
+        if (! $this->selectedTemplateId) {
             return null;
         }
 
         $template = WhatsappTemplate::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->find($this->selectedTemplateId);
-        if (!$template) {
+        if (! $template) {
             return null;
         }
 
@@ -355,4 +372,3 @@ class Wizard extends Component
         return view('livewire.campaigns.wizard');
     }
 }
-

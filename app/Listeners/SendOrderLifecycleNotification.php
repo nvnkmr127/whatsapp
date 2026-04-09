@@ -28,8 +28,9 @@ class SendOrderLifecycleNotification implements ShouldQueue
 
         // 1. Check Lifecycle Notification Rules
         $lifecycleService = app(\App\Services\CommerceLifecycleService::class);
-        if (!$lifecycleService->shouldNotify($team, $status)) {
+        if (! $lifecycleService->shouldNotify($team, $status)) {
             Log::info("Notification suppressed by lifecycle rules for order status: {$status} in Team {$team->id}");
+
             return;
         }
 
@@ -38,8 +39,9 @@ class SendOrderLifecycleNotification implements ShouldQueue
 
         $templateName = $templates[$status] ?? null;
 
-        if (!$templateName) {
+        if (! $templateName) {
             Log::info("No template configured for order status: {$status} in Team {$team->id}");
+
             return;
         }
 
@@ -52,16 +54,16 @@ class SendOrderLifecycleNotification implements ShouldQueue
 
         if ($status === 'shipped') {
             // {{2}} Tracking Info
-            if (!empty($context['tracking_url'])) {
+            if (! empty($context['tracking_url'])) {
                 $bodyParams[] = $context['tracking_url'];
-            } elseif (!empty($context['tracking_number'])) {
+            } elseif (! empty($context['tracking_number'])) {
                 $bodyParams[] = $context['tracking_number'];
             } else {
                 $bodyParams[] = 'See details';
             }
         } elseif ($status === 'placed') {
             // {{2}} Total Amount
-            $bodyParams[] = $order->currency . ' ' . $order->total_amount;
+            $bodyParams[] = $order->currency.' '.$order->total_amount;
         }
 
         // 3. Send Message
@@ -73,20 +75,20 @@ class SendOrderLifecycleNotification implements ShouldQueue
             $waTemplate = \App\Models\WhatsappTemplate::where('team_id', $team->id)
                 ->where('name', $templateName)
                 ->first();
-            
+
             $language = $waTemplate->language ?? 'en_US';
 
             $this->whatsappService->sendTemplate(
                 $order->contact->phone_number,
                 $templateName,
-                $language, 
+                $language,
                 $bodyParams
             );
 
             Log::info("Sent order status notification ({$status}) to {$order->contact->phone_number}");
 
         } catch (\Exception $e) {
-            Log::error("Failed to send order lifecycle notification: " . $e->getMessage());
+            Log::error('Failed to send order lifecycle notification: '.$e->getMessage());
         }
     }
 }

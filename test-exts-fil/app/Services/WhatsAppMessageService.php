@@ -19,33 +19,33 @@ class WhatsAppMessageService
 
     public function __construct()
     {
-        $this->apiVersion   = get_setting('whatsapp.api_version');
-        $this->dailyLimit   = get_setting('whatsapp.daily_limit');
-        $this->queueName    = json_decode(get_setting('whatsapp.queue'), true)['name'];
+        $this->apiVersion = get_setting('whatsapp.api_version');
+        $this->dailyLimit = get_setting('whatsapp.daily_limit');
+        $this->queueName = json_decode(get_setting('whatsapp.queue'), true)['name'];
         $this->queueTimeout = json_decode(get_setting('whatsapp.queue'), true)['timeout'];
-        $this->logChannel   = json_decode(get_setting('whatsapp.logging'), true)['channel'];
+        $this->logChannel = json_decode(get_setting('whatsapp.logging'), true)['channel'];
     }
 
     public function sendTemplateMessage(string $to, array $params): array
     {
         try {
             // Check daily limit
-            $dailyCount = Cache::get('whatsapp_daily_count_' . date('Y-m-d'), 0);
+            $dailyCount = Cache::get('whatsapp_daily_count_'.date('Y-m-d'), 0);
             if ($dailyCount >= $this->dailyLimit) {
                 return [
                     'success' => false,
-                    'error'   => 'Daily message limit exceeded',
-                    'status'  => 'limit_exceeded',
+                    'error' => 'Daily message limit exceeded',
+                    'status' => 'limit_exceeded',
                 ];
             }
 
             $response = Http::withToken(get_setting('whatsapp.wm_access_token'))
-                ->post("https://graph.facebook.com/{$this->apiVersion}/" . get_setting('whatsapp.wm_default_phone_number_id') . '/messages', [
+                ->post("https://graph.facebook.com/{$this->apiVersion}/".get_setting('whatsapp.wm_default_phone_number_id').'/messages', [
                     'messaging_product' => 'whatsapp',
-                    'to'                => $to,
-                    'type'              => 'template',
-                    'template'          => [
-                        'name'     => $params['template_id'],
+                    'to' => $to,
+                    'type' => 'template',
+                    'template' => [
+                        'name' => $params['template_id'],
                         'language' => [
                             'code' => 'en',
                         ],
@@ -55,37 +55,37 @@ class WhatsAppMessageService
 
             if ($response->successful()) {
                 // Increment daily count
-                Cache::increment('whatsapp_daily_count_' . date('Y-m-d'));
+                Cache::increment('whatsapp_daily_count_'.date('Y-m-d'));
 
                 return [
-                    'success'    => true,
+                    'success' => true,
                     'message_id' => $response->json('messages.0.id'),
-                    'status'     => 'sent',
+                    'status' => 'sent',
                 ];
             }
 
             $this->logError('API Error', [
                 'response' => $response->json(),
-                'status'   => $response->status(),
-                'to'       => $to,
+                'status' => $response->status(),
+                'to' => $to,
             ]);
 
             return [
                 'success' => false,
-                'error'   => $response->json('error.message', 'Unknown error occurred'),
-                'status'  => 'failed',
+                'error' => $response->json('error.message', 'Unknown error occurred'),
+                'status' => 'failed',
             ];
         } catch (\Throwable $e) {
             $this->logError('Service Error', [
-                'error'       => $e->getMessage(),
-                'to'          => $to,
+                'error' => $e->getMessage(),
+                'to' => $to,
                 'template_id' => $params['template_id'],
             ], $e);
 
             return [
                 'success' => false,
-                'error'   => $e->getMessage(),
-                'status'  => 'error',
+                'error' => $e->getMessage(),
+                'status' => 'error',
             ];
         }
     }
@@ -96,7 +96,7 @@ class WhatsAppMessageService
 
         if (! empty($params['header'])) {
             $components[] = [
-                'type'       => 'header',
+                'type' => 'header',
                 'parameters' => [
                     [
                         'type' => 'text',
@@ -108,7 +108,7 @@ class WhatsAppMessageService
 
         if (! empty($params['body'])) {
             $components[] = [
-                'type'       => 'body',
+                'type' => 'body',
                 'parameters' => [
                     [
                         'type' => 'text',
@@ -120,7 +120,7 @@ class WhatsAppMessageService
 
         if (! empty($params['footer'])) {
             $components[] = [
-                'type'       => 'footer',
+                'type' => 'footer',
                 'parameters' => [
                     [
                         'type' => 'text',
@@ -145,11 +145,11 @@ class WhatsAppMessageService
         return Cache::remember("whatsapp_number_valid:{$number}", 3600, function () use ($number) {
             try {
                 $response = Http::withToken(get_setting('whatsapp.wm_access_token'))
-                    ->post("https://graph.facebook.com/{$this->apiVersion}/" . get_setting('whatsapp.wm_default_phone_number_id') . '/messages', [
+                    ->post("https://graph.facebook.com/{$this->apiVersion}/".get_setting('whatsapp.wm_default_phone_number_id').'/messages', [
                         'messaging_product' => 'whatsapp',
-                        'to'                => $number,
-                        'type'              => 'text',
-                        'text'              => ['preview_url' => false, 'body' => '.'],
+                        'to' => $number,
+                        'type' => 'text',
+                        'text' => ['preview_url' => false, 'body' => '.'],
                     ]);
 
                 return $response->successful();

@@ -23,13 +23,14 @@ class ProcessCampaignJob implements ShouldQueue
     {
         $campaign = Campaign::find($this->campaignId);
 
-        if (!$campaign) {
+        if (! $campaign) {
             return;
         }
 
         // Only process if scheduled or processing (resume)
-        if (!in_array($campaign->status, ['scheduled', 'processing', 'draft'])) {
+        if (! in_array($campaign->status, ['scheduled', 'processing', 'draft'])) {
             Log::info("Campaign {$this->campaignId} is in status {$campaign->status}, skipping launch.");
+
             return;
         }
 

@@ -2,16 +2,16 @@
 
 namespace App\Services;
 
-use App\Models\Team;
-use App\Models\WhatsAppCall;
 use App\Models\Contact;
+use App\Models\Team;
 use App\Models\User;
-use App\Services\EntitlementService;
+use App\Models\WhatsAppCall;
 use Illuminate\Support\Facades\Log;
 
 class CallService
 {
     protected $team;
+
     protected $whatsappService;
 
     public function __construct(WhatsAppService $whatsappService)
@@ -28,9 +28,9 @@ class CallService
         if ($team) {
             $this->whatsappService->setTeam($team);
         }
+
         return $this;
     }
-
 
     /**
      * Initiate an outbound call with validation.
@@ -39,31 +39,38 @@ class CallService
     {
         // Find or create contact
         $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
-        $contact = Contact::where('team_id', $this->team->id)
+        $contact = \App\Models\Contact::where('team_id', $this->team->id)
             ->where('phone_number', $normalizedPhone)
             ->first();
 
-        if (!$contact) {
-            return [
-                'success' => false,
-                'error' => 'Contact not found. Please add the contact first.',
-            ];
+        if (! $contact) {
+            // Check without normalization if not found
+            $contact = \App\Models\Contact::where('team_id', $this->team->id)
+                ->where('phone_number', $phoneNumber)
+                ->first();
+
+            if (! $contact) {
+                return [
+                    'success' => false,
+                    'error' => 'Contact not found. Please add the contact first.',
+                ];
+            }
         }
 
         // Run comprehensive eligibility checks
         $eligibilityService = new CallEligibilityService($this->team);
         $eligibility = $eligibilityService->checkEligibility($contact, 'user_initiated', [
-            'trigger_source' => 'in_app_action'
+            'trigger_source' => 'in_app_action',
         ]);
 
-        if (!$eligibility['eligible']) {
+        $isEligible = $eligibility['allowed'] ?? ($eligibility['eligible'] ?? false);
+
+        if (! $isEligible) {
             return [
                 'success' => false,
-                'error' => $eligibility['user_message'],
-                'block_reason' => $eligibility['block_reason'],
-                'block_category' => $eligibility['block_category'],
-                'can_retry_at' => $eligibility['can_retry_at'],
-                'eligibility_details' => $eligibility,
+                'error' => 'Eligibility check failed: '.($eligibility['block_reason'] ?? 'Unknown reason'),
+                'block_reason' => $eligibility['block_code'] ?? $eligibility['block_reason'] ?? 'ERR_UNKNOWN',
+                'checks' => $eligibility['checks'] ?? [],
             ];
         }
 
@@ -72,7 +79,7 @@ class CallService
             $response = $this->whatsappService->initiateCall($normalizedPhone, $sdp, $options);
 
             if ($response['success'] ?? false) {
-                Log::info("Call initiated successfully", [
+                Log::info('Call initiated successfully', [
                     'team_id' => $this->team->id,
                     'phone' => $normalizedPhone,
                     'contact_id' => $contact->id,
@@ -81,7 +88,7 @@ class CallService
 
             return $response;
         } catch (\Exception $e) {
-            Log::error("Call initiation failed", [
+            Log::error('Call initiation failed', [
                 'team_id' => $this->team->id,
                 'phone' => $phoneNumber,
                 'error' => $e->getMessage(),
@@ -101,9 +108,9 @@ class CallService
      */
     public function checkUsageLimits(): array
     {
-        $currentMonth = now()->format('Y-m');
         $minutesUsed = WhatsAppCall::where('team_id', $this->team->id)
-            ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
             ->sum('duration_seconds') / 60;
 
         // ── Read from EntitlementService (offer > plan > raw column) ──────────
@@ -115,7 +122,7 @@ class CallService
             ? $entitledLimit
             : ($this->team->max_call_minutes_per_month ?? 0);
 
-        if (!$limit) {
+        if (! $limit) {
             return [
                 'allowed' => true,
                 'minutes_used' => round($minutesUsed, 2),
@@ -129,7 +136,7 @@ class CallService
         if ($minutesUsed >= $limit) {
             return [
                 'allowed' => false,
-                'reason' => "Monthly call limit of {$limit} minutes has been reached. Used: " . round($minutesUsed, 1) . ' minutes.',
+                'reason' => "Monthly call limit of {$limit} minutes has been reached. Used: ".round($minutesUsed, 1).' minutes.',
                 'minutes_used' => round($minutesUsed, 2),
                 'minutes_limit' => $limit,
                 'minutes_remaining' => 0,
@@ -259,7 +266,7 @@ class CallService
     public function handleCallStarted(WhatsAppCall $call): void
     {
         $agentId = $call->agent_id;
-        if (!$agentId) {
+        if (! $agentId) {
             return;
         }
 
@@ -268,7 +275,7 @@ class CallService
             'call_status' => 'busy',
         ]);
 
-        Log::info("Agent marked as busy", [
+        Log::info('Agent marked as busy', [
             'team_id' => $this->team->id,
             'agent_id' => $agentId,
             'call_id' => $call->call_id,
@@ -281,16 +288,19 @@ class CallService
     public function handleCallEnded(WhatsAppCall $call): void
     {
         $agentId = $call->agent_id;
-        if (!$agentId)
+        if (! $agentId) {
             return;
+        }
 
         $user = User::find($agentId);
-        if (!$user)
+        if (! $user) {
             return;
+        }
 
         $membership = $this->team->users()->where('users.id', $agentId)->first()?->membership;
-        if (!$membership)
+        if (! $membership) {
             return;
+        }
 
         // Update status to cooldown
         $this->team->users()->updateExistingPivot($agentId, [
@@ -298,7 +308,7 @@ class CallService
             'last_call_ended_at' => now(),
         ]);
 
-        Log::info("Agent entered cooldown", [
+        Log::info('Agent entered cooldown', [
             'team_id' => $this->team->id,
             'agent_id' => $agentId,
             'call_id' => $call->call_id,
@@ -311,6 +321,7 @@ class CallService
     public function routeCall(Contact $contact): array
     {
         $routingService = new CallRoutingService($this->team);
+
         return $routingService->findAgent($contact);
     }
 }

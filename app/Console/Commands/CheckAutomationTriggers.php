@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Contact;
 use App\Services\AutomationService;
-use Carbon\Carbon;
+use Illuminate\Console\Command;
 
 class CheckAutomationTriggers extends Command
 {
@@ -28,7 +27,7 @@ class CheckAutomationTriggers extends Command
      */
     public function handle(AutomationService $automationService)
     {
-        $this->info("Starting time-based automation trigger check...");
+        $this->info('Starting time-based automation trigger check...');
 
         // 1. Birthday Trigger (T6)
         $this->checkBirthdayTriggers($automationService);
@@ -36,13 +35,13 @@ class CheckAutomationTriggers extends Command
         // 2. Inactivity Trigger (T5)
         $this->checkInactivityTriggers($automationService);
 
-        $this->info("Trigger check completed.");
+        $this->info('Trigger check completed.');
     }
 
     protected function checkBirthdayTriggers(AutomationService $automationService)
     {
         $today = now()->format('m-d');
-        
+
         // Find contacts whose birthday (stored in custom_attributes) is today
         // Assuming birthday is stored as 'YYYY-MM-DD' or 'MM-DD'
         $contacts = Contact::where('custom_attributes', 'LIKE', "%$today%")->get();
@@ -52,7 +51,7 @@ class CheckAutomationTriggers extends Command
             if ($birthday && str_ends_with($birthday, $today)) {
                 $this->line("Triggering birthday automation for contact #{$contact->id}");
                 $automationService->checkSpecialTriggers($contact, 'contact_birthday', [
-                    'birthday' => $birthday
+                    'birthday' => $birthday,
                 ]);
             }
         }
@@ -61,9 +60,9 @@ class CheckAutomationTriggers extends Command
     protected function checkInactivityTriggers(AutomationService $automationService)
     {
         // Find contacts who haven't messaged in X days
-        // We can query contacts where last_interaction_at is older than N days 
+        // We can query contacts where last_interaction_at is older than N days
         // and they don't have an active automation run.
-        
+
         $inactivityDays = 7; // Default or could be dynamic
         $threshold = now()->subDays($inactivityDays);
 
@@ -75,7 +74,7 @@ class CheckAutomationTriggers extends Command
             $this->line("Triggering inactivity automation for contact #{$contact->id}");
             $automationService->checkSpecialTriggers($contact, 'inactivity', [
                 'last_interaction_at' => $contact->last_interaction_at->toDateTimeString(),
-                'days_inactive' => $inactivityDays
+                'days_inactive' => $inactivityDays,
             ]);
         }
     }

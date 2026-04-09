@@ -23,9 +23,9 @@ class WhatsappAutoLeadSettings extends Component
     {
         return [
             'auto_lead_enabled' => 'nullable|boolean',
-            'lead_status'       => 'nullable|numeric|exists:statuses,id|required_if:auto_lead_enabled,true',
-            'lead_source'       => 'nullable|numeric|exists:sources,id|required_if:auto_lead_enabled,true',
-            'lead_assigned_to'  => 'nullable|numeric|exists:users,id',
+            'lead_status' => 'nullable|numeric|exists:statuses,id|required_if:auto_lead_enabled,true',
+            'lead_source' => 'nullable|numeric|exists:sources,id|required_if:auto_lead_enabled,true',
+            'lead_assigned_to' => 'nullable|numeric|exists:users,id',
         ];
     }
 
@@ -45,9 +45,9 @@ class WhatsappAutoLeadSettings extends Component
         $settings = get_settings_by_group('whats-mark');
 
         $this->auto_lead_enabled = $settings->auto_lead_enabled ?? false;
-        $this->lead_status       = $settings->lead_status;
-        $this->lead_source       = $settings->lead_source;
-        $this->lead_assigned_to  = $settings->lead_assigned_to;
+        $this->lead_status = $settings->lead_status;
+        $this->lead_source = $settings->lead_source;
+        $this->lead_assigned_to = $settings->lead_assigned_to;
     }
 
     public function save()
@@ -57,9 +57,9 @@ class WhatsappAutoLeadSettings extends Component
 
             $originalSettings = [
                 'auto_lead_enabled' => get_setting('whats-mark.auto_lead_enabled', false),
-                'lead_status'       => get_setting('whats-mark.lead_status'),
-                'lead_source'       => get_setting('whats-mark.lead_source'),
-                'lead_assigned_to'  => get_setting('whats-mark.lead_assigned_to'),
+                'lead_status' => get_setting('whats-mark.lead_status'),
+                'lead_source' => get_setting('whats-mark.lead_source'),
+                'lead_assigned_to' => get_setting('whats-mark.lead_assigned_to'),
             ];
 
             $modifiedSettings = [];
@@ -85,8 +85,8 @@ class WhatsappAutoLeadSettings extends Component
     {
         return view('livewire.admin.settings.whatsmark.whatsapp-auto-lead-settings', [
             'statuses' => Status::select('id', 'name')->get(),
-            'sources'  => Source::select('id', 'name')->get(),
-            'users'    => User::select('id', 'firstname', 'lastname')->get(),
+            'sources' => Source::select('id', 'name')->get(),
+            'users' => User::select('id', 'firstname', 'lastname')->get(),
         ]);
     }
 }

@@ -88,7 +88,7 @@ final class CannedReplyTable extends PowerGridComponent
 
     public function actions(CannedReply $canned)
     {
-        $user    = auth()->user();
+        $user = auth()->user();
         $actions = [];
         if ($user->can('canned_reply.edit') || $user->is_admin == 1) {
             $actions[] = Button::add('edit')
@@ -139,13 +139,13 @@ final class CannedReplyTable extends PowerGridComponent
 
                 $this->notify([
                     'message' => $statusMessage,
-                    'type'    => 'success',
+                    'type' => 'success',
                 ]);
             }
         } else {
             $this->notify([
                 'message' => t('no_permission_to_perform_action'),
-                'type'    => 'warning',
+                'type' => 'warning',
             ]);
         }
     }

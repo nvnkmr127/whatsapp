@@ -18,7 +18,7 @@ class LanguageManager extends Component
     public $language_id = null;
 
     protected $listeners = [
-        'editLanguage'  => 'editLanguage',
+        'editLanguage' => 'editLanguage',
         'confirmDelete' => 'confirmDelete',
     ];
 
@@ -38,7 +38,7 @@ class LanguageManager extends Component
                 'required',
                 'string',
                 'max:255',
-                'unique:languages,name,' . ($this->language->id ?? 'NULL'),
+                'unique:languages,name,'.($this->language->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
             ],
             'language.code' => [
@@ -46,7 +46,7 @@ class LanguageManager extends Component
                 'string',
                 'min:2',
                 'max:3',
-                'unique:languages,code,' . ($this->language->id ?? 'NULL'),
+                'unique:languages,code,'.($this->language->id ?? 'NULL'),
                 'regex:/^[a-zA-Z]+$/',
                 new PurifiedInput(t('sql_injection_error')),
             ],
@@ -68,7 +68,7 @@ class LanguageManager extends Component
 
     public function confirmDelete($languageId)
     {
-        $this->language_id        = $languageId;
+        $this->language_id = $languageId;
         $this->confirmingDeletion = true;
     }
 
@@ -78,7 +78,7 @@ class LanguageManager extends Component
             return $this->notify(['type' => 'danger', 'message' => t('edit_english_language_not_allowed')]);
         }
 
-        $language       = Language::where('code', $languageCode)->firstOrFail();
+        $language = Language::where('code', $languageCode)->firstOrFail();
         $this->language = $language;
         $this->resetValidation();
         $this->showLanguageModal = true;
@@ -101,7 +101,7 @@ class LanguageManager extends Component
             // Get the old language code only if it's an update
             $originalCode = $isUpdate ? $this->language->getOriginal('code') : null;
 
-            $newCode              = strtolower($this->language->code);
+            $newCode = strtolower($this->language->code);
             $this->language->code = $newCode;
 
             // File paths
@@ -139,11 +139,11 @@ class LanguageManager extends Component
                 return redirect()->route('admin.languages');
             }
         } catch (\Exception $e) {
-            app_log('Language save failed: ' . $e->getMessage(), 'error', $e, [
-                'language_id'   => $this->language->id ?? null,
-                'new_code'      => $newCode            ?? null,
-                'original_code' => $originalCode       ?? null,
-                'is_update'     => $isUpdate,
+            app_log('Language save failed: '.$e->getMessage(), 'error', $e, [
+                'language_id' => $this->language->id ?? null,
+                'new_code' => $newCode ?? null,
+                'original_code' => $originalCode ?? null,
+                'is_update' => $isUpdate,
             ]);
 
             $this->notify(['type' => 'danger', 'message' => t('language_handling_error')], true);
@@ -161,7 +161,7 @@ class LanguageManager extends Component
             // Check if the language is default or English
             if (($language->name === 'English' && $language->code === 'en')) {
                 $message = ($language->name === 'English' && $language->code === 'en') ? 'English' : 'Default';
-                $this->notify(['type' => 'danger', 'message' => t('deleting_the') . $message . t('language_is_not_allowed')]);
+                $this->notify(['type' => 'danger', 'message' => t('deleting_the').$message.t('language_is_not_allowed')]);
                 $this->confirmingDeletion = false;
 
                 return;
@@ -178,9 +178,9 @@ class LanguageManager extends Component
             $language->delete();
             $this->confirmingDeletion = false;
             $this->dispatch('pg:eventRefresh-language-table-eoksxv-table');
-            $this->notify(['type' => 'success', 'message' => $langName . t('language_delete_successfully')]);
+            $this->notify(['type' => 'success', 'message' => $langName.t('language_delete_successfully')]);
         } catch (\Exception $e) {
-            app_log('Language delete failed: ' . $e->getMessage(), 'error', $e, [
+            app_log('Language delete failed: '.$e->getMessage(), 'error', $e, [
                 'language_id' => $this->language_id,
             ]);
 

@@ -3,11 +3,9 @@
 namespace App\Events;
 
 use App\Models\Message;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -40,8 +38,8 @@ class MessageStatusUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('teams.' . $this->message->team_id),
-            new PresenceChannel('conversation.' . $this->message->conversation_id),
+            new PrivateChannel('teams.'.$this->message->team_id),
+            new PresenceChannel('conversation.'.$this->message->conversation_id),
         ];
     }
 

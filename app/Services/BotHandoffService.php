@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Contact;
 use App\Models\AutomationRun;
+use App\Models\Contact;
 use Illuminate\Support\Facades\Log;
 
 class BotHandoffService
@@ -51,6 +51,7 @@ class BotHandoffService
         // 1. Check if an agent is explicitly assigned
         if ($contact->assigned_to) {
             Log::debug("BotHandoff: Skipping contact {$contact->id} - Active agent assigned: {$contact->assigned_to}");
+
             return false;
         }
 
@@ -60,9 +61,11 @@ class BotHandoffService
             if ($contact->bot_paused_until && $contact->bot_paused_until <= now()) {
                 Log::info("BotHandoff: Resuming bot for contact {$contact->id} (Pause expired)");
                 $this->resume($contact);
+
                 return true;
             }
             Log::debug("BotHandoff: Skipping contact {$contact->id} - Bot is manually paused. Reason: {$contact->bot_paused_reason}");
+
             return false;
         }
 

@@ -2,14 +2,14 @@
 
 namespace App\Livewire\Analytics;
 
-use Livewire\Component;
-use Livewire\WithPagination;
-use App\Models\TeamTransaction;
 use App\Models\Message;
-use App\Models\Ticket;
+use App\Models\TeamTransaction;
 use App\Models\TeamWallet;
+use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Title('Analytics')]
 class AnalyticsDashboard extends Component
@@ -17,16 +17,27 @@ class AnalyticsDashboard extends Component
     use WithPagination;
 
     public $dateRange = 30; // days
+
     public $chartData = []; // Restored
+
     public $lastRefresh; // Restored
+
     public $metaAnalytics = [];
+
     public $walletId;
+
     public $webhookStatusFilter = 'all';
+
     public $webhookSearch = '';
+
     public $webhookContactFilter = '';
+
     public $webhookFromDate = '';
+
     public $webhookToDate = '';
+
     public $webhookPerPage = 15;
+
     public $transactionsPerPage = 10;
 
     protected array $webhookStatuses = ['sent', 'delivered', 'read', 'failed'];
@@ -125,9 +136,11 @@ class AnalyticsDashboard extends Component
                     'DAILY',
                     ['conversation_analytics', 'cost']
                 );
+
                 return $metaData['data'] ?? [];
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::warning("Failed to fetch Meta analytics: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning('Failed to fetch Meta analytics: '.$e->getMessage());
+
                 return [];
             }
         });
@@ -209,8 +222,8 @@ class AnalyticsDashboard extends Component
                     'data' => array_column($dates, 'inbound'),
                     'borderColor' => '#14b8a6',
                     'backgroundColor' => 'rgba(20, 184, 166, 0.4)',
-                ]
-            ]
+                ],
+            ],
         ];
     }
 
@@ -228,7 +241,7 @@ class AnalyticsDashboard extends Component
                             $txn->type,
                             $txn->amount,
                             $txn->description,
-                            $txn->invoice_number
+                            $txn->invoice_number,
                         ]);
                     }
                 });
@@ -303,7 +316,7 @@ class AnalyticsDashboard extends Component
                 ->filter()
                 ->toArray();
 
-            if (!empty($contactIds)) {
+            if (! empty($contactIds)) {
                 // Fetch contacts in chunks
                 \App\Models\Contact::whereIn('id', $contactIds)
                     ->chunk(500, function ($contacts) use ($handle, $teamId) {
@@ -338,7 +351,7 @@ class AnalyticsDashboard extends Component
             ->where('team_id', $teamId)
             ->where('direction', 'outbound')
             ->where('created_at', '>=', $startDate)
-            ->selectRaw("status, COUNT(*) as total")
+            ->selectRaw('status, COUNT(*) as total')
             ->whereIn('status', $this->webhookStatuses)
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -430,7 +443,7 @@ class AnalyticsDashboard extends Component
                 'team_id' => $teamId,
                 'user_id' => $userId,
                 'report_type' => 'monthly_usage',
-                'frequency' => 'weekly' // Default
+                'frequency' => 'weekly', // Default
             ]);
         }
     }

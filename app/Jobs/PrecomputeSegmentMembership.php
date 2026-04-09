@@ -17,6 +17,7 @@ class PrecomputeSegmentMembership implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $segment;
+
     public $timeout = 3600; // 1 hour timeout for large segments
 
     /**
@@ -32,7 +33,7 @@ class PrecomputeSegmentMembership implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("Starting segment precomputation", ['segment_id' => $this->segment->id]);
+        Log::info('Starting segment precomputation', ['segment_id' => $this->segment->id]);
 
         $startTime = microtime(true);
 
@@ -48,7 +49,7 @@ class PrecomputeSegmentMembership implements ShouldQueue
 
         // Insert in batches
         $query->chunk(1000, function ($contacts) use (&$totalInserted) {
-            $memberships = $contacts->map(fn($contact) => [
+            $memberships = $contacts->map(fn ($contact) => [
                 'segment_id' => $this->segment->id,
                 'contact_id' => $contact->id,
                 'added_at' => now(),
@@ -66,7 +67,7 @@ class PrecomputeSegmentMembership implements ShouldQueue
 
         $duration = round(microtime(true) - $startTime, 2);
 
-        Log::info("Completed segment precomputation", [
+        Log::info('Completed segment precomputation', [
             'segment_id' => $this->segment->id,
             'member_count' => $totalInserted,
             'duration_seconds' => $duration,

@@ -24,7 +24,7 @@ class WhatsAppSetupStateMachine
         $fromState = $this->getCurrentState($team);
 
         // Validate transition
-        if (!$this->canTransition($fromState, $toState)) {
+        if (! $this->canTransition($fromState, $toState)) {
             throw new InvalidStateTransitionException(
                 $fromState->value,
                 $toState->value,
@@ -40,7 +40,7 @@ class WhatsAppSetupStateMachine
             ];
 
             // Set started_at on first transition from NOT_CONFIGURED
-            if ($fromState === WhatsAppSetupState::NOT_CONFIGURED && !$team->whatsapp_setup_started_at) {
+            if ($fromState === WhatsAppSetupState::NOT_CONFIGURED && ! $team->whatsapp_setup_started_at) {
                 $updates['whatsapp_setup_started_at'] = now();
                 $updates['whatsapp_setup_in_progress'] = true;
             }
@@ -52,7 +52,7 @@ class WhatsAppSetupStateMachine
             }
 
             // Reset retry count on successful progress
-            if (!$toState->isError()) {
+            if (! $toState->isError()) {
                 $updates['whatsapp_setup_retry_count'] = 0;
             }
 
@@ -65,7 +65,7 @@ class WhatsAppSetupStateMachine
             $this->onStateEnter($team, $toState, $metadata);
         });
 
-        Log::info("WhatsApp setup state transition", [
+        Log::info('WhatsApp setup state transition', [
             'team_id' => $team->id,
             'from' => $fromState->value,
             'to' => $toState->value,
@@ -78,6 +78,7 @@ class WhatsAppSetupStateMachine
     public function canTransition(WhatsAppSetupState $from, WhatsAppSetupState $to): bool
     {
         $allowedTransitions = $from->getAllowedTransitions();
+
         return in_array($to, $allowedTransitions);
     }
 
@@ -103,6 +104,7 @@ class WhatsAppSetupStateMachine
     public function canRetry(Team $team): bool
     {
         $currentState = $this->getCurrentState($team);
+
         return $currentState->canRetry() && $team->whatsapp_setup_retry_count < 3;
     }
 
@@ -117,7 +119,7 @@ class WhatsAppSetupStateMachine
     /**
      * Rollback to a safe state
      */
-    public function rollback(Team $team, WhatsAppSetupState|string $toState = null): void
+    public function rollback(Team $team, WhatsAppSetupState|string|null $toState = null): void
     {
         if ($toState === null) {
             $toState = WhatsAppSetupState::NOT_CONFIGURED;
@@ -133,7 +135,7 @@ class WhatsAppSetupStateMachine
             'whatsapp_setup_in_progress' => false,
         ]);
 
-        Log::warning("WhatsApp setup rolled back", [
+        Log::warning('WhatsApp setup rolled back', [
             'team_id' => $team->id,
             'to_state' => $toState->value,
         ]);
@@ -153,7 +155,7 @@ class WhatsAppSetupStateMachine
             'whatsapp_setup_retry_count' => 0,
         ]);
 
-        Log::info("WhatsApp setup reset", ['team_id' => $team->id]);
+        Log::info('WhatsApp setup reset', ['team_id' => $team->id]);
     }
 
     /**
@@ -161,7 +163,7 @@ class WhatsAppSetupStateMachine
      */
     public function isStuck(Team $team): bool
     {
-        if (!$team->whatsapp_setup_in_progress || !$team->whatsapp_setup_started_at) {
+        if (! $team->whatsapp_setup_in_progress || ! $team->whatsapp_setup_started_at) {
             return false;
         }
 
@@ -173,6 +175,7 @@ class WhatsAppSetupStateMachine
         }
 
         $elapsed = $team->whatsapp_setup_started_at->diffInSeconds(now());
+
         return $elapsed > $timeout;
     }
 
@@ -189,6 +192,7 @@ class WhatsAppSetupStateMachine
             }
 
             $team->update(['whatsapp_setup_in_progress' => true]);
+
             return true;
         });
     }
@@ -251,7 +255,7 @@ class WhatsAppSetupStateMachine
             $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                 $team,
                 'quality_red',
-                "CRITICAL: Your WhatsApp Account has been SUSPENDED. All campaigns are paused.",
+                'CRITICAL: Your WhatsApp Account has been SUSPENDED. All campaigns are paused.',
                 ['status' => 'suspended']
             ));
         }
@@ -268,7 +272,7 @@ class WhatsAppSetupStateMachine
             $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                 $team,
                 'quality_yellow',
-                "WARNING: Your WhatsApp Account status is DEGRADED. Please check your dashboard.",
+                'WARNING: Your WhatsApp Account status is DEGRADED. Please check your dashboard.',
                 ['status' => 'degraded']
             ));
         }
@@ -285,7 +289,7 @@ class WhatsAppSetupStateMachine
             $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                 $team,
                 'setup_success',
-                "Your WhatsApp Business Account is now ACTIVE and ready to send messages.",
+                'Your WhatsApp Business Account is now ACTIVE and ready to send messages.',
                 ['status' => 'active']
             ));
         }
@@ -302,7 +306,7 @@ class WhatsAppSetupStateMachine
             $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                 $team,
                 'token_expiry',
-                "ACTION REQUIRED: Your WhatsApp Access Token has expired. Please reconnect.",
+                'ACTION REQUIRED: Your WhatsApp Access Token has expired. Please reconnect.',
                 ['status' => 'token_expired']
             ));
         }

@@ -40,7 +40,7 @@ class RoleCreator extends Component
         return [
             'role.name' => [
                 'required',
-                'unique:roles,name,' . ($this->role->id ?? 'NULL'),
+                'unique:roles,name,'.($this->role->id ?? 'NULL'),
                 new PurifiedInput(t('sql_injection_error')),
                 'max:255',
             ],
@@ -60,8 +60,8 @@ class RoleCreator extends Component
 
                 return redirect()->intended(route('admin.roles.list', absolute: false));
             } catch (\Exception $e) {
-                app_log('Failed to save role: ' . $e->getMessage(), 'error', $e, [
-                    'role_id'             => $this->role->id ?? null,
+                app_log('Failed to save role: '.$e->getMessage(), 'error', $e, [
+                    'role_id' => $this->role->id ?? null,
                     'selectedPermissions' => $this->selectedPermissions,
                 ]);
 

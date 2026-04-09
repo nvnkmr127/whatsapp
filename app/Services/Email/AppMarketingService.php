@@ -3,8 +3,8 @@
 namespace App\Services\Email;
 
 use App\Enums\EmailUseCase;
-use App\Models\User;
 use App\Models\EmailTemplate;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -35,7 +35,7 @@ class AppMarketingService
         $count = 0;
         foreach ($users as $user) {
             // Ensure unsubscribe token exists
-            if (!$user->unsubscribe_token) {
+            if (! $user->unsubscribe_token) {
                 $user->update(['unsubscribe_token' => Str::random(32)]);
             }
 
@@ -51,6 +51,7 @@ class AppMarketingService
         }
 
         Log::info("Marketing campaign '{$templateSlug}' dispatched to {$count} users.");
+
         return $count;
     }
 
@@ -67,6 +68,7 @@ class AppMarketingService
                 'unsubscribed_at' => now(),
             ]);
             Log::info("User {$user->email} unsubscribed from marketing.");
+
             return true;
         }
 

@@ -2,14 +2,12 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Models\Team;
-use App\Models\User;
-use App\Models\TenantBackup;
 use App\Services\BackupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
 
 class BackupTest extends TestCase
 {
@@ -20,7 +18,7 @@ class BackupTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->backupService = new BackupService();
+        $this->backupService = new BackupService;
         Storage::fake('local');
         Storage::fake('public');
     }
@@ -30,6 +28,7 @@ class BackupTest extends TestCase
         $team = Team::factory()->create(['name' => 'Team Alpha']);
 
         $backupRecord = $this->backupService->backupTenant($team);
+        $backupRecord->refresh();
 
         // Verify record
         $this->assertDatabaseHas('tenant_backups', [

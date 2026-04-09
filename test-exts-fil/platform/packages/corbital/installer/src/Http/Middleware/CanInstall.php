@@ -31,7 +31,7 @@ class CanInstall
         // If the application is already installed, redirect to the home page
         // unless the user is on the finished page
         if (
-            $this->installer->isAppInstalled() && ! $request->is(config('installer.routes.prefix') . '/finished')
+            $this->installer->isAppInstalled() && ! $request->is(config('installer.routes.prefix').'/finished')
         ) {
             return redirect('/');
         }

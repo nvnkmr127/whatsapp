@@ -10,16 +10,21 @@ class TemplatePicker extends Component
 {
     // Props
     public $selectedTemplateId = null;
+
     public $allowedCategories = []; // Empty = All allowed
+
     public $minReadiness = 70;
 
     // Filters
     public $categoryFilter = '';
+
     public $languageFilter = '';
+
     public $showInactive = false;
 
     // Computed: Selected Template Context
     public $selectedTemplateReadiness = null;
+
     public $selectionWarning = null;
 
     public function mount($preselectedId = null, $allowedCategories = [], $minReadiness = 70)
@@ -37,9 +42,10 @@ class TemplatePicker extends Component
 
     public function validateSelection($id)
     {
-        if (!$id) {
+        if (! $id) {
             $this->selectedTemplateReadiness = null;
             $this->selectionWarning = null;
+
             return;
         }
 
@@ -47,8 +53,9 @@ class TemplatePicker extends Component
             ->where('team_id', Auth::user()->currentTeam->id)
             ->first();
 
-        if (!$tpl)
+        if (! $tpl) {
             return;
+        }
 
         $this->selectedTemplateReadiness = $tpl->readiness_score;
 
@@ -68,12 +75,12 @@ class TemplatePicker extends Component
             ->where('team_id', Auth::user()->currentTeam->id);
 
         // Security Scope (unless showing inactive explicitly)
-        if (!$this->showInactive) {
+        if (! $this->showInactive) {
             $query->safeForSending();
         }
 
         // Category Filter (Hard constraint + User filter)
-        if (!empty($this->allowedCategories)) {
+        if (! empty($this->allowedCategories)) {
             $query->whereIn('category', $this->allowedCategories);
         }
 
@@ -91,7 +98,7 @@ class TemplatePicker extends Component
     public function render()
     {
         return view('livewire.templates.template-picker', [
-            'templates' => $this->templates
+            'templates' => $this->templates,
         ]);
     }
 }

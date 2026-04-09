@@ -13,7 +13,7 @@ class OptInValidator
      */
     public function validate(Contact $contact, string $messageType = 'transactional'): ValidationResult
     {
-        $result = new ValidationResult();
+        $result = new ValidationResult;
 
         // Check if opted out
         if ($contact->opt_in_status === 'opted_out') {

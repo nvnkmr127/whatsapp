@@ -42,9 +42,9 @@ class DatabaseMigrator
     /**
      * Run the application migrations.
      *
-     * @param  bool          $pretend  Run the migrations in "pretend" mode
-     * @param  callable|null $callback Optional callback for each migration
-     * @return array         Migration results
+     * @param  bool  $pretend  Run the migrations in "pretend" mode
+     * @param  callable|null  $callback  Optional callback for each migration
+     * @return array Migration results
      */
     public function run(bool $pretend = false, ?callable $callback = null): array
     {
@@ -62,7 +62,7 @@ class DatabaseMigrator
                 return $this->migrationResults;
             }
 
-            $this->logInfo('Running ' . count($migrationFiles) . ' migrations...');
+            $this->logInfo('Running '.count($migrationFiles).' migrations...');
 
             // Set up options for migrations
             $options = [
@@ -74,10 +74,10 @@ class DatabaseMigrator
 
             // Process results
             foreach ($migrationFiles as $file => $path) {
-                $migrationName                          = $this->getMigrationName($file);
+                $migrationName = $this->getMigrationName($file);
                 $this->migrationResults[$migrationName] = [
                     'status' => self::STATUS_SUCCESS,
-                    'file'   => $file,
+                    'file' => $file,
                 ];
 
                 if ($callback) {
@@ -88,14 +88,14 @@ class DatabaseMigrator
             $this->logInfo('Migrations completed successfully.');
 
         } catch (Exception $e) {
-            $this->logError('Migration failed: ' . $e->getMessage());
+            $this->logError('Migration failed: '.$e->getMessage());
 
             // Record the failed migration
             if (isset($migrationName)) {
                 $this->migrationResults[$migrationName] = [
                     'status' => self::STATUS_FAILED,
-                    'file'   => $file ?? null,
-                    'error'  => $e->getMessage(),
+                    'file' => $file ?? null,
+                    'error' => $e->getMessage(),
                 ];
 
                 if ($callback) {
@@ -110,8 +110,8 @@ class DatabaseMigrator
     /**
      * Rollback the last batch of migrations.
      *
-     * @param  int   $steps   Number of migration batches to rollback
-     * @param  bool  $pretend Run the migrations in "pretend" mode
+     * @param  int  $steps  Number of migration batches to rollback
+     * @param  bool  $pretend  Run the migrations in "pretend" mode
      * @return array Rollback results
      */
     public function rollback(int $steps = 1, bool $pretend = false): array
@@ -124,7 +124,7 @@ class DatabaseMigrator
             // Set up options for rollback
             $options = [
                 'pretend' => $pretend,
-                'step'    => $steps,
+                'step' => $steps,
             ];
 
             $migrationsRolledBack = $this->migrator->rollback(
@@ -133,23 +133,23 @@ class DatabaseMigrator
             );
 
             foreach ($migrationsRolledBack as $migration) {
-                $migrationName           = $this->getMigrationName($migration);
+                $migrationName = $this->getMigrationName($migration);
                 $results[$migrationName] = [
                     'status' => self::STATUS_SUCCESS,
-                    'file'   => $migration,
+                    'file' => $migration,
                 ];
             }
 
             $this->logInfo('Rollback completed successfully.');
 
         } catch (Exception $e) {
-            $this->logError('Rollback failed: ' . $e->getMessage());
+            $this->logError('Rollback failed: '.$e->getMessage());
 
             if (isset($migrationName)) {
                 $results[$migrationName] = [
                     'status' => self::STATUS_FAILED,
-                    'file'   => $migration ?? null,
-                    'error'  => $e->getMessage(),
+                    'file' => $migration ?? null,
+                    'error' => $e->getMessage(),
                 ];
             }
         }
@@ -169,7 +169,7 @@ class DatabaseMigrator
             return count($allMigrations) > count($ranMigrations);
         } catch (QueryException $e) {
             // If migrations table doesn't exist yet, migrations are needed
-            $this->logWarning('Error checking migrations: ' . $e->getMessage());
+            $this->logWarning('Error checking migrations: '.$e->getMessage());
 
             return true;
         }
@@ -191,7 +191,7 @@ class DatabaseMigrator
                 return ! in_array($this->getMigrationName($migration), $ranMigrations);
             });
         } catch (QueryException $e) {
-            $this->logWarning('Error getting pending migrations: ' . $e->getMessage());
+            $this->logWarning('Error getting pending migrations: '.$e->getMessage());
 
             return $this->getAllMigrationFiles();
         }
@@ -239,9 +239,9 @@ class DatabaseMigrator
     protected function repositoryExists(): bool
     {
         // Use a retry mechanism to handle potential database connection issues
-        $attempts    = 0;
+        $attempts = 0;
         $maxAttempts = 3;
-        $delay       = 500; // milliseconds
+        $delay = 500; // milliseconds
 
         while ($attempts < $maxAttempts) {
             try {
@@ -272,7 +272,7 @@ class DatabaseMigrator
      */
     protected function logInfo(string $message): void
     {
-        Log::info('[Database Migrator] ' . $message);
+        Log::info('[Database Migrator] '.$message);
     }
 
     /**
@@ -280,7 +280,7 @@ class DatabaseMigrator
      */
     protected function logError(string $message): void
     {
-        Log::error('[Database Migrator] ' . $message);
+        Log::error('[Database Migrator] '.$message);
     }
 
     /**
@@ -288,7 +288,7 @@ class DatabaseMigrator
      */
     protected function logWarning(string $message): void
     {
-        Log::warning('[Database Migrator] ' . $message);
+        Log::warning('[Database Migrator] '.$message);
     }
 
     /**

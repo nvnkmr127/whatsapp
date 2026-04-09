@@ -68,7 +68,7 @@ class MessageBotCreator extends Component
     public $isUploading = false;
 
     protected $listeners = [
-        'upload-started'  => 'setUploading',
+        'upload-started' => 'setUploading',
         'upload-finished' => 'setUploadingComplete',
     ];
 
@@ -79,11 +79,11 @@ class MessageBotCreator extends Component
 
             return redirect(route('admin.dashboard'));
         }
-        $this->id            = $this->getId();
-        $this->extensions    = get_meta_allowed_extension();
+        $this->id = $this->getId();
+        $this->extensions = get_meta_allowed_extension();
         $this->relation_type = array_key_first(\App\Enums\WhatsAppTemplateRelationType::getRelationType());
-        $this->reply_type    = array_key_first(\App\Enums\WhatsAppTemplateRelationType::getReplyType());
-        $this->fileType      = 'image';
+        $this->reply_type = array_key_first(\App\Enums\WhatsAppTemplateRelationType::getReplyType());
+        $this->fileType = 'image';
         if ($messagebotId) {
             $this->message_bot = MessageBots::find($messagebotId);
 
@@ -122,7 +122,7 @@ class MessageBotCreator extends Component
         );
 
         $this->mergeFields = json_encode(array_map(fn ($value) => [
-            'key'   => ucfirst($value['name']),
+            'key' => ucfirst($value['name']),
             'value' => $value['key'],
         ], $field));
     }
@@ -130,20 +130,20 @@ class MessageBotCreator extends Component
     public function loadTemplateData()
     {
         if ($this->message_bot) {
-            $this->bot_name        = $this->message_bot->name;
-            $this->relation_type   = $this->message_bot->rel_type;
-            $this->reply_text      = $this->message_bot->reply_text;
-            $this->reply_type      = $this->message_bot->reply_type;
+            $this->bot_name = $this->message_bot->name;
+            $this->relation_type = $this->message_bot->rel_type;
+            $this->reply_text = $this->message_bot->reply_text;
+            $this->reply_type = $this->message_bot->reply_type;
             $this->trigger_keyword = $this->message_bot->trigger ? array_filter(explode(',', $this->message_bot->trigger)) : [];
 
-            $this->header      = $this->message_bot->bot_header;
-            $this->footer      = $this->message_bot->bot_footer;
-            $this->button1     = $this->message_bot->button1;
-            $this->button1_id  = $this->message_bot->button1_id;
-            $this->button2     = $this->message_bot->button2;
-            $this->button2_id  = $this->message_bot->button2_id;
-            $this->button3     = $this->message_bot->button3;
-            $this->button3_id  = $this->message_bot->button3_id;
+            $this->header = $this->message_bot->bot_header;
+            $this->footer = $this->message_bot->bot_footer;
+            $this->button1 = $this->message_bot->button1;
+            $this->button1_id = $this->message_bot->button1_id;
+            $this->button2 = $this->message_bot->button2;
+            $this->button2_id = $this->message_bot->button2_id;
+            $this->button3 = $this->message_bot->button3;
+            $this->button3_id = $this->message_bot->button3_id;
             $this->button_name = $this->message_bot->button_name;
             $this->button_link = $this->message_bot->button_url;
             $this->file_upload = $this->message_bot->filename;
@@ -179,9 +179,9 @@ class MessageBotCreator extends Component
 
         if ($this->file_upload instanceof \Illuminate\Http\UploadedFile) {
             $mimeTypes = [
-                'image'    => 'mimes:jpeg,png|max:5120',
+                'image' => 'mimes:jpeg,png|max:5120',
                 'document' => 'mimes:pdf,doc,docx,txt,xls,xlsx,ppt,pptx|max:102400',
-                'video'    => 'mimes:mp4,3gp|max:16384',
+                'video' => 'mimes:mp4,3gp|max:16384',
             ];
 
             // Detect file type by MIME and apply appropriate rules
@@ -203,22 +203,22 @@ class MessageBotCreator extends Component
         }
 
         return [
-            'bot_name'        => ['required', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'relation_type'   => 'required|string|max:50',
+            'bot_name' => ['required', 'string', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'relation_type' => 'required|string|max:50',
             'reply_text' => ['required', 'string', new PurifiedInput(t('sql_injection_error'))],
-            'reply_type'      => 'required|max:1024',
+            'reply_type' => 'required|max:1024',
             'trigger_keyword' => ($this->reply_type == 1 || $this->reply_type == 2) ? 'required' : 'nullable',
-            'button_link'     => ['nullable', 'url', 'max:255', new PurifiedInput(t('sql_injection_error'))],
-            'button1'         => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
-            'button2'         => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
-            'button3'         => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
-            'button_name'     => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
-            'header'          => ['nullable', 'max:60', new PurifiedInput(t('sql_injection_error'))],
-            'footer'          => ['nullable', 'max:60', new PurifiedInput(t('sql_injection_error'))],
-            'button1_id'      => ['nullable', 'max:256', new PurifiedInput(t('sql_injection_error'))],
-            'button2_id'      => ['nullable', 'max:256', new PurifiedInput(t('sql_injection_error'))],
-            'button3_id'      => ['nullable', 'max:256', new PurifiedInput(t('sql_injection_error'))],
-            'file_upload'     => $fileRules,
+            'button_link' => ['nullable', 'url', 'max:255', new PurifiedInput(t('sql_injection_error'))],
+            'button1' => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
+            'button2' => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
+            'button3' => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
+            'button_name' => ['nullable', 'max:20', new PurifiedInput(t('sql_injection_error'))],
+            'header' => ['nullable', 'max:60', new PurifiedInput(t('sql_injection_error'))],
+            'footer' => ['nullable', 'max:60', new PurifiedInput(t('sql_injection_error'))],
+            'button1_id' => ['nullable', 'max:256', new PurifiedInput(t('sql_injection_error'))],
+            'button2_id' => ['nullable', 'max:256', new PurifiedInput(t('sql_injection_error'))],
+            'button3_id' => ['nullable', 'max:256', new PurifiedInput(t('sql_injection_error'))],
+            'file_upload' => $fileRules,
         ];
     }
 
@@ -232,8 +232,8 @@ class MessageBotCreator extends Component
                 if ($this->file_upload && is_array($this->file_upload)) {
                     foreach ($this->file_upload as $file) {
                         $originalName = str_replace(' ', '_', $file->getClientOriginalName());
-                        $uniqueName   = time() . '_' . $originalName;
-                        $file_path    = $file->storeAs('bot_files', $uniqueName, 'public');
+                        $uniqueName = time().'_'.$originalName;
+                        $file_path = $file->storeAs('bot_files', $uniqueName, 'public');
                     }
                 } elseif (is_string($this->file_upload)) {
                     $file_path = $this->file_upload;
@@ -242,23 +242,23 @@ class MessageBotCreator extends Component
                 }
 
                 $this->message_bot->fill([
-                    'name'        => $this->bot_name,
-                    'rel_type'    => $this->relation_type,
-                    'reply_text'  => $this->reply_text,
-                    'reply_type'  => $this->reply_type,
-                    'trigger'     => ($this->reply_type == 1 || $this->reply_type == 2) ? implode(',', $this->trigger_keyword) : null,
-                    'bot_header'  => $this->header,
-                    'bot_footer'  => $this->footer,
-                    'button1'     => $this->button1,
-                    'button1_id'  => $this->button1_id,
-                    'button2'     => $this->button2,
-                    'button2_id'  => $this->button2_id,
-                    'button3'     => $this->button3,
-                    'button3_id'  => $this->button3_id,
+                    'name' => $this->bot_name,
+                    'rel_type' => $this->relation_type,
+                    'reply_text' => $this->reply_text,
+                    'reply_type' => $this->reply_type,
+                    'trigger' => ($this->reply_type == 1 || $this->reply_type == 2) ? implode(',', $this->trigger_keyword) : null,
+                    'bot_header' => $this->header,
+                    'bot_footer' => $this->footer,
+                    'button1' => $this->button1,
+                    'button1_id' => $this->button1_id,
+                    'button2' => $this->button2,
+                    'button2_id' => $this->button2_id,
+                    'button3' => $this->button3,
+                    'button3_id' => $this->button3_id,
                     'button_name' => $this->button_name,
-                    'button_url'  => $this->button_link,
-                    'addedfrom'   => 1,
-                    'filename'    => $file_path,
+                    'button_url' => $this->button_link,
+                    'addedfrom' => 1,
+                    'filename' => $file_path,
                 ]);
 
                 $this->message_bot->save();

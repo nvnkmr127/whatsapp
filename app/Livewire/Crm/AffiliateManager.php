@@ -11,6 +11,7 @@ class AffiliateManager extends Component
     use WithPagination;
 
     public $showCreateModal = false;
+
     public $newAffiliate = [
         'user_id' => '',
         'code' => '',

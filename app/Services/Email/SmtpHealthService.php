@@ -4,16 +4,12 @@ namespace App\Services\Email;
 
 use App\Models\SmtpConfig;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 
 class SmtpHealthService
 {
     /**
      * Test the connection for a given SMTP config.
-     *
-     * @param SmtpConfig $config
-     * @return bool
      */
     public function testConnection(SmtpConfig $config): bool
     {
@@ -31,10 +27,12 @@ class SmtpHealthService
             $transport->stop();
 
             $this->reportSuccess($config);
+
             return true;
         } catch (\Exception $e) {
-            Log::error("SMTP Connection Test Failed for {$config->name}: " . $e->getMessage());
+            Log::error("SMTP Connection Test Failed for {$config->name}: ".$e->getMessage());
             $this->reportFailure($config);
+
             return false;
         }
     }

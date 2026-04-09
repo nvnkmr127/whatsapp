@@ -14,7 +14,7 @@ return [
     |--------------------------------------------------------------------------
     | System Origin (Global Default)
     |--------------------------------------------------------------------------
-    | Fallback phone number used for system OTPs if team-specific 
+    | Fallback phone number used for system OTPs if team-specific
     | configuration is missing.
     */
     'phone_number_id' => env('WHATSAPP_SYSTEM_PHONE_NUMBER_ID'),

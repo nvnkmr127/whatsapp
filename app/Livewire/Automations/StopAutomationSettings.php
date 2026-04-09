@@ -7,6 +7,7 @@ use Livewire\Component;
 class StopAutomationSettings extends Component
 {
     public $stop_bots_keyword = [];
+
     public $restart_bots_after = null;
 
     protected $rules = [
@@ -31,7 +32,7 @@ class StopAutomationSettings extends Component
 
         $settings = [
             'stop_bots_keyword' => $this->stop_bots_keyword,
-            'restart_bots_after' => $this->restart_bots_after
+            'restart_bots_after' => $this->restart_bots_after,
         ];
 
         foreach ($settings as $key => $value) {

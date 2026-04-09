@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
 /**
@@ -21,26 +21,26 @@ use RuntimeException;
  * table was overwritten by a backup restore. The BackupService reads this
  * registry after every restore and re-applies the latest decision.
  *
- * @property int         $id
- * @property int         $team_id
- * @property int|null    $contact_id
- * @property string      $phone_number
- * @property string      $action          OPT_IN | OPT_OUT | OPT_IN_ATTEMPT | OPT_OUT_ATTEMPT | CONSENT_EXPIRED | CONSENT_RENEWED
- * @property string|null $source          STOP_KEYWORD | MANUAL_ADMIN | API | START_KEYWORD …
- * @property string|null $channel         whatsapp | sms | web …
+ * @property int $id
+ * @property int $team_id
+ * @property int|null $contact_id
+ * @property string $phone_number
+ * @property string $action OPT_IN | OPT_OUT | OPT_IN_ATTEMPT | OPT_OUT_ATTEMPT | CONSENT_EXPIRED | CONSENT_RENEWED
+ * @property string|null $source STOP_KEYWORD | MANUAL_ADMIN | API | START_KEYWORD …
+ * @property string|null $channel whatsapp | sms | web …
  * @property string|null $notes
  * @property string|null $proof_url
  * @property string|null $ip_address
  * @property string|null $user_agent
  * @property \Carbon\Carbon|null $expires_at
- * @property \Carbon\Carbon      $recorded_at
- * @property \Carbon\Carbon      $created_at
- * @property \Carbon\Carbon      $updated_at
+ * @property \Carbon\Carbon $recorded_at
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
  */
 class ConsentRegistry extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $table = 'consent_registry';
 
@@ -81,8 +81,8 @@ class ConsentRegistry extends Model
          */
         static::updating(function (ConsentRegistry $model) {
             throw new RuntimeException(
-                'ConsentRegistry is immutable. Consent records cannot be modified after creation. ' .
-                'Create a new registry entry instead. ' .
+                'ConsentRegistry is immutable. Consent records cannot be modified after creation. '.
+                'Create a new registry entry instead. '.
                 '[GDPR Compliance Violation Prevention — Consent Ledger]'
             );
         });
@@ -92,8 +92,8 @@ class ConsentRegistry extends Model
          */
         static::deleting(function (ConsentRegistry $model) {
             throw new RuntimeException(
-                'ConsentRegistry rows cannot be deleted. ' .
-                'Deletion of consent records is a GDPR compliance violation. ' .
+                'ConsentRegistry rows cannot be deleted. '.
+                'Deletion of consent records is a GDPR compliance violation. '.
                 '[GDPR Compliance Violation Prevention — Consent Ledger]'
             );
         });
@@ -102,8 +102,6 @@ class ConsentRegistry extends Model
     // ──────────────────────────────────────────────────────────────────────────
     // RELATIONSHIPS
     // ──────────────────────────────────────────────────────────────────────────
-
-
 
     public function contact()
     {
@@ -137,6 +135,7 @@ class ConsentRegistry extends Model
     public static function isOptedOut(int $teamId, string $phoneNumber): bool
     {
         $latest = static::getLatestAuthoritativeState($teamId, $phoneNumber);
+
         return $latest && $latest->action === 'OPT_OUT';
     }
 

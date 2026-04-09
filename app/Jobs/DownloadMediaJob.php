@@ -17,10 +17,13 @@ class DownloadMediaJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $messageId;
+
     public $mediaId;
+
     public $teamId;
 
     public $tries = 3;
+
     public $backoff = [30, 60, 120];
 
     public function __construct($messageId, $mediaId, $teamId)
@@ -35,12 +38,12 @@ class DownloadMediaJob implements ShouldQueue
         $message = Message::find($this->messageId);
         $team = Team::find($this->teamId);
 
-        if (!$message || !$team) {
+        if (! $message || ! $team) {
             return;
         }
 
         try {
-            $mediaService = new MediaService();
+            $mediaService = new MediaService;
             $mediaUrl = $mediaService->downloadAndStore($this->mediaId, $team);
 
             $message->update([
@@ -53,7 +56,7 @@ class DownloadMediaJob implements ShouldQueue
             \App\Events\MessageReceived::dispatch($message);
 
         } catch (\Exception $e) {
-            Log::error("DownloadMediaJob FAILED: " . $e->getMessage());
+            Log::error('DownloadMediaJob FAILED: '.$e->getMessage());
             throw $e;
         }
     }

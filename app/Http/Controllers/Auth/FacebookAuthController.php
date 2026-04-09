@@ -10,16 +10,14 @@ use App\Services\OfferEligibilityService;
 use App\Services\UniqueIdentityService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
+use Laravel\Socialite\Facades\Socialite;
 
 class FacebookAuthController extends Controller
 {
     public function __construct(
         private readonly UniqueIdentityService $identity,
-    ) {
-    }
+    ) {}
 
     /**
      * Redirect to Facebook.
@@ -37,7 +35,8 @@ class FacebookAuthController extends Controller
         try {
             $facebookUser = Socialite::driver('facebook')->user();
         } catch (\Exception $e) {
-            Log::error("Facebook OAuth error: " . $e->getMessage());
+            Log::error('Facebook OAuth error: '.$e->getMessage());
+
             return redirect()->route('login')->with('error', 'Failed to authenticate with Facebook.');
         }
 
@@ -94,14 +93,14 @@ class FacebookAuthController extends Controller
                 $email = $facebookUser->getEmail();
                 $user = $email ? User::where('email', $email)->first() : null;
 
-                if (!$user) {
+                if (! $user) {
                     $ip = $request->ip() ?? '0.0.0.0';
                     $identityResult = $this->identity->check(
                         email: $email ?? 'unknown@unknown.local',
                         ip: $ip,
                     );
 
-                    if (!$identityResult->passed) {
+                    if (! $identityResult->passed) {
                         return redirect()->route('login')->withErrors(['oauth' => $identityResult->denial_reason]);
                     }
 
@@ -116,7 +115,7 @@ class FacebookAuthController extends Controller
                     // ── Create team ─────────────────────────────────────────────
                     $team = \App\Models\Team::forceCreate([
                         'user_id' => $user->id,
-                        'name' => ($user->name ?: 'Facebook') . "'s Team",
+                        'name' => ($user->name ?: 'Facebook')."'s Team",
                         'personal_team' => true,
                         'subscription_plan' => 'trial',
                         'subscription_status' => 'trial',
@@ -159,7 +158,7 @@ class FacebookAuthController extends Controller
             Auth::login($user, true);
 
             AuditService::log('Auth.Success', $user->id, $user->email ?? $facebookUser->getId(), 'facebook', [
-                'facebook_id' => $facebookUser->getId()
+                'facebook_id' => $facebookUser->getId(),
             ]);
 
             return redirect()->route('dashboard');

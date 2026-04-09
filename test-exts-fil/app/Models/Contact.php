@@ -10,28 +10,28 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property int                             $id
- * @property string                          $firstname
- * @property string                          $lastname
- * @property string|null                     $company
- * @property string                          $type
- * @property string|null                     $description
- * @property int|null                        $country_id
- * @property string|null                     $zip
- * @property string|null                     $city
- * @property string|null                     $state
- * @property string|null                     $address
- * @property int|null                        $assigned_id
- * @property int                             $status_id
- * @property int                             $source_id
- * @property string|null                     $email
- * @property string|null                     $website
- * @property string                          $phone
- * @property int|null                        $is_enabled
- * @property int                             $addedfrom
- * @property string|null                     $dateassigned
- * @property string|null                     $last_status_change
- * @property string|null                     $default_language
+ * @property int $id
+ * @property string $firstname
+ * @property string $lastname
+ * @property string|null $company
+ * @property string $type
+ * @property string|null $description
+ * @property int|null $country_id
+ * @property string|null $zip
+ * @property string|null $city
+ * @property string|null $state
+ * @property string|null $address
+ * @property int|null $assigned_id
+ * @property int $status_id
+ * @property int $source_id
+ * @property string|null $email
+ * @property string|null $website
+ * @property string $phone
+ * @property int|null $is_enabled
+ * @property int $addedfrom
+ * @property string|null $dateassigned
+ * @property string|null $last_status_change
+ * @property string|null $default_language
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\User|null $assignedTo
@@ -125,7 +125,7 @@ class Contact extends Model
     protected function fullName(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->firstname . ' ' . $this->lastname,
+            get: fn () => $this->firstname.' '.$this->lastname,
         );
     }
 
@@ -203,6 +203,6 @@ class Contact extends Model
     public function scopeByPhone($query, $phone)
     {
         return $query->where('phone', $phone)
-            ->orWhere('phone', '+' . $phone);
+            ->orWhere('phone', '+'.$phone);
     }
 }

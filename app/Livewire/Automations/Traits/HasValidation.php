@@ -16,11 +16,11 @@ trait HasValidation
             'trigger_config' => $this->triggerConfig,
             'flow_data' => [
                 'nodes' => array_values($this->nodes),
-                'edges' => array_values($this->edges)
-            ]
+                'edges' => array_values($this->edges),
+            ],
         ]);
 
-        $results = (new AutomationValidationService())->validate($automation);
+        $results = (new AutomationValidationService)->validate($automation);
         $this->validationIssues = $results['issues'];
         $this->isActivatable = $results['is_activatable'];
 

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Team;
 use App\Models\Plan;
+use App\Models\Team;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -17,7 +17,7 @@ class SubscriptionService
         $currentPlan = Plan::where('name', $team->subscription_plan ?? 'basic')->first();
         $newPlan = Plan::where('name', $newPlanName)->first();
 
-        if (!$newPlan) {
+        if (! $newPlan) {
             throw new \Exception("Target plan '{$newPlanName}' not found.");
         }
 
@@ -65,7 +65,7 @@ class SubscriptionService
             $team->subscription_status = 'active';
 
             // Set grace period if downgrade or resource overage
-            if ($impact['type'] === 'downgrade' || !$impact['is_safe']) {
+            if ($impact['type'] === 'downgrade' || ! $impact['is_safe']) {
                 $team->subscription_grace_ends_at = now()->addDays(7);
             } else {
                 $team->subscription_grace_ends_at = null;
@@ -74,7 +74,7 @@ class SubscriptionService
             try {
                 $team->save();
             } catch (\Exception $e) {
-                Log::error("Failed to save subscription update for Team {$team->id}: " . $e->getMessage());
+                Log::error("Failed to save subscription update for Team {$team->id}: ".$e->getMessage());
                 throw $e; // Re-throw to trigger transaction rollback
             }
 
@@ -93,7 +93,7 @@ class SubscriptionService
     {
         if ($team->subscription_grace_ends_at && $team->subscription_grace_ends_at->isPast()) {
             // Hard enforce: No grace period left.
-            // 1. We don't remove agents automatically (destructive), 
+            // 1. We don't remove agents automatically (destructive),
             // but we block their login/usage via middleware if they are over-limit.
 
             // 2. Clear the grace period flag

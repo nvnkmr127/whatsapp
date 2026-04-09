@@ -5,13 +5,13 @@ use Spatie\LaravelSettings\Migrations\SettingsMigration;
 return new class extends SettingsMigration
 {
     protected array $settings = [
-        'announcement.isEnable'         => '',
-        'announcement.message'          => '',
-        'announcement.link'             => '',
-        'announcement.link_text'        => '',
+        'announcement.isEnable' => '',
+        'announcement.message' => '',
+        'announcement.link' => '',
+        'announcement.link_text' => '',
         'announcement.background_color' => '',
-        'announcement.link_text_color'  => '',
-        'announcement.message_color'    => '',
+        'announcement.link_text_color' => '',
+        'announcement.message_color' => '',
     ];
 
     public function up(): void

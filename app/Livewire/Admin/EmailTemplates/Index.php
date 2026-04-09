@@ -13,7 +13,7 @@ class Index extends Component
             'templates' => EmailTemplate::orderBy('is_locked', 'desc')
                 ->orderBy('name')
                 ->limit(200)
-                ->get()
+                ->get(),
         ])->layout('layouts.app');
     }
 
@@ -21,6 +21,7 @@ class Index extends Component
     {
         if ($template->is_locked) {
             session()->flash('error', 'Cannot delete a locked system template.');
+
             return;
         }
 

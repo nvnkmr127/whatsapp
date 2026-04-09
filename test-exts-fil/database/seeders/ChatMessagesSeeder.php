@@ -20,18 +20,18 @@ class ChatMessagesSeeder extends Seeder
         for ($i = 0; $i < 100; $i++) {
             DB::table('chat_messages')->insert([
                 'interaction_id' => $faker->randomNumber(),
-                'sender_id'      => $faker->randomNumber(),
-                'url'            => $faker->url,
-                'message'        => $faker->paragraph,
-                'status'         => $faker->randomElement(['sent', 'delivered', 'read']),
-                'time_sent'      => now(),
-                'message_id'     => $faker->uuid,
-                'staff_id'       => $faker->uuid,
-                'type'           => $faker->word,
-                'is_read'        => $faker->boolean,
+                'sender_id' => $faker->randomNumber(),
+                'url' => $faker->url,
+                'message' => $faker->paragraph,
+                'status' => $faker->randomElement(['sent', 'delivered', 'read']),
+                'time_sent' => now(),
+                'message_id' => $faker->uuid,
+                'staff_id' => $faker->uuid,
+                'type' => $faker->word,
+                'is_read' => $faker->boolean,
                 'ref_message_id' => $faker->uuid,
-                'created_at'     => now(),
-                'updated_at'     => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

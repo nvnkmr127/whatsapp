@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Services\OfferAuditService;
 use Carbon\Carbon;
 
 /**
@@ -67,7 +66,7 @@ class OfferEligibilityService
         $eligible = true;
 
         foreach ($rules as $rule) {
-            if (!$rule->pass) {
+            if (! $rule->pass) {
                 $eligible = false;
                 $denialReason = $rule->message;
                 break; // First failing rule wins; order matters
@@ -77,7 +76,7 @@ class OfferEligibilityService
         return (object) [
             'eligible' => $eligible,
             'denial_reason' => $denialReason,
-            'rules' => array_map(fn($r) => ['pass' => $r->pass, 'message' => $r->message], $rules),
+            'rules' => array_map(fn ($r) => ['pass' => $r->pass, 'message' => $r->message], $rules),
         ];
     }
 
@@ -105,7 +104,7 @@ class OfferEligibilityService
 
         // ── User-level claim (permanent, non-clearable) ───────────────
         $owner = $team->owner ?? User::find($team->user_id);
-        if ($owner && !$owner->has_claimed_offer) {
+        if ($owner && ! $owner->has_claimed_offer) {
             $owner->has_claimed_offer = true;
             $owner->offer_claimed_at = $claimedAt;
             $owner->saveQuietly();
@@ -180,7 +179,7 @@ class OfferEligibilityService
         $start = get_setting('offer_start_at');
         $end = get_setting('offer_end_at');
 
-        if (!$start && !$end) {
+        if (! $start && ! $end) {
             return $this->result(true, 'No offer window configured – always within window.');
         }
 
@@ -256,7 +255,7 @@ class OfferEligibilityService
     {
         $owner = $team->owner ?? User::find($team->user_id);
 
-        if (!$owner) {
+        if (! $owner) {
             // No owner found — fail safely
             return $this->result(false, 'Team has no associated owner user.');
         }

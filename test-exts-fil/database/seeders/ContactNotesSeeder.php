@@ -22,10 +22,10 @@ class ContactNotesSeeder extends Seeder
             $contactId = $contactIds[array_rand($contactIds)];
 
             ContactNote::create([
-                'contact_id'        => $contactId,
-                'notes_description' => 'Sample note description for contact ID ' . $contactId,
-                'created_at'        => now(),
-                'updated_at'        => now(),
+                'contact_id' => $contactId,
+                'notes_description' => 'Sample note description for contact ID '.$contactId,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

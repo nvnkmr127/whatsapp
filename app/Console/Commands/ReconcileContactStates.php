@@ -42,7 +42,7 @@ class ReconcileContactStates extends Command
             $query->where('team_id', $teamId);
             $this->info("Reconciling team #{$teamId}");
         } else {
-            $this->info("Reconciling all teams");
+            $this->info('Reconciling all teams');
         }
 
         if ($limit) {
@@ -64,7 +64,7 @@ class ReconcileContactStates extends Command
         foreach ($contacts as $contact) {
             $discrepancies = $this->reconcileContact($contact, $stateManager, $autoFix);
 
-            if (!empty($discrepancies)) {
+            if (! empty($discrepancies)) {
                 $stats['discrepancies']++;
 
                 if ($autoFix) {
@@ -90,9 +90,9 @@ class ReconcileContactStates extends Command
             ]
         );
 
-        if ($stats['discrepancies'] > 0 && !$autoFix) {
+        if ($stats['discrepancies'] > 0 && ! $autoFix) {
             $this->newLine();
-            $this->warn("Run with --fix to automatically correct discrepancies");
+            $this->warn('Run with --fix to automatically correct discrepancies');
         }
 
         return 0;
@@ -146,8 +146,8 @@ class ReconcileContactStates extends Command
             $stateManager->updateDerivedFields($contact);
         }
 
-        if (!empty($discrepancies)) {
-            Log::warning("Contact state discrepancies", [
+        if (! empty($discrepancies)) {
+            Log::warning('Contact state discrepancies', [
                 'contact_id' => $contact->id,
                 'discrepancies' => $discrepancies,
                 'fixed' => $autoFix,

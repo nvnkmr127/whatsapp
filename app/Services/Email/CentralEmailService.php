@@ -4,14 +4,14 @@ namespace App\Services\Email;
 
 use App\Enums\EmailUseCase;
 use App\Mail\DynamicSystemMail;
-use Illuminate\Support\Facades\Cache;
+use App\Models\EmailTemplate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
-use App\Models\EmailTemplate;
 
 class CentralEmailService
 {
     protected $dispatcher;
+
     protected $templateService;
 
     public function __construct(EmailDispatcher $dispatcher, EmailTemplateService $templateService)
@@ -44,11 +44,11 @@ class CentralEmailService
             \App\Jobs\Email\SendSystemEmailJob::dispatch($to, $useCase, $mailable, null);
 
         } catch (\Exception $e) {
-            Log::error("CentralEmailService: Failed to queue raw system email", [
+            Log::error('CentralEmailService: Failed to queue raw system email', [
                 'to' => $to,
                 'subject' => $subject,
                 'useCase' => $useCase->value,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -74,10 +74,10 @@ class CentralEmailService
             $this->sendSystemEmail($to, $rendered['subject'], $rendered['html'], $rendered['text'], $useCase, $headers);
 
         } catch (\Exception $e) {
-            Log::error("CentralEmailService: Failed to queue templated email", [
+            Log::error('CentralEmailService: Failed to queue templated email', [
                 'to' => $to,
                 'slug' => $slug,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -88,7 +88,7 @@ class CentralEmailService
      */
     protected function enforceRateLimit(string $key, string $type, int $maxAttempts, int $decaySeconds): void
     {
-        $limitKey = "email_limit:{$type}:" . sha1($key);
+        $limitKey = "email_limit:{$type}:".sha1($key);
 
         if (RateLimiter::tooManyAttempts($limitKey, $maxAttempts)) {
             $seconds = RateLimiter::availableIn($limitKey);

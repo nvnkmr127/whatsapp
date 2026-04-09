@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
-
-use \App\Traits\HasTeam;
 
 class Ticket extends Model
 {

@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class WorkflowLog extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'workflow_id',
@@ -34,8 +34,6 @@ class WorkflowLog extends Model
     {
         return $this->belongsTo(Workflow::class);
     }
-
-
 
     public function subject(): MorphTo
     {

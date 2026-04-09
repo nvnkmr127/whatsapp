@@ -2,20 +2,24 @@
 
 namespace App\Livewire\Auth;
 
-use Livewire\Component;
 use App\Services\OTPService;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component;
 
 class PasswordlessLogin extends Component
 {
     public $identifier = '';
+
     public $type = 'phone'; // email or phone
+
     public $code = '';
+
     public $step = 'request'; // request or verify
+
     public $message = '';
+
     public $error = '';
+
     public $resendCountdown = 0;
 
     public function mount()
@@ -38,14 +42,12 @@ class PasswordlessLogin extends Component
         'type' => 'required|in:email,phone',
     ];
 
-
-
     public function requestOtp(OTPService $otpService)
     {
         // Remove non-numeric characters and ensure leading + for phone
         $this->identifier = preg_replace('/[^0-9+]/', '', $this->identifier);
-        if (!str_starts_with($this->identifier, '+')) {
-            $this->identifier = '+' . $this->identifier;
+        if (! str_starts_with($this->identifier, '+')) {
+            $this->identifier = '+'.$this->identifier;
         }
 
         $this->type = 'phone'; // Enforce phone type
@@ -61,6 +63,7 @@ class PasswordlessLogin extends Component
             $this->error = "Please wait {$remaining} seconds before requesting a new code.";
             // Sync the frontend timer just in case
             $this->dispatch('start-timer', duration: $remaining);
+
             return;
         }
 
@@ -70,7 +73,7 @@ class PasswordlessLogin extends Component
             if ($sent) {
                 session(['otp_last_sent_at' => now()]);
                 $this->step = 'verify';
-                $this->message = 'A 6-digit code has been sent to your ' . ($this->type === 'email' ? 'email' : 'WhatsApp') . '.';
+                $this->message = 'A 6-digit code has been sent to your '.($this->type === 'email' ? 'email' : 'WhatsApp').'.';
                 $this->resendCountdown = 60;
                 $this->dispatch('start-timer', duration: 60);
             } else {
@@ -78,7 +81,7 @@ class PasswordlessLogin extends Component
             }
         } catch (\Exception $e) {
             $this->error = 'An unexpected error occurred. Please try again later.';
-            Log::error("OTP Request Error: " . $e->getMessage());
+            Log::error('OTP Request Error: '.$e->getMessage());
         }
     }
 
@@ -87,8 +90,9 @@ class PasswordlessLogin extends Component
         $this->validate(['code' => 'required|string|size:6']);
         $this->error = '';
 
-        if (!$otpService->verify($this->identifier, $this->code, false)) {
+        if (! $otpService->verify($this->identifier, $this->code, false)) {
             $this->error = 'Invalid or expired code.';
+
             return;
         }
 
@@ -99,7 +103,6 @@ class PasswordlessLogin extends Component
             'code' => $this->code,
         ]));
     }
-
 
     public function render()
     {

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Campaign;
 use App\Models\CampaignSnapshot;
 use App\Models\CampaignSnapshotContact;
-use App\Models\Contact;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -38,11 +37,11 @@ class CampaignSnapshotService
                 'meta' => [
                     'filters' => $campaign->audience_filters ?? [],
                     'created_at' => now(),
-                ]
+                ],
             ]);
 
             // 3. Populate Snapshot Contacts (Chunked to avoid memory issues)
-            $query->chunk(1000, function ($contacts) use ($snapshot) {
+            $query->orderBy('contacts.id')->chunk(1000, function ($contacts) use ($snapshot) {
                 $batch = [];
                 foreach ($contacts as $contact) {
                     $batch[] = [
@@ -60,7 +59,7 @@ class CampaignSnapshotService
             // 4. Update Campaign
             $campaign->update([
                 'last_snapshot_id' => $snapshot->id,
-                'total_contacts' => $count
+                'total_contacts' => $count,
             ]);
 
             Log::info("Created snapshot {$snapshot->id} for Campaign {$campaign->id} with {$count} contacts.");

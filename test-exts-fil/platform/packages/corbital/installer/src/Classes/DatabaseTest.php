@@ -35,16 +35,16 @@ class DatabaseTest
      */
     public function __construct(Connection $connection)
     {
-        $this->connection      = $connection;
+        $this->connection = $connection;
         $this->tablesToCleanup = [$this->testTable, 'test_users', 'test_user_relations'];
     }
 
     /**
      * Run a specific database privilege test.
      *
-     * @param  string  $testName     The name of the test for error reporting
-     * @param  Closure $testFunction The function containing test logic
-     * @return bool    Whether the test passed
+     * @param  string  $testName  The name of the test for error reporting
+     * @param  Closure  $testFunction  The function containing test logic
+     * @return bool Whether the test passed
      */
     public function runTest(string $testName, Closure $testFunction): bool
     {
@@ -53,7 +53,7 @@ class DatabaseTest
 
             return true;
         } catch (QueryException|PDOException $e) {
-            $this->lastError = "[$testName] " . $e->getMessage();
+            $this->lastError = "[$testName] ".$e->getMessage();
 
             return false;
         } finally {
@@ -196,14 +196,14 @@ class DatabaseTest
     public function runAllTests(): array
     {
         return [
-            'DROP'       => $this->testDropTable(),
-            'CREATE'     => $this->testCreateTable(),
-            'INSERT'     => $this->testInsert(),
-            'SELECT'     => $this->testSelect(),
-            'UPDATE'     => $this->testUpdate(),
-            'DELETE'     => $this->testDelete(),
-            'ALTER'      => $this->testAlter(),
-            'INDEX'      => $this->testIndex(),
+            'DROP' => $this->testDropTable(),
+            'CREATE' => $this->testCreateTable(),
+            'INSERT' => $this->testInsert(),
+            'SELECT' => $this->testSelect(),
+            'UPDATE' => $this->testUpdate(),
+            'DELETE' => $this->testDelete(),
+            'ALTER' => $this->testAlter(),
+            'INDEX' => $this->testIndex(),
             'REFERENCES' => $this->testReferences(),
         ];
     }
@@ -232,7 +232,7 @@ class DatabaseTest
     protected function dropTable(?string $tableName = null): void
     {
         try {
-            $pdo       = $this->connection->getPdo();
+            $pdo = $this->connection->getPdo();
             $tableName = $tableName ?: $this->testTable;
             $tableName = $this->withTablePrefix($tableName);
 
@@ -245,8 +245,8 @@ class DatabaseTest
     /**
      * Create a table with specified columns.
      *
-     * @param string|null $tableName The table name (without prefix)
-     * @param array       $columns   Column definitions
+     * @param  string|null  $tableName  The table name (without prefix)
+     * @param  array  $columns  Column definitions
      */
     protected function createTable(?string $tableName = null, array $columns = []): void
     {
@@ -257,8 +257,8 @@ class DatabaseTest
             ];
         }
 
-        $tableName         = $tableName ?: $this->testTable;
-        $tableName         = $this->withTablePrefix($tableName);
+        $tableName = $tableName ?: $this->testTable;
+        $tableName = $this->withTablePrefix($tableName);
         $columnDefinitions = implode(', ', $columns);
 
         try {
@@ -275,7 +275,7 @@ class DatabaseTest
     protected function insertRow(?string $tableName = null): void
     {
         try {
-            $pdo       = $this->connection->getPdo();
+            $pdo = $this->connection->getPdo();
             $tableName = $this->withTablePrefix($tableName ?: $this->testTable);
 
             $stmt = $pdo->prepare("INSERT INTO {$tableName} (test_column) VALUES (?)");
@@ -290,6 +290,6 @@ class DatabaseTest
      */
     protected function withTablePrefix(?string $tableName = null): string
     {
-        return $this->connection->getTablePrefix() . ($tableName ?? $this->testTable);
+        return $this->connection->getTablePrefix().($tableName ?? $this->testTable);
     }
 }

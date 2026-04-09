@@ -18,14 +18,14 @@ return new class extends Migration
             $table->string('outcome')->nullable(); // For calls/meetings: answered, no_answer, busy, etc.
             $table->integer('duration_minutes')->nullable();
             $table->dateTime('performed_at');
-            
+
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Admin who performed action
-            
+
             // Polymorphic relation to Team or User
             $table->morphs('related_to');
-            
+
             $table->json('metadata')->nullable(); // Extra data
-            
+
             $table->timestamps();
         });
     }

@@ -45,7 +45,7 @@ class EmailTemplateController extends Controller
         } else {
             $validated = $request->validate([
                 'name' => 'sometimes|string|max:255',
-                'slug' => 'sometimes|string|max:255|unique:email_templates,slug,' . $template->id,
+                'slug' => 'sometimes|string|max:255|unique:email_templates,slug,'.$template->id,
                 'subject' => 'required|string|max:255',
                 'content_html' => 'required|string',
                 'content_text' => 'nullable|string',
@@ -73,6 +73,7 @@ class EmailTemplateController extends Controller
     public function preview(Request $request, EmailTemplate $template)
     {
         $preview = $this->service->preview($template);
+
         return response()->json($preview);
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class DeepSeekProvider implements AIProviderInterface
 {
     protected string $apiKey;
+
     protected string $baseUrl = 'https://api.deepseek.com';
 
     public function __construct(string $apiKey)
@@ -38,8 +39,8 @@ class DeepSeekProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/chat/completions", $payload);
 
             if ($response->failed()) {
-                Log::error("DeepSeek API Failed: " . $response->body());
-                throw new \Exception("DeepSeek API request failed: " . ($response->json('error.message') ?? 'Unknown error'));
+                Log::error('DeepSeek API Failed: '.$response->body());
+                throw new \Exception('DeepSeek API request failed: '.($response->json('error.message') ?? 'Unknown error'));
             }
 
             return [
@@ -50,7 +51,8 @@ class DeepSeekProvider implements AIProviderInterface
                 'raw_response' => $response->json(),
             ];
         } catch (\Exception $e) {
-            Log::error("DeepSeek Provider Error: " . $e->getMessage());
+            Log::error('DeepSeek Provider Error: '.$e->getMessage());
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -69,7 +71,8 @@ class DeepSeekProvider implements AIProviderInterface
     public function embed(string|array $text, array $options = []): array
     {
         // DeepSeek does not currently provide an embeddings endpoint
-        Log::warning("DeepSeek does not support embeddings. Returning empty vector.");
+        Log::warning('DeepSeek does not support embeddings. Returning empty vector.');
+
         return [];
     }
 
@@ -77,7 +80,7 @@ class DeepSeekProvider implements AIProviderInterface
     {
         $messages = [
             ['role' => 'system', 'content' => 'You are a helpful assistant that summarizes text concisely.'],
-            ['role' => 'user', 'content' => "Please summarize the following text:\n\n{$content}"]
+            ['role' => 'user', 'content' => "Please summarize the following text:\n\n{$content}"],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
@@ -90,7 +93,7 @@ class DeepSeekProvider implements AIProviderInterface
         $categoriesStr = implode(', ', $categories);
         $messages = [
             ['role' => 'system', 'content' => "You are a classifier. Classify the input into one of these categories: {$categoriesStr}. Return only the category name."],
-            ['role' => 'user', 'content' => $content]
+            ['role' => 'user', 'content' => $content],
         ];
 
         $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
@@ -106,12 +109,13 @@ class DeepSeekProvider implements AIProviderInterface
                 ->post("{$this->baseUrl}/chat/completions", [
                     'model' => 'deepseek-chat',
                     'messages' => [['role' => 'user', 'content' => 'Hi']],
-                    'max_tokens' => 1
+                    'max_tokens' => 1,
                 ]);
 
             return $response->successful();
         } catch (\Exception $e) {
-            Log::error("DeepSeek Connection Test Failed: " . $e->getMessage());
+            Log::error('DeepSeek Connection Test Failed: '.$e->getMessage());
+
             return false;
         }
     }

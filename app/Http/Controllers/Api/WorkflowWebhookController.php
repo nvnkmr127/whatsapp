@@ -24,7 +24,7 @@ class WorkflowWebhookController extends Controller
             ->where('trigger_type', 'webhook_incoming')
             ->first();
 
-        if (!$workflow) {
+        if (! $workflow) {
             return $this->error('Workflow not found or inactive.', 404, null, 'ERR_WORKFLOW_NOT_FOUND');
         }
 
@@ -32,17 +32,18 @@ class WorkflowWebhookController extends Controller
 
         // Attempt to resolve context model
         $contact = null;
-        if (!empty($payload['phone'])) {
+        if (! empty($payload['phone'])) {
             $contact = Contact::where('team_id', $workflow->team_id)
                 ->where('phone_number', $payload['phone'])
                 ->first();
-        } elseif (!empty($payload['contact_id'])) {
+        } elseif (! empty($payload['contact_id'])) {
             $contact = Contact::where('team_id', $workflow->team_id)
                 ->find($payload['contact_id']);
         }
 
-        if (!$contact) {
-            Log::warning("Workflow Webhook: No contact resolved for webhook payload", $payload);
+        if (! $contact) {
+            Log::warning('Workflow Webhook: No contact resolved for webhook payload', $payload);
+
             return $this->error('No subject resolved. Requires phone or contact_id.', 400, null, 'ERR_SUBJECT_MISSING');
         }
 
@@ -55,12 +56,12 @@ class WorkflowWebhookController extends Controller
 
             return $this->success([], 'Workflow executed successfully.');
         } catch (\Exception $e) {
-            Log::error("Workflow Webhook Execution failed: " . $e->getMessage(), [
+            Log::error('Workflow Webhook Execution failed: '.$e->getMessage(), [
                 'workflow_id' => $workflowId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $this->error('Execution failed due to internal error.', 500, null, 'ERR_SERVER_ERROR');
         }
     }
 }
-

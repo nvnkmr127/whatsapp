@@ -5,7 +5,6 @@ namespace App\Livewire\Crm;
 use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\Pipeline;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class Dashboard extends Component

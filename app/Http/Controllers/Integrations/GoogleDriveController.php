@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Integrations;
 
 use App\Http\Controllers\Controller;
 use App\Models\Integration;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Exception;
 
 class GoogleDriveController extends Controller
 {
@@ -38,7 +38,7 @@ class GoogleDriveController extends Controller
             'state' => $state,
         ]);
 
-        return redirect('https://accounts.google.com/o/oauth2/v2/auth?' . $query);
+        return redirect('https://accounts.google.com/o/oauth2/v2/auth?'.$query);
     }
 
     /**
@@ -48,7 +48,7 @@ class GoogleDriveController extends Controller
     {
         // 1. Verify OAuth state (CSRF Protection)
         $sessionState = session()->pull('google_drive_oauth_state');
-        if (!$sessionState || $sessionState !== $request->state) {
+        if (! $sessionState || $sessionState !== $request->state) {
             return redirect()->route('settings.integrations')
                 ->with('error', 'Invalid OAuth state. Please try again.');
         }
@@ -64,7 +64,7 @@ class GoogleDriveController extends Controller
 
         if ($request->error) {
             return redirect()->route('settings.integrations')
-                ->with('error', 'Google Drive connection failed: ' . $request->error);
+                ->with('error', 'Google Drive connection failed: '.$request->error);
         }
 
         try {
@@ -76,8 +76,8 @@ class GoogleDriveController extends Controller
                 'grant_type' => 'authorization_code',
             ]);
 
-            if (!$response->successful()) {
-                throw new Exception("Failed to exchange code for token: " . $response->body());
+            if (! $response->successful()) {
+                throw new Exception('Failed to exchange code for token: '.$response->body());
             }
 
             $data = $response->json();
@@ -94,7 +94,7 @@ class GoogleDriveController extends Controller
                     'type' => 'google_drive',
                 ],
                 [
-                    'name' => 'Google Drive (' . ($userInfo['email'] ?? 'Unknown') . ')',
+                    'name' => 'Google Drive ('.($userInfo['email'] ?? 'Unknown').')',
                     'credentials' => [
                         'access_token' => $data['access_token'],
                         'refresh_token' => $data['refresh_token'] ?? null,
@@ -114,7 +114,7 @@ class GoogleDriveController extends Controller
 
         } catch (Exception $e) {
             return redirect()->route('settings.integrations')
-                ->with('error', 'Error connecting Google Drive: ' . $e->getMessage());
+                ->with('error', 'Error connecting Google Drive: '.$e->getMessage());
         }
     }
 

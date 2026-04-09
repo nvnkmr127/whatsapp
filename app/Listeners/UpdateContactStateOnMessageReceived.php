@@ -3,8 +3,8 @@
 namespace App\Listeners;
 
 use App\Events\MessageReceived;
-use App\Services\ContactStateManager;
 use App\Models\ContactEvent;
+use App\Services\ContactStateManager;
 use Illuminate\Support\Facades\Cache;
 
 class UpdateContactStateOnMessageReceived

@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Campaign;
 use App\Models\Contact;
-use App\Models\ContactTag;
 use App\Models\WhatsappTemplate;
+use Illuminate\Http\Request;
 
 class CampaignController extends Controller
 {
@@ -17,7 +16,9 @@ class CampaignController extends Controller
     public function index(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) return response()->json([]);
+        if (! $team) {
+            return response()->json([]);
+        }
 
         $campaigns = Campaign::where('team_id', $team->id)
             ->with('template')
@@ -41,7 +42,9 @@ class CampaignController extends Controller
         ]);
 
         $team = $request->user()->currentTeam;
-        if (!$team) abort(403);
+        if (! $team) {
+            abort(403);
+        }
 
         $template = WhatsappTemplate::findOrFail($request->template_id);
 
@@ -66,7 +69,7 @@ class CampaignController extends Controller
 
         return response()->json([
             'success' => true,
-            'campaign' => $campaign->load('template')
+            'campaign' => $campaign->load('template'),
         ]);
     }
 }

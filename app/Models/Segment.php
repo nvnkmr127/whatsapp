@@ -39,7 +39,7 @@ class Segment extends Model
      */
     public function needsRecomputation(): bool
     {
-        if (!$this->last_computed_at) {
+        if (! $this->last_computed_at) {
             return true;
         }
 

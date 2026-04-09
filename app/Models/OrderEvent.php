@@ -9,7 +9,7 @@ class OrderEvent extends Model
     protected $fillable = [
         'order_id',
         'event',
-        'metadata'
+        'metadata',
     ];
 
     protected $casts = [

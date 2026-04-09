@@ -14,7 +14,7 @@ class MediaService
 
     public function __construct()
     {
-        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $this->baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
     }
 
     /**
@@ -25,8 +25,9 @@ class MediaService
     {
         $accessToken = $team->whatsapp_access_token;
 
-        if (!$accessToken) {
+        if (! $accessToken) {
             Log::error("Media download failed: No access token for Team {$team->id}");
+
             return null;
         }
 
@@ -35,13 +36,14 @@ class MediaService
 
         if ($response->failed()) {
             Log::error("Failed to get media URL for ID {$mediaId}", $response->json());
+
             return null;
         }
 
         $mediaUrl = $response->json()['url'] ?? null;
         $mimeType = $response->json()['mime_type'] ?? 'application/octet-stream';
 
-        if (!$mediaUrl) {
+        if (! $mediaUrl) {
             return null;
         }
 
@@ -50,18 +52,19 @@ class MediaService
 
         if ($binaryResponse->failed()) {
             Log::error("Failed to download media binary from {$mediaUrl}");
+
             return null;
         }
 
         // 3. Determine Extension & Filename
         $extension = $this->guessExtension($mimeType);
-        $filename = Str::random(40) . '.' . $extension;
+        $filename = Str::random(40).'.'.$extension;
         $path = "whatsapp/{$team->id}/{$filename}";
 
         // 4. Store
         Storage::disk('public')->put($path, $binaryResponse->body());
 
-        // Return public URL or relative path? 
+        // Return public URL or relative path?
         // Returning relative path is safer, can wrap with Storage::url() in UI.
         return $path;
     }

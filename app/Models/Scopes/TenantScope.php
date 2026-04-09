@@ -22,7 +22,7 @@ class TenantScope implements Scope
         $user = Auth::user();
 
         if ($user && $user->current_team_id) {
-            $builder->where($model->getTable() . '.team_id', $user->current_team_id);
+            $builder->where($model->getTable().'.team_id', $user->current_team_id);
         }
     }
 }

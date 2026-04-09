@@ -3,7 +3,6 @@
 namespace App\Livewire\Developer;
 
 use App\Models\KnowledgeBaseSource;
-use App\Services\KnowledgeBaseService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
@@ -12,27 +11,41 @@ use Livewire\WithFileUploads;
 
 class KnowledgeBaseManager extends Component
 {
-    use WithFileUploads, \Livewire\WithPagination;
+    use \Livewire\WithPagination, WithFileUploads;
 
     public $showFeedback = false;
+
     public $searchFeedback = '';
+
     public $statusFilter = 'pending';
+
     public $resolutionNote = '';
+
     public $selectedGapId = null;
+
     public $showResolutionModal = false;
 
     public $sources = [];
+
     public $file;
+
     public $url;
+
     public $name;
+
     public $rawText;
 
     // Preview & Edit
     public $editingId;
+
     public $editingName;
+
     public $editingContent;
+
     public $editingType;
+
     public $showModal = false;
+
     public $modalMode = 'preview'; // preview or edit
 
     public function mount()
@@ -121,7 +134,7 @@ class KnowledgeBaseManager extends Component
             'metadata' => [
                 'original_name' => $this->file->getClientOriginalName(),
                 'extension' => $this->file->extension(),
-            ]
+            ],
         ]);
 
         \App\Jobs\ProcessKnowledgeBaseSourceJob::dispatch($source);
@@ -150,7 +163,7 @@ class KnowledgeBaseManager extends Component
             'status' => KnowledgeBaseSource::STATUS_PENDING,
             'metadata' => [
                 'url' => $this->url,
-            ]
+            ],
         ]);
 
         \App\Jobs\ProcessKnowledgeBaseSourceJob::dispatch($source);
@@ -178,7 +191,7 @@ class KnowledgeBaseManager extends Component
             'content' => $this->rawText,
             'status' => KnowledgeBaseSource::STATUS_READY, // Text is instant
             'last_synced_at' => now(),
-            'metadata' => []
+            'metadata' => [],
         ]);
 
         audit('knowledge_base.added', "Added knowledge base source '{$this->name}' (Text)", $source);
@@ -222,7 +235,7 @@ class KnowledgeBaseManager extends Component
 
     public function toggleFeedback()
     {
-        $this->showFeedback = !$this->showFeedback;
+        $this->showFeedback = ! $this->showFeedback;
         $this->resetPage();
     }
 
@@ -261,7 +274,10 @@ class KnowledgeBaseManager extends Component
     #[Computed]
     public function editingSource()
     {
-        if (!$this->editingId) return null;
+        if (! $this->editingId) {
+            return null;
+        }
+
         return KnowledgeBaseSource::where('team_id', Auth::user()->currentTeam->id)->find($this->editingId);
     }
 
@@ -271,7 +287,7 @@ class KnowledgeBaseManager extends Component
         if ($this->showFeedback) {
             $gaps = \App\Models\KnowledgeBaseGap::where('team_id', Auth::user()->currentTeam->id)
                 ->when($this->searchFeedback, function ($query) {
-                    $query->where('query', 'like', '%' . $this->searchFeedback . '%');
+                    $query->where('query', 'like', '%'.$this->searchFeedback.'%');
                 })
                 ->when($this->statusFilter, function ($query) {
                     $query->where('status', $this->statusFilter);
@@ -281,7 +297,7 @@ class KnowledgeBaseManager extends Component
         }
 
         return view('livewire.developer.knowledge-base-manager', [
-            'gaps' => $gaps
+            'gaps' => $gaps,
         ]);
     }
 }

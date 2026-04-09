@@ -12,15 +12,15 @@ if (! function_exists('format_currency')) {
     /**
      * Format currency based on system settings
      *
-     * @param  float  $amount Amount to format
+     * @param  float  $amount  Amount to format
      * @return string Formatted currency string
      */
     function format_currency(float $amount): string
     {
-        $symbol            = settings('system.currency_symbol', '$');
-        $position          = settings('system.currency_position', 'right');
-        $decimals          = settings('system.decimal_places', 2);
-        $decimalSeparator  = settings('system.decimal_separator', '.');
+        $symbol = settings('system.currency_symbol', '$');
+        $position = settings('system.currency_position', 'right');
+        $decimals = settings('system.decimal_places', 2);
+        $decimalSeparator = settings('system.decimal_separator', '.');
         $thousandSeparator = settings('system.thousand_separator', ',');
 
         $formattedAmount = number_format(
@@ -40,9 +40,9 @@ if (! function_exists('format_date')) {
     /**
      * Format date according to system settings
      *
-     * @param  string|Carbon $date   Date to format
-     * @param  string|null   $format Custom format (optional)
-     * @return string        Formatted date
+     * @param  string|Carbon  $date  Date to format
+     * @param  string|null  $format  Custom format (optional)
+     * @return string Formatted date
      */
     function format_date(string|Carbon $date, ?string $format = null): string
     {
@@ -56,9 +56,9 @@ if (! function_exists('format_time')) {
     /**
      * Format time according to system settings
      *
-     * @param  string|Carbon $time   Time to format
-     * @param  string|null   $format Custom format (optional)
-     * @return string        Formatted time
+     * @param  string|Carbon  $time  Time to format
+     * @param  string|null  $format  Custom format (optional)
+     * @return string Formatted time
      */
     function format_time(string|Carbon $time, ?string $format = null): string
     {
@@ -71,7 +71,7 @@ if (! function_exists('format_time')) {
 if (! function_exists('format_date_time')) {
     function format_date_time($dateTime)
     {
-        $timezone   = get_setting('general.timezone', config('app.timezone'));
+        $timezone = get_setting('general.timezone', config('app.timezone'));
         $dateFormat = get_setting('general.date_format', config('app.date_format'));
         $timeFormat = get_setting('general.time_format') == '12' ? 'h:i A' : 'H:i';
 
@@ -85,8 +85,8 @@ if (! function_exists('to_sql_date')) {
     /**
      * Convert string to SQL date based on current date format from settings
      *
-     * @param  string      $date     Date string
-     * @param  bool        $datetime Include time in conversion
+     * @param  string  $date  Date string
+     * @param  bool  $datetime  Include time in conversion
      * @return string|null SQL formatted date(time)
      */
     function to_sql_date(string $date, bool $datetime = false): ?string
@@ -95,13 +95,13 @@ if (! function_exists('to_sql_date')) {
             return null;
         }
 
-        $to_date     = 'Y-m-d';
+        $to_date = 'Y-m-d';
         $from_format = get_setting('system.date_format', 'Y-m-d');
 
         try {
             // Check if already in Y-m-d format
             if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $date)) {
-                return $datetime ? $date . ' 00:00:00' : $date;
+                return $datetime ? $date.' 00:00:00' : $date;
             }
 
             if (! $datetime) {
@@ -115,7 +115,7 @@ if (! function_exists('to_sql_date')) {
                 $is24Hour = get_setting('system.time_format', 'H:i') === 'H:i';
 
                 $_temp = explode(' ', $date);
-                $time  = explode(':', $_temp[1]);
+                $time = explode(':', $_temp[1]);
 
                 if ($is24Hour) {
                     // 24-hour format
@@ -125,18 +125,18 @@ if (! function_exists('to_sql_date')) {
                 } else {
                     // 12-hour format
                     $carbonDate = Carbon::createFromFormat(
-                        $from_format . ' ' . 'g:i A',
+                        $from_format.' '.'g:i A',
                         $date
                     );
                     $time = $carbonDate->format('G:i');
-                    $date = $carbonDate->format($from_format . ' ' . 'G:i:s');
+                    $date = $carbonDate->format($from_format.' '.'G:i:s');
                 }
             }
 
             return Carbon::createFromFormat(
-                $from_format . ($datetime ? ' H:i:s' : ''),
+                $from_format.($datetime ? ' H:i:s' : ''),
                 $date
-            )->format('Y-m-d' . ($datetime ? ' H:i:s' : ''));
+            )->format('Y-m-d'.($datetime ? ' H:i:s' : ''));
         } catch (\Exception $e) {
             report($e);
 
@@ -261,23 +261,23 @@ if (! function_exists('get_meta_allowed_extension')) {
         return [
             'image' => [
                 'extension' => '.jpeg, .png',
-                'size'      => 5,
+                'size' => 5,
             ],
             'video' => [
                 'extension' => '.mp4, .3gp',
-                'size'      => 16,
+                'size' => 16,
             ],
             'audio' => [
                 'extension' => '.aac, .amr, .mp3, .m4a, .ogg',
-                'size'      => 16,
+                'size' => 16,
             ],
             'document' => [
                 'extension' => '.pdf, .doc, .docx, .txt, .xls, .xlsx, .ppt, .pptx',
-                'size'      => 100,
+                'size' => 100,
             ],
             'sticker' => [
                 'extension' => '.webp',
-                'size'      => 0.1,
+                'size' => 0.1,
             ],
         ];
     }
@@ -307,11 +307,11 @@ if (! function_exists('t')) {
      * This function fetches translations from cached JSON files based on the user's locale.
      * If the translation does not exist, it returns the provided key as a fallback.
      *
-     * @param  string      $key     The translation key to retrieve.
-     * @param  array       $replace An optional array of placeholders and their replacements.
-     *                              Example: ['name' => 'John'] replaces ":name" in the translation.
-     * @param  string|null $locale  The locale to use (optional). Defaults to the user's locale or the app's active language.
-     * @return string      The translated string or the original key if the translation is not found.
+     * @param  string  $key  The translation key to retrieve.
+     * @param  array  $replace  An optional array of placeholders and their replacements.
+     *                          Example: ['name' => 'John'] replaces ":name" in the translation.
+     * @param  string|null  $locale  The locale to use (optional). Defaults to the user's locale or the app's active language.
+     * @return string The translated string or the original key if the translation is not found.
      */
     function t($key, $replace = [], $locale = null)
     {
@@ -344,8 +344,8 @@ if (! function_exists('getLanguage')) {
     /**
      * Retrieve language(s) from the DB.
      *
-     * @param  mixed $filter  (null, id, name, code, or associative array for custom where)
-     * @param  array $columns (columns to select, default ['*'])
+     * @param  mixed  $filter  (null, id, name, code, or associative array for custom where)
+     * @param  array  $columns  (columns to select, default ['*'])
      * @return mixed
      */
     function getLanguage($filter = null, $columns = ['*'])
@@ -413,10 +413,10 @@ if (! function_exists('getArrayItem')) {
      * This function checks if the provided key exists in the array and returns its value.
      * If the key is not found or the value is 'null', it returns the default value.
      *
-     * @param  string|int $key     The key to search for in the array.
-     * @param  array      $array   The array to search within.
-     * @param  mixed      $default The default value to return if the key does not exist or the value is 'null'.
-     * @return mixed      The value corresponding to the key or the default value if not found.
+     * @param  string|int  $key  The key to search for in the array.
+     * @param  array  $array  The array to search within.
+     * @param  mixed  $default  The default value to return if the key does not exist or the value is 'null'.
+     * @return mixed The value corresponding to the key or the default value if not found.
      */
     function getArrayItem($key, $array, $default = null)
     {
@@ -433,7 +433,7 @@ if (! function_exists('mailTemplate')) {
      * This function fetches the first matching email template from the database
      * based on the provided slug.
      *
-     * @param  string                         $slug The unique identifier (slug) of the email template.
+     * @param  string  $slug  The unique identifier (slug) of the email template.
      * @return \App\Models\EmailTemplate|null The matching EmailTemplate instance or null if not found.
      */
     function mailTemplate($slug)
@@ -450,11 +450,10 @@ if (! function_exists('getLanguageJson')) {
      * If the language code is 'en', it fetches the default English JSON file.
      * For other language codes, it attempts to retrieve the corresponding translation file.
      *
-     * @param string $languageCode The language code (e.g., 'en', 'fr').
+     * @param  string  $languageCode  The language code (e.g., 'en', 'fr').
+     * @return array An associative array containing the language translations.
      *
      * @throws \Exception If the language file is missing or cannot be decoded.
-     *
-     * @return array An associative array containing the language translations.
      */
     function getLanguageJson(string $languageCode): array
     {
@@ -468,21 +467,21 @@ if (! function_exists('getLanguageJson')) {
 
             // Check if the file exists
             if (! file_exists($filePath)) {
-                throw new Exception(t('language_file_for') . $languageCode . t('not_found'));
+                throw new Exception(t('language_file_for').$languageCode.t('not_found'));
             }
 
             // Read and decode the JSON file
-            $jsonData    = file_get_contents($filePath);
+            $jsonData = file_get_contents($filePath);
             $decodedData = json_decode($jsonData, true);
 
             // Check if JSON decoding failed
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception(t('failed_to_decode_json_from') . $filePath);
+                throw new Exception(t('failed_to_decode_json_from').$filePath);
             }
 
             return $decodedData;
         } catch (Exception $e) {
-            Log::error(t('error_loading_language_file') . $e->getMessage());
+            Log::error(t('error_loading_language_file').$e->getMessage());
 
             return [];
         }
@@ -493,9 +492,9 @@ if (! function_exists('getLangugeValue')) {
     /**
      * Retrieve the value for a specific key from a language JSON file.
      *
-     * @param  string $languageCode The language code (e.g., 'en', 'fr', etc.)
-     * @param  string $key          The key in the language JSON file
-     * @param  mixed  $default      The default value if the key is not found (optional)
+     * @param  string  $languageCode  The language code (e.g., 'en', 'fr', etc.)
+     * @param  string  $key  The key in the language JSON file
+     * @param  mixed  $default  The default value if the key is not found (optional)
      * @return mixed
      */
     function getLangugeValue(string $languageCode, string $key, $default = null)
@@ -507,16 +506,16 @@ if (! function_exists('getLangugeValue')) {
                 : resource_path("lang/translations/{$languageCode}.json");
 
             if (! file_exists($filePath)) {
-                throw new Exception(t('language_file_for') . $languageCode . ('not_found'));
+                throw new Exception(t('language_file_for').$languageCode.('not_found'));
             }
 
             // Read and decode the JSON file
-            $jsonData    = file_get_contents($filePath);
+            $jsonData = file_get_contents($filePath);
             $decodedData = json_decode($jsonData, true);
 
             // Check if JSON decoding failed
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception(t('failed_to_decode_json_from') . $filePath);
+                throw new Exception(t('failed_to_decode_json_from').$filePath);
             }
 
             // Check if the key exists in the decoded JSON data
@@ -526,7 +525,7 @@ if (! function_exists('getLangugeValue')) {
 
             return $default;
         } catch (Exception $e) {
-            Log::error(t('error_fetching_language_key_value') . $e->getMessage());
+            Log::error(t('error_fetching_language_key_value').$e->getMessage());
 
             return $default;
         }
@@ -537,10 +536,10 @@ if (! function_exists('app_log')) {
     /**
      * Write application logs with consistent formatting
      *
-     * @param string          $message   Main log message
-     * @param string          $level     Log level (error, info, debug, warning)
-     * @param \Throwable|null $exception Optional exception object
-     * @param array           $context   Additional context data
+     * @param  string  $message  Main log message
+     * @param  string  $level  Log level (error, info, debug, warning)
+     * @param  \Throwable|null  $exception  Optional exception object
+     * @param  array  $context  Additional context data
      */
     function app_log(string $message, string $level = 'error', ?\Throwable $exception = null, array $context = []): void
     {
@@ -555,12 +554,12 @@ if (! function_exists('app_log')) {
         // Build log context
         $logContext = array_merge([
             'timestamp' => now()->setTimezone(get_setting('general.timezone', config('app.timezone')))->toDateTimeString(),
-            'env'       => config('app.env'),
-            'request'   => [
-                'id'     => $request ? ($request->header('X-Request-ID') ?? (string) Str::uuid()) : (string) Str::uuid(),
-                'url'    => $request ? $request->fullUrl() : 'CLI',
+            'env' => config('app.env'),
+            'request' => [
+                'id' => $request ? ($request->header('X-Request-ID') ?? (string) Str::uuid()) : (string) Str::uuid(),
+                'url' => $request ? $request->fullUrl() : 'CLI',
                 'method' => $request ? $request->method() : 'CLI',
-                'ip'     => $request ? $request->ip() : '127.0.0.1',
+                'ip' => $request ? $request->ip() : '127.0.0.1',
             ],
             'user_id' => auth()->id() ?? 'guest',
         ], $context);
@@ -568,10 +567,10 @@ if (! function_exists('app_log')) {
         // Add exception details if provided
         if ($exception) {
             $logContext['exception'] = [
-                'class'   => get_class($exception),
+                'class' => get_class($exception),
                 'message' => $exception->getMessage(),
-                'file'    => $exception->getFile() . ':' . $exception->getLine(),
-                'trace'   => array_slice(
+                'file' => $exception->getFile().':'.$exception->getLine(),
+                'trace' => array_slice(
                     array_filter(
                         array_map(
                             'trim',
@@ -592,10 +591,10 @@ if (! function_exists('parseText')) {
     /**
      * Parse text with merge fields
      *
-     * @param  string       $rel_type
-     * @param  string       $type
-     * @param  array        $data
-     * @param  string       $return_type
+     * @param  string  $rel_type
+     * @param  string  $type
+     * @param  array  $data
+     * @param  string  $return_type
      * @return string|array
      */
     function parseText($rel_type, $type, $data, $return_type = 'text')
@@ -606,7 +605,7 @@ if (! function_exists('parseText')) {
         // Prepare context for merge field parsing
         $context = [
             'contactId' => $data['rel_id'] ?? null,
-            'relType'   => $rel_type,
+            'relType' => $rel_type,
         ];
 
         // Default to empty array if params are not set
@@ -625,18 +624,18 @@ if (! function_exists('parseText')) {
         );
 
         // Prepare to parse parameters
-        $parsedData  = [];
-        $paramsCount = $data["{$type}_params_count"]              ?? 0;
-        $params      = json_decode($data["{$type}_params"], true) ?? [];
-        $index       = ($return_type == 'text') ? 1 : 0;
-        $last        = ($return_type == 'text') ? $paramsCount : $paramsCount - 1;
+        $parsedData = [];
+        $paramsCount = $data["{$type}_params_count"] ?? 0;
+        $params = json_decode($data["{$type}_params"], true) ?? [];
+        $index = ($return_type == 'text') ? 1 : 0;
+        $last = ($return_type == 'text') ? $paramsCount : $paramsCount - 1;
         // Process each parameter
         for ($i = $index; $i <= $last; $i++) {
             $parsedText = is_array($params) ? array_map(function ($body) use ($merge_fields) {
                 // Replace merge fields
                 $body = preg_replace('/@{(.*?)}/', '{$1}', $body);
                 foreach ($merge_fields as $field) {
-                    $key  = $field['key'] ?? '';
+                    $key = $field['key'] ?? '';
                     $body = str_contains($body, "{{$key}}")
                         ? str_replace("{{$key}}", '', $body)
                         : $body;
@@ -646,14 +645,14 @@ if (! function_exists('parseText')) {
             }, $params) : [1 => trim($data["{$type}_params"] ?? '')];
 
             // Handle message template
-            if ('text' == $return_type && ! empty($data["{$type}_message"])) {
+            if ($return_type == 'text' && ! empty($data["{$type}_message"])) {
                 $data["{$type}_message"] = str_replace("{{{$i}}}", ! empty($parsedText[$i - 1]) ? $parsedText[$i - 1] : ' ', $data["{$type}_message"]);
             }
 
             $parsedData[] = ! empty($parsedText[$i]) ? $parsedText[$i] : ' ';
         }
 
-        return ('text' == $return_type) ? $data["{$type}_message"] : $parsedData;
+        return ($return_type == 'text') ? $data["{$type}_message"] : $parsedData;
     }
 }
 
@@ -661,7 +660,7 @@ if (! function_exists('parseMessageText')) {
     /**
      * Parse message text with merge fields
      *
-     * @param  array $data
+     * @param  array  $data
      * @return array
      */
     function parseMessageText($data)
@@ -685,8 +684,8 @@ if (! function_exists('isJson')) {
      * This function verifies whether the provided string is a valid JSON format.
      * It returns true if the string can be decoded as JSON, including the 'null' value.
      *
-     * @param  mixed $string The input to be checked.
-     * @return bool  True if the input is a valid JSON string, otherwise false.
+     * @param  mixed  $string  The input to be checked.
+     * @return bool True if the input is a valid JSON string, otherwise false.
      */
     function isJson($string): bool
     {
@@ -703,16 +702,16 @@ if (! function_exists('parseCsvText')) {
      * This function processes text by replacing placeholders in the format `{key}` with values from
      * the provided `$relData` array. It supports multiple parameters through JSON or plain text.
      *
-     * @param  string $type    The type prefix used to extract parameters and count from `$data`.
-     * @param  array  $data    The main data array containing parameter values and counts.
-     * @param  array  $relData An associative array of placeholder keys and their corresponding values.
-     * @return mixed  An array of parsed and formatted text entries.
+     * @param  string  $type  The type prefix used to extract parameters and count from `$data`.
+     * @param  array  $data  The main data array containing parameter values and counts.
+     * @param  array  $relData  An associative array of placeholder keys and their corresponding values.
+     * @return mixed An array of parsed and formatted text entries.
      */
     function parseCsvText(string $type, array $data, array $relData): mixed
     {
         // Create merge fields by mapping {key} => value
         $mergeFields = collect($relData)->mapWithKeys(fn ($value, $key) => ["{{$key}}" => $value])->toArray();
-        $parseData   = [];
+        $parseData = [];
 
         for ($i = 0; $i < $data["{$type}_params_count"]; $i++) {
             if (isJson($data["{$type}_params"] ?? '[]')) {
@@ -745,8 +744,8 @@ if (! function_exists('checkRemoteFile')) {
      *
      * This function verifies whether a given URL is valid and returns whether the remote file is accessible.
      *
-     * @param  string $url The URL of the remote file to check.
-     * @return bool   True if the file is accessible, false otherwise.
+     * @param  string  $url  The URL of the remote file to check.
+     * @return bool True if the file is accessible, false otherwise.
      */
     function checkRemoteFile($url)
     {
@@ -771,8 +770,8 @@ if (! function_exists('checkPermission')) {
      * This function verifies whether the current user has the specified permission(s).
      * Admin users are granted all permissions by default.
      *
-     * @param  string|array $permissions The permission or array of permissions to check.
-     * @return bool         True if the user has any of the specified permissions, false otherwise.
+     * @param  string|array  $permissions  The permission or array of permissions to check.
+     * @return bool True if the user has any of the specified permissions, false otherwise.
      */
     function checkPermission($permissions)
     {
@@ -805,8 +804,8 @@ if (! function_exists('can_send_email')) {
     /**
      * Check if an email template is active based on the slug.
      *
-     * @param  string $slug The email template slug.
-     * @return bool   True if the email can be sent, otherwise false.
+     * @param  string  $slug  The email template slug.
+     * @return bool True if the email can be sent, otherwise false.
      */
     function can_send_email(string $slug): bool
     {
@@ -820,10 +819,10 @@ if (! function_exists('whatsapp_log')) {
     /**
      * Write WhatsApp logs with consistent formatting
      *
-     * @param string          $message   Main log message
-     * @param string          $level     Log level (error, warning, info, debug, critical, alert, emergency)
-     * @param array           $context   Additional context data
-     * @param \Throwable|null $exception Optional exception object
+     * @param  string  $message  Main log message
+     * @param  string  $level  Log level (error, warning, info, debug, critical, alert, emergency)
+     * @param  array  $context  Additional context data
+     * @param  \Throwable|null  $exception  Optional exception object
      */
     function whatsapp_log(string $message, string $level = 'info', array $context = [], ?\Throwable $exception = null): void
     {
@@ -836,8 +835,8 @@ if (! function_exists('whatsapp_log')) {
         if ($exception) {
             $context['exception'] = [
                 'message' => $exception->getMessage(),
-                'file'    => $exception->getFile() . ':' . $exception->getLine(),
-                'trace'   => $exception->getTraceAsString(),
+                'file' => $exception->getFile().':'.$exception->getLine(),
+                'trace' => $exception->getTraceAsString(),
             ];
         }
 
@@ -855,10 +854,10 @@ if (! function_exists('app_log')) {
     /**
      * Write application logs with consistent formatting
      *
-     * @param string          $message   Main log message
-     * @param string          $level     Log level (error, info, debug, warning, critical, alert, emergency)
-     * @param array           $context   Additional context data
-     * @param \Throwable|null $exception Optional exception object
+     * @param  string  $message  Main log message
+     * @param  string  $level  Log level (error, info, debug, warning, critical, alert, emergency)
+     * @param  array  $context  Additional context data
+     * @param  \Throwable|null  $exception  Optional exception object
      */
     function app_log(string $message, string $level = 'info', array $context = [], ?\Throwable $exception = null): void
     {
@@ -870,12 +869,12 @@ if (! function_exists('app_log')) {
         // Build log context
         $logContext = array_merge([
             'timestamp' => now()->toDateTimeString(),
-            'env'       => config('app.env'),
-            'request'   => [
-                'id'     => request()->id() ?? \Illuminate\Support\Str::uuid(),
-                'url'    => request()->fullUrl(),
+            'env' => config('app.env'),
+            'request' => [
+                'id' => request()->id() ?? \Illuminate\Support\Str::uuid(),
+                'url' => request()->fullUrl(),
                 'method' => request()->method(),
-                'ip'     => request()->ip(),
+                'ip' => request()->ip(),
             ],
             'user_id' => auth()->id() ?? 'guest',
         ], $context);
@@ -883,10 +882,10 @@ if (! function_exists('app_log')) {
         // Add exception details if provided
         if ($exception) {
             $logContext['exception'] = [
-                'class'   => get_class($exception),
+                'class' => get_class($exception),
                 'message' => $exception->getMessage(),
-                'file'    => $exception->getFile() . ':' . $exception->getLine(),
-                'trace'   => array_slice(
+                'file' => $exception->getFile().':'.$exception->getLine(),
+                'trace' => array_slice(
                     array_filter(
                         array_map(
                             'trim',
@@ -922,7 +921,7 @@ if (! function_exists('getCountryList')) {
 /**
  * Decode WhatsApp signs to HTML tags
  *
- * @param  string $text
+ * @param  string  $text
  * @return string
  */
 if (! function_exists('ecodeWhatsAppSigns')) {

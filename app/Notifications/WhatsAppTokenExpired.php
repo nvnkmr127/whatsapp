@@ -27,10 +27,10 @@ class WhatsAppTokenExpired extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-                    ->subject('Action Required: WhatsApp Token Expired')
-                    ->line('The WhatsApp Business API token for your team "' . $this->team->name . '" has expired.')
-                    ->line('Please reconnect your WhatsApp account to ensure uninterrupted service.')
-                    ->action('Reconnect WhatsApp', url('/teams/' . $this->team->id . '/whatsapp-config'));
+            ->subject('Action Required: WhatsApp Token Expired')
+            ->line('The WhatsApp Business API token for your team "'.$this->team->name.'" has expired.')
+            ->line('Please reconnect your WhatsApp account to ensure uninterrupted service.')
+            ->action('Reconnect WhatsApp', url('/teams/'.$this->team->id.'/whatsapp-config'));
     }
 
     public function toArray($notifiable)

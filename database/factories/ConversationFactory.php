@@ -1,4 +1,5 @@
 <?php
+
 /** @var \Illuminate\Database\Eloquent\Factory $factory */
 
 namespace Database\Factories;
@@ -13,7 +14,8 @@ class ConversationFactory extends Factory
     public function definition()
     {
         return [
-            'team_id' => 1,
+            'team_id' => \App\Models\Team::factory(),
+            'contact_id' => \App\Models\Contact::factory(),
             'status' => 'open',
             'last_message_at' => now(),
         ];

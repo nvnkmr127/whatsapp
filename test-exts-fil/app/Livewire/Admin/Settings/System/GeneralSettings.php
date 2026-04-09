@@ -38,12 +38,12 @@ class GeneralSettings extends Component
     public $id;
 
     private array $keys = [
-        'site_name'        => '',
+        'site_name' => '',
         'site_description' => '',
-        'timezone'         => '',
-        'date_format'      => '',
-        'time_format'      => '',
-        'active_language'  => '',
+        'timezone' => '',
+        'date_format' => '',
+        'time_format' => '',
+        'active_language' => '',
     ];
 
     public array $date_formats = [
@@ -64,15 +64,15 @@ class GeneralSettings extends Component
     protected function rules()
     {
         return [
-            'site_name'        => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
+            'site_name' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
             'site_description' => ['nullable', 'string', new PurifiedInput(t('sql_injection_error'))],
-            'timezone'         => 'nullable|string|timezone',
-            'date_format'      => 'nullable|string',
-            'active_language'  => 'nullable|string',
-            'time_format'      => 'nullable|string',
-            'site_logo'        => 'nullable|image|mimes:png,jpg,jpeg',
-            'site_dark_logo'   => 'nullable|image|mimes:png,jpg,jpeg',
-            'favicon'          => 'nullable|image|mimes:png,jpg,jpeg',
+            'timezone' => 'nullable|string|timezone',
+            'date_format' => 'nullable|string',
+            'active_language' => 'nullable|string',
+            'time_format' => 'nullable|string',
+            'site_logo' => 'nullable|image|mimes:png,jpg,jpeg',
+            'site_dark_logo' => 'nullable|image|mimes:png,jpg,jpeg',
+            'favicon' => 'nullable|image|mimes:png,jpg,jpeg',
             'cover_page_image' => 'nullable|image|mimes:png,jpg,jpeg|dimensions:width729,height=152',
         ];
     }
@@ -85,18 +85,18 @@ class GeneralSettings extends Component
             return redirect(route('admin.dashboard'));
         }
 
-        $this->id            = $this->getId();
+        $this->id = $this->getId();
         $this->timezone_list = timezone_identifiers_list();
-        $this->id            = $this->getId();
+        $this->id = $this->getId();
 
         $general_settings = get_settings_by_group('general');
 
-        $this->site_name        = $general_settings->site_name        ?? '';
+        $this->site_name = $general_settings->site_name ?? '';
         $this->site_description = $general_settings->site_description ?? '';
-        $this->timezone         = $general_settings->timezone         ?? '';
-        $this->date_format      = $general_settings->date_format      ?? '';
-        $this->time_format      = $general_settings->time_format      ?? '';
-        $this->active_language  = $general_settings->active_language  ?? '';
+        $this->timezone = $general_settings->timezone ?? '';
+        $this->date_format = $general_settings->date_format ?? '';
+        $this->time_format = $general_settings->time_format ?? '';
+        $this->active_language = $general_settings->active_language ?? '';
     }
 
     public function save()
@@ -108,12 +108,12 @@ class GeneralSettings extends Component
             Cache::forget("translations.{$originalSettings->active_language}");
 
             $newSettings = [
-                'general.site_name'        => $this->site_name,
+                'general.site_name' => $this->site_name,
                 'general.site_description' => $this->site_description,
-                'general.timezone'         => $this->timezone,
-                'general.date_format'      => $this->date_format,
-                'general.time_format'      => $this->time_format,
-                'general.active_language'  => $this->active_language,
+                'general.timezone' => $this->timezone,
+                'general.date_format' => $this->date_format,
+                'general.time_format' => $this->time_format,
+                'general.active_language' => $this->active_language,
             ];
 
             Session::put('locale', $this->active_language);
@@ -123,29 +123,29 @@ class GeneralSettings extends Component
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
                 $propertyName = str_replace('general.', '', $key);
 
-                return $originalSettings->$propertyName !== $value;
+                return $value !== $originalSettings->$propertyName;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Handle file uploads and update only if new files are uploaded
             $uploadedFiles = [];
 
             if (is_object($this->favicon)) {
-                $faviconPath                      = $this->handleFileUpload($this->favicon, 'favicon');
+                $faviconPath = $this->handleFileUpload($this->favicon, 'favicon');
                 $uploadedFiles['general.favicon'] = $faviconPath;
             }
 
             if (is_object($this->site_dark_logo)) {
-                $darkLogoPath                            = $this->handleFileUpload($this->site_dark_logo, 'site_dark_logo');
+                $darkLogoPath = $this->handleFileUpload($this->site_dark_logo, 'site_dark_logo');
                 $uploadedFiles['general.site_dark_logo'] = $darkLogoPath;
             }
 
             if (is_object($this->site_logo)) {
-                $siteLogoPath                       = $this->handleFileUpload($this->site_logo, 'site_logo');
+                $siteLogoPath = $this->handleFileUpload($this->site_logo, 'site_logo');
                 $uploadedFiles['general.site_logo'] = $siteLogoPath;
             }
 
             if (is_object($this->cover_page_image)) {
-                $siteLogoPath                              = $this->handleFileUpload($this->cover_page_image, 'cover_page_image');
+                $siteLogoPath = $this->handleFileUpload($this->cover_page_image, 'cover_page_image');
                 $uploadedFiles['general.cover_page_image'] = $siteLogoPath;
             }
 
@@ -159,7 +159,7 @@ class GeneralSettings extends Component
                 }
 
                 $this->notify([
-                    'type'    => 'success',
+                    'type' => 'success',
                     'message' => t('setting_save_successfully'),
 
                 ]);
@@ -172,25 +172,25 @@ class GeneralSettings extends Component
         create_storage_link();
 
         // Delete the old file based on the type
-        if ($type === 'site_logo' && get_setting('general.site_logo') && file_exists('storage/' . get_setting('general.site_logo'))) {
-            @unlink('storage/' . get_setting('general.site_logo'));
+        if ($type === 'site_logo' && get_setting('general.site_logo') && file_exists('storage/'.get_setting('general.site_logo'))) {
+            @unlink('storage/'.get_setting('general.site_logo'));
         }
 
-        if ($type === 'site_dark_logo' && get_setting('general.site_dark_logo') && file_exists('storage/' . get_setting('general.site_dark_logo'))) {
-            @unlink('storage/' . get_setting('general.site_dark_logo'));
+        if ($type === 'site_dark_logo' && get_setting('general.site_dark_logo') && file_exists('storage/'.get_setting('general.site_dark_logo'))) {
+            @unlink('storage/'.get_setting('general.site_dark_logo'));
         }
 
-        if ($type === 'favicon' && get_setting('general.favicon') && file_exists('storage/' . get_setting('general.favicon'))) {
-            @unlink('storage/' . get_setting('general.favicon'));
+        if ($type === 'favicon' && get_setting('general.favicon') && file_exists('storage/'.get_setting('general.favicon'))) {
+            @unlink('storage/'.get_setting('general.favicon'));
         }
 
-        if ($type === 'cover_page_image' && get_setting('general.cover_page_image') && file_exists('storage/' . get_setting('general.cover_page_image'))) {
-            @unlink('storage/' . get_setting('general.cover_page_image'));
+        if ($type === 'cover_page_image' && get_setting('general.cover_page_image') && file_exists('storage/'.get_setting('general.cover_page_image'))) {
+            @unlink('storage/'.get_setting('general.cover_page_image'));
         }
 
         // Generate a new filename and store the file
-        $filename = $type . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $path     = $file->storeAs('settings', $filename, 'public');
+        $filename = $type.'_'.time().'.'.$file->getClientOriginalExtension();
+        $path = $file->storeAs('settings', $filename, 'public');
 
         return $path;
     }
@@ -200,8 +200,8 @@ class GeneralSettings extends Component
         try {
             $filePath = get_setting($pathSetting);
 
-            if ($filePath && file_exists(public_path('storage/' . $filePath))) {
-                @unlink(public_path('storage/' . $filePath));
+            if ($filePath && file_exists(public_path('storage/'.$filePath))) {
+                @unlink(public_path('storage/'.$filePath));
             }
 
             set_setting($pathSetting, null);
@@ -239,8 +239,8 @@ class GeneralSettings extends Component
         }
 
         $this->notify([
-            'type'    => 'success',
-            'message' => ucfirst(str_replace('_', ' ', $type)) . t('remove_successfully'),
+            'type' => 'success',
+            'message' => ucfirst(str_replace('_', ' ', $type)).t('remove_successfully'),
         ]);
     }
 

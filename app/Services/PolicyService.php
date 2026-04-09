@@ -12,7 +12,7 @@ class PolicyService
      */
     public function isSessionActive(Contact $contact): bool
     {
-        if (!$contact->last_interaction_at) {
+        if (! $contact->last_interaction_at) {
             return false;
         }
 

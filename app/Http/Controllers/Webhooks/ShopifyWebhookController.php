@@ -32,19 +32,21 @@ class ShopifyWebhookController extends Controller
 
         if ($hmac && $secret) {
             $calculatedHmac = base64_encode(hash_hmac('sha256', $data, $secret, true));
-            if (!hash_equals($hmac, $calculatedHmac)) {
+            if (! hash_equals($hmac, $calculatedHmac)) {
                 Log::error("Shopify Webhook HMAC mismatch for shop: {$request->header('X-Shopify-Shop-Domain')}");
+
                 return response()->json(['error' => 'Invalid signature'], 401);
             }
         } else {
-            Log::warning("Shopify Webhook received without HMAC or Secret configured.");
+            Log::warning('Shopify Webhook received without HMAC or Secret configured.');
             // In strict mode, return 401. For now, log and proceed if you want to allow it.
         }
 
         $shopDomain = $request->header('X-Shopify-Shop-Domain');
 
-        if (!$shopDomain) {
-            Log::warning("Shopify Webhook missing Shop Domain.");
+        if (! $shopDomain) {
+            Log::warning('Shopify Webhook missing Shop Domain.');
+
             return response()->json(['error' => 'Missing Shop Domain'], 400);
         }
 
@@ -57,8 +59,9 @@ class ShopifyWebhookController extends Controller
                 return str_contains($int->credentials['domain'] ?? ($int->credentials['shop_url'] ?? ''), $shopDomain);
             });
 
-        if (!$integration) {
+        if (! $integration) {
             Log::info("Received Shopify webhook for unknown or broken shop: {$shopDomain}");
+
             return response()->json(['message' => 'Shop not integrated or integration broken'], 200);
         }
 
@@ -67,7 +70,7 @@ class ShopifyWebhookController extends Controller
         $orderData = $payload;
         $shopifyId = $orderData['id'] ?? null;
 
-        if (!$shopifyId) {
+        if (! $shopifyId) {
             return response()->json(['message' => 'No Order ID'], 200);
         }
 
@@ -75,7 +78,7 @@ class ShopifyWebhookController extends Controller
         // Shopify: financial_status (paid, pending), fulfillment_status (fulfilled, null)
         $status = 'placed'; // Default
 
-        if (!empty($orderData['cancel_reason'])) {
+        if (! empty($orderData['cancel_reason'])) {
             $status = 'cancelled';
         } elseif ($orderData['fulfillment_status'] === 'fulfilled') {
             $status = 'shipped'; // or delivered, depending on carrier info? Usually 'shipped'.
@@ -91,7 +94,7 @@ class ShopifyWebhookController extends Controller
         $email = $customer['email'] ?? null;
         $phone = $customer['phone'] ?? $customer['default_address']['phone'] ?? null;
 
-        if (!$phone) {
+        if (! $phone) {
             // Can't send WA without phone.
             return response()->json(['message' => 'No Customer Phone'], 200);
         }
@@ -99,7 +102,7 @@ class ShopifyWebhookController extends Controller
         // Resolve Contact
         $contact = Contact::firstOrCreate(
             ['team_id' => $teamId, 'phone_number' => $phone],
-            ['name' => $customer['first_name'] . ' ' . $customer['last_name'], 'email' => $email]
+            ['name' => $customer['first_name'].' '.$customer['last_name'], 'email' => $email]
         );
 
         $order = Order::updateOrCreate(
@@ -113,7 +116,7 @@ class ShopifyWebhookController extends Controller
                 'total_amount' => $orderData['total_price'] ?? 0,
                 'currency' => $orderData['currency'] ?? 'USD',
                 'items' => $orderData['line_items'] ?? [], // Store raw items for reference
-                'payment_details' => ['method' => 'shopify', 'financial_status' => $orderData['financial_status'] ?? null]
+                'payment_details' => ['method' => 'shopify', 'financial_status' => $orderData['financial_status'] ?? null],
             ]
         );
 
@@ -122,14 +125,14 @@ class ShopifyWebhookController extends Controller
         $context = [];
         if ($status === 'shipped') {
             $fulfillments = $orderData['fulfillments'] ?? [];
-            if (!empty($fulfillments)) {
+            if (! empty($fulfillments)) {
                 $lastFulfillment = end($fulfillments);
                 $context['tracking_number'] = $lastFulfillment['tracking_number'] ?? null;
                 $context['tracking_url'] = $lastFulfillment['tracking_url'] ?? null;
             }
         }
 
-        // Only fire if status CHANGED? updateOrCreate returns the model. 
+        // Only fire if status CHANGED? updateOrCreate returns the model.
         // We should check if was changed.
         // Laravel's `wasChanged()` checks immediate save.
         // But for `updateStatus` service logic, we explicitly want to fire logic.

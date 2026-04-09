@@ -22,7 +22,7 @@ Route::prefix('v1')->group(function () {
     $resources = [
         'contacts' => ContactController::class,
         'statuses' => StatusController::class,
-        'sources'  => SourceController::class,
+        'sources' => SourceController::class,
     ];
 
     foreach ($resources as $resource => $controller) {

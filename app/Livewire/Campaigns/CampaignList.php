@@ -4,10 +4,10 @@ namespace App\Livewire\Campaigns;
 
 use App\Models\Campaign;
 use Illuminate\Support\Facades\DB;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
-use Livewire\WithPagination;
 use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Title('Campaigns')]
 class CampaignList extends Component
@@ -15,7 +15,9 @@ class CampaignList extends Component
     use WithPagination;
 
     public $search = '';
+
     public $confirmingDeletion = false;
+
     public $campaignIdToDelete = null;
 
     protected $listeners = ['refreshComponent' => '$refresh'];
@@ -44,7 +46,7 @@ class CampaignList extends Component
             $campaign->delete();
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Campaign deleted successfully.'
+                'message' => 'Campaign deleted successfully.',
             ]);
         }
         $this->confirmingDeletion = false;
@@ -65,20 +67,22 @@ class CampaignList extends Component
 
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Campaign cloned successfully. You can now edit and send it.'
+                'message' => 'Campaign cloned successfully. You can now edit and send it.',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Failed to clone campaign: ' . $e->getMessage()
+                'message' => 'Failed to clone campaign: '.$e->getMessage(),
             ]);
         }
     }
 
     // Retargeting
     public $showRetargetModal = false;
+
     public $retargetingCriteria = 'not_read';
+
     public $selectedCampaignId = null;
 
     public function openRetargetModal($campaignId)
@@ -94,7 +98,7 @@ class CampaignList extends Component
             $campaign->update(['status' => 'paused']);
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Campaign paused successfully.'
+                'message' => 'Campaign paused successfully.',
             ]);
         }
     }
@@ -106,7 +110,7 @@ class CampaignList extends Component
             $campaign->update(['status' => 'processing']);
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Campaign resumed successfully.'
+                'message' => 'Campaign resumed successfully.',
             ]);
         }
     }
@@ -136,14 +140,15 @@ class CampaignList extends Component
         if (empty($contactIds)) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'No contacts found matching criteria.'
+                'message' => 'No contacts found matching criteria.',
             ]);
+
             return;
         }
 
         session([
             'retarget_ids' => $contactIds,
-            'default_name' => "Retarget: " . $campaign->name . " (" . str_replace('_', ' ', $this->retargetingCriteria) . ")"
+            'default_name' => 'Retarget: '.$campaign->name.' ('.str_replace('_', ' ', $this->retargetingCriteria).')',
         ]);
 
         return redirect()->route('campaigns.create');
@@ -155,7 +160,7 @@ class CampaignList extends Component
         $query = Campaign::query();
 
         if ($this->search) {
-            $query->where('campaign_name', 'like', '%' . $this->search . '%');
+            $query->where('campaign_name', 'like', '%'.$this->search.'%');
         }
 
         // Add team scope
@@ -176,7 +181,7 @@ class CampaignList extends Component
 
         return view('livewire.campaigns.campaign-list', [
             'campaigns' => $campaigns,
-            'stats' => $stats
+            'stats' => $stats,
         ]);
     }
 }

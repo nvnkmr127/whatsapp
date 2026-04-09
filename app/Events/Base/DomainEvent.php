@@ -14,15 +14,19 @@ abstract class DomainEvent implements DomainEventContract
     use Dispatchable, SerializesModels;
 
     public $eventId;
+
     public $occurredAt;
+
     public $payload;
+
     public $metadata;
 
     /**
      * Instantiate and validate the event.
-     * 
-     * @param array $payload Key-value data specific to the domain event.
-     * @param array $metadata Optional context (user_id, team_id, request_id).
+     *
+     * @param  array  $payload  Key-value data specific to the domain event.
+     * @param  array  $metadata  Optional context (user_id, team_id, request_id).
+     *
      * @throws InvalidDomainEventException
      */
     public function __construct(array $payload, array $metadata = [])
@@ -39,8 +43,7 @@ abstract class DomainEvent implements DomainEventContract
 
     /**
      * Validate the payload.
-     * 
-     * @param array $payload
+     *
      * @throws InvalidDomainEventException
      */
     protected function validate(array $payload): void
@@ -51,7 +54,7 @@ abstract class DomainEvent implements DomainEventContract
             $errors = $validator->errors()->toArray();
             $className = class_basename($this);
             throw new InvalidDomainEventException(
-                "Event contract violation for [{$className}]: " . json_encode($errors),
+                "Event contract violation for [{$className}]: ".json_encode($errors),
                 $errors
             );
         }
@@ -90,7 +93,7 @@ abstract class DomainEvent implements DomainEventContract
         // 1. Correlation Context
         $currentTraceId = \App\Services\TraceContext::getTraceId();
 
-        if (!$currentTraceId && app()->bound('request')) {
+        if (! $currentTraceId && app()->bound('request')) {
             $currentTraceId = \App\Services\TraceContext::ensureTraceId();
         }
 
@@ -108,11 +111,11 @@ abstract class DomainEvent implements DomainEventContract
         ];
 
         // Attempt to grab current user/team context if not provided
-        if (!isset($metadata['team_id']) && auth()->check() && request()->user()->current_team_id) {
+        if (! isset($metadata['team_id']) && auth()->check() && request()->user()->current_team_id) {
             $metadata['team_id'] = request()->user()->current_team_id;
         }
 
-        if (!isset($metadata['actor_id']) && auth()->check()) {
+        if (! isset($metadata['actor_id']) && auth()->check()) {
             $metadata['actor_id'] = auth()->id();
         }
 
@@ -137,6 +140,7 @@ abstract class DomainEvent implements DomainEventContract
         if (array_key_exists($key, $this->payload)) {
             return $this->payload[$key];
         }
+
         return null;
     }
 }

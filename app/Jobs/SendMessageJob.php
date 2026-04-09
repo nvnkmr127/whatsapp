@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Team;
 use App\Models\Message;
+use App\Models\Team;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,17 +17,27 @@ class SendMessageJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $teamId;
+
     public $phone;
+
     public $type;
-    public $content; 
+
+    public $content;
+
     public $templateName;
+
     public $language;
+
     public $messageId;
+
     public $traceId;
+
     public $headerParams;
+
     public $footerParams;
 
     public $tries = 3;
+
     public $backoff = [10, 30, 60];
 
     /**
@@ -61,30 +71,33 @@ class SendMessageJob implements ShouldQueue
         }
 
         $team = Team::find($this->teamId);
-        if (!$team) {
+        if (! $team) {
             Log::error("SendMessageJob: Team not found {$this->teamId}");
+
             return;
         }
 
         $waService->setTeam($team);
 
         if ($team->is_sandbox_mode) {
-             Log::info("SendMessageJob: Team {$team->id} in SANDBOX mode. Skipping real WhatsApp call for {$this->phone}");
-             if ($this->messageId) {
-                 Message::where('id', $this->messageId)->update([
-                     'status' => 'sent',
-                     'whatsapp_message_id' => 'sandbox_' . \Illuminate\Support\Str::random(10)
-                 ]);
-             }
-             return;
+            Log::info("SendMessageJob: Team {$team->id} in SANDBOX mode. Skipping real WhatsApp call for {$this->phone}");
+            if ($this->messageId) {
+                Message::where('id', $this->messageId)->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => 'sandbox_'.\Illuminate\Support\Str::random(10),
+                ]);
+            }
+
+            return;
         }
 
         // 1. Idempotency Check
         // If messageId exists, check if it already has a provider ID (meaning it was already sent)
         if ($this->messageId) {
             $existingMessage = Message::find($this->messageId);
-            if ($existingMessage && !empty($existingMessage->whatsapp_message_id)) {
+            if ($existingMessage && ! empty($existingMessage->whatsapp_message_id)) {
                 Log::info("SendMessageJob: Message {$this->messageId} already sent (idempotency triggered). Skipping.");
+
                 return;
             }
         } else {
@@ -125,12 +138,13 @@ class SendMessageJob implements ShouldQueue
                 );
             }
 
-            if (!empty($response['error'])) {
+            if (! empty($response['error'])) {
                 $errorCode = $response['error']['code'] ?? null;
-                
+
                 // Permanent failures (Policy)
                 if (in_array($errorCode, [131047, 131051])) {
                     Log::warning("SendMessageJob: Policy failure for {$this->phone}. Code: {$errorCode}");
+
                     return;
                 }
 
@@ -139,6 +153,7 @@ class SendMessageJob implements ShouldQueue
                     $backoff = 60 + mt_rand(5, 30);
                     Log::notice("SendMessageJob: Rate Limit hit. Backing off {$backoff}s.");
                     $this->release($backoff);
+
                     return;
                 }
 
@@ -146,7 +161,7 @@ class SendMessageJob implements ShouldQueue
             }
 
         } catch (\Exception $e) {
-            Log::error("Failed to send message to {$this->phone}: " . $e->getMessage());
+            Log::error("Failed to send message to {$this->phone}: ".$e->getMessage());
 
             if (str_contains($e->getMessage(), 'Policy UC-03') || str_contains($e->getMessage(), '24-hour window')) {
                 return;
@@ -166,21 +181,20 @@ class SendMessageJob implements ShouldQueue
             if ($message) {
                 $message->update([
                     'status' => 'failed',
-                    'error_message' => mb_strimwidth($exception->getMessage(), 0, 500, '...')
+                    'error_message' => mb_strimwidth($exception->getMessage(), 0, 500, '...'),
                 ]);
 
                 try {
                     \App\Events\MessageStatusUpdated::dispatch($message);
                 } catch (\Exception $e) {
-                    Log::error("Failed to update message status after job failure: " . $e->getMessage(), [
+                    Log::error('Failed to update message status after job failure: '.$e->getMessage(), [
                         'message_id' => $this->messageId,
-                        'trace_id' => $this->traceId
+                        'trace_id' => $this->traceId,
                     ]);
                 }
             }
         }
 
-        Log::error("SendMessageJob completely failed for ID: {$this->messageId}. Error: " . $exception->getMessage());
+        Log::error("SendMessageJob completely failed for ID: {$this->messageId}. Error: ".$exception->getMessage());
     }
 }
-

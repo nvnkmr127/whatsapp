@@ -3,28 +3,39 @@
 namespace App\Livewire\Crm;
 
 use App\Models\Company;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Facades\Auth;
 
 class CompanyManager extends Component
 {
     use WithPagination;
 
     public $search = '';
+
     public $isModalOpen = false;
+
     public $isDeleteModalOpen = false;
+
     public $companyId;
 
     // Form fields
     public $name;
+
     public $domain;
+
     public $industry;
+
     public $size;
+
     public $website;
+
     public $phone;
+
     public $city;
+
     public $country;
+
     public $description;
 
     protected $rules = [
@@ -45,9 +56,9 @@ class CompanyManager extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('domain', 'like', '%' . $this->search . '%')
-                    ->orWhere('industry', 'like', '%' . $this->search . '%');
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('domain', 'like', '%'.$this->search.'%')
+                    ->orWhere('industry', 'like', '%'.$this->search.'%');
             });
         }
 

@@ -32,8 +32,8 @@ class ProcessTenantBackupJob implements ShouldQueue
     {
         try {
             if ($this->backupRecord->type === 'global') {
-                // Using a private/protected helper call via a public wrapper or reflection 
-                // but since it's in the same namespace context or Service, let's just 
+                // Using a private/protected helper call via a public wrapper or reflection
+                // but since it's in the same namespace context or Service, let's just
                 // call a public method. I'll make generateGlobalBackup public in BackupService.
                 $backupService->generateGlobalBackup($this->backupRecord);
             } else {
@@ -41,7 +41,7 @@ class ProcessTenantBackupJob implements ShouldQueue
             }
             Log::info("Backup generation completed for Record ID: {$this->backupRecord->id} (Type: {$this->backupRecord->type})");
         } catch (\Exception $e) {
-            Log::error("Backup generation failed for Record ID: {$this->backupRecord->id}. Error: " . $e->getMessage());
+            Log::error("Backup generation failed for Record ID: {$this->backupRecord->id}. Error: ".$e->getMessage());
             throw $e;
         }
     }

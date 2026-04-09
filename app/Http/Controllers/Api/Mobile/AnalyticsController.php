@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Message;
 use App\Models\Conversation;
+use App\Models\Message;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AnalyticsController extends Controller
 {
@@ -16,7 +16,9 @@ class AnalyticsController extends Controller
     public function dashboard(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) return response()->json(['error' => 'No team assigned'], 403);
+        if (! $team) {
+            return response()->json(['error' => 'No team assigned'], 403);
+        }
 
         $now = Carbon::now();
         $startOfMonth = $now->copy()->startOfMonth();
@@ -43,8 +45,8 @@ class AnalyticsController extends Controller
             ->where('created_at', '>=', $now->copy()->subDays(30))
             ->count();
 
-        $deliveryRate = $outboundCount > 0 ? (int)(($deliveredCount / $outboundCount) * 100) : 100;
-        $readRate = $deliveredCount > 0 ? (int)(($readCount / $deliveredCount) * 100) : 0;
+        $deliveryRate = $outboundCount > 0 ? (int) (($deliveredCount / $outboundCount) * 100) : 100;
+        $readRate = $deliveredCount > 0 ? (int) (($readCount / $deliveredCount) * 100) : 0;
 
         return response()->json([
             'conversations' => [
@@ -58,7 +60,7 @@ class AnalyticsController extends Controller
                 'delivery_rate' => $deliveryRate,
                 'read_rate' => $readRate,
             ],
-            'last_sync' => now()->toISOString()
+            'last_sync' => now()->toISOString(),
         ]);
     }
 }

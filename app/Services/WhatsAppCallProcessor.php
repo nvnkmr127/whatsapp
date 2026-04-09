@@ -2,20 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\Team;
-use App\Models\WhatsAppCall;
-use App\Models\Contact;
-use App\Services\ConversationService;
-use App\Events\CallOffered;
-use App\Events\CallRinging;
 use App\Events\CallAnswered;
 use App\Events\CallEnded;
 use App\Events\CallFailed;
-use App\Events\CallRejected;
 use App\Events\CallMissed;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\File;
+use App\Events\CallOffered;
+use App\Events\CallRejected;
+use App\Events\CallRinging;
+use App\Models\Contact;
+use App\Models\Team;
+use App\Models\WhatsAppCall;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class WhatsAppCallProcessor
 {
@@ -42,8 +40,9 @@ class WhatsAppCallProcessor
         $timestamp = $callData['timestamp'] ?? null;
         $direction = $callData['direction'] ?? null; // USER_INITIATED, etc.
 
-        if (!$callId) {
-            Log::warning("Call webhook missing call ID");
+        if (! $callId) {
+            Log::warning('Call webhook missing call ID');
+
             return;
         }
 
@@ -53,7 +52,7 @@ class WhatsAppCallProcessor
             'from' => $from,
             'to' => $to,
             'event' => $event,
-            'status' => $status
+            'status' => $status,
         ]);
 
         // Normalize direction
@@ -69,34 +68,41 @@ class WhatsAppCallProcessor
 
         // --- CALL STATUS STICKINESS (UC-SAFE-07) ---
         $callRanks = [
-            'initiated'   => 0,
-            'ringing'     => 1,
+            'initiated' => 0,
+            'ringing' => 1,
             'in_progress' => 2,
-            'completed'   => 3, // Terminal
-            'failed'      => 3, // Terminal
-            'rejected'    => 3, // Terminal
-            'missed'      => 3, // Terminal
+            'completed' => 3, // Terminal
+            'failed' => 3, // Terminal
+            'rejected' => 3, // Terminal
+            'missed' => 3, // Terminal
         ];
 
         if ($call) {
             $currentRank = $callRanks[$call->status] ?? 0;
-            
+
             // If new data suggests an event/status, check if it's a retrograde move
             // Events roughly map to ranks: connect=rings, answered=in_progress, terminate=terminal
             $newRank = $currentRank; // Default
             $eventNormalized = strtolower($event ?? '');
-            
-            if ($eventNormalized === 'connect' || $eventNormalized === 'connected') $newRank = 1;
-            if ($eventNormalized === 'answered' || strtolower($status ?? '') === 'in_progress') $newRank = 2;
-            if ($eventNormalized === 'terminate' || in_array(strtolower($status ?? ''), ['completed', 'failed', 'rejected', 'missed'])) $newRank = 3;
+
+            if ($eventNormalized === 'connect' || $eventNormalized === 'connected') {
+                $newRank = 1;
+            }
+            if ($eventNormalized === 'answered' || strtolower($status ?? '') === 'in_progress') {
+                $newRank = 2;
+            }
+            if ($eventNormalized === 'terminate' || in_array(strtolower($status ?? ''), ['completed', 'failed', 'rejected', 'missed'])) {
+                $newRank = 3;
+            }
 
             if ($newRank < $currentRank && $currentRank >= 3) {
-                 Log::info("WhatsAppCallProcessor: Ignoring retrograde event '{$event}' for terminal call {$callId}");
-                 return;
+                Log::info("WhatsAppCallProcessor: Ignoring retrograde event '{$event}' for terminal call {$callId}");
+
+                return;
             }
         }
 
-        if (!$call) {
+        if (! $call) {
             // New call
             $call = WhatsAppCall::create([
                 'call_id' => $callId,
@@ -143,10 +149,10 @@ class WhatsAppCallProcessor
             // Silently fail
         }
 
-        Log::info("WhatsAppCallProcessor: Handling connect/connected event", [
+        Log::info('WhatsAppCallProcessor: Handling connect/connected event', [
             'call_id' => $call->call_id,
             'has_session' => isset($callData['session']),
-            'sdp_type' => $callData['session']['sdp_type'] ?? 'N/A'
+            'sdp_type' => $callData['session']['sdp_type'] ?? 'N/A',
         ]);
 
         // Capture SDP offer/answer
@@ -158,7 +164,7 @@ class WhatsAppCallProcessor
 
             $call->update([
                 'status' => 'ringing',
-                'metadata' => array_merge($call->metadata ?? [], ['sdp' => $sanitizedSdp])
+                'metadata' => array_merge($call->metadata ?? [], ['sdp' => $sanitizedSdp]),
             ]);
 
             // Record SDP offer received for quality tracking
@@ -196,7 +202,7 @@ class WhatsAppCallProcessor
             $sdp = $callData['session']['sdp'] ?? $callData['session_data']['sdp'] ?? null;
             if ($sdp) {
                 $call->update([
-                    'metadata' => array_merge($call->metadata ?? [], ['answered_sdp' => $sdp])
+                    'metadata' => array_merge($call->metadata ?? [], ['answered_sdp' => $sdp]),
                 ]);
             }
 
@@ -248,17 +254,17 @@ class WhatsAppCallProcessor
 
         // Record terminal event for safeguards (missed/failed)
         if (in_array($status, ['missed', 'failed', 'no_answer', 'rejected'])) {
-            $safeguardService = new CallSafeguardService();
+            $safeguardService = new CallSafeguardService;
             $type = in_array($status, ['missed', 'no_answer', 'rejected']) ? 'missed' : 'failed';
             $safeguardService->recordEvent($call->team, $type);
         }
 
         // Trigger log to message thread
         try {
-            $logService = new CallLogService();
+            $logService = new CallLogService;
             $logService->logCall($call);
         } catch (\Exception $e) {
-            Log::error("Failed to log call to thread: " . $e->getMessage());
+            Log::error('Failed to log call to thread: '.$e->getMessage());
         }
     }
 
@@ -279,7 +285,7 @@ class WhatsAppCallProcessor
                 ->where('phone_number', $normalizedPhone)
                 ->first();
 
-            if (!$contact) {
+            if (! $contact) {
                 $contact = Contact::create([
                     'team_id' => $team->id,
                     'phone_number' => $normalizedPhone,
@@ -289,7 +295,7 @@ class WhatsAppCallProcessor
             }
 
             // Create conversation if needed
-            $conversationService = new ConversationService();
+            $conversationService = new ConversationService;
             $conversation = $conversationService->ensureActiveConversation($contact);
 
             // Update call with contact and conversation
@@ -299,7 +305,7 @@ class WhatsAppCallProcessor
             ]);
 
             // Route call to an agent if not already assigned
-            if (!$call->agent_id) {
+            if (! $call->agent_id) {
                 $routingService = new CallRoutingService($team);
                 $routingResult = $routingService->findAgent($contact);
 
@@ -307,20 +313,20 @@ class WhatsAppCallProcessor
                     $call->update(['agent_id' => $routingResult['agent']->id]);
 
                     // Set sticky assignment if contact is not currently assigned
-                    if (!$contact->assigned_to) {
+                    if (! $contact->assigned_to) {
                         $contact->update(['assigned_to' => $routingResult['agent']->id]);
                     }
 
-                    Log::info("Inbound call routed to agent", [
+                    Log::info('Inbound call routed to agent', [
                         'call_id' => $call->call_id,
                         'agent_id' => $routingResult['agent']->id,
-                        'method' => $routingResult['method']
+                        'method' => $routingResult['method'],
                     ]);
-                } else if (isset($routingResult['action']) && $routingResult['action'] === 'auto_reply') {
+                } elseif (isset($routingResult['action']) && $routingResult['action'] === 'auto_reply') {
                     // Trigger fallback auto-reply if needed
-                    Log::info("Inbound call triggered fallback action", [
+                    Log::info('Inbound call triggered fallback action', [
                         'call_id' => $call->call_id,
-                        'action' => 'auto_reply'
+                        'action' => 'auto_reply',
                     ]);
                 }
 
@@ -329,7 +335,7 @@ class WhatsAppCallProcessor
                     ->delay(now()->addSeconds($team->getCallRoutingConfig()['ring_timeout_seconds'] ?? config('whatsapp.calling.ring_timeout_seconds', 30)));
             }
         } catch (\Exception $e) {
-            Log::error("Failed to ensure contact/conv/routing for call: " . $e->getMessage());
+            Log::error('Failed to ensure contact/conv/routing for call: '.$e->getMessage());
         }
     }
 }

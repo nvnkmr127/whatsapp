@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Team;
 use App\Models\QualityRatingHistory;
+use App\Models\Team;
 use App\Traits\WhatsApp;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -56,7 +56,7 @@ class MonitorWhatsAppPhoneStatus extends Command
                     } catch (\Exception $e) {
                         $this->error("Failed to check team {$team->id}: {$e->getMessage()}");
                         Log::error("Phone status check failed for team {$team->id}", [
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ]);
                     }
                 }
@@ -77,8 +77,9 @@ class MonitorWhatsAppPhoneStatus extends Command
         try {
             $result = $this->getPhoneNumberDetails($team->whatsapp_phone_number_id);
 
-            if (!$result['status']) {
+            if (! $result['status']) {
                 $this->handlePhoneError($team, $result['message']);
+
                 return true;
             }
 
@@ -116,7 +117,7 @@ class MonitorWhatsAppPhoneStatus extends Command
             }
 
         } catch (\Exception $e) {
-            Log::error("Phone status check failed for team {$team->id}: " . $e->getMessage());
+            Log::error("Phone status check failed for team {$team->id}: ".$e->getMessage());
             throw $e;
         }
 
@@ -159,7 +160,7 @@ class MonitorWhatsAppPhoneStatus extends Command
                 $data
             ));
         } catch (\Exception $e) {
-            Log::error("Failed to send status change notification: " . $e->getMessage());
+            Log::error('Failed to send status change notification: '.$e->getMessage());
         }
     }
 
@@ -209,11 +210,11 @@ class MonitorWhatsAppPhoneStatus extends Command
                 $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                     $team,
                     'quality_red',
-                    "CRITICAL: Your WhatsApp Quality Rating has dropped to RED. Sending is now restricted to prevent a permanent ban.",
+                    'CRITICAL: Your WhatsApp Quality Rating has dropped to RED. Sending is now restricted to prevent a permanent ban.',
                     $data
                 ));
             } catch (\Exception $e) {
-                Log::error("Failed to send critical quality notification: " . $e->getMessage());
+                Log::error('Failed to send critical quality notification: '.$e->getMessage());
             }
 
         } elseif ($severity === 'warning') {
@@ -229,11 +230,11 @@ class MonitorWhatsAppPhoneStatus extends Command
                 $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification(
                     $team,
                     'quality_yellow',
-                    "WARNING: Your WhatsApp Quality Rating is YELLOW. Please review your recently sent messages for compliance issues.",
+                    'WARNING: Your WhatsApp Quality Rating is YELLOW. Please review your recently sent messages for compliance issues.',
                     ['new_rating' => $newRating]
                 ));
             } catch (\Exception $e) {
-                Log::error("Failed to send quality warning notification: " . $e->getMessage());
+                Log::error('Failed to send quality warning notification: '.$e->getMessage());
             }
         } else {
             $this->info("Team {$team->id}: Quality rating changed from {$oldRating} to {$newRating}");
@@ -246,7 +247,7 @@ class MonitorWhatsAppPhoneStatus extends Command
     private function handlePhoneError(Team $team, string $error): void
     {
         Log::error("Failed to fetch phone details for team {$team->id}", [
-            'error' => $error
+            'error' => $error,
         ]);
 
         // Check if it's a token error

@@ -13,7 +13,7 @@ class RoleList extends Component
     public $role_id;
 
     protected $listeners = [
-        'editRole'      => 'editRole',
+        'editRole' => 'editRole',
         'confirmDelete' => 'confirmDelete',
     ];
 
@@ -33,7 +33,7 @@ class RoleList extends Component
 
     public function confirmDelete($roleId)
     {
-        $this->role_id            = $roleId;
+        $this->role_id = $roleId;
         $this->confirmingDeletion = true;
     }
 

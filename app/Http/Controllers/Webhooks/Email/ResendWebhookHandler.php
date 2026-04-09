@@ -29,7 +29,7 @@ class ResendWebhookHandler
 
                 WebhookSignature::verify($payload, $headers, $webhookSecret);
             } catch (\Exception $e) {
-                Log::warning("Resend Webhook signature verification failed: " . $e->getMessage());
+                Log::warning('Resend Webhook signature verification failed: '.$e->getMessage());
                 abort(403, 'Invalid signature');
             }
         }
@@ -39,14 +39,16 @@ class ResendWebhookHandler
         $data = $request->json('data');
         $emailId = $data['email_id'] ?? null;
 
-        if (!$emailId) {
+        if (! $emailId) {
             Log::info("Resend Webhook: Missing email_id in payload type [{$type}]");
+
             return;
         }
 
         $log = EmailLog::where('message_id', $emailId)->first();
-        if (!$log) {
+        if (! $log) {
             Log::info("Resend Webhook: No EmailLog found for message_id [{$emailId}]");
+
             return;
         }
 
@@ -54,7 +56,7 @@ class ResendWebhookHandler
             case 'email.delivered':
                 $log->update([
                     'delivered_at' => now(),
-                    'status' => 'delivered'
+                    'status' => 'delivered',
                 ]);
                 break;
 
@@ -71,11 +73,11 @@ class ResendWebhookHandler
                 $log->update([
                     'status' => 'complained',
                     'metadata' => array_merge($log->metadata ?? [], [
-                        'complaint' => $data['complaint'] ?? []
-                    ])
+                        'complaint' => $data['complaint'] ?? [],
+                    ]),
                 ]);
                 break;
-                
+
             case 'email.opened':
                 $log->update(['status' => 'opened', 'opened_at' => now()]);
                 // T10.1: Automation Trigger
@@ -91,12 +93,12 @@ class ResendWebhookHandler
                 $contact = \App\Models\Contact::where('email', $log->recipient)->first();
                 if ($contact) {
                     app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'email_link_clicked', [
-                        'template_id' => $log->template_id, 
-                        'url' => $data['click']['url'] ?? ''
+                        'template_id' => $log->template_id,
+                        'url' => $data['click']['url'] ?? '',
                     ]);
                 }
                 break;
-                
+
             default:
                 Log::info("Resend Webhook: Unhandled event type [{$type}] for message_id [{$emailId}]");
                 break;

@@ -23,8 +23,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         public WebhookPayload $payload,
         public array $actionConfig,
         public ?string $traceId = null
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {
@@ -51,7 +50,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
             $this->payload->update([
                 'status' => 'processed',
                 'error_message' => null,
-                'next_retry_at' => null
+                'next_retry_at' => null,
             ]);
             $this->payload->source?->incrementProcessed();
         } catch (\Exception $e) {
@@ -66,7 +65,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
                 'error' => $e->getMessage(),
                 'payload_id' => $this->payload->id,
                 'retry_count' => $currentRetryCount,
-                'retry_enabled' => $retryEnabled
+                'retry_enabled' => $retryEnabled,
             ]);
 
             // Handle Retries
@@ -76,16 +75,16 @@ class ProcessMappedWebhookJob implements ShouldQueue
                 $strategy = $retryConfig['retry_strategy'] ?? 'exponential';
 
                 // Calculate delay
-                $delaySeconds = ($strategy === 'exponential') 
+                $delaySeconds = ($strategy === 'exponential')
                     ? $interval * pow(2, $currentRetryCount) // 0->1x, 1->2x, 2->4x, 3->8x...
                     : $interval;
-                
+
                 $nextRetryAt = now()->addSeconds($delaySeconds);
 
                 $this->payload->update([
                     'status' => 'failed',
                     'error_message' => $e->getMessage(),
-                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                    'last_error' => $e->getMessage()."\n".$e->getTraceAsString(),
                     'retry_count' => $newRetryCount,
                     'next_retry_at' => $nextRetryAt,
                 ]);
@@ -94,20 +93,20 @@ class ProcessMappedWebhookJob implements ShouldQueue
                 self::dispatch($this->payload, $this->actionConfig, $this->traceId)
                     ->delay($nextRetryAt);
 
-                Log::info("Webhook job rescheduled for retry", [
+                Log::info('Webhook job rescheduled for retry', [
                     'payload_id' => $this->payload->id,
                     'retry_count' => $newRetryCount,
-                    'next_retry_at' => $nextRetryAt->toDateTimeString()
+                    'next_retry_at' => $nextRetryAt->toDateTimeString(),
                 ]);
             } else {
                 // Final failure
                 $this->payload->update([
                     'status' => 'failed',
                     'error_message' => $e->getMessage(),
-                    'last_error' => $e->getMessage() . "\n" . $e->getTraceAsString(),
+                    'last_error' => $e->getMessage()."\n".$e->getTraceAsString(),
                     'next_retry_at' => null,
                 ]);
-                
+
                 if ($source) {
                     $source->incrementFailed();
                 }
@@ -129,25 +128,25 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $parameterMapping = $this->normalizeMapping($this->actionConfig['parameter_mapping'] ?? []);
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
 
-        if (!$templateId) {
+        if (! $templateId) {
             throw new \Exception('Template ID not configured');
         }
 
         $template = WhatsappTemplate::find($templateId);
-        if (!$template || $template instanceof \Illuminate\Database\Eloquent\Collection) {
+        if (! $template || $template instanceof \Illuminate\Database\Eloquent\Collection) {
             // Ensure we have a single model
             if ($template instanceof \Illuminate\Database\Eloquent\Collection) {
                 $template = $template->first();
             }
 
-            if (!$template) {
+            if (! $template) {
                 // Use json_encode for templateId in case it's still weird, to avoid Array to String conversion
-                throw new \Exception("Template not found: " . (is_string($templateId) || is_numeric($templateId) ? $templateId : json_encode($templateId)));
+                throw new \Exception('Template not found: '.(is_string($templateId) || is_numeric($templateId) ? $templateId : json_encode($templateId)));
             }
         }
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
-        if (!$phoneNumber) {
+        if (! $phoneNumber) {
             throw new \Exception("Phone number not found in mapped data (Field: {$phoneField})");
         }
 
@@ -155,20 +154,20 @@ class ProcessMappedWebhookJob implements ShouldQueue
         try {
             $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
         } catch (\Exception $e) {
-            throw new \Exception("Invalid phone number format for WhatsApp: {$phoneNumber}. Error: " . $e->getMessage());
+            throw new \Exception("Invalid phone number format for WhatsApp: {$phoneNumber}. Error: ".$e->getMessage());
         }
 
         // Build template parameters
         $parameters = [];
         // Map configured parameters from action config to mapped keys in payload
-        if (!empty($parameterMapping) && is_array($parameterMapping)) {
+        if (! empty($parameterMapping) && is_array($parameterMapping)) {
             foreach ($parameterMapping as $position => $mappedKey) {
                 // Handle case where mappedKey might be an array (malformed config)
                 if (is_array($mappedKey)) {
-                    Log::warning("Parameter mapping contains array value", [
+                    Log::warning('Parameter mapping contains array value', [
                         'payload_id' => $this->payload->id,
                         'position' => $position,
-                        'mappedKey' => $mappedKey
+                        'mappedKey' => $mappedKey,
                     ]);
                     // Try to extract the actual key if it's a nested structure
                     $mappedKey = is_string($mappedKey[0] ?? null) ? $mappedKey[0] : json_encode($mappedKey);
@@ -205,12 +204,12 @@ class ProcessMappedWebhookJob implements ShouldQueue
                         ? array_keys($this->payload->mapped_data)
                         : ['mapped_data is not an array'];
 
-                    Log::warning("Empty value for parameter mapping", [
+                    Log::warning('Empty value for parameter mapping', [
                         'payload_id' => $this->payload->id,
                         'position' => $position,
                         'mappedKey' => $mappedKey,
                         'mapped_data_keys' => $mappedDataKeys,
-                        'parameter_mapping' => $parameterMapping
+                        'parameter_mapping' => $parameterMapping,
                     ]);
                 }
 
@@ -222,12 +221,13 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $whatsappService = new WhatsAppService($template->team);
 
         if ($template->team->webhookSource?->is_sandbox || ($this->payload->source && $this->payload->source->is_sandbox)) {
-             Log::info('Webhook triggered template send (SANDBOX - SKIP API)', [
+            Log::info('Webhook triggered template send (SANDBOX - SKIP API)', [
                 'phone' => $phoneNumber,
                 'template' => $template->name,
                 'parameters' => $parameters,
-                'status' => 'sandbox'
+                'status' => 'sandbox',
             ]);
+
             return;
         }
 
@@ -238,9 +238,9 @@ class ProcessMappedWebhookJob implements ShouldQueue
             $parameters
         );
 
-        if (isset($result['success']) && !$result['success']) {
+        if (isset($result['success']) && ! $result['success']) {
             $errorDesc = $result['message'] ?? (is_array($result['error']) ? json_encode($result['error']) : ($result['error'] ?? 'Unknown error'));
-            throw new \Exception("Failed to send template: " . $errorDesc);
+            throw new \Exception('Failed to send template: '.$errorDesc);
         }
 
         $messageId = $result['data']['messages'][0]['id'] ?? 'unknown';
@@ -256,7 +256,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
             'template' => $template->name,
             'parameters' => $parameters,
             'message_id' => $messageId,
-            'status' => 'success'
+            'status' => 'success',
         ]);
     }
 
@@ -272,24 +272,24 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $otpParamIndex = $this->actionConfig['otp_param_index'] ?? 1;
         $otpLength = $this->actionConfig['otp_length'] ?? 6;
 
-        if (!$templateId) {
+        if (! $templateId) {
             throw new \Exception('Template ID not configured for OTP');
         }
 
         $template = WhatsappTemplate::find($templateId);
-        if (!$template || $template instanceof \Illuminate\Database\Eloquent\Collection) {
+        if (! $template || $template instanceof \Illuminate\Database\Eloquent\Collection) {
             if ($template instanceof \Illuminate\Database\Eloquent\Collection) {
                 $template = $template->first();
             }
 
-            if (!$template) {
+            if (! $template) {
                 // Use json_encode for templateId in case it's still weird
-                throw new \Exception("Template not found for OTP: " . (is_string($templateId) || is_numeric($templateId) ? $templateId : json_encode($templateId)));
+                throw new \Exception('Template not found for OTP: '.(is_string($templateId) || is_numeric($templateId) ? $templateId : json_encode($templateId)));
             }
         }
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
-        if (!$phoneNumber) {
+        if (! $phoneNumber) {
             throw new \Exception("Phone number not found in mapped data for OTP (Field: {$phoneField})");
         }
 
@@ -297,7 +297,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         try {
             $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
         } catch (\Exception $e) {
-            throw new \Exception("Invalid phone number format for OTP: {$phoneNumber}. Error: " . $e->getMessage());
+            throw new \Exception("Invalid phone number format for OTP: {$phoneNumber}. Error: ".$e->getMessage());
         }
 
         // Generate OTP
@@ -316,15 +316,16 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         // Use OTPService for secure storage and sending
-        $otpService = new \App\Services\OTPService();
+        $otpService = new \App\Services\OTPService;
 
         if ($template->team->webhookSource?->is_sandbox || ($this->payload->source && $this->payload->source->is_sandbox)) {
-             Log::info('Webhook triggered OTP send (SANDBOX - SKIP API)', [
+            Log::info('Webhook triggered OTP send (SANDBOX - SKIP API)', [
                 'phone' => $phoneNumber,
                 'template' => $template->name,
                 'otp' => '******',
-                'status' => 'sandbox'
+                'status' => 'sandbox',
             ]);
+
             return;
         }
 
@@ -338,8 +339,8 @@ class ProcessMappedWebhookJob implements ShouldQueue
             (int) $otpParamIndex
         );
 
-        if (!$success) {
-            throw new \Exception("Failed to send OTP via WhatsApp");
+        if (! $success) {
+            throw new \Exception('Failed to send OTP via WhatsApp');
         }
 
         Log::info('Webhook triggered OTP send', [
@@ -356,7 +357,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $customFields = $this->actionConfig['custom_fields'] ?? [];
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
-        if (!$phoneNumber) {
+        if (! $phoneNumber) {
             throw new \Exception("Phone number not found in mapped data for contact upsert (Field: {$phoneField})");
         }
 
@@ -364,7 +365,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         try {
             $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
         } catch (\Exception $e) {
-            throw new \Exception("Invalid phone number format for contact: {$phoneNumber}. Error: " . $e->getMessage());
+            throw new \Exception("Invalid phone number format for contact: {$phoneNumber}. Error: ".$e->getMessage());
         }
 
         $contactData = [
@@ -401,12 +402,12 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
         $variables = $this->normalizeMapping($this->actionConfig['variables'] ?? []);
 
-        if (!$automationId) {
+        if (! $automationId) {
             throw new \Exception('Automation ID not configured');
         }
 
         $phoneNumber = $this->payload->mapped_data[$phoneField] ?? null;
-        if (!$phoneNumber) {
+        if (! $phoneNumber) {
             throw new \Exception("Phone number not found in mapped data for automation (Field: {$phoneField})");
         }
 
@@ -414,7 +415,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         try {
             $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
         } catch (\Exception $e) {
-            throw new \Exception("Invalid phone number format for automation: {$phoneNumber}. Error: " . $e->getMessage());
+            throw new \Exception("Invalid phone number format for automation: {$phoneNumber}. Error: ".$e->getMessage());
         }
 
         // Build automation variables
@@ -430,12 +431,12 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $automation = \App\Models\Automation::find($automationId);
-        if (!$automation || $automation instanceof \Illuminate\Database\Eloquent\Collection) {
+        if (! $automation || $automation instanceof \Illuminate\Database\Eloquent\Collection) {
             if ($automation instanceof \Illuminate\Database\Eloquent\Collection) {
                 $automation = $automation->first();
             }
-            if (!$automation) {
-                throw new \Exception("Automation ID " . (is_string($automationId) || is_numeric($automationId) ? $automationId : json_encode($automationId)) . " not found");
+            if (! $automation) {
+                throw new \Exception('Automation ID '.(is_string($automationId) || is_numeric($automationId) ? $automationId : json_encode($automationId)).' not found');
             }
         }
 
@@ -461,7 +462,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $method = $this->actionConfig['method'] ?? 'POST';
         $headers = $this->actionConfig['headers'] ?? [];
 
-        if (!$url) {
+        if (! $url) {
             throw new \Exception('Forward URL not configured');
         }
 
@@ -476,7 +477,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
                 'json' => $forwardPayload,
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception("Forward webhook failed: {$response->status()}");
         }
 
@@ -513,6 +514,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
 
             // Backward-compatible fallback: treat single mapping string as first parameter.
             $trimmed = trim($mapping);
+
             return $trimmed !== '' ? [1 => $trimmed] : [];
         }
 

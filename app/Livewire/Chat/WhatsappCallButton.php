@@ -4,13 +4,15 @@ namespace App\Livewire\Chat;
 
 use App\Models\Contact;
 use App\Services\CallEligibilityService;
-use Livewire\Component;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component;
 
 class WhatsappCallButton extends Component
 {
     public Contact $contact;
+
     public $eligibility = null;
+
     public $isLoading = true;
 
     public function mount(Contact $contact)
@@ -26,17 +28,17 @@ class WhatsappCallButton extends Component
             $service = new CallEligibilityService(auth()->user()->currentTeam);
             // Defaulting trigger to 'user_initiated' for manual clicks
             $this->eligibility = $service->checkEligibility($this->contact, 'user_initiated', [
-                'trigger_source' => 'in_app_action'
+                'trigger_source' => 'in_app_action',
             ], true);
         } catch (\Exception $e) {
-            Log::error("Call eligibility check failed: " . $e->getMessage(), [
+            Log::error('Call eligibility check failed: '.$e->getMessage(), [
                 'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             $this->eligibility = [
                 'eligible' => false,
                 'user_message' => 'Unable to verify eligibility.',
-                'block_reason' => 'ERROR'
+                'block_reason' => 'ERROR',
             ];
         }
 
@@ -45,13 +47,14 @@ class WhatsappCallButton extends Component
 
     public function initiateCall()
     {
-        if (!$this->eligibility || !$this->eligibility['eligible']) {
+        if (! $this->eligibility || ! $this->eligibility['eligible']) {
             $this->checkEligibility();
-            if (!$this->eligibility['eligible']) {
+            if (! $this->eligibility['eligible']) {
                 $this->dispatch('notify', [
                     'type' => 'error',
-                    'message' => $this->eligibility['user_message'] ?? 'Not eligible to call.'
+                    'message' => $this->eligibility['user_message'] ?? 'Not eligible to call.',
                 ]);
+
                 return;
             }
         }
@@ -59,20 +62,20 @@ class WhatsappCallButton extends Component
         // Logic to actually initiate the call
         // This would typically emit an event to a global caller component or call an API
 
-        Log::info("WhatsappCallButton: Initiating call dispatch", [
+        Log::info('WhatsappCallButton: Initiating call dispatch', [
             'contact_id' => $this->contact->id,
             'phone_number' => $this->contact->phone_number,
-            'contact_attributes' => $this->contact->getAttributes()
+            'contact_attributes' => $this->contact->getAttributes(),
         ]);
 
         $this->dispatch('initiate-whatsapp-call', [
             'contact_id' => $this->contact->id,
-            'phone_number' => $this->contact->phone_number
+            'phone_number' => $this->contact->phone_number,
         ]);
 
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => 'Call sequence initiated.'
+            'message' => 'Call sequence initiated.',
         ]);
     }
 

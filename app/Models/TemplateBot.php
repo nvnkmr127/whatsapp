@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class TemplateBot extends Model
 {
-    use HasFactory;
     use \App\Traits\HasTeam;
+    use HasFactory;
 
     protected $fillable = [
         'team_id',
@@ -24,7 +24,7 @@ class TemplateBot extends Model
         'reply_type',
         'addedfrom',
         'is_bot_active',
-        'sending_count'
+        'sending_count',
     ];
 
     protected $casts = [

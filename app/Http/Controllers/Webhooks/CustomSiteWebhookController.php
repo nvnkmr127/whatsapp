@@ -27,7 +27,7 @@ class CustomSiteWebhookController extends Controller
     {
         // 1. Authenticate
         $token = $request->header('X-Integration-Token');
-        if (!$token) {
+        if (! $token) {
             return response()->json(['error' => 'Missing X-Integration-Token'], 401);
         }
 
@@ -38,7 +38,7 @@ class CustomSiteWebhookController extends Controller
                 return ($int->credentials['api_key'] ?? '') === $token;
             });
 
-        if (!$integration) {
+        if (! $integration) {
             return response()->json(['error' => 'Invalid Token'], 401);
         }
 

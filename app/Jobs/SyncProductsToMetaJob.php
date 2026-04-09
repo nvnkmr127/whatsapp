@@ -32,8 +32,9 @@ class SyncProductsToMetaJob implements ShouldQueue
     {
         $integration = Integration::find($this->integrationId);
 
-        if (!$integration || $integration->type !== 'meta_commerce') {
+        if (! $integration || $integration->type !== 'meta_commerce') {
             Log::error("SyncProductsToMetaJob: Invalid integration ID {$this->integrationId}");
+
             return;
         }
 
@@ -42,7 +43,7 @@ class SyncProductsToMetaJob implements ShouldQueue
             $count = $service->syncProducts();
             Log::info("SyncProductsToMetaJob: Successfully synced {$count} products for team {$integration->team_id}");
         } catch (\Exception $e) {
-            Log::error("SyncProductsToMetaJob: Failed for integration {$this->integrationId}. Error: " . $e->getMessage());
+            Log::error("SyncProductsToMetaJob: Failed for integration {$this->integrationId}. Error: ".$e->getMessage());
         }
     }
 }

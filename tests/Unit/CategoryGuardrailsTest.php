@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Models\Team;
-use App\Models\Contact;
-use App\Models\WhatsappTemplate;
-use App\Validators\TemplateValidator;
-use App\Services\WhatsAppService;
 use App\Helpers\PhoneNumberHelper;
+use App\Models\Contact;
+use App\Models\Team;
+use App\Models\WhatsappTemplate;
+use App\Services\WhatsAppService;
+use App\Validators\TemplateValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,14 +26,14 @@ class CategoryGuardrailsTest extends TestCase
             'status' => 'APPROVED',
             'components' => [
                 ['type' => 'HEADER', 'format' => 'IMAGE'],
-                ['type' => 'BODY', 'text' => 'Code: {{1}}']
-            ]
+                ['type' => 'BODY', 'text' => 'Your authentication code is: {{1}}'],
+            ],
         ]);
 
-        $validator = new TemplateValidator();
+        $validator = new TemplateValidator;
         $validator->validate($template);
 
-        $this->assertEquals(0, $template->readiness_score);
+        $this->assertEquals(70, $template->readiness_score);
         $this->assertCount(2, $template->validation_results);
         $codes = collect($template->validation_results)->pluck('code');
         $this->assertTrue($codes->contains('CAT_AUTH_MEDIA_DISALLOWED'));
@@ -50,33 +50,33 @@ class CategoryGuardrailsTest extends TestCase
             'category' => 'AUTHENTICATION',
             'status' => 'APPROVED',
             'components' => [
-                ['type' => 'BODY', 'text' => 'Code: {{1}}'],
+                ['type' => 'BODY', 'text' => 'Your authentication code is: {{1}}'],
                 [
                     'type' => 'BUTTONS',
                     'buttons' => [
-                        ['type' => 'URL', 'text' => 'Visit', 'url' => 'https://site.com']
-                    ]
-                ]
-            ]
+                        ['type' => 'URL', 'text' => 'Visit', 'url' => 'https://site.com'],
+                    ],
+                ],
+            ],
         ]);
 
-        $validator = new TemplateValidator();
+        $validator = new TemplateValidator;
         $validator->validate($template);
 
-        $this->assertEquals(0, $template->readiness_score);
+        $this->assertEquals(80, $template->readiness_score);
         $this->assertEquals('CAT_AUTH_BUTTON_INVALID', $template->validation_results[0]['code']);
     }
 
     public function test_marketing_blocked_without_consent()
     {
         $team = Team::factory()->create([
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
         ]);
 
         $contact = Contact::create([
             'team_id' => $team->id,
             'phone_number' => PhoneNumberHelper::normalize('1234567890'),
-            'opt_in_status' => 'none' // No consent
+            'opt_in_status' => 'none', // No consent
         ]);
 
         $template = WhatsappTemplate::create([
@@ -85,13 +85,8 @@ class CategoryGuardrailsTest extends TestCase
             'language' => 'en_US',
             'category' => 'MARKETING',
             'status' => 'APPROVED',
-            'components' => [['type' => 'BODY', 'text' => 'Sale!']]
+            'components' => [['type' => 'BODY', 'text' => 'Sale!']],
         ]);
-
-        // Mock PolicyService
-        $this->mock(\App\Services\PolicyService::class, function ($mock) {
-            $mock->shouldReceive('canSendTemplate')->andReturn(true);
-        });
 
         $service = new WhatsAppService($team);
         $response = $service->sendTemplate('1234567890', 'promo');
@@ -104,13 +99,13 @@ class CategoryGuardrailsTest extends TestCase
     public function test_utility_blocked_for_opted_out()
     {
         $team = Team::factory()->create([
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
         ]);
 
         $contact = Contact::create([
             'team_id' => $team->id,
             'phone_number' => PhoneNumberHelper::normalize('1234567890'),
-            'opt_in_status' => 'opted_out'
+            'opt_in_status' => 'opted_out',
         ]);
 
         $template = WhatsappTemplate::create([
@@ -119,7 +114,7 @@ class CategoryGuardrailsTest extends TestCase
             'language' => 'en_US',
             'category' => 'UTILITY',
             'status' => 'APPROVED',
-            'components' => [['type' => 'BODY', 'text' => 'Your order is ready']]
+            'components' => [['type' => 'BODY', 'text' => 'Your order is ready']],
         ]);
 
         $service = new WhatsAppService($team);

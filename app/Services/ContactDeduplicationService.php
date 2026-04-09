@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\ConsentLog;
 use App\Models\Contact;
 use App\Models\ContactMergeLog;
+use App\Models\Conversation;
 use App\Models\DuplicateDetectionQueue;
 use App\Models\Message;
-use App\Models\Conversation;
-use App\Models\ConsentLog;
-use App\Helpers\PhoneNumberHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -33,7 +32,7 @@ class ContactDeduplicationService
         if ($contact->name) {
             $fuzzyMatches = $this->findFuzzyNameMatches($contact);
             foreach ($fuzzyMatches as $match) {
-                if (!$duplicates->contains('contact.id', $match->id)) {
+                if (! $duplicates->contains('contact.id', $match->id)) {
                     $score = $this->calculateDuplicateScore($contact, $match);
                     if ($score['score'] >= $threshold) {
                         $duplicates->push([
@@ -71,6 +70,7 @@ class ContactDeduplicationService
 
         return $candidates->filter(function ($candidate) use ($contact) {
             $similarity = $this->calculateNameSimilarity($contact->name, $candidate->name);
+
             return $similarity >= config('contacts.deduplication.name_similarity_threshold', 0.8);
         });
     }
@@ -115,7 +115,7 @@ class ContactDeduplicationService
         if (strpos($name, ',') !== false) {
             $parts = explode(',', $name);
             if (count($parts) === 2) {
-                $name = trim($parts[1]) . ' ' . trim($parts[0]);
+                $name = trim($parts[1]).' '.trim($parts[0]);
             }
         }
 
@@ -184,14 +184,19 @@ class ContactDeduplicationService
      */
     protected function getConfidenceLevel(float $score): string
     {
-        if ($score >= 100)
+        if ($score >= 100) {
             return 'certain';
-        if ($score >= 80)
+        }
+        if ($score >= 80) {
             return 'high';
-        if ($score >= 60)
+        }
+        if ($score >= 60) {
             return 'medium';
-        if ($score >= 40)
+        }
+        if ($score >= 40) {
             return 'low';
+        }
+
         return 'unlikely';
     }
 
@@ -202,12 +207,12 @@ class ContactDeduplicationService
     {
         // Validate same team
         if ($primary->team_id !== $duplicate->team_id) {
-            throw new \Exception("Cannot merge contacts from different teams");
+            throw new \Exception('Cannot merge contacts from different teams');
         }
 
         // Validate not same contact
         if ($primary->id === $duplicate->id) {
-            throw new \Exception("Cannot merge contact with itself");
+            throw new \Exception('Cannot merge contact with itself');
         }
 
         // Check for circular merges
@@ -242,7 +247,7 @@ class ContactDeduplicationService
                 $duplicate->delete(); // Soft delete
             }
 
-            Log::info("Merged contacts", [
+            Log::info('Merged contacts', [
                 'primary_id' => $primary->id,
                 'duplicate_id' => $duplicate->id,
                 'team_id' => $primary->team_id,
@@ -278,12 +283,12 @@ class ContactDeduplicationService
     protected function mergeBasicFields(Contact $primary, Contact $duplicate): void
     {
         // Name: Use longest non-null
-        if (!$primary->name || (strlen($duplicate->name ?? '') > strlen($primary->name))) {
+        if (! $primary->name || (strlen($duplicate->name ?? '') > strlen($primary->name))) {
             $primary->name = $duplicate->name;
         }
 
         // Email: Use first non-null
-        if (!$primary->email && $duplicate->email) {
+        if (! $primary->email && $duplicate->email) {
             $primary->email = $duplicate->email;
         }
 
@@ -291,18 +296,18 @@ class ContactDeduplicationService
         $this->resolveConsentConflict($primary, $duplicate);
 
         // Timestamps: Use earliest/latest
-        if ($duplicate->opt_in_at && (!$primary->opt_in_at || $duplicate->opt_in_at < $primary->opt_in_at)) {
+        if ($duplicate->opt_in_at && (! $primary->opt_in_at || $duplicate->opt_in_at < $primary->opt_in_at)) {
             $primary->opt_in_at = $duplicate->opt_in_at;
-            if (!$primary->opt_in_source) {
+            if (! $primary->opt_in_source) {
                 $primary->opt_in_source = $duplicate->opt_in_source;
             }
         }
 
-        if ($duplicate->last_interaction_at && (!$primary->last_interaction_at || $duplicate->last_interaction_at > $primary->last_interaction_at)) {
+        if ($duplicate->last_interaction_at && (! $primary->last_interaction_at || $duplicate->last_interaction_at > $primary->last_interaction_at)) {
             $primary->last_interaction_at = $duplicate->last_interaction_at;
         }
 
-        if ($duplicate->last_customer_message_at && (!$primary->last_customer_message_at || $duplicate->last_customer_message_at > $primary->last_customer_message_at)) {
+        if ($duplicate->last_customer_message_at && (! $primary->last_customer_message_at || $duplicate->last_customer_message_at > $primary->last_customer_message_at)) {
             $primary->last_customer_message_at = $duplicate->last_customer_message_at;
         }
 
@@ -343,7 +348,7 @@ class ContactDeduplicationService
 
         // Deep merge: duplicate values override primary only if primary is null
         foreach ($duplicateAttrs as $key => $value) {
-            if (!isset($primaryAttrs[$key]) || $primaryAttrs[$key] === null) {
+            if (! isset($primaryAttrs[$key]) || $primaryAttrs[$key] === null) {
                 $primaryAttrs[$key] = $value;
             }
         }
@@ -424,7 +429,7 @@ class ContactDeduplicationService
             ->where('status', 'pending')
             ->exists();
 
-        if (!$existing) {
+        if (! $existing) {
             DuplicateDetectionQueue::create([
                 'team_id' => $contact->team_id,
                 'contact_id' => $contact->id,

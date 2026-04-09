@@ -2,34 +2,34 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Message;
-use App\Models\WebhookPayload;
 use App\Models\SystemEvent;
 use App\Models\Team;
-use Carbon\Carbon;
+use App\Models\WebhookPayload;
+use Illuminate\Console\Command;
 
 class DiagnoseWhatsApp extends Command
 {
     protected $signature = 'whatsapp:diagnose {--limit=20}';
+
     protected $description = 'Diagnose WhatsApp delivery issues';
 
     public function handle()
     {
         $limit = $this->option('limit');
-        $this->info("Starting WhatsApp Diagnosis...");
+        $this->info('Starting WhatsApp Diagnosis...');
 
         // 1. Check recent messages
         $this->info("\n--- Recent Messages (Last $limit) ---");
         $messages = Message::orderBy('created_at', 'desc')->take($limit)->get();
-        
+
         $stats = [
             'total' => 0,
             'sent' => 0,
             'delivered' => 0,
             'read' => 0,
             'failed' => 0,
-            'queued' => 0
+            'queued' => 0,
         ];
 
         $headers = ['ID', 'To', 'Status', 'WA Message ID', 'Created At', 'Updated At'];
@@ -38,19 +38,19 @@ class DiagnoseWhatsApp extends Command
         foreach ($messages as $msg) {
             $stats['total']++;
             $stats[$msg->status] = ($stats[$msg->status] ?? 0) + 1;
-            
+
             $rows[] = [
                 $msg->id,
                 $msg->to,
                 $msg->status,
-                substr($msg->whatsapp_message_id, 0, 15) . '...',
+                substr($msg->whatsapp_message_id, 0, 15).'...',
                 $msg->created_at->toDateTimeString(),
-                $msg->updated_at->toDateTimeString()
+                $msg->updated_at->toDateTimeString(),
             ];
         }
 
         $this->table($headers, $rows);
-        $this->info("Stats: " . json_encode($stats, JSON_PRETTY_PRINT));
+        $this->info('Stats: '.json_encode($stats, JSON_PRETTY_PRINT));
 
         // 2. Check recent Webhook Payloads
         $this->info("\n--- Recent Webhook Payloads (Last $limit) ---");
@@ -65,7 +65,7 @@ class DiagnoseWhatsApp extends Command
                 $p->status,
                 $p->waba_id,
                 substr($p->error_message ?? '', 0, 30),
-                $p->created_at->toDateTimeString()
+                $p->created_at->toDateTimeString(),
             ];
         }
 
@@ -80,7 +80,7 @@ class DiagnoseWhatsApp extends Command
             ->get();
 
         if ($errors->isEmpty()) {
-            $this->info("No recent operational errors found in SystemEvent.");
+            $this->info('No recent operational errors found in SystemEvent.');
         } else {
             $headers = ['Event', 'Payload Summary', 'Date'];
             $rows = [];
@@ -88,7 +88,7 @@ class DiagnoseWhatsApp extends Command
                 $rows[] = [
                     $e->event_type,
                     substr(json_encode($e->payload), 0, 50),
-                    $e->created_at->toDateTimeString()
+                    $e->created_at->toDateTimeString(),
                 ];
             }
             $this->table($headers, $rows);
@@ -100,10 +100,10 @@ class DiagnoseWhatsApp extends Command
         foreach ($teams as $team) {
             $this->info("Team ID: {$team->id}");
             $this->info("  Name: {$team->name}");
-            $this->info("  Setup State: " . ($team->whatsapp_setup_state ? (is_string($team->whatsapp_setup_state) ? $team->whatsapp_setup_state : $team->whatsapp_setup_state->name) : 'NULL'));
-            $this->info("  Phone ID: " . ($team->whatsapp_phone_number_id ?? 'MISSING'));
-            $this->info("  WABA ID: " . ($team->whatsapp_business_account_id ?? 'MISSING'));
-            $this->info("  Token: " . ($team->whatsapp_access_token ? 'Set (Length: ' . strlen($team->whatsapp_access_token) . ')' : 'MISSING'));
+            $this->info('  Setup State: '.($team->whatsapp_setup_state ? (is_string($team->whatsapp_setup_state) ? $team->whatsapp_setup_state : $team->whatsapp_setup_state->name) : 'NULL'));
+            $this->info('  Phone ID: '.($team->whatsapp_phone_number_id ?? 'MISSING'));
+            $this->info('  WABA ID: '.($team->whatsapp_business_account_id ?? 'MISSING'));
+            $this->info('  Token: '.($team->whatsapp_access_token ? 'Set (Length: '.strlen($team->whatsapp_access_token).')' : 'MISSING'));
         }
 
         // 5. Campaign Check

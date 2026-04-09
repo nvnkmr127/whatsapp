@@ -2,15 +2,16 @@
 
 namespace App\Services\WhatsApp;
 
+use App\Core\WhatsApp\WhatsAppClient;
 use App\Models\Team;
 use App\Models\WhatsappTemplate;
-use App\Core\WhatsApp\WhatsAppClient;
-use Illuminate\Support\Facades\Log;
 
 class TemplateService
 {
     protected WhatsAppClient $client;
+
     protected \App\Core\WhatsApp\CredentialResolver $resolver;
+
     protected ?Team $team = null;
 
     public function __construct(WhatsAppClient $client, \App\Core\WhatsApp\CredentialResolver $resolver)
@@ -23,6 +24,7 @@ class TemplateService
     {
         $this->team = $team;
         $this->client->forTeam($team);
+
         return $this;
     }
 
@@ -31,16 +33,22 @@ class TemplateService
      */
     public function syncTemplates(): array
     {
-        if (!$this->team) return ['success' => false, 'error' => 'Team not set'];
+        if (! $this->team) {
+            return ['success' => false, 'error' => 'Team not set'];
+        }
 
         $wabaId = $this->team->whatsapp_business_account_id;
-        if (!$wabaId) return ['success' => false, 'error' => 'WABA ID not found'];
+        if (! $wabaId) {
+            return ['success' => false, 'error' => 'WABA ID not found'];
+        }
 
-        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com') . '/' . config('whatsapp.api_version', 'v21.0');
+        $baseUrl = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
         $url = "{$baseUrl}/{$wabaId}/message_templates?limit=100";
         $response = $this->client->sendRequestFullUrl($url, 'get');
 
-        if (!$response['success']) return $response;
+        if (! $response['success']) {
+            return $response;
+        }
 
         $templates = $response['data']['data'] ?? [];
         foreach ($templates as $tpl) {
@@ -54,7 +62,7 @@ class TemplateService
                     'components' => json_encode($tpl['components'] ?? []),
                     'quality_rating' => $tpl['quality_rating'] ?? 'UNKNOWN',
                     'is_paused_by_meta' => $tpl['is_paused_by_meta'] ?? false,
-                    'last_synced_at' => now()
+                    'last_synced_at' => now(),
                 ]
             );
         }

@@ -3,15 +3,16 @@
 namespace App\Services\Integrations;
 
 use App\Models\Integration;
-use App\Enums\IntegrationState;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class MetaMarketingService
 {
     protected $integration;
+
     protected $healthService;
+
     protected $baseUrl = 'https://graph.facebook.com/v21.0';
+
     protected $accessToken;
 
     public function __construct(Integration $integration)
@@ -27,7 +28,7 @@ class MetaMarketingService
     public function getAdAccounts()
     {
         return $this->makeRequest('GET', '/me/adaccounts', [
-            'fields' => 'id,name,account_status,currency,timezone_name'
+            'fields' => 'id,name,account_status,currency,timezone_name',
         ]);
     }
 
@@ -37,7 +38,7 @@ class MetaMarketingService
     public function getCampaigns($adAccountId)
     {
         return $this->makeRequest('GET', "/{$adAccountId}/campaigns", [
-            'fields' => 'id,name,status,objective,start_time,stop_time,daily_budget,lifetime_budget,spend'
+            'fields' => 'id,name,status,objective,start_time,stop_time,daily_budget,lifetime_budget,spend',
         ]);
     }
 
@@ -47,7 +48,7 @@ class MetaMarketingService
     public function getAdSets($campaignId)
     {
         return $this->makeRequest('GET', "/{$campaignId}/adsets", [
-            'fields' => 'id,name,status,daily_budget,lifetime_budget,start_time,end_time,targeting,promoted_object'
+            'fields' => 'id,name,status,daily_budget,lifetime_budget,start_time,end_time,targeting,promoted_object',
         ]);
     }
 
@@ -57,16 +58,16 @@ class MetaMarketingService
     public function getAds($adSetId)
     {
         return $this->makeRequest('GET', "/{$adSetId}/ads", [
-            'fields' => 'id,name,status,creative{name,thumbnail_url,image_url,title,body},preview_shareable_link'
+            'fields' => 'id,name,status,creative{name,thumbnail_url,image_url,title,body},preview_shareable_link',
         ]);
     }
 
     /**
      * Fetch Insights (Analytics) for an object (Account, Campaign, AdSet, Ad).
-     * 
-     * @param string $objectId The ID of the object to fetch insights for.
-     * @param string $level 'account', 'campaign', 'adset', or 'ad'.
-     * @param string $datePreset e.g., 'last_30d', 'today', 'this_month'.
+     *
+     * @param  string  $objectId  The ID of the object to fetch insights for.
+     * @param  string  $level  'account', 'campaign', 'adset', or 'ad'.
+     * @param  string  $datePreset  e.g., 'last_30d', 'today', 'this_month'.
      */
     public function getInsights($objectId, $level = 'campaign', $datePreset = 'maximum')
     {
@@ -76,7 +77,7 @@ class MetaMarketingService
         return $this->makeRequest('GET', "/{$objectId}/insights", [
             'level' => $level,
             'date_preset' => $datePreset,
-            'fields' => $fields
+            'fields' => $fields,
         ]);
     }
 
@@ -118,15 +119,15 @@ class MetaMarketingService
     public function updateStatus($objectId, $status)
     {
         return $this->makeRequest('POST', "/{$objectId}", [
-            'status' => $status
+            'status' => $status,
         ]);
     }
 
     /**
      * Send Conversion Event (CAPI).
-     * 
-     * @param string $pixelId The Meta Pixel ID to send events to.
-     * @param array $events Array of event objects following CAPI structure.
+     *
+     * @param  string  $pixelId  The Meta Pixel ID to send events to.
+     * @param  array  $events  Array of event objects following CAPI structure.
      * @return array
      */
     public function sendConversionEvents($pixelId, array $events)
@@ -145,8 +146,8 @@ class MetaMarketingService
      */
     protected function makeRequest($method, $endpoint, $params = [])
     {
-        if (!$this->accessToken) {
-            throw new \Exception("Missing Meta Marketing Access Token");
+        if (! $this->accessToken) {
+            throw new \Exception('Missing Meta Marketing Access Token');
         }
 
         try {

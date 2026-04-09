@@ -16,8 +16,8 @@ class ReCaptchaSettings extends Component
     {
         return [
             'isReCaptchaEnable' => 'nullable|boolean',
-            'site_key'          => 'required_if:isReCaptchaEnable,true|string|max:255',
-            'secret_key'        => 'required_if:isReCaptchaEnable,true|string|max:255',
+            'site_key' => 'required_if:isReCaptchaEnable,true|string|max:255',
+            'secret_key' => 'required_if:isReCaptchaEnable,true|string|max:255',
         ];
     }
 
@@ -36,8 +36,8 @@ class ReCaptchaSettings extends Component
         $settings = get_settings_by_group('re-captcha');
 
         $this->isReCaptchaEnable = $settings->isReCaptchaEnable ?? false;
-        $this->site_key          = $settings->site_key;
-        $this->secret_key        = $settings->secret_key;
+        $this->site_key = $settings->site_key;
+        $this->secret_key = $settings->secret_key;
     }
 
     public function save()
@@ -49,13 +49,13 @@ class ReCaptchaSettings extends Component
 
             $newSettings = [
                 'isReCaptchaEnable' => $this->isReCaptchaEnable,
-                'site_key'          => $this->site_key,
-                'secret_key'        => $this->secret_key,
+                'site_key' => $this->site_key,
+                'secret_key' => $this->secret_key,
             ];
 
             // Filter the settings that have been modified
             $modifiedSettings = array_filter($newSettings, function ($value, $key) use ($originalSettings) {
-                return $originalSettings->$key !== $value;
+                return $value !== $originalSettings->$key;
             }, ARRAY_FILTER_USE_BOTH);
 
             // Save only if there are modifications

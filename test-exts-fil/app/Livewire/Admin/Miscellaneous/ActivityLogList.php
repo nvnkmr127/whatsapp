@@ -37,14 +37,14 @@ class ActivityLogList extends Component
     {
         if (WmActivityLog::count() === 0) {
             $this->notify([
-                'type'    => 'danger',
+                'type' => 'danger',
                 'message' => t('no_activity_log_found'),
             ]);
 
             return;
         }
-        $this->log_id             = $logId;
-        $this->isBulckDelete      = is_array($this->log_id) && count($this->log_id) !== 1 ? true : false;
+        $this->log_id = $logId;
+        $this->isBulckDelete = is_array($this->log_id) && count($this->log_id) !== 1 ? true : false;
         $this->confirmingDeletion = true;
     }
 
@@ -57,8 +57,8 @@ class ActivityLogList extends Component
                 $this->log_id = null;
                 $this->js('window.pgBulkActions.clearAll()');
                 $this->notify([
-                    'type'    => 'danger',
-                    'message' => $deletedCount . t('activity_logs_deleted'),
+                    'type' => 'danger',
+                    'message' => $deletedCount.t('activity_logs_deleted'),
                 ]);
             } elseif (! empty($this->log_id)) {
                 $delete = WmActivityLog::find($this->log_id);

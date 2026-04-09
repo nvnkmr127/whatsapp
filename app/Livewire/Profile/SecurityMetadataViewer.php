@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Profile;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class SecurityMetadataViewer extends Component
 {

@@ -83,8 +83,8 @@ class RunScheduledWorkflows extends Command
             if ($shouldRun) {
                 $this->info("Triggering Workflow #{$workflow->id}: {$workflow->name}");
 
-                // For a scheduled workflow, we typically run it universally without a single external event. 
-                // We'd need to iterate over eligible targets. 
+                // For a scheduled workflow, we typically run it universally without a single external event.
+                // We'd need to iterate over eligible targets.
                 // E.g. Run this workflow against all Contacts in the team, or a segment.
                 // For now, let's grab the Team's first 50 contacts as a conceptual batch (In a real system you'd queue jobs per contact depending on segment).
 
@@ -102,6 +102,7 @@ class RunScheduledWorkflows extends Command
         }
 
         $this->info("Executed {$executedCount} scheduled workflows.");
+
         return Command::SUCCESS;
     }
 }

@@ -48,10 +48,10 @@ class InviteTeamMember implements InvitesTeamMembers
         ], $this->rules($team), [
             'email.unique' => __('This user has already been invited to the team.'),
         ])->after(
-                $this->ensureTeamIsNotFull($team)
-            )->after(
-                $this->ensureUserIsNotAlreadyOnTeam($team, $email)
-            )->validateWithBag('addTeamMember');
+            $this->ensureTeamIsNotFull($team)
+        )->after(
+            $this->ensureUserIsNotAlreadyOnTeam($team, $email)
+        )->validateWithBag('addTeamMember');
     }
 
     /**
@@ -60,7 +60,7 @@ class InviteTeamMember implements InvitesTeamMembers
     protected function ensureTeamIsNotFull(Team $team): Closure
     {
         return function ($validator) use ($team) {
-            if (!$team->canAccess('add_agent')) {
+            if (! $team->canAccess('add_agent')) {
                 $validator->errors()->add(
                     'email',
                     __('This team has reached its agent limit for the current plan.')

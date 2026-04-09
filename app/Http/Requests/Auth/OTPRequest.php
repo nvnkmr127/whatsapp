@@ -54,7 +54,7 @@ class OTPRequest extends FormRequest
             // Normalize phone number if it's a phone type
             if ($this->input('type') === 'phone') {
                 $phone = preg_replace('/[^0-9+]/', '', $this->identifier);
-                if (!str_starts_with($phone, '+')) {
+                if (! str_starts_with($phone, '+')) {
                     // Default to no prefix for now or look for country code param
                 }
                 $this->merge(['identifier' => $phone]);

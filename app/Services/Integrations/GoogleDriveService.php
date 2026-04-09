@@ -3,9 +3,8 @@
 namespace App\Services\Integrations;
 
 use App\Models\Integration;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Exception;
+use Illuminate\Support\Facades\Http;
 
 /**
  * GoogleDriveService
@@ -28,19 +27,20 @@ use Exception;
 class GoogleDriveService
 {
     protected Integration $integration;
+
     protected int $teamId;
 
     public function __construct(Integration $integration)
     {
         if ($integration->type !== 'google_drive') {
-            throw new Exception("Invalid integration type for GoogleDriveService.");
+            throw new Exception('Invalid integration type for GoogleDriveService.');
         }
 
-        if (!$integration->team_id) {
+        if (! $integration->team_id) {
             // Refuse to operate without an explicit team scope — prevents global drive misuse
             throw new \RuntimeException(
-                "GoogleDriveService requires an integration with a non-null team_id. " .
-                "Never pass a platform-level integration."
+                'GoogleDriveService requires an integration with a non-null team_id. '.
+                'Never pass a platform-level integration.'
             );
         }
 
@@ -59,9 +59,9 @@ class GoogleDriveService
     /**
      * Upload a file to the tenant's isolated Google Drive folder.
      *
-     * @param  string  $filePath   Absolute path to the local file to upload.
-     * @param  string  $filename   Name to give the file in Google Drive.
-     * @return string  The Google Drive File ID of the uploaded backup.
+     * @param  string  $filePath  Absolute path to the local file to upload.
+     * @param  string  $filename  Name to give the file in Google Drive.
+     * @return string The Google Drive File ID of the uploaded backup.
      */
     public function uploadFile(string $filePath, string $filename): string
     {
@@ -81,8 +81,8 @@ class GoogleDriveService
             ->attach('file', $content, $filename, ['Content-Type' => $mimeType])
             ->post('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
 
-        if (!$response->successful()) {
-            throw new Exception("Google Drive upload failed for team {$this->teamId}: " . $response->body());
+        if (! $response->successful()) {
+            throw new Exception("Google Drive upload failed for team {$this->teamId}: ".$response->body());
         }
 
         return $response->json('id');
@@ -106,7 +106,7 @@ class GoogleDriveService
                 'fields' => 'files(id, name, mimeType)',
             ]);
 
-        if ($response->successful() && !empty($response->json('files'))) {
+        if ($response->successful() && ! empty($response->json('files'))) {
             return $response->json('files.0');
         }
 
@@ -125,7 +125,7 @@ class GoogleDriveService
                 'fields' => 'id,trashed',
             ]);
 
-        return $response->successful() && !$response->json('trashed');
+        return $response->successful() && ! $response->json('trashed');
     }
 
     /**
@@ -139,7 +139,7 @@ class GoogleDriveService
         // Security: Cross-Account Verification
         if ($expectedAccountId && $this->getAccountIdentifier() !== $expectedAccountId) {
             throw new Exception(
-                "Backup Ownership Violation: This backup is bound to Google Account [{$expectedAccountId}] " .
+                "Backup Ownership Violation: This backup is bound to Google Account [{$expectedAccountId}] ".
                 "but the current integration is using [{$this->getAccountIdentifier()}]."
             );
         }
@@ -150,11 +150,11 @@ class GoogleDriveService
             ]);
 
         if ($response->status() === 404) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException("File not found in Google Drive.");
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('File not found in Google Drive.');
         }
 
-        if (!$response->successful()) {
-            throw new Exception("Google Drive download failed for team {$this->teamId}: " . $response->body());
+        if (! $response->successful()) {
+            throw new Exception("Google Drive download failed for team {$this->teamId}: ".$response->body());
         }
 
         file_put_contents($destinationPath, $response->body());
@@ -175,8 +175,8 @@ class GoogleDriveService
                 'values' => [$values],
             ]);
 
-        if (!$response->successful()) {
-            throw new Exception("Google Sheets append failed for team {$this->teamId}: " . $response->body());
+        if (! $response->successful()) {
+            throw new Exception("Google Sheets append failed for team {$this->teamId}: ".$response->body());
         }
 
         return $response->json();
@@ -192,8 +192,8 @@ class GoogleDriveService
         $response = Http::withToken($this->integration->credentials['access_token'])
             ->delete("https://www.googleapis.com/drive/v3/files/{$fileId}");
 
-        if (!$response->successful() && $response->status() !== 404) {
-            throw new Exception("Google Drive deletion failed for team {$this->teamId}: " . $response->body());
+        if (! $response->successful() && $response->status() !== 404) {
+            throw new Exception("Google Drive deletion failed for team {$this->teamId}: ".$response->body());
         }
     }
 
@@ -222,14 +222,14 @@ class GoogleDriveService
         $folderName = $this->tenantFolderName();
 
         // 1. Use cached folder ID if still valid
-        if (!empty($settings['google_folder_id'])) {
+        if (! empty($settings['google_folder_id'])) {
             $response = Http::withToken($this->integration->credentials['access_token'])
                 ->get("https://www.googleapis.com/drive/v3/files/{$settings['google_folder_id']}?fields=id,trashed,name");
 
             // Validate: must still exist, not trashed, and name must match ours
             if (
                 $response->successful() &&
-                !$response->json('trashed') &&
+                ! $response->json('trashed') &&
                 $response->json('name') === $folderName
             ) {
                 return $settings['google_folder_id'];
@@ -248,7 +248,7 @@ class GoogleDriveService
                 'fields' => 'files(id, name)',
             ]);
 
-        if ($searchResponse->successful() && !empty($searchResponse->json('files'))) {
+        if ($searchResponse->successful() && ! empty($searchResponse->json('files'))) {
             $folderId = $searchResponse->json('files.0.id');
         } else {
             // 3. Create tenant-isolated folder
@@ -258,9 +258,9 @@ class GoogleDriveService
                     'mimeType' => 'application/vnd.google-apps.folder',
                 ]);
 
-            if (!$createResponse->successful()) {
+            if (! $createResponse->successful()) {
                 throw new Exception(
-                    "Failed to create Google Drive backup folder for team {$this->teamId}: " .
+                    "Failed to create Google Drive backup folder for team {$this->teamId}: ".
                     $createResponse->body()
                 );
             }
@@ -287,7 +287,8 @@ class GoogleDriveService
     protected function tenantFolderName(): string
     {
         $mac = hash_hmac('sha256', (string) $this->teamId, config('app.key'));
-        return 'WatxIO Backups [' . substr($mac, 0, 12) . ']';
+
+        return 'WatxIO Backups ['.substr($mac, 0, 12).']';
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -300,7 +301,7 @@ class GoogleDriveService
     protected function refreshTokenIfNeeded(): void
     {
         if ($this->integration->status === 'error') {
-            throw new Exception("Google Drive integration is in an error state. Please reconnect.");
+            throw new Exception('Google Drive integration is in an error state. Please reconnect.');
         }
 
         $credentials = $this->integration->credentials;
@@ -315,17 +316,17 @@ class GoogleDriveService
                 'grant_type' => 'refresh_token',
             ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 $errorBody = $response->json();
                 $isRevoked = ($errorBody['error'] ?? '') === 'invalid_grant';
 
                 $this->integration->update([
                     'status' => 'error',
-                    'error_message' => $isRevoked ? 'TOKEN_REVOKED: The Google Drive access was revoked or account disconnected.' : 'FAILED_REFRESH: ' . ($errorBody['error_description'] ?? 'Unexpected error during token refresh.')
+                    'error_message' => $isRevoked ? 'TOKEN_REVOKED: The Google Drive access was revoked or account disconnected.' : 'FAILED_REFRESH: '.($errorBody['error_description'] ?? 'Unexpected error during token refresh.'),
                 ]);
 
                 throw new Exception(
-                    "Google token refresh failed (Revoked: " . ($isRevoked ? 'YES' : 'NO') . ") for team {$this->teamId}: " . $response->body()
+                    'Google token refresh failed (Revoked: '.($isRevoked ? 'YES' : 'NO').") for team {$this->teamId}: ".$response->body()
                 );
             }
 

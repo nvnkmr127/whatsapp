@@ -2,13 +2,12 @@
 
 namespace App\Livewire\Whatsapp;
 
-use App\Models\CallSettings;
 use App\Models\CallPermission;
+use App\Models\CallSettings;
 use App\Services\WhatsAppService;
-use Livewire\Component;
-use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\Log;
-
+use Livewire\Attributes\Title;
+use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Title('Call Settings')]
@@ -17,37 +16,54 @@ class CallSettingsManager extends Component
     use WithPagination;
 
     public $phoneNumberId;
+
     public $settings;
 
     // Search and Filter
     public $search = '';
+
     public $filterStatus = '';
 
     // Call Settings
     public $callingEnabled = false;
+
     public $callIconVisibility = 'show';
+
     public $callbackPermissionEnabled = false;
 
     // Business Hours
     public $timezone = 'UTC';
+
     public $businessHours = [];
+
     public $syncWithBusinessHours = false;
+
     public $awayMessageEnabled = false;
+
     public $awayMessage = '';
 
     // SIP Configuration
     public $sipEnabled = false;
+
     public $sipUri = '';
+
     public $sipUsername = '';
+
     public $sipPassword = '';
+
     public $sipRealm = '';
 
     // Statistics
     public $totalPermissions = 0;
+
     public $activePermissions = 0;
+
     public $expiredPermissions = 0;
+
     public $callsMadeToday = 0;
+
     public $isRestricted = false;
+
     public $restrictionReason = '';
 
     protected $rules = [
@@ -66,15 +82,17 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             $this->dispatch('notify', title: 'Error', message: 'No active team found', type: 'error');
+
             return;
         }
 
         $this->phoneNumberId = $team->whatsapp_phone_number_id;
 
-        if (!$this->phoneNumberId) {
+        if (! $this->phoneNumberId) {
             $this->dispatch('notify', title: 'Error', message: 'No phone number configured', type: 'error');
+
             return;
         }
 
@@ -87,7 +105,7 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -98,7 +116,7 @@ class CallSettingsManager extends Component
             ]
         );
 
-        if (!$this->settings->exists) {
+        if (! $this->settings->exists) {
             // Migration: Try to inherit legacy Team business hours
             $inherited = $this->inheritHoursFromTeam($team);
 
@@ -129,7 +147,7 @@ class CallSettingsManager extends Component
 
         // Load SIP config if exists
         $sipConfig = $this->settings->sip_config ?? [];
-        $this->sipEnabled = !empty($sipConfig);
+        $this->sipEnabled = ! empty($sipConfig);
         $this->sipUri = $sipConfig['uri'] ?? '';
         $this->sipUsername = $sipConfig['username'] ?? '';
         $this->sipRealm = $sipConfig['realm'] ?? '';
@@ -138,8 +156,9 @@ class CallSettingsManager extends Component
 
     protected function inheritHoursFromTeam($team)
     {
-        if (empty($team->business_hours))
+        if (empty($team->business_hours)) {
             return null;
+        }
 
         $hours = [];
         $days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -154,7 +173,7 @@ class CallSettingsManager extends Component
                     'day' => $day,
                     'open' => $team->business_hours[$key][0],
                     'close' => $team->business_hours[$key][1],
-                    'enabled' => true
+                    'enabled' => true,
                 ];
             } else {
                 $hours[] = ['day' => $day, 'open' => '09:00', 'close' => '17:00', 'enabled' => false];
@@ -164,7 +183,7 @@ class CallSettingsManager extends Component
         return [
             'timezone' => $team->timezone ?? 'UTC',
             'hours' => $hours,
-            'sync_enabled' => $legacySync
+            'sync_enabled' => $legacySync,
         ];
     }
 
@@ -172,7 +191,7 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -225,8 +244,9 @@ class CallSettingsManager extends Component
 
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             $this->dispatch('notify', title: 'Error', message: 'No active team found', type: 'error');
+
             return;
         }
 
@@ -235,19 +255,19 @@ class CallSettingsManager extends Component
         if ($this->callingEnabled) {
             $prereqWarnings = [];
 
-            if (!$this->syncWithBusinessHours) {
+            if (! $this->syncWithBusinessHours) {
                 $prereqWarnings[] = 'Call Hours are not enforced (enable "Enforce Hours" and set your active days).';
             }
 
-            if (!$this->callbackPermissionEnabled) {
+            if (! $this->callbackPermissionEnabled) {
                 $prereqWarnings[] = 'Callback Requests are disabled (required so customers outside hours can request a callback).';
             }
 
-            if (!empty($prereqWarnings)) {
+            if (! empty($prereqWarnings)) {
                 $this->dispatch(
                     'notify',
                     title: 'Warning',
-                    message: 'Calling enabled with incomplete setup: ' . implode(' ', $prereqWarnings),
+                    message: 'Calling enabled with incomplete setup: '.implode(' ', $prereqWarnings),
                     type: 'warning'
                 );
                 // We still save — this is a soft warning, not a hard block.
@@ -263,7 +283,6 @@ class CallSettingsManager extends Component
                 'callback_permission_status' => $this->callbackPermissionEnabled ? 'ENABLED' : 'DISABLED',
             ];
 
-
             if ($this->sipEnabled) {
                 $metaSettings['sip_config'] = [
                     'uri' => $this->sipUri,
@@ -271,17 +290,16 @@ class CallSettingsManager extends Component
                     'realm' => $this->sipRealm,
                 ];
 
-                if (!empty($this->sipPassword)) {
+                if (! empty($this->sipPassword)) {
                     $metaSettings['sip_config']['password'] = $this->sipPassword;
-                } elseif (!empty($this->settings->sip_config['password'])) {
+                } elseif (! empty($this->settings->sip_config['password'])) {
                     try {
                         $metaSettings['sip_config']['password'] = decrypt($this->settings->sip_config['password']);
                     } catch (\Exception $e) {
-                        Log::error("Failed to decrypt SIP password for Meta sync: " . $e->getMessage());
+                        Log::error('Failed to decrypt SIP password for Meta sync: '.$e->getMessage());
                     }
                 }
             }
-
 
             if ($this->syncWithBusinessHours) {
                 $metaSettings['business_hours'] = $this->formatBusinessHoursForMeta();
@@ -317,7 +335,7 @@ class CallSettingsManager extends Component
                 ];
 
                 // Only update password if provided
-                if (!empty($this->sipPassword)) {
+                if (! empty($this->sipPassword)) {
                     $sipConfig['password'] = encrypt($this->sipPassword);
                 }
             }
@@ -360,14 +378,14 @@ class CallSettingsManager extends Component
                 $this->dispatch('notify', title: 'Success', message: 'Call settings updated successfully', type: 'success');
             } else {
                 $msg = $response['message'] ?? ($response['error']['message'] ?? 'Unknown error');
-                $this->dispatch('notify', title: 'Warning', message: 'Saved locally, but Meta sync failed: ' . $msg, type: 'warning');
+                $this->dispatch('notify', title: 'Warning', message: 'Saved locally, but Meta sync failed: '.$msg, type: 'warning');
             }
 
             $this->loadStatistics();
 
         } catch (\Exception $e) {
-            Log::error('Failed to update call settings: ' . $e->getMessage());
-            $this->dispatch('notify', title: 'Error', message: 'Failed to update settings: ' . $e->getMessage(), type: 'error');
+            Log::error('Failed to update call settings: '.$e->getMessage());
+            $this->dispatch('notify', title: 'Error', message: 'Failed to update settings: '.$e->getMessage(), type: 'error');
         }
     }
 
@@ -383,12 +401,13 @@ class CallSettingsManager extends Component
                 ];
             }
         }
+
         return $formatted;
     }
 
     public function toggleDay($index)
     {
-        $this->businessHours[$index]['enabled'] = !($this->businessHours[$index]['enabled'] ?? false);
+        $this->businessHours[$index]['enabled'] = ! ($this->businessHours[$index]['enabled'] ?? false);
     }
 
     public function applyToAll($index)
@@ -403,7 +422,7 @@ class CallSettingsManager extends Component
 
     public function removeRestriction()
     {
-        if (!$this->isRestricted) {
+        if (! $this->isRestricted) {
             return;
         }
 
@@ -418,7 +437,7 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return;
         }
 
@@ -430,7 +449,7 @@ class CallSettingsManager extends Component
             $this->dispatch('notify', message: 'Call link generated');
 
         } catch (\Exception $e) {
-            Log::error('Failed to generate call link: ' . $e->getMessage());
+            Log::error('Failed to generate call link: '.$e->getMessage());
             $this->dispatch('notify', title: 'Error', message: 'Failed to generate link', type: 'error');
         }
     }
@@ -469,9 +488,9 @@ class CallSettingsManager extends Component
     {
         $team = auth()->user()->currentTeam;
 
-        if (!$team) {
+        if (! $team) {
             return view('livewire.whatsapp.call-settings-manager', [
-                'permissions' => collect()
+                'permissions' => collect(),
             ]);
         }
 
@@ -480,8 +499,8 @@ class CallSettingsManager extends Component
             ->with('contact')
             ->when($this->search, function ($query) {
                 $query->whereHas('contact', function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('phone_number', 'like', '%' . $this->search . '%');
+                    $q->where('name', 'like', '%'.$this->search.'%')
+                        ->orWhere('phone_number', 'like', '%'.$this->search.'%');
                 });
             })
             ->when($this->filterStatus, function ($query) {
@@ -491,7 +510,7 @@ class CallSettingsManager extends Component
             ->paginate(10);
 
         return view('livewire.whatsapp.call-settings-manager', [
-            'permissions' => $permissions
+            'permissions' => $permissions,
         ]);
     }
 }

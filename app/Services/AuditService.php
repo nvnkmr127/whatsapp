@@ -3,14 +3,14 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
-use Illuminate\Support\Facades\Request;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Request;
 
 class AuditService
 {
     /**
      * Log a security or authentication event.
-     * 
+     *
      * Handles both specific auth parameters and generic activity parameters.
      */
     public static function log(string $event, $userId = null, $identifier = null, ?string $provider = null, array $metadata = []): void
@@ -21,7 +21,7 @@ class AuditService
         if ($userId instanceof Model) {
             $teamId = $userId->current_team_id ?? null;
             $userId = $userId->id;
-        } elseif (is_string($userId) && !is_numeric($userId)) {
+        } elseif (is_string($userId) && ! is_numeric($userId)) {
             $metadata['description'] = $userId;
             $userId = null;
         }
@@ -32,7 +32,7 @@ class AuditService
         }
 
         // Final fallback for team_id from session
-        if (!$teamId && auth()->check()) {
+        if (! $teamId && auth()->check()) {
             $teamId = auth()->user()->current_team_id;
         }
 
@@ -60,6 +60,7 @@ class AuditService
             if (is_string($value)) {
                 return self::sanitizeUtf8($value);
             }
+
             return $value;
         }, $metadata);
     }

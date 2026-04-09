@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\Team;
-use App\Models\WebhookPayload;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
@@ -85,7 +83,7 @@ class SystemHealthController extends Controller
     {
         // Aggregates from CalculateHealthScores/WhatsAppHealthMonitor logic
         $teams = Team::whereNotNull('whatsapp_access_token')->get();
-        
+
         $summary = [
             'total_connected' => $teams->count(),
             'active' => Team::where('whatsapp_setup_state', \App\Enums\IntegrationState::READY)->count(),
@@ -95,7 +93,7 @@ class SystemHealthController extends Controller
 
         // Real Meta API rate limit monitoring
         $isPaused = \Illuminate\Support\Facades\Cache::get('broadcast_system_paused');
-        
+
         // Check if any numbers are currently in backoff/throttle state
         $throttledCount = 0;
         foreach ($teams as $team) {
@@ -131,10 +129,10 @@ class SystemHealthController extends Controller
         $totalChecked = Team::where('whatsapp_connected', true)
             ->whereNotNull('whatsapp_access_token')
             ->count();
-            
+
         // Teams that haven't received a webhook in X hours
         $threshold = now()->subHours($hoursThreshold);
-        
+
         $silentTeamsCount = DB::table('teams')
             ->where('whatsapp_connected', true)
             ->whereNotNull('whatsapp_access_token')
@@ -162,7 +160,7 @@ class SystemHealthController extends Controller
         try {
             $connections = 0;
             $driver = DB::connection()->getDriverName();
-            
+
             if ($driver === 'mysql') {
                 $status = DB::select("SHOW STATUS LIKE 'Threads_connected'");
                 $connections = $status[0]->Value ?? 0;
@@ -188,10 +186,11 @@ class SystemHealthController extends Controller
     {
         try {
             $info = Redis::info();
+
             return [
                 'memory_used' => $info['used_memory_human'] ?? 'Unknown',
                 'memory_peak' => $info['used_memory_peak_human'] ?? 'Unknown',
-                'uptime' => ($info['uptime_in_days'] ?? 0) . ' days',
+                'uptime' => ($info['uptime_in_days'] ?? 0).' days',
                 'status' => 'Healthy',
             ];
         } catch (\Exception $e) {
@@ -222,7 +221,7 @@ class SystemHealthController extends Controller
         foreach ($recentFailures as $failure) {
             $teamId = null;
             $payload = json_decode($failure->payload, true);
-            
+
             // Try to extract team_id from payload (Serialized jobs often have it)
             if (isset($payload['data']['command'])) {
                 $command = $payload['data']['command'];
@@ -233,8 +232,8 @@ class SystemHealthController extends Controller
             }
 
             $teamName = $teamId && isset($teams[$teamId]) ? $teams[$teamId] : 'System/Unknown';
-            
-            if (!isset($failuresByTeam[$teamName])) {
+
+            if (! isset($failuresByTeam[$teamName])) {
                 $failuresByTeam[$teamName] = 0;
             }
             $failuresByTeam[$teamName]++;
@@ -261,8 +260,8 @@ class SystemHealthController extends Controller
      */
     protected function triggerSystemAlert(string $message)
     {
-        $cacheKey = 'system_alert_sent_' . md5($message);
-        
+        $cacheKey = 'system_alert_sent_'.md5($message);
+
         // Rate limit alerts to once every 4 hours to avoid spamming
         if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
             return;
@@ -272,8 +271,8 @@ class SystemHealthController extends Controller
         foreach ($superAdmins as $admin) {
             // Dispatch notification (Assuming SystemHealthAlert notification exists or using general one)
             // For now, using a generic Log alert and potentially a notification if available
-            \Illuminate\Support\Facades\Log::emergency("SYSTEM HEALTH ALERT: " . $message);
-            
+            \Illuminate\Support\Facades\Log::emergency('SYSTEM HEALTH ALERT: '.$message);
+
             // If they have a notification preference, send it
             // $admin->notify(new \App\Notifications\SystemHealthNotification($message));
         }
@@ -284,22 +283,28 @@ class SystemHealthController extends Controller
     /**
      * Helper to extract ID from serialized PHP strings
      */
-    private static function preg_with_id($command, &$teamId) {
+    private static function preg_with_id($command, &$teamId)
+    {
         if (preg_match('/"team_id";i:(\d+)/', $command, $matches)) {
             $teamId = $matches[1];
+
             return true;
         }
+
         return false;
     }
 
     /**
      * Helper to extract Team ID from Serialized Eloquent Model in string
      */
-    private static function preg_with_team_obj($command, &$teamId) {
+    private static function preg_with_team_obj($command, &$teamId)
+    {
         if (preg_match('/App\\\\Models\\\\Team";s:2:"id";i:(\d+)/', $command, $matches)) {
             $teamId = $matches[1];
+
             return true;
         }
+
         return false;
     }
 
@@ -309,15 +314,15 @@ class SystemHealthController extends Controller
     protected function getServerVitals()
     {
         $load = function_exists('sys_getloadavg') ? sys_getloadavg() : [0, 0, 0];
-        $diskFree = disk_free_space("/");
-        $diskTotal = disk_total_space("/");
+        $diskFree = disk_free_space('/');
+        $diskTotal = disk_total_space('/');
         $diskUsed = $diskTotal - $diskFree;
         $diskUsagePercent = round(($diskUsed / $diskTotal) * 100, 1);
 
         return [
             'load' => $load[0],
             'disk_usage' => $diskUsagePercent,
-            'disk_free' => round($diskFree / (1024 * 1024 * 1024), 1) . ' GB',
+            'disk_free' => round($diskFree / (1024 * 1024 * 1024), 1).' GB',
             'memory_limit' => ini_get('memory_limit'),
             'php_version' => PHP_VERSION,
         ];
@@ -342,6 +347,7 @@ class SystemHealthController extends Controller
     public function retryJobs()
     {
         \Illuminate\Support\Facades\Artisan::call('queue:retry all');
+
         return back()->with('flash.banner', __('Failed jobs have been queued for retry.'))->with('flash.bannerStyle', 'success');
     }
 
@@ -351,6 +357,7 @@ class SystemHealthController extends Controller
     public function clearJobs()
     {
         \Illuminate\Support\Facades\Artisan::call('queue:flush');
+
         return back()->with('flash.banner', __('Failed jobs log has been cleared.'))->with('flash.bannerStyle', 'success');
     }
 
@@ -361,8 +368,8 @@ class SystemHealthController extends Controller
     {
         return Team::whereNotNull('whatsapp_access_token')
             ->select([
-                'id', 'name', 'whatsapp_setup_state', 'whatsapp_quality_rating', 
-                'whatsapp_messaging_limit', 'whatsapp_phone_status', 'whatsapp_connected'
+                'id', 'name', 'whatsapp_setup_state', 'whatsapp_quality_rating',
+                'whatsapp_messaging_limit', 'whatsapp_phone_status', 'whatsapp_connected',
             ])
             ->orderBy('whatsapp_setup_state')
             ->get();
@@ -410,7 +417,7 @@ class SystemHealthController extends Controller
     protected function getFinancialSummary()
     {
         $last24h = now()->subDay();
-        
+
         return [
             'total_liquidity' => \App\Models\TeamWallet::sum('balance'),
             'revenue_24h' => \App\Models\TeamTransaction::where('created_at', '>=', $last24h)

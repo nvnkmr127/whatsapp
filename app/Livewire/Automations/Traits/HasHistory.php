@@ -5,12 +5,16 @@ namespace App\Livewire\Automations\Traits;
 trait HasHistory
 {
     public array $history = [];
+
     public int $historyIndex = -1;
+
     public bool $historyEnabled = true;
 
     protected function pushHistory(): void
     {
-        if (!$this->historyEnabled) return;
+        if (! $this->historyEnabled) {
+            return;
+        }
 
         // Clear any redo states after current position
         if ($this->historyIndex < count($this->history) - 1) {
@@ -34,6 +38,7 @@ trait HasHistory
     {
         if ($this->historyIndex <= 0) {
             session()->flash('info', 'Nothing to undo.');
+
             return;
         }
 
@@ -51,6 +56,7 @@ trait HasHistory
     {
         if ($this->historyIndex >= count($this->history) - 1) {
             session()->flash('info', 'Nothing to redo.');
+
             return;
         }
 

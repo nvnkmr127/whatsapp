@@ -52,9 +52,9 @@ class ResetPassword extends Notification
 
             return $this->buildMailMessage($this->resetUrl($notifiable));
         } catch (\Exception $e) {
-            app_log('Error sending reset password notification: ' . $e->getMessage(), 'error', $e, [
-                'notifiable_id' => $notifiable->id    ?? null,
-                'email'         => $notifiable->email ?? null,
+            app_log('Error sending reset password notification: '.$e->getMessage(), 'error', $e, [
+                'notifiable_id' => $notifiable->id ?? null,
+                'email' => $notifiable->email ?? null,
             ]);
         }
     }
@@ -72,12 +72,12 @@ class ResetPassword extends Notification
                 ->line(Lang::get($template->message))
                 ->action(Lang::get('Reset Password'), $url)
                 ->line(Lang::get('This password reset link will expire in :count minutes.', [
-                    'count' => config('auth.passwords.' . config('auth.defaults.passwords') . '.expire'),
+                    'count' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire'),
                 ]))
                 ->line(Lang::get('If you did not request a password reset, no further action is required.'));
         } catch (\Exception $e) {
-            app_log('Error building reset password mail message: ' . $e->getMessage(), 'error', $e, [
-                'url'     => $url,
+            app_log('Error building reset password mail message: '.$e->getMessage(), 'error', $e, [
+                'url' => $url,
                 'user_id' => $notifiable->id ?? null,
             ]);
         }
@@ -98,9 +98,9 @@ class ResetPassword extends Notification
                 'email' => $notifiable->getEmailForPasswordReset(),
             ], false));
         } catch (\Exception $e) {
-            app_log('Error generating reset password URL: ' . $e->getMessage(), 'error', $e, [
-                'notifiable_id' => $notifiable->id    ?? null,
-                'email'         => $notifiable->email ?? null,
+            app_log('Error generating reset password URL: '.$e->getMessage(), 'error', $e, [
+                'notifiable_id' => $notifiable->id ?? null,
+                'email' => $notifiable->email ?? null,
             ]);
         }
     }
@@ -113,7 +113,7 @@ class ResetPassword extends Notification
         try {
             static::$createUrlCallback = $callback;
         } catch (\Exception $e) {
-            app_log('Error setting reset URL callback: ' . $e->getMessage(), 'error', $e);
+            app_log('Error setting reset URL callback: '.$e->getMessage(), 'error', $e);
         }
     }
 
@@ -125,7 +125,7 @@ class ResetPassword extends Notification
         try {
             static::$toMailCallback = $callback;
         } catch (\Exception $e) {
-            app_log('Error setting reset mail callback: ' . $e->getMessage(), 'error', $e);
+            app_log('Error setting reset mail callback: '.$e->getMessage(), 'error', $e);
         }
     }
 }

@@ -29,6 +29,7 @@ class WhatsAppSetupProgressTracker
     public function loadProgress(Team $team, string $step): ?array
     {
         $progress = $team->whatsapp_setup_progress ?? [];
+
         return $progress[$step] ?? null;
     }
 
@@ -64,7 +65,7 @@ class WhatsAppSetupProgressTracker
      */
     public function canResume(Team $team): bool
     {
-        return !empty($team->whatsapp_setup_progress) &&
+        return ! empty($team->whatsapp_setup_progress) &&
             $team->whatsapp_setup_in_progress;
     }
 
@@ -81,6 +82,7 @@ class WhatsAppSetupProgressTracker
 
         // Get the most recent step
         $steps = array_keys($progress);
+
         return end($steps);
     }
 
@@ -98,6 +100,7 @@ class WhatsAppSetupProgressTracker
     public function isCompleted(Team $team, string $step): bool
     {
         $progress = $this->loadProgress($team, $step);
+
         return $progress['data']['completed'] ?? false;
     }
 
@@ -106,11 +109,12 @@ class WhatsAppSetupProgressTracker
      */
     public function getDuration(Team $team): ?int
     {
-        if (!$team->whatsapp_setup_started_at) {
+        if (! $team->whatsapp_setup_started_at) {
             return null;
         }
 
         $end = $team->whatsapp_setup_completed_at ?? now();
+
         return $team->whatsapp_setup_started_at->diffInSeconds($end);
     }
 
@@ -129,6 +133,7 @@ class WhatsAppSetupProgressTracker
     public function getTempData(Team $team, string $key): mixed
     {
         $cacheKey = "whatsapp_setup:{$team->id}:{$key}";
+
         return Cache::get($cacheKey);
     }
 

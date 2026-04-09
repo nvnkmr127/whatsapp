@@ -3,9 +3,6 @@
 namespace App\Services;
 
 use App\Models\WebhookSubscription;
-use App\Models\WebhookDelivery;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class WebhookService
 {

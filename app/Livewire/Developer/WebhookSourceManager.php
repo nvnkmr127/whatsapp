@@ -5,7 +5,6 @@ namespace App\Livewire\Developer;
 use App\Models\Message;
 use App\Models\WebhookSource;
 use App\Models\WhatsappTemplate;
-use App\Services\WebhookAuthService;
 use App\Services\WebhookMappingService;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -17,54 +16,86 @@ class WebhookSourceManager extends Component
 {
     use WithPagination;
 
-    public $name, $platform = 'custom', $auth_method = 'api_key';
+    public $name;
+
+    public $platform = 'custom';
+
+    public $auth_method = 'api_key';
+
     public $auth_config = [];
+
     public $field_mappings = [];
+
     public $transformation_rules = [];
+
     public $action_config = [];
+
     public $is_active = true;
+
     public $editingId = null;
+
     public $search = '';
+
     public $exportDateRange = 30; // Days back to include in exports (7, 30, or 90)
+
     public $exportStatusFilter = 'all'; // Filter exports by message status: all, sent, delivered, read, failed
 
     protected $queryString = ['search'];
 
     // Wizard State - tracks the step-by-step configuration process
     public $currentStep = 1;
+
     public $isCapturing = false;
+
     public $capturedPayload = null;
+
     public $lastPayloadId = null;
+
     public $showRawData = false;
+
     public $showWizardModal = false;
 
     // For filtering rules
     public $filtering_rules_ui = [];
+
     public $process_delay = 0;
 
     // Retry configuration
     public $retry_enabled = false;
+
     public $max_retries = 3;
+
     public $retry_interval = 60; // seconds
+
     public $retry_strategy = 'exponential';
 
     // For field mapping builder
     public $selectedEventType = '';
+
     public $mappingFields = [];
+
     public $mappingContext = []; // Flattened key-value pairs for dropdowns
 
     // For action configuration
     public $actionType = 'send_template';
+
     public $selectedTemplateId = null;
+
     public $templateParameters = [];
+
     public $otpParamIndex = 1;
+
     public $otpLength = 6;
 
     // For testing
     public $testPayload = '';
+
     public $testResult = null;
+
     public $showTestModal = false;
+
     public $testingSourceId = null;
+
     public $testMessageResult = null;
 
     protected $rules = [
@@ -83,7 +114,7 @@ class WebhookSourceManager extends Component
     {
         $this->auth_config = [
             'key' => Str::random(32),
-            'header' => 'X-API-Key'
+            'header' => 'X-API-Key',
         ];
         $this->field_mappings = [];
         $this->transformation_rules = [];
@@ -93,7 +124,7 @@ class WebhookSourceManager extends Component
         $this->currentStep = 1;
         $this->isCapturing = false;
         $this->capturedPayload = null;
-        
+
         // Reset retry defaults
         $this->retry_enabled = false;
         $this->max_retries = 3;
@@ -105,7 +136,7 @@ class WebhookSourceManager extends Component
     {
         if ($this->currentStep === 1) {
             $this->validate();
-            if (!$this->editingId) {
+            if (! $this->editingId) {
                 $this->saveInitialSource();
             }
         }
@@ -138,8 +169,9 @@ class WebhookSourceManager extends Component
 
     public function startCapture()
     {
-        if (!$this->editingId)
+        if (! $this->editingId) {
             return;
+        }
 
         $this->isCapturing = true;
         $latest = \App\Models\WebhookPayload::where('webhook_source_id', $this->editingId)
@@ -155,8 +187,9 @@ class WebhookSourceManager extends Component
 
     public function checkForNewPayload()
     {
-        if (!$this->isCapturing || !$this->editingId)
+        if (! $this->isCapturing || ! $this->editingId) {
             return;
+        }
 
         $newPayload = \App\Models\WebhookPayload::where('webhook_source_id', $this->editingId)
             ->where('id', '>', $this->lastPayloadId)
@@ -176,9 +209,10 @@ class WebhookSourceManager extends Component
         $user = auth()->user();
         $team = $user->currentTeam ?? ($user->isSuperAdmin() ? \App\Models\Team::first() : null);
 
-        if (!$team) {
+        if (! $team) {
             $this->dispatch('notify', 'Please select a team before creating a source.');
             $this->currentStep = 1;
+
             return;
         }
 
@@ -203,13 +237,13 @@ class WebhookSourceManager extends Component
             $this->auth_config = $preset['auth_config'] ?? [];
 
             // Set sample mappings if available
-            if (!empty($preset['sample_mappings'])) {
+            if (! empty($preset['sample_mappings'])) {
                 $this->field_mappings = $preset['sample_mappings'];
                 $this->selectedEventType = array_key_first($preset['sample_mappings']);
             }
 
             // Set sample transformations
-            if (!empty($preset['sample_transformations'])) {
+            if (! empty($preset['sample_transformations'])) {
                 $this->transformation_rules = $preset['sample_transformations'];
             }
 
@@ -221,7 +255,7 @@ class WebhookSourceManager extends Component
             }
 
             // Set default header if not present in config but present in preset
-            if (empty($this->auth_config['header']) && !empty($preset['auth_config']['header'])) {
+            if (empty($this->auth_config['header']) && ! empty($preset['auth_config']['header'])) {
                 $this->auth_config['header'] = $preset['auth_config']['header'];
             }
         }
@@ -241,7 +275,7 @@ class WebhookSourceManager extends Component
 
     public function addMappingField()
     {
-        if (!isset($this->field_mappings[$this->selectedEventType])) {
+        if (! isset($this->field_mappings[$this->selectedEventType])) {
             $this->field_mappings[$this->selectedEventType] = [];
         }
 
@@ -283,7 +317,7 @@ class WebhookSourceManager extends Component
      */
     public function mapFieldToParameter($parameterPosition, $fieldPath)
     {
-        if (!isset($this->templateParameters)) {
+        if (! isset($this->templateParameters)) {
             $this->templateParameters = [];
         }
 
@@ -300,13 +334,13 @@ class WebhookSourceManager extends Component
 
         $query = WebhookSource::query();
 
-        if ($team && !$user->is_super_admin) {
+        if ($team && ! $user->is_super_admin) {
             $query->where('team_id', $team->id);
         }
 
         $source = $query->find($sourceId);
 
-        if (!$source) {
+        if (! $source) {
             return [];
         }
 
@@ -354,7 +388,7 @@ class WebhookSourceManager extends Component
 
     public function openNewSource()
     {
-        \Illuminate\Support\Facades\Log::info("Opening new source wizard");
+        \Illuminate\Support\Facades\Log::info('Opening new source wizard');
         $this->cancelEdit();
         $this->showWizardModal = true;
         $this->showLogsModal = false;
@@ -380,7 +414,7 @@ class WebhookSourceManager extends Component
             $this->field_mappings = $source->field_mappings ?? [];
             $this->transformation_rules = $source->transformation_rules ?? [];
             $this->action_config = $source->action_config ?? [];
-            $this->filtering_rules_ui = !empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
+            $this->filtering_rules_ui = ! empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
             $this->is_active = $source->is_active;
             $this->process_delay = $source->process_delay;
 
@@ -398,7 +432,7 @@ class WebhookSourceManager extends Component
             }
 
             // Set selected event type and pull mappings to top level for UI
-            if (!empty($this->field_mappings)) {
+            if (! empty($this->field_mappings)) {
                 $this->selectedEventType = array_key_first($this->field_mappings);
                 $currentMappings = $this->field_mappings[$this->selectedEventType] ?? [];
 
@@ -434,7 +468,7 @@ class WebhookSourceManager extends Component
                 }
             }
 
-            $this->templateParameters = !empty($sanitized) ? $sanitized : $this->templateParameters;
+            $this->templateParameters = ! empty($sanitized) ? $sanitized : $this->templateParameters;
             $this->otpParamIndex = $this->action_config['otp_param_index'] ?? 1;
             $this->otpLength = $this->action_config['otp_length'] ?? 6;
 
@@ -445,9 +479,9 @@ class WebhookSourceManager extends Component
             $this->showTestModal = false;
             \Illuminate\Support\Facades\Log::info("Wizard modal shown for ID: {$id}. State: active.");
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error in WebhookSourceManager@edit: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error in WebhookSourceManager@edit: '.$e->getMessage());
             \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
-            $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
+            $this->dispatch('notify', 'Error: '.$e->getMessage(), 'error');
         }
     }
 
@@ -455,6 +489,7 @@ class WebhookSourceManager extends Component
     {
         if ($this->currentStep < 4) {
             $this->nextStep();
+
             return;
         }
 
@@ -483,7 +518,7 @@ class WebhookSourceManager extends Component
         }
 
         // 3. Nest under event type if we have any mappings
-        if (!empty($currentEventMappings)) {
+        if (! empty($currentEventMappings)) {
             $fieldMappings[$eventType] = $currentEventMappings;
         }
 
@@ -532,7 +567,7 @@ class WebhookSourceManager extends Component
         $this->authorize('update', $source);
 
         $newSource = $source->replicate();
-        $newSource->name = $source->name . ' (Copy)';
+        $newSource->name = $source->name.' (Copy)';
         $newSource->is_active = false; // Duplicated source should be inactive until user activates it
         $newSource->slug = null; // Clear slug to trigger new one generation
 
@@ -551,7 +586,7 @@ class WebhookSourceManager extends Component
         $source = WebhookSource::findOrFail($id);
         $this->authorize('update', $source);
 
-        $source->update(['is_active' => !$source->is_active]);
+        $source->update(['is_active' => ! $source->is_active]);
     }
 
     public function openTestModal($id)
@@ -579,10 +614,11 @@ class WebhookSourceManager extends Component
 
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $this->testResult = ['error' => 'Invalid JSON payload'];
+
                 return;
             }
 
-            $mappingService = new WebhookMappingService();
+            $mappingService = new WebhookMappingService;
 
             // Extract event type
             $eventType = $mappingService->extractEventType(
@@ -596,7 +632,7 @@ class WebhookSourceManager extends Component
 
             // Apply transformations
             $transformationRules = $source->getTransformationRules();
-            if (!empty($transformationRules)) {
+            if (! empty($transformationRules)) {
                 $mappedData = $mappingService->transformData($mappedData, $transformationRules);
             }
 
@@ -684,14 +720,17 @@ class WebhookSourceManager extends Component
             'customer_name' => 'Demo User',
             'customer_phone' => '+1234567890',
             'amount' => '150.00',
-            'email' => 'demo@example.com'
+            'email' => 'demo@example.com',
         ], JSON_PRETTY_PRINT);
     }
 
     // For logs viewer
     public $showLogsModal = false;
+
     public $logsSourceId = null;
+
     public $recentLogs = [];
+
     public $logsSourceStats = null;
 
     public function viewLogs($id)
@@ -704,8 +743,8 @@ class WebhookSourceManager extends Component
             $this->showTestModal = false;
             $this->refreshLogs();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error opening logs: " . $e->getMessage());
-            $this->dispatch('notify', 'Error loading logs: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error opening logs: '.$e->getMessage());
+            $this->dispatch('notify', 'Error loading logs: '.$e->getMessage());
         }
     }
 
@@ -714,7 +753,7 @@ class WebhookSourceManager extends Component
         if ($this->logsSourceId) {
             \Illuminate\Support\Facades\Log::info("Refreshing logs for source ID: {$this->logsSourceId}");
             $this->recentLogs = $this->getRecentPayloads($this->logsSourceId);
-            \Illuminate\Support\Facades\Log::info("Found " . count($this->recentLogs) . " recent logs.");
+            \Illuminate\Support\Facades\Log::info('Found '.count($this->recentLogs).' recent logs.');
 
             $source = WebhookSource::find($this->logsSourceId);
             if ($source) {
@@ -723,9 +762,9 @@ class WebhookSourceManager extends Component
                     'processed' => (int) $source->total_processed,
                     'failed' => (int) $source->total_failed,
                     'rate' => $source->getSuccessRate(),
-                    'name' => $source->name
+                    'name' => $source->name,
                 ];
-                \Illuminate\Support\Facades\Log::info("Stats updated: ", $this->logsSourceStats);
+                \Illuminate\Support\Facades\Log::info('Stats updated: ', $this->logsSourceStats);
 
                 // Force Livewire to update the view
                 $this->dispatch('stats-loaded');
@@ -735,7 +774,7 @@ class WebhookSourceManager extends Component
 
             $this->dispatch('notify', 'Logs and analytics refreshed.');
         } else {
-            \Illuminate\Support\Facades\Log::warning("refreshLogs called without logsSourceId");
+            \Illuminate\Support\Facades\Log::warning('refreshLogs called without logsSourceId');
         }
     }
 
@@ -780,7 +819,7 @@ class WebhookSourceManager extends Component
                 'customer_id' => 'CUST-100',
                 'phone' => '+1234567890',
                 'name' => 'Demo User',
-                'amount' => '0.00'
+                'amount' => '0.00',
             ];
         }
 
@@ -788,7 +827,7 @@ class WebhookSourceManager extends Component
         $flattened = Arr::dot($payload);
 
         // Ensure even flat keys are present and the array isn't empty
-        $this->mappingContext = !empty($flattened) ? $flattened : $payload;
+        $this->mappingContext = ! empty($flattened) ? $flattened : $payload;
 
         // 6. Sync back to capturedPayload for the preview window if it was empty
         if (empty($this->capturedPayload)) {
@@ -806,16 +845,18 @@ class WebhookSourceManager extends Component
         $this->testMessageResult = null;
 
         try {
-            if (!$this->selectedTemplateId) {
+            if (! $this->selectedTemplateId) {
                 $this->testMessageResult = ['type' => 'error', 'message' => 'Please select a template first.'];
                 $this->dispatch('notify', 'Please select a template first.', 'error');
+
                 return;
             }
 
             $phoneNumberMapping = $this->field_mappings['phone_number'] ?? null;
-            if (!$phoneNumberMapping) {
+            if (! $phoneNumberMapping) {
                 $this->testMessageResult = ['type' => 'error', 'message' => 'Please map or set a phone number.'];
                 $this->dispatch('notify', 'Please map or set a phone number.', 'error');
+
                 return;
             }
 
@@ -824,7 +865,7 @@ class WebhookSourceManager extends Component
             if ($this->capturedPayload) {
                 $payload = is_string($this->capturedPayload) ? json_decode($this->capturedPayload, true) : $this->capturedPayload;
             }
-            if (!$payload) {
+            if (! $payload) {
                 $sampleJson = $this->getSamplePayload($this->platform ?: 'custom');
                 $payload = json_decode($sampleJson, true);
             }
@@ -837,9 +878,10 @@ class WebhookSourceManager extends Component
                 $phoneNumber = data_get($payload, $phoneNumberMapping);
             }
 
-            if (!$phoneNumber) {
+            if (! $phoneNumber) {
                 $this->testMessageResult = ['type' => 'error', 'message' => 'Could not determine phone number from payload or static value.'];
                 $this->dispatch('notify', 'Could not determine phone number from payload or static value.', 'error');
+
                 return;
             }
 
@@ -847,9 +889,9 @@ class WebhookSourceManager extends Component
 
             // Resolve Parameters
             $parameters = [];
-            if (!empty($this->templateParameters)) {
+            if (! empty($this->templateParameters)) {
                 $keys = array_keys($this->templateParameters);
-                $maxParam = !empty($keys) ? max($keys) : 0;
+                $maxParam = ! empty($keys) ? max($keys) : 0;
                 for ($i = 1; $i <= $maxParam; $i++) {
                     $path = $this->templateParameters[$i] ?? null;
                     if ($path) {
@@ -875,18 +917,18 @@ class WebhookSourceManager extends Component
             );
 
             if ($response['success']) {
-                $this->testMessageResult = ['type' => 'success', 'message' => 'Message sent to ' . $phoneNumber];
-                $this->dispatch('notify', 'Test message sent successfully to ' . $phoneNumber);
+                $this->testMessageResult = ['type' => 'success', 'message' => 'Message sent to '.$phoneNumber];
+                $this->dispatch('notify', 'Test message sent successfully to '.$phoneNumber);
             } else {
                 $errorDesc = $response['message'] ?? (is_array($response['error']) ? json_encode($response['error']) : ($response['error'] ?? 'Unknown error'));
-                $this->testMessageResult = ['type' => 'error', 'message' => 'Failed: ' . $errorDesc];
-                $this->dispatch('notify', 'Failed: ' . $errorDesc, 'error');
+                $this->testMessageResult = ['type' => 'error', 'message' => 'Failed: '.$errorDesc];
+                $this->dispatch('notify', 'Failed: '.$errorDesc, 'error');
             }
 
         } catch (\Exception $e) {
-            $this->testMessageResult = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
-            \Illuminate\Support\Facades\Log::error("Test send error: " . $e->getMessage());
-            $this->dispatch('notify', 'Error: ' . $e->getMessage(), 'error');
+            $this->testMessageResult = ['type' => 'error', 'message' => 'Error: '.$e->getMessage()];
+            \Illuminate\Support\Facades\Log::error('Test send error: '.$e->getMessage());
+            $this->dispatch('notify', 'Error: '.$e->getMessage(), 'error');
         }
     }
 
@@ -913,8 +955,9 @@ class WebhookSourceManager extends Component
     protected function streamWebhookExport(string $statusFilter)
     {
         $teamId = $this->resolveExportTeamId();
-        if (!$teamId) {
+        if (! $teamId) {
             $this->dispatch('notify', 'Please select a team to export webhook report.', 'error');
+
             return null;
         }
 
@@ -1030,8 +1073,8 @@ class WebhookSourceManager extends Component
 
             fclose($handle);
         }, $statusFilter === 'failed'
-            ? 'webhook-source-' . $source->id . '-failed.csv'
-            : 'webhook-source-' . $source->id . '-report.csv');
+            ? 'webhook-source-'.$source->id.'-failed.csv'
+            : 'webhook-source-'.$source->id.'-report.csv');
     }
 
     protected function resolveExportTeamId(): ?int
@@ -1053,15 +1096,17 @@ class WebhookSourceManager extends Component
     protected function normalizeExportStatusFilter(): string
     {
         $allowed = ['all', 'sent', 'delivered', 'read', 'failed'];
+
         return in_array($this->exportStatusFilter, $allowed, true) ? $this->exportStatusFilter : 'all';
     }
-
-
 
     #[Computed]
     public function currentSource()
     {
-        if (!$this->editingId) return null;
+        if (! $this->editingId) {
+            return null;
+        }
+
         return WebhookSource::find($this->editingId);
     }
 
@@ -1071,13 +1116,13 @@ class WebhookSourceManager extends Component
             $payload = \App\Models\WebhookPayload::findOrFail($payloadId);
             $source = $payload->source;
 
-            if (!$source) {
-                throw new \Exception("Source not found for payload.");
+            if (! $source) {
+                throw new \Exception('Source not found for payload.');
             }
 
             $actionConfig = $source->getActionConfig();
             if (empty($actionConfig)) {
-                throw new \Exception("No action configured for this source.");
+                throw new \Exception('No action configured for this source.');
             }
 
             // Reset status for replay
@@ -1085,7 +1130,7 @@ class WebhookSourceManager extends Component
                 'status' => 'pending',
                 'error_message' => null,
                 'retry_count' => 0,
-                'next_retry_at' => null
+                'next_retry_at' => null,
             ]);
 
             $traceId = \App\Services\TraceContext::getTraceId();
@@ -1094,18 +1139,18 @@ class WebhookSourceManager extends Component
             $this->dispatch('notify', 'Webhook payload re-queued for processing.');
             $this->refreshLogs();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error replaying payload {$payloadId}: " . $e->getMessage());
-            $this->dispatch('notify', 'Replay failed: ' . $e->getMessage(), 'error');
+            \Illuminate\Support\Facades\Log::error("Error replaying payload {$payloadId}: ".$e->getMessage());
+            $this->dispatch('notify', 'Replay failed: '.$e->getMessage(), 'error');
         }
     }
 
     public function render()
     {
-        \Illuminate\Support\Facades\Log::info("Rendering WebhookSourceManager. Wizards: " . ($this->showWizardModal ? 'YES' : 'NO') . " | Logs: " . ($this->showLogsModal ? 'YES' : 'NO'));
+        \Illuminate\Support\Facades\Log::info('Rendering WebhookSourceManager. Wizards: '.($this->showWizardModal ? 'YES' : 'NO').' | Logs: '.($this->showLogsModal ? 'YES' : 'NO'));
         $user = auth()->user();
         $team = $user->currentTeam;
 
-        if (!$team && !$user->is_super_admin) {
+        if (! $team && ! $user->is_super_admin) {
             return <<<'HTML'
                 <div class="p-8 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800">
                     <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">No Team Selected</h3>
@@ -1115,16 +1160,16 @@ class WebhookSourceManager extends Component
         }
 
         $query = WebhookSource::query();
-        if ($team && !$user->is_super_admin) {
+        if ($team && ! $user->is_super_admin) {
             $query->where('team_id', $team->id);
         }
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('platform', 'like', '%' . $this->search . '%')
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('platform', 'like', '%'.$this->search.'%')
                     ->orWhereHas('team', function ($q) {
-                        $q->where('name', 'like', '%' . $this->search . '%');
+                        $q->where('name', 'like', '%'.$this->search.'%');
                     });
             });
         }
@@ -1152,9 +1197,9 @@ class WebhookSourceManager extends Component
                     // Extract {{1}}, {{2}}, etc. from all components with text
                     if (isset($component['text'])) {
                         preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches);
-                        if (!empty($matches[1])) {
+                        if (! empty($matches[1])) {
                             foreach ($matches[1] as $match) {
-                                if (!in_array($match, $templateParams)) {
+                                if (! in_array($match, $templateParams)) {
                                     $templateParams[] = $match;
                                 }
                             }

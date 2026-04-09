@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Exception;
-
 class SDPValidator
 {
     /**
@@ -24,7 +22,7 @@ class SDPValidator
     /**
      * Validate SDP structure and content
      *
-     * @param string $sdp The SDP string to validate
+     * @param  string  $sdp  The SDP string to validate
      * @return array ['valid' => bool, 'errors' => array, 'warnings' => array]
      */
     public static function validate(string $sdp): array
@@ -35,6 +33,7 @@ class SDPValidator
         // Basic structure validation
         if (empty(trim($sdp))) {
             $errors[] = 'SDP is empty';
+
             return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
         }
 
@@ -43,6 +42,7 @@ class SDPValidator
 
         if (empty($lines)) {
             $errors[] = 'SDP has no valid lines';
+
             return ['valid' => false, 'errors' => $errors, 'warnings' => $warnings];
         }
 
@@ -55,33 +55,33 @@ class SDPValidator
         }
 
         foreach (self::REQUIRED_FIELDS as $field) {
-            if (!in_array($field, $foundFields)) {
+            if (! in_array($field, $foundFields)) {
                 $errors[] = "Missing required SDP field: {$field}=";
             }
         }
 
         // Validate version (must be 0)
         $versionLine = self::findLine($lines, 'v');
-        if ($versionLine && !preg_match('/^v=0$/', $versionLine)) {
+        if ($versionLine && ! preg_match('/^v=0$/', $versionLine)) {
             $errors[] = 'SDP version must be 0';
         }
 
         // Validate origin line format
         $originLine = self::findLine($lines, 'o');
-        if ($originLine && !preg_match('/^o=\S+ \d+ \d+ IN IP[46] \S+$/', $originLine)) {
+        if ($originLine && ! preg_match('/^o=\S+ \d+ \d+ IN IP[46] \S+$/', $originLine)) {
             $warnings[] = 'Origin line (o=) format may be invalid';
         }
 
         // Validate connection line format
         $connectionLine = self::findLine($lines, 'c');
-        if ($connectionLine && !preg_match('/^c=IN IP[46] \S+$/', $connectionLine)) {
+        if ($connectionLine && ! preg_match('/^c=IN IP[46] \S+$/', $connectionLine)) {
             $errors[] = 'Connection line (c=) format is invalid';
         }
 
         // Validate media line
         $mediaLine = self::findLine($lines, 'm');
         if ($mediaLine) {
-            if (!preg_match('/^m=(audio|video) \d+ \S+ (.+)$/', $mediaLine, $matches)) {
+            if (! preg_match('/^m=(audio|video) \d+ \S+ (.+)$/', $mediaLine, $matches)) {
                 $errors[] = 'Media line (m=) format is invalid';
             } else {
                 // Check if it's audio (WhatsApp primarily uses audio)
@@ -93,16 +93,16 @@ class SDPValidator
 
         // Validate codecs
         $codecValidation = self::validateCodecs($lines);
-        if (!empty($codecValidation['errors'])) {
+        if (! empty($codecValidation['errors'])) {
             $errors = array_merge($errors, $codecValidation['errors']);
         }
-        if (!empty($codecValidation['warnings'])) {
+        if (! empty($codecValidation['warnings'])) {
             $warnings = array_merge($warnings, $codecValidation['warnings']);
         }
 
         // Check for security issues
         $securityCheck = self::checkSecurity($sdp);
-        if (!empty($securityCheck)) {
+        if (! empty($securityCheck)) {
             $errors = array_merge($errors, $securityCheck);
         }
 
@@ -116,7 +116,7 @@ class SDPValidator
     /**
      * Validate codecs in SDP
      *
-     * @param array $lines SDP lines
+     * @param  array  $lines  SDP lines
      * @return array ['errors' => array, 'warnings' => array]
      */
     protected static function validateCodecs(array $lines): array
@@ -137,8 +137,8 @@ class SDPValidator
             }
         }
 
-        if (!$foundSupportedCodec) {
-            $errors[] = 'No supported audio codec found. Supported: ' . implode(', ', self::SUPPORTED_CODECS);
+        if (! $foundSupportedCodec) {
+            $errors[] = 'No supported audio codec found. Supported: '.implode(', ', self::SUPPORTED_CODECS);
         }
 
         return ['errors' => $errors, 'warnings' => $warnings];
@@ -147,7 +147,7 @@ class SDPValidator
     /**
      * Check for security issues in SDP
      *
-     * @param string $sdp The SDP string
+     * @param  string  $sdp  The SDP string
      * @return array Array of security errors
      */
     protected static function checkSecurity(string $sdp): array
@@ -179,8 +179,8 @@ class SDPValidator
     /**
      * Find a specific line in SDP by field type
      *
-     * @param array $lines SDP lines
-     * @param string $field Field type (e.g., 'v', 'o', 's')
+     * @param  array  $lines  SDP lines
+     * @param  string  $field  Field type (e.g., 'v', 'o', 's')
      * @return string|null The line or null if not found
      */
     protected static function findLine(array $lines, string $field): ?string
@@ -190,13 +190,14 @@ class SDPValidator
                 return $line;
             }
         }
+
         return null;
     }
 
     /**
      * Sanitize SDP content
      *
-     * @param string $sdp The SDP string
+     * @param  string  $sdp  The SDP string
      * @return string Sanitized SDP
      */
     public static function sanitize(string $sdp): string
@@ -218,7 +219,7 @@ class SDPValidator
                 $payloadType = $matches[1];
                 $codec = $matches[2];
 
-                if (!in_array($codec, self::SUPPORTED_CODECS)) {
+                if (! in_array($codec, self::SUPPORTED_CODECS)) {
                     $unsupportedPayloadTypes[] = $payloadType;
                 }
             }
@@ -226,8 +227,9 @@ class SDPValidator
 
         foreach ($lines as $line) {
             $line = trim($line);
-            if (empty($line))
+            if (empty($line)) {
                 continue;
+            }
 
             // 1. Capitalize Fingerprint Algorithm (Meta requirement)
             if (strpos($line, 'a=fingerprint:') === 0) {
@@ -249,7 +251,7 @@ class SDPValidator
                 $payloads = array_slice($parts, 3);
 
                 foreach ($payloads as $p) {
-                    if (!in_array($p, $unsupportedPayloadTypes)) {
+                    if (! in_array($p, $unsupportedPayloadTypes)) {
                         $newParts[] = $p;
                     }
                 }
@@ -271,7 +273,7 @@ class SDPValidator
     /**
      * Extract codec information from SDP
      *
-     * @param string $sdp The SDP string
+     * @param  string  $sdp  The SDP string
      * @return array Array of codec names
      */
     public static function extractCodecs(string $sdp): array
@@ -291,8 +293,7 @@ class SDPValidator
     /**
      * Validate SDP type (offer or answer)
      *
-     * @param string $type The SDP type
-     * @return bool
+     * @param  string  $type  The SDP type
      */
     public static function validateType(string $type): bool
     {
@@ -302,18 +303,17 @@ class SDPValidator
     /**
      * Get a human-readable validation summary
      *
-     * @param array $validation Validation result from validate()
-     * @return string
+     * @param  array  $validation  Validation result from validate()
      */
     public static function getValidationSummary(array $validation): string
     {
         if ($validation['valid']) {
             $summary = 'SDP is valid';
-            if (!empty($validation['warnings'])) {
+            if (! empty($validation['warnings'])) {
                 $summary .= ' (with warnings)';
             }
         } else {
-            $summary = 'SDP validation failed: ' . implode('; ', $validation['errors']);
+            $summary = 'SDP validation failed: '.implode('; ', $validation['errors']);
         }
 
         return $summary;

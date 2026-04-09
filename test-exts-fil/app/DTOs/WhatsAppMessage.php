@@ -20,19 +20,19 @@ class WhatsAppMessage
             to: $data['to'],
             template: $data['template'],
             parameters: $data['parameters'] ?? [],
-            language: $data['language']     ?? 'en_US',
-            media: $data['media']           ?? null
+            language: $data['language'] ?? 'en_US',
+            media: $data['media'] ?? null
         );
     }
 
     public function toArray(): array
     {
         return [
-            'to'         => $this->to,
-            'template'   => $this->template,
+            'to' => $this->to,
+            'template' => $this->template,
             'parameters' => $this->parameters,
-            'language'   => $this->language,
-            'media'      => $this->media,
+            'language' => $this->language,
+            'media' => $this->media,
         ];
     }
 

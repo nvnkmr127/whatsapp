@@ -11,16 +11,27 @@ use Livewire\Component;
 class DealForm extends Component
 {
     public $dealId;
+
     public $pipelineId;
+
     public $stageId;
+
     public $contactId;
+
     public $ownerId;
+
     public $title;
+
     public $value = 0;
+
     public $currency = 'USD';
+
     public $probability;
+
     public $expectedCloseDate;
+
     public $description;
+
     public $isOpen = false;
 
     protected $listeners = ['openDealForm'];
@@ -29,7 +40,7 @@ class DealForm extends Component
     {
         $this->reset();
         $this->isOpen = true;
-        
+
         if ($dealId) {
             $deal = Deal::find($dealId);
             $this->dealId = $deal->id;
@@ -47,7 +58,7 @@ class DealForm extends Component
             $this->pipelineId = $pipelineId;
             $this->stageId = $stageId;
             $this->ownerId = auth()->id();
-            
+
             if ($stageId) {
                 $stage = PipelineStage::find($stageId);
                 $this->probability = $stage->probability;

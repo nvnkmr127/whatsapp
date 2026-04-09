@@ -23,14 +23,14 @@ class LogViewer extends Component
 
     public $logLevels = [
         'emergency' => false,
-        'alert'     => false,
-        'critical'  => false,
-        'error'     => false,
-        'warning'   => false,
-        'notice'    => false,
-        'info'      => false,
-        'debug'     => false,
-        'local'     => false,
+        'alert' => false,
+        'critical' => false,
+        'error' => false,
+        'warning' => false,
+        'notice' => false,
+        'info' => false,
+        'debug' => false,
+        'local' => false,
     ];
 
     public function mount()
@@ -46,7 +46,7 @@ class LogViewer extends Component
 
     public function refreshLogFiles()
     {
-        $files          = File::files(storage_path('logs'));
+        $files = File::files(storage_path('logs'));
         $this->logFiles = collect($files)
             ->filter(function ($file) {
                 return Str::endsWith($file->getFilename(), '.log');
@@ -67,7 +67,7 @@ class LogViewer extends Component
     {
         try {
             if ($this->selectedFile) {
-                File::delete(storage_path('logs/' . $this->selectedFile));
+                File::delete(storage_path('logs/'.$this->selectedFile));
                 $this->refreshLogFiles();
                 $this->dispatch('notify', ['message' => 'Log file deleted successfully', 'type' => 'success']);
 
@@ -78,7 +78,7 @@ class LogViewer extends Component
                 }
             }
         } catch (\Exception $e) {
-            $this->dispatch('notify', ['message' => 'Error deleting log file: ' . $e->getMessage(), 'type' => 'danger']);
+            $this->dispatch('notify', ['message' => 'Error deleting log file: '.$e->getMessage(), 'type' => 'danger']);
         }
     }
 
@@ -86,13 +86,13 @@ class LogViewer extends Component
     {
         try {
             foreach ($this->logFiles as $file) {
-                File::delete(storage_path('logs/' . $file));
+                File::delete(storage_path('logs/'.$file));
             }
             $this->refreshLogFiles();
             $this->selectedFile = null;
             $this->dispatch('notify', ['message' => 'All log files cleared successfully', 'type' => 'success']);
         } catch (\Exception $e) {
-            $this->dispatch('notify', ['message' => 'Error clearing log files: ' . $e->getMessage(), 'type' => 'danger']);
+            $this->dispatch('notify', ['message' => 'Error clearing log files: '.$e->getMessage(), 'type' => 'danger']);
         }
     }
 
@@ -104,24 +104,24 @@ class LogViewer extends Component
 
     protected function getLogEntries()
     {
-        if (! $this->selectedFile || ! File::exists(storage_path('logs/' . $this->selectedFile))) {
+        if (! $this->selectedFile || ! File::exists(storage_path('logs/'.$this->selectedFile))) {
             return collect();
         }
 
-        $path = storage_path('logs/' . $this->selectedFile);
+        $path = storage_path('logs/'.$this->selectedFile);
         if (File::size($path) > 20 * 1024 * 1024) { // 20MB limit for safety
             return collect([
                 [
-                    'level'       => 'error',
-                    'date'        => now()->format('Y-m-d H:i:s'),
+                    'level' => 'error',
+                    'date' => now()->format('Y-m-d H:i:s'),
                     'environment' => 'system',
-                    'content'     => 'Log file too large (>10MB). Please download and view it externally.',
+                    'content' => 'Log file too large (>10MB). Please download and view it externally.',
                 ],
             ]);
         }
 
         $content = File::get($path);
-        $logs    = collect();
+        $logs = collect();
 
         // Standard Laravel log format
         $pattern = '/\[([\d\-\s:\.]+)\]\s+(\w+)\.(\w+):(.*?)(?=\n\[|$)/s';
@@ -130,10 +130,10 @@ class LogViewer extends Component
         if (! empty($matches)) {
             $logs = collect($matches)->map(function ($match) {
                 return [
-                    'date'        => $match[1],
+                    'date' => $match[1],
                     'environment' => $match[2],             // environment (local, production, etc)
-                    'level'       => strtolower($match[3]), // log level (error, info, etc)
-                    'content'     => trim($match[4]),
+                    'level' => strtolower($match[3]), // log level (error, info, etc)
+                    'content' => trim($match[4]),
                 ];
             });
         } else {
@@ -144,10 +144,10 @@ class LogViewer extends Component
             if (! empty($matches)) {
                 $logs = collect($matches)->map(function ($match) {
                     return [
-                        'date'        => $match[1],
+                        'date' => $match[1],
                         'environment' => $match[2],
-                        'level'       => strtolower($match[3]),
-                        'content'     => trim($match[4]),
+                        'level' => strtolower($match[3]),
+                        'content' => trim($match[4]),
                     ];
                 });
             } else {
@@ -158,10 +158,10 @@ class LogViewer extends Component
                 if (! empty($matches)) {
                     $logs = collect($matches)->map(function ($match) {
                         return [
-                            'date'        => $match[1],
+                            'date' => $match[1],
                             'environment' => $match[2],
-                            'level'       => strtolower($match[3]),
-                            'content'     => trim($match[4]),
+                            'level' => strtolower($match[3]),
+                            'content' => trim($match[4]),
                         ];
                     });
                 }
@@ -175,28 +175,28 @@ class LogViewer extends Component
 
             if (! empty($matches)) {
                 $logs = collect($matches)->map(function ($match) {
-                    $parts       = explode('.', $match[1], 2);
+                    $parts = explode('.', $match[1], 2);
                     $environment = 'local';
-                    $level       = 'info';
+                    $level = 'info';
 
                     if (count($parts) > 1) {
-                        $datePart  = trim($parts[0]);
+                        $datePart = trim($parts[0]);
                         $levelPart = trim($parts[1]);
 
                         // Try to extract environment.level pattern
                         if (preg_match('/(\w+)\.(\w+)/', $levelPart, $levelMatches)) {
                             $environment = $levelMatches[1];
-                            $level       = strtolower($levelMatches[2]);
+                            $level = strtolower($levelMatches[2]);
                         }
                     } else {
                         $datePart = trim($match[1]);
                     }
 
                     return [
-                        'date'        => $datePart,
+                        'date' => $datePart,
                         'environment' => $environment,
-                        'level'       => $level,
-                        'content'     => trim($match[2]),
+                        'level' => $level,
+                        'content' => trim($match[2]),
                     ];
                 });
             }
@@ -243,16 +243,16 @@ class LogViewer extends Component
 
         // Manual pagination to optimize performance with large log files
         $paginatedLogs = $logs->skip(($this->page - 1) * $this->perPage)->take($this->perPage);
-        $totalPages    = ceil($logs->count() / $this->perPage);
+        $totalPages = ceil($logs->count() / $this->perPage);
 
         // Ensure page is within valid range
         if ($this->page > $totalPages && $totalPages > 0) {
-            $this->page    = $totalPages;
+            $this->page = $totalPages;
             $paginatedLogs = $logs->skip(($this->page - 1) * $this->perPage)->take($this->perPage);
         }
 
         return view('livewire.log-viewer', [
-            'logs'       => $paginatedLogs,
+            'logs' => $paginatedLogs,
             'totalPages' => $totalPages,
         ]);
     }

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\LeadCaptureWidget;
 use BaconQrCode\Renderer\Color\Rgb;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -11,6 +9,7 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\Fill;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Illuminate\Http\Request;
 
 class LeadCaptureWidgetController extends Controller
 {
@@ -46,7 +45,7 @@ class LeadCaptureWidgetController extends Controller
                 new Rgb($bgColor['r'], $bgColor['g'], $bgColor['b']),
                 new Rgb($color['r'], $color['g'], $color['b'])
             )),
-            new SvgImageBackEnd()
+            new SvgImageBackEnd
         );
 
         $writer = new Writer($renderer);
@@ -59,14 +58,15 @@ class LeadCaptureWidgetController extends Controller
     {
         $hex = str_replace('#', '', $hex);
         if (strlen($hex) == 3) {
-            $r = hexdec(substr($hex, 0, 1) . substr($hex, 0, 1));
-            $g = hexdec(substr($hex, 1, 1) . substr($hex, 1, 1));
-            $b = hexdec(substr($hex, 2, 1) . substr($hex, 2, 1));
+            $r = hexdec(substr($hex, 0, 1).substr($hex, 0, 1));
+            $g = hexdec(substr($hex, 1, 1).substr($hex, 1, 1));
+            $b = hexdec(substr($hex, 2, 1).substr($hex, 2, 1));
         } else {
             $r = hexdec(substr($hex, 0, 2));
             $g = hexdec(substr($hex, 2, 2));
             $b = hexdec(substr($hex, 4, 2));
         }
+
         return ['r' => $r, 'g' => $g, 'b' => $b];
     }
 
@@ -87,12 +87,12 @@ class LeadCaptureWidgetController extends Controller
             $contact = \App\Models\Contact::updateOrCreate(
                 ['team_id' => $team->id, 'phone' => $phone ?: 'unknown'],
                 [
-                    'name' => $name ?: 'Lead from ' . $widget->name,
+                    'name' => $name ?: 'Lead from '.$widget->name,
                     'email' => $email,
                     'lead_source_id' => \App\Models\LeadSource::firstOrCreate(
-                        ['team_id' => $team->id, 'name' => "Growth: " . $widget->name],
+                        ['team_id' => $team->id, 'name' => 'Growth: '.$widget->name],
                         ['type' => 'custom']
-                    )->id
+                    )->id,
                 ]
             );
         }
@@ -147,6 +147,7 @@ class LeadCaptureWidgetController extends Controller
         if ($widget) {
             $widget->increment('click_count');
         }
+
         return response()->json(['status' => 'success'])->header('Access-Control-Allow-Origin', '*');
     }
 }

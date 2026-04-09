@@ -91,6 +91,7 @@ class CallQualityMetric extends Model
         if ($this->sdp_offer_received_at && $this->sdp_answer_sent_at) {
             return $this->sdp_offer_received_at->diffInMilliseconds($this->sdp_answer_sent_at);
         }
+
         return null;
     }
 
@@ -102,6 +103,7 @@ class CallQualityMetric extends Model
         if ($this->sdp_answer_sent_at && $this->connection_established_at) {
             return $this->sdp_answer_sent_at->diffInMilliseconds($this->connection_established_at);
         }
+
         return null;
     }
 
@@ -116,7 +118,7 @@ class CallQualityMetric extends Model
             'connection_latency' => $this->connection_latency_ms,
             'codec' => $this->selected_codec,
             'connection_type' => $this->connection_type,
-            'had_issues' => !$this->validation_passed || $this->retry_attempts > 0 || !empty($this->error_logs),
+            'had_issues' => ! $this->validation_passed || $this->retry_attempts > 0 || ! empty($this->error_logs),
             'retry_count' => $this->retry_attempts,
         ];
     }

@@ -4,9 +4,6 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Models\Plan;
-use App\Services\BillingService;
-use App\Services\OfferEligibilityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -75,5 +72,42 @@ class TenantService
             }
             $eligibilitySvc->markClaimed($team);
         }
+    }
+
+    public function getTenantId(): ?int
+    {
+        return auth()->user()?->currentTeam?->id;
+    }
+
+    public function getWabaId(): ?string
+    {
+        return auth()->user()?->currentTeam?->whatsapp_business_account_id;
+    }
+
+    public function getPhoneNumberId(): ?string
+    {
+        return auth()->user()?->currentTeam?->whatsapp_phone_number_id;
+    }
+
+    public function getAccessToken(): ?string
+    {
+        return auth()->user()?->currentTeam?->whatsapp_access_token;
+    }
+
+    public function isConnected(): bool
+    {
+        return (bool) auth()->user()?->currentTeam?->whatsapp_connected;
+    }
+
+    public function getUserRole(): ?string
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->currentTeam) {
+            return null;
+        }
+
+        $role = $user->teamRole($user->currentTeam);
+
+        return $role ? $role->key : null;
     }
 }

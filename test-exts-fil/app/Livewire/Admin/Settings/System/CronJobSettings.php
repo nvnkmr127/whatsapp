@@ -21,7 +21,7 @@ class CronJobSettings extends Component
 
             return redirect(route('admin.dashboard'));
         }
-        $settings    = app(CronSettings::class);
+        $settings = app(CronSettings::class);
         $lastCronRun = $settings->last_cron_run;
 
         if ($lastCronRun && $lastCronRun !== 'false') {
@@ -67,7 +67,7 @@ class CronJobSettings extends Component
 
             whatsapp_log('Manual cron job execution start', 'info', [
                 'start_time' => $startTime,
-                'user_id'    => auth()->id(),
+                'user_id' => auth()->id(),
             ]);
 
             // Run the main scheduler
@@ -78,7 +78,7 @@ class CronJobSettings extends Component
             Artisan::call('queue:work --queue=whatsapp-messages --stop-when-empty --sleep=3 --tries=3 --timeout=120 --backoff=5 --max-time=3600 --max-jobs=100');
 
             // Calculate execution time
-            $endTime       = now()->timestamp;
+            $endTime = now()->timestamp;
             $executionTime = $endTime - $startTime;
 
             // Update settings
@@ -90,17 +90,17 @@ class CronJobSettings extends Component
             set_setting('cron-job.last_cron_run', $endTime);
 
             // Update UI properties
-            $this->last_cron_run          = $now->diffForHumans();
+            $this->last_cron_run = $now->diffForHumans();
             $this->last_cron_run_datetime = $now->format('Y-m-d H:i:s');
 
             // Log success
             whatsapp_log('Manual cron job execution over', 'info', [
                 'execution_time' => $executionTime,
-                'user_id'        => auth()->id(),
+                'user_id' => auth()->id(),
             ]);
 
             $this->notify([
-                'type'    => 'success',
+                'type' => 'success',
                 'message' => t('cron_job_executed_successfully'),
             ]);
         } catch (\Exception $e) {
@@ -109,13 +109,13 @@ class CronJobSettings extends Component
 
             // Log error
             whatsapp_log('Manual cron job execution failed', 'error', [
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'user_id' => auth()->id(),
             ], $e);
 
             $this->notify([
-                'type'    => 'danger',
-                'message' => t('failed_to_execute_cron_job') . ': ' . $e->getMessage(),
+                'type' => 'danger',
+                'message' => t('failed_to_execute_cron_job').': '.$e->getMessage(),
             ]);
         }
     }
@@ -123,7 +123,7 @@ class CronJobSettings extends Component
     public function isCronStale(): bool
     {
         $settings = app(CronSettings::class);
-        $lastRun  = $settings->last_cron_run;
+        $lastRun = $settings->last_cron_run;
 
         if (! $lastRun || $lastRun === 'false') {
             // Update status to reflect stale condition
@@ -133,7 +133,7 @@ class CronJobSettings extends Component
         }
 
         $timestamp = (int) json_decode($lastRun);
-        $isStale   = Carbon::createFromTimestamp($timestamp)->diffInHours(now()) >= 48;
+        $isStale = Carbon::createFromTimestamp($timestamp)->diffInHours(now()) >= 48;
 
         // If cron is stale but status shows completed, update status
         if ($isStale && get_setting('cron-job.status', '') === 'completed') {

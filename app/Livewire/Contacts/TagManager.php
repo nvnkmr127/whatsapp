@@ -3,13 +3,15 @@
 namespace App\Livewire\Contacts;
 
 use App\Models\ContactTag;
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class TagManager extends Component
 {
     public $isOpen = false;
+
     public $newTagName = '';
+
     public $newTagColor = '#10B981';
 
     protected $listeners = ['openTagManager' => 'open'];
@@ -61,6 +63,7 @@ class TagManager extends Component
     public function render()
     {
         $tags = ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
+
         return view('livewire.contacts.tag-manager', compact('tags'));
     }
 }

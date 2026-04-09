@@ -29,7 +29,7 @@ class CheckWhatsMarkUpdates extends Command
         try {
             // Get token from settings
             $settings = explode('|', get_setting('whats-mark.wm_verification_token'));
-            $token    = $settings[0];
+            $token = $settings[0];
 
             if (empty($token)) {
                 set_setting('whats-mark.whatsmark_latest_version', null);
@@ -61,7 +61,7 @@ class CheckWhatsMarkUpdates extends Command
 
             return 0;
         } catch (\Exception $e) {
-            $this->error('Error checking updates: ' . $e->getMessage());
+            $this->error('Error checking updates: '.$e->getMessage());
 
             return 1;
         }

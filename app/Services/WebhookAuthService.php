@@ -35,10 +35,11 @@ class WebhookAuthService
 
         $signature = $request->header($header);
 
-        if (!$signature) {
+        if (! $signature) {
             Log::warning('HMAC verification failed: No signature header found', [
                 'expected_header' => $header,
             ]);
+
             return false;
         }
 
@@ -56,11 +57,11 @@ class WebhookAuthService
 
         $isValid = hash_equals($computedSignature, $signature);
 
-        if (!$isValid) {
+        if (! $isValid) {
             Log::warning('HMAC verification failed: Signature mismatch', [
                 'header' => $header,
-                'expected' => substr($computedSignature, 0, 10) . '...',
-                'received' => substr($signature, 0, 10) . '...',
+                'expected' => substr($computedSignature, 0, 10).'...',
+                'received' => substr($signature, 0, 10).'...',
             ]);
         }
 
@@ -85,11 +86,11 @@ class WebhookAuthService
             }
         }
 
-        if (!$timestamp || empty($signatures)) {
+        if (! $timestamp || empty($signatures)) {
             return false;
         }
 
-        $signedPayload = $timestamp . '.' . $payload;
+        $signedPayload = $timestamp.'.'.$payload;
         $expectedSignature = hash_hmac('sha256', $signedPayload, $secret);
 
         foreach ($signatures as $sig) {
@@ -111,20 +112,21 @@ class WebhookAuthService
 
         $providedKey = $request->header($header);
 
-        if (!$providedKey) {
+        if (! $providedKey) {
             Log::warning('API Key verification failed: No key header found', [
                 'expected_header' => $header,
                 'available_headers' => array_keys($request->headers->all()),
             ]);
+
             return false;
         }
 
         $isValid = hash_equals($expectedKey, $providedKey);
 
-        if (!$isValid) {
+        if (! $isValid) {
             Log::warning('API Key verification failed: Key mismatch', [
                 'header' => $header,
-                'received_key_preview' => substr($providedKey, 0, 4) . '...',
+                'received_key_preview' => substr($providedKey, 0, 4).'...',
             ]);
         }
 
@@ -141,10 +143,11 @@ class WebhookAuthService
 
         $authHeader = $request->header('Authorization');
 
-        if (!$authHeader || !str_starts_with($authHeader, 'Basic ')) {
+        if (! $authHeader || ! str_starts_with($authHeader, 'Basic ')) {
             Log::warning('Basic Auth verification failed: No valid Authorization header found', [
                 'has_header' => (bool) $authHeader,
             ]);
+
             return false;
         }
 
@@ -153,6 +156,7 @@ class WebhookAuthService
 
         if (count($parts) < 2) {
             Log::warning('Basic Auth verification failed: Malformed credentials');
+
             return false;
         }
 
@@ -160,7 +164,7 @@ class WebhookAuthService
 
         $isValid = hash_equals($username, $providedUsername) && hash_equals($password, $providedPassword);
 
-        if (!$isValid) {
+        if (! $isValid) {
             Log::warning('Basic Auth verification failed: Credentials mismatch', [
                 'username_match' => hash_equals($username, $providedUsername),
             ]);

@@ -4,37 +4,47 @@ namespace App\Livewire\Contacts;
 
 use App\Models\Contact;
 use App\Models\ContactTag;
-use Livewire\Component;
-use Livewire\Attributes\Layout;
-use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Url;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 class ContactManager extends Component
 {
-
-    use WithPagination;
     use \Livewire\WithFileUploads;
+    use WithPagination;
 
     public $search = '';
+
     public $filterTag = '';
+
     public $filterStatus = '';
 
     // Modal state
     public $isModalOpen = false;
+
     public $isDeleteModalOpen = false;
+
     public $contactId;
 
     // Form fields
     public $name;
+
     public $countryCode;
+
     public $phoneNumberWithoutCode;
+
     public $email;
+
     public $language = 'en';
+
     public $opt_in_status = 'opted_in';
+
     public $category_id;
+
     public $selectedTags = [];
+
     public $customAttributes = []; // For holding dynamic field values
 
     public $availableCountryCodes = [
@@ -50,34 +60,53 @@ class ContactManager extends Component
 
     // Import State
     public $isImportModalOpen = false;
+
     public $importFile;
+
     public $csvHeaders = [];
+
     public $columnMapping = []; // csv_header => system_field
+
     #[Locked]
     public $importResult = null;
+
     #[Locked]
     public $importPreview = null;
+
     public $isDuplicateModalOpen = false;
+
     public $importDuplicateStrategy = 'update';
+
     public $importDuplicateTagStrategy = 'add';
+
     public $isImporting = false;
+
     public $importDuplicatesConfirmed = false;
 
     // Custom Fields State
     public $isFieldModalOpen = false;
+
     public $fieldId;
+
     public $fieldLabel;
+
     public $fieldType = 'text';
+
     public $fieldOptions = ''; // Comma separated for editing
 
     // Merge State
     public $isMergeModalOpen = false;
+
     public $sourceContactId;
+
     public $targetContactId;
+
     #[Locked]
     public $sourceContact;
+
     #[Locked]
     public $targetContact;
+
     public $isMerging = false;
 
     protected $queryString = [
@@ -106,9 +135,9 @@ class ContactManager extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('phone_number', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%');
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('phone_number', 'like', '%'.$this->search.'%')
+                    ->orWhere('email', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -142,6 +171,7 @@ class ContactManager extends Component
 
     // View Modal State
     public $isViewModalOpen = false;
+
     #[Locked]
     public $viewingContact = null;
 
@@ -154,8 +184,9 @@ class ContactManager extends Component
     public function getConversationRoute($contactId)
     {
         $contact = Contact::find($contactId);
-        if (!$contact)
+        if (! $contact) {
             return route('chat');
+        }
 
         $conversationId = $contact->conversations->first()?->id;
 
@@ -220,7 +251,7 @@ class ContactManager extends Component
 
         try {
             // Combine country code + phone number
-            $fullPhoneNumber = $this->countryCode . ltrim($this->phoneNumberWithoutCode, '0');
+            $fullPhoneNumber = $this->countryCode.ltrim($this->phoneNumberWithoutCode, '0');
 
             $data = [
                 'team_id' => Auth::user()->currentTeam->id,
@@ -237,16 +268,15 @@ class ContactManager extends Component
                 $data['id'] = $this->contactId;
             }
 
-            $contactService = new \App\Services\ContactService();
+            $contactService = new \App\Services\ContactService;
             $contact = $contactService->createOrUpdate($data);
 
             $tagsToSync = is_array($this->selectedTags) ? $this->selectedTags : (empty($this->selectedTags) ? [] : [$this->selectedTags]);
             $contact->tags()->sync($tagsToSync);
 
-
             audit(
                 $this->contactId ? 'contact.updated' : 'contact.created',
-                ($this->contactId ? "Updated" : "Created") . " contact '{$contact->name}' ({$contact->phone_number})",
+                ($this->contactId ? 'Updated' : 'Created')." contact '{$contact->name}' ({$contact->phone_number})",
                 $contact
             );
 
@@ -255,8 +285,8 @@ class ContactManager extends Component
             $this->resetInputFields();
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Contact Store Failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            session()->flash('error', 'Error saving contact: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Contact Store Failed: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            session()->flash('error', 'Error saving contact: '.$e->getMessage());
         }
     }
 
@@ -296,7 +326,6 @@ class ContactManager extends Component
     {
         $this->dispatch('openTagManager')->to(TagManager::class);
     }
-
 
     // Custom Fields Management
     public function openFieldModal()
@@ -377,13 +406,13 @@ class ContactManager extends Component
         $this->validate([
             'targetContactId' => 'required|exists:contacts,id|different:sourceContactId',
         ], [
-            'targetContactId.different' => 'Cannot merge a contact into itself.'
+            'targetContactId.different' => 'Cannot merge a contact into itself.',
         ]);
 
         $this->isMerging = true;
 
         try {
-            $service = new \App\Services\ContactMergeService();
+            $service = new \App\Services\ContactMergeService;
             $source = Contact::findOrFail($this->sourceContactId);
             $target = Contact::findOrFail($this->targetContactId);
 
@@ -392,12 +421,12 @@ class ContactManager extends Component
             $this->isMergeModalOpen = false;
             $this->resetMergeState();
             session()->flash('message', "{$source->name} successfully merged into {$target->name}.");
-            
+
             // Redirect or refresh
             return redirect()->route('contacts.index');
 
         } catch (\Exception $e) {
-            session()->flash('merge_error', "Error merging contacts: " . $e->getMessage());
+            session()->flash('merge_error', 'Error merging contacts: '.$e->getMessage());
         } finally {
             $this->isMerging = false;
         }
@@ -473,15 +502,15 @@ class ContactManager extends Component
         $this->isImporting = true;
 
         try {
-            if (!$this->importPreview) {
+            if (! $this->importPreview) {
                 $preview = $importService->previewImport($this->importFile->getRealPath(), $this->columnMapping);
-                
+
                 // Limit preview duplicates to prevent hitting post_max_size on next request
                 if (count($preview['duplicates_existing'] ?? []) > 100) {
                     $preview['duplicates_existing_count'] = count($preview['duplicates_existing']);
                     $preview['duplicates_existing'] = array_slice($preview['duplicates_existing'], 0, 100);
                 }
-                
+
                 if (count($preview['duplicates_in_file'] ?? []) > 100) {
                     $preview['duplicates_in_file_count'] = count($preview['duplicates_in_file']);
                     $preview['duplicates_in_file'] = array_slice($preview['duplicates_in_file'], 0, 100);
@@ -490,10 +519,11 @@ class ContactManager extends Component
                 $this->importPreview = $preview;
             }
 
-            $hasDuplicates = !empty($this->importPreview['duplicates_existing'] ?? []) || !empty($this->importPreview['duplicates_in_file'] ?? []);
+            $hasDuplicates = ! empty($this->importPreview['duplicates_existing'] ?? []) || ! empty($this->importPreview['duplicates_in_file'] ?? []);
 
-            if ($hasDuplicates && !$this->importDuplicatesConfirmed) {
+            if ($hasDuplicates && ! $this->importDuplicatesConfirmed) {
                 $this->isDuplicateModalOpen = true;
+
                 return;
             }
 
@@ -512,7 +542,7 @@ class ContactManager extends Component
             'updated' => $result['updated_count'] ?? null,
             'skipped' => $result['skipped_count'] ?? null,
             'errors' => array_slice($result['errors'], 0, 100), // Limit error list
-            'error_count' => count($result['errors'])
+            'error_count' => count($result['errors']),
         ];
 
         if ($result['success_count'] > 0) {
@@ -537,9 +567,12 @@ class ContactManager extends Component
         $this->isDuplicateModalOpen = false;
         $this->importDuplicatesConfirmed = false;
     }
-    
+
     // Alias for the old method name if any other component called it
-    public function importContacts() { $this->import(); }
+    public function importContacts()
+    {
+        $this->import();
+    }
 
     public function export()
     {
@@ -549,9 +582,9 @@ class ContactManager extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('phone_number', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%');
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('phone_number', 'like', '%'.$this->search.'%')
+                    ->orWhere('email', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -600,9 +633,9 @@ class ContactManager extends Component
             fclose($file);
         };
 
-        audit('contact.exported', "Exported " . $contacts->count() . " contacts to CSV.");
+        audit('contact.exported', 'Exported '.$contacts->count().' contacts to CSV.');
 
-        return response()->streamDownload($callback, 'contacts_export_' . now()->format('Y-m-d_H-i') . '.csv');
+        return response()->streamDownload($callback, 'contacts_export_'.now()->format('Y-m-d_H-i').'.csv');
     }
 
     public function downloadSampleCsv()
@@ -621,10 +654,10 @@ class ContactManager extends Component
             fputcsv($file, $headers);
 
             // Add sample rows with country code
-            $row = ['John Doe', $defaultCountryCode . '1234567890', 'john@example.com', 'VIP,Lead'];
+            $row = ['John Doe', $defaultCountryCode.'1234567890', 'john@example.com', 'VIP,Lead'];
             fputcsv($file, $row);
 
-            $row2 = ['Jane Smith', $defaultCountryCode . '9876543210', 'jane@example.com', 'Customer'];
+            $row2 = ['Jane Smith', $defaultCountryCode.'9876543210', 'jane@example.com', 'Customer'];
             fputcsv($file, $row2);
 
             fclose($file);

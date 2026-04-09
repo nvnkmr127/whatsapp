@@ -3,17 +3,18 @@
 namespace App\Livewire\Components;
 
 use App\Services\BillingService;
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
 
 class HeaderStats extends Component
 {
     public $stats = [];
+
     public $showModal = false;
 
     public function mount()
     {
-        // Load initially to prevent empty state if needed, 
+        // Load initially to prevent empty state if needed,
         // but fetching on open is better for performance if heavy.
         // However, BillingService is fast (cached).
         if (Auth::check() && Auth::user()->currentTeam) {

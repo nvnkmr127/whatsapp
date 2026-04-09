@@ -2,28 +2,30 @@
 
 namespace App\Traits;
 
-use App\Models\WhatsappTemplate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 trait WhatsApp
 {
     public const ERROR_TOKEN_INVALID = 190;
+
     public const ERROR_PASSWORD_CHANGED = 460;
 
     protected static string $facebookAPI = 'https://graph.facebook.com/';
 
     protected ?\App\Core\WhatsApp\ManagementClient $mgmtClient = null;
+
     protected bool $skipAppSecretProof = false;
 
     protected function mgmt(): \App\Core\WhatsApp\ManagementClient
     {
-        if (!$this->mgmtClient) {
+        if (! $this->mgmtClient) {
             $this->mgmtClient = app(\App\Core\WhatsApp\ManagementClient::class);
             if (isset($this->team)) {
                 $this->mgmtClient->forTeam($this->team);
             }
         }
+
         return $this->mgmtClient;
     }
 
@@ -45,6 +47,7 @@ trait WhatsApp
     protected static function getBaseUrl(): string
     {
         $version = config('whatsapp.api_version', 'v21.0');
+
         return "https://graph.facebook.com/{$version}/";
     }
 
@@ -71,8 +74,8 @@ trait WhatsApp
                 // Determine if it was a password change (#460) or general expiry
                 $reason = "Session invalidated (Code: {$errorCode}, Sub: {$subcode})";
                 if ($subcode == self::ERROR_PASSWORD_CHANGED) {
-                    $reason = "Session invalidated: Password changed on Facebook account.";
-                    $this->triggerHealthNotification($team, 'token_password_changed', "Your WhatsApp connection has been disconnected because of a password change on the linked Facebook account. Please reconnect to restore service.");
+                    $reason = 'Session invalidated: Password changed on Facebook account.';
+                    $this->triggerHealthNotification($team, 'token_password_changed', 'Your WhatsApp connection has been disconnected because of a password change on the linked Facebook account. Please reconnect to restore service.');
                 }
 
                 $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
@@ -89,17 +92,17 @@ trait WhatsApp
                 $team->owner->notify(new \App\Notifications\WhatsAppHealthNotification($team, $type, $message));
             }
         } catch (\Exception $e) {
-            Log::error("WhatsApp Trait: Failed to send health notification: " . $e->getMessage());
+            Log::error('WhatsApp Trait: Failed to send health notification: '.$e->getMessage());
         }
     }
 
     public function loadTemplatesFromWhatsApp(?string $wabaId = null, ?string $token = null): array
     {
         $team = $this->team ?? auth()->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return ['status' => false, 'message' => 'No contextual team found.'];
         }
-        
+
         $res = app(\App\Services\WhatsApp\TemplateService::class)
             ->setTeam($team)
             ->syncTemplates();
@@ -107,7 +110,7 @@ trait WhatsApp
         return [
             'status' => $res['success'],
             'message' => $res['success'] ? 'Templates synced' : ($res['error'] ?? 'Unknown error'),
-            'count' => $res['count'] ?? 0
+            'count' => $res['count'] ?? 0,
         ];
     }
 
@@ -124,11 +127,11 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
+            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
-            $response = Http::timeout(15)->get(self::getBaseUrl() . "{$phoneNumberId}", $params);
+            $response = Http::timeout(15)->get(self::getBaseUrl()."{$phoneNumberId}", $params);
 
             // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
@@ -138,10 +141,10 @@ trait WhatsApp
                     str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
                 ) {
 
-                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Phone Details, retrying without proof.");
+                    Log::warning('WhatsApp Trait: AppSecret Proof failed for Phone Details, retrying without proof.');
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::timeout(15)->get(self::getBaseUrl() . "{$phoneNumberId}", $params);
+                    $response = Http::timeout(15)->get(self::getBaseUrl()."{$phoneNumberId}", $params);
                 }
             }
 
@@ -152,7 +155,7 @@ trait WhatsApp
                 $this->handleTokenFailure($response, 'Phone Details');
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
-                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token."];
+                    return ['status' => false, 'message' => 'Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token.'];
                 }
 
                 return ['status' => false, 'message' => $errorMessage ?? 'API Error'];
@@ -167,11 +170,12 @@ trait WhatsApp
                     'verified_name' => $data['verified_name'] ?? null,
                     'quality_rating' => $data['quality_rating'] ?? null,
                     'messaging_limit_tier' => $data['messaging_limit_tier'] ?? null,
-                ]
+                ],
             ];
 
         } catch (\Throwable $e) {
-            Log::error("WhatsApp Phone Details Error: " . $e->getMessage());
+            Log::error('WhatsApp Phone Details Error: '.$e->getMessage());
+
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }
@@ -189,20 +193,20 @@ trait WhatsApp
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
-            $url = self::getBaseUrl() . "{$phoneNumberId}/register";
+            $url = self::getBaseUrl()."{$phoneNumberId}/register";
 
             $params = [
                 'messaging_product' => 'whatsapp',
-                'pin' => $pin
+                'pin' => $pin,
             ];
 
-            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
+            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
-            Log::debug("WhatsApp Trait: Registering phone", [
+            Log::debug('WhatsApp Trait: Registering phone', [
                 'phone_id' => $phoneNumberId,
-                'is_system_token' => $isSystemToken
+                'is_system_token' => $isSystemToken,
             ]);
 
             $response = Http::timeout(15)->withToken($token)->post($url, $params);
@@ -215,7 +219,7 @@ trait WhatsApp
                     str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
                 ) {
 
-                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Registration, retrying without proof.");
+                    Log::warning('WhatsApp Trait: AppSecret Proof failed for Registration, retrying without proof.');
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::timeout(15)->withToken($token)->post($url, $params);
@@ -229,7 +233,7 @@ trait WhatsApp
                 $this->handleTokenFailure($response, 'Phone Registration');
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
-                    return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token."];
+                    return ['status' => false, 'message' => 'Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token.'];
                 }
 
                 return ['status' => false, 'message' => $errorMessage ?? 'Registration Failed'];
@@ -238,7 +242,8 @@ trait WhatsApp
             return ['status' => true, 'message' => 'Phone number registered successfully'];
 
         } catch (\Throwable $e) {
-            Log::error("WhatsApp Register Phone Error: " . $e->getMessage());
+            Log::error('WhatsApp Register Phone Error: '.$e->getMessage());
+
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }
@@ -277,19 +282,20 @@ trait WhatsApp
             $appId = get_setting('whatsapp_wm_fb_app_id')
                 ?: config('whatsapp.app_id');
             $appSecret = config('whatsapp.app_secret');
-            $appToken = $appId . '|' . $appSecret;
+            $appToken = $appId.'|'.$appSecret;
 
             if (empty($appId) || empty($appSecret)) {
-                Log::warning("WhatsApp Trait: debugToken skipped — App ID or Secret not configured.");
+                Log::warning('WhatsApp Trait: debugToken skipped — App ID or Secret not configured.');
+
                 return ['status' => false, 'message' => 'WhatsApp App ID or Secret not configured.'];
             }
 
-            Log::debug("WhatsApp Trait: Debugging token", [
+            Log::debug('WhatsApp Trait: Debugging token', [
                 'app_id' => $appId,
-                'token_prefix' => substr($token, 0, 8) . '...'
+                'token_prefix' => substr($token, 0, 8).'...',
             ]);
 
-            $response = Http::timeout(15)->get(self::$facebookAPI . 'debug_token', [
+            $response = Http::timeout(15)->get(self::$facebookAPI.'debug_token', [
                 'input_token' => $token,
                 'access_token' => $appToken,
             ]);
@@ -300,16 +306,17 @@ trait WhatsApp
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
-                    Log::warning("WhatsApp Trait: Token Debug Mismatch — token was generated under a different App ID.", [
+                    Log::warning('WhatsApp Trait: Token Debug Mismatch — token was generated under a different App ID.', [
                         'config_app_id' => $appId,
                         'hint' => 'Set WHATSAPP_APP_ID in .env to the App ID your System User token belongs to, or update it via the WhatsApp Setup page.',
                     ]);
+
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ({$appId}). Set WHATSAPP_APP_ID in your .env to the correct App ID."];
                 }
 
                 $this->handleTokenFailure($response, 'Token Debug');
 
-                Log::error("WhatsApp Trait: Token Debug Failed", [
+                Log::error('WhatsApp Trait: Token Debug Failed', [
                     'status' => $response->status(),
                     'error' => $errorData,
                 ]);
@@ -320,24 +327,26 @@ trait WhatsApp
             $data = $response->json('data');
             $isValid = $data['is_valid'] ?? false;
 
-            if (!$isValid) {
+            if (! $isValid) {
                 // If it's invalid, trigger the failure handler to suspend/notify
                 $this->handleTokenFailure($response, 'Token Debug', $data['error'] ?? $data);
 
                 $errorMsg = $data['error']['message'] ?? 'Token is invalid or has expired.';
+
                 return [
                     'status' => false,
                     'message' => $errorMsg,
-                    'data' => $data
+                    'data' => $data,
                 ];
             }
 
             return [
                 'status' => true,
-                'data' => $data
+                'data' => $data,
             ];
         } catch (\Throwable $e) {
-            Log::error("WhatsApp Token Debug Error: " . $e->getMessage());
+            Log::error('WhatsApp Token Debug Error: '.$e->getMessage());
+
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }
@@ -348,7 +357,7 @@ trait WhatsApp
     public function checkWebhookSubscription(string $wabaId, string $token): array
     {
         try {
-            $url = self::getBaseUrl() . "{$wabaId}/subscribed_apps";
+            $url = self::getBaseUrl()."{$wabaId}/subscribed_apps";
             $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
             $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
 
@@ -359,7 +368,7 @@ trait WhatsApp
             if ($appId) {
                 $params['app_id'] = $appId;
             }
-            if (!$isSystemToken && !$this->skipAppSecretProof) {
+            if (! $isSystemToken && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -373,7 +382,7 @@ trait WhatsApp
                     str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
                 ) {
 
-                    Log::warning("WhatsApp Trait: AppSecret Proof failed on Check, retrying without proof.");
+                    Log::warning('WhatsApp Trait: AppSecret Proof failed on Check, retrying without proof.');
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
                     $response = Http::timeout(15)->withToken($token)->get($url, $params);
@@ -386,7 +395,7 @@ trait WhatsApp
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
                 $this->handleTokenFailure($response, 'Webhook Check');
 
-                Log::error("WhatsApp Trait: Webhook Check Failed", ['error' => $errorData]);
+                Log::error('WhatsApp Trait: Webhook Check Failed', ['error' => $errorData]);
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
@@ -397,22 +406,24 @@ trait WhatsApp
 
             $subscriptions = $response->json('data');
 
-            Log::debug("WhatsApp Trait: Checking Webhook Subscription", [
+            Log::debug('WhatsApp Trait: Checking Webhook Subscription', [
                 'configured_app_id' => $appId,
-                'found_subscriptions' => $subscriptions
+                'found_subscriptions' => $subscriptions,
             ]);
 
             $isSubscribed = collect($subscriptions)->contains('id', $appId);
 
             return [
                 'status' => true,
-                'is_subscribed' => $isSubscribed
+                'is_subscribed' => $isSubscribed,
             ];
         } catch (\Throwable $e) {
-            Log::error("WhatsApp Webhook Check Error: " . $e->getMessage());
+            Log::error('WhatsApp Webhook Check Error: '.$e->getMessage());
+
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }
+
     /**
      * Fetch WABA IDs accessible by the user token.
      */
@@ -428,8 +439,8 @@ trait WhatsApp
             // Business-level edges (embedded signup often grants access through BM ownership/client links).
             $businessIds = $this->fetchPaginatedGraphIds($token, 'me/businesses');
             foreach ($businessIds as $businessId) {
-                $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, $businessId . '/owned_whatsapp_business_accounts'));
-                $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, $businessId . '/client_whatsapp_business_accounts'));
+                $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, $businessId.'/owned_whatsapp_business_accounts'));
+                $wabaIds = array_merge($wabaIds, $this->fetchPaginatedGraphIds($token, $businessId.'/client_whatsapp_business_accounts'));
             }
 
             $wabaIds = array_values(array_unique(array_filter($wabaIds)));
@@ -441,7 +452,8 @@ trait WhatsApp
 
             return $wabaIds;
         } catch (\Throwable $e) {
-            Log::error("WhatsApp Trait: Failed to fetch accessible WABA IDs: " . $e->getMessage());
+            Log::error('WhatsApp Trait: Failed to fetch accessible WABA IDs: '.$e->getMessage());
+
             return [];
         }
     }
@@ -452,7 +464,7 @@ trait WhatsApp
     private function fetchPaginatedGraphIds(string $token, string $edgePath): array
     {
         $ids = [];
-        $nextUrl = self::getBaseUrl() . ltrim($edgePath, '/');
+        $nextUrl = self::getBaseUrl().ltrim($edgePath, '/');
 
         while ($nextUrl) {
             $response = Http::timeout(15)->withToken($token)->get($nextUrl);
@@ -467,7 +479,7 @@ trait WhatsApp
             }
 
             foreach (($response->json('data') ?? []) as $row) {
-                if (!empty($row['id'])) {
+                if (! empty($row['id'])) {
                     $ids[] = (string) $row['id'];
                 }
             }
@@ -501,7 +513,7 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
+            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -510,7 +522,7 @@ trait WhatsApp
                 'is_system_token' => $isSystemToken,
             ]);
 
-            $response = Http::timeout(15)->get(self::getBaseUrl() . "{$accountId}", $params);
+            $response = Http::timeout(15)->get(self::getBaseUrl()."{$accountId}", $params);
 
             // Retry without appsecret_proof on proof errors
             if ($response->failed()) {
@@ -522,7 +534,7 @@ trait WhatsApp
                     Log::warning('WhatsApp Trait: AppSecret Proof failed for verification status, retrying without proof.');
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::timeout(15)->get(self::getBaseUrl() . "{$accountId}", $params);
+                    $response = Http::timeout(15)->get(self::getBaseUrl()."{$accountId}", $params);
                 }
             }
 
@@ -535,6 +547,7 @@ trait WhatsApp
                     'status' => $response->status(),
                     'error' => $errorData,
                 ]);
+
                 return ['status' => false, 'message' => $errorMessage];
             }
 
@@ -557,7 +570,8 @@ trait WhatsApp
                 'raw' => $data,
             ];
         } catch (\Throwable $e) {
-            Log::error('WhatsApp Trait: Error fetching business verification status: ' . $e->getMessage());
+            Log::error('WhatsApp Trait: Error fetching business verification status: '.$e->getMessage());
+
             return ['status' => false, 'message' => $e->getMessage()];
         }
     }
@@ -577,16 +591,16 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if (!$isSystemToken && $appSecret && !$this->skipAppSecretProof) {
+            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
-            Log::debug("WhatsApp Trait: Fetching Facebook Business ID", [
+            Log::debug('WhatsApp Trait: Fetching Facebook Business ID', [
                 'waba_id' => $wabaId,
-                'is_system_token' => $isSystemToken
+                'is_system_token' => $isSystemToken,
             ]);
 
-            $response = Http::get(self::getBaseUrl() . "{$wabaId}", $params);
+            $response = Http::get(self::getBaseUrl()."{$wabaId}", $params);
 
             // Retry without appsecret_proof if it fails
             if ($response->failed()) {
@@ -595,19 +609,20 @@ trait WhatsApp
                     ($errorData['error']['code'] ?? 0) == 100 &&
                     str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
                 ) {
-                    Log::warning("WhatsApp Trait: AppSecret Proof failed for Business ID fetch, retrying without proof.");
+                    Log::warning('WhatsApp Trait: AppSecret Proof failed for Business ID fetch, retrying without proof.');
                     $this->skipAppSecretProof = true;
                     unset($params['appsecret_proof']);
-                    $response = Http::get(self::getBaseUrl() . "{$wabaId}", $params);
+                    $response = Http::get(self::getBaseUrl()."{$wabaId}", $params);
                 }
             }
 
             if ($response->failed()) {
                 $errorData = $response->json();
-                Log::error("WhatsApp Trait: Failed to fetch Facebook Business ID", [
+                Log::error('WhatsApp Trait: Failed to fetch Facebook Business ID', [
                     'status' => $response->status(),
-                    'error' => $errorData
+                    'error' => $errorData,
                 ]);
+
                 return null;
             }
 
@@ -615,15 +630,16 @@ trait WhatsApp
             $businessId = $data['owner_business_info']['id'] ?? null;
 
             if ($businessId) {
-                Log::info("WhatsApp Trait: Successfully fetched Facebook Business ID", [
+                Log::info('WhatsApp Trait: Successfully fetched Facebook Business ID', [
                     'waba_id' => $wabaId,
-                    'business_id' => $businessId
+                    'business_id' => $businessId,
                 ]);
             }
 
             return $businessId;
         } catch (\Throwable $e) {
-            Log::error("WhatsApp Trait: Error fetching Facebook Business ID: " . $e->getMessage());
+            Log::error('WhatsApp Trait: Error fetching Facebook Business ID: '.$e->getMessage());
+
             return null;
         }
     }

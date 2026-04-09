@@ -3,20 +3,26 @@
 namespace App\Livewire\Webhooks;
 
 use App\Models\WebhookPayload;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\Layout;
 
 class WebhookLogs extends Component
 {
     use WithPagination;
 
     public $search = '';
+
     public $filterStatus = '';
+
     public $fromDate = '';
+
     public $toDate = '';
+
     public $perPage = 15;
+
     public $selectedPayload = null;
+
     public $showDetailsModal = false;
 
     public function updatingSearch()
@@ -49,13 +55,13 @@ class WebhookLogs extends Component
         $user = auth()->user();
         $team = $user->currentTeam;
 
-        if (!$team && !$user->isSuperAdmin()) {
+        if (! $team && ! $user->isSuperAdmin()) {
             return;
         }
 
         $query = WebhookPayload::query();
 
-        if ($team && !$user->isSuperAdmin()) {
+        if ($team && ! $user->isSuperAdmin()) {
             $query->where('waba_id', $team->whatsapp_business_account_id);
         }
 
@@ -85,22 +91,22 @@ class WebhookLogs extends Component
         $user = auth()->user();
         $team = $user->currentTeam;
 
-        if (!$team && !$user->isSuperAdmin()) {
+        if (! $team && ! $user->isSuperAdmin()) {
             return view('livewire.webhooks.webhook-logs', [
-                'logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15)
+                'logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
             ]);
         }
 
         $query = WebhookPayload::query()->latest();
 
-        if ($team && !$user->isSuperAdmin()) {
+        if ($team && ! $user->isSuperAdmin()) {
             $query->where('waba_id', $team->whatsapp_business_account_id);
         }
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('payload', 'like', '%' . $this->search . '%')
-                    ->orWhere('id', 'like', '%' . $this->search . '%');
+                $q->where('payload', 'like', '%'.$this->search.'%')
+                    ->orWhere('id', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -117,7 +123,7 @@ class WebhookLogs extends Component
         }
 
         return view('livewire.webhooks.webhook-logs', [
-            'logs' => $query->paginate((int) $this->perPage)
+            'logs' => $query->paginate((int) $this->perPage),
         ]);
     }
 
@@ -127,14 +133,16 @@ class WebhookLogs extends Component
             $payload = WebhookPayload::findOrFail($payloadId);
             $source = $payload->source;
 
-            if (!$source) {
+            if (! $source) {
                 session()->flash('error', 'Source not found for this payload.');
+
                 return;
             }
 
             $actionConfig = $source->getActionConfig();
             if (empty($actionConfig)) {
                 session()->flash('error', 'No action configured for this source.');
+
                 return;
             }
 
@@ -143,15 +151,15 @@ class WebhookLogs extends Component
                 'status' => 'pending',
                 'error_message' => null,
                 'retry_count' => 0,
-                'next_retry_at' => null
+                'next_retry_at' => null,
             ]);
 
             \App\Jobs\ProcessMappedWebhookJob::dispatch($payload, $actionConfig, \App\Services\TraceContext::getTraceId());
 
             session()->flash('success', 'Webhook re-queued for processing.');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Manual Replay Error: " . $e->getMessage());
-            session()->flash('error', 'Replay failed: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Manual Replay Error: '.$e->getMessage());
+            session()->flash('error', 'Replay failed: '.$e->getMessage());
         }
     }
 }

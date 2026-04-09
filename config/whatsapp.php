@@ -59,7 +59,7 @@ return [
 
         // Minimum wallet balance required to initiate or answer a call
         'min_balance_to_start' => env('WHATSAPP_CALL_MIN_BALANCE', 1.00),
-        
+
         // Default ring timeout
         'ring_timeout_seconds' => 30,
     ],
@@ -76,7 +76,7 @@ return [
         'marketing' => 0.10,
         'utility' => 0.05,
         'authentication' => 0.03,
-        'service' => 0.00, 
+        'service' => 0.00,
     ],
 
     /*

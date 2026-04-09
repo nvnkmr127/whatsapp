@@ -3,26 +3,29 @@
 namespace App\Livewire\Commerce;
 
 use App\Models\Cart;
-use App\Models\Order;
 use App\Services\OrderService;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 #[Layout('layouts.guest')]
 class CartCheckout extends Component
 {
     public $cart;
+
     public $success = false;
+
     public $order = null;
-    
+
     public $payment_method = 'cod';
+
     public $shipping_address = '';
+
     public $notes = '';
 
     public function mount($uuid)
     {
         $this->cart = Cart::where('uuid', $uuid)->firstOrFail();
-        
+
         if ($this->cart->status !== 'active') {
             abort(404, 'This cart is no longer active.');
         }
@@ -48,7 +51,7 @@ class CartCheckout extends Component
 
             $this->order = $orderService->createOrderFromCart($this->cart, $paymentDetails);
             $this->success = true;
-            
+
             session()->flash('message', 'Order placed successfully!');
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());

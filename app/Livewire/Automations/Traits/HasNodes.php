@@ -2,8 +2,6 @@
 
 namespace App\Livewire\Automations\Traits;
 
-use Illuminate\Support\Collection;
-
 trait HasNodes
 {
     public function calculateStepMetadata()
@@ -14,18 +12,20 @@ trait HasNodes
 
         // Find trigger node
         $triggerNode = collect($this->nodes)->firstWhere('type', 'trigger') ?? collect($this->nodes)->first();
-        if (!$triggerNode)
+        if (! $triggerNode) {
             return;
+        }
 
         $queue[] = ['id' => $triggerNode['id']];
         $order = 1;
 
-        while (!empty($queue)) {
+        while (! empty($queue)) {
             $current = array_shift($queue);
             $nodeId = $current['id'];
 
-            if (isset($nodeMetadata[$nodeId]))
+            if (isset($nodeMetadata[$nodeId])) {
                 continue;
+            }
 
             $nodeMetadata[$nodeId] = [
                 'step' => $order++,
@@ -53,7 +53,7 @@ trait HasNodes
 
         $this->stepMetadata = [
             'nodes' => $nodeMetadata,
-            'edges' => $edgeMetadata
+            'edges' => $edgeMetadata,
         ];
     }
 
@@ -83,14 +83,14 @@ trait HasNodes
                 $data['text'] = 'Please select an option from the list below:';
                 $data['button_text'] = 'View Options';
                 $data['sections'] = [
-                    ['title' => 'Section 1', 'rows' => [['id' => 'opt1', 'title' => 'Option 1', 'description' => '']]]
+                    ['title' => 'Section 1', 'rows' => [['id' => 'opt1', 'title' => 'Option 1', 'description' => '']]],
                 ];
                 break;
             case 'interactive_button':
                 $data['text'] = 'Please choose one:';
                 $data['buttons'] = [
                     ['id' => 'btn1', 'title' => 'Yes'],
-                    ['id' => 'btn2', 'title' => 'No']
+                    ['id' => 'btn2', 'title' => 'No'],
                 ];
                 break;
             case 'template':
@@ -142,8 +142,8 @@ trait HasNodes
                         'title' => 'Card Title',
                         'description' => 'Card Description',
                         'image' => '',
-                        'buttons' => [['id' => uniqid('btn-'), 'type' => 'reply', 'title' => 'Button 1']]
-                    ]
+                        'buttons' => [['id' => uniqid('btn-'), 'type' => 'reply', 'title' => 'Button 1']],
+                    ],
                 ];
                 break;
             case 'tag_contact':
@@ -257,11 +257,11 @@ trait HasNodes
 
         $newId = uniqid('node-');
         $this->nodes[] = [
-            'id'   => $newId,
+            'id' => $newId,
             'type' => $type,
-            'x'    => 150 + (count($this->nodes) % 5) * 350,
-            'y'    => 100 + intdiv(count($this->nodes), 5) * 200,
-            'data' => $data
+            'x' => 150 + (count($this->nodes) % 5) * 350,
+            'y' => 100 + intdiv(count($this->nodes), 5) * 200,
+            'data' => $data,
         ];
         $this->nodes = array_values($this->nodes);
         $this->pushHistory();
@@ -282,8 +282,9 @@ trait HasNodes
     public function addEdge($source, $target)
     {
         foreach ($this->edges as $edge) {
-            if ($edge['source'] == $source && $edge['target'] == $target)
+            if ($edge['source'] == $source && $edge['target'] == $target) {
                 return;
+            }
         }
         $this->edges[] = ['source' => $source, 'target' => $target, 'condition' => ''];
         $this->edges = array_values($this->edges);
@@ -293,10 +294,12 @@ trait HasNodes
 
     public function deleteNode($id)
     {
-        if (($node = collect($this->nodes)->firstWhere('id', $id)) && ($node['type'] ?? '') === 'trigger') return;
+        if (($node = collect($this->nodes)->firstWhere('id', $id)) && ($node['type'] ?? '') === 'trigger') {
+            return;
+        }
         $this->pushHistory();
-        $this->nodes = collect($this->nodes)->filter(fn($n) => $n['id'] !== $id)->values()->toArray();
-        $this->edges = collect($this->edges)->filter(fn($e) => $e['source'] !== $id && $e['target'] !== $id)->values()->toArray();
+        $this->nodes = collect($this->nodes)->filter(fn ($n) => $n['id'] !== $id)->values()->toArray();
+        $this->edges = collect($this->edges)->filter(fn ($e) => $e['source'] !== $id && $e['target'] !== $id)->values()->toArray();
         if ($this->selectedNodeId === $id) {
             $this->selectedNodeId = null;
         }
@@ -314,16 +317,20 @@ trait HasNodes
     public function duplicateNode($id = null)
     {
         $nodeId = $id ?? $this->selectedNodeId;
-        if (!$nodeId) return;
+        if (! $nodeId) {
+            return;
+        }
 
         $node = collect($this->nodes)->firstWhere('id', $nodeId);
-        if (!$node || ($node['type'] ?? '') === 'trigger') return;
+        if (! $node || ($node['type'] ?? '') === 'trigger') {
+            return;
+        }
 
         $newNode = $node;
         $newNode['id'] = uniqid('node-');
         $newNode['x'] += 60;
         $newNode['y'] += 60;
-        $newNode['data']['label'] = ($newNode['data']['label'] ?? '') . ' (Copy)';
+        $newNode['data']['label'] = ($newNode['data']['label'] ?? '').' (Copy)';
 
         $this->nodes[] = $newNode;
         $this->pushHistory();

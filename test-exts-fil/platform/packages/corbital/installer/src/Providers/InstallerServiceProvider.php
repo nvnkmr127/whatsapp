@@ -14,7 +14,7 @@ class InstallerServiceProvider extends ServiceProvider
     {
         // Merge configuration
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/installer.php',
+            __DIR__.'/../config/installer.php',
             'installer'
         );
 
@@ -30,13 +30,13 @@ class InstallerServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Load routes
-        $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
 
         // Load views
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'installer');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'installer');
 
         // Load migrations
-        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         // Register the middleware
         $this->registerMiddleware();
@@ -44,22 +44,22 @@ class InstallerServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             // Publish config
             $this->publishes([
-                __DIR__ . '/../config/installer.php' => $this->app->configPath('installer.php'),
+                __DIR__.'/../config/installer.php' => $this->app->configPath('installer.php'),
             ], 'installer-config');
 
             // Publish views
             $this->publishes([
-                __DIR__ . '/../resources/views' => $this->app->resourcePath('views/vendor/installer'),
+                __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/installer'),
             ], 'installer-views');
 
             // Publish migrations
             $this->publishes([
-                __DIR__ . '/../database/migrations' => $this->app->databasePath('migrations'),
+                __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
             ], 'installer-migrations');
 
             // Publish models
             $this->publishes([
-                __DIR__ . '/../Models/User.php' => $this->app->path('Models/User.php'),
+                __DIR__.'/../Models/User.php' => $this->app->path('Models/User.php'),
                 // Add any other user-related models here
             ], ['installer-models', 'force']);
 

@@ -29,7 +29,7 @@ class CheckBirthdayTriggers extends Command
      */
     public function handle()
     {
-        $this->info("Checking birthday triggers for " . now()->toDateString());
+        $this->info('Checking birthday triggers for '.now()->toDateString());
 
         // Find automations with birthday trigger
         $automations = Automation::where('is_active', true)
@@ -37,7 +37,8 @@ class CheckBirthdayTriggers extends Command
             ->get();
 
         if ($automations->isEmpty()) {
-            $this->info("No active birthday automations found.");
+            $this->info('No active birthday automations found.');
+
             return;
         }
 
@@ -48,7 +49,7 @@ class CheckBirthdayTriggers extends Command
         foreach ($automations as $automation) {
             $fieldName = $automation->trigger_config['field_name'] ?? 'birthday';
             $daysBefore = (int) ($automation->trigger_config['days_before'] ?? 0);
-            
+
             $targetDate = now()->addDays($daysBefore);
             $targetMonth = $targetDate->month;
             $targetDay = $targetDate->day;
@@ -57,7 +58,7 @@ class CheckBirthdayTriggers extends Command
 
             // Look in core fields (if they exist) or custom_attributes
             Contact::where('team_id', $automation->team_id)
-                ->where(function($q) use ($fieldName, $targetMonth, $targetDay) {
+                ->where(function ($q) {
                     // This is a bit complex due to JSON custom_attributes
                     // We'll fetch all and filter for now, or use JSON query if DB supports it.
                     // Assuming standard Laravel whereJsonContains or similar is available.
@@ -65,7 +66,9 @@ class CheckBirthdayTriggers extends Command
                 ->chunk(100, function ($contacts) use ($service, $automation, $fieldName, $targetMonth, $targetDay) {
                     foreach ($contacts as $contact) {
                         $dobValue = $contact->{$fieldName} ?? ($contact->custom_attributes[$fieldName] ?? null);
-                        if (!$dobValue) continue;
+                        if (! $dobValue) {
+                            continue;
+                        }
 
                         try {
                             $dob = \Carbon\Carbon::parse($dobValue);
@@ -76,18 +79,18 @@ class CheckBirthdayTriggers extends Command
                                     ->where('created_at', '>', now()->startOfYear())
                                     ->exists();
 
-                                if (!$alreadyRun) {
+                                if (! $alreadyRun) {
                                     $service->start($automation, $contact);
                                     $this->info("Triggered birthday automation for contact #{$contact->id}");
                                 }
                             }
                         } catch (\Exception $e) {
-                            Log::error("Birthday trigger date parsing failed for contact {$contact->id}: " . $e->getMessage());
+                            Log::error("Birthday trigger date parsing failed for contact {$contact->id}: ".$e->getMessage());
                         }
                     }
                 });
         }
 
-        $this->info("Birthday check complete.");
+        $this->info('Birthday check complete.');
     }
 }

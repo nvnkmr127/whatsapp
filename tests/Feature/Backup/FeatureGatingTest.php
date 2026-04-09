@@ -5,11 +5,10 @@ namespace Tests\Feature\Backup;
 use App\Models\Plan;
 use App\Models\Team;
 use App\Models\TeamAddOn;
-use App\Models\User;
 use App\Services\BackupService;
+use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Exception;
 
 class FeatureGatingTest extends TestCase
 {
@@ -20,7 +19,9 @@ class FeatureGatingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->backupService = new BackupService();
+        $this->backupService = new BackupService;
+
+        config(['app.full_access_all' => false]);
 
         // Setup default plans
         Plan::create([
@@ -28,14 +29,14 @@ class FeatureGatingTest extends TestCase
             'monthly_price' => 0,
             'message_limit' => 100,
             'agent_limit' => 1,
-            'features' => ['backups' => true, 'cloud_backups' => false]
+            'features' => ['backups' => true, 'cloud_backups' => false],
         ]);
         Plan::create([
             'name' => 'pro',
             'monthly_price' => 29,
             'message_limit' => 1000,
             'agent_limit' => 5,
-            'features' => ['backups' => true, 'cloud_backups' => true]
+            'features' => ['backups' => true, 'cloud_backups' => true],
         ]);
     }
 
@@ -65,7 +66,7 @@ class FeatureGatingTest extends TestCase
         TeamAddOn::create([
             'team_id' => $team->id,
             'type' => 'cloud_backups',
-            'expires_at' => now()->addDay()
+            'expires_at' => now()->addDay(),
         ]);
 
         $this->assertTrue($team->hasFeature('cloud_backups'));
@@ -75,7 +76,7 @@ class FeatureGatingTest extends TestCase
     {
         $team = Team::factory()->create([
             'subscription_plan' => 'pro',
-            'subscription_status' => 'expired'
+            'subscription_status' => 'expired',
         ]);
 
         $this->assertFalse($team->hasFeature('backups'));
@@ -91,7 +92,7 @@ class FeatureGatingTest extends TestCase
         $plan->update(['features' => ['backups' => false]]);
 
         $this->expectException(Exception::class);
-        $this->expectExceptionMessage("The backup feature is not available for your team.");
+        $this->expectExceptionMessage('The backup feature is not available for your team.');
 
         $this->backupService->backupTenant($team);
     }

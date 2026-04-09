@@ -53,7 +53,7 @@ class ProcessCampaignJob implements ShouldQueue
                 });
 
             $this->campaign->update([
-                'is_sent'           => true,
+                'is_sent' => true,
                 'last_processed_at' => now(),
             ]);
         } catch (Throwable $e) {
@@ -65,7 +65,7 @@ class ProcessCampaignJob implements ShouldQueue
     protected function handleFailure(Throwable $e): void
     {
         $this->campaign->update([
-            'last_error'     => $e->getMessage(),
+            'last_error' => $e->getMessage(),
             'pause_campaign' => true,
         ]);
 
@@ -73,7 +73,7 @@ class ProcessCampaignJob implements ShouldQueue
             logger()->channel(json_decode(get_setting('whatsapp.logging'), true)['channel'])
                 ->error('Campaign processing failed', [
                     'campaign_id' => $this->campaign->id,
-                    'error'       => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
         }
     }

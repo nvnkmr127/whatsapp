@@ -3,18 +3,23 @@
 namespace App\Livewire\Calls;
 
 use App\Models\Contact;
-use App\Services\CallService;
 use App\Services\CallEligibilityService;
+use App\Services\CallService;
 use App\Services\WhatsAppService;
 use Livewire\Component;
 
 class CallControls extends Component
 {
     public Contact $contact;
+
     public $activeCall = null;
+
     public $isInitiating = false;
+
     public $eligibility = null;
+
     public $showEligibilityDetails = false;
+
     public $teamId;
 
     public function getListeners()
@@ -76,8 +81,9 @@ class CallControls extends Component
         // Re-check eligibility before initiating
         $this->checkEligibility();
 
-        if (!$this->eligibility['eligible']) {
+        if (! $this->eligibility['eligible']) {
             $this->dispatch('call-error', ['message' => $this->eligibility['user_message']]);
+
             return;
         }
 
@@ -104,7 +110,7 @@ class CallControls extends Component
 
     public function answerCall()
     {
-        if (!$this->activeCall) {
+        if (! $this->activeCall) {
             return;
         }
 
@@ -126,7 +132,7 @@ class CallControls extends Component
 
     public function rejectCall()
     {
-        if (!$this->activeCall) {
+        if (! $this->activeCall) {
             return;
         }
 
@@ -147,7 +153,7 @@ class CallControls extends Component
 
     public function endCall()
     {
-        if (!$this->activeCall) {
+        if (! $this->activeCall) {
             return;
         }
 

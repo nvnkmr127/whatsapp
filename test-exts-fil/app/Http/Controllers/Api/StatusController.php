@@ -47,13 +47,13 @@ class StatusController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $statuses,
+                'data' => $statuses,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => t('failed_to_fetch_statuses'),
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -90,16 +90,16 @@ class StatusController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name'      => 'required|string|max:255|unique:statuses',
-                'color'     => 'nullable|string|max:7',
+                'name' => 'required|string|max:255|unique:statuses',
+                'color' => 'nullable|string|max:7',
                 'isdefault' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -110,15 +110,15 @@ class StatusController extends Controller
             $status = Status::create($request->all());
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Status created successfully',
-                'data'    => $status,
+                'data' => $status,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to create status',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -153,13 +153,13 @@ class StatusController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $status,
+                'data' => $status,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Status not found',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 404);
         }
     }
@@ -192,16 +192,16 @@ class StatusController extends Controller
             $status = Status::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'name'      => 'sometimes|string|max:255|unique:statuses,name,' . $id,
-                'color'     => 'nullable|string|max:7',
+                'name' => 'sometimes|string|max:255|unique:statuses,name,'.$id,
+                'color' => 'nullable|string|max:7',
                 'isdefault' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Validation failed',
-                    'errors'  => $validator->errors(),
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -212,15 +212,15 @@ class StatusController extends Controller
             $status->update($request->all());
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Status updated successfully',
-                'data'    => $status,
+                'data' => $status,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to update status',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -252,7 +252,7 @@ class StatusController extends Controller
 
             if ($status->isdefault) {
                 return response()->json([
-                    'status'  => 'error',
+                    'status' => 'error',
                     'message' => 'Cannot delete the default status',
                 ], 400);
             }
@@ -260,14 +260,14 @@ class StatusController extends Controller
             $status->delete();
 
             return response()->json([
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => 'Status deleted successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to delete status',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

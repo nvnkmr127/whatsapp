@@ -42,16 +42,17 @@ class SyncWhatsappTemplates extends Command
             $this->info("Syncing Team: {$team->name} (ID: {$team->id})");
 
             try {
-                if (!$team->whatsapp_business_account_id || !$team->whatsapp_access_token) {
+                if (! $team->whatsapp_business_account_id || ! $team->whatsapp_access_token) {
                     $this->warn("Skipping Team {$team->id}: Missing WABA ID or Access Token.");
+
                     continue;
                 }
 
                 $syncedNames = $service->syncTemplates($team);
-                $this->info("Synced " . count($syncedNames) . " templates.");
+                $this->info('Synced '.count($syncedNames).' templates.');
 
             } catch (\Exception $e) {
-                $this->error("Failed to sync Team {$team->id}: " . $e->getMessage());
+                $this->error("Failed to sync Team {$team->id}: ".$e->getMessage());
             }
         }
 

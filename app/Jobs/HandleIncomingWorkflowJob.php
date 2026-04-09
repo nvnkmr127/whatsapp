@@ -3,26 +3,26 @@
 namespace App\Jobs;
 
 use App\Models\Message;
-use App\Models\Team;
 use App\Services\AutomationService;
-use App\Services\AiCommerceService;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class HandleIncomingWorkflowJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $messageId;
+
     public $teamId;
 
     public $tries = 2;
+
     public $backoff = [30, 60];
 
     public function __construct($messageId, $teamId)
@@ -35,27 +35,29 @@ class HandleIncomingWorkflowJob implements ShouldQueue
     {
         // Idempotency check: Ensure we don't process the same message twice
         $lockKey = "processing_msg_{$this->messageId}";
-        if (!Cache::add($lockKey, true, 60)) {
+        if (! Cache::add($lockKey, true, 60)) {
             Log::info("Message {$this->messageId} is already being processed. Skipping.");
+
             return;
         }
 
         try {
             $message = Message::with(['contact', 'team'])->find($this->messageId);
-            if (!$message)
+            if (! $message) {
                 return;
+            }
 
             $team = $message->team;
             $contact = $message->contact;
 
-            $waService = new WhatsAppService();
+            $waService = new WhatsAppService;
             $waService->setTeam($team);
 
             // Agent Assignment Check: Bots should stay silent if a human is assigned
             $isAssigned = $contact->assigned_to !== null;
 
             // 1. Automations (Keywords, Flows, Template Buttons)
-            if (!$isAssigned) {
+            if (! $isAssigned) {
                 try {
                     $automationService = app(AutomationService::class);
                     $automationService->setWhatsAppService($waService);
@@ -64,6 +66,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
                     if ($message->type === 'button') {
                         if ($automationService->checkTemplateTriggers($contact, $message->content)) {
                             Log::info("Automation Triggered: Template Button for message {$this->messageId}");
+
                             return;
                         }
                     }
@@ -72,6 +75,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
                     if ($message->type === 'interactive') {
                         if ($automationService->checkFlowTriggers($contact, $message)) {
                             Log::info("Automation Triggered: Flow Completion for message {$this->messageId}");
+
                             return;
                         }
                     }
@@ -80,27 +84,29 @@ class HandleIncomingWorkflowJob implements ShouldQueue
                     if (in_array($message->type, ['text', 'interactive', 'button'])) {
                         if ($automationService->checkTriggers($contact, $message->content)) {
                             Log::info("Automation Triggered: Keyword for message {$this->messageId}");
+
                             return;
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::error("Automation Logic Failed in Job: " . $e->getMessage());
+                    Log::error('Automation Logic Failed in Job: '.$e->getMessage());
                 }
             }
 
             // 2. AI Assistant Check
-            if (!$isAssigned) {
+            if (! $isAssigned) {
                 $commerceConfig = $team->commerce_config ?? [];
                 if (($commerceConfig['ai_assistant_enabled'] ?? false) && $message->type === 'text') {
                     // Optimized: Async Dispatch to avoid blocking main queue
                     Log::info("Dispatching AI Job for message {$this->messageId}");
                     ProcessAiAssistantJob::dispatch($this->messageId);
+
                     return; // Assume AI or Automation handles it.
                 }
             }
 
             // 3. Welcome / Away Messages (Business Hours)
-            if (!$isAssigned) {
+            if (! $isAssigned) {
                 $this->handleAutoReplies($waService, $team, $contact, $message);
             }
 
@@ -117,12 +123,13 @@ class HandleIncomingWorkflowJob implements ShouldQueue
             $lockKey = "welcome_message_lock:{$contact->id}";
             if (Cache::add($lockKey, true, 30)) {
                 $this->sendAutoReply($waService, $contact->phone_number, $team->welcome_message, $team->welcome_message_config);
+
                 return;
             }
         }
 
         // 2. Business Hours / Away Message
-        if ($team->away_message_enabled && !$team->isWithinBusinessHours()) {
+        if ($team->away_message_enabled && ! $team->isWithinBusinessHours()) {
             $lockKey = "away_message_lock:{$contact->id}";
             if (Cache::add($lockKey, true, 3600)) {
                 $recentOutbound = $message->conversation->messages()
@@ -130,7 +137,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
                     ->where('created_at', '>', now()->subHours(24))
                     ->exists();
 
-                if (!$recentOutbound) {
+                if (! $recentOutbound) {
                     $this->sendAutoReply($waService, $contact->phone_number, $team->away_message, $team->away_message_config);
                 }
             }
@@ -141,6 +148,7 @@ class HandleIncomingWorkflowJob implements ShouldQueue
     {
         if (empty($config)) {
             $waService->sendText($to, $legacyText ?? 'Auto-reply');
+
             return;
         }
 

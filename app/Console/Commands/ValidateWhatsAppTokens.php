@@ -43,6 +43,7 @@ class ValidateWhatsAppTokens extends Command
                         $this->warn("Team {$team->id}: Token expired on {$team->whatsapp_token_expires_at}");
                         $tokensExpired++;
                         $this->handleTokenExpired($team);
+
                         continue;
                     }
 
@@ -64,7 +65,7 @@ class ValidateWhatsAppTokens extends Command
                             $team->update([
                                 'whatsapp_connected' => false,
                                 'whatsapp_setup_state' => \App\Enums\IntegrationState::DISCONNECTED,
-                                'whatsapp_token_expires_at' => null
+                                'whatsapp_token_expires_at' => null,
                             ]);
                             $this->error("Auto-Disconnected Team {$team->id} due to permanent auth failure.");
                         }
@@ -85,7 +86,7 @@ class ValidateWhatsAppTokens extends Command
             }
         });
 
-        $this->info("Validation complete:");
+        $this->info('Validation complete:');
         $this->info("  - Checked: {$teamsChecked}");
         $this->info("  - Expired: {$tokensExpired}");
         $this->info("  - Expiring soon: {$tokensExpiringSoon}");
@@ -108,6 +109,7 @@ class ValidateWhatsAppTokens extends Command
 
     /**
      * Handle token error
+     *
      * @return bool True if permanent failure
      */
     private function handleTokenError(Team $team, array $error): bool
@@ -118,16 +120,17 @@ class ValidateWhatsAppTokens extends Command
         // Check if it's an auth error
         if (str_contains(strtolower($message), 'token') || $code == 190 || $code == 102) {
             Log::error("WhatsApp token invalid for team {$team->id}", [
-                'error' => $error
+                'error' => $error,
             ]);
 
             // Return true to trigger auto-disconnect
             return true;
         } else {
             Log::warning("WhatsApp API error for team {$team->id}", [
-                'error' => $error
+                'error' => $error,
             ]);
         }
+
         return false;
     }
 }

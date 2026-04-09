@@ -3,16 +3,17 @@
 namespace App\Livewire\Analytics;
 
 use App\Models\Campaign;
+use App\Models\CustomerEvent;
 use App\Models\Message;
 use App\Models\Order;
-use App\Models\CustomerEvent;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class CampaignFunnel extends Component
 {
     public $campaignId;
+
     public $funnelData = [];
+
     public $lastRefresh;
 
     public function mount($campaignId = null)
@@ -63,7 +64,7 @@ class CampaignFunnel extends Component
         $repliesRaw = Message::where('team_id', $teamId)
             ->where('direction', 'inbound')
             ->whereNotNull('attributed_campaign_id')
-            ->when($this->campaignId, fn($q) => $q->where('attributed_campaign_id', $this->campaignId))
+            ->when($this->campaignId, fn ($q) => $q->where('attributed_campaign_id', $this->campaignId))
             ->count();
 
         // 5. Automation Triggered
@@ -83,7 +84,7 @@ class CampaignFunnel extends Component
             ->where('direction', 'outbound')
             ->whereNull('campaign_id')
             ->whereNotNull('attributed_campaign_id')
-            ->when($this->campaignId, fn($q) => $q->where('attributed_campaign_id', $this->campaignId))
+            ->when($this->campaignId, fn ($q) => $q->where('attributed_campaign_id', $this->campaignId))
             ->count();
 
         // 7. Order Created (Conversion)
@@ -93,7 +94,7 @@ class CampaignFunnel extends Component
                 $query->select('contact_id')
                     ->from('messages')
                     ->whereNotNull('campaign_id')
-                    ->when($this->campaignId, fn($q) => $q->where('campaign_id', $this->campaignId));
+                    ->when($this->campaignId, fn ($q) => $q->where('campaign_id', $this->campaignId));
             })
             ->count();
 
@@ -106,7 +107,7 @@ class CampaignFunnel extends Component
                 ['label' => 'Automated', 'value' => $automationRaw, 'color' => 'indigo-400', 'icon' => 'bolt'],
                 ['label' => 'Agent Chat', 'value' => $agentRaw, 'color' => 'orange-400', 'icon' => 'user-group'],
                 ['label' => 'Orders', 'value' => $orderRaw, 'color' => 'emerald-400', 'icon' => 'shopping-cart'],
-            ]
+            ],
         ];
 
         $this->lastRefresh = now()->format('H:i:s');

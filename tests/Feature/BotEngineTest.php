@@ -19,7 +19,7 @@ class BotEngineTest extends TestCase
         // Ensure team has credentials
         $team->update([
             'whatsapp_access_token' => 'fake_token',
-            'whatsapp_phone_number_id' => '123456789'
+            'whatsapp_phone_number_id' => '123456789',
         ]);
 
         // Simple Flow: Start -> Ask Name -> End
@@ -32,23 +32,23 @@ class BotEngineTest extends TestCase
                 [
                     'id' => 'step_1',
                     'type' => 'message', // Greeting
-                    'data' => ['content' => 'Hi there!']
+                    'data' => ['content' => 'Hi there!'],
                 ],
                 [
                     'id' => 'step_2',
                     'type' => 'question', // Ask Name
-                    'data' => ['content' => 'What is your name?']
+                    'data' => ['content' => 'What is your name?'],
                 ],
                 [
                     'id' => 'step_3',
                     'type' => 'message', // Thanks
-                    'data' => ['content' => 'Thanks!']
-                ]
+                    'data' => ['content' => 'Thanks!'],
+                ],
             ],
             'edges' => [
                 ['source' => 'step_1', 'target' => 'step_2'],
-                ['source' => 'step_2', 'target' => 'step_3']
-            ]
+                ['source' => 'step_2', 'target' => 'step_3'],
+            ],
         ]);
     }
 
@@ -58,14 +58,14 @@ class BotEngineTest extends TestCase
         $contact = Contact::factory()->create(['team_id' => $team->id]);
         $flow = $this->createTestFlow($team);
 
-        $service = new BotFlowService();
+        $service = new BotFlowService;
         $result = $service->handleKeyword($contact, 'hello');
 
         $this->assertTrue($result);
         $this->assertDatabaseHas('flow_sessions', [
             'contact_id' => $contact->id,
             'flow_id' => $flow->id,
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Should have advanced to step_2 (Question) because step_1 is auto-advance 'message'
@@ -85,10 +85,10 @@ class BotEngineTest extends TestCase
             'contact_id' => $contact->id,
             'current_step_id' => 'step_2',
             'state' => [],
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
-        $service = new BotFlowService();
+        $service = new BotFlowService;
         $result = $service->processInput($contact, 'My name is John');
 
         $this->assertTrue($result);

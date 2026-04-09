@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\Contact;
 use App\Models\ContactTag;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 
 class ContactService
 {
@@ -27,7 +27,7 @@ class ContactService
                 ->where('phone_number', $phone)
                 ->first();
 
-            if (!$contact) {
+            if (! $contact) {
                 // Handle ID-based lookup for updates
                 if (isset($data['id'])) {
                     $contact = Contact::lockForUpdate()
@@ -42,7 +42,7 @@ class ContactService
                             ->exists();
 
                         if ($exists) {
-                            throw new \Exception("Another contact with this phone number already exists.");
+                            throw new \Exception('Another contact with this phone number already exists.');
                         }
                         $contact->phone_number = $phone;
                     }
@@ -50,8 +50,8 @@ class ContactService
             }
 
             // Create new contact if not found
-            if (!$contact) {
-                $contact = new Contact();
+            if (! $contact) {
+                $contact = new Contact;
                 $contact->team_id = $teamId;
                 $contact->phone_number = $phone;
             }
@@ -63,7 +63,7 @@ class ContactService
 
                 // Limit to prevent bloat
                 if (count($merged) > 50) {
-                    throw new \Exception("Custom attributes limit exceeded (max 50 keys)");
+                    throw new \Exception('Custom attributes limit exceeded (max 50 keys)');
                 }
 
                 $contact->custom_attributes = $merged;
@@ -80,7 +80,7 @@ class ContactService
                     $automationService = app(AutomationService::class);
                     $automationService->checkSpecialTriggers($contact, 'contact_added');
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Contact Added Automation Trigger Failed: ' . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error('Contact Added Automation Trigger Failed: '.$e->getMessage());
                     // Don't throw - contact creation should succeed even if automation fails
                 }
             }
@@ -101,11 +101,13 @@ class ContactService
                 $array1[$key] = $value;
             }
         }
+
         return $array1;
     }
 
     /**
      * Normalize phone number format (deprecated - use PhoneNumberHelper instead)
+     *
      * @deprecated Use \App\Helpers\PhoneNumberHelper::normalize() instead
      */
     protected function normalizePhoneNumber(string $phone): string
@@ -171,7 +173,7 @@ class ContactService
         // Determine missing tags
         $missingNames = array_diff($names, $existingNames);
 
-        if (!empty($missingNames)) {
+        if (! empty($missingNames)) {
             $now = now();
             $newTagsData = [];
             foreach ($missingNames as $name) {
@@ -198,7 +200,7 @@ class ContactService
 
     protected function triggerTagAutomation(Contact $contact, array $ids)
     {
-        if (!empty($ids)) {
+        if (! empty($ids)) {
             try {
                 if (class_exists(AutomationService::class)) {
                     $automationService = app(AutomationService::class);
@@ -211,7 +213,7 @@ class ContactService
                     }
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('Tag Assigned Automation Trigger Failed: '.$e->getMessage());
                 // Don't throw - tag assignment should succeed even if automation fails
             }
 
@@ -222,12 +224,11 @@ class ContactService
                         app(\App\Services\WorkflowEngine::class)->trigger('tag_added', $contact, ['tag_id' => $id]);
                     }
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Workflow tag_added Trigger Failed: ' . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error('Workflow tag_added Trigger Failed: '.$e->getMessage());
                 }
             }
         }
     }
-
 
     /**
      * Helper to get a custom attribute.

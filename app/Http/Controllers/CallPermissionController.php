@@ -18,7 +18,7 @@ class CallPermissionController extends Controller
     public function requestPermission(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',
@@ -41,7 +41,7 @@ class CallPermissionController extends Controller
                 ->where('id', $request->contact_id)
                 ->first();
 
-            if (!$contact) {
+            if (! $contact) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Contact not found',
@@ -51,7 +51,7 @@ class CallPermissionController extends Controller
             $whatsappService = new WhatsAppService($team);
             $response = $whatsappService->requestCallPermission($request->contact_id);
 
-            if (!($response['success'] ?? false)) {
+            if (! ($response['success'] ?? false)) {
                 return response()->json($response, 400);
             }
 
@@ -78,7 +78,7 @@ class CallPermissionController extends Controller
     public function checkPermission(Request $request, int $contactId)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',
@@ -91,7 +91,7 @@ class CallPermissionController extends Controller
                 ->latest()
                 ->first();
 
-            if (!$permission) {
+            if (! $permission) {
                 return response()->json([
                     'success' => true,
                     'data' => [
@@ -139,7 +139,7 @@ class CallPermissionController extends Controller
     public function initiateCall(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (!$team) {
+        if (! $team) {
             return response()->json([
                 'success' => false,
                 'error' => 'No team context',
@@ -163,7 +163,7 @@ class CallPermissionController extends Controller
                 ->where('id', $request->contact_id)
                 ->first();
 
-            if (!$contact) {
+            if (! $contact) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Contact not found',
@@ -175,7 +175,7 @@ class CallPermissionController extends Controller
                     ->where('id', $request->permission_id)
                     ->first();
 
-                if (!$permission) {
+                if (! $permission) {
                     return response()->json([
                         'success' => false,
                         'error' => 'Permission not found',

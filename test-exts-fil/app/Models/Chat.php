@@ -6,21 +6,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @property int                             $id
- * @property string                          $name
- * @property string                          $receiver_id
- * @property string|null                     $last_message
- * @property string|null                     $last_msg_time
- * @property string|null                     $wa_no
- * @property string|null                     $wa_no_id
- * @property string                          $time_sent
- * @property string|null                     $type
- * @property string|null                     $type_id
- * @property string|null                     $agent
- * @property int                             $is_ai_chat
- * @property string|null                     $ai_message_json
- * @property int|null                        $is_bots_stoped
- * @property string|null                     $bot_stoped_time
+ * @property int $id
+ * @property string $name
+ * @property string $receiver_id
+ * @property string|null $last_message
+ * @property string|null $last_msg_time
+ * @property string|null $wa_no
+ * @property string|null $wa_no_id
+ * @property string $time_sent
+ * @property string|null $type
+ * @property string|null $type_id
+ * @property string|null $agent
+ * @property int $is_ai_chat
+ * @property string|null $ai_message_json
+ * @property int|null $is_bots_stoped
+ * @property string|null $bot_stoped_time
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ChatMessage> $messages

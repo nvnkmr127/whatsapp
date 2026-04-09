@@ -13,7 +13,9 @@ class ActivityLogViewer extends Component
     use WithPagination;
 
     public $search = '';
+
     public $filterUser = '';
+
     public $filterAction = '';
 
     protected $queryString = [
@@ -24,11 +26,11 @@ class ActivityLogViewer extends Component
 
     public function render()
     {
-        if (!Auth::user()->currentTeam) {
+        if (! Auth::user()->currentTeam) {
             return view('livewire.activity.activity-log-viewer', [
                 'logs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20),
                 'users' => collect(),
-                'actions' => collect()
+                'actions' => collect(),
             ]);
         }
 
@@ -36,9 +38,9 @@ class ActivityLogViewer extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('description', 'like', '%' . $this->search . '%')
-                    ->orWhere('action', 'like', '%' . $this->search . '%')
-                    ->orWhere('ip_address', 'like', '%' . $this->search . '%');
+                $q->where('description', 'like', '%'.$this->search.'%')
+                    ->orWhere('action', 'like', '%'.$this->search.'%')
+                    ->orWhere('ip_address', 'like', '%'.$this->search.'%');
             });
         }
 

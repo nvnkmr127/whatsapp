@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class TeamAddOn extends Model
 {
     use \App\Traits\HasTeam;
+
     protected $table = 'team_addons';
 
     protected $fillable = [
@@ -20,8 +21,6 @@ class TeamAddOn extends Model
         'settings' => 'array',
         'expires_at' => 'datetime',
     ];
-
-
 
     /**
      * Check if the add-on is currently active (not expired)

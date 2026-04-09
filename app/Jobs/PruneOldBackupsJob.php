@@ -29,9 +29,9 @@ class PruneOldBackupsJob implements ShouldQueue
     {
         try {
             $backupService->cleanOldBackups();
-            Log::info("Background backup pruning completed.");
+            Log::info('Background backup pruning completed.');
         } catch (\Exception $e) {
-            Log::error("Background backup pruning failed. Error: " . $e->getMessage());
+            Log::error('Background backup pruning failed. Error: '.$e->getMessage());
             throw $e;
         }
     }

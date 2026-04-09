@@ -9,8 +9,11 @@ use Livewire\Component;
 class PipelineSettings extends Component
 {
     public $pipelineId;
+
     public $pipelineName;
+
     public $stages = [];
+
     public $newStageName = '';
 
     protected $listeners = ['pipelineUpdated' => 'refresh'];
@@ -54,9 +57,10 @@ class PipelineSettings extends Component
     public function deleteStage($stageId)
     {
         $stage = PipelineStage::find($stageId);
-        
+
         if ($stage->deals()->count() > 0) {
             $this->dispatch('notify', type: 'error', message: 'Cannot delete stage with deals');
+
             return;
         }
 
