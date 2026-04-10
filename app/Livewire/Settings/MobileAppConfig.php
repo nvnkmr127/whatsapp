@@ -34,7 +34,7 @@ class MobileAppConfig extends Component
     public function getQrCodeProperty()
     {
         $payload = [
-            'baseUrl' => config('app.url'),
+            'baseUrl' => rtrim(config('app.url'), '/') . '/api/v1',
             'platform' => 'Watxio',
             'teamId' => Auth::user()->current_team_id,
             'userId' => Auth::id(),
