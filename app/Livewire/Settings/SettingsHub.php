@@ -79,6 +79,14 @@ class SettingsHub extends Component
                 'privelege' => 'manage-settings',
             ],
             [
+                'title' => 'Mobile App',
+                'description' => 'Configure and sync your mobile devices for on-the-go workspace management.',
+                'route' => 'settings.mobile-app',
+                'icon' => 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
+                'color' => 'indigo',
+                'privelege' => 'manage-settings',
+            ],
+            [
                 'title' => 'Dev Tools',
                 'description' => 'API Tokens, Webhook management, and technical documentation.',
                 'route' => 'developer.overview',

@@ -11,6 +11,15 @@ Route::post('/webhooks/trigger/{id}', [\App\Http\Controllers\Api\WebhookTriggerC
 Route::post('/webhooks/workflow/{workflowId}', [\App\Http\Controllers\Api\WorkflowWebhookController::class, 'handle']);
 Route::post('/webhooks/workflow-incoming/{webhookUrlId}', [\App\Http\Controllers\Api\WorkflowIncomingWebhookController::class, 'handle']);
 
+Route::prefix('v1/mobile/auth')->middleware('throttle:api')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
+        Route::post('/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
+    });
+});
+
 Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Http\Middleware\BlockTrialFieldsViaApi::class], 'prefix' => 'v1'], function () {
     // Contacts
     Route::get('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'index']);
@@ -73,6 +82,8 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Presence (Active Chat State)
         Route::post('/presence/heartbeat', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'heartbeat']);
         Route::post('/presence/leave', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'leave']);
+
+        Route::post('/broadcasting/auth', [\App\Http\Controllers\Api\Mobile\BroadcastAuthController::class, 'authenticate']);
 
         // Inbox Management
         Route::get('/conversations', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'index']);
