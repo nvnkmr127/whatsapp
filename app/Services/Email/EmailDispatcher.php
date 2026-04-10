@@ -54,9 +54,12 @@ class EmailDispatcher
             Log::warning('EmailDispatcher Content Extraction: '.$e->getMessage());
         }
 
+        // 1.5 Normalize recipient
+        $normalizedTo = $this->normalizeRecipient($to);
+
         // 2. Build Payload
         $payload = new EmailPayload(
-            to: is_array($to) ? (implode(',', array_keys($to)) ?: implode(',', $to)) : $to,
+            to: $normalizedTo,
             subject: $subject,
             html: $html,
             text: $text,
@@ -69,7 +72,7 @@ class EmailDispatcher
         $result = $this->manager->send($payload);
 
         // 4. Log Result
-        $this->logResult($to, $useCase, $result, $subject, $templateId);
+        $this->logResult($normalizedTo, $useCase, $result, $subject, $templateId);
 
         // 5. Fail loud if the final driver (including fallback) failed
         if (! $result->success) {
@@ -136,11 +139,17 @@ class EmailDispatcher
     protected function logResult($to, EmailUseCase $useCase, EmailResult $result, string $subject, ?int $templateId): void
     {
         try {
+            // Ensure recipient is a string and not too long for the DB
+            $recipient = is_array($to) ? json_encode($to) : (string) $to;
+            if (strlen($recipient) > 255) {
+                $recipient = substr($recipient, 0, 252).'...';
+            }
+
             $data = [
-                'recipient' => is_array($to) ? json_encode($to) : $to,
+                'recipient' => $recipient,
                 'use_case' => $useCase,
                 'template_id' => $templateId,
-                'subject' => $subject,
+                'subject' => substr($subject, 0, 255),
                 'status' => $result->success ? 'sent' : 'failed',
                 'provider_name' => $result->providerName,
                 'message_id' => $result->messageId,
@@ -162,5 +171,36 @@ class EmailDispatcher
         } catch (\Exception $e) {
             Log::error('Failed to write EmailLog via EmailDispatcher: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Normalize various recipient formats (User model, array, string) into a comma-separated string.
+     */
+    protected function normalizeRecipient($to): string
+    {
+        if (is_string($to)) {
+            return $to;
+        }
+
+        if ($to instanceof \App\Models\User) {
+            return $to->email;
+        }
+
+        if (is_array($to)) {
+            // Handle ['email@example.com' => 'Name'] or ['email@example.com'] or [UserModel]
+            return collect($to)->map(function ($value, $key) {
+                if ($value instanceof \App\Models\User) {
+                    return $value->email;
+                }
+                // If key is an email-like string and value is name, return key
+                if (is_string($key) && str_contains($key, '@')) {
+                    return $key;
+                }
+
+                return $value;
+            })->unique()->implode(',');
+        }
+
+        return (string) $to;
     }
 }
