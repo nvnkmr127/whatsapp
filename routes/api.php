@@ -125,6 +125,15 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Campaigns / Broadcasting
         Route::get('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'index']);
         Route::post('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'store']);
+
+        // Team Management
+        Route::get('/team/members', function (\Illuminate\Http\Request $request) {
+            return response()->json($request->user()->currentTeam->allUsers()->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'initials' => strtoupper(substr($u->name, 0, 2)),
+            ]));
+        });
     });
 
     // WhatsApp Calling API

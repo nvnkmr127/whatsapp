@@ -20,8 +20,19 @@ class ConversationController extends Controller
             return response()->json(['error' => 'No team associated'], 400);
         }
 
-        $conversations = Conversation::where('team_id', $team->id)
-            ->with(['contact:id,name,phone_number', 'lastMessage'])
+        $query = Conversation::where('team_id', $team->id);
+
+        // Apply Filters
+        $filter = $request->input('filter', 'all');
+        if ($filter === 'unread') {
+            $query->whereHas('messages', function($q) {
+                $q->where('direction', 'inbound')->whereNull('read_at');
+            });
+        } elseif ($filter === 'assigned') {
+            $query->where('assigned_to', $user->id);
+        }
+
+        $conversations = $query->with(['contact:id,name,phone_number', 'lastMessage'])
             ->withCount(['messages as unread_count' => function ($query) {
                 $query->where('direction', 'inbound')->whereNull('read_at');
             }])
@@ -45,6 +56,7 @@ class ConversationController extends Controller
                 'status' => $conv->status,
                 'assigned_to' => $conv->assigned_to,
                 'last_interaction' => $conv->last_message_at ? $conv->last_message_at->timestamp : null,
+                'is_within_24_hours' => $conv->isWithin24Hours(),
             ];
         });
 
@@ -71,6 +83,7 @@ class ConversationController extends Controller
             'status' => $conversation->status,
             'assigned_to' => $conversation->assigned_to,
             'metadata' => $conversation->metadata,
+            'is_within_24_hours' => $conversation->isWithin24Hours(),
         ]);
     }
 

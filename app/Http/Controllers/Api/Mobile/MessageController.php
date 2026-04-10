@@ -17,9 +17,19 @@ class MessageController extends Controller
     {
         $this->authorizeConversation($request->user(), $conversation);
 
-        $messages = Message::where('conversation_id', $conversation->id)
+        $messages = Message::where('contact_id', $conversation->contact_id)
+            ->with('replyTo:id,content')
             ->latest('id')
             ->cursorPaginate($request->input('per_page', 40));
+
+        // Transform to include reply context
+        $messages->getCollection()->transform(function($msg) {
+            $data = $msg->toArray();
+            if ($msg->replyTo) {
+                $data['reply_to_content'] = $msg->replyTo->content;
+            }
+            return $data;
+        });
 
         // Mark messages as read if retrieved via mobile app
         $conversation->messages()
@@ -44,19 +54,30 @@ class MessageController extends Controller
         ]);
 
         $team = $request->user()->currentTeam;
+        
+        // Meta Policy: Check 24-hour window for text/media messages
+        if (in_array($request->type, ['text', 'image', 'document']) && !$conversation->isWithin24Hours()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Policy Violation: 24-hour window closed. Please use a Template message.',
+                'code' => 'META_POLICY_WINDOW_CLOSED'
+            ], 422);
+        }
 
         // Ensure we use the latest conversation context
         $contact = $conversation->contact;
 
         $message = Message::create([
-            'team_id' => $team->id,
-            'contact_id' => $contact->id,
+            'team_id' => $user->currentTeam->id,
+            'contact_id' => $conversation->contact_id,
             'conversation_id' => $conversation->id,
-            'type' => $request->type,
+            'user_id' => $user->id,
             'direction' => 'outbound',
-            'status' => 'queued',
+            'type' => $request->input('type', 'text'),
             'content' => $request->input('content'),
             'media_url' => $request->input('media_path'),
+            'reply_to_message_id' => $request->input('reply_to_message_id'),
+            'status' => 'pending',
         ]);
 
         // Dispatch Job (reuse existing infrastructure)

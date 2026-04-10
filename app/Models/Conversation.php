@@ -58,4 +58,26 @@ class Conversation extends Model
     {
         return $this->calls()->whereIn('status', ['initiated', 'ringing', 'in_progress'])->exists();
     }
+
+    /**
+     * Check if the conversation is within the Meta 24-hour service window.
+     */
+    public function isWithin24Hours(): bool
+    {
+        if (!$this->last_message_at) {
+            return false;
+        }
+
+        // Only inbound messages from the customer reset the window for standard text
+        $lastInbound = $this->messages()
+            ->where('direction', 'inbound')
+            ->latest('id')
+            ->first();
+
+        if (!$lastInbound) {
+            return false;
+        }
+
+        return $lastInbound->created_at->addHours(24)->isFuture();
+    }
 }

@@ -66,4 +66,14 @@ class Message extends Model
     {
         return $this->belongsTo(AutomationRun::class);
     }
+
+    public function replyTo()
+    {
+        return $this->belongsTo(Message::class, 'reply_to_message_id');
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(Message::class, 'reply_to_message_id');
+    }
 }
