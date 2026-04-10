@@ -230,6 +230,7 @@ class BillingService
     {
         $stats = $this->getDetailedUsageStats($team);
         $warnings = [];
+        $alertsToDispatch = [];
 
         foreach ($stats as $key => $data) {
             if ($data['limit'] === 0) {
@@ -245,7 +246,7 @@ class BillingService
                 $message = "Limit reached! You have used all {$data['limit']} {$data['label']}. Please upgrade for more access.";
             } elseif ($percent >= 90) {
                 $level = 'warning';
-                $message = "Critical threshold! You are at {$percent}% of your {$data['label']} limit.";
+                $message = "Critical threshold! You are at ".round($percent, 1)."% of your {$data['label']} limit.";
             } elseif ($percent >= 80) {
                 $level = 'info';
                 $message = "Usage alert: You have reached 80% of your {$data['label']} limit.";
@@ -259,15 +260,49 @@ class BillingService
                     'percent' => $percent,
                 ];
 
-                // Cooldown: Only dispatch event if level has increased
+                // Check if this specific alert has increased in severity
                 $cacheKey = "billing_alert_{$team->id}_{$key}";
                 $lastLevel = \Illuminate\Support\Facades\Cache::get($cacheKey);
-
                 $levels = ['info' => 1, 'warning' => 2, 'danger' => 3];
+                
                 if (! $lastLevel || ($levels[$level] > ($levels[$lastLevel] ?? 0))) {
-                    \App\Events\UsageThresholdReached::dispatch($team, $key, $level, $percent, $message);
-                    \Illuminate\Support\Facades\Cache::put($cacheKey, $level, now()->addHours(24));
+                    $alertsToDispatch[] = [
+                        'key' => $key,
+                        'level' => $level,
+                        'percent' => $percent,
+                        'message' => $message,
+                        'levelValue' => $levels[$level]
+                    ];
                 }
+            }
+        }
+
+        // Handle Alerting Cooldowns (Strictly limit to 1 per day unless severity increases)
+        if (!empty($alertsToDispatch)) {
+            $globalCooldownKey = "billing_alert_global_cooldown_{$team->id}";
+            $hasGlobalCooldown = \Illuminate\Support\Facades\Cache::has($globalCooldownKey);
+
+            // Sort by severity (desc) so we pick the most critical one to send
+            usort($alertsToDispatch, fn($a, $b) => $b['levelValue'] <=> $a['levelValue']);
+            $mostCritical = $alertsToDispatch[0];
+
+            // Only fire if:
+            // 1. No alert sent in last 24h
+            // 2. OR this is a DANGER (100%+) alert that broke through
+            if (!$hasGlobalCooldown || $mostCritical['levelValue'] >= 3) {
+                \App\Events\UsageThresholdReached::dispatch(
+                    $team, 
+                    $mostCritical['key'], 
+                    $mostCritical['level'], 
+                    $mostCritical['percent'], 
+                    $mostCritical['message']
+                );
+                
+                // Update per-metric cache
+                \Illuminate\Support\Facades\Cache::put("billing_alert_{$team->id}_{$mostCritical['key']}", $mostCritical['level'], now()->addHours(24));
+                
+                // Update global cooldown
+                \Illuminate\Support\Facades\Cache::put($globalCooldownKey, true, now()->addHours(24));
             }
         }
 

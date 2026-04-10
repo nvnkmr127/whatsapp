@@ -21,6 +21,7 @@ Schedule::command('whatsapp:check-setup-health')->everySixHours();
 Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
 Schedule::command('automation:resume')->everyMinute();
+Schedule::command('app:send-daily-reports')->dailyAt('23:00')->timezone('Asia/Kolkata');
 
 // Security & Maintenance
 Schedule::command('audit:prune --days=90')->monthly()->at('01:00');

@@ -267,6 +267,14 @@ class Team extends JetstreamTeam
     }
 
     /**
+     * Get the team's wallet.
+     */
+    public function wallet()
+    {
+        return $this->hasOne(TeamWallet::class);
+    }
+
+    /**
      * Unified capability check.
      * Delegates entirely to EntitlementService — the single source of truth.
      * No subscription/trial/limit logic lives here.
