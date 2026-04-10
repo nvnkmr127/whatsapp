@@ -25,7 +25,10 @@ class AnalyticsController extends Controller
 
         // 1. Conversation Stats
         $activeCount = Conversation::where('team_id', $team->id)->whereNull('closed_at')->count();
-        $unreadCount = Conversation::where('team_id', $team->id)->where('unread_count', '>', 0)->count();
+        $unreadCount = Conversation::where('team_id', $team->id)
+            ->whereHas('messages', function ($q) {
+                $q->where('direction', 'inbound')->whereNull('read_at');
+            })->count();
 
         // 2. Message Stats (Last 30 Days)
         $outboundCount = Message::where('team_id', $team->id)
