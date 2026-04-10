@@ -59,6 +59,29 @@ class AuthController extends Controller
         ]);
     }
 
+    public function teams(Request $request)
+    {
+        return response()->json($request->user()->allTeams()
+            ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])
+            ->values());
+    }
+
+    public function switchTeam(Request $request)
+    {
+        $request->validate(['team_id' => 'required|exists:teams,id']);
+        
+        $user = $request->user();
+        $team = $user->allTeams()->where('id', $request->team_id)->first();
+        
+        if (!$team) {
+            return response()->json(['message' => 'Team not found or access denied'], 403);
+        }
+
+        $user->forceFill(['current_team_id' => $team->id])->save();
+
+        return response()->json(['success' => true, 'team' => ['id' => $team->id, 'name' => $team->name]]);
+    }
+
     public function logout(Request $request)
     {
         $request->user()?->tokens()->delete();

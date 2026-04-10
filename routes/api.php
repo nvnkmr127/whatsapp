@@ -75,6 +75,11 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
     // Mobile Core
     Route::prefix('mobile')->group(function () {
+        // Auth & Identity
+        Route::get('/auth/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
+        Route::get('/auth/teams', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'teams']);
+        Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
+
         // FCM Tokens
         Route::post('/fcm/register', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
         Route::post('/fcm/remove', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'destroy']);
@@ -91,8 +96,9 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/conversations/{conversation}/read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
         Route::post('/conversations/{conversation}/assign', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'assign']);
         Route::post('/conversations/{conversation}/close', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'close']);
+        Route::post('/conversations/{conversation}/mark-read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
 
-        // Chat Management
+        Route::get('/analytics/dashboard', [\App\Http\Controllers\Api\Mobile\AnalyticsController::class, 'dashboard']);
         Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'store']);
         Route::delete('/messages/{message}', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'destroy']);
