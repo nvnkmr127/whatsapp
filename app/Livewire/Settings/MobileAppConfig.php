@@ -39,6 +39,7 @@ class MobileAppConfig extends Component
             'teamId' => Auth::user()->current_team_id,
             'userId' => Auth::id(),
             'email' => Auth::user()->email,
+            'token' => $this->setupToken,
         ];
 
         $renderer = new ImageRenderer(
