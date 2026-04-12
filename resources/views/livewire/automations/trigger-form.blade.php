@@ -93,7 +93,7 @@
             <select wire:model.live="triggerConfig.template_name"
                 class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200">
                 <option value="">Choose a template...</option>
-                @foreach($approvedTemplates as $tmpl)
+                @foreach($this->approvedTemplates as $tmpl)
                     <option value="{{ data_get($tmpl, 'name') }}">{{ data_get($tmpl, 'name') }} ({{ data_get($tmpl, 'language') }})</option>
                 @endforeach
             </select>
@@ -167,7 +167,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Listen for Template</label>
         <select wire:model.live="triggerConfig.template_name" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Any Template</option>
-            @foreach($approvedTemplates as $tmpl)
+            @foreach($this->approvedTemplates as $tmpl)
                 <option value="{{ data_get($tmpl, 'name') }}">{{ data_get($tmpl, 'name') }}</option>
             @endforeach
         </select>
@@ -185,7 +185,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Select Pipeline</label>
         <select wire:model.live="triggerConfig.pipeline_id" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Any Pipeline</option>
-            @foreach($availablePipelines as $pipe)
+            @foreach($this->availablePipelines as $pipe)
                 <option value="{{ $pipe['id'] }}">{{ $pipe['name'] }}</option>
             @endforeach
         </select>
@@ -218,7 +218,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Match Email Template</label>
         <select wire:model.live="triggerConfig.template_id" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Any Template</option>
-            @foreach($availableEmailTemplates as $et)
+            @foreach($this->availableEmailTemplates as $et)
                 <option value="{{ $et['id'] }}">{{ $et['name'] }}</option>
             @endforeach
         </select>
@@ -228,7 +228,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Listen for Campaign</label>
         <select wire:model.live="triggerConfig.campaign_id" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Any Campaign</option>
-            @foreach($availableCampaigns as $c)
+            @foreach($this->availableCampaigns as $c)
                 <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
             @endforeach
         </select>

@@ -98,6 +98,15 @@ class Wizard extends Component
             $this->max_retries = $campaign->retry_config['max_retries'] ?? 3;
             $this->retry_interval = $campaign->retry_config['retry_interval'] ?? 60;
             $this->retry_strategy = $campaign->retry_config['retry_strategy'] ?? 'exponential';
+            
+            if ($this->campaignType === 'drip') {
+                $steps = $campaign->steps ?? [];
+                if (count($steps) > 0) {
+                    // Skip the first step as it is the main campaign template/message
+                    $this->dripSteps = array_slice($steps, 1);
+                }
+            }
+
             $this->calculateAudience();
         }
 

@@ -263,6 +263,7 @@
             <livewire:campaigns.wizard.audience-selector 
                 :selectedTags="$selectedTags"
                 :selectedContacts="$selectedContacts"
+                :audienceType="$audienceType"
             />
         @endif
 

@@ -25,7 +25,7 @@
             <label class="block text-xs font-bold text-slate-500 uppercase">Template Name</label>
             <select wire:model.live="nodeText" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
                 <option value="">Select Template...</option>
-                @foreach($approvedTemplates as $tmpl)
+                @foreach($this->approvedTemplates as $tmpl)
                     <option value="{{ data_get($tmpl, 'name') }}">{{ data_get($tmpl, 'name') }}</option>
                 @endforeach
             </select>
@@ -104,7 +104,7 @@
         <div x-show="$wire.nodeUseKb" class="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
             <label class="block text-[10px] font-black uppercase text-slate-400">Knowledge Sources</label>
             <div class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-                @foreach($availableKnowledgeBaseSources as $source)
+                @foreach($this->availableKnowledgeBaseSources as $source)
                     <div class="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
                         <input type="checkbox" wire:model.live="nodeKbSourceIds" value="{{ $source['id'] }}" class="rounded text-wa-teal focus:ring-wa-teal">
                         <span class="text-[11px] font-medium truncate">{{ $source['name'] }}</span>
@@ -184,7 +184,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Pipeline</label>
         <select wire:model.live="nodeProvider" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Select Pipeline...</option>
-            @foreach($availablePipelines as $pipe)
+            @foreach($this->availablePipelines as $pipe)
                 <option value="{{ $pipe['id'] }}">{{ $pipe['name'] }}</option>
             @endforeach
         </select>
@@ -196,7 +196,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Assigned User</label>
         <select wire:model.live="nodeProvider" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="round_robin">Round Robin</option>
-            @foreach($availableUsers as $user)
+            @foreach($this->availableUsers as $user)
                 <option value="{{ $user['id'] }}">{{ $user['name'] }}</option>
             @endforeach
         </select>
@@ -294,7 +294,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">WhatsApp Flow Configuration</label>
         <select wire:model.live="nodeSaveTo" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Select Flow...</option>
-            @foreach($availableFlows as $flow)
+            @foreach($this->availableFlows as $flow)
                 <option value="{{ $flow['id'] }}">{{ $flow['name'] }}</option>
             @endforeach
         </select>
@@ -372,7 +372,7 @@
         <label class="block text-xs font-bold text-slate-500 uppercase">Select Target Automation</label>
         <select wire:model.live="nodeProvider" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm">
             <option value="">Select Automation...</option>
-            @foreach($availableWorkflows as $wf)
+            @foreach($this->availableWorkflows as $wf)
                 <option value="{{ $wf['id'] }}">{{ $wf['name'] }}</option>
             @endforeach
         </select>
@@ -646,7 +646,7 @@
                     &#123;&#123;{{ $var }}&#125;&#125;
                 </button>
             @endforeach
-            @foreach($availableTags as $tag)
+            @foreach($this->availableTags as $tag)
                 <button type="button" onclick="navigator.clipboard.writeText('&#123;&#123;{{ data_get($tag, 'name') }}&#125;&#125;')"
                     title="Click to copy tag"
                     class="text-[9px] font-mono px-1.5 py-0.5 bg-wa-teal/5 text-wa-teal rounded hover:bg-wa-teal/20 transition-colors cursor-copy">

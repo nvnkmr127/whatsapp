@@ -105,7 +105,7 @@
                             <input type="text" wire:model.live="nodeTag" list="available-stage-tags" placeholder="e.g. Qualified Lead"
                                 class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold focus:ring-wa-teal focus:border-wa-teal text-slate-700 dark:text-slate-200 transition-all">
                             <datalist id="available-stage-tags">
-                                @foreach($availableTags as $tag)
+                                @foreach($this->availableTags as $tag)
                                     <option value="{{ data_get($tag, 'name') }}">
                                 @endforeach
                             </datalist>

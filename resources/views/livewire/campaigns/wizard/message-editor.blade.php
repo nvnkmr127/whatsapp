@@ -23,6 +23,33 @@
                 </select>
             </div>
 
+            @if($campaignType === 'drip' && $currentDripStep > 0)
+                <div class="p-6 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-100 dark:border-orange-900/30 space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-[0.2em]">Step Delay</label>
+                        <span class="text-[10px] font-black text-orange-400 uppercase tracking-widest">Wait before sending</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="relative">
+                            <input type="number" wire:model.live.debounce.500ms="dripSteps.{{ $currentDripStep - 1 }}.delay_minutes" 
+                                class="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-6 py-4 text-sm font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 transition-all">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Min</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             @php 
+                                $mins = (int)($dripSteps[$currentDripStep - 1]['delay_minutes'] ?? 0);
+                                $days = floor($mins / 1440);
+                                $hours = floor(($mins % 1440) / 60);
+                                $m = $mins % 60;
+                             @endphp
+                             <span class="text-xs font-bold text-slate-500">
+                                ≈ @if($days > 0) {{ $days }}d @endif @if($hours > 0) {{ $hours }}h @endif @if($m > 0 || ($days == 0 && $hours == 0)) {{ $m }}m @endif
+                             </span>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if($this->templateInfo)
                 @php $info = $this->templateInfo; @endphp
 

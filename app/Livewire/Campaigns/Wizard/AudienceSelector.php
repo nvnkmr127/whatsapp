@@ -12,6 +12,7 @@ class AudienceSelector extends Component
 {
     public $selectedTags = [];
     public $selectedContacts = [];
+    public $audienceType = 'tags';
 
     public $contactSearch = '';
 
