@@ -17,13 +17,9 @@ use Livewire\Component;
 class Dashboard extends Component
 {
     public $stats = [];
-
     public $chartData = [];
-
     public $timeRange = 'today';
-
-    public $dashboardData = [];
-
+    public $readyToLoad = false;
     public $lastRefresh;
 
     // Listener for chart updates
@@ -32,7 +28,12 @@ class Dashboard extends Component
     public function mount()
     {
         $this->lastRefresh = now()->format('H:i:s');
+    }
+
+    public function load()
+    {
         $this->loadData();
+        $this->readyToLoad = true;
     }
 
     public function loadData()

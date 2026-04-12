@@ -68,15 +68,28 @@ class EmailDispatcher
             headers: $headers
         );
 
-        // 3. Delegate to Manager (Resolved Driver Architecture)
-        $result = $this->manager->send($payload);
+        // 3. Dispatch Job (Asynchronous delivery for production stability)
+        \App\Jobs\SendEmailJob::dispatch($payload);
 
-        // 4. Log Result
-        $this->logResult($normalizedTo, $useCase, $result, $subject, $templateId);
+        // 4. Initial Log (Log that it's queued)
+        $this->logInitialEntry($normalizedTo, $useCase, $subject, $templateId);
+    }
 
-        // 5. Fail loud if the final driver (including fallback) failed
-        if (! $result->success) {
-            throw new Exception("Final Email Delivery Failure ({$result->providerName}): ".$result->error);
+    /**
+     * Initial log entry to track that an email has been queued.
+     */
+    protected function logInitialEntry($to, $useCase, $subject, ?int $templateId): void
+    {
+        try {
+            \App\Models\EmailLog::create([
+                'recipient' => is_array($to) ? json_encode($to) : (string) $to,
+                'use_case' => $useCase,
+                'template_id' => $templateId,
+                'subject' => substr($subject, 0, 255),
+                'status' => 'queued',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to write initial EmailLog: ' . $e->getMessage());
         }
     }
 
@@ -136,7 +149,7 @@ class EmailDispatcher
     /**
      * Store result in EmailLog.
      */
-    protected function logResult($to, EmailUseCase $useCase, EmailResult $result, string $subject, ?int $templateId): void
+    public function logResult($to, $useCase, \App\Services\Email\Contracts\EmailResult $result, string $subject, ?int $templateId): void
     {
         try {
             // Ensure recipient is a string and not too long for the DB

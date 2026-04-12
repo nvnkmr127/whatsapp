@@ -198,7 +198,7 @@ class PersistMessageJob implements ShouldQueue
                 'direction' => 'inbound',
                 'type' => $msgData['type'],
                 'content' => $content,
-                'metadata' => json_encode($meta),
+                'metadata' => $meta,
                 'status' => 'delivered',
                 'media_id' => $mediaId,
                 'media_type' => $mediaType,

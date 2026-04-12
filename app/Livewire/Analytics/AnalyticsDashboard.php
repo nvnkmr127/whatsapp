@@ -317,22 +317,15 @@ class AnalyticsDashboard extends Component
                 ->toArray();
 
             if (! empty($contactIds)) {
-                // Fetch contacts in chunks
                 \App\Models\Contact::whereIn('id', $contactIds)
-                    ->chunk(500, function ($contacts) use ($handle, $teamId) {
+                    ->with('latestOutboundMessage')
+                    ->chunk(500, function ($contacts) use ($handle) {
                         foreach ($contacts as $contact) {
-                            // Get latest message status for this contact from the filtered range
-                            $latestMsg = Message::where('contact_id', $contact->id)
-                                ->where('team_id', $teamId)
-                                ->where('direction', 'outbound')
-                                ->latest()
-                                ->first();
-
                             fputcsv($handle, [
                                 $contact->name,
                                 $contact->phone_number,
                                 $contact->email,
-                                optional($latestMsg)->status ?? 'N/A',
+                                $contact->latestOutboundMessage->status ?? 'N/A',
                                 optional($contact->updated_at)->format('Y-m-d H:i:s'),
                             ]);
                         }

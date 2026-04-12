@@ -64,6 +64,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </div>
+            <button wire:click="createOrder"
+                class="px-6 py-3 bg-slate-900 dark:bg-wa-teal text-white dark:text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-xl hover:scale-[1.05] transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Manual Order
+            </button>
         </div>
     </div>
 
@@ -93,9 +100,8 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @forelse($orders as $order)
-                        <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-all cursor-pointer"
-                            wire:click="viewDetails({{ $order->id }})">
-                            <td class="px-8 py-5">
+                        <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-all cursor-pointer">
+                            <td class="px-8 py-5" wire:click="viewDetails({{ $order->id }})">
                                 <span
                                     class="text-sm font-black text-slate-900 dark:text-white">#{{ $order->order_id ?? $order->id }}</span>
                             </td>
@@ -311,11 +317,59 @@
         </x-slot>
 
         <x-slot name="footer">
-            <div class="flex gap-3">
+            <div class="flex justify-between w-full">
+                <button wire:click="deleteOrder({{ $viewingOrder->id }})" wire:confirm="Are you sure you want to delete this order? This cannot be undone."
+                    class="px-6 py-3 text-rose-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-rose-50 transition-all">
+                    Terminte Order
+                </button>
                 <button wire:click="$set('showDetailsModal', false)"
                     class="px-6 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-100 transition-all">
                     Dismiss
                 </button>
+            </div>
+        </x-slot>
+    </x-dialog-modal>
+
+    <!-- Create Order Modal -->
+    <x-dialog-modal wire:model.live="showCreateModal">
+        <x-slot name="title">
+            <span class="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Create Manual Order</span>
+        </x-slot>
+        <x-slot name="content">
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Select Customer</label>
+                    <select wire:model="contact_id" class="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-bold">
+                        <option value="">Select Contact...</option>
+                        @foreach(\App\Models\Contact::where('team_id', auth()->user()->currentTeam->id)->orderBy('name')->get() as $c)
+                            <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->phone_number }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Total Amount</label>
+                        <input type="number" wire:model="total_amount" class="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-bold" placeholder="0.00">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Currency</label>
+                        <select wire:model="currency" class="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-bold">
+                            <option value="USD">USD</option>
+                            <option value="INR">INR</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Items JSON (Optional)</label>
+                    <textarea wire:model="items_json" class="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 text-sm font-bold" rows="3" placeholder='[{"product_name": "Example", "quantity": 1, "price": 10.00}]'></textarea>
+                </div>
+            </div>
+        </x-slot>
+        <x-slot name="footer">
+            <div class="flex gap-3">
+                <button wire:click="$set('showCreateModal', false)" class="text-xs font-bold text-slate-400 uppercase tracking-widest mr-4">Cancel</button>
+                <button wire:click="storeOrder" class="px-8 py-3 bg-wa-teal text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl hover:scale-[1.05] transition-all shadow-lg">Create Order</button>
             </div>
         </x-slot>
     </x-dialog-modal>

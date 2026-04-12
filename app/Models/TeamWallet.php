@@ -81,40 +81,39 @@ class TeamWallet extends Model
      *
      * @throws \Exception If balance is insufficient.
      */
-    public function strictDeduct(float $cost): void
+    /**
+     * Strictly deducts from wallet ensuring balance never goes negative.
+     * Must be called within a DB Transaction where this model is lockForUpdate().
+     *
+     * @throws \Exception If balance is insufficient.
+     */
+    public function strictDeduct(float|string $cost): void
     {
-        if ($cost <= 0) {
+        $costStr = number_format((float) $cost, 4, '.', '');
+        if (bccomp($costStr, '0.0000', 4) <= 0) {
             return;
         }
 
         // Force reload from database to avoid caching issues
-        // Using direct DB query bypasses Eloquent's caching
-        $currentBalanceQuery = \Illuminate\Support\Facades\DB::table($this->getTable())
-            ->where('id', $this->id);
+        $currentBalanceRaw = \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->when(\Illuminate\Support\Facades\DB::transactionLevel() > 0, fn($q) => $q->lockForUpdate())
+            ->value('balance');
 
-        // In tests we might not be in a transaction
-        if (\Illuminate\Support\Facades\DB::transactionLevel() > 0) {
-            $currentBalanceQuery->lockForUpdate();
-        }
+        $currentBalanceStr = number_format((float) $currentBalanceRaw, 4, '.', '');
 
-        $currentBalance = (float) $currentBalanceQuery->value('balance');
-
-        // Use string comparison with BC Math if available, otherwise round
-        $currentBalanceStr = number_format($currentBalance, 4, '.', '');
-        $costToDeductStr = number_format($cost, 4, '.', '');
-
-        if (bccomp($currentBalanceStr, $costToDeductStr, 4) === -1) {
-            throw new \Exception("Insufficient wallet balance. Have: {$currentBalanceStr}, Need: {$costToDeductStr}. No negative wallet allowed.");
+        if (bccomp($currentBalanceStr, $costStr, 4) === -1) {
+            throw new \Exception("Insufficient wallet balance. Have: {$currentBalanceStr}, Need: {$costStr}. No negative wallet allowed.");
         }
 
         $this->allowBalanceMutation = true;
 
-        $newBalance = bcsub($currentBalanceStr, $costToDeductStr, 4);
+        $newBalance = bcsub($currentBalanceStr, $costStr, 4);
 
         $affected = \Illuminate\Support\Facades\DB::table($this->getTable())
             ->where('id', $this->id)
-            ->where('balance', '>=', (float) $costToDeductStr - 0.0001)
-            ->update(['balance' => $newBalance]);
+            ->where('balance', '>=', (float) $costStr) // Direct float comparison in SQL is acceptable for >=
+            ->update(['balance' => (float) $newBalance]);
 
         if ($affected === 0) {
             $this->allowBalanceMutation = false;
@@ -123,7 +122,6 @@ class TeamWallet extends Model
 
         // We MUST update the current instance's balance so tests/callers see the new value
         $this->balance = (float) $newBalance;
-
         $this->allowBalanceMutation = false;
     }
 
@@ -131,16 +129,27 @@ class TeamWallet extends Model
      * Safely increments the wallet balance.
      * Should only be called from BillingService::deposit().
      *
-     * @param  float  $amount  Amount to credit. Must be positive.
+     * @param  float|string  $amount  Amount to credit. Must be positive.
      */
-    public function incrementBalance(float $amount): void
+    public function incrementBalance(float|string $amount): void
     {
-        if ($amount <= 0) {
-            throw new \InvalidArgumentException("Deposit amount must be positive. Got: {$amount}");
+        $amountStr = number_format((float) $amount, 4, '.', '');
+        if (bccomp($amountStr, '0.0000', 4) <= 0) {
+            throw new \InvalidArgumentException("Deposit amount must be positive. Got: {$amountStr}");
         }
 
         $this->allowBalanceMutation = true;
-        $this->increment('balance', $amount);
+        
+        $currentBalanceRaw = \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->lockForUpdate()
+            ->value('balance');
+            
+        $currentBalanceStr = number_format((float) $currentBalanceRaw, 4, '.', '');
+        $newBalance = bcadd($currentBalanceStr, $amountStr, 4);
+        
+        $this->update(['balance' => (float) $newBalance]);
+        
         $this->allowBalanceMutation = false;
     }
 

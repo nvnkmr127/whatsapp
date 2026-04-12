@@ -36,10 +36,11 @@
                     <template x-if="message.media_type && message.media_type.startsWith('image')">
                         <img :src="message.media_url"
                             class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm"
+                            loading="lazy"
                             @click="lightboxImage = message.media_url; lightboxOpen = true">
                     </template>
                     <template x-if="message.media_type && message.media_type.startsWith('video')">
-                        <video :src="message.media_url" controls class="w-full max-h-80"></video>
+                        <video :src="message.media_url" controls class="w-full max-h-80" preload="metadata"></video>
                     </template>
                     <template x-if="message.media_type && message.media_type.startsWith('audio')">
                         <div x-data="{ 
@@ -49,14 +50,16 @@
                                     audio: null,
                                     bars: [],
                                     init() {
-                                        this.audio = new Audio(message.media_url);
-                                        this.audio.onloadedmetadata = () => { this.duration = this.audio.duration; };
-                                        this.audio.ontimeupdate = () => { this.current = this.audio.currentTime; };
-                                        this.audio.onended = () => { this.playing = false; this.current = 0; };
                                         let seed = parseInt(String(message.id).replace(/\D/g, '')) || 1;
                                         this.bars = Array.from({length: 25}, (_, i) => 30 + ((seed * (i + 3)) % 70));
                                     },
                                     toggle() {
+                                        if (!this.audio) {
+                                            this.audio = new Audio(message.media_url);
+                                            this.audio.onloadedmetadata = () => { this.duration = this.audio.duration; };
+                                            this.audio.ontimeupdate = () => { this.current = this.audio.currentTime; };
+                                            this.audio.onended = () => { this.playing = false; this.current = 0; };
+                                        }
                                         if (this.playing) { this.audio.pause(); } 
                                         else { this.audio.play(); }
                                         this.playing = !this.playing;

@@ -90,31 +90,31 @@ class MessageWindow extends Component
             $teamId = Auth::user()->currentTeam->id;
 
             return [
-                "echo-private:teams.{$teamId},.MessageReceived" => 'handleIncomingMessage',
-                "echo-private:teams.{$teamId},.MessageStatusUpdated" => 'handleStatusUpdate',
                 "echo-presence:conversation.{$this->conversationId},.MessageReceived" => 'handleIncomingMessage',
                 "echo-presence:conversation.{$this->conversationId},.MessageStatusUpdated" => 'handleStatusUpdate',
-                'templateSelected' => 'handleTemplateSelected',
-                'mediaUploaded' => 'handleMediaUploaded',
-                'mediaDeleted' => 'handleMediaDeleted',
-                'aiSuggestionSelected' => 'handleAiSuggestionSelected',
                 "echo-presence:conversation.{$this->conversationId},client-typing" => 'handleClientTyping',
                 "echo-presence:conversation.{$this->conversationId},here" => 'handlePresence',
                 "echo-presence:conversation.{$this->conversationId},joining" => 'handlePresenceJoin',
                 "echo-presence:conversation.{$this->conversationId},leaving" => 'handlePresenceLeave',
+                'templateSelected' => 'handleTemplateSelected',
+                'mediaUploaded' => 'handleMediaUploaded',
+                'mediaDeleted' => 'handleMediaDeleted',
+                'aiSuggestionSelected' => 'handleAiSuggestionSelected',
             ];
         }
 
         return [];
     }
 
+    #[\Livewire\Attributes\Renderless]
     public function handleStatusUpdate($event)
     {
-        // This will trigger a re-render or we can search and update the property
-        $this->loadConversation();
+        // Handled via Echo listeners in Alpine store usually
     }
 
     public $chatMessages = []; // Dedicated property
+
+    public $messageCount = 50;
 
     public $lastMessageId = null;
 
@@ -138,13 +138,17 @@ class MessageWindow extends Component
         $this->conversation = Conversation::with(['contact'])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
 
         if ($this->conversation) {
-            // Load messages specifically and assign to public property
-            $this->chatMessages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
+            // Load messages with pagination to prevent memory exhaustion
+            $this->chatMessages = $this->conversation->messages()
+                ->orderBy('created_at', 'desc')
+                ->take($this->messageCount)
+                ->get()
+                ->reverse();
 
             if (count($this->chatMessages) > 0) {
                 $latestId = $this->chatMessages->last()->id;
 
-                // If we have a lastMessageId tracking and the new one is different -> New Message!
+                // Sync UI state
                 if ($this->lastMessageId && $latestId > $this->lastMessageId) {
                     $this->dispatch('play-sound');
                     $this->dispatch('chat-scroll-bottom');
@@ -153,7 +157,7 @@ class MessageWindow extends Component
                 $this->lastMessageId = $latestId;
             }
 
-            // Mark as read locally and sync to WhatsApp if enabled
+            // Mark as read locally and sync to WhatsApp asynchronously
             $unreadMessages = $this->conversation->messages()
                 ->where('direction', 'inbound')
                 ->whereNull('read_at')
@@ -165,15 +169,9 @@ class MessageWindow extends Component
                     ->update(['read_at' => now()]);
 
                 if (Auth::user()->currentTeam->read_receipts_enabled) {
-                    $wa = new \App\Services\WhatsAppService(Auth::user()->currentTeam);
-                    foreach ($unreadMessages as $msg) {
-                        if ($msg->whatsapp_message_id) {
-                            try {
-                                $wa->markRead($msg->whatsapp_message_id);
-                            } catch (\Exception $e) {
-                                Log::warning("Failed to mark message {$msg->whatsapp_message_id} as read on WhatsApp: ".$e->getMessage());
-                            }
-                        }
+                    $msgIds = $unreadMessages->pluck('whatsapp_message_id')->filter()->toArray();
+                    if (!empty($msgIds)) {
+                        \App\Jobs\MarkAsReadJob::dispatch(Auth::user()->currentTeam->id, $msgIds);
                     }
                 }
                 $this->dispatch('chat-messages-read');
@@ -181,6 +179,22 @@ class MessageWindow extends Component
         } else {
             $this->chatMessages = [];
         }
+    }
+
+    public function handleTeamWideMessage($event)
+    {
+        // Only reload if the message belongs to THIS conversation
+        if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
+            $this->handleIncomingMessage($event);
+        }
+        // Otherwise ignore to save processing
+    }
+
+    public function loadMore()
+    {
+        $this->messageCount += 50;
+        $this->loadConversation();
+        $this->dispatch('chat-scroll-to-id', ['id' => $this->chatMessages->first()->id]);
     }
 
     // public function updatedNewAttachment() // Removed
@@ -663,33 +677,33 @@ class MessageWindow extends Component
         $messages = $this->conversation->messages()->orderBy('created_at', 'asc')->get();
         $filename = "conversation_{$this->conversation->id}_".now()->format('Y-m-d_H-i-s').'.csv';
 
-        return response()->streamDownload(function () use ($messages) {
+        return response()->streamDownload(function () {
             $handle = fopen('php://output', 'w');
-
-            // Add BOM for Excel UTF-8 support
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // CSV Headers
             fputcsv($handle, ['Timestamp', 'Sender', 'Type', 'Content', 'Status']);
 
-            foreach ($messages as $msg) {
-                $sender = $msg->direction === 'inbound'
-                    ? ($this->conversation->contact->name ?? $this->conversation->contact->phone_number)
-                    : (isset($msg->metadata['agent_name']) ? "Agent ({$msg->metadata['agent_name']})" : 'System/Agent');
+            $this->conversation->messages()
+                ->orderBy('created_at', 'asc')
+                ->chunk(200, function ($messages) use ($handle) {
+                    foreach ($messages as $msg) {
+                        $sender = $msg->direction === 'inbound'
+                            ? ($this->conversation->contact->name ?? $this->conversation->contact->phone_number)
+                            : (isset($msg->metadata['agent_name']) ? "Agent ({$msg->metadata['agent_name']})" : 'System/Agent');
 
-                $content = $msg->content;
-                if ($msg->type !== 'text') {
-                    $content = "[{$msg->type}] ".($msg->caption ?? 'Media asset: '.($msg->media_url ?? 'N/A'));
-                }
+                        $content = $msg->content;
+                        if ($msg->type !== 'text') {
+                            $content = "[{$msg->type}] ".($msg->caption ?? 'Media asset: '.($msg->media_url ?? 'N/A'));
+                        }
 
-                fputcsv($handle, [
-                    $msg->created_at->format('Y-m-d H:i:s'),
-                    $sender,
-                    ucfirst($msg->type),
-                    $content,
-                    ucfirst($msg->status),
-                ]);
-            }
+                        fputcsv($handle, [
+                            $msg->created_at->format('Y-m-d H:i:s'),
+                            $sender,
+                            ucfirst($msg->type),
+                            $content,
+                            ucfirst($msg->status),
+                        ]);
+                    }
+                });
 
             fclose($handle);
         }, $filename);
@@ -717,14 +731,10 @@ class MessageWindow extends Component
         }
     }
 
+    #[\Livewire\Attributes\Renderless]
     public function handleIncomingMessage($event)
     {
-        Log::info('MessageWindow: handleIncomingMessage received', ['event' => $event]);
-        if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
-            $this->loadConversation();
-            $this->dispatch('chat-scroll-bottom');
-            $this->dispatch('play-sound');
-        }
+        // Handled via Alpine Store
     }
 
     public function handlePresence($users)
@@ -747,10 +757,10 @@ class MessageWindow extends Component
             ->all();
     }
 
+    #[\Livewire\Attributes\Renderless]
     public function handleClientTyping($event)
     {
-        // This will be handled by JS listener mainly, but we can have a fallback here if needed
-        // For now, we rely on the JS listener in the blade file for visual feedback
+        // Handled via JS listener mainly
     }
 
     public function toggleBot()

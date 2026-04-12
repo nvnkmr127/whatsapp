@@ -159,10 +159,15 @@ trait HasNodeEditing
 
     public function updated($propertyName)
     {
+        // sync local properties to the focused node in the array
         if (str_starts_with($propertyName, 'node') || str_starts_with($propertyName, 'triggerConfig')) {
             $this->updateNodeData();
+            
+            // Only run expensive validation for non-text fields to keep UI snappy
+            if (!in_array($propertyName, ['nodeText', 'nodeLabel', 'nodeDescription'])) {
+                $this->runValidation();
+            }
         }
-        $this->runValidation();
     }
 
     public function updatedTriggerKeywordsString($value)

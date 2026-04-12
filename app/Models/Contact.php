@@ -143,4 +143,13 @@ class Contact extends Model
     {
         return $this->hasMany(AutomationRun::class);
     }
+
+    public function latestOutboundMessage()
+    {
+        return $this->hasOne(Message::class)->ofMany([
+            'id' => 'max'
+        ], function ($query) {
+            $query->where('direction', 'outbound');
+        });
+    }
 }

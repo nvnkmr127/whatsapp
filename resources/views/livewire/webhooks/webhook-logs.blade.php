@@ -207,7 +207,7 @@
                     <h3 class="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Webhook
                         Payload</h3>
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Details for
-                        #{{ $selectedPayload?->id ?? '...' }}</p>
+                        #{{ $this->selectedPayload?->id ?? '...' }}</p>
                 </div>
             </div>
         </x-slot>
@@ -221,8 +221,8 @@
                         <label
                             class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Status</label>
                         <span
-                            class="text-sm font-black uppercase {{ $selectedPayload?->status === 'failed' ? 'text-rose-500' : 'text-wa-teal' }}">
-                            {{ $selectedPayload?->status ?? 'Unknown' }}
+                            class="text-sm font-black uppercase {{ $this->selectedPayload?->status === 'failed' ? 'text-rose-500' : 'text-wa-teal' }}">
+                            {{ $this->selectedPayload?->status ?? 'Unknown' }}
                         </span>
                     </div>
                     <div
@@ -231,48 +231,48 @@
                             class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Received
                             At</label>
                         <span class="text-sm font-black text-slate-900 dark:text-white uppercase">
-                            {{ $selectedPayload?->created_at?->format('F d, Y H:i:s') ?? '...' }}
+                            {{ $this->selectedPayload?->created_at?->format('F d, Y H:i:s') ?? '...' }}
                         </span>
                     </div>
                 </div>
 
-                @if(($selectedPayload?->retry_count ?? 0) > 0 || $selectedPayload?->next_retry_at)
+                @if(($this->selectedPayload?->retry_count ?? 0) > 0 || $this->selectedPayload?->next_retry_at)
                     <div class="grid grid-cols-2 gap-4">
                         <div class="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/20">
                             <label class="text-[10px] font-black text-amber-500 uppercase tracking-widest block mb-1">Retry Count</label>
                             <span class="text-sm font-black text-amber-600 dark:text-amber-400">
-                                {{ $selectedPayload->retry_count }} Attempts
+                                {{ $this->selectedPayload->retry_count }} Attempts
                             </span>
                         </div>
-                        @if($selectedPayload?->next_retry_at)
+                        @if($this->selectedPayload?->next_retry_at)
                         <div class="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800/20">
                             <label class="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1">Scheduled for</label>
                             <span class="text-sm font-black text-blue-600 dark:text-blue-400">
-                                {{ $selectedPayload->next_retry_at->diffForHumans() }}
+                                {{ $this->selectedPayload->next_retry_at->diffForHumans() }}
                             </span>
                         </div>
                         @endif
                     </div>
                 @endif
 
-                @if($selectedPayload?->error_message)
+                @if($this->selectedPayload?->error_message)
                     <div x-data="{ showTrace: false }" class="space-y-4">
                         <div class="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-900/50">
                             <div class="flex items-center justify-between mb-1">
                                 <label class="text-[10px] font-black text-rose-500 uppercase tracking-widest">Processing Error</label>
-                                @if($selectedPayload?->last_error)
+                                @if($this->selectedPayload?->last_error)
                                     <button @click="showTrace = !showTrace" class="text-[9px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest underline underline-offset-4">
                                         <span x-text="showTrace ? 'Hide Trace' : 'Show Full Log'"></span>
                                     </button>
                                 @endif
                             </div>
-                            <p class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ $selectedPayload->error_message }}</p>
+                            <p class="text-xs font-bold text-rose-600 dark:text-rose-400">{{ $this->selectedPayload->error_message }}</p>
                         </div>
 
                         <div x-show="showTrace" x-cloak class="animate-in slide-in-from-top-2 duration-300">
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Full Stack Trace</label>
                             <div class="bg-[#0D1117] rounded-2xl p-6 border border-slate-800">
-                                <pre class="text-[9px] font-mono text-rose-400/80 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">{{ $selectedPayload->last_error }}</pre>
+                                <pre class="text-[9px] font-mono text-rose-400/80 whitespace-pre-wrap overflow-x-auto max-h-60 custom-scrollbar">{{ $this->selectedPayload->last_error }}</pre>
                             </div>
                         </div>
                     </div>
@@ -284,7 +284,7 @@
                     <div
                         class="bg-[#0D1117] rounded-2xl p-6 overflow-x-auto overflow-y-auto max-h-96 custom-scrollbar border border-slate-800 shadow-2xl">
                         <pre
-                            class="text-xs font-mono text-wa-teal leading-relaxed select-all">{{ json_encode($selectedPayload?->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                            class="text-xs font-mono text-wa-teal leading-relaxed select-all">{{ json_encode($this->selectedPayload?->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                     </div>
                 </div>
             </div>

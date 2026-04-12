@@ -196,18 +196,39 @@
                         console.log('CSRF token expired (419), refreshing page...');
                         preventDefault();
                         window.location.reload();
+                    } else if (status === 500) {
+                        window.dispatchEvent(new CustomEvent('notify', { 
+                            detail: { message: 'A server error occurred. Please try again later.', type: 'error' } 
+                        }));
                     }
                 });
             });
         });
 
-        // Also handle fetch/axios 419 errors globally
-        window.addEventListener('error', function (event) {
-            if (event.message && event.message.includes('419')) {
-                console.log('CSRF error detected, refreshing page...');
-                window.location.reload();
-            }
-        }, true);
+        // Network Status Listeners
+        window.addEventListener('online', () => {
+            window.dispatchEvent(new CustomEvent('notify', { 
+                detail: { message: 'Your internet connection has been restored.', type: 'success' } 
+            }));
+        });
+
+        window.addEventListener('offline', () => {
+            window.dispatchEvent(new CustomEvent('notify', { 
+                detail: { message: 'You are currently offline. Some features may not work.', type: 'warning' } 
+            }));
+        });
+
+        // Handle generic fetch errors
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            return originalFetch.apply(this, arguments).catch(err => {
+                if (!window.navigator.onLine) return Promise.reject(err);
+                window.dispatchEvent(new CustomEvent('notify', { 
+                    detail: { message: 'Network request failed. Please check your connection.', type: 'error' } 
+                }));
+                return Promise.reject(err);
+            });
+        };
     </script>
 </body>
 

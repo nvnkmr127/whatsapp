@@ -47,14 +47,10 @@ class WhatsAppWebhookController extends Controller
         $data = $request->all();
         $signature = $request->header('X-Hub-Signature-256');
 
-        if (config('app.debug')) {
-            try {
-                // Mask sensitive info for debug logs
-                $maskedData = $this->maskSensitiveData($data);
-                \Illuminate\Support\Facades\Log::channel('whatsapp')->debug('WhatsApp Webhook Received', $maskedData);
-            } catch (\Exception $e) {
-                Log::warning('Failed to write to whatsapp log channel: '.$e->getMessage());
-            }
+        // 1. Signature Verification (Security First)
+        if (!$this->verifySignature($request)) {
+            Log::warning('WhatsApp Webhook: Invalid Signature', ['signature' => $signature]);
+            return response('Invalid Signature', 403);
         }
 
         // Store Raw Payload
@@ -96,6 +92,31 @@ class WhatsAppWebhookController extends Controller
         }
 
         return response('EVENT_RECEIVED', 200);
+    }
+
+    /**
+     * Verify the X-Hub-Signature-256 header.
+     */
+    protected function verifySignature(Request $request): bool
+    {
+        $signature = $request->header('X-Hub-Signature-256');
+        if (! $signature) {
+            return false;
+        }
+
+        $secret = config('whatsapp.app_secret');
+        if (! $secret) {
+            Log::critical('WhatsApp Webhook: APP_SECRET not configured. Blocking all webhooks for safety.');
+
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $request->getContent(), $secret);
+
+        // signature is in format 'sha256=HEX_HASH'
+        $actual = str_replace('sha256=', '', $signature);
+
+        return hash_equals($expected, $actual);
     }
 
     /**

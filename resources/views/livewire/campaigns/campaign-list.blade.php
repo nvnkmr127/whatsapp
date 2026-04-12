@@ -125,10 +125,19 @@
                                 </button>
                             @endif
 
-                            <a href="{{ route('campaigns.show', $campaign->id) }}"
-                                class="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                                View Report
-                            </a>
+                            @if($campaign->status === 'draft' || $campaign->status === 'scheduled')
+                                <a href="{{ route('campaigns.create', $campaign->id) }}"
+                                    class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-teal/20">
+                                    Edit
+                                </a>
+                            @endif
+
+                            @if($campaign->status !== 'draft')
+                                <a href="{{ route('campaigns.show', $campaign->id) }}"
+                                    class="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    View Report
+                                </a>
+                            @endif
 
                             <button wire:click="cloneCampaign({{ $campaign->id }})"
                                 class="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors flex items-center gap-2">

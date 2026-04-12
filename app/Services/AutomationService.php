@@ -24,7 +24,6 @@ class AutomationService
 
     protected $maxSteps;
 
-    protected $nodeHandlers = [];
 
     public function __construct(WhatsAppService $whatsapp, WhatsAppHealthMonitor $healthMonitor, PolicyService $policyService)
     {
@@ -35,14 +34,6 @@ class AutomationService
         $this->policyService = $policyService;
         $this->maxSteps = config('automation.max_steps', 50);
         $this->handoff = new BotHandoffService;
-
-        // Initialize Node Handlers (Strategy Pattern)
-        $this->nodeHandlers = [
-            'text' => new \App\Core\Automations\NodeHandlers\MessageNodeHandler($whatsapp),
-            'message' => new \App\Core\Automations\NodeHandlers\MessageNodeHandler($whatsapp),
-            'question' => new \App\Core\Automations\NodeHandlers\QuestionNodeHandler($whatsapp),
-            'user_input' => new \App\Core\Automations\NodeHandlers\QuestionNodeHandler($whatsapp),
-        ];
     }
 
     public function setWhatsAppService(WhatsAppService $whatsapp)
@@ -502,6 +493,7 @@ class AutomationService
                 return;
             }
 
+        return DB::transaction(function () use ($automation, $contact, $initialVariables) {
             // 0. Billing Enforcement
             if (! $automation->team->canAccess('automations')) {
                 Log::warning("Automation #{$automation->id} skipped: Feature [automations] not accessible for team {$automation->team_id}.");
@@ -523,8 +515,6 @@ class AutomationService
 
                 return;
             }
-
-            // Preflight Check (moved up before interruption)
 
             // Preflight Check
             $validation = $automation->validate();
@@ -579,6 +569,11 @@ class AutomationService
 
             Log::info("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
 
+            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
+
+            return $run;
+        });
+    }
             // Track Funnel Event
             \App\Models\CustomerEvent::create([
                 'team_id' => $automation->team_id,
@@ -621,7 +616,6 @@ class AutomationService
         }
 
         Log::info("AutomationRun #{$run->id}: Executing node {$nodeId} (type: {$node['type']})");
-        $run->increment('step_count');
 
         // Infinite Loop protection (recursion gate)
         if ($run->step_count > 50) {
@@ -1597,10 +1591,7 @@ class AutomationService
             $context = $kbService->searchContext($teamId, $run->state_data['variables']['last_message'] ?? $node['data']['prompt'], $sourceIdsToUse);
         }
 
-        $prompt = $node['data']['prompt'] ?? '';
-        foreach ($run->state_data['variables'] as $k => $v) {
-            $prompt = str_replace('{{'.$k.'}}', (string) $v, $prompt);
-        }
+        $prompt = $this->resolveVariable($run, $node['data']['prompt'] ?? '');
 
         if ($context) {
             $strict = $node['data']['kb_strict'] ?? true;
@@ -1619,10 +1610,14 @@ STRICT GROUNDING RULES:
             }
         }
 
-        $response = \Illuminate\Support\Facades\Http::withToken($apiKey)->post('https://api.openai.com/v1/chat/completions', [
-            'model' => 'gpt-4o',
-            'messages' => [['role' => 'user', 'content' => $prompt]],
-        ]);
+            $response = retry(3, function () use ($apiKey, $prompt) {
+                return \Illuminate\Support\Facades\Http::withToken($apiKey)
+                    ->timeout(30)
+                    ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => 'gpt-4o',
+                        'messages' => [['role' => 'user', 'content' => $prompt]],
+                    ]);
+            }, 500);
 
         if ($response->successful()) {
             $content = $response->json('choices.0.message.content');
@@ -1664,13 +1659,15 @@ STRICT GROUNDING RULES:
             $request->withHeader($key, $this->resolveVariable($run, $value));
         }
 
-        if ($method === 'POST') {
-            $response = $request->withBody($body, 'application/json')->post($url);
-        } elseif ($method === 'PUT') {
-            $response = $request->withBody($body, 'application/json')->put($url);
-        } else {
-            $response = $request->get($url);
-        }
+        $response = retry(3, function () use ($request, $method, $url, $body) {
+            if ($method === 'POST') {
+                return $request->withBody($body, 'application/json')->post($url);
+            } elseif ($method === 'PUT') {
+                return $request->withBody($body, 'application/json')->put($url);
+            } else {
+                return $request->get($url);
+            }
+        }, 1000);
 
         if ($response->successful()) {
             if (isset($node['data']['save_to'])) {
@@ -1876,7 +1873,7 @@ STRICT GROUNDING RULES:
             'empty' => empty($actual),
             'is_not_empty',
             'not_empty' => ! empty($actual),
-            'regex' => (bool) @preg_match('/'.$value.'/i', (string) $actual),
+            'regex' => (bool) @preg_match('#'.str_replace('#', '\#', $value).'#i', (string) $actual),
             default => false,
         };
     }
@@ -1908,7 +1905,8 @@ STRICT GROUNDING RULES:
         $all = array_merge($systemVars, $vars);
 
         // Replace {{variable_name}} or {{global.key}}
-        return preg_replace_callback('/\{\{(\w+(\.\w+)?)\}\}/', function ($m) use ($all, $globalVars) {
+        // Broadened regex to support dashes, dots, and underscores
+        return preg_replace_callback('/\{\{([a-zA-Z0-9\._-]+)\}\}/', function ($m) use ($all, $globalVars) {
             $key = $m[1];
             if (str_starts_with($key, 'global.')) {
                 $gkey = str_replace('global.', '', $key);

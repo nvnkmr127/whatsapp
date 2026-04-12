@@ -1,6 +1,6 @@
 export default (wire, conversationId, teamId, userId) => ({
-    itemHeight: 80, // Average height estimate
-    buffer: 5,
+    itemHeight: 72, // Slightly tighter estimate
+    buffer: 15, // Larger buffer to handle varied heights better
     viewportHeight: 0,
     scrollTop: 0,
     msgBody: '',

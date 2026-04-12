@@ -18,11 +18,17 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
+use App\Traits\HasFlashMessages;
+
 class AutomationBuilder extends Component
 {
-    use HasHistory, HasNodeEditing, HasNodes, HasPersistence, HasTemplates, HasTestMode, HasValidation, WithFileUploads;
+    use HasFlashMessages, HasHistory, HasNodeEditing, HasNodes, HasPersistence, HasTemplates, HasTestMode, HasValidation, WithFileUploads;
 
     public $automationId;
+
+    protected $listeners = [
+        'template-selected' => 'loadTemplate'
+    ];
 
     public $name;
 
@@ -111,36 +117,7 @@ class AutomationBuilder extends Component
 
     public $nodeDelayHours = 0;
 
-    public $availableTags = [];
-
-    public $approvedTemplates = [];
-
-    public $availableFlows = [];
-
-    public $uploadFile;
-
-    public $availableKnowledgeBaseSources = [];
-
-    public $availableCampaigns = [];
-
-    public $availableUsers = [];
-
-    public $availablePipelines = [];
-
-    public $availableWorkflows = [];
-
-    public $availableEmailTemplates = [];
-
-    public $nodeUseKb = false;
-
-    public $nodeKbScope = 'all';
-
-    public $nodeKbSourceIds = [];
-
-    public $nodeKbStrict = true;
-
     public $validationIssues = [];
-
     public $isActivatable = true;
 
     // Versioning & Publishing
@@ -164,6 +141,33 @@ class AutomationBuilder extends Component
     public $debugMode = false;
 
     public $debugLogs = [];
+
+    #[Computed]
+    public function availableTags() { return \App\Models\ContactTag::where('team_id', Auth::user()->currentTeam->id)->get()->toArray(); }
+    
+    #[Computed]
+    public function approvedTemplates() { return \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->where('status', 'APPROVED')->get()->toArray(); }
+    
+    #[Computed]
+    public function availableFlows() { return \App\Models\Flow::where('team_id', Auth::user()->currentTeam->id)->get()->toArray(); }
+    
+    #[Computed]
+    public function availableKnowledgeBaseSources() { return \App\Models\KnowledgeBaseSource::where('team_id', Auth::user()->currentTeam->id)->whereIn('status', [\App\Models\KnowledgeBaseSource::STATUS_READY, 'indexed'])->get()->toArray(); }
+    
+    #[Computed]
+    public function availableCampaigns() { return \App\Models\Campaign::where('team_id', Auth::user()->currentTeam->id)->get()->toArray(); }
+    
+    #[Computed]
+    public function availableUsers() { return Auth::user()->currentTeam->users()->get()->toArray(); }
+    
+    #[Computed]
+    public function availablePipelines() { return \App\Models\Pipeline::where('team_id', Auth::user()->currentTeam->id)->with('stages')->get()->toArray(); }
+    
+    #[Computed]
+    public function availableWorkflows() { return \App\Models\Automation::where('team_id', Auth::user()->currentTeam->id)->where('is_active', true)->get()->toArray(); }
+    
+    #[Computed]
+    public function availableEmailTemplates() { return \App\Models\EmailTemplate::all()->toArray(); }
 
     #[Computed]
     public function risks()
@@ -209,31 +213,10 @@ class AutomationBuilder extends Component
 
         Gate::authorize('chat-access');
 
+        // We no longer populate them in mount to keep state lean
+        // They will be fetched via #[Computed] properties when needed in the view
+
         $team = Auth::user()->currentTeam;
-        if (! $team) {
-            // Fallback for tests or users without a team
-            $this->availableTags = [];
-            $this->approvedTemplates = [];
-            $this->availableFlows = [];
-            $this->availableKnowledgeBaseSources = [];
-
-            return;
-        }
-
-        $this->availableTags = \App\Models\ContactTag::where('team_id', $team->id)->get()->toArray();
-        $this->approvedTemplates = \App\Models\WhatsappTemplate::where('team_id', $team->id)
-            ->where('status', 'APPROVED')
-            ->get()->toArray();
-        $this->availableFlows = \App\Models\Flow::where('team_id', $team->id)->get()->toArray();
-        $this->availableKnowledgeBaseSources = \App\Models\KnowledgeBaseSource::where('team_id', $team->id)
-            ->whereIn('status', [\App\Models\KnowledgeBaseSource::STATUS_READY, 'indexed'])
-            ->get()->toArray();
-        $this->availableCampaigns = \App\Models\Campaign::where('team_id', $team->id)->get()->toArray();
-        $this->availableUsers = $team->users()->get()->toArray();
-        $this->availablePipelines = \App\Models\Pipeline::where('team_id', $team->id)->with('stages')->get()->toArray();
-        $this->availableWorkflows = \App\Models\Automation::where('team_id', $team->id)->where('is_active', true)->get()->toArray();
-        $this->availableEmailTemplates = \App\Models\EmailTemplate::all()->toArray();
-
         if ($automationId) {
             $automation = Automation::where('team_id', $team->id)->findOrFail($automationId);
             $this->automationId = $automation->id;
@@ -379,23 +362,31 @@ class AutomationBuilder extends Component
 
     public function updated($property)
     {
-        // 1. Logic for trigger keywords string sync
+        // 1. Skip heavy logic for UI-only state (e.g., modals, search)
+        $uiState = [
+            'selectedNodeId', 'selectedEdgeIndex', 'isDirty', 'debugLogs', 
+            'validationIssues', 'showPublishModal', 'showErrorModal', 
+            'showTemplatesModal', 'showTestModal', 'publishNote',
+            'testContactSearch', 'templateSearch', 'selectedIndustry', 'selectedUseCase'
+        ];
+
+        if (in_array($property, $uiState)) {
+            return;
+        }
+
+        // 2. Logic for trigger keywords string sync
         if ($property === 'triggerKeywordsString') {
             $this->triggerConfig['keywords'] = array_filter(array_map('trim', explode(',', $this->triggerKeywordsString)));
             $this->updateNodeData();
         }
 
-        // 2. Logic from HasNodeEditing trait
+        // 3. Logic for node data
         if (str_starts_with($property, 'node') || str_starts_with($property, 'triggerConfig')) {
             $this->updateNodeData();
         }
-        $this->runValidation();
 
-        // 3. Dirty Tracking
-        $uiState = ['selectedNodeId', 'selectedEdgeIndex', 'isDirty', 'debugLogs', 'validationIssues', 'showPublishModal', 'showErrorModal', 'publishNote'];
-        if (! in_array($property, $uiState)) {
-            $this->isDirty = true;
-        }
+        $this->runValidation();
+        $this->isDirty = true;
     }
 
     public function render()

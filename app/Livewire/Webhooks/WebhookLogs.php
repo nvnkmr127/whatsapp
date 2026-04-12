@@ -21,7 +21,7 @@ class WebhookLogs extends Component
 
     public $perPage = 15;
 
-    public $selectedPayload = null;
+    public $selectedPayloadId = null;
 
     public $showDetailsModal = false;
 
@@ -52,27 +52,20 @@ class WebhookLogs extends Component
 
     public function viewDetails($id)
     {
-        $user = auth()->user();
-        $team = $user->currentTeam;
-
-        if (! $team && ! $user->isSuperAdmin()) {
-            return;
-        }
-
-        $query = WebhookPayload::query();
-
-        if ($team && ! $user->isSuperAdmin()) {
-            $query->where('waba_id', $team->whatsapp_business_account_id);
-        }
-
-        $this->selectedPayload = $query->find($id);
+        $this->selectedPayloadId = $id;
         $this->showDetailsModal = true;
     }
 
     public function closeDetails()
     {
         $this->showDetailsModal = false;
-        $this->selectedPayload = null;
+        $this->selectedPayloadId = null;
+    }
+
+    public function getSelectedPayloadProperty()
+    {
+        if (!$this->selectedPayloadId) return null;
+        return WebhookPayload::find($this->selectedPayloadId);
     }
 
     public function resetFilters()

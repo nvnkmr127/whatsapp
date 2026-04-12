@@ -241,7 +241,10 @@
                             Profile</label>
                         <div
                             class="aspect-square bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 relative group shadow-inner">
-                            @if($image_url)
+                            @if($imageFile)
+                                <img src="{{ $imageFile->temporaryUrl() }}"
+                                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                            @elseif($image_url)
                                 <img src="{{ $image_url }}"
                                     class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                                 <div
@@ -270,8 +273,18 @@
 
                     <div class="space-y-4">
                         <div class="space-y-2">
-                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Source
-                                URL</label>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Upload Image (Preferred)</label>
+                            <div class="relative group/upload">
+                                <input type="file" wire:model="imageFile" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                                <div class="w-full bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-xs font-bold text-center text-slate-400 group-hover/upload:border-wa-teal transition-all">
+                                    {{ $imageFile ? $imageFile->getClientOriginalName() : 'Choose local file...' }}
+                                </div>
+                            </div>
+                            @error('imageFile') <span class="text-rose-500 text-[9px] font-bold uppercase tracking-wider">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">OR Source URL</label>
                             <input wire:model.live.debounce.300ms="image_url" type="url"
                                 class="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-wa-teal/20 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
                                 placeholder="https://image-source.com/...">

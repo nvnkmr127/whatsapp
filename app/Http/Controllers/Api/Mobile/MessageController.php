@@ -50,10 +50,11 @@ class MessageController extends Controller
         $request->validate([
             'type' => 'required|in:text,image,document,template',
             'content' => 'required_if:type,text|string',
-            'media_path' => 'required_if:type,image,document|string',
+            'media_url' => 'required_if:type,image,document|string',
         ]);
 
-        $team = $request->user()->currentTeam;
+        $user = $request->user();
+        $team = $user->currentTeam;
         
         // Meta Policy: Check 24-hour window for text/media messages
         if (in_array($request->type, ['text', 'image', 'document']) && !$conversation->isWithin24Hours()) {
@@ -68,14 +69,14 @@ class MessageController extends Controller
         $contact = $conversation->contact;
 
         $message = Message::create([
-            'team_id' => $user->currentTeam->id,
+            'team_id' => $team->id,
             'contact_id' => $conversation->contact_id,
             'conversation_id' => $conversation->id,
             'user_id' => $user->id,
             'direction' => 'outbound',
             'type' => $request->input('type', 'text'),
             'content' => $request->input('content'),
-            'media_url' => $request->input('media_path'),
+            'media_url' => $request->input('media_url'),
             'reply_to_message_id' => $request->input('reply_to_message_id'),
             'status' => 'pending',
         ]);

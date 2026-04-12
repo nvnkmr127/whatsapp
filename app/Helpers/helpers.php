@@ -107,3 +107,14 @@ if (! function_exists('money')) {
         return '$'.number_format((float) $amount, 2);
     }
 }
+
+if (! function_exists('flash_message')) {
+    /**
+     * Flash a message to the session for toast notifications.
+     * types: success, error, warning, info
+     */
+    function flash_message($message, $type = 'success')
+    {
+        session()->flash($type, $message);
+    }
+}

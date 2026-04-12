@@ -12,7 +12,7 @@
             selectedId: null,
             selectedEdgeIndex: null,
             animationOffset: 0,
-            availableTags: @entangle('availableTags'),
+            availableTags: @js($this->availableTags),
             debugLogs: @entangle('debugLogs'),
             validationIssues: @entangle('validationIssues'),
             stepMetadata: @entangle('stepMetadata'),
@@ -95,14 +95,33 @@
             init() {
                 const canvas = this.$refs.canvas;
                 this.ctx = canvas.getContext('2d');
+                
+                // Animation for active edges only
+                let animationId = null;
                 const animate = () => {
-                    this.animationOffset = (this.animationOffset - 1) % 40;
-                    this.updateCanvas();
-                    requestAnimationFrame(animate);
+                    if (this.selectedEdgeIndex !== null) {
+                        this.animationOffset = (this.animationOffset - 1) % 40;
+                        this.updateCanvas();
+                        animationId = requestAnimationFrame(animate);
+                    } else {
+                        animationId = null;
+                    }
                 };
-                requestAnimationFrame(animate);
+
                 this.$watch('nodes', () => this.updateCanvas());
                 this.$watch('edges', () => this.updateCanvas());
+                this.$watch('scale', () => this.updateCanvas());
+                this.$watch('panX', () => this.updateCanvas());
+                this.$watch('panY', () => this.updateCanvas());
+                this.$watch('selectedId', () => this.updateCanvas());
+                this.$watch('selectedEdgeIndex', (val) => {
+                    this.updateCanvas();
+                    if (val !== null && !animationId) {
+                        animationId = requestAnimationFrame(animate);
+                    }
+                });
+                
+                this.updateCanvas();
             },
 
             startPan(e) {

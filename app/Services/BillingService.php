@@ -223,11 +223,18 @@ class BillingService
         ];
     }
 
+    protected static $warningCache = [];
+
     /**
      * Identify which resources are near or over their limits.
      */
     public function getWarningStatus(Team $team): array
     {
+        $cacheId = $team->id;
+        if (isset(static::$warningCache[$cacheId])) {
+            return static::$warningCache[$cacheId];
+        }
+
         $stats = $this->getDetailedUsageStats($team);
         $warnings = [];
         $alertsToDispatch = [];
@@ -306,7 +313,7 @@ class BillingService
             }
         }
 
-        return $warnings;
+        return static::$warningCache[$cacheId] = $warnings;
     }
 
     public function deposit(Team $team, $amount, $note = 'Deposit')

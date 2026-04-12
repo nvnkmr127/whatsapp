@@ -355,6 +355,18 @@
         <div class="min-h-full px-4 sm:px-12 py-6 space-y-1 relative"
             :style="'padding-top: ' + renderConfig.top + 'px; padding-bottom: ' + renderConfig.bottom + 'px'">
 
+            <!-- Load More -->
+            <div class="flex justify-center mb-6">
+                <button wire:click="loadMore" wire:loading.attr="disabled"
+                    class="px-5 py-2 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-sm text-slate-500 dark:text-slate-400 text-tiny font-black uppercase tracking-widest rounded-full border border-slate-200 dark:border-slate-700 transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
+                    <span wire:loading.remove wire:target="loadMore">{{ __('Load Previous Messages') }}</span>
+                    <span wire:loading wire:target="loadMore" class="flex items-center gap-2">
+                        <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        {{ __('Loading...') }}
+                    </span>
+                </button>
+            </div>
+
             <!-- Loading Indicator -->
             <div x-show="$store.chat.loading" class="flex justify-center py-4">
                 <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-wa-teal"></div>

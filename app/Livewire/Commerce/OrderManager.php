@@ -4,6 +4,7 @@ namespace App\Livewire\Commerce;
 
 use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -22,6 +23,52 @@ class OrderManager extends Component
 
     // Status Update
     public $newStatus = '';
+
+    public $showCreateModal = false;
+
+    // Create Order Form
+    public $contact_id;
+    public $total_amount;
+    public $currency = 'USD';
+    public $items_json = '[]';
+
+    public function createOrder()
+    {
+        $this->reset(['contact_id', 'total_amount', 'items_json']);
+        $this->showCreateModal = true;
+    }
+
+    public function storeOrder()
+    {
+        $this->validate([
+            'contact_id' => 'required|exists:contacts,id',
+            'total_amount' => 'required|numeric|min:0',
+        ]);
+
+        Order::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->contact_id,
+            'total_amount' => $this->total_amount,
+            'currency' => $this->currency,
+            'status' => 'pending',
+            'items' => json_decode($this->items_json, true) ?: [],
+            'order_id' => 'MAN-' . strtoupper(Str::random(8)),
+            'source' => 'manual',
+        ]);
+
+        $this->showCreateModal = false;
+        session()->flash('flash.banner', 'Manual order created.');
+        session()->flash('flash.bannerStyle', 'success');
+    }
+
+    public function deleteOrder($id)
+    {
+        $order = Order::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
+        $order->delete();
+        $this->showDetailsModal = false;
+        session()->flash('flash.banner', 'Order deleted.');
+        session()->flash('flash.bannerStyle', 'success');
+    }
 
     public function updatedSearch()
     {

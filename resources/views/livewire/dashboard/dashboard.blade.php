@@ -1,4 +1,4 @@
-<div class="space-y-10">
+<div class="space-y-10" wire:init="load">
 
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -82,6 +82,7 @@
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        @if($readyToLoad)
         @foreach ($stats as $stat)
             @php
                 $colorClasses = [
@@ -148,6 +149,23 @@
                 </div>
             </div>
         @endforeach
+        @else
+            @foreach(range(1,4) as $i)
+                <div class="bg-white dark:bg-slate-900 rounded-[2rem] p-8 animate-pulse border border-slate-50 dark:border-slate-800">
+                    <div class="flex justify-between mb-8">
+                        <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
+                        <div class="space-y-2">
+                            <div class="w-20 h-2 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                            <div class="w-16 h-4 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                        </div>
+                    </div>
+                    <div class="mt-auto space-y-3">
+                        <div class="w-24 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg"></div>
+                        <div class="w-32 h-3 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                    </div>
+                </div>
+            @endforeach
+        @endif
     </div>
 
     <!-- Quick Actions -->

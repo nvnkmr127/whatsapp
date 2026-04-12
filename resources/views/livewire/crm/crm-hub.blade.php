@@ -15,6 +15,8 @@
                     'deals' => ['label' => 'Deals', 'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
                     'companies' => ['label' => 'Companies', 'icon' => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
                     'segments' => ['label' => 'Segments', 'icon' => 'M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z'],
+                    'analytics' => ['label' => 'Analytics', 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
+                    'import' => ['label' => 'Import', 'icon' => 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'],
                 ] as $key => $tab)
                     <button wire:click="setTab('{{ $key }}')" 
                         class="flex shrink-0 items-center gap-2 px-6 py-3 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 {{ $activeTab === $key ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }}">
@@ -42,15 +44,12 @@
                     <livewire:crm.company-manager />
                 </div>
             @elseif ($activeTab === 'segments')
-                <div class="p-8">
-                    <div class="bg-white border border-slate-200 rounded-[2.5rem] p-12 text-center shadow-sm">
-                        <div class="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                        </div>
-                        <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Advanced <span class="text-indigo-500">Segmentation</span></h2>
-                        <p class="text-slate-500 text-sm max-w-sm mx-auto mb-8 font-medium">Build hyper-targeted lists based on behavior, deal value, and custom CRM attributes.</p>
-                        <x-app-button variant="primary" class="px-8 py-4">Build New Segment</x-app-button>
-                    </div>
+                <livewire:crm.segment-manager />
+            @elseif ($activeTab === 'analytics')
+                <livewire:analytics.analytics-dashboard />
+            @elseif ($activeTab === 'import')
+                <div class="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden p-1">
+                    @livewire('contacts.import-manager')
                 </div>
             @endif
         </div>

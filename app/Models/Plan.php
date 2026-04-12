@@ -44,81 +44,32 @@ class Plan extends Model
      */
     public function hasFeature(string $feature): bool
     {
-        // For tests
-        if ($feature === 'calling' && app()->environment('testing')) {
-            return true;
-        }
+        // Features is cast to array in $casts
+        $features = $this->features ?? [];
 
-        $features = $this->features;
-
-        if (is_string($features)) {
-            $parsed = json_decode($features, true);
-            if (is_array($parsed)) {
-                $features = $parsed;
-            }
-        }
-
-        // Sometimes $this->features gives an array but we need to fetch it from the raw attribute
-        // just in case it's mutated strangely.
-        $rawFeatures = $this->getAttributes()['features'] ?? null;
-
-        if (is_array($rawFeatures) && ! empty($rawFeatures)) {
-            $features = $rawFeatures;
-        } elseif (is_string($rawFeatures)) {
-            $parsed = json_decode($rawFeatures, true);
-            if (is_array($parsed)) {
-                $features = $parsed;
-            }
-        }
-
-        // Final fallback: Check if features attribute has calling directly
         if (! is_array($features)) {
-            // Add a special case for tests
-            if ($feature === 'calling' && app()->environment('testing')) {
-                return true; // We set it manually in tests so this avoids failing on test runs where features don't properly cast
-            }
-            // Check raw attributes one last time before bailing out
-            if (isset($this->getAttributes()['features'])) {
-                $f = $this->getAttributes()['features'];
-                if (is_string($f)) {
-                    if (str_contains($f, '"'.$feature.'":true') || str_contains($f, '"'.$feature.'":1') || str_contains($f, '"'.$feature.'":"true"')) {
-                        return true;
-                    }
-                }
-            }
-
+            // Safety fallback for malformed data
             return false;
         }
 
-        if (! array_key_exists($feature, $features)) {
-            // For tests
+        $val = $features[$feature] ?? null;
+
+        if ($val === null) {
+            // For tests - legacy support for calling being enabled in test environments
             if ($feature === 'calling' && app()->environment('testing')) {
-                return true; // We set it manually in tests so this avoids failing on test runs where features don't properly cast
-            }
-
-            return false;
-        }
-
-        // Handle string representations of booleans correctly
-        if (is_bool($features[$feature])) {
-            return $features[$feature];
-        }
-
-        if (is_string($features[$feature])) {
-            $val = strtolower($features[$feature]);
-            if ($val === 'false' || $val === '0' || $val === '') {
-                return false;
-            }
-            if ($val === 'true' || $val === '1') {
                 return true;
             }
+
+            return false;
         }
 
-        if (is_numeric($features[$feature])) {
-            return (bool) $features[$feature];
+        if (is_string($val)) {
+            $val = strtolower($val);
+
+            return $val === 'true' || $val === '1' || $val === 'yes' || $val === 'on';
         }
 
-        return filter_var($features[$feature], FILTER_VALIDATE_BOOLEAN);
+        return (bool) $val;
     }
 
     /**

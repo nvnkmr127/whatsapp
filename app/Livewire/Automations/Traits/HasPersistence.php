@@ -29,7 +29,7 @@ trait HasPersistence
             ]);
 
             if ($shouldActivate && ! $this->isActivatable) {
-                $this->addError('base', 'There are critical errors in your flow. Please fix them before publishing.');
+                $this->error('There are critical errors in your flow. Please fix them before publishing.');
                 $this->showErrorModal = true;
 
                 return;
@@ -68,18 +68,18 @@ trait HasPersistence
                 $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
                 $automation->update($data);
                 $this->isDirty = false;
-                session()->flash('success', $shouldActivate ? 'Automation published successfully!' : 'Draft saved successfully!');
+                $this->success($shouldActivate ? 'Automation published successfully!' : 'Draft saved successfully!');
             } else {
                 $automation = Automation::create($data);
                 $this->automationId = $automation->id;
                 $this->isDirty = false;
-                session()->flash('success', $shouldActivate ? 'Automation created and published!' : 'Draft created successfully!');
+                $this->flash($shouldActivate ? 'Automation created and published!' : 'Draft created successfully!');
 
                 return redirect()->route('automations.builder', $automation->id);
             }
         } catch (\Exception $e) {
             $this->logDebug('Save Exception', ['error' => $e->getMessage()]);
-            $this->addError('base', 'An error occurred while saving the automation.');
+            $this->error('An error occurred while saving the automation: ' . $e->getMessage());
             $this->showErrorModal = true;
         }
     }

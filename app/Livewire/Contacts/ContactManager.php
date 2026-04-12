@@ -14,6 +14,7 @@ class ContactManager extends Component
 {
     use \Livewire\WithFileUploads;
     use WithPagination;
+    use \App\Traits\HasFlashMessages;
 
     public $search = '';
 
@@ -131,7 +132,8 @@ class ContactManager extends Component
     public function render()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');
-        $query = Contact::query();
+        $teamId = Auth::user()->currentTeam->id;
+        $query = Contact::query()->where('team_id', $teamId);
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -152,10 +154,21 @@ class ContactManager extends Component
         }
 
         $contacts = $query->with(['tags', 'category'])->latest()->paginate(15);
-        $tags = ContactTag::all();
-        $customFields = \App\Models\ContactField::all();
-        $categories = \App\Models\Category::whereIn('target_module', ['all', 'contacts'])
-            ->get();
+        $tags = \Illuminate\Support\Facades\Cache::remember("team_{$teamId}_tags", 60, function() use ($teamId) {
+            return ContactTag::where('team_id', $teamId)->get();
+        });
+        $customFields = \Illuminate\Support\Facades\Cache::remember("team_{$teamId}_fields", 60, function() use ($teamId) {
+            return \App\Models\ContactField::where('team_id', $teamId)->get();
+        });
+        $categories = \Illuminate\Support\Facades\Cache::remember("team_{$teamId}_categories", 60, function() use ($teamId) {
+            return \App\Models\Category::where('team_id', $teamId)
+                ->whereIn('target_module', ['all', 'contacts'])
+                ->get();
+        });
+
+        if ($this->search && $contacts->isEmpty()) {
+            $this->info("No contacts found matching '{$this->search}'");
+        }
 
         return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'));
     }
@@ -280,13 +293,13 @@ class ContactManager extends Component
                 $contact
             );
 
-            session()->flash('message', $this->contactId ? 'Contact updated successfully.' : 'Contact created successfully.');
+            $this->success($this->contactId ? 'Contact updated successfully.' : 'Contact created successfully.');
             $this->closeModal();
             $this->resetInputFields();
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Contact Store Failed: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            session()->flash('error', 'Error saving contact: '.$e->getMessage());
+            $this->error('Error saving contact: '.$e->getMessage());
         }
     }
 
@@ -303,7 +316,7 @@ class ContactManager extends Component
             if ($contact) {
                 $contact->delete();
                 audit('contact.deleted', "Deleted contact '{$contact->name}' ({$contact->phone_number})", $contact);
-                session()->flash('message', 'Contact deleted successfully.');
+                $this->success('Contact deleted successfully.');
             }
         }
         $this->isDeleteModalOpen = false;

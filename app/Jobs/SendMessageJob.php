@@ -43,19 +43,39 @@ class SendMessageJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($teamId, $phone, $type, $content, $templateName = null, $language = 'en_US', $messageId = null, $traceId = null, $headerParams = [], $footerParams = [])
+    public function __construct($teamId, $phone = null, $type = null, $content = null, $templateName = null, $language = 'en_US', $messageId = null, $traceId = null, $headerParams = [], $footerParams = [])
     {
         $this->onQueue('messages');
-        $this->teamId = $teamId;
-        $this->phone = $phone;
-        $this->type = $type;
-        $this->content = $content;
-        $this->templateName = $templateName;
-        $this->language = $language;
-        $this->messageId = $messageId;
-        $this->traceId = $traceId;
-        $this->headerParams = $headerParams;
-        $this->footerParams = $footerParams;
+
+        if ($teamId instanceof Message) {
+            $message = $teamId;
+            $this->messageId = $message->id;
+            $this->teamId = $message->team_id;
+            $this->phone = $message->contact->phone_number;
+            $this->type = $message->type;
+            
+            if ($message->type === 'template') {
+                $this->templateName = $message->metadata['template_name'] ?? $message->metadata['template_id'] ?? null;
+                $this->content = $message->metadata['variables'] ?? [];
+            } else {
+                $this->content = $message->content;
+            }
+            
+            $this->language = $message->metadata['language'] ?? 'en_US';
+            $this->headerParams = $message->metadata['header_params'] ?? [];
+            $this->footerParams = $message->metadata['footer_params'] ?? [];
+        } else {
+            $this->teamId = $teamId;
+            $this->phone = $phone;
+            $this->type = $type;
+            $this->content = $content;
+            $this->templateName = $templateName;
+            $this->language = $language;
+            $this->messageId = $messageId;
+            $this->traceId = $traceId;
+            $this->headerParams = $headerParams;
+            $this->footerParams = $footerParams;
+        }
     }
 
     /**

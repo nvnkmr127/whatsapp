@@ -9,13 +9,17 @@ use App\Services\WhatsAppCommerceService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class ProductManager extends Component
 {
     use WithPagination;
+    use WithFileUploads;
 
     public $search = '';
+
+    public $imageFile;
 
     public $name;
 
@@ -57,7 +61,8 @@ class ProductManager extends Component
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'retailer_id' => 'required|string|max:100|regex:/^[a-zA-Z0-9\-_]+$/|unique:products,retailer_id,'.$this->editingProductId.',id',
-            'image_url' => 'required|url', // Meta requires image
+            'image_url' => 'required_without:imageFile|nullable|url',
+            'imageFile' => 'required_without:image_url|nullable|image|max:2048',
             'category_id' => 'nullable|exists:categories,id',
             'stock_quantity' => 'required_if:manage_stock,true|numeric|min:0',
             'description' => 'required|string|min:10',
@@ -72,7 +77,11 @@ class ProductManager extends Component
 
     public function store()
     {
-        $this->validate();
+        $imageUrl = $this->image_url;
+        if ($this->imageFile) {
+            $path = $this->imageFile->store('products', 'public');
+            $imageUrl = asset('storage/'.$path);
+        }
 
         Product::create([
             'team_id' => Auth::user()->currentTeam->id,
@@ -81,7 +90,7 @@ class ProductManager extends Component
             'price' => $this->price,
             'currency' => $this->currency,
             'retailer_id' => $this->retailer_id,
-            'image_url' => $this->image_url,
+            'image_url' => $imageUrl,
             'url' => $this->url,
             'category_id' => $this->category_id ?: null,
             'availability' => $this->availability,
@@ -118,7 +127,11 @@ class ProductManager extends Component
 
     public function update()
     {
-        $this->validate();
+        $imageUrl = $this->image_url;
+        if ($this->imageFile) {
+            $path = $this->imageFile->store('products', 'public');
+            $imageUrl = asset('storage/'.$path);
+        }
 
         $product = Product::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->editingProductId);
         $product->update([
@@ -127,7 +140,7 @@ class ProductManager extends Component
             'price' => $this->price,
             'currency' => $this->currency,
             'retailer_id' => $this->retailer_id,
-            'image_url' => $this->image_url,
+            'image_url' => $imageUrl,
             'url' => $this->url,
             'category_id' => $this->category_id ?: null,
             'stock_quantity' => $this->stock_quantity,

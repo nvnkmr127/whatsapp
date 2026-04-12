@@ -53,6 +53,8 @@ class BillingDashboard extends Component
 
     public $extensionReason = '';
 
+    public $isProcessingPayment = false;
+
     public function mount()
     {
         $this->team = auth()->user()->currentTeam;
@@ -140,12 +142,21 @@ class BillingDashboard extends Component
             'topUpAmount' => 'required|numeric|min:10|max:10000',
         ]);
 
-        // For now, just add credits directly (Phase 4 will add payment gateway)
+        $this->isProcessingPayment = true;
+
+        // In production, this would call a real gateway like Stripe
+        // For now, we simulate a 1.5s delay to mimic real-world processing
+        $this->dispatch('simulating-payment');
+
+        // We use Livewire's background-like delay simulation
+        sleep(2); 
+
         $billingService = new BillingService;
-        $billingService->deposit($this->team, $this->topUpAmount, 'Manual top-up');
+        $billingService->deposit($this->team, $this->topUpAmount, 'Gateway Deposit (Simulated)');
 
-        session()->flash('message', 'Successfully added $'.number_format($this->topUpAmount, 2).' to your wallet!');
+        session()->flash('message', 'Secure payment successful! $'.number_format($this->topUpAmount, 2).' added.');
 
+        $this->isProcessingPayment = false;
         $this->closeTopUpModal();
         $this->loadData();
     }

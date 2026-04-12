@@ -10,12 +10,14 @@ use App\Models\WhatsappTemplate;
 use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class Wizard extends Component
 {
     use WithFileUploads;
+    use \App\Traits\HasFlashMessages;
 
     public $step = 1;
 
@@ -75,10 +77,29 @@ class Wizard extends Component
         ];
     }
 
-    public function mount()
+    public $editingCampaignId;
+
+    public function mount($campaignId = null)
     {
         $this->name = session('default_name', request('default_name', 'Campaign '.date('Y-m-d H:i')));
         $this->scheduled_at = now()->addMinutes(5)->format('Y-m-d\TH:i');
+
+        if ($campaignId) {
+            $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->findOrFail($campaignId);
+            $this->editingCampaignId = $campaign->id;
+            $this->name = $campaign->name;
+            $this->campaignType = $campaign->campaign_type;
+            $this->selectedTemplateId = $campaign->template_id;
+            $this->templateVars = $campaign->template_variables ?? [];
+            $this->audienceType = $campaign->audience_filters['type'] ?? 'tags';
+            $this->selectedTags = $campaign->audience_filters['tags'] ?? [];
+            $this->selectedContacts = $campaign->audience_filters['contacts'] ?? [];
+            $this->retry_enabled = $campaign->retry_config['enabled'] ?? false;
+            $this->max_retries = $campaign->retry_config['max_retries'] ?? 3;
+            $this->retry_interval = $campaign->retry_config['retry_interval'] ?? 60;
+            $this->retry_strategy = $campaign->retry_config['retry_strategy'] ?? 'exponential';
+            $this->calculateAudience();
+        }
 
         if (session()->has('retarget_ids') || request()->has('retarget_ids')) {
             $this->audienceType = 'contacts';
@@ -86,11 +107,13 @@ class Wizard extends Component
             $this->calculateAudience();
         }
 
-        // Initialize retry defaults
-        $this->retry_enabled = false;
-        $this->max_retries = 3;
-        $this->retry_interval = 60;
-        $this->retry_strategy = 'exponential';
+        // Initialize retry defaults if not editing
+        if (!$campaignId) {
+            $this->retry_enabled = false;
+            $this->max_retries = 3;
+            $this->retry_interval = 60;
+            $this->retry_strategy = 'exponential';
+        }
     }
 
     #[Computed]
@@ -107,11 +130,22 @@ class Wizard extends Component
         return ContactTag::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->get();
     }
 
+    public $contactSearch = '';
+    
     #[Computed]
     public function contacts()
     {
-        return Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
-            ->orderBy('name')
+        $query = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id);
+        
+        if ($this->contactSearch) {
+            $query->where(function($q) {
+                $q->where('name', 'like', '%' . $this->contactSearch . '%')
+                  ->orWhere('phone_number', 'like', '%' . $this->contactSearch . '%');
+            });
+        }
+
+        return $query->orderBy('name')
+            ->take(50)
             ->get();
     }
 
@@ -125,8 +159,18 @@ class Wizard extends Component
         $this->calculateAudience();
     }
 
-    public function updatedSelectedContacts()
+    #[On('audienceUpdated')]
+    public function updateAudience($selectedTags = null, $selectedContacts = null)
     {
+        if ($selectedTags !== null) $this->selectedTags = $selectedTags;
+        if ($selectedContacts !== null) $this->selectedContacts = $selectedContacts;
+        $this->calculateAudience();
+    }
+
+    #[On('audienceTypeUpdated')]
+    public function updateAudienceType($type)
+    {
+        $this->audienceType = $type;
         $this->calculateAudience();
     }
 
@@ -234,6 +278,45 @@ class Wizard extends Component
         }
     }
 
+    public function saveDraft()
+    {
+        $this->validate(['name' => 'required|min:3']);
+
+        $campaignData = [
+            'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
+            'name' => $this->name,
+            'campaign_name' => $this->name,
+            'campaign_type' => $this->campaignType,
+            'template_id' => $this->selectedTemplateId,
+            'template_language' => $this->selectedTemplateId ? WhatsappTemplate::find($this->selectedTemplateId)?->language : 'en_US',
+            'template_variables' => array_values($this->templateVars),
+            'steps' => $this->campaignType === 'drip' ? $this->dripSteps : null,
+            'audience_filters' => [
+                'type' => $this->audienceType,
+                'tags' => $this->selectedTags,
+                'contacts' => $this->selectedContacts,
+                'all' => $this->audienceType === 'all',
+            ],
+            'status' => 'draft',
+            'retry_config' => [
+                'enabled' => (bool) $this->retry_enabled,
+                'max_retries' => (int) $this->max_retries,
+                'retry_interval' => (int) $this->retry_interval,
+                'retry_strategy' => $this->retry_strategy,
+            ],
+        ];
+
+        if ($this->editingCampaignId) {
+            $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->findOrFail($this->editingCampaignId);
+            $campaign->update($campaignData);
+        } else {
+            $campaign = Campaign::create($campaignData);
+        }
+
+        $this->flash('Campaign saved as draft!', 'success');
+        return redirect()->route('campaigns.index');
+    }
+
     public function launch()
     {
         $this->validate([
@@ -270,7 +353,7 @@ class Wizard extends Component
             // array_unshift($finalVars, $finalHeaderMedia);
         }
 
-        $campaign = Campaign::create([
+        $campaignData = [
             'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
             'name' => $this->name,
             'campaign_name' => $this->name,
@@ -305,7 +388,14 @@ class Wizard extends Component
                 'retry_interval' => (int) $this->retry_interval,
                 'retry_strategy' => $this->retry_strategy,
             ],
-        ]);
+        ];
+
+        if ($this->editingCampaignId) {
+            $campaign = Campaign::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->findOrFail($this->editingCampaignId);
+            $campaign->update($campaignData);
+        } else {
+            $campaign = Campaign::create($campaignData);
+        }
 
         $delay = Carbon::parse($this->scheduled_at);
         $seconds = now()->diffInSeconds($delay, false);
@@ -319,7 +409,7 @@ class Wizard extends Component
 
         \App\Jobs\PrepareCampaignJob::dispatch($campaign->id, $criteria)->delay($delaySeconds);
 
-        session()->flash('success', 'Campaign Launched Successfully!');
+        $this->flash('Campaign Launched Successfully!', 'success');
 
         return redirect()->route('campaigns.index');
     }

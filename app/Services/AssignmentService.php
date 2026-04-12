@@ -209,16 +209,20 @@ class AssignmentService
             return null;
         }
 
-        // 1. Calculate Load
-        // We use a simplified load count here to avoid N+1 issues in loop
-        // Ideally this should be a subquery or cache
-        $agentsWithLoad = $agents->map(function ($agent) use ($team) {
+        // 1. Calculate Load efficiently via a single query
+        $agentIds = $agents->pluck('id')->toArray();
+        $workloads = Contact::where('team_id', $team->id)
+            ->whereIn('assigned_to', $agentIds)
+            ->whereNotIn('status', ['resolved', 'closed'])
+            ->selectRaw('assigned_to, count(*) as load')
+            ->groupBy('assigned_to')
+            ->pluck('load', 'assigned_to')
+            ->toArray();
+
+        $agentsWithLoad = $agents->map(function ($agent) use ($workloads) {
             return [
                 'user' => $agent,
-                'load' => Contact::where('team_id', $team->id)
-                    ->where('assigned_to', $agent->id)
-                    ->whereNotIn('status', ['resolved', 'closed'])
-                    ->count(),
+                'load' => $workloads[$agent->id] ?? 0,
             ];
         });
 

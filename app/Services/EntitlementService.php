@@ -372,13 +372,11 @@ class EntitlementService
      */
     private function resolveUsage(Team $team): array
     {
-        $month = now()->month;
-        $year = now()->year;
+        $startOfMonth = now()->startOfMonth();
 
         $messages = Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
-            ->whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
+            ->where('created_at', '>=', $startOfMonth)
             ->count();
 
         $agents = $team->users()->count() + $team->teamInvitations()->count();

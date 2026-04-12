@@ -166,7 +166,7 @@ Route::middleware([
     // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
     Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
-    Route::get('/campaigns/create', \App\Livewire\Campaigns\Wizard::class)->name('campaigns.create')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
+    Route::get('/campaigns/wizard/{campaignId?}', \App\Livewire\Campaigns\Wizard::class)->name('campaigns.create')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
     Route::get('/campaigns/{campaignId}', \App\Livewire\Campaigns\Show::class)->name('campaigns.show')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 

@@ -159,31 +159,31 @@ class ConversationList extends Component
     {
         if (! Auth::check() || ! Auth::user()->currentTeam) {
             return [
-                'active' => 0,
-                'unassigned' => 0,
-                'sla_breaches' => 0,
-                'avg_response' => '0m',
-                'resolution' => '0%',
+                'active' => 0, 'unassigned' => 0, 'sla_breaches' => 0,
+                'avg_response' => '-', 'resolution' => '-',
             ];
         }
 
         $teamId = Auth::user()->currentTeam->id;
-        $active = Conversation::where('team_id', $teamId)->where('status', 'open')->count();
-        $unassigned = Conversation::where('team_id', $teamId)->where('status', 'open')->whereNull('assigned_to')->count();
 
-        $slaBreaches = Conversation::where('team_id', $teamId)
-            ->where('status', 'open')
-            ->whereNotNull('sla_due_at')
-            ->where('sla_due_at', '<', now())
-            ->count();
+        return cache()->remember("chat_stats_{$teamId}", 30, function () use ($teamId) {
+            $active = Conversation::where('team_id', $teamId)->where('status', 'open')->count();
+            $unassigned = Conversation::where('team_id', $teamId)->where('status', 'open')->whereNull('assigned_to')->count();
 
-        return [
-            'active' => $active,
-            'unassigned' => $unassigned,
-            'sla_breaches' => $slaBreaches,
-            'avg_response' => '-',
-            'resolution' => '-',
-        ];
+            $slaBreaches = Conversation::where('team_id', $teamId)
+                ->where('status', 'open')
+                ->whereNotNull('sla_due_at')
+                ->where('sla_due_at', '<', now())
+                ->count();
+
+            return [
+                'active' => $active,
+                'unassigned' => $unassigned,
+                'sla_breaches' => $slaBreaches,
+                'avg_response' => '-',
+                'resolution' => '-',
+            ];
+        });
     }
 
     public function render()
