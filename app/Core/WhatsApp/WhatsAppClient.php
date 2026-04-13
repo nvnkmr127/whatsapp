@@ -116,6 +116,25 @@ class WhatsAppClient
                 default => null,
             };
 
+            // [RESILIENCE] If it failed due to invalid appsecret_proof, retry without it
+            if ($response && $response->failed()) {
+                $errorData = $response->json();
+                if (($errorData['error']['code'] ?? 0) == 100 && str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')) {
+                    Log::warning("WhatsApp API: Invalid appsecret_proof, retrying WITHOUT proof for $endpoint");
+                    
+                    $retryClient = Http::withToken($this->token)
+                        ->withHeaders(['Content-Type' => 'application/json'])
+                        ->timeout(20);
+                        
+                    $response = match ($method) {
+                        'post' => $retryClient->post($url, $data),
+                        'get' => $retryClient->get($url, $data),
+                        'delete' => $retryClient->delete($url, $data),
+                        default => null,
+                    };
+                }
+            }
+
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             if (! $response) {
