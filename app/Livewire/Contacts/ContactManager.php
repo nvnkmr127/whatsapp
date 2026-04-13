@@ -194,7 +194,9 @@ class ContactManager extends Component
 
     public function viewContact($id)
     {
-        $this->viewingContact = Contact::with('tags')->findOrFail($id);
+        $this->viewingContact = Contact::with(['tags', 'category'])
+            ->withCount(['messages', 'conversations', 'tags'])
+            ->findOrFail($id);
         $this->isViewModalOpen = true;
     }
 

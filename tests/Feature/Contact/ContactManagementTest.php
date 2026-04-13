@@ -80,4 +80,17 @@ class ContactManagementTest extends TestCase
             ->assertSet('viewingContact.id', $contact->id)
             ->assertSee('John Doe');
     }
+
+    public function test_contact_manager_does_not_render_heavy_modals_when_closed()
+    {
+        $team = Team::factory()->create();
+        $this->actingAs($team->owner);
+
+        Contact::factory()->create(['team_id' => $team->id, 'name' => 'Jane Doe']);
+
+        \Livewire\Livewire::test(\App\Livewire\Contacts\ContactManager::class)
+            ->assertDontSee('Import Contacts')
+            ->assertDontSee('Register Contact')
+            ->assertDontSee('activeTab');
+    }
 }

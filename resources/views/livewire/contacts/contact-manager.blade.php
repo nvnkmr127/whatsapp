@@ -98,23 +98,20 @@
                         <tr wire:key="contact-{{ $contact->id }}"
                             class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                             <td class="px-8 py-6">
-                                <x-contact-hover-card :contact="$contact">
-                                    <div class="flex items-center gap-4 cursor-pointer">
-                                        <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $contact->name }}" 
-                                             alt="{{ $contact->name }}" 
-                                             class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 object-cover"
-                                             loading="lazy">
-                                        <div>
-                                            <span class="text-sm font-black text-slate-900 dark:text-white hover:text-wa-teal transition-colors text-left">
-                                                {{ $contact->name }}
-                                            </span>
-
+                                <button type="button" wire:click="viewContact({{ $contact->id }})" class="flex items-center gap-4 text-left">
+                                    <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $contact->name }}" 
+                                        alt="{{ $contact->name }}" 
+                                        class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 object-cover"
+                                        loading="lazy">
+                                    <div>
+                                        <span class="text-sm font-black text-slate-900 dark:text-white hover:text-wa-teal transition-colors text-left">
+                                            {{ $contact->name }}
+                                        </span>
                                         <div class="text-xs text-slate-500 font-medium">
                                             {{ $contact->email ?: 'No email linked' }}
                                         </div>
                                     </div>
-                                </div>
-                                </x-contact-hover-card>
+                                </button>
                             </td>
                             <td class="px-8 py-6">
                                 <span
@@ -204,8 +201,77 @@
         @endif
     </div>
 
+    @if($isViewModalOpen)
+        <x-app-modal wire:model="isViewModalOpen" maxWidth="4xl">
+            <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                        Contact <span class="text-wa-teal">Details</span>
+                    </h2>
+                    <div class="mt-2 text-xs font-bold text-slate-500">
+                        {{ $viewingContact['phone_number'] ?? '' }}
+                    </div>
+                </div>
+                <button type="button" wire:click="closeViewModal" class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                    <x-icon name="x-mark" class="w-6 h-6" />
+                </button>
+            </div>
+
+            <div class="p-8 space-y-6">
+                <div class="flex items-center gap-4">
+                    <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $viewingContact['name'] ?? '' }}"
+                        alt="{{ $viewingContact['name'] ?? '' }}"
+                        class="w-16 h-16 rounded-[1.75rem] bg-slate-100 dark:bg-slate-800 object-cover">
+                    <div class="min-w-0">
+                        <div class="text-lg font-black text-slate-900 dark:text-white truncate">{{ $viewingContact['name'] ?? '' }}</div>
+                        <div class="text-sm text-slate-500 font-medium truncate">{{ $viewingContact['email'] ?? 'No email linked' }}</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Messages</div>
+                        <div class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($viewingContact['messages_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Conversations</div>
+                        <div class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($viewingContact['conversations_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tags</div>
+                        <div class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($viewingContact['tags_count'] ?? 0) }}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Classification</div>
+                    <div class="flex flex-wrap gap-2">
+                        @if(!empty($viewingContact['category']))
+                            @php $categoryColor = $viewingContact['category']['color'] ?? '#64748b'; @endphp
+                            <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
+                                style="background-color: {{ $categoryColor }}20; color: {{ $categoryColor }}; border-color: {{ $categoryColor }}40">
+                                {{ $viewingContact['category']['name'] ?? '' }}
+                            </span>
+                        @endif
+                        @foreach(($viewingContact['tags'] ?? []) as $tag)
+                            @php $tagColor = $tag['color'] ?? '#64748b'; @endphp
+                            <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
+                                style="background-color: {{ $tagColor }}10; color: {{ $tagColor }}; border-color: {{ $tagColor }}30">
+                                {{ $tag['name'] ?? '' }}
+                            </span>
+                        @endforeach
+                        @if(empty($viewingContact['category']) && empty($viewingContact['tags']))
+                            <div class="text-xs text-slate-400 italic">No classification</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </x-app-modal>
+    @endif
+
     <!-- Create/Edit Modal -->
     <!-- Main Contact Modal (Create/Edit) -->
+    @if($isModalOpen)
     <x-app-modal wire:model="isModalOpen" maxWidth="5xl" :backdropClose="false">
         <div class="p-8 pb-0">
             <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
@@ -336,9 +402,11 @@
             <x-app-button variant="primary" class="w-full sm:flex-[2] py-4 order-1 sm:order-2" wire:click="store">Save Contact</x-app-button>
         </div>
     </x-app-modal>
+    @endif
 
 
     <!-- Delete Confirmation Modal -->
+    @if($isDeleteModalOpen)
     <x-app-modal wire:model="isDeleteModalOpen" maxWidth="md" :backdropClose="false">
 
         <div class="p-10 text-center space-y-6">
@@ -355,6 +423,7 @@
             </div>
         </div>
     </x-app-modal>
+    @endif
 
 
     <!-- Tag Management (Child Component) -->
@@ -362,6 +431,7 @@
 
 
     <!-- Custom Fields Management Modal -->
+    @if($isFieldModalOpen)
     <x-app-modal wire:model="isFieldModalOpen" maxWidth="4xl" :backdropClose="false">
 
         <div class="p-8 pb-0 flex justify-between items-center">
@@ -440,9 +510,11 @@
             </div>
         </div>
     </x-app-modal>
+    @endif
 
 
     <!-- Import Modal -->
+    @if($isImportModalOpen)
     <x-app-modal wire:model="isImportModalOpen" maxWidth="5xl" :backdropClose="false">
 
         <div class="p-8 pb-0">
@@ -504,7 +576,7 @@
                                             <option value="category">Category</option>
                                             <option value="tags">Tags (comma separated)</option>
                                             <!-- Dynamic fields -->
-                                            @foreach(\App\Models\ContactField::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)->get() as $f)
+                                            @foreach($customFields as $f)
                                                 <option value="attr_{{ $f->key }}">{{ $f->label }}</option>
                                             @endforeach
                                         </select>
@@ -566,7 +638,9 @@
             @endif
         </div>
     </x-app-modal>
+    @endif
 
+    @if($isDuplicateModalOpen)
     <x-app-modal wire:model="isDuplicateModalOpen" maxWidth="4xl" :backdropClose="false">
         <div class="p-8 pb-0">
             <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
@@ -658,9 +732,11 @@
             </x-app-button>
         </div>
     </x-app-modal>
+    @endif
 
 
     <!-- Merge Modal -->
+    @if($isMergeModalOpen)
     <x-app-modal wire:model="isMergeModalOpen" maxWidth="4xl" :backdropClose="false">
         <div class="p-8 pb-0">
             <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
@@ -744,6 +820,7 @@
             </x-app-button>
         </div>
     </x-app-modal>
+    @endif
 
     <!-- End of Modals -->
 
