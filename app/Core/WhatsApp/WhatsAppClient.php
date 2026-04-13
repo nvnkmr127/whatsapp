@@ -11,6 +11,7 @@ class WhatsAppClient
     protected ?Team $team = null;
 
     protected string $baseUrl;
+    protected ?string $appId = null;
 
     protected ?string $token = null;
 
@@ -34,6 +35,7 @@ class WhatsAppClient
 
         $this->token = (string) ($creds['token'] ?? '');
         $this->phoneId = $creds['phone_number_id'] ?? null;
+        $this->appId = $creds['app_id'] ?? null;
 
         return $this;
     }
@@ -60,9 +62,6 @@ class WhatsAppClient
         return $this->sendRequestFullUrl($url, $method, $data, $endpoint);
     }
 
-    /**
-     * Send a request to a full URL.
-     */
     public function sendRequestFullUrl(string $url, string $method, array $data = [], string $endpoint = 'unknown'): array
     {
         // Sandbox Mode Interceptor
@@ -81,8 +80,17 @@ class WhatsAppClient
             ];
         }
 
+        $appSecret = config('whatsapp.app_secret');
+        $isSystemToken = $this->token && str_starts_with($this->token, 'EAAB');
+
+        $queryParams = [];
+        if (! $isSystemToken && $appSecret && $this->token) {
+            $queryParams['appsecret_proof'] = hash_hmac('sha256', $this->token, $appSecret);
+        }
+
         $client = Http::withToken($this->token)
             ->withHeaders(['Content-Type' => 'application/json'])
+            ->withQueryParameters($queryParams)
             ->timeout(20)
             ->retry(2, 500, function ($exception) {
                 if ($exception instanceof \Illuminate\Http\Client\ConnectionException) {
