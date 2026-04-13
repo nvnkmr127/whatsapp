@@ -104,6 +104,14 @@ class AutomationBuilder extends Component
 
     public $nodeModel = 'gpt-4o';
 
+    public $nodeUseKb = false;
+
+    public $nodeKbSourceIds = [];
+
+    public $nodeKbScope = 'all';
+
+    public $nodeKbStrict = true;
+
     public $nodeLanguage = 'en';
 
     public $nodeOperator = 'eq';
@@ -141,6 +149,38 @@ class AutomationBuilder extends Component
     public $debugMode = false;
 
     public $debugLogs = [];
+
+    public function nodeUseKb($value = null): void
+    {
+        if ($value === null) {
+            $this->nodeUseKb = ! (bool) $this->nodeUseKb;
+        } else {
+            $this->nodeUseKb = (bool) $value;
+        }
+
+        if (! $this->nodeUseKb) {
+            $this->nodeKbSourceIds = [];
+            $this->nodeKbScope = 'all';
+            $this->nodeKbStrict = true;
+        }
+
+        $this->updateNodeData();
+        $this->runValidation();
+    }
+
+    public function updatedNodeUseKb($value): void
+    {
+        if ($value) {
+            return;
+        }
+
+        $this->nodeKbSourceIds = [];
+        $this->nodeKbScope = 'all';
+        $this->nodeKbStrict = true;
+
+        $this->updateNodeData();
+        $this->runValidation();
+    }
 
     #[Computed]
     public function availableTags() { return \App\Models\ContactTag::where('team_id', Auth::user()->currentTeam->id)->get()->toArray(); }
@@ -264,7 +304,6 @@ class AutomationBuilder extends Component
         session(['automation_debug_mode' => $value]);
     }
 
-    #[Layout('components.layouts.app')]
     public function addCard()
     {
         $this->nodeCards[] = ['image_url' => '', 'title' => '', 'sub_title' => '', 'buttons' => []];
@@ -389,9 +428,9 @@ class AutomationBuilder extends Component
         $this->isDirty = true;
     }
 
+    #[Layout('components.layouts.app', ['fullscreen' => true])]
     public function render()
     {
-        return view('livewire.automations.automation-builder')
-            ->layout('components.layouts.app', ['fullscreen' => true]);
+        return view('livewire.automations.automation-builder');
     }
 }

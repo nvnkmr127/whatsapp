@@ -3,10 +3,10 @@
 namespace App\Livewire\Campaigns\Wizard;
 
 use Livewire\Component;
-use Livewire\Attributes\Modelable;
 use Livewire\Attributes\Computed;
 use App\Models\Contact;
-use App\Models\Tag;
+use App\Models\ContactTag;
+use Illuminate\Support\Facades\Auth;
 
 class AudienceSelector extends Component
 {
@@ -34,13 +34,13 @@ class AudienceSelector extends Component
     #[Computed]
     public function tags()
     {
-        return Tag::where('team_id', auth()->user()->currentTeam->id)->get();
+        return ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
     }
 
     #[Computed]
     public function contacts()
     {
-        $query = Contact::where('team_id', auth()->user()->currentTeam->id);
+        $query = Contact::where('team_id', Auth::user()->currentTeam->id);
         if ($this->contactSearch) {
             $query->where(function($q) {
                 $q->where('name', 'like', "%{$this->contactSearch}%")
@@ -54,8 +54,8 @@ class AudienceSelector extends Component
     public function audienceCount()
     {
         if ($this->audienceType === 'tags') {
-            return Contact::where('team_id', auth()->user()->currentTeam->id)
-                ->whereHas('tags', fn($q) => $q->whereIn('tags.id', $this->selectedTags))
+            return Contact::where('team_id', Auth::user()->currentTeam->id)
+                ->whereHas('tags', fn($q) => $q->whereIn('contact_tags.id', $this->selectedTags))
                 ->count();
         }
         return count($this->selectedContacts);
