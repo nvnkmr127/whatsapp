@@ -284,13 +284,16 @@ trait WhatsApp
                 'message' => $result['error'] ?? 'OK',
             ];
         } catch (\Exception $e) {
-            // [RESILIENCE] Log but don't block. Users can send messages even if webhooks are pending.
-            \Illuminate\Support\Facades\Log::warning("WhatsApp Webhook Subscription Soft-Fail for WABA {$wabaId}: " . $e->getMessage());
+            // [RESILIENCE] Log but only block if it is a hard permission error
+            $message = $e->getMessage();
+            $isPermissionError = str_contains($message, '#200') || str_contains($message, 'Permissions error');
+            
+            \Illuminate\Support\Facades\Log::warning("WhatsApp Webhook Subscription Fail for WABA {$wabaId}: " . $message);
             
             return [
-                'status' => true, // Return true to keep setup flow moving
-                'message' => 'Webhook subscription deferred: ' . $e->getMessage(),
-                'webhook_deferred' => true
+                'status' => $isPermissionError ? false : true, // Hard-fail on permissions, soft-fail on others
+                'message' => 'Webhook subscription failed: ' . $message,
+                'is_permission_error' => $isPermissionError
             ];
         }
     }
