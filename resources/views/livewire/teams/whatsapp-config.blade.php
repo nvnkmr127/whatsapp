@@ -131,7 +131,14 @@
                                         <span>WhatsApp Access Token is invalid or expired. Please re-authenticate.</span>
                                     </div>
                                 @else
-                                    {{ $integrationState === 'suspended' ? 'Your Meta session has expired. Messaging is blocked.' : 'Your account is restricted by Meta.' }}
+                                    @elseif($integrationState === 'suspended')
+                                        <div class="flex flex-col gap-1">
+                                            <span>Your Meta session has expired or permissions have been revoked.</span>
+                                            <span class="text-[11px] font-bold opacity-75">REASON: Meta Permission Error (#200) - Missing messaging access for this WABA.</span>
+                                        </div>
+                                    @else
+                                        Your account is restricted by Meta.
+                                    @endif
                                 @endif
                                 </p>
                             </div>

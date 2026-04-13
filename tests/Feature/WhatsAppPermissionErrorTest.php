@@ -107,4 +107,34 @@ class WhatsAppPermissionErrorTest extends TestCase
             $this->assertStringContainsString('Please reconnect Facebook', $e->getMessage());
         }
     }
+
+    /** @test */
+    public function it_blocks_subsequent_messages_when_already_suspended()
+    {
+        $this->team->update(['whatsapp_setup_state' => IntegrationState::SUSPENDED]);
+        
+        $phone = '+911234567890';
+        $contact = \App\Models\Contact::factory()->create(['team_id' => $this->team->id, 'phone_number' => $phone]);
+        $conversation = \App\Models\Conversation::factory()->create(['team_id' => $this->team->id, 'contact_id' => $contact->id]);
+
+        $message = Message::create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'type' => 'text',
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'content' => 'Test message',
+        ]);
+
+        $job = new \App\Jobs\SendMessageJob($this->team->id, $phone, 'text', 'Test message', null, 'en_US', $message->id);
+        
+        try {
+            $job->handle(app(\App\Services\WhatsAppService::class));
+            $this->fail('Expected exception was not thrown');
+        } catch (\Exception $e) {
+            $this->assertStringContainsString('Messaging blocked. Connection state: Suspended (Action Required)', $e->getMessage());
+            $this->assertStringContainsString('Please go to WhatsApp Settings to reconnect', $e->getMessage());
+        }
+    }
 }

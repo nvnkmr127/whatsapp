@@ -146,6 +146,8 @@ class WhatsAppService
      */
     public function sendText($to, $message, $existingMessage = null)
     {
+        $this->verifyReadyToSend();
+
         $contact = $this->getOrCreateContact($to);
         $policy = app(PolicyService::class);
         if ($contact && ! $policy->canSendFreeMessage($contact)) {
@@ -153,7 +155,7 @@ class WhatsAppService
             throw new \App\Exceptions\Messaging\WhatsAppPolicyException('Message blocked by 24h policy. Use a Template.');
         }
 
-        $this->verifyReadyToSend();
+
         if (! $this->team->canAccess('send_message')) {
             throw new \App\Exceptions\Messaging\WhatsAppPolicyException('Plan limit reached.');
         }
@@ -196,6 +198,8 @@ class WhatsAppService
      */
     public function sendMedia($to, $type, $link, $caption = null, $existingMessage = null)
     {
+        $this->verifyReadyToSend();
+
         // Find contact to check policy
         $contact = $this->getOrCreateContact($to);
 
@@ -207,7 +211,7 @@ class WhatsAppService
         }
 
         // Rule 1: Messaging Lock & Plan Limits
-        $this->verifyReadyToSend();
+
         if (! $this->team->canAccess('send_message')) {
             $denial = $this->team->entitlement()->denialReason('send_message');
             throw new \Exception($denial ?: 'Monthly message limit reached or subscription inactive.');
@@ -286,6 +290,8 @@ class WhatsAppService
      */
     public function sendInteractiveButtons($to, $text, array $buttons, $existingMessage = null)
     {
+        $this->verifyReadyToSend();
+
         // Find contact to check policy
         $contact = $this->getOrCreateContact($to);
 
@@ -297,7 +303,7 @@ class WhatsAppService
         }
 
         // Rule 1: Messaging Lock & Plan Limits
-        $this->verifyReadyToSend();
+
         if (! $this->team->canAccess('send_message')) {
             $denial = $this->team->entitlement()->denialReason('send_message');
             throw new \Exception($denial ?: 'Monthly message limit reached or subscription inactive.');
@@ -377,6 +383,8 @@ class WhatsAppService
      */
     public function sendFlow($to, $flowId, $headline, $body, $cta, $mode = 'draft', $initialScreen = null, $data = [], $existingMessage = null)
     {
+        $this->verifyReadyToSend();
+
         // Find contact to check policy
         $contact = $this->getOrCreateContact($to);
 
@@ -408,7 +416,6 @@ class WhatsAppService
         }
 
         // Rule 1: Messaging Lock & Plan Limits
-        $this->verifyReadyToSend();
         if (! $this->team->canAccess('send_message')) {
             $denial = $this->team->entitlement()->denialReason('send_message');
             throw new \Exception($denial ?: 'Monthly message limit reached or subscription inactive.');
@@ -506,8 +513,9 @@ class WhatsAppService
      */
     public function sendLocationRequest($to, $text, $existingMessage = null)
     {
-        $contact = $this->getOrCreateContact($to);
         $this->verifyReadyToSend();
+
+        $contact = $this->getOrCreateContact($to);
 
         $conversationService = new \App\Services\ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
@@ -558,8 +566,9 @@ class WhatsAppService
      */
     public function sendContact($to, array $contactData, $existingMessage = null)
     {
-        $contact = $this->getOrCreateContact($to);
         $this->verifyReadyToSend();
+
+        $contact = $this->getOrCreateContact($to);
 
         $conversationService = new \App\Services\ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
@@ -606,8 +615,9 @@ class WhatsAppService
      */
     public function sendCarousel($to, array $cards, $existingMessage = null)
     {
-        $contact = $this->getOrCreateContact($to);
         $this->verifyReadyToSend();
+
+        $contact = $this->getOrCreateContact($to);
 
         $conversationService = new \App\Services\ConversationService;
         $conversation = $conversationService->ensureActiveConversation($contact);
@@ -672,6 +682,8 @@ class WhatsAppService
 
     public function sendTemplate($to, $templateName, $language = 'en_US', $bodyParams = [], $headerParams = [], $footerParams = [], $campaignId = null, $existingMessage = null)
     {
+        $this->verifyReadyToSend();
+
         // Fetch Template first to understand structure
         $tpl = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
             ->where('name', $templateName)
@@ -724,7 +736,6 @@ class WhatsAppService
         }
 
         // Rule 1: Messaging Lock
-        $this->verifyReadyToSend();
 
         $components = [];
 
@@ -2082,15 +2093,12 @@ class WhatsAppService
             \App\Enums\IntegrationState::READY,
             \App\Enums\IntegrationState::READY_WARNING,
             \App\Enums\IntegrationState::ACTIVE,
+            \App\Enums\IntegrationState::DEGRADED,
         ];
 
         if ($state === \App\Enums\IntegrationState::PROVISIONED) {
             if (! empty($this->team->whatsapp_access_token) && ! empty($this->team->whatsapp_phone_number_id)) {
                 $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
-                // Only persist the state change if the model has not had credentials
-                // injected from outside (e.g. system env override). Checking isDirty
-                // on credential fields guards against writing system credentials into
-                // the team's own DB row.
                 if (! $this->team->isDirty(['whatsapp_access_token', 'whatsapp_phone_number_id'])) {
                     $this->team->save();
                 }
@@ -2100,8 +2108,15 @@ class WhatsAppService
         }
 
         if (! in_array($state, $allowed)) {
-            Log::warning("Messaging blocked for team {$this->team->id}. Current state: ".($state ? $state->label() : 'Unknown'));
-            throw new \Exception('Messaging blocked. Connection state: '.($state ? $state->label() : 'Unknown'));
+            $label = $state ? $state->label() : 'Not Configured';
+            $message = "Messaging blocked. Connection state: {$label}.";
+
+            if ($state === \App\Enums\IntegrationState::SUSPENDED) {
+                $message .= ' This is usually due to a permission issue (#200) or an invalid token. Please go to WhatsApp Settings to reconnect and resolve this.';
+            }
+
+            Log::warning("Messaging blocked for team {$this->team->id}. State: {$label}");
+            throw new \Exception($message);
         }
         Log::debug("WhatsAppService: Team {$this->team->id} is ready to send messages.");
     }
