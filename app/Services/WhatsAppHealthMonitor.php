@@ -77,23 +77,22 @@ class WhatsAppHealthMonitor
 
         // Check expiration
         if ($team->whatsapp_token_expires_at) {
-            if ($team->whatsapp_token_expires_at->isPast()) {
+            $daysRemaining = (int) floor(now()->diffInMinutes($team->whatsapp_token_expires_at, false) / 1440);
+            
+            if ($daysRemaining < 0) {
                 $score = 0;
                 $valid = false;
-                $issues[] = 'Token expired';
-            } else {
-                $daysUntilExpiry = (int) $team->whatsapp_token_expires_at->diffInDays();
-
-                if ($daysUntilExpiry < 3) {
-                    $score -= 60;
-                    $issues[] = "Token expires in {$daysUntilExpiry} days (critical)";
-                } elseif ($daysUntilExpiry < 7) {
-                    $score -= 40;
-                    $issues[] = "Token expires in {$daysUntilExpiry} days";
-                } elseif ($daysUntilExpiry < 30) {
-                    $score -= 10;
-                    $issues[] = "Token expires in {$daysUntilExpiry} days";
-                }
+                $absDays = abs($daysRemaining);
+                $issues[] = "Token expired {$absDays} day" . ($absDays == 1 ? "" : "s") . " ago";
+            } elseif ($daysRemaining < 3) {
+                $score -= 60;
+                $issues[] = "Token expires in {$daysRemaining} days (critical)";
+            } elseif ($daysRemaining < 7) {
+                $score -= 40;
+                $issues[] = "Token expires in {$daysRemaining} days";
+            } elseif ($daysRemaining < 30) {
+                $score -= 10;
+                $issues[] = "Token expires in {$daysRemaining} days";
             }
         }
 
@@ -119,6 +118,7 @@ class WhatsAppHealthMonitor
             'is_permanent' => is_null($team->whatsapp_token_expires_at),
             'expires_at' => $team->whatsapp_token_expires_at,
             'days_remaining' => $team->whatsapp_token_expires_at ? (int) floor(now()->diffInMinutes($team->whatsapp_token_expires_at, false) / 1440) : null,
+            'is_expired' => $team->whatsapp_token_expires_at ? $team->whatsapp_token_expires_at->isPast() : false,
             'last_validated' => $team->whatsapp_token_last_validated,
             'issues' => $issues,
         ];
