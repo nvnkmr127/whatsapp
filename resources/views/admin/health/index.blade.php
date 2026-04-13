@@ -51,6 +51,12 @@
                             {{ __('Try Fixing Errors') }}
                         </button>
                     </form>
+                    <form action="{{ route('admin.health.jobs.clear') }}" method="POST">
+                        @csrf
+                        <button class="px-8 py-4 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl">
+                            {{ __('Clear Failed Jobs') }}
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -241,21 +247,10 @@
                              </div>
                          </div>
 
-                         <!-- Recent Failures -->
-                         <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-xl border border-slate-50 dark:border-slate-800">
-                             <h4 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-6">Recent Errors</h4>
-                             <div class="space-y-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                                @foreach($healthData['background_jobs']['failures_by_team'] as $teamName => $count)
-                                    <div class="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-100 dark:border-rose-900/20">
-                                        <span class="text-[10px] font-black text-rose-900 dark:text-rose-100 uppercase truncate pr-4 text-center">{{ $teamName }}</span>
-                                        <span class="px-2 py-1 bg-rose-600 text-white text-[9px] font-black rounded-lg">{{ $count }} Errors</span>
-                                    </div>
-                                @endforeach
-                                @if(empty($healthData['background_jobs']['failures_by_team']))
-                                    <div class="text-center py-12 opacity-30 text-[10px] font-black uppercase">{{ __('No Errors Found') }}</div>
-                                @endif
-                             </div>
-                         </div>
+                    </div>
+
+                    <div class="mt-8">
+                        <livewire:admin.health.failed-jobs-table />
                     </div>
 
                 </div>
@@ -352,11 +347,6 @@
             row.style.display = name.includes(filter) ? '' : 'none';
         });
     });
-
-    // Auto-refresh every 60 seconds
-    setTimeout(function() {
-        window.location.reload();
-    }, 60000);
     </script>
 
     <style>

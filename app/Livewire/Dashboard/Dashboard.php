@@ -17,6 +17,7 @@ use Livewire\Component;
 class Dashboard extends Component
 {
     public $stats = [];
+    public $dashboardData = [];
     public $chartData = [];
     public $timeRange = 'today';
     public $readyToLoad = false;
@@ -28,6 +29,15 @@ class Dashboard extends Component
     public function mount()
     {
         $this->lastRefresh = now()->format('H:i:s');
+        $this->chartData = [
+            'labels' => [],
+            'series' => [
+                [
+                    'name' => 'Messages',
+                    'data' => [],
+                ],
+            ],
+        ];
     }
 
     public function load()

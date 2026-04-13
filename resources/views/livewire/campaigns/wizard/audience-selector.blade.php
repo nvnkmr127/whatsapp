@@ -12,6 +12,8 @@
                     class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'tags' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">By Tags</button>
                 <button wire:click="$set('audienceType', 'contacts')" 
                     class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'contacts' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">Individual</button>
+                <button wire:click="$set('audienceType', 'all')" 
+                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'all' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">All</button>
             </div>
 
             @if($audienceType === 'tags')
@@ -23,7 +25,7 @@
                         </label>
                     @endforeach
                 </div>
-            @else
+            @elseif($audienceType === 'contacts')
                 <div class="space-y-4">
                     <input type="text" wire:model.live.debounce.500ms="contactSearch" 
                         class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 text-sm font-medium" 
@@ -40,6 +42,10 @@
                         @endforeach
                     </div>
                 </div>
+            @else
+                <div class="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <p class="text-xs font-bold text-slate-700 dark:text-slate-200">All opted-in contacts will be included.</p>
+                </div>
             @endif
         </div>
 
@@ -51,8 +57,8 @@
     </div>
 
     <div class="pt-12 border-t border-slate-50 dark:border-slate-800 flex justify-between items-center">
-        <button type="button" @click="$parent.step = 1" class="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Back</button>
-        <button type="button" @click="$parent.step = 3"
+        <button type="button" wire:click="goToStep(1)" class="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Back</button>
+        <button type="button" wire:click="goToStep(3)"
             class="px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
             Next: Message
         </button>

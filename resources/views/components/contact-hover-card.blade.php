@@ -194,15 +194,15 @@
                         {{-- Quick Metrics --}}
                         <div class="grid grid-cols-3 gap-3">
                             <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-800/50">
-                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->messages()->count() }}</div>
+                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->messages_count ?? 0 }}</div>
                                 <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Msgs</div>
                             </div>
                             <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-800/50">
-                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->conversations()->count() }}</div>
+                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->conversations_count ?? 0 }}</div>
                                 <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Convos</div>
                             </div>
                             <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 text-center border border-slate-100 dark:border-slate-800/50">
-                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->tags()->count() }}</div>
+                                <div class="text-xl font-black text-slate-900 dark:text-white">{{ $contact->tags_count ?? 0 }}</div>
                                 <div class="text-[8px] text-slate-400 font-black uppercase tracking-widest">Tags</div>
                             </div>
                         </div>

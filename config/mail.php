@@ -1,5 +1,8 @@
 <?php
 
+$defaultMailHost = env('MAIL_HOST') ?: '127.0.0.1';
+$defaultMailPort = (int) (env('MAIL_PORT') ?: 2525);
+
 return [
 
     /*
@@ -50,8 +53,8 @@ return [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),
             'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', '127.0.0.1'),
-            'port' => (int) env('MAIL_PORT', 2525),
+            'host' => $defaultMailHost,
+            'port' => $defaultMailPort,
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
@@ -60,8 +63,8 @@ return [
 
         'transactional' => [
             'transport' => env('MAIL_TRANSACTIONAL_TRANSPORT', env('MAIL_MAILER', 'smtp')),
-            'host' => env('MAIL_TRANSACTIONAL_HOST', env('MAIL_HOST')),
-            'port' => (int) env('MAIL_TRANSACTIONAL_PORT', env('MAIL_PORT')),
+            'host' => env('MAIL_TRANSACTIONAL_HOST') ?: $defaultMailHost,
+            'port' => (int) (env('MAIL_TRANSACTIONAL_PORT') ?: $defaultMailPort),
             'username' => env('MAIL_TRANSACTIONAL_USERNAME', env('MAIL_USERNAME')),
             'password' => env('MAIL_TRANSACTIONAL_PASSWORD', env('MAIL_PASSWORD')),
             'timeout' => env('MAIL_TRANSACTIONAL_TIMEOUT', 30),
@@ -69,8 +72,8 @@ return [
 
         'marketing' => [
             'transport' => env('MAIL_MARKETING_TRANSPORT', env('MAIL_MAILER', 'smtp')),
-            'host' => env('MAIL_MARKETING_HOST', env('MAIL_HOST')),
-            'port' => (int) env('MAIL_MARKETING_PORT', env('MAIL_PORT')),
+            'host' => env('MAIL_MARKETING_HOST') ?: $defaultMailHost,
+            'port' => (int) (env('MAIL_MARKETING_PORT') ?: $defaultMailPort),
             'username' => env('MAIL_MARKETING_USERNAME', env('MAIL_USERNAME')),
             'password' => env('MAIL_MARKETING_PASSWORD', env('MAIL_PASSWORD')),
             'timeout' => env('MAIL_MARKETING_TIMEOUT', 60),

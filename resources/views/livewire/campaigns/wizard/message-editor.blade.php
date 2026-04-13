@@ -111,8 +111,8 @@
     </div>
 
     <div class="pt-12 border-t border-slate-50 dark:border-slate-800 flex justify-between items-center">
-        <button type="button" @click="$parent.step = 2" class="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Back</button>
-        <button type="button" @click="$parent.step = 4"
+        <button type="button" wire:click="goToStep(2)" class="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Back</button>
+        <button type="button" wire:click="goToStep(4)"
             class="px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
             Continue
         </button>

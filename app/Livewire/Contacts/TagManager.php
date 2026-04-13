@@ -62,7 +62,10 @@ class TagManager extends Component
 
     public function render()
     {
-        $tags = ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
+        $tags = collect();
+        if ($this->isOpen) {
+            $tags = ContactTag::where('team_id', Auth::user()->currentTeam->id)->get();
+        }
 
         return view('livewire.contacts.tag-manager', compact('tags'));
     }

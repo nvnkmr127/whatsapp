@@ -5,6 +5,8 @@ namespace App\Livewire\Campaigns\Wizard;
 use Livewire\Component;
 use Livewire\Attributes\Modelable;
 use Livewire\Attributes\Computed;
+use App\Models\WhatsappTemplate;
+use Illuminate\Support\Facades\Auth;
 
 class MessageEditor extends Component
 {
@@ -22,18 +24,22 @@ class MessageEditor extends Component
     #[Computed]
     public function templates()
     {
-        return \App\Models\Template::where('team_id', auth()->user()->currentTeam->id)
-            ->where('status', 'approved')
+        return WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+            ->where('status', 'APPROVED')
             ->get();
     }
 
     #[Computed]
     public function templateInfo()
     {
-        if (!$this->selectedTemplateId) return null;
+        if (! $this->selectedTemplateId) {
+            return null;
+        }
         
-        $template = \App\Models\Template::find($this->selectedTemplateId);
-        if (!$template) return null;
+        $template = WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->find($this->selectedTemplateId);
+        if (! $template) {
+            return null;
+        }
 
         $body = collect($template->components)->firstWhere('type', 'BODY');
         $header = collect($template->components)->firstWhere('type', 'HEADER');
@@ -47,6 +53,11 @@ class MessageEditor extends Component
             'footerText' => $footer['text'] ?? '',
             'paramCount' => preg_match_all('/\{\{(\d+)\}\}/', ($body['text'] ?? '') . ($header['text'] ?? ''), $matches),
         ];
+    }
+
+    public function goToStep(int $step): void
+    {
+        $this->dispatch('campaignWizardGoToStep', step: $step);
     }
 
     public function render()

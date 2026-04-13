@@ -6,6 +6,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Auth;
 
 #[Title('Automations')]
 class AutomationList extends Component
@@ -17,6 +18,8 @@ class AutomationList extends Component
     public $confirmingDeletion = false;
 
     public $deletionId = null;
+
+    public $showErrorModal = false;
 
     protected $queryString = ['search'];
 
@@ -35,6 +38,7 @@ class AutomationList extends Component
             $this->dispatch('notify', 'Automation deleted successfully.');
         } catch (\Exception $e) {
             $this->confirmingDeletion = false;
+            $this->showErrorModal = true;
             $this->addError('base', 'Unable to delete automation: '.$e->getMessage());
         }
     }
@@ -42,7 +46,7 @@ class AutomationList extends Component
     public function duplicate($id)
     {
         try {
-            $original = \App\Models\Automation::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
+            $original = \App\Models\Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
             $clone = $original->replicate();
             $clone->name = $original->name.' (Copy)';
             $clone->is_active = false; // Default to inactive for safety
@@ -50,6 +54,7 @@ class AutomationList extends Component
 
             $this->dispatch('notify', 'Automation duplicated successfully.');
         } catch (\Exception $e) {
+            $this->showErrorModal = true;
             $this->addError('base', 'Unable to duplicate: '.$e->getMessage());
         }
     }
@@ -57,7 +62,7 @@ class AutomationList extends Component
     public function export($id)
     {
         try {
-            $automation = \App\Models\Automation::where('team_id', auth()->user()->currentTeam->id)->findOrFail($id);
+            $automation = \App\Models\Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($id);
 
             // Format matching the user's example structure or cleaner
             $exportData = [
@@ -74,6 +79,7 @@ class AutomationList extends Component
             }, \Illuminate\Support\Str::slug($automation->name).'-export.json');
 
         } catch (\Exception $e) {
+            $this->showErrorModal = true;
             $this->addError('base', 'Unable to export: '.$e->getMessage());
         }
     }
@@ -82,7 +88,7 @@ class AutomationList extends Component
     public function render()
     {
         $query = \App\Models\Automation::query()
-            ->where('team_id', auth()->user()->currentTeam->id);
+            ->where('team_id', Auth::user()->currentTeam->id);
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -93,7 +99,7 @@ class AutomationList extends Component
         $automations = $query->latest()->paginate(10);
 
         // Module-Level Core Metrics
-        $teamId = auth()->user()->currentTeam->id;
+        $teamId = Auth::user()->currentTeam->id;
         $stats = [
             'total' => \App\Models\Automation::where('team_id', $teamId)->count(),
             'active' => \App\Models\Automation::where('team_id', $teamId)->where('is_active', true)->count(),

@@ -31,6 +31,11 @@ class AudienceSelector extends Component
         $this->dispatch('audienceTypeUpdated', type: $this->audienceType);
     }
 
+    public function goToStep(int $step): void
+    {
+        $this->dispatch('campaignWizardGoToStep', step: $step);
+    }
+
     #[Computed]
     public function tags()
     {
@@ -53,12 +58,19 @@ class AudienceSelector extends Component
     #[Computed]
     public function audienceCount()
     {
+        $base = Contact::where('team_id', Auth::user()->currentTeam->id)
+            ->where('opt_in_status', 'opted_in');
+
         if ($this->audienceType === 'tags') {
-            return Contact::where('team_id', Auth::user()->currentTeam->id)
-                ->whereHas('tags', fn($q) => $q->whereIn('contact_tags.id', $this->selectedTags))
+            return $base
+                ->whereHas('tags', fn ($q) => $q->whereIn('contact_tags.id', $this->selectedTags))
                 ->count();
         }
-        return count($this->selectedContacts);
+        if ($this->audienceType === 'contacts') {
+            return $base->whereIn('id', $this->selectedContacts)->count();
+        }
+
+        return $base->count();
     }
 
     public function render()

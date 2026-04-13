@@ -183,9 +183,21 @@ class Wizard extends Component
         $this->calculateAudience();
     }
 
+    #[On('campaignWizardGoToStep')]
+    public function goToStep($step)
+    {
+        $step = (int) $step;
+        if ($step < 1 || $step > 4) {
+            return;
+        }
+
+        $this->step = $step;
+    }
+
     public function calculateAudience()
     {
-        $query = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id);
+        $query = Contact::where('team_id', \Illuminate\Support\Facades\Auth::user()->currentTeam->id)
+            ->where('opt_in_status', 'opted_in');
 
         if ($this->audienceType === 'tags' && ! empty($this->selectedTags)) {
             $query->whereHas('tags', function ($q) {

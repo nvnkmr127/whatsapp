@@ -273,7 +273,7 @@
                 </div>
 
                 <div wire:loading.remove id="message-chart-container" class="w-full h-[400px] -ml-4">
-                    <div id="chart"></div>
+                    <div id="chart" data-chart='@json($chartData)'></div>
                 </div>
             </div>
         </div>
@@ -284,9 +284,29 @@
     document.addEventListener('livewire:initialized', () => {
         let chart = null;
 
+        const normalizeChartData = (data) => {
+            data = (data && typeof data === 'object') ? data : {};
+            const labels = Array.isArray(data.labels) ? data.labels : [];
+
+            let series = Array.isArray(data.series) ? data.series : [];
+            series = series
+                .filter(s => s && typeof s === 'object')
+                .map(s => ({
+                    name: typeof s.name === 'string' ? s.name : 'Messages',
+                    data: Array.isArray(s.data) ? s.data : [],
+                }));
+
+            if (series.length === 0) {
+                series = [{ name: 'Messages', data: [] }];
+            }
+
+            return { labels, series };
+        };
+
         const initChart = (data) => {
+            const normalized = normalizeChartData(data);
             const options = {
-                series: data.series,
+                series: normalized.series,
                 chart: {
                     type: 'area',
                     height: 400,
@@ -324,7 +344,7 @@
                     lineCap: 'round'
                 },
                 xaxis: {
-                    categories: data.labels,
+                    categories: normalized.labels,
                     axisBorder: { show: false },
                     axisTicks: { show: false },
                     labels: {
@@ -366,7 +386,14 @@
             }
         };
 
-        initChart(@json($chartData));
+        const initialChartEl = document.querySelector("#chart");
+        let initialChartData = {};
+        try {
+            initialChartData = initialChartEl?.dataset?.chart ? JSON.parse(initialChartEl.dataset.chart) : {};
+        } catch (e) {
+            initialChartData = {};
+        }
+        initChart(initialChartData);
 
         Livewire.on('chartDataUpdated', (data) => {
             if (Array.isArray(data)) data = data[0];

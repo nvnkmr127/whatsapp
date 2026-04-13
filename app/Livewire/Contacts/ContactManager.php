@@ -153,7 +153,11 @@ class ContactManager extends Component
             $query->where('opt_in_status', $this->filterStatus);
         }
 
-        $contacts = $query->with(['tags', 'category'])->latest()->paginate(15);
+        $contacts = $query
+            ->with(['tags', 'category'])
+            ->withCount(['messages', 'conversations', 'tags'])
+            ->latest()
+            ->paginate(15);
         $tags = \Illuminate\Support\Facades\Cache::remember("team_{$teamId}_tags", 60, function() use ($teamId) {
             return ContactTag::where('team_id', $teamId)->get();
         });
