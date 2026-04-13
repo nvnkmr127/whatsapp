@@ -48,10 +48,10 @@ class ManagementClient
         ]);
 
         if ($response->failed()) {
-            return ['success' => false, 'error' => $response->json('error.message') ?? 'Exchange failed'];
+            return ['status' => false, 'error' => $response->json('error.message') ?? 'Exchange failed'];
         }
 
-        return ['success' => true, 'access_token' => $response->json('access_token')];
+        return ['status' => true, 'access_token' => $response->json('access_token')];
     }
 
     /**
@@ -65,10 +65,10 @@ class ManagementClient
         $response = Http::withToken($token)->post($url, ['app_id' => $appId]);
 
         if ($response->failed()) {
-            return ['success' => false, 'error' => $response->json('error.message') ?? 'Subscription failed'];
+            return ['status' => false, 'error' => $response->json('error.message') ?? 'Subscription failed'];
         }
 
-        return ['success' => true];
+        return ['status' => true];
     }
 
     /**
@@ -82,9 +82,9 @@ class ManagementClient
         ]);
 
         if ($response->failed()) {
-            return ['success' => false, 'error' => $response->json('error.message') ?? 'Fetch failed'];
+            return ['status' => false, 'error' => $response->json('error.message') ?? 'Fetch failed'];
         }
 
-        return ['success' => true, 'data' => $response->json()];
+        return ['status' => true, 'data' => $response->json()];
     }
 }
