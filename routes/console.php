@@ -20,7 +20,7 @@ Schedule::command('whatsapp:check-setup-health')->everySixHours();
 // Existing schedules
 Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
 Schedule::command('chats:process-status-rules')->hourly();
-Schedule::command('automation:resume')->everyMinute();
+Schedule::command('automation:resume')->everyMinute()->withoutOverlapping();
 Schedule::command('app:send-daily-reports')->dailyAt('23:00')->timezone('Asia/Kolkata');
 
 // Security & Maintenance

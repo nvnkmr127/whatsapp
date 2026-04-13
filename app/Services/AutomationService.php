@@ -490,110 +490,109 @@ class AutomationService
             if (! $lock->get()) {
                 Log::info("Automation Start: Skipped for contact {$contact->id} - Another process is already starting a flow (Locked).");
 
-                return;
+                return null;
             }
 
-        return DB::transaction(function () use ($automation, $contact, $initialVariables) {
-            // 0. Billing Enforcement
-            if (! $automation->team->canAccess('automations')) {
-                Log::warning("Automation #{$automation->id} skipped: Feature [automations] not accessible for team {$automation->team_id}.");
+            return DB::transaction(function () use ($automation, $contact, $initialVariables) {
+                // 0. Billing Enforcement
+                if (! $automation->team->canAccess('automations')) {
+                    Log::warning("Automation #{$automation->id} skipped: Feature [automations] not accessible for team {$automation->team_id}.");
 
-                return;
-            }
-
-            if (! $automation->team->canAccess('send_message')) {
-                Log::warning("Automation #{$automation->id} skipped: Message limit reached for team {$automation->team_id}.");
-
-                return;
-            }
-
-            // Health Check Enforcement
-            $health = $this->healthMonitor->checkHealth($automation->team);
-            $healthThreshold = config('whatsapp.thresholds.health_quality_score', 35);
-            if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= $healthThreshold) {
-                Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).", ['health' => $health]);
-
-                return;
-            }
-
-            // Preflight Check
-            $validation = $automation->validate();
-            if (! $validation['is_activatable']) {
-                Log::error("Attempted to start invalid automation #{$automation->id}: ".json_encode($validation['issues']));
-
-                return;
-            }
-
-            $flowData = $automation->flow_data;
-            $startNodeId = $this->findStartNode($flowData);
-
-            if (! $startNodeId) {
-                Log::error("Automation {$automation->id} has no start node.");
-
-                return;
-            }
-
-            // Interrupt existing runs NOW, just before we commit to the new one
-            AutomationRun::where('contact_id', $contact->id)
-                ->whereIn('status', ['active', 'waiting_input', 'paused'])
-                ->update(['status' => 'interrupted']);
-
-            Log::info("Automation #{$automation->id} starting run for contact {$contact->id}");
-
-            $run = AutomationRun::create([
-                'automation_id' => $automation->id,
-                'contact_id' => $contact->id,
-                'status' => 'active',
-                'version' => 1,
-                'step_count' => 0,
-                'state_data' => ['current_node_id' => $startNodeId, 'variables' => $initialVariables],
-                'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']],
-            ]);
-
-            // Process Trigger Tags
-            $triggerConfig = $automation->trigger_config ?? [];
-            if (! empty($triggerConfig['add_tags'])) {
-                foreach ($triggerConfig['add_tags'] as $tagName) {
-                    $tag = \App\Models\ContactTag::firstOrCreate(['team_id' => $automation->team_id, 'name' => $tagName]);
-                    $contact->tags()->syncWithoutDetaching([$tag->id]);
+                    return null;
                 }
-            }
-            if (! empty($triggerConfig['remove_tags'])) {
-                foreach ($triggerConfig['remove_tags'] as $tagName) {
-                    $tag = \App\Models\ContactTag::where('team_id', $automation->team_id)->where('name', $tagName)->first();
-                    if ($tag) {
-                        $contact->tags()->detach($tag->id);
+
+                if (! $automation->team->canAccess('send_message')) {
+                    Log::warning("Automation #{$automation->id} skipped: Message limit reached for team {$automation->team_id}.");
+
+                    return null;
+                }
+
+                // Health Check Enforcement
+                $health = $this->healthMonitor->checkHealth($automation->team);
+                $healthThreshold = config('whatsapp.thresholds.health_quality_score', 35);
+                if ($health['status'] === 'restricted' || ($health['quality']['score'] ?? 100) <= $healthThreshold) {
+                    Log::warning("Automation #{$automation->id} blocked: Account Restricted or Poor Quality (RED).", ['health' => $health]);
+
+                    return null;
+                }
+
+                // Preflight Check
+                $validation = $automation->validate();
+                if (! $validation['is_activatable']) {
+                    Log::error("Attempted to start invalid automation #{$automation->id}: ".json_encode($validation['issues']));
+
+                    return null;
+                }
+
+                $flowData = $automation->flow_data;
+                $startNodeId = $this->findStartNode($flowData);
+
+                if (! $startNodeId) {
+                    Log::error("Automation {$automation->id} has no start node.");
+
+                    return null;
+                }
+
+                // Interrupt existing runs NOW, just before we commit to the new one
+                AutomationRun::where('contact_id', $contact->id)
+                    ->whereIn('status', ['active', 'waiting_input', 'paused'])
+                    ->update(['status' => 'interrupted']);
+
+                Log::info("Automation #{$automation->id} starting run for contact {$contact->id}");
+
+                $run = AutomationRun::create([
+                    'automation_id' => $automation->id,
+                    'contact_id' => $contact->id,
+                    'status' => 'active',
+                    'version' => 1,
+                    'step_count' => 0,
+                    'state_data' => ['current_node_id' => $startNodeId, 'variables' => $initialVariables],
+                    'execution_history' => [['node_id' => $startNodeId, 'timestamp' => now()->toDateTimeString(), 'event' => 'started']],
+                ]);
+
+                // Process Trigger Tags
+                $triggerConfig = $automation->trigger_config ?? [];
+                if (! empty($triggerConfig['add_tags'])) {
+                    foreach ($triggerConfig['add_tags'] as $tagName) {
+                        $tag = \App\Models\ContactTag::firstOrCreate(['team_id' => $automation->team_id, 'name' => $tagName]);
+                        $contact->tags()->syncWithoutDetaching([$tag->id]);
                     }
                 }
-            }
+                if (! empty($triggerConfig['remove_tags'])) {
+                    foreach ($triggerConfig['remove_tags'] as $tagName) {
+                        $tag = \App\Models\ContactTag::where('team_id', $automation->team_id)->where('name', $tagName)->first();
+                        if ($tag) {
+                            $contact->tags()->detach($tag->id);
+                        }
+                    }
+                }
 
-            Log::info("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
+                Log::info("Automation #{$automation->id}: Run created with ID {$run->id}. Dispatching first node: {$startNodeId}");
 
-            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
+                ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
 
-            return $run;
-        });
-    }
-            // Track Funnel Event
-            \App\Models\CustomerEvent::create([
-                'team_id' => $automation->team_id,
-                'contact_id' => $contact->id,
-                'event_type' => 'flow_started',
-                'event_data' => [
-                    'automation_id' => $automation->id,
-                    'automation_name' => $automation->name,
-                    'attributed_campaign_id' => \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$contact->phone_number}"),
-                ],
-            ]);
+                // Track Funnel Event
+                \App\Models\CustomerEvent::create([
+                    'team_id' => $automation->team_id,
+                    'contact_id' => $contact->id,
+                    'event_type' => 'flow_started',
+                    'event_data' => [
+                        'automation_id' => $automation->id,
+                        'automation_name' => $automation->name,
+                        'attributed_campaign_id' => \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$contact->phone_number}"),
+                    ],
+                ]);
 
-            // Dispatch first node
-            ExecuteAutomationNodeJob::dispatch($run->id, $startNodeId);
-            Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
+                Log::info("Automation #{$automation->id} successfully started for contact {$contact->id}. Run ID: {$run->id}");
 
-        } catch (\Exception $e) {
+                return $run;
+            });
+        } catch (\Throwable $e) {
             Log::error("Automation #{$automation->id} start FAILED for contact {$contact->id}: ".$e->getMessage(), [
                 'exception' => $e,
             ]);
+
+            return null;
         } finally {
             $lock->release();
         }
@@ -604,7 +603,15 @@ class AutomationService
      */
     public function executeNodeSync(AutomationRun $run)
     {
-        $nodeId = $run->state_data['current_node_id'];
+        $nodeId = data_get($run->state_data, 'current_node_id');
+        if (! $nodeId) {
+            Log::warning("AutomationRun #{$run->id}: Missing current_node_id in state_data. Failing run.", [
+                'state_data' => $run->state_data,
+            ]);
+            $run->update(['status' => 'failed', 'error_message' => 'Missing current_node_id']);
+
+            return;
+        }
         $flowData = $run->automation->flow_data;
         $node = $this->getNodeById($flowData, $nodeId);
 
@@ -1446,7 +1453,7 @@ class AutomationService
         $runs = AutomationRun::whereIn('id', $runIds)->get();
         foreach ($runs as $run) {
             try {
-                $nodeId = $run->state_data['current_node_id'] ?? null;
+                $nodeId = data_get($run->state_data, 'current_node_id');
                 if (! $nodeId) {
                     Log::warning("AutomationRun #{$run->id} skipped during resume: missing current_node_id in state_data.", [
                         'state_data' => $run->state_data,
@@ -1500,7 +1507,14 @@ class AutomationService
         // 2. Identify and Process Response Data
         $input = $messageContent;
         $flowData = $run->automation->flow_data;
-        $currentNodeId = $run->state_data['current_node_id'];
+        $currentNodeId = data_get($run->state_data, 'current_node_id');
+        if (! $currentNodeId) {
+            Log::warning("AutomationRun #{$run->id}: Missing current_node_id in state_data during handleReply.", [
+                'state_data' => $run->state_data,
+            ]);
+
+            return false;
+        }
         $currentNode = $this->getNodeById($flowData, $currentNodeId);
 
         if (! $currentNode) {

@@ -62,7 +62,7 @@ class AutomationValidationService
 
         // 3. Node-Specific Content Validation
         foreach ($nodes as $node) {
-            $this->validateNode($node, $automation->team_id, $results);
+            $this->validateNode($node, $automation->team_id, $results, $flow);
 
             // 4. Edge Connectivity Check for this node
             $isTerminalNode = in_array($node['type'], ['handover', 'stop', 'stop_flow']);
@@ -107,7 +107,7 @@ class AutomationValidationService
         }
     }
 
-    protected function validateNode(array $node, $teamId, array &$results)
+    protected function validateNode(array $node, $teamId, array &$results, array $flow)
     {
         $data = $node['data'] ?? [];
 
@@ -244,5 +244,30 @@ class AutomationValidationService
         } else {
             $results['warnings']++;
         }
+    }
+
+    protected function evaluateOperator($actual, $operator, $value): bool
+    {
+        $strActual = strtolower((string) $actual);
+        $strValue = strtolower((string) $value);
+
+        return match ($operator) {
+            'eq' => (string) $actual === (string) $value,
+            'neq' => (string) $actual !== (string) $value,
+            'gt' => (float) $actual > (float) $value,
+            'gte' => (float) $actual >= (float) $value,
+            'lt' => (float) $actual < (float) $value,
+            'lte' => (float) $actual <= (float) $value,
+            'contains' => str_contains($strActual, $strValue),
+            'not_contains' => ! str_contains($strActual, $strValue),
+            'starts_with' => str_starts_with($strActual, $strValue),
+            'ends_with' => str_ends_with($strActual, $strValue),
+            'is_empty',
+            'empty' => empty($actual),
+            'is_not_empty',
+            'not_empty' => ! empty($actual),
+            'regex' => (bool) @preg_match('#'.str_replace('#', '\#', $value).'#i', (string) $actual),
+            default => false,
+        };
     }
 }
