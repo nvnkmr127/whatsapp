@@ -10,6 +10,7 @@ class ManagementClient
     protected WhatsAppClient $client;
 
     protected CredentialResolver $resolver;
+    protected ?Team $team = null;
 
     public function __construct(WhatsAppClient $client, CredentialResolver $resolver)
     {
@@ -22,6 +23,7 @@ class ManagementClient
      */
     public function forTeam(Team $team): self
     {
+        $this->team = $team;
         $this->client->forTeam($team);
 
         return $this;
@@ -32,7 +34,7 @@ class ManagementClient
      */
     public function exchangeToken(string $shortLivedToken): array
     {
-        $appId = config('whatsapp.app_id');
+        $appId = $this->team ? $this->resolver->resolve($this->team)['app_id'] : config('whatsapp.app_id');
         $appSecret = config('whatsapp.app_secret');
 
         if (! $appId || ! $appSecret) {
@@ -51,7 +53,7 @@ class ManagementClient
             return ['status' => false, 'error' => $response->json('error.message') ?? 'Exchange failed'];
         }
 
-        return ['status' => true, 'access_token' => $response->json('access_token')];
+        return array_merge(['status' => true], $response->json());
     }
 
     /**
@@ -59,7 +61,7 @@ class ManagementClient
      */
     public function subscribeToWebhooks(string $wabaId, string $token): array
     {
-        $appId = config('whatsapp.app_id');
+        $appId = $this->team ? $this->resolver->resolve($this->team)['app_id'] : config('whatsapp.app_id');
         $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}/subscribed_apps";
 
         $response = Http::withToken($token)->post($url, ['app_id' => $appId]);

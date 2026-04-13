@@ -114,7 +114,8 @@
                                             </svg>
                                             <span>
                                                 @if($tokenDaysUntilExpiry <= 0)
-                                                    WhatsApp Access Token has expired. Re-connect immediately to restore service.
+                                                    WhatsApp Access Token expires today. Re-connect immediately to restore service.
+                                                    <div class="mt-1 text-[10px] font-bold opacity-75 italic lowercase">(Hint: You might be using a temporary token)</div>
                                                 @else
                                                     WhatsApp Access Token expires in {{ $tokenDaysUntilExpiry }}
                                                     {{ Str::plural('day', $tokenDaysUntilExpiry) }}. Re-connect soon.

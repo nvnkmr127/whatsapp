@@ -56,6 +56,15 @@ trait WhatsApp
         $this->skipAppSecretProof = $skip;
     }
 
+    protected function getAppId(): ?string
+    {
+        $team = $this->team ?? auth()->user()?->currentTeam;
+
+        return $team?->whatsapp_app_id
+            ?: (get_setting('whatsapp_wm_fb_app_id')
+                ?: (config('whatsapp.app_id') ?? config('services.facebook.client_id')));
+    }
+
     /**
      * Handle cases where the access token is invalid, expired, or revoked.
      */
@@ -289,10 +298,7 @@ trait WhatsApp
     public function debugToken(string $token): array
     {
         try {
-            // Priority: Settings DB (UI-entered) > WHATSAPP_APP_ID env > FACEBOOK_APP_ID env
-            // The settings DB key matches what WhatsappConfig::loadSettings() reads (whatsapp_wm_fb_app_id).
-            $appId = get_setting('whatsapp_wm_fb_app_id')
-                ?: config('whatsapp.app_id');
+            $appId = $this->getAppId();
             $appSecret = config('whatsapp.app_secret');
             $appToken = $appId.'|'.$appSecret;
 
@@ -370,7 +376,7 @@ trait WhatsApp
     {
         try {
             $url = self::getBaseUrl()."{$wabaId}/subscribed_apps";
-            $appId = config('whatsapp.app_id') ?? config('services.facebook.client_id');
+            $appId = $this->getAppId();
             $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
 
             $isSystemToken = str_starts_with($token, 'EAAB');

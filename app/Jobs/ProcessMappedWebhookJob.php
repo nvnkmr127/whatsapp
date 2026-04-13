@@ -173,23 +173,14 @@ class ProcessMappedWebhookJob implements ShouldQueue
                     $mappedKey = is_string($mappedKey[0] ?? null) ? $mappedKey[0] : json_encode($mappedKey);
                 }
 
-                $rawVal = null;
+                $rawVal = $this->resolveValue($mappedKey, (int) $position);
 
-                // Try to get value from mapped_data first (e.g., "param_1")
-                if (isset($this->payload->mapped_data[$mappedKey])) {
-                    $rawVal = $this->payload->mapped_data[$mappedKey];
-                }
-                // If not found and mappedKey contains dots, try extracting from raw payload using dot notation
-                elseif (str_contains($mappedKey, '.')) {
-                    $rawVal = data_get($this->payload->payload, $mappedKey);
-
-                    if ($rawVal === null) {
-                        Log::warning("Value not found in raw payload for path: {$mappedKey}", [
-                            'payload_id' => $this->payload->id,
-                            'path' => $mappedKey,
-                            'available_mapped_keys' => array_keys($this->payload->mapped_data ?? []),
-                        ]);
-                    }
+                if ($rawVal === null && str_contains($mappedKey, '.')) {
+                    Log::warning("Value not found in raw payload for path: {$mappedKey}", [
+                        'payload_id' => $this->payload->id,
+                        'path' => $mappedKey,
+                        'available_mapped_keys' => array_keys($this->payload->mapped_data ?? []),
+                    ]);
                 }
 
                 // Handle array values (e.g. from JSON fields)
@@ -306,11 +297,11 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Build template parameters
         $parameters = [];
         foreach ($parameterMapping as $position => $mappedKey) {
-            $rawVal = $this->payload->mapped_data[$mappedKey] ?? '';
+            $rawVal = $this->resolveValue($mappedKey, (int) $position);
             if (is_array($rawVal)) {
                 $val = json_encode($rawVal);
             } else {
-                $val = (string) $rawVal;
+                $val = (string) ($rawVal ?? '');
             }
             $parameters[$position] = $val;
         }
@@ -421,11 +412,11 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Build automation variables
         $automationVariables = [];
         foreach ($variables as $varName => $field) {
-            $rawVal = $this->payload->mapped_data[$field] ?? '';
+            $rawVal = $this->resolveValue($field);
             if (is_array($rawVal)) {
                 $val = json_encode($rawVal);
             } else {
-                $val = (string) $rawVal;
+                $val = (string) ($rawVal ?? '');
             }
             $automationVariables[$varName] = $val;
         }
@@ -542,5 +533,32 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         return [];
+    }
+
+    /**
+     * Resolve a value from the payload or mapped data.
+     */
+    protected function resolveValue(string $mappedKey, ?int $position = null): mixed
+    {
+        // 1. Check if this is explicitly mapped to a param position
+        if ($position !== null) {
+            $paramKey = "param_{$position}";
+            if (isset($this->payload->mapped_data[$paramKey])) {
+                return $this->payload->mapped_data[$paramKey];
+            }
+        }
+
+        // 2. Check for STATIC: prefix
+        if (str_starts_with($mappedKey, 'STATIC:')) {
+            return substr($mappedKey, 7);
+        }
+
+        // 3. Check mapped_data by key
+        if (isset($this->payload->mapped_data[$mappedKey])) {
+            return $this->payload->mapped_data[$mappedKey];
+        }
+
+        // 4. Try extract from raw payload
+        return data_get($this->payload->payload, $mappedKey);
     }
 }

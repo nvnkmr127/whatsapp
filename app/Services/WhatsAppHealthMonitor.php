@@ -118,7 +118,7 @@ class WhatsAppHealthMonitor
             'valid' => $valid,
             'is_permanent' => is_null($team->whatsapp_token_expires_at),
             'expires_at' => $team->whatsapp_token_expires_at,
-            'days_remaining' => $team->whatsapp_token_expires_at ? (int) $team->whatsapp_token_expires_at->diffInDays() : null,
+            'days_remaining' => $team->whatsapp_token_expires_at ? (int) floor(now()->diffInMinutes($team->whatsapp_token_expires_at, false) / 1440) : null,
             'last_validated' => $team->whatsapp_token_last_validated,
             'issues' => $issues,
         ];
