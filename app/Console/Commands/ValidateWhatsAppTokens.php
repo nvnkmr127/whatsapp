@@ -117,9 +117,9 @@ class ValidateWhatsAppTokens extends Command
         $message = $error['message'] ?? 'Unknown error';
         $code = $error['code'] ?? null;
 
-        // Check if it's an auth error
-        if (str_contains(strtolower($message), 'token') || $code == 190 || $code == 102) {
-            Log::error("WhatsApp token invalid for team {$team->id}", [
+        // Check if it's an auth or permission error
+        if (str_contains(strtolower($message), 'token') || $code == 190 || $code == 102 || $code == 200) {
+            Log::error("WhatsApp token invalid or lacks permissions for team {$team->id}", [
                 'error' => $error,
             ]);
 

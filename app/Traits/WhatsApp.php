@@ -67,8 +67,9 @@ trait WhatsApp
         $subcode = $errorData['error']['error_subcode'] ?? $errorData['error_subcode'] ?? null;
 
         // Code 190: Access token has expired or is invalid
+        // Code 200: Permissions error (System user not added to WABA)
         // Status 401: Unauthorized (standard for token issues)
-        if ($status === 401 || $errorCode == self::ERROR_TOKEN_INVALID) {
+        if ($status === 401 || $errorCode == self::ERROR_TOKEN_INVALID || $errorCode == 200) {
             $team = $this->team ?? auth()->user()?->currentTeam;
             if ($team) {
                 // Determine if it was a password change (#460) or general expiry

@@ -159,7 +159,7 @@ class SendMessageJob implements ShouldQueue
             }
 
             if (! empty($response['error'])) {
-                $errorCode = $response['error']['code'] ?? null;
+                $errorCode = $response['error']['error']['code'] ?? $response['error']['code'] ?? null;
 
                 // Permanent failures (Policy)
                 if (in_array($errorCode, [131047, 131051])) {
@@ -175,6 +175,10 @@ class SendMessageJob implements ShouldQueue
                     $this->release($backoff);
 
                     return;
+                }
+
+                if ($errorCode == 200) {
+                    throw new \Exception("WhatsApp Permission Error (#200): The system does not have permission to send messages for this account. Please reconnect Facebook and ensure the System User has Admin access to the WABA.");
                 }
 
                 throw new \Exception(json_encode($response['error']));
