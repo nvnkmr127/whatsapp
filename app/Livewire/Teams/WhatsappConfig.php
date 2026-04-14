@@ -17,6 +17,7 @@ class WhatsappConfig extends Component
     use WhatsApp;
 
     // Connection Fields
+    public $team;
     public $wm_fb_app_id;
 
     public $wm_fb_app_secret;
@@ -222,6 +223,7 @@ class WhatsappConfig extends Component
 
     public function mount()
     {
+        $this->team = \Illuminate\Support\Facades\Auth::user()?->fresh()?->currentTeam;
         $this->loadSettings();
 
         // Defer heavy API calls to loadData()
@@ -286,17 +288,33 @@ class WhatsappConfig extends Component
     {
         $this->readyToLoad = true;
 
+        if (!$this->team) {
+            $this->team = \Illuminate\Support\Facades\Auth::user()?->fresh()?->currentTeam;
+        }
+
+        $team = $this->team;
+        if (! $team) {
+            $this->is_whatsmark_connected = false;
+            $this->integrationState = 'disconnected';
+
+            return;
+        }
+
         if ($this->is_whatsmark_connected) {
             $this->loadBusinessProfile();
             $this->refreshHealth();
             $this->loadAvailablePhoneNumbers();
 
-            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
-            
             // [PROACTIVE VALIDATION] If last validation is stale (> 6 hours), run a fresh background check
             if ($this->tokenLastValidated && $this->tokenLastValidated->diffInHours(now()) >= 6) {
-                \App\Jobs\ValidateWhatsAppTokens::dispatch($team->id, \App\Services\TraceContext::getTraceId())->onQueue('high');
-                Log::info("WhatsApp Config: Triggered proactive background validation for Team {$team->id}");
+                try {
+                    \App\Jobs\ValidateWhatsAppTokens::dispatch($team->id, \App\Services\TraceContext::getTraceId())->onQueue('high');
+                    Log::info("WhatsApp Config: Triggered proactive background validation for Team {$team->id}");
+                } catch (\Throwable $e) {
+                    Log::warning("WhatsApp Config: Failed to dispatch background validation for Team {$team->id}", [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             // Auto-sync once if basic info is missing but we are connected
@@ -305,8 +323,7 @@ class WhatsappConfig extends Component
             }
 
             // [NEW] Self-Heal: Fetch Facebook Business ID if missing
-            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
-            if ($team && $this->is_whatsmark_connected && ! $team->facebook_business_id && $team->whatsapp_business_account_id) {
+            if ($this->is_whatsmark_connected && ! $team->facebook_business_id && $team->whatsapp_business_account_id) {
                 // Determine token to use
                 $token = $this->wm_access_token ?: $team->whatsapp_access_token;
 
@@ -324,14 +341,19 @@ class WhatsappConfig extends Component
     public function loadSettings()
     {
         try {
-            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
+            if (!$this->team) {
+                $this->team = \Illuminate\Support\Facades\Auth::user()?->currentTeam;
+            }
 
-            if (! $team) {
+            if (! $this->team) {
                 $this->is_whatsmark_connected = false;
                 $this->integrationState = 'disconnected';
 
                 return;
             }
+
+            $team = $this->team->fresh();
+            $this->team = $team;
 
             // Load App ID and Secret
             $this->wm_fb_app_id = $team->whatsapp_app_id 
