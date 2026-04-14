@@ -1429,8 +1429,15 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <x-label for="wm_business_account_id" value="WABA Account ID *"
-                                class="text-xs font-bold text-slate-500 uppercase mb-2" />
+                            <div class="flex items-center justify-between mb-2">
+                                <x-label for="wm_business_account_id" value="WABA Account ID *"
+                                    class="text-xs font-bold text-slate-500 uppercase" />
+                                <button type="button" wire:click="discoverManualAccounts" wire:loading.attr="disabled"
+                                    class="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest">
+                                    <span wire:loading.remove wire:target="discoverManualAccounts">↺ DISCOVER</span>
+                                    <span wire:loading wire:target="discoverManualAccounts">...</span>
+                                </button>
+                            </div>
                             <x-input id="wm_business_account_id" type="text" wire:model="wm_business_account_id"
                                 class="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl"
                                 placeholder="WABA ID from Meta" />
@@ -1532,10 +1539,16 @@
             window.launchWhatsAppSignup = function () {
                 if (!checkHttps()) return;
 
+                const fbBtn = document.getElementById('fb-login-btn');
+                const originalHtml = fbBtn.innerHTML;
+
                 if (!sdkInitialized || typeof FB === 'undefined') {
                     @this.dispatch('notify', { title: 'SDK Loading', message: 'Facebook SDK is still loading. Please wait a moment.', type: 'info' });
                     return;
                 }
+
+                fbBtn.disabled = true;
+                fbBtn.innerHTML = 'WORKING...';
 
                 FB.login(function (response) {
                     if (response.authResponse) {
@@ -1556,18 +1569,23 @@
                                     @this.handleEmbeddedSuccess(res.data.access_token, wabaId, options);
                                 } else {
                                     @this.dispatch('notify', { title: 'Onboarding Error', message: res.data.message, type: 'error' });
+                                    fbBtn.disabled = false;
+                                    fbBtn.innerHTML = originalHtml;
                                 }
                             })
                             .catch(function (error) {
                                 console.error('WhatsApp Onboarding External Error:', error);
                                 const errorMsg = error.response?.data?.message || error.message || 'Unknown network error';
                                 @this.dispatch('notify', { title: 'Linkage Failed', message: errorMsg, type: 'error' });
+                                fbBtn.disabled = false;
+                                fbBtn.innerHTML = originalHtml;
                             });
                     } else {
                         // [NEW] Handle Cancellation
                         console.log('WhatsApp Onboarding: User cancelled or did not fully authorize.');
                         @this.dispatch('notify', { title: 'Onboarding Cancelled', message: 'You closed the Facebook login window before completing the setup.', type: 'info' });
-                        @this.set('isProcessing', false);
+                        fbBtn.disabled = false;
+                        fbBtn.innerHTML = originalHtml;
                     }
                 }, {
                     scope: 'whatsapp_business_management, whatsapp_business_messaging, business_management',

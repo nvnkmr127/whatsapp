@@ -645,6 +645,44 @@ class WhatsappConfig extends Component
     }
 
     /**
+     * Discovery logic for Manual Flow
+     */
+    public function discoverManualAccounts()
+    {
+        $this->validate([
+            'wm_access_token' => 'required',
+        ]);
+
+        $this->dispatch('notify', title: 'Searching...', message: 'Querying Meta Graph for reachable WABAs...', type: 'info');
+
+        try {
+            $wabaIds = $this->getAccessibleWabaIds($this->wm_access_token);
+            
+            if (empty($wabaIds)) {
+                $this->dispatch('notify', title: 'No WABAs Found', message: 'No WhatsApp Business Accounts found for this token. Check permissions.', type: 'warning');
+                return;
+            }
+
+            $this->available_wabas = [];
+            foreach ($wabaIds as $id) {
+                $res = $this->mgmt()->getWabaStatus($id, $this->wm_access_token);
+                $this->available_wabas[] = [
+                    'id' => $id,
+                    'name' => $res['data']['name'] ?? 'WABA ' . $id,
+                    'status' => strtoupper($res['data']['account_review_status'] ?? 'unknown'),
+                    'verification' => strtoupper($res['data']['business_verification_status'] ?? 'unknown'),
+                ];
+            }
+
+            $this->dispatch('notify', title: 'Accounts Found', message: count($this->available_wabas) . ' accounts discovered. Please select one.', type: 'success');
+
+        } catch (\Exception $e) {
+            $this->dispatch('notify', title: 'Discovery Failed', message: $e->getMessage(), type: 'error');
+        }
+    }
+
+
+    /**
      * THE SINGLE SOURCE OF TRUTH for connecting WhatsApp accounts.
      * All connection flows must funnel through this method.
      */
@@ -746,40 +784,19 @@ class WhatsappConfig extends Component
             DB::rollBack();
             $this->completeAudit($auditId, 'failed', ['error' => $e->getMessage()]);
 
-            // Wipe partial state on hard failures
             $team->update([
                 'whatsapp_connected' => false,
                 'whatsapp_setup_state' => \App\Enums\IntegrationState::DISCONNECTED,
             ]);
             $this->is_whatsmark_connected = false;
 
-            Log::error('WhatsApp Unified Setup Flow Exception', [
-                'message' => $e->getMessage(),
-                'team_id' => $team->id
-            ]);
-
-            $this->dispatch('notify', title: 'Connection Sequence Failed', message: $e->getMessage(), type: 'error');
-            throw $e; // Re-throw to caller (manual or embedded) for specific UI handling if needed
-        }
-    }
-            ]);
-            $this->is_whatsmark_connected = false;
-
             Log::error('WhatsApp Setup: Connection Flow Failed', [
                 'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
+                'team_id' => $team->id,
+                'trace' => $e->getTraceAsString()
             ]);
-            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
 
-            if (! $startedTransaction) {
-                // If we are in embedded flow (parent transaction), we generally want to bubble up,
-                // BUT for this specific 500 debugging, we want to catch it to see the error.
-                // Re-throwing Throwable might just cause the 500 again if not caught upstream.
-                // Let's log it and NOT re-throw for now to ensure UI feedback.
-                // throw $e;
-            }
+            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
         }
     }
 
