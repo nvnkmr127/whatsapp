@@ -25,6 +25,9 @@ trait WhatsApp
             if (isset($this->team)) {
                 $this->mgmtClient->forTeam($this->team);
             }
+            if ($this->skipAppSecretProof) {
+                $this->mgmtClient->skipAppSecretProof(true);
+            }
         }
 
         return $this->mgmtClient;

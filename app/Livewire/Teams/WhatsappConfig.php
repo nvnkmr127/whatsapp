@@ -1059,6 +1059,14 @@ class WhatsappConfig extends Component
 
         $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
 
+        // [RESILIENCE] If #200 Permission Error occurs, it's often due to appsecret_proof mismatch on manual tokens.
+        // Try one more time without the proof.
+        if (!($result['status'] ?? false) && ($result['is_permission_error'] ?? false)) {
+            Log::info("Webhook Setup: Detected permission error #200, retrying without appsecret_proof for Team {$team->id}");
+            $this->setSkipAppSecretProof(true);
+            $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
+        }
+
         if ((bool) ($result['status'] ?? $result['success'] ?? false)) {
             $this->dispatch('notify', title: 'Success', message: 'Webhook subscribed successfully! Your account is now linked.', type: 'success');
             

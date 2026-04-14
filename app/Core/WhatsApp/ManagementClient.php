@@ -12,6 +12,7 @@ class ManagementClient
 
     protected CredentialResolver $resolver;
     protected ?Team $team = null;
+    protected bool $skipAppSecretProof = false;
 
     public function __construct(WhatsAppClient $client, CredentialResolver $resolver)
     {
@@ -26,6 +27,16 @@ class ManagementClient
     {
         $this->team = $team;
         $this->client->forTeam($team);
+
+        return $this;
+    }
+
+    /**
+     * Disable appsecret_proof for this client.
+     */
+    public function skipAppSecretProof(bool $skip = true): self
+    {
+        $this->skipAppSecretProof = $skip;
 
         return $this;
     }
@@ -70,12 +81,11 @@ class ManagementClient
         $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}/subscribed_apps";
 
         $params = [
-            'app_id' => $appId,
             'subscribed_fields' => 'messages,phone_number_name_update,phone_number_quality_update,message_template_status_update,template_performance_metrics'
         ];
         
-        // Add appsecret_proof for security
-        if ($appSecret) {
+        // Add appsecret_proof for security (unless skipped)
+        if ($appSecret && !$this->skipAppSecretProof) {
             $params['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
         }
 
