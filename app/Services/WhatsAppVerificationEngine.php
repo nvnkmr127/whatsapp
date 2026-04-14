@@ -109,6 +109,12 @@ class WhatsAppVerificationEngine
         $scopes = $data['scopes'] ?? [];
         $required = ['whatsapp_business_messaging', 'whatsapp_business_management'];
         $missing = array_diff($required, $scopes);
+        
+        $results['scopes'] = [
+            'has_messaging' => in_array('whatsapp_business_messaging', $scopes),
+            'has_management' => in_array('whatsapp_business_management', $scopes),
+            'all' => $scopes
+        ];
 
         if (! empty($missing)) {
             // Log missing scopes but don't hard-fail if there's no scope metadata (common in some manual system tokens)
@@ -174,6 +180,18 @@ class WhatsAppVerificationEngine
             return ['status' => false, 'error' => 'No WABA ID'];
         }
 
+        // Webhook check requirement: whatsapp_business_management scope
+        $debug = $this->debugToken($token);
+        $scopes = $debug['data']['scopes'] ?? [];
+        if (!empty($scopes) && !in_array('whatsapp_business_management', $scopes)) {
+            return [
+                'status' => false,
+                'error' => 'Missing "whatsapp_business_management" scope. Please reconnect and grant all permissions.',
+                'category' => 'PERMISSION_MISMATCH',
+                'webhook_subscribed' => false,
+            ];
+        }
+
         // Webhook check
         $webhook = $this->checkWebhookSubscription($wabaId, $token);
 
@@ -181,7 +199,7 @@ class WhatsAppVerificationEngine
         $templates = $this->team->whatsappTemplates()->count();
 
         return [
-            'status' => true,
+            'status' => ($webhook['is_subscribed'] ?? false),
             'webhook_subscribed' => $webhook['is_subscribed'] ?? false,
             'template_count' => $templates,
         ];
