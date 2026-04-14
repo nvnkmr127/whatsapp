@@ -1044,20 +1044,31 @@ class WhatsappConfig extends Component
 
     public function setupWebhook()
     {
-        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
+        if (!$this->team) {
+            $this->team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
+        }
+        $team = $this->team;
+
         if (! $team->whatsapp_access_token || ! $this->wm_business_account_id) {
-            $this->dispatch('notify', 'Missing configuration. Please connect first.');
+            $this->dispatch('notify', title: 'Config Missing', message: 'Missing configuration. Please connect first.', type: 'warning');
 
             return;
         }
 
+        $this->dispatch('notify', title: 'Subscribing...', message: 'Requesting Meta to link webhooks...', type: 'info');
+
         $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
 
         if ((bool) ($result['status'] ?? $result['success'] ?? false)) {
-            $this->dispatch('notify', 'Webhook subscribed successfully!');
-            $this->refreshHealth();
+            $this->dispatch('notify', title: 'Success', message: 'Webhook subscribed successfully! Your account is now linked.', type: 'success');
+            
+            // Critical: Refresh state from Meta immediately
+            $this->validateConnection(); // Run VerificationEngine
+            $this->refreshHealth();     // Recalculate health and setup progress
         } else {
-            $this->dispatch('notify', 'Webhook subscription failed: '.($result['message'] ?? $result['error'] ?? 'Unknown error'));
+            $error = $result['message'] ?? $result['error'] ?? 'Unknown error';
+            Log::error("Webhook Setup Failed for Team {$team->id}: {$error}");
+            $this->dispatch('notify', title: 'Subscription Failed', message: 'Error: ' . $error, type: 'error');
         }
     }
 

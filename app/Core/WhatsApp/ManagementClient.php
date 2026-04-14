@@ -71,7 +71,7 @@ class ManagementClient
 
         $params = [
             'app_id' => $appId,
-            'subscribed_fields' => 'messages,messaging_postbacks,message_echoes,forwarded_messages,message_deliveries,message_reads'
+            'subscribed_fields' => 'messages,phone_number_name_update,phone_number_quality_update,message_template_status_update,template_performance_metrics'
         ];
         
         // Add appsecret_proof for security
