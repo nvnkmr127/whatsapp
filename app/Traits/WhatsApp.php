@@ -423,8 +423,6 @@ trait WhatsApp
             $response = Http::timeout(15)->withToken($token)->get($url, $params);
 
             if ($response->failed()) {
-
-            if ($response->failed()) {
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
@@ -563,8 +561,6 @@ trait WhatsApp
             $response = Http::timeout(15)->get(self::getBaseUrl()."{$accountId}", $params);
 
             if ($response->failed()) {
-
-            if ($response->failed()) {
                 $errorData = $response->json();
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
 
@@ -627,8 +623,6 @@ trait WhatsApp
             ]);
 
             $response = Http::get(self::getBaseUrl()."{$wabaId}", $params);
-
-            if ($response->failed()) {
 
             if ($response->failed()) {
                 $errorData = $response->json();
