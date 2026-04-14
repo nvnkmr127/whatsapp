@@ -72,42 +72,73 @@ class ManagementClient
     /**
      * Subscribe to webhooks.
      *
-     * For embedded signup (USER tokens), the appsecret_proof may be rejected because the
-     * token's app differs from the configured app secret. We auto-retry without the proof
-     * in that case — the subscription POST itself will succeed as long as the token is valid.
+     * Retry ladder for embedded signup (USER tokens) which frequently hit permission errors:
+     *   1. User token + appsecret_proof  (standard)
+     *   2. User token without proof      (if proof is wrong/mismatched)
+     *   3. App Access Token              (app_id|app_secret) — Meta's recommended fallback for #200
+     *
+     * The App Access Token is a server-to-server credential that has whatsapp_business_management
+     * by default and does NOT require appsecret_proof.
      */
     public function subscribeToWebhooks(string $wabaId, string $token): array
     {
-        $creds = $this->team ? $this->resolver->resolve($this->team) : null;
-        $appId = $creds['app_id'] ?? config('whatsapp.app_id');
+        $creds     = $this->team ? $this->resolver->resolve($this->team) : null;
+        $appId     = $creds['app_id']     ?? config('whatsapp.app_id');
         $appSecret = $creds['app_secret'] ?? config('whatsapp.app_secret');
 
         $version = config('whatsapp.api_version', 'v21.0');
-        $url = "https://graph.facebook.com/{$version}/{$wabaId}/subscribed_apps";
+        $url     = "https://graph.facebook.com/{$version}/{$wabaId}/subscribed_apps";
 
-        // First attempt (with proof unless explicitly skipped)
+        // --- Attempt 1: user token + appsecret_proof ---
         $result = $this->doSubscribePost($url, $token, $appId, $appSecret, $wabaId, withProof: !$this->skipAppSecretProof);
 
-        // Auto-retry without proof if Meta rejected due to invalid appsecret_proof
-        if (! ($result['status'] ?? false)) {
-            $meta = $result['meta'] ?? [];
-            $msg  = $result['message'] ?? '';
-            $code = $meta['code'] ?? 0;
+        if ($result['status'] ?? false) {
+            return $result;
+        }
 
-            $isProofError = ($code === 100 && str_contains($msg, 'appsecret_proof'))
-                         || str_contains($msg, 'Invalid appsecret_proof')
-                         || str_contains($msg, '#200')
-                         || str_contains($msg, 'Permissions error');
+        $code = $result['meta']['code'] ?? 0;
+        $msg  = $result['message'] ?? '';
 
-            if ($isProofError) {
-                Log::info('WhatsApp ManagementClient: appsecret_proof rejected — retrying without proof', [
-                    'trace_id' => \App\Services\TraceContext::getTraceId(),
-                    'team_id'  => $this->team?->id,
-                    'waba_id'  => $wabaId,
-                    'code'     => $code,
-                ]);
-                $result = $this->doSubscribePost($url, $token, $appId, $appSecret, $wabaId, withProof: false);
+        // --- Attempt 2: user token WITHOUT proof (proof mismatch) ---
+        $isProofMismatch = ($code === 100 && str_contains($msg, 'appsecret_proof'))
+                        || str_contains($msg, 'Invalid appsecret_proof');
+
+        if ($isProofMismatch && !$this->skipAppSecretProof) {
+            Log::info('WhatsApp ManagementClient: appsecret_proof mismatch — retrying without proof', [
+                'trace_id' => \App\Services\TraceContext::getTraceId(),
+                'team_id'  => $this->team?->id,
+                'waba_id'  => $wabaId,
+            ]);
+            $result = $this->doSubscribePost($url, $token, $appId, $appSecret, $wabaId, withProof: false);
+
+            if ($result['status'] ?? false) {
+                return $result;
             }
+
+            $code = $result['meta']['code'] ?? 0;
+            $msg  = $result['message'] ?? '';
+        }
+
+        // --- Attempt 3: App Access Token (app_id|app_secret) ---
+        // Meta #200 = token lacks whatsapp_business_management. The App Access Token is the
+        // documented fix — it's a first-party credential with full management permissions.
+        $isPermissionError = $code === 200
+                          || str_contains($msg, '#200')
+                          || str_contains($msg, 'Permissions error')
+                          || str_contains($msg, 'permission');
+
+        if ($isPermissionError && $appId && $appSecret) {
+            $appToken = "{$appId}|{$appSecret}";
+
+            Log::info('WhatsApp ManagementClient: #200 Permission error — retrying with App Access Token', [
+                'trace_id' => \App\Services\TraceContext::getTraceId(),
+                'team_id'  => $this->team?->id,
+                'waba_id'  => $wabaId,
+                'hint'     => 'USER token lacks whatsapp_business_management scope.',
+            ]);
+
+            // App tokens don't need appsecret_proof
+            $result = $this->doSubscribePost($url, $appToken, $appId, $appSecret, $wabaId, withProof: false);
         }
 
         return $result;

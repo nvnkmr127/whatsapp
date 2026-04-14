@@ -1099,33 +1099,29 @@ class WhatsappConfig extends Component
 
         $this->dispatch('notify', title: 'Subscribing...', message: 'Requesting Meta to link webhooks...', type: 'info');
 
+        // ManagementClient handles the full retry ladder internally:
+        // 1. user token + proof → 2. user token without proof → 3. App Access Token (#200 fallback)
         $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
-
-        // [RESILIENCE] If #200 Permission Error occurs, it's often due to appsecret_proof mismatch on manual tokens.
-        // Try one more time without the proof.
-        if (!($result['status'] ?? false) && ($result['is_permission_error'] ?? false)) {
-            Log::info("Webhook Setup: Detected permission error #200, retrying without appsecret_proof for Team {$team->id}");
-            $this->setSkipAppSecretProof(true);
-            $result = $this->subscribeToWebhooks($this->wm_business_account_id, $team->whatsapp_access_token);
-        }
 
         if ((bool) ($result['status'] ?? $result['success'] ?? false)) {
             $this->dispatch('notify', title: 'Success', message: 'Webhook subscribed successfully! Your account is now linked.', type: 'success');
-            
+
             // Critical: Refresh state from Meta immediately
             $this->validateConnection(); // Run VerificationEngine
             $this->refreshHealth();     // Recalculate health and setup progress
         } else {
             $error = $result['message'] ?? $result['error'] ?? 'Unknown error';
             Log::error("Webhook Setup Failed for Team {$team->id}: {$error}");
-            $this->dispatch('notify', title: 'Subscription Failed', message: 'Error: ' . $error, type: 'error');
+            $this->dispatch('notify', title: 'Subscription Failed', message: 'Error: ' . $error . ' — Ensure your App ID and App Secret are correctly configured.', type: 'error');
         }
     }
 
     /**
      * Force a fresh webhook subscription attempt and immediately re-run the VerificationEngine.
-     * This is the correct recovery action when `integration_state = provisioned` and
-     * `webhook_subscription.is_subscribed = false` (e.g. USER token with limited scopes).
+     * ManagementClient handles a 3-attempt retry ladder internally:
+     *   1. User token + appsecret_proof
+     *   2. User token without proof  (proof mismatch)
+     *   3. App Access Token          (#200 Permission error — embedded USER token fallback)
      */
     public function forceResubscribeWebhook()
     {
@@ -1139,29 +1135,26 @@ class WhatsappConfig extends Component
             return;
         }
 
-        $this->dispatch('notify', title: 'Re-subscribing...', message: 'Sending subscription request to Meta...', type: 'info');
+        $this->dispatch('notify', title: 'Re-subscribing...', message: 'Trying all available methods to subscribe webhooks...', type: 'info');
 
-        // Attempt 1: with appsecret_proof
+        // All retry logic (including App Access Token fallback) is inside ManagementClient
         $result = $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
-
-        // Attempt 2: without proof if permission error
-        if (! ($result['status'] ?? false) && ($result['is_permission_error'] ?? false)) {
-            Log::info("ForceResubscribe: Retrying without appsecret_proof for Team {$team->id}");
-            $this->setSkipAppSecretProof(true);
-            $result = $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
-        }
 
         if (! ($result['status'] ?? false)) {
             $error = $result['message'] ?? $result['error'] ?? 'Unknown error';
-            Log::error("ForceResubscribe: Subscription POST failed for Team {$team->id}: {$error}");
-            $this->dispatch('notify', title: 'Subscription Failed', message: "Meta rejected the request: {$error}", type: 'error');
+            Log::error("ForceResubscribe: All attempts failed for Team {$team->id}: {$error}");
+            $this->dispatch(
+                'notify',
+                title: 'Subscription Failed',
+                message: "All retry methods exhausted. Last error: {$error}. Verify your App ID and App Secret are set correctly in the configuration.",
+                type: 'error'
+            );
             return;
         }
 
-        Log::info("ForceResubscribe: Subscription POST accepted for Team {$team->id}. Re-running VerificationEngine.");
+        Log::info("ForceResubscribe: Subscription accepted for Team {$team->id}. Re-running VerificationEngine.");
 
-        // Re-run VerificationEngine — with the fixed tier3 logic, this will now promote
-        // the state to READY even if the webhook cannot be confirmed via GET (USER token).
+        // Re-run VerificationEngine — tier3 now handles USER tokens gracefully → state → READY
         $this->validateConnection();
         $this->loadSettings();
         $this->refreshHealth();
