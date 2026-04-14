@@ -410,7 +410,6 @@ trait WhatsApp
                 ];
             }
 
-            $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
             $params = [];
@@ -444,7 +443,6 @@ trait WhatsApp
                 'found_subscriptions_count' => count($subscriptions),
             ]);
 
-            // Robust comparison: Ensure both are strings and handle potential missing ID in data
             $isSubscribed = collect($subscriptions)->contains(function ($sub) use ($appId) {
                 return isset($sub['id']) && (string) $sub['id'] === (string) $appId;
             });
