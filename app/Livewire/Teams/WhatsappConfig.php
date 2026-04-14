@@ -827,11 +827,18 @@ class WhatsappConfig extends Component
             ]);
 
             // 1. Exchange for Long-Lived Token (If not already long-lived)
+            // NOTE: mgmtClient is intentionally NOT used here yet — it will be reset
+            // after credentials are persisted in step 4, so it always uses the correct token.
             $this->setupLastStep = 'exchange_for_long_lived_token';
-            $exchangeResult = $this->exchangeForLongLivedToken($tokenToUse);
-            if ($exchangeResult['status']) {
+            $exchangeResult = $this->mgmt()->exchangeToken($tokenToUse);
+            if ($exchangeResult['status'] ?? false) {
                 $tokenToUse = $exchangeResult['access_token'];
                 Log::info("WhatsApp Setup: Unified flow secured long-lived token for Team {$team->id}");
+            } else {
+                Log::info("WhatsApp Setup: Token exchange skipped or failed (may already be long-lived)", [
+                    'team_id' => $team->id,
+                    'reason'  => $exchangeResult['error'] ?? 'no status',
+                ]);
             }
 
             // 2. Pre-Verification (Ownership/Access check)
@@ -873,6 +880,13 @@ class WhatsappConfig extends Component
                 'whatsapp_settings' => $teamSettings,
             ]);
 
+            // [EMBEDDED FIX] Reset the mgmtClient singleton so it re-initializes with
+            // the freshly persisted credentials on next use. Without this, the client
+            // retains the pre-update team state (no token/app_id), causing a mismatched
+            // appsecret_proof in step 5 for embedded signup flows.
+            $this->mgmtClient = null;
+            $this->team = $team->fresh();
+
             // Self-heal Facebook Business ID
             $this->setupLastStep = 'resolve_facebook_business_id';
             $fbBusinessId = $this->getFacebookBusinessId($wabaId, $tokenToUse);
@@ -881,17 +895,45 @@ class WhatsappConfig extends Component
             }
 
             // 5. Automated Webhook Linking
+            // [EMBEDDED FIX] This is now a SOFT failure — we do NOT throw here.
+            // For embedded signup flows, the USER token may lack the
+            // `whatsapp_business_management` scope needed to confirm subscription via GET.
+            // The POST itself succeeds. The VerificationEngine (step 7) handles this
+            // gracefully and the Diagnostics panel provides a one-click recovery.
             $this->setupLastStep = 'subscribe_to_webhooks';
+
+            // Attempt 1: with appsecret_proof
             $subResult = $this->subscribeToWebhooks($wabaId, $tokenToUse);
-            if (!(bool)($subResult['status'] ?? $subResult['success'] ?? false)) {
-                Log::warning('WhatsApp Setup: Webhook subscription failed', [
-                    'trace_id' => $this->setupTraceId,
+
+            // Attempt 2: if permission error, retry without proof (common for embedded USER tokens)
+            if (!($subResult['status'] ?? false) && ($subResult['is_permission_error'] ?? false)) {
+                Log::info('WhatsApp Setup: Detected permission error on webhook sub, retrying without appsecret_proof', [
                     'team_id' => $team->id,
-                    'waba_id' => $wabaId,
-                    'resolved_app_id' => $this->getAppId(),
-                    'result' => $subResult,
+                    'trace_id' => $this->setupTraceId,
                 ]);
-                throw new \Exception('Webhook Mapping Failed: ' . ($subResult['message'] ?? 'Unknown error'));
+                $this->setSkipAppSecretProof(true);
+                $subResult = $this->subscribeToWebhooks($wabaId, $tokenToUse);
+            }
+
+            $webhookSubscribed = (bool) ($subResult['status'] ?? $subResult['success'] ?? false);
+
+            if (! $webhookSubscribed) {
+                // Soft-fail: log the error but continue — DO NOT rollback or disconnect.
+                // State will be set to PROVISIONED by the VerificationEngine, not DISCONNECTED.
+                // The user can recover via the Diagnostics panel → "Force Re-subscribe" button.
+                Log::warning('WhatsApp Setup: Webhook subscription soft-failed (non-blocking)', [
+                    'trace_id'       => $this->setupTraceId,
+                    'team_id'        => $team->id,
+                    'waba_id'        => $wabaId,
+                    'resolved_app_id'=> $this->getAppId(),
+                    'result'         => $subResult,
+                    'hint'           => 'Likely USER token from embedded signup without whatsapp_business_management scope.',
+                ]);
+            } else {
+                Log::info('WhatsApp Setup: Webhook subscription succeeded', [
+                    'trace_id' => $this->setupTraceId,
+                    'team_id'  => $team->id,
+                ]);
             }
 
             // 6. Template & Phone Sync

@@ -71,6 +71,10 @@ class ManagementClient
 
     /**
      * Subscribe to webhooks.
+     *
+     * For embedded signup (USER tokens), the appsecret_proof may be rejected because the
+     * token's app differs from the configured app secret. We auto-retry without the proof
+     * in that case — the subscription POST itself will succeed as long as the token is valid.
      */
     public function subscribeToWebhooks(string $wabaId, string $token): array
     {
@@ -79,62 +83,91 @@ class ManagementClient
         $appSecret = $creds['app_secret'] ?? config('whatsapp.app_secret');
 
         $version = config('whatsapp.api_version', 'v21.0');
-        
-        // Build query params for the URL - some Meta endpoints are much more stable with query-params
+        $url = "https://graph.facebook.com/{$version}/{$wabaId}/subscribed_apps";
+
+        // First attempt (with proof unless explicitly skipped)
+        $result = $this->doSubscribePost($url, $token, $appId, $appSecret, $wabaId, withProof: !$this->skipAppSecretProof);
+
+        // Auto-retry without proof if Meta rejected due to invalid appsecret_proof
+        if (! ($result['status'] ?? false)) {
+            $meta = $result['meta'] ?? [];
+            $msg  = $result['message'] ?? '';
+            $code = $meta['code'] ?? 0;
+
+            $isProofError = ($code === 100 && str_contains($msg, 'appsecret_proof'))
+                         || str_contains($msg, 'Invalid appsecret_proof')
+                         || str_contains($msg, '#200')
+                         || str_contains($msg, 'Permissions error');
+
+            if ($isProofError) {
+                Log::info('WhatsApp ManagementClient: appsecret_proof rejected — retrying without proof', [
+                    'trace_id' => \App\Services\TraceContext::getTraceId(),
+                    'team_id'  => $this->team?->id,
+                    'waba_id'  => $wabaId,
+                    'code'     => $code,
+                ]);
+                $result = $this->doSubscribePost($url, $token, $appId, $appSecret, $wabaId, withProof: false);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Internal: perform the actual POST to subscribed_apps.
+     */
+    private function doSubscribePost(string $url, string $token, ?string $appId, ?string $appSecret, string $wabaId, bool $withProof = true): array
+    {
         $queryParams = [
             'subscribed_fields' => 'messages,phone_number_name_update,phone_number_quality_update,message_template_status_update',
         ];
 
-        if ($appSecret && !$this->skipAppSecretProof) {
+        if ($appSecret && $withProof) {
             $queryParams['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
         }
 
-        $url = "https://graph.facebook.com/{$version}/{$wabaId}/subscribed_apps";
-
-        Log::info('WhatsApp ManagementClient: subscribeToWebhooks (Query-String Mode)', [
-            'trace_id' => \App\Services\TraceContext::getTraceId(),
-            'team_id' => $this->team?->id,
-            'waba_id' => $wabaId,
-            'url_base' => $url,
-            'has_appsecret_proof' => array_key_exists('appsecret_proof', $queryParams),
+        Log::info('WhatsApp ManagementClient: subscribeToWebhooks attempt', [
+            'trace_id'           => \App\Services\TraceContext::getTraceId(),
+            'team_id'            => $this->team?->id,
+            'waba_id'            => $wabaId,
+            'has_appsecret_proof'=> array_key_exists('appsecret_proof', $queryParams),
         ]);
 
-        // Send POST with params in Query String and empty body
         $response = Http::withToken($token)->post($url . '?' . http_build_query($queryParams));
 
         if ($response->failed()) {
             $error = $response->json('error') ?? [];
-            $meta = [
-                'code' => $error['code'] ?? null,
+            $meta  = [
+                'code'          => $error['code'] ?? null,
                 'error_subcode' => $error['error_subcode'] ?? null,
-                'type' => $error['type'] ?? null,
-                'fbtrace_id' => $error['fbtrace_id'] ?? null,
+                'type'          => $error['type'] ?? null,
+                'fbtrace_id'    => $error['fbtrace_id'] ?? null,
             ];
 
             Log::warning('WhatsApp ManagementClient: subscribeToWebhooks failed', [
-                'trace_id' => \App\Services\TraceContext::getTraceId(),
-                'team_id' => $this->team?->id,
-                'waba_id' => $wabaId,
-                'app_id' => $appId,
-                'http_status' => $response->status(),
-                'meta' => $meta,
-                'message' => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
+                'trace_id'   => \App\Services\TraceContext::getTraceId(),
+                'team_id'    => $this->team?->id,
+                'waba_id'    => $wabaId,
+                'app_id'     => $appId,
+                'http_status'=> $response->status(),
+                'meta'       => $meta,
+                'message'    => $error['message'] ?? 'Subscription failed',
             ]);
 
             return [
-                'status' => false,
+                'status'  => false,
                 'message' => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
-                'error' => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
-                'meta' => $meta,
+                'error'   => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
+                'meta'    => $meta,
                 'http_status' => $response->status(),
             ];
         }
 
         Log::info('WhatsApp ManagementClient: subscribeToWebhooks success', [
             'trace_id' => \App\Services\TraceContext::getTraceId(),
-            'team_id' => $this->team?->id,
-            'waba_id' => $wabaId,
-            'app_id' => $appId,
+            'team_id'  => $this->team?->id,
+            'waba_id'  => $wabaId,
+            'app_id'   => $appId,
         ]);
 
         return ['status' => true];
