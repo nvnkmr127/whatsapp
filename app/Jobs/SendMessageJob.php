@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\IntegrationState;
 use App\Models\Message;
 use App\Models\Team;
 use App\Services\WhatsAppService;
@@ -124,6 +125,37 @@ class SendMessageJob implements ShouldQueue
             $existingMessage = null;
         }
 
+        if ($team->whatsapp_setup_state === IntegrationState::PROVISIONED) {
+            if (! empty($team->whatsapp_access_token) && ! empty($team->whatsapp_phone_number_id)) {
+                $team->whatsapp_setup_state = IntegrationState::READY;
+                if (! $team->isDirty(['whatsapp_access_token', 'whatsapp_phone_number_id'])) {
+                    $team->save();
+                }
+            }
+        }
+
+        $allowed = [
+            IntegrationState::READY,
+            IntegrationState::READY_WARNING,
+            IntegrationState::ACTIVE,
+            IntegrationState::DEGRADED,
+        ];
+
+        if (! in_array($team->whatsapp_setup_state, $allowed, true)) {
+            $state = $team->whatsapp_setup_state;
+            $label = $state ? $state->label() : 'Not Configured';
+            $message = "Messaging blocked. Connection state: {$label}.";
+
+            if ($state === IntegrationState::SUSPENDED) {
+                $message .= ' This is usually due to a permission issue (#200) or an invalid token. Please go to WhatsApp Settings to reconnect and resolve this.';
+            }
+
+            Log::warning("SendMessageJob: Messaging blocked for team {$team->id}. State: {$label}");
+            $this->markMessageFailed($message);
+
+            return;
+        }
+
         try {
             $response = null;
 
@@ -178,7 +210,9 @@ class SendMessageJob implements ShouldQueue
                 }
 
                 if ($errorCode == 200) {
-                    throw new \Exception("WhatsApp Permission Error (#200): The system does not have permission to send messages for this account. Please reconnect Facebook and ensure the System User has Admin access to the WABA.");
+                    $this->markMessageFailed("WhatsApp Permission Error (#200): The system does not have permission to send messages for this account. Please reconnect Facebook and ensure the System User has Admin access to the WABA.");
+
+                    return;
                 }
 
                 throw new \Exception(json_encode($response['error']));
@@ -195,29 +229,38 @@ class SendMessageJob implements ShouldQueue
         }
     }
 
+    protected function markMessageFailed(string $error): void
+    {
+        if (! $this->messageId) {
+            return;
+        }
+
+        $message = Message::find($this->messageId);
+        if (! $message) {
+            return;
+        }
+
+        $message->update([
+            'status' => 'failed',
+            'error_message' => mb_strimwidth($error, 0, 500, '...'),
+        ]);
+
+        try {
+            \App\Events\MessageStatusUpdated::dispatch($message);
+        } catch (\Exception $e) {
+            Log::error('Failed to update message status after job failure: '.$e->getMessage(), [
+                'message_id' => $this->messageId,
+                'trace_id' => $this->traceId,
+            ]);
+        }
+    }
+
     /**
      * Handle a job failure.
      */
     public function failed(\Throwable $exception): void
     {
-        if ($this->messageId) {
-            $message = Message::find($this->messageId);
-            if ($message) {
-                $message->update([
-                    'status' => 'failed',
-                    'error_message' => mb_strimwidth($exception->getMessage(), 0, 500, '...'),
-                ]);
-
-                try {
-                    \App\Events\MessageStatusUpdated::dispatch($message);
-                } catch (\Exception $e) {
-                    Log::error('Failed to update message status after job failure: '.$e->getMessage(), [
-                        'message_id' => $this->messageId,
-                        'trace_id' => $this->traceId,
-                    ]);
-                }
-            }
-        }
+        $this->markMessageFailed($exception->getMessage());
 
         Log::error("SendMessageJob completely failed for ID: {$this->messageId}. Error: ".$exception->getMessage());
     }

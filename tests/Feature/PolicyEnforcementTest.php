@@ -17,7 +17,13 @@ class PolicyEnforcementTest extends TestCase
     public function test_cannot_send_free_text_outside_24h_window()
     {
         $user = User::factory()->create();
-        $team = Team::factory()->create(['user_id' => $user->id, 'whatsapp_phone_number_id' => '123', 'whatsapp_access_token' => 'abc']);
+        $team = Team::factory()->create([
+            'user_id' => $user->id,
+            'whatsapp_phone_number_id' => '123',
+            'whatsapp_access_token' => 'abc',
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_connected' => true,
+        ]);
         $user->switchTeam($team);
 
         // Contact with old interaction

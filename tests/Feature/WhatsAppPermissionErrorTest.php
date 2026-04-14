@@ -63,7 +63,7 @@ class WhatsAppPermissionErrorTest extends TestCase
     }
 
     /** @test */
-    public function it_throws_descriptive_exception_in_send_message_job_on_code_200()
+    public function it_marks_message_failed_in_send_message_job_on_code_200()
     {
         Http::fake([
             '*' => Http::response([
@@ -98,18 +98,19 @@ class WhatsAppPermissionErrorTest extends TestCase
         ]);
 
         $job = new \App\Jobs\SendMessageJob($this->team->id, '123456789', 'text', 'Test message', null, 'en_US', $message->id);
-        
-        try {
-            $job->handle(app(\App\Services\WhatsAppService::class));
-            $this->fail('Expected exception was not thrown');
-        } catch (\Exception $e) {
-            $this->assertStringContainsString('WhatsApp Permission Error (#200)', $e->getMessage());
-            $this->assertStringContainsString('Please reconnect Facebook', $e->getMessage());
-        }
+
+        $job->handle(app(\App\Services\WhatsAppService::class));
+
+        $message->refresh();
+        $this->assertEquals('failed', $message->status);
+        $this->assertStringContainsString('WhatsApp Permission Error (#200)', $message->error_message);
+
+        $this->team->refresh();
+        $this->assertEquals(IntegrationState::SUSPENDED, $this->team->whatsapp_setup_state);
     }
 
     /** @test */
-    public function it_blocks_subsequent_messages_when_already_suspended()
+    public function it_marks_message_failed_without_throwing_when_already_suspended()
     {
         $this->team->update(['whatsapp_setup_state' => IntegrationState::SUSPENDED]);
         
@@ -128,13 +129,12 @@ class WhatsAppPermissionErrorTest extends TestCase
         ]);
 
         $job = new \App\Jobs\SendMessageJob($this->team->id, $phone, 'text', 'Test message', null, 'en_US', $message->id);
-        
-        try {
-            $job->handle(app(\App\Services\WhatsAppService::class));
-            $this->fail('Expected exception was not thrown');
-        } catch (\Exception $e) {
-            $this->assertStringContainsString('Messaging blocked. Connection state: Suspended (Action Required)', $e->getMessage());
-            $this->assertStringContainsString('Please go to WhatsApp Settings to reconnect', $e->getMessage());
-        }
+
+        $job->handle(app(\App\Services\WhatsAppService::class));
+
+        $message->refresh();
+        $this->assertEquals('failed', $message->status);
+        $this->assertStringContainsString('Messaging blocked. Connection state: Suspended (Action Required)', $message->error_message);
+        $this->assertStringContainsString('Please go to WhatsApp Settings to reconnect', $message->error_message);
     }
 }
