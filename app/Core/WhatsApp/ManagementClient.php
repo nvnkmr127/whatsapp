@@ -78,27 +78,29 @@ class ManagementClient
         $appId = $creds['app_id'] ?? config('whatsapp.app_id');
         $appSecret = $creds['app_secret'] ?? config('whatsapp.app_secret');
 
-        $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}/subscribed_apps";
-
-        $params = [
-            'app_id' => $appId,
-            'subscribed_fields' => 'messages,phone_number_name_update,phone_number_quality_update,message_template_status_update,template_performance_metrics'
-        ];
+        $version = config('whatsapp.api_version', 'v21.0');
         
-        // Add appsecret_proof for security (unless skipped)
+        // Build query params for the URL - some Meta endpoints are much more stable with query-params
+        $queryParams = [
+            'subscribed_fields' => 'messages,phone_number_name_update,phone_number_quality_update,message_template_status_update',
+        ];
+
         if ($appSecret && !$this->skipAppSecretProof) {
-            $params['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
+            $queryParams['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
         }
 
-        Log::info('WhatsApp ManagementClient: subscribeToWebhooks request', [
+        $url = "https://graph.facebook.com/{$version}/{$wabaId}/subscribed_apps";
+
+        Log::info('WhatsApp ManagementClient: subscribeToWebhooks (Query-String Mode)', [
             'trace_id' => \App\Services\TraceContext::getTraceId(),
             'team_id' => $this->team?->id,
             'waba_id' => $wabaId,
-            'app_id' => $appId,
-            'has_appsecret_proof' => array_key_exists('appsecret_proof', $params),
+            'url_base' => $url,
+            'has_appsecret_proof' => array_key_exists('appsecret_proof', $queryParams),
         ]);
 
-        $response = Http::withToken($token)->post($url, $params);
+        // Send POST with params in Query String and empty body
+        $response = Http::withToken($token)->post($url . '?' . http_build_query($queryParams));
 
         if ($response->failed()) {
             $error = $response->json('error') ?? [];

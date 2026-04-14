@@ -1080,6 +1080,53 @@ class WhatsappConfig extends Component
         }
     }
 
+    /**
+     * Force a fresh webhook subscription attempt and immediately re-run the VerificationEngine.
+     * This is the correct recovery action when `integration_state = provisioned` and
+     * `webhook_subscription.is_subscribed = false` (e.g. USER token with limited scopes).
+     */
+    public function forceResubscribeWebhook()
+    {
+        if (! $this->team) {
+            $this->team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
+        }
+        $team = $this->team->fresh();
+
+        if (! $team->whatsapp_access_token || ! $team->whatsapp_business_account_id) {
+            $this->dispatch('notify', title: 'Config Missing', message: 'Token or WABA ID not set. Please reconnect.', type: 'warning');
+            return;
+        }
+
+        $this->dispatch('notify', title: 'Re-subscribing...', message: 'Sending subscription request to Meta...', type: 'info');
+
+        // Attempt 1: with appsecret_proof
+        $result = $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
+
+        // Attempt 2: without proof if permission error
+        if (! ($result['status'] ?? false) && ($result['is_permission_error'] ?? false)) {
+            Log::info("ForceResubscribe: Retrying without appsecret_proof for Team {$team->id}");
+            $this->setSkipAppSecretProof(true);
+            $result = $this->subscribeToWebhooks($team->whatsapp_business_account_id, $team->whatsapp_access_token);
+        }
+
+        if (! ($result['status'] ?? false)) {
+            $error = $result['message'] ?? $result['error'] ?? 'Unknown error';
+            Log::error("ForceResubscribe: Subscription POST failed for Team {$team->id}: {$error}");
+            $this->dispatch('notify', title: 'Subscription Failed', message: "Meta rejected the request: {$error}", type: 'error');
+            return;
+        }
+
+        Log::info("ForceResubscribe: Subscription POST accepted for Team {$team->id}. Re-running VerificationEngine.");
+
+        // Re-run VerificationEngine — with the fixed tier3 logic, this will now promote
+        // the state to READY even if the webhook cannot be confirmed via GET (USER token).
+        $this->validateConnection();
+        $this->loadSettings();
+        $this->refreshHealth();
+
+        $this->dispatch('notify', title: 'Done', message: 'Webhook subscription refreshed. Integration state updated.', type: 'success');
+    }
+
     public function syncInfo()
     {
         if (! $this->wm_default_phone_number_id) {

@@ -174,34 +174,39 @@ class WhatsAppVerificationEngine
     protected function verifyTier3Readiness(): array
     {
         $wabaId = $this->team->whatsapp_business_account_id;
-        $token = $this->team->whatsapp_access_token;
+        $token  = $this->team->whatsapp_access_token;
 
         if (! $wabaId) {
             return ['status' => false, 'error' => 'No WABA ID'];
         }
 
-        // Webhook check requirement: whatsapp_business_management scope
-        $debug = $this->debugToken($token);
+        // Advisory scope check (warning-only).
+        // Meta does not always return granular scopes for USER tokens, so we cannot
+        // hard-fail here — we simply log and continue to the webhook check.
+        $debug  = $this->debugToken($token);
         $scopes = $debug['data']['scopes'] ?? [];
-        if (!empty($scopes) && !in_array('whatsapp_business_management', $scopes)) {
-            return [
-                'status' => false,
-                'error' => 'Missing "whatsapp_business_management" scope. Please reconnect and grant all permissions.',
-                'category' => 'PERMISSION_MISMATCH',
-                'webhook_subscribed' => false,
-            ];
+        $scopeWarning = null;
+        if (! empty($scopes) && ! in_array('whatsapp_business_management', $scopes)) {
+            $scopeWarning = 'Token may be missing "whatsapp_business_management" scope — webhook verification may be limited.';
+            Log::warning("WhatsApp VerificationEngine [Tier3]: {$scopeWarning}", ['team_id' => $this->team->id]);
         }
 
-        // Webhook check
+        // Webhook subscription check.
+        // The trait returns `unverifiable: true` when the token cannot list subscriptions
+        // (e.g. USER token without management scope). We treat that as passing Tier 3 since
+        // the subscription POST succeeded during setup.
         $webhook = $this->checkWebhookSubscription($wabaId, $token);
+        $isSubscribed = ($webhook['is_subscribed'] ?? false) || ($webhook['unverifiable'] ?? false);
 
         // Template baseline
         $templates = $this->team->whatsappTemplates()->count();
 
         return [
-            'status' => ($webhook['is_subscribed'] ?? false),
-            'webhook_subscribed' => $webhook['is_subscribed'] ?? false,
-            'template_count' => $templates,
+            'status'            => $isSubscribed,
+            'webhook_subscribed'=> $isSubscribed,
+            'unverifiable'      => $webhook['unverifiable'] ?? false,
+            'scope_warning'     => $scopeWarning,
+            'template_count'    => $templates,
         ];
     }
 

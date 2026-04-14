@@ -162,6 +162,28 @@
                         Close
                     </button>
                 </div>
+
+                {{-- Recovery Banner: Provisioned + webhook not subscribed --}}
+                @if(($setupDiagnostics['integration_state'] ?? '') === 'provisioned' && !($setupDiagnostics['webhook_subscription']['is_subscribed'] ?? true))
+                    <div class="mt-5 p-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <div class="text-xs font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest">⚠ Webhook Not Subscribed</div>
+                            <p class="mt-1 text-[11px] font-medium text-amber-700 dark:text-amber-400 leading-relaxed max-w-md">
+                                Your token is valid and WABA is linked, but webhook subscription could not be verified (common with USER tokens that lack the <code class="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">whatsapp_business_management</code> scope).
+                                Click <strong>Force Re-subscribe</strong> to re-POST the subscription and promote state to READY.
+                            </p>
+                        </div>
+                        <button wire:click="forceResubscribeWebhook" wire:loading.attr="disabled"
+                            class="flex-shrink-0 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow transition-all hover:scale-105 active:scale-95">
+                            <span wire:loading.remove wire:target="forceResubscribeWebhook">Force Re-subscribe</span>
+                            <span wire:loading wire:target="forceResubscribeWebhook" class="flex items-center gap-2">
+                                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Working...
+                            </span>
+                        </button>
+                    </div>
+                @endif
+
                 <pre class="mt-4 text-[11px] leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">{{ json_encode($setupDiagnostics, JSON_PRETTY_PRINT) }}</pre>
             </div>
         @endif

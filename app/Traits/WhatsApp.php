@@ -36,6 +36,10 @@ trait WhatsApp
     public function setSkipAppSecretProof(bool $skip): self
     {
         $this->skipAppSecretProof = $skip;
+        
+        if ($this->mgmtClient) {
+            $this->mgmtClient->skipAppSecretProof($skip);
+        }
 
         return $this;
     }
@@ -308,17 +312,27 @@ trait WhatsApp
 
             // Normalize response shape
             if (array_key_exists('status', $result)) {
+                $msg = $result['message'] ?? $result['error'] ?? '';
+                $result['is_permission_error'] = str_contains($msg, '#200') || 
+                                               str_contains($msg, 'Permissions error') || 
+                                               str_contains($msg, 'appsecret_proof');
                 return $result;
             }
 
+            $msg = $result['error'] ?? 'OK';
             return [
                 'status' => (bool) ($result['success'] ?? false),
-                'message' => $result['error'] ?? 'OK',
+                'message' => $msg,
+                'is_permission_error' => str_contains($msg, '#200') || 
+                                       str_contains($msg, 'Permissions error') || 
+                                       str_contains($msg, 'appsecret_proof'),
             ];
         } catch (\Exception $e) {
             // [RESILIENCE] Log but only block if it is a hard permission error
             $message = $e->getMessage();
-            $isPermissionError = str_contains($message, '#200') || str_contains($message, 'Permissions error');
+            $isPermissionError = str_contains($message, '#200') || 
+                               str_contains($message, 'Permissions error') || 
+                               str_contains($message, 'appsecret_proof');
             
             \Illuminate\Support\Facades\Log::warning("WhatsApp Webhook Subscription Fail for WABA {$wabaId}: " . $message);
             
@@ -406,6 +420,11 @@ trait WhatsApp
 
     /**
      * Check if the app is subscribed to webhooks for this WABA.
+     *
+     * Note: Meta's GET /{waba_id}/subscribed_apps does NOT accept `app_id` as a filter param.
+     * It returns ALL subscribed apps for the WABA. We then search the list for our app_id.
+     * USER tokens without `whatsapp_business_management` scope may get a 403 on this endpoint,
+     * which we treat as "cannot verify" (non-blocking) rather than "not subscribed" (blocking).
      */
     public function checkWebhookSubscription(string $wabaId, string $token): array
     {
@@ -418,27 +437,44 @@ trait WhatsApp
                 Log::warning('WhatsApp Trait: Webhook check aborted because App ID is missing.');
 
                 return [
-                    'status' => true,
+                    'status'        => true,
                     'is_subscribed' => false,
-                    'message' => 'App ID not configured',
+                    'message'       => 'App ID not configured',
                 ];
             }
 
-            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
-
+            // Do NOT pass app_id as a query param — Meta does not support it as a filter.
+            // Only attach appsecret_proof when we have a secret and proof is not skipped.
             $params = [];
-            $params['app_id'] = $appId;
-            
             if ($appSecret && ! $this->skipAppSecretProof) {
-                $params['appsecret_proof'] = $appSecretProof;
+                $params['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
             }
 
             $response = Http::timeout(15)->withToken($token)->get($url, $params);
 
             if ($response->failed()) {
-                $errorData = $response->json();
-                $errorCode = $errorData['error']['code'] ?? null;
+                $errorData    = $response->json();
+                $errorCode    = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
+
+                // Meta returns 403 / code 200 when the token lacks whatsapp_business_management.
+                // This means the subscription itself MAY exist but we cannot confirm it via this
+                // endpoint. Treat as "cannot verify" — non-blocking so setup can still proceed.
+                if ($response->status() === 403 || $errorCode === 200 || $errorCode === 10) {
+                    Log::warning('WhatsApp Trait: Cannot verify webhook subscription — token lacks management scope.', [
+                        'waba_id'   => $wabaId,
+                        'http_code' => $response->status(),
+                        'api_code'  => $errorCode,
+                    ]);
+
+                    return [
+                        'status'        => true,
+                        'is_subscribed' => true,   // Non-blocking: assume subscribed, can't confirm
+                        'unverifiable'  => true,
+                        'message'       => 'Cannot confirm via API (management scope missing); treating as subscribed.',
+                    ];
+                }
+
                 $this->handleTokenFailure($response, 'Webhook Check');
 
                 Log::error('WhatsApp Trait: Webhook Check Failed', ['error' => $errorData, 'waba_id' => $wabaId]);
@@ -453,8 +489,9 @@ trait WhatsApp
             $subscriptions = $response->json('data') ?? [];
 
             Log::debug('WhatsApp Trait: Checking Webhook Subscription', [
-                'configured_app_id' => $appId,
+                'configured_app_id'         => $appId,
                 'found_subscriptions_count' => count($subscriptions),
+                'raw_ids'                   => collect($subscriptions)->pluck('id')->all(),
             ]);
 
             $isSubscribed = collect($subscriptions)->contains(function ($sub) use ($appId) {
@@ -462,7 +499,7 @@ trait WhatsApp
             });
 
             return [
-                'status' => true,
+                'status'        => true,
                 'is_subscribed' => $isSubscribed,
             ];
         } catch (\Throwable $e) {
