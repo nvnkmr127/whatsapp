@@ -144,6 +144,29 @@ class WhatsAppClient
                         default => null,
                     };
                 }
+
+                // [EMBEDDED SIGNUP FALLBACK] Retrying with System User Token
+                // USER tokens generated via Facebook Embedded Signup cannot be used to send messages.
+                // If a #200 Permissions error is encountered and the developer has configured a global system token,
+                // we seamlessly fall back to it (ideal for Solution Partners / Tech Providers).
+                $errorData = $response->json(); // Re-read in case previous retry altered it
+                if (($errorData['error']['code'] ?? 0) == 200 && config('whatsapp.system_access_token')) {
+                    $systemToken = config('whatsapp.system_access_token');
+                    if ($this->token !== $systemToken) {
+                        Log::warning("WhatsApp API (#200): Permission denied. Attempting seamless fallback using global WHATSAPP_SYSTEM_ACCESS_TOKEN for $endpoint.");
+                        
+                        $retryClient = Http::withToken($systemToken)
+                            ->withHeaders(['Content-Type' => 'application/json'])
+                            ->timeout(20);
+                            
+                        $response = match ($method) {
+                            'post' => $retryClient->post($url, $data),
+                            'get' => $retryClient->get($url, $data),
+                            'delete' => $retryClient->delete($url, $data),
+                            default => null,
+                        };
+                    }
+                }
             }
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
