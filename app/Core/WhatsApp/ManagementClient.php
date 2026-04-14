@@ -4,6 +4,7 @@ namespace App\Core\WhatsApp;
 
 use App\Models\Team;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ManagementClient
 {
@@ -78,11 +79,50 @@ class ManagementClient
             $params['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
         }
 
+        Log::info('WhatsApp ManagementClient: subscribeToWebhooks request', [
+            'trace_id' => \App\Services\TraceContext::getTraceId(),
+            'team_id' => $this->team?->id,
+            'waba_id' => $wabaId,
+            'app_id' => $appId,
+            'has_appsecret_proof' => array_key_exists('appsecret_proof', $params),
+        ]);
+
         $response = Http::withToken($token)->post($url, $params);
 
         if ($response->failed()) {
-            return ['status' => false, 'error' => $response->json('error.message') ?? 'Subscription failed'];
+            $error = $response->json('error') ?? [];
+            $meta = [
+                'code' => $error['code'] ?? null,
+                'error_subcode' => $error['error_subcode'] ?? null,
+                'type' => $error['type'] ?? null,
+                'fbtrace_id' => $error['fbtrace_id'] ?? null,
+            ];
+
+            Log::warning('WhatsApp ManagementClient: subscribeToWebhooks failed', [
+                'trace_id' => \App\Services\TraceContext::getTraceId(),
+                'team_id' => $this->team?->id,
+                'waba_id' => $wabaId,
+                'app_id' => $appId,
+                'http_status' => $response->status(),
+                'meta' => $meta,
+                'message' => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
+            ]);
+
+            return [
+                'status' => false,
+                'message' => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
+                'error' => $error['message'] ?? ($response->json('error.message') ?? 'Subscription failed'),
+                'meta' => $meta,
+                'http_status' => $response->status(),
+            ];
         }
+
+        Log::info('WhatsApp ManagementClient: subscribeToWebhooks success', [
+            'trace_id' => \App\Services\TraceContext::getTraceId(),
+            'team_id' => $this->team?->id,
+            'waba_id' => $wabaId,
+            'app_id' => $appId,
+        ]);
 
         return ['status' => true];
     }

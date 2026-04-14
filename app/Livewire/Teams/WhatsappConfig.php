@@ -73,9 +73,17 @@ class WhatsappConfig extends Component
 
     public $token_info = [];
 
+    public $setupTraceId;
+    public $setupLastStep;
+    public $setupLastError;
+    public $setupDiagnostics = [];
+    public $showSetupDiagnostics = false;
+
     public $credits = 0;
 
     public $credits_total = 1000;
+
+    public $plan_details = [];
 
     public $wm_test_message;
 
@@ -132,7 +140,7 @@ class WhatsappConfig extends Component
             // Generate a unique Trace ID for this test
             $traceId = \App\Services\TraceContext::ensureTraceId();
             
-            $response = $waService->sendMessage($this->wm_test_message, "Your DigiCloudify WhatsApp connection is active! [Trace: {$traceId}]");
+            $response = $waService->sendText($this->wm_test_message, "Your DigiCloudify WhatsApp connection is active! [Trace: {$traceId}]");
 
             if ($response['success'] ?? false) {
                 $this->dispatch('notify', title: 'Success', message: 'Test message sent successfully. Please check your phone.', type: 'success');
@@ -249,22 +257,28 @@ class WhatsappConfig extends Component
 
         if (!$token) return;
 
-        $wa = new \App\Services\WhatsAppService($team);
-        $wabas = $wa->getAvailableWabas($token);
+        try {
+            $wabaIds = $this->getAccessibleWabaIds($token);
 
-        if ($wabas['status'] && !empty($wabas['data'])) {
-            $this->available_wabas = array_map(function($w) {
-                return [
-                    'id' => $w['id'],
-                    'name' => $w['name'] ?? 'WABA ' . $w['id'],
-                    'status' => strtoupper($w['account_review_status'] ?? 'unknown'),
-                    'verification' => strtoupper($w['business_verification_status'] ?? 'unknown'),
+            if (empty($wabaIds)) {
+                $this->dispatch('notify', title: 'No Accounts', message: 'No WhatsApp Business Accounts found for this token.', type: 'warning');
+                return;
+            }
+
+            $this->available_wabas = [];
+            foreach ($wabaIds as $id) {
+                $res = $this->mgmt()->getWabaStatus($id, $token);
+                $this->available_wabas[] = [
+                    'id' => $id,
+                    'name' => $res['data']['name'] ?? 'WABA ' . $id,
+                    'status' => strtoupper($res['data']['account_review_status'] ?? 'unknown'),
+                    'verification' => strtoupper($res['data']['business_verification_status'] ?? 'unknown'),
                 ];
-            }, $wabas['data']);
+            }
 
             $this->dispatch('notify', title: 'Accounts Found', message: count($this->available_wabas) . ' WhatsApp accounts retrieved.', type: 'success');
-        } else {
-            $this->dispatch('notify', title: 'No Accounts', message: 'No WhatsApp Business Accounts found for this token.', type: 'warning');
+        } catch (\Throwable $e) {
+            $this->dispatch('notify', title: 'Accounts Failed', message: $e->getMessage(), type: 'error');
         }
     }
 
@@ -281,7 +295,7 @@ class WhatsappConfig extends Component
             
             // [PROACTIVE VALIDATION] If last validation is stale (> 6 hours), run a fresh background check
             if ($this->tokenLastValidated && $this->tokenLastValidated->diffInHours(now()) >= 6) {
-                \App\Jobs\ValidateWhatsAppTokens::dispatch($team->id)->onQueue('high');
+                \App\Jobs\ValidateWhatsAppTokens::dispatch($team->id, \App\Services\TraceContext::getTraceId())->onQueue('high');
                 Log::info("WhatsApp Config: Triggered proactive background validation for Team {$team->id}");
             }
 
@@ -309,108 +323,105 @@ class WhatsappConfig extends Component
 
     public function loadSettings()
     {
-        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
+        try {
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
 
-        if (! $team) {
-            $this->is_whatsmark_connected = false;
-            $this->integrationState = 'disconnected';
+            if (! $team) {
+                $this->is_whatsmark_connected = false;
+                $this->integrationState = 'disconnected';
 
-            return;
-        }
+                return;
+            }
 
-        // Load from Team Model first, fallback to settings if empty (migration path)
-        // Actually, App ID might be global for the SaaS unless white-labeled.
-        // Let's stick to global for App ID if it's not in Team.
-        // But WABA, Token, PhoneID ARE in Team.
+            // Load App ID and Secret
+            $this->wm_fb_app_id = $team->whatsapp_app_id 
+                ?: ($team->whatsapp_settings['manual_app_id'] ?? get_setting('whatsapp_wm_fb_app_id'));
+                
+            $this->wm_fb_app_secret = $team->whatsapp_settings['manual_app_secret'] ?? get_setting('whatsapp_wm_fb_app_secret');
 
-        // [FIXED] Prioritize Team-Specific App ID and Secret (White Label / Manual Connection)
-        // Check Team properties followed by settings array
-        $this->wm_fb_app_id = $team->whatsapp_app_id 
-            ?: ($team->whatsapp_settings['manual_app_id'] ?? get_setting('whatsapp_wm_fb_app_id'));
+            // [FIX Orphaned State]
+            if (! empty($team->whatsapp_access_token) && empty($team->whatsapp_business_account_id)) {
+                $updatedAt = $team->updated_at;
+                if ($updatedAt && $updatedAt->diffInMinutes(now()) > 5) {
+                    Log::warning("Detected Orphaned Token for Team {$team->id}. Clearing to allow reconnection.");
+                    $team->update(['whatsapp_access_token' => null]);
+                }
+            }
+
+            if (! $team->whatsapp_connected && $team->hasStoredWhatsAppConnection()) {
+                $updates = ['whatsapp_connected' => true];
+
+                if (! $team->whatsapp_setup_state || $team->whatsapp_setup_state === \App\Enums\IntegrationState::DISCONNECTED) {
+                    $updates['whatsapp_setup_state'] = \App\Enums\IntegrationState::AUTHENTICATED;
+                }
+
+                $team->update($updates);
+                $team = $team->fresh();
+
+                Log::info("WhatsApp Config: Self-healed stale disconnected flag for Team {$team->id}", [
+                    'waba_id' => $team->whatsapp_business_account_id,
+                    'phone_id' => $team->whatsapp_phone_number_id,
+                ]);
+            }
+
+            if ($team->whatsapp_connected) {
+                $this->is_whatsmark_connected = true;
+                $this->wm_business_account_id = $team->whatsapp_business_account_id;
+            } else {
+                $this->is_whatsmark_connected = false;
+                $this->wm_business_account_id = null;
+            }
+
+            $this->outbound_webhook_url = $team->outbound_webhook_url;
+            $this->is_webhook_connected = ! empty($this->outbound_webhook_url);
+            $this->webhook_verify_token = $team->whatsapp_verify_token ?: get_setting('whatsapp_webhook_verify_token');
             
-        $this->wm_fb_app_secret = $team->whatsapp_settings['manual_app_secret'] ?? get_setting('whatsapp_wm_fb_app_secret');
-
-        // [FIX Orphaned State]
-        // If we have a token but NO WABA ID, the connection is corrupted/partial.
-        // We should clear the state to allow fresh connection.
-        if (! empty($team->whatsapp_access_token) && empty($team->whatsapp_business_account_id)) {
-            // Only clear if it's been more than 5 minutes since update (to allow async process to finish if any)
-            $updatedAt = $team->updated_at;
-            if ($updatedAt && $updatedAt->diffInMinutes(now()) > 5) {
-                Log::warning("Detected Orphaned Token for Team {$team->id}. Clearing to allow reconnection.");
-                $team->update(['whatsapp_access_token' => null]);
-            }
-        }
-
-        if (! $team->whatsapp_connected && $team->hasStoredWhatsAppConnection()) {
-            $updates = ['whatsapp_connected' => true];
-
-            if (! $team->whatsapp_setup_state || $team->whatsapp_setup_state === \App\Enums\IntegrationState::DISCONNECTED) {
-                $updates['whatsapp_setup_state'] = \App\Enums\IntegrationState::AUTHENTICATED;
+            if (empty($this->webhook_verify_token)) {
+                $this->webhook_verify_token = config('whatsapp.webhook_verify_token') ?: Str::random(24);
+                set_setting('whatsapp_webhook_verify_token', $this->webhook_verify_token);
             }
 
-            $team->update($updates);
-            $team = $team->fresh();
+            $this->wm_default_phone_number_id = $team->whatsapp_phone_number_id;
+            $this->wm_messaging_limit = $team->whatsapp_messaging_limit ?: 'TIER_1K';
+            $this->wm_quality_rating = $team->whatsapp_quality_rating ?: 'UNKNOWN';
+            $this->wm_phone_display = $team->whatsapp_phone_display ?: '';
+            $this->wm_verified_name = $team->whatsapp_verified_name ?: '';
+            $this->wm_business_verification_status = $team->whatsapp_business_verification_status ?? 'unknown';
+            $this->tokenLastValidated = $team->whatsapp_token_last_validated;
+            $this->tokenExpiresAt = $team->whatsapp_token_expires_at;
+            $this->lastWebhookReceivedAt = $team->last_webhook_received_at;
 
-            Log::info("WhatsApp Config: Self-healed stale disconnected flag for Team {$team->id}", [
-                'waba_id' => $team->whatsapp_business_account_id,
-                'phone_id' => $team->whatsapp_phone_number_id,
+            // Derive state from model to avoid mismatch
+            $state = $team->whatsapp_setup_state;
+            if ($this->is_whatsmark_connected && (! $state || $state === \App\Enums\IntegrationState::DISCONNECTED)) {
+                $state = \App\Enums\IntegrationState::AUTHENTICATED;
+                $team->update(['whatsapp_setup_state' => $state]);
+            }
+
+            $this->integrationState = $state?->value ?? 'disconnected';
+            $this->integrationStateLabel = $state?->label() ?? 'Disconnected';
+            $this->integrationStateColor = $state?->color() ?? 'slate';
+
+            // Fetch Real Billing Data
+            $wallet = \App\Models\TeamWallet::firstOrCreate(['team_id' => $team->id]);
+            $this->credits = $wallet->balance;
+
+            $plan = \App\Models\Plan::where('name', $team->subscription_plan)->first();
+            if ($plan) {
+                $this->plan_details = [
+                    'name' => $plan->label ?? $plan->name,
+                    'is_active' => true, // Placeholder logic
+                ];
+            }
+
+            $this->credits_total = $plan ? $plan->message_limit : 1000;
+            $this->loadBehaviorSettings($team);
+        } catch (\Throwable $e) {
+            Log::error("WhatsApp LoadSettings Error: " . $e->getMessage(), [
+                'stack' => $e->getTraceAsString()
             ]);
+            $this->dispatch('notify', title: 'Loading Error', message: 'Failed to initialize settings. Check logs.', type: 'error');
         }
-
-        if ($team->whatsapp_connected) {
-            $this->is_whatsmark_connected = true;
-            $this->wm_business_account_id = $team->whatsapp_business_account_id;
-        } else {
-            $this->is_whatsmark_connected = false;
-            $this->wm_business_account_id = null;
-        }
-
-        // Always load outbound_webhook_url regardless of connection state —
-        // it is stored on the team model and is independent of whatsapp_connected.
-        $this->outbound_webhook_url = $team->outbound_webhook_url;
-
-        $this->is_webhook_connected = ! empty($this->outbound_webhook_url);
-
-        // [FIXED] Prioritize Team-Specific Verify Token (Custom App Setup)
-        $this->webhook_verify_token = $team->whatsapp_verify_token ?: get_setting('whatsapp_webhook_verify_token');
-        
-        if (empty($this->webhook_verify_token)) {
-            $this->webhook_verify_token = config('whatsapp.webhook_verify_token') ?: Str::random(24);
-            set_setting('whatsapp_webhook_verify_token', $this->webhook_verify_token);
-        }
-
-        $this->wm_default_phone_number_id = $team->whatsapp_phone_number_id;
-
-        $this->wm_messaging_limit = $team->whatsapp_messaging_limit ?: 'TIER_1K';
-        $this->wm_quality_rating = $team->whatsapp_quality_rating ?: 'UNKNOWN';
-        $this->wm_phone_display = $team->whatsapp_phone_display ?: '';
-        $this->wm_verified_name = $team->whatsapp_verified_name ?: '';
-        $this->wm_business_verification_status = $team->whatsapp_business_verification_status ?? 'unknown';
-        $this->tokenLastValidated = $team->whatsapp_token_last_validated;
-        $this->tokenExpiresAt = $team->whatsapp_token_expires_at;
-        $this->lastWebhookReceivedAt = $team->last_webhook_received_at;
-
-        // Derive state from model to avoid mismatch
-        $state = $team->whatsapp_setup_state;
-        if ($this->is_whatsmark_connected && (! $state || $state === \App\Enums\IntegrationState::DISCONNECTED)) {
-            // Self-heal state if data is present
-            $state = \App\Enums\IntegrationState::AUTHENTICATED;
-            $team->update(['whatsapp_setup_state' => $state]);
-        }
-
-        $this->integrationState = $state?->value ?? 'disconnected';
-        $this->integrationStateLabel = $state?->label() ?? 'Disconnected';
-        $this->integrationStateColor = $state?->color() ?? 'slate';
-
-        // Fetch Real Billing Data
-        $wallet = \App\Models\TeamWallet::firstOrCreate(['team_id' => $team->id]);
-        $this->credits = $wallet->balance;
-
-        $plan = \App\Models\Plan::where('name', $team->subscription_plan)->first();
-        $this->credits_total = $plan ? $plan->message_limit : 1000;
-
-        $this->loadBehaviorSettings($team);
     }
 
     public function loadBehaviorSettings($team)
@@ -586,9 +597,11 @@ class WhatsappConfig extends Component
 
     public function handleEmbeddedSuccess($accessToken, $wabaId, $wabaOptions = [])
     {
+        $this->setupTraceId = \App\Services\TraceContext::ensureTraceId();
         Log::debug('WhatsApp Setup: Received handleEmbeddedSuccess', [
+            'trace_id' => $this->setupTraceId,
             'waba_id' => $wabaId,
-            'token_prefix' => substr($accessToken, 0, 8).'...',
+            'token_preview' => $this->maskSecret($accessToken),
             'options_count' => count($wabaOptions),
         ]);
 
@@ -622,6 +635,79 @@ class WhatsappConfig extends Component
             );
             $this->loadSettings();
         }
+    }
+
+    public function runSetupDiagnostics()
+    {
+        $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
+        $this->setupTraceId = \App\Services\TraceContext::ensureTraceId();
+
+        try {
+            $resolver = app(\App\Core\WhatsApp\CredentialResolver::class);
+            $creds = $resolver->resolve($team);
+
+            $tokenPresent = (bool) ($creds['token'] ?? null);
+            $wabaId = (string) ($creds['waba_id'] ?? '');
+
+            $tokenDebug = null;
+            if ($tokenPresent) {
+                $tokenDebug = $this->debugToken($creds['token']);
+                if (isset($tokenDebug['data']['data'])) {
+                    $tokenDebug['data'] = $tokenDebug['data']['data'];
+                }
+            }
+
+            $subscription = null;
+            if ($tokenPresent && $wabaId) {
+                $subscription = $this->checkWebhookSubscription($wabaId, $creds['token']);
+            }
+
+            $this->setupDiagnostics = [
+                'trace_id' => $this->setupTraceId,
+                'team_id' => $team->id,
+                'integration_state' => $team->whatsapp_setup_state?->value ?? null,
+                'connected' => (bool) $team->whatsapp_connected,
+                'waba_id' => $creds['waba_id'] ?? null,
+                'phone_number_id' => $creds['phone_number_id'] ?? null,
+                'app_id' => $creds['app_id'] ?? null,
+                'verify_token_present' => (bool) ($creds['verify_token'] ?? null),
+                'token_debug' => $tokenDebug ? [
+                    'status' => (bool) ($tokenDebug['status'] ?? false),
+                    'message' => $tokenDebug['message'] ?? null,
+                    'is_valid' => $tokenDebug['data']['is_valid'] ?? null,
+                    'app_id' => $tokenDebug['data']['app_id'] ?? null,
+                    'type' => $tokenDebug['data']['type'] ?? null,
+                    'expires_at' => $tokenDebug['data']['expires_at'] ?? null,
+                    'scopes_count' => isset($tokenDebug['data']['scopes']) ? count($tokenDebug['data']['scopes']) : null,
+                    'granular_scopes_count' => isset($tokenDebug['data']['granular_scopes']) ? count($tokenDebug['data']['granular_scopes']) : null,
+                ] : null,
+                'webhook_subscription' => $subscription,
+            ];
+
+            $this->showSetupDiagnostics = true;
+            $this->dispatch('notify', title: 'Diagnostics Ready', message: "Trace: {$this->setupTraceId}", type: 'success');
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp Setup: Diagnostics failed', [
+                'trace_id' => $this->setupTraceId,
+                'team_id' => $team?->id,
+                'message' => $e->getMessage(),
+            ]);
+            $this->dispatch('notify', title: 'Diagnostics Failed', message: $e->getMessage()." [Trace: {$this->setupTraceId}]", type: 'error');
+        }
+    }
+
+    protected function maskSecret(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $len = strlen($value);
+        if ($len <= 12) {
+            return str_repeat('*', $len);
+        }
+
+        return substr($value, 0, 6).'...'.substr($value, -4);
     }
 
     /**
@@ -694,6 +780,10 @@ class WhatsappConfig extends Component
         $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
         $auditId = $this->startAudit('connect_unified');
 
+        $this->setupTraceId = \App\Services\TraceContext::ensureTraceId();
+        $this->setupLastStep = 'init';
+        $this->setupLastError = null;
+
         $tokenToUse = $token ?: $team->whatsapp_access_token;
         if (!$tokenToUse) {
             throw new \Exception('No access token provided.');
@@ -702,7 +792,20 @@ class WhatsappConfig extends Component
         try {
             DB::beginTransaction();
 
+            Log::info('WhatsApp Setup: Unified connection start', [
+                'trace_id' => $this->setupTraceId,
+                'team_id' => $team->id,
+                'waba_id' => $wabaId,
+                'phone_id' => $phoneId,
+                'token_preview' => $this->maskSecret($tokenToUse),
+                'manual_app_id_provided' => (bool) $appId,
+                'manual_app_secret_provided' => (bool) $appSecret,
+                'resolved_app_id' => $this->getAppId(),
+                'resolved_api_version' => $this->getApiVersion(),
+            ]);
+
             // 1. Exchange for Long-Lived Token (If not already long-lived)
+            $this->setupLastStep = 'exchange_for_long_lived_token';
             $exchangeResult = $this->exchangeForLongLivedToken($tokenToUse);
             if ($exchangeResult['status']) {
                 $tokenToUse = $exchangeResult['access_token'];
@@ -710,12 +813,14 @@ class WhatsappConfig extends Component
             }
 
             // 2. Pre-Verification (Ownership/Access check)
+            $this->setupLastStep = 'debug_token';
             $debugResult = $this->debugToken($tokenToUse);
             if (!$debugResult['status']) {
                 throw new \Exception('Identity Validation Failed: ' . ($debugResult['message'] ?? 'Invalid token'));
             }
 
             // 3. Duplicate Prevention (Global)
+            $this->setupLastStep = 'duplicate_check';
             $duplicate = \App\Models\Team::where('whatsapp_business_account_id', $wabaId)
                 ->where('id', '!=', $team->id)
                 ->exists();
@@ -726,6 +831,7 @@ class WhatsappConfig extends Component
             }
 
             // 4. Persistence
+            $this->setupLastStep = 'persist_team';
             $teamSettings = $team->whatsapp_settings ?? [];
             if ($appId && $appId !== get_setting('whatsapp_wm_fb_app_id')) {
                 $teamSettings['manual_app_id'] = $appId;
@@ -746,18 +852,28 @@ class WhatsappConfig extends Component
             ]);
 
             // Self-heal Facebook Business ID
+            $this->setupLastStep = 'resolve_facebook_business_id';
             $fbBusinessId = $this->getFacebookBusinessId($wabaId, $tokenToUse);
             if ($fbBusinessId) {
                 $team->update(['facebook_business_id' => $fbBusinessId]);
             }
 
             // 5. Automated Webhook Linking
+            $this->setupLastStep = 'subscribe_to_webhooks';
             $subResult = $this->subscribeToWebhooks($wabaId, $tokenToUse);
             if (!(bool)($subResult['status'] ?? $subResult['success'] ?? false)) {
+                Log::warning('WhatsApp Setup: Webhook subscription failed', [
+                    'trace_id' => $this->setupTraceId,
+                    'team_id' => $team->id,
+                    'waba_id' => $wabaId,
+                    'resolved_app_id' => $this->getAppId(),
+                    'result' => $subResult,
+                ]);
                 throw new \Exception('Webhook Mapping Failed: ' . ($subResult['message'] ?? 'Unknown error'));
             }
 
             // 6. Template & Phone Sync
+            $this->setupLastStep = 'sync_templates_and_phone_numbers';
             $syncRes = $this->loadTemplatesFromWhatsApp($wabaId, $tokenToUse);
             if ($syncRes['status'] && !empty($syncRes['phone_numbers'])) {
                 $this->available_phone_numbers = $syncRes['phone_numbers'];
@@ -776,15 +892,25 @@ class WhatsappConfig extends Component
             $this->completeAudit($auditId, 'completed');
 
             // 7. Post-Connection Handshake & State Determination
+            $this->setupLastStep = 'post_connection_handshake';
             $this->validateConnection(); // Runs VerificationEngine
             $this->syncInfo();           // Fetches limits, quality, display name
             $this->loadSettings();       // Refreshes UI state
             $this->refreshHealth();     // Calculates health score
 
-            $this->dispatch('notify', title: 'Success', message: 'WhatsApp Account Link Completed Successfully!', type: 'success');
+            Log::info('WhatsApp Setup: Unified connection success', [
+                'trace_id' => $this->setupTraceId,
+                'team_id' => $team->id,
+                'waba_id' => $wabaId,
+                'phone_id' => $team->whatsapp_phone_number_id,
+                'state' => $team->whatsapp_setup_state?->value ?? null,
+            ]);
+
+            $this->dispatch('notify', title: 'Success', message: "WhatsApp Account Link Completed Successfully! [Trace: {$this->setupTraceId}]", type: 'success');
 
         } catch (\Throwable $e) {
             DB::rollBack();
+            $this->setupLastError = $e->getMessage();
             $this->completeAudit($auditId, 'failed', ['error' => $e->getMessage()]);
 
             $team->update([
@@ -794,12 +920,15 @@ class WhatsappConfig extends Component
             $this->is_whatsmark_connected = false;
 
             Log::error('WhatsApp Setup: Connection Flow Failed', [
+                'trace_id' => $this->setupTraceId,
                 'message' => $e->getMessage(),
                 'team_id' => $team->id,
+                'waba_id' => $wabaId,
+                'step' => $this->setupLastStep,
                 'trace' => $e->getTraceAsString()
             ]);
 
-            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage(), type: 'error');
+            $this->dispatch('notify', title: 'Connection Failed', message: $e->getMessage()." [Trace: {$this->setupTraceId}]", type: 'error');
         }
     }
 
@@ -1042,6 +1171,8 @@ class WhatsappConfig extends Component
     {
         $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
         $state = $team->whatsapp_setup_state;
+
+        \Illuminate\Support\Facades\Log::debug("SetupProgress Debug: Team ID {$team->id}, State Type: " . gettype($state) . (is_object($state) ? " (Class: " . get_class($state) . ")" : "") . ", Value: " . json_encode($state));
 
         $steps = [
             [
