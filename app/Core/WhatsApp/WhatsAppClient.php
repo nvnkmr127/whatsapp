@@ -17,6 +17,8 @@ class WhatsAppClient
 
     protected ?string $phoneId = null;
 
+    protected bool $skipAppSecretProof = false;
+
     protected CredentialResolver $resolver;
 
     public function __construct(CredentialResolver $resolver)
@@ -36,6 +38,13 @@ class WhatsAppClient
         $this->token = (string) ($creds['token'] ?? '');
         $this->phoneId = $creds['phone_number_id'] ?? null;
         $this->appId = $creds['app_id'] ?? null;
+
+        return $this;
+    }
+
+    public function setSkipAppSecretProof(bool $skip): self
+    {
+        $this->skipAppSecretProof = $skip;
 
         return $this;
     }
@@ -84,7 +93,7 @@ class WhatsAppClient
         $isSystemToken = $this->token && str_starts_with($this->token, 'EAAB');
 
         $queryParams = [];
-        if (! $isSystemToken && $appSecret && $this->token) {
+        if (! $isSystemToken && $appSecret && $this->token && ! $this->skipAppSecretProof) {
             $queryParams['appsecret_proof'] = hash_hmac('sha256', $this->token, $appSecret);
         }
 

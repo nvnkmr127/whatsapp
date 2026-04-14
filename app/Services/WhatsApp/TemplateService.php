@@ -28,6 +28,13 @@ class TemplateService
         return $this;
     }
 
+    public function setSkipAppSecretProof(bool $skip): self
+    {
+        $this->client->setSkipAppSecretProof($skip);
+
+        return $this;
+    }
+
     /**
      * Sync templates from Meta for the current team.
      */

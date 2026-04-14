@@ -15,6 +15,8 @@ trait WhatsApp
 
     protected ?\App\Core\WhatsApp\ManagementClient $mgmtClient = null;
 
+    protected bool $skipAppSecretProof = false;
+
 
     protected function mgmt(): \App\Core\WhatsApp\ManagementClient
     {
@@ -26,6 +28,13 @@ trait WhatsApp
         }
 
         return $this->mgmtClient;
+    }
+
+    public function setSkipAppSecretProof(bool $skip): self
+    {
+        $this->skipAppSecretProof = $skip;
+
+        return $this;
     }
 
     private function getToken(): string
@@ -120,9 +129,11 @@ trait WhatsApp
             return ['status' => false, 'message' => 'No contextual team found.'];
         }
 
-        $res = app(\App\Services\WhatsApp\TemplateService::class)
-            ->setTeam($team)
-            ->syncTemplates();
+        $service = app(\App\Services\WhatsApp\TemplateService::class)->setTeam($team);
+        if ($this->skipAppSecretProof) {
+            $service->setSkipAppSecretProof(true);
+        }
+        $res = $service->syncTemplates();
 
         $phoneNumbers = [];
         if ($res['success']) {
@@ -184,7 +195,7 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if ($appSecret) {
+            if ($appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -243,7 +254,7 @@ trait WhatsApp
                 'pin' => $pin,
             ];
 
-            if ($appSecret) {
+            if ($appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -415,7 +426,7 @@ trait WhatsApp
             $params = [];
             $params['app_id'] = $appId;
             
-            if ($appSecret) {
+            if ($appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -547,7 +558,7 @@ trait WhatsApp
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
-            if ($appSecret) {
+            if ($appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -611,7 +622,7 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if ($appSecret) {
+            if ($appSecret && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
