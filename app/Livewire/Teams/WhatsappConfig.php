@@ -972,8 +972,8 @@ class WhatsappConfig extends Component
             [
                 'id' => 'webhook_setup',
                 'title' => 'Webhook Setup',
-                'status' => $state && in_array($state->value, ['ready', 'ready_warning', 'restricted']) ? 'completed' : 'not_started',
-                'description' => $state && in_array($state->value, ['ready', 'ready_warning', 'restricted']) ? 'Receiving events' : 'Not configured',
+                'status' => $state && in_array($state->value, ['ready', 'ready_warning', 'restricted', 'ACTIVE']) ? 'completed' : 'not_started',
+                'description' => $state && in_array($state->value, ['ready', 'ready_warning', 'restricted', 'ACTIVE']) ? 'Receiving events' : 'Not configured',
                 'icon' => 'webhook',
             ],
             [
@@ -986,7 +986,7 @@ class WhatsappConfig extends Component
             [
                 'id' => 'system_ready',
                 'title' => 'Messaging Ready',
-                'status' => in_array($state?->value, ['ready', 'ready_warning']) ? 'completed' : ($state?->value === 'restricted' ? 'warning' : 'not_started'),
+                'status' => in_array($state?->value, ['ready', 'ready_warning', 'ACTIVE']) ? 'completed' : ($state?->value === 'restricted' ? 'warning' : 'not_started'),
                 'description' => $state ? $state->label() : 'Pending verification',
                 'icon' => 'check-circle',
             ],

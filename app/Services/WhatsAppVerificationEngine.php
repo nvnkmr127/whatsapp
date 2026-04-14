@@ -208,7 +208,7 @@ class WhatsAppVerificationEngine
             return IntegrationState::READY_WARNING;
         }
 
-        return IntegrationState::READY;
+        return IntegrationState::ACTIVE;
     }
 
     protected function updateState(IntegrationState $state, array $results): array

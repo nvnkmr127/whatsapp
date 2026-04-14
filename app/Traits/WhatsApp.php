@@ -291,8 +291,8 @@ trait WhatsApp
             \Illuminate\Support\Facades\Log::warning("WhatsApp Webhook Subscription Fail for WABA {$wabaId}: " . $message);
             
             return [
-                'status' => $isPermissionError ? false : true, // Hard-fail on permissions, soft-fail on others
-                'message' => 'Webhook subscription failed: ' . $message,
+                'status' => false,
+                'message' => 'Exception during subscription: ' . $message,
                 'is_permission_error' => $isPermissionError
             ];
         }
@@ -382,13 +382,22 @@ trait WhatsApp
             $appId = $this->getAppId();
             $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
 
+            if (empty($appId)) {
+                Log::warning('WhatsApp Trait: Webhook check aborted because App ID is missing.');
+
+                return [
+                    'status' => true,
+                    'is_subscribed' => false,
+                    'message' => 'App ID not configured',
+                ];
+            }
+
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
             $params = [];
-            if ($appId) {
-                $params['app_id'] = $appId;
-            }
+            $params['app_id'] = $appId;
+            
             if (! $isSystemToken && ! $this->skipAppSecretProof) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
@@ -416,7 +425,7 @@ trait WhatsApp
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
                 $this->handleTokenFailure($response, 'Webhook Check');
 
-                Log::error('WhatsApp Trait: Webhook Check Failed', ['error' => $errorData]);
+                Log::error('WhatsApp Trait: Webhook Check Failed', ['error' => $errorData, 'waba_id' => $wabaId]);
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
@@ -425,14 +434,17 @@ trait WhatsApp
                 return ['status' => false, 'message' => $errorMessage ?? 'Webhook check failed'];
             }
 
-            $subscriptions = $response->json('data');
+            $subscriptions = $response->json('data') ?? [];
 
             Log::debug('WhatsApp Trait: Checking Webhook Subscription', [
                 'configured_app_id' => $appId,
-                'found_subscriptions' => $subscriptions,
+                'found_subscriptions_count' => count($subscriptions),
             ]);
 
-            $isSubscribed = collect($subscriptions)->contains('id', $appId);
+            // Robust comparison: Ensure both are strings and handle potential missing ID in data
+            $isSubscribed = collect($subscriptions)->contains(function ($sub) use ($appId) {
+                return isset($sub['id']) && (string) $sub['id'] === (string) $appId;
+            });
 
             return [
                 'status' => true,
