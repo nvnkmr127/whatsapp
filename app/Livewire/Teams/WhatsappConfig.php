@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Teams;
 
+use App\Enums\IntegrationState;
 use App\Traits\WhatsApp;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

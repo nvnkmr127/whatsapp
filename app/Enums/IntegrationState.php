@@ -12,7 +12,8 @@ enum IntegrationState: string
     case READY_WARNING = 'ready_warning';
     case SUSPENDED = 'suspended';
     case RESTRICTED = 'restricted';
-    case DEGRADED = 'degraded';
+    case DEGRADED = 'DEGRADED'; // Note: Unified as uppercase in DB
+    case DEGRADED_LOWER = 'degraded'; // Support lowercase variant
     case CONNECTED = 'connected'; // Added to fix runtime error in resetCircuitBreaker
 
     // Backward Compatibility / Legacy Mappings (Redirect to primary cases if possible)
@@ -55,7 +56,7 @@ enum IntegrationState: string
             self::SUSPENDED, self::SUSPENDED_UPPER => 'Suspended (Action Required)',
             self::RESTRICTED => 'Restricted (Policy Violation)',
             self::NOT_CONFIGURED => 'Not Connected',
-            self::DEGRADED => 'Degraded',
+            self::DEGRADED, self::DEGRADED_LOWER => 'Degraded',
             default => 'Provisioning...',
         };
     }
@@ -69,7 +70,7 @@ enum IntegrationState: string
             self::READY, self::ACTIVE, self::CONNECTED => 'green',
             self::READY_WARNING => 'amber',
             self::SUSPENDED, self::SUSPENDED_UPPER, self::RESTRICTED => 'rose',
-            self::DEGRADED => 'amber',
+            self::DEGRADED, self::DEGRADED_LOWER => 'amber',
             default => 'blue',
         };
     }
@@ -82,5 +83,10 @@ enum IntegrationState: string
     public function isFailure(): bool
     {
         return in_array($this, [self::SUSPENDED, self::SUSPENDED_UPPER, self::RESTRICTED, self::AUTH_FAILED]);
+    }
+
+    public function isDegraded(): bool
+    {
+        return in_array($this, [self::DEGRADED, self::DEGRADED_LOWER, self::READY_WARNING]);
     }
 }
