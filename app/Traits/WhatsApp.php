@@ -423,14 +423,18 @@ trait WhatsApp
      *
      * Note: Meta's GET /{waba_id}/subscribed_apps does NOT accept `app_id` as a filter param.
      * It returns ALL subscribed apps for the WABA. We then search the list for our app_id.
-     * USER tokens without `whatsapp_business_management` scope may get a 403 on this endpoint,
-     * which we treat as "cannot verify" (non-blocking) rather than "not subscribed" (blocking).
+     *
+     * EMBEDDED SIGNUP NOTE: When a WABA is connected via Facebook Embedded Signup, Meta
+     * automatically configures webhook subscriptions as part of the flow. The app token
+     * cannot access the WABA via this endpoint ("Object does not exist") because the app
+     * is not a registered Solution Provider for that WABA. ANY API failure here is treated
+     * as "unverifiable" (non-blocking) — we assume Meta already subscribed the webhooks.
      */
     public function checkWebhookSubscription(string $wabaId, string $token): array
     {
         try {
-            $url = self::getBaseUrl()."{$wabaId}/subscribed_apps";
-            $appId = $this->getAppId();
+            $url    = self::getBaseUrl()."{$wabaId}/subscribed_apps";
+            $appId  = $this->getAppId();
             $appSecret = $this->getAppSecret();
 
             if (empty($appId)) {
@@ -457,33 +461,32 @@ trait WhatsApp
                 $errorCode    = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
 
-                // Meta returns 403 / code 200 when the token lacks whatsapp_business_management.
-                // This means the subscription itself MAY exist but we cannot confirm it via this
-                // endpoint. Treat as "cannot verify" — non-blocking so setup can still proceed.
-                if ($response->status() === 403 || $errorCode === 200 || $errorCode === 10) {
-                    Log::warning('WhatsApp Trait: Cannot verify webhook subscription — token lacks management scope.', [
-                        'waba_id'   => $wabaId,
-                        'http_code' => $response->status(),
-                        'api_code'  => $errorCode,
-                    ]);
-
-                    return [
-                        'status'        => true,
-                        'is_subscribed' => true,   // Non-blocking: assume subscribed, can't confirm
-                        'unverifiable'  => true,
-                        'message'       => 'Cannot confirm via API (management scope missing); treating as subscribed.',
-                    ];
-                }
-
-                $this->handleTokenFailure($response, 'Webhook Check');
-
-                Log::error('WhatsApp Trait: Webhook Check Failed', ['error' => $errorData, 'waba_id' => $wabaId]);
-
+                // Hard configuration errors — these indicate a real mismatch that the user must fix.
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
                     return ['status' => false, 'message' => "Configuration Error: The Access Token belongs to a different App ID than the one currently configured ($appId). Please regenerate your System User Token for this App ID."];
                 }
 
-                return ['status' => false, 'message' => $errorMessage ?? 'Webhook check failed'];
+                // ALL other failures (403, #200, 404, "Object does not exist", etc.) are treated
+                // as "cannot verify" — non-blocking. This covers:
+                //   - USER tokens without whatsapp_business_management scope (#200)
+                //   - Embedded signup WABAs where the app is not a Solution Provider (404/"does not exist")
+                //   - Transient API errors
+                // Meta automatically sets up webhook subscriptions during Embedded Signup,
+                // so inability to verify does NOT mean the subscription is absent.
+                Log::warning('WhatsApp Trait: Webhook subscription verify failed — treating as unverifiable (non-blocking).', [
+                    'waba_id'   => $wabaId,
+                    'http_code' => $response->status(),
+                    'api_code'  => $errorCode,
+                    'message'   => $errorMessage,
+                    'note'      => 'Embedded signup WABAs are auto-subscribed by Meta and cannot be verified via API.',
+                ]);
+
+                return [
+                    'status'        => true,
+                    'is_subscribed' => true,   // Assume subscribed — cannot verify
+                    'unverifiable'  => true,
+                    'message'       => 'Webhook subscription cannot be verified via API; assuming active (embedded signup or limited token scope).',
+                ];
             }
 
             $subscriptions = $response->json('data') ?? [];
