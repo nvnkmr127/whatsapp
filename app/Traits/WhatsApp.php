@@ -99,9 +99,8 @@ trait WhatsApp
         $subcode = $errorData['error']['error_subcode'] ?? $errorData['error_subcode'] ?? null;
 
         // Code 190: Access token has expired or is invalid
-        // Code 200: Permissions error (System user not added to WABA)
         // Status 401: Unauthorized (standard for token issues)
-        if ($status === 401 || $errorCode == self::ERROR_TOKEN_INVALID || $errorCode == 200) {
+        if ($status === 401 || $errorCode == self::ERROR_TOKEN_INVALID) {
             $team = $this->team ?? auth()->user()?->currentTeam;
             if ($team) {
                 // Determine if it was a password change (#460) or general expiry
@@ -421,8 +420,10 @@ trait WhatsApp
     /**
      * Check if the app is subscribed to webhooks for this WABA.
      *
-     * Note: Meta's GET /{waba_id}/subscribed_apps does NOT accept `app_id` as a filter param.
-     * It returns ALL subscribed apps for the WABA. We then search the list for our app_id.
+     * Check if the app is subscribed to webhooks for this WABA.
+     *
+     * Per official Meta docs, GET /{waba_id}/subscribed_apps returns:
+     *   { "data": [{ "whatsapp_business_api_data": { "id": "<APP_ID>", "name": "..." } }] }
      *
      * EMBEDDED SIGNUP NOTE: When a WABA is connected via Facebook Embedded Signup, Meta
      * automatically configures webhook subscriptions as part of the flow. The app token
@@ -491,15 +492,25 @@ trait WhatsApp
 
             $subscriptions = $response->json('data') ?? [];
 
-            Log::debug('WhatsApp Trait: Checking Webhook Subscription', [
-                'configured_app_id'         => $appId,
-                'found_subscriptions_count' => count($subscriptions),
-                'raw_ids'                   => collect($subscriptions)->pluck('id')->all(),
-            ]);
-
+            // Per official Meta docs, each subscription entry has the structure:
+            // { "whatsapp_business_api_data": { "id": "<APP_ID>", "name": "...", "link": "..." } }
+            // We must read the id from the nested whatsapp_business_api_data key.
             $isSubscribed = collect($subscriptions)->contains(function ($sub) use ($appId) {
-                return isset($sub['id']) && (string) $sub['id'] === (string) $appId;
+                $id = $sub['whatsapp_business_api_data']['id']   // Official format
+                   ?? $sub['id']                                  // Legacy/flat format fallback
+                   ?? null;
+
+                return $id !== null && (string) $id === (string) $appId;
             });
+
+            Log::debug('WhatsApp Trait: Webhook subscription check result', [
+                'configured_app_id'         => $appId,
+                'is_subscribed'             => $isSubscribed,
+                'found_subscriptions_count' => count($subscriptions),
+                'raw_ids'                   => collect($subscriptions)->map(fn($s) =>
+                    $s['whatsapp_business_api_data']['id'] ?? $s['id'] ?? 'unknown'
+                )->all(),
+            ]);
 
             return [
                 'status'        => true,

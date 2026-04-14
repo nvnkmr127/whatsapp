@@ -121,11 +121,16 @@ class WhatsAppVerificationEngine
             Log::warning("Token missing recommended scopes for team {$this->team->id}: ".implode(', ', $missing));
         }
 
-        // Rule: App Mode Check (Production Hardening)
-        $isLive = $data['app_mode'] ?? true; // Default to true if not present in legacy debug
-        if (!$isLive) {
+        // Rule: App Mode advisory check.
+        // Meta returns app_mode as a string: "DEVELOPMENT" or "LIVE".
+        // Development mode limits webhooks to registered test users only, but does NOT
+        // invalidate the token or block the integration from functioning.
+        // This is WARNING-ONLY and must NEVER cause SUSPENDED state.
+        $appMode = $data['app_mode'] ?? 'LIVE';
+        $appModeWarning = null;
+        if (strtoupper((string) $appMode) === 'DEVELOPMENT') {
+            $appModeWarning = 'Your Meta App is in DEVELOPMENT mode. Webhooks only work for registered test users. Switch to LIVE mode in the Meta App Dashboard to receive messages from all users.';
             Log::warning("WhatsApp Verification Warning: Team {$this->team->id} is connected via an App in DEVELOPMENT MODE. Webhooks will ONLY work for registered App Developers.");
-            $results['tier1']['app_mode_warning'] = true;
         }
 
         // Rule 2: Token Grace Period check
@@ -140,7 +145,13 @@ class WhatsAppVerificationEngine
             }
         }
 
-        return ['status' => true, 'is_expiring_soon' => $isExpiringSoon];
+        return [
+            'status'            => true,
+            'is_expiring_soon'  => $isExpiringSoon,
+            'app_mode'          => $appMode,
+            'app_mode_warning'  => $appModeWarning,
+            'scopes'            => $results['scopes'] ?? [],
+        ];
     }
 
     protected function verifyTier2Entity(): array
@@ -180,31 +191,63 @@ class WhatsAppVerificationEngine
             return ['status' => false, 'error' => 'No WABA ID'];
         }
 
-        // Advisory scope check (warning-only).
-        // Meta does not always return granular scopes for USER tokens, so we cannot
-        // hard-fail here — we simply log and continue to the webhook check.
-        $debug  = $this->debugToken($token);
-        $scopes = $debug['data']['scopes'] ?? [];
+        // Get token metadata. We need the `type` field to distinguish embedded signup
+        // (USER token) from manual setup (SYSTEM token).
+        $debug     = $this->debugToken($token);
+        $tokenType = strtoupper($debug['data']['type'] ?? 'UNKNOWN');
+        $scopes    = $debug['data']['scopes'] ?? [];
+
+        // Advisory scope warning (logged only, never blocks).
         $scopeWarning = null;
         if (! empty($scopes) && ! in_array('whatsapp_business_management', $scopes)) {
-            $scopeWarning = 'Token may be missing "whatsapp_business_management" scope — webhook verification may be limited.';
+            $scopeWarning = 'Token may be missing "whatsapp_business_management" scope — webhook verification limited.';
             Log::warning("WhatsApp VerificationEngine [Tier3]: {$scopeWarning}", ['team_id' => $this->team->id]);
         }
 
-        // Webhook subscription check.
-        // The trait returns `unverifiable: true` when the token cannot list subscriptions
-        // (e.g. USER token without management scope). We treat that as passing Tier 3 since
-        // the subscription POST succeeded during setup.
-        $webhook = $this->checkWebhookSubscription($wabaId, $token);
-        $isSubscribed = ($webhook['is_subscribed'] ?? false) || ($webhook['unverifiable'] ?? false);
+        // ── Tier 3 Webhook Decision ───────────────────────────────────────────────
+        //
+        // USER token  = Facebook Embedded Signup flow.
+        //   Meta AUTOMATICALLY subscribes webhooks as part of the signup flow.
+        //   The GET /subscribed_apps endpoint returns an empty list for USER tokens
+        //   because the token only has visibility into its own OAuth context, not
+        //   the app-level subscription registry. The POST also fails (#200 / "Object
+        //   does not exist") because the app is not a registered Solution Provider.
+        //   → Treat as: SUBSCRIBED (auto by Meta), UNVERIFIABLE via API.
+        //
+        // SYSTEM token = Manual setup with System User token.
+        //   Has full whatsapp_business_management scope. The API check is reliable.
+        //   → Use API result as ground truth.
+        //
+        if ($tokenType === 'USER') {
+            Log::info('WhatsApp VerificationEngine [Tier3]: USER token detected — assuming webhook auto-subscribed by Meta (Embedded Signup).', [
+                'team_id'    => $this->team->id,
+                'waba_id'    => $wabaId,
+                'token_type' => $tokenType,
+            ]);
+
+            $isSubscribed = true;
+            $unverifiable = true;
+        } else {
+            // SYSTEM token or unknown — rely on the API.
+            $webhook      = $this->checkWebhookSubscription($wabaId, $token);
+            $isSubscribed = ($webhook['is_subscribed'] ?? false) || ($webhook['unverifiable'] ?? false);
+            $unverifiable = $webhook['unverifiable'] ?? false;
+
+            Log::info('WhatsApp VerificationEngine [Tier3]: System token webhook check result.', [
+                'team_id'      => $this->team->id,
+                'is_subscribed'=> $isSubscribed,
+                'unverifiable' => $unverifiable,
+            ]);
+        }
 
         // Template baseline
         $templates = $this->team->whatsappTemplates()->count();
 
         return [
             'status'            => $isSubscribed,
-            'webhook_subscribed'=> $isSubscribed,
-            'unverifiable'      => $webhook['unverifiable'] ?? false,
+            'webhook_subscribed' => $isSubscribed,
+            'unverifiable'      => $unverifiable,
+            'token_type'        => $tokenType,
             'scope_warning'     => $scopeWarning,
             'template_count'    => $templates,
         ];

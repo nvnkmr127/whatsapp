@@ -206,7 +206,7 @@ class WhatsAppClient
             ];
         }
 
-        if (($response->status() === 401 || $errorCode === 200) && $this->team) {
+        if ($response->status() === 401 && $this->team) {
             $this->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
             \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'critical', $this->maskSensitiveData($data), ['error' => $responseJson]);
         } elseif ($this->team) {
