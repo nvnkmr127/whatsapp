@@ -12,6 +12,7 @@ class WhatsAppClient
 
     protected string $baseUrl;
     protected ?string $appId = null;
+    protected ?string $appSecret = null;
 
     protected ?string $token = null;
 
@@ -38,6 +39,7 @@ class WhatsAppClient
         $this->token = (string) ($creds['token'] ?? '');
         $this->phoneId = $creds['phone_number_id'] ?? null;
         $this->appId = $creds['app_id'] ?? null;
+        $this->appSecret = $creds['app_secret'] ?? null;
 
         return $this;
     }
@@ -89,7 +91,7 @@ class WhatsAppClient
             ];
         }
 
-        $appSecret = config('whatsapp.app_secret');
+        $appSecret = $this->appSecret ?: config('whatsapp.app_secret');
         $isSystemToken = $this->token && str_starts_with($this->token, 'EAAB');
 
         $queryParams = [];

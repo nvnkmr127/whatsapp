@@ -95,7 +95,7 @@ class IntegrationHealthService
             return IntegrationState::DEGRADED->value;
         }
 
-        return IntegrationState::ACTIVE->value;
+        return IntegrationState::READY->value;
     }
 
     /**

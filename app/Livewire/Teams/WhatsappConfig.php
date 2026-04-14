@@ -193,7 +193,7 @@ class WhatsappConfig extends Component
         \Illuminate\Support\Facades\Cache::forget($errorKey);
 
         if ($this->integrationState === 'restricted') {
-            $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::CONNECTED]);
+            $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY]);
             $this->loadSettings();
             $this->dispatch('notify', title: 'Circuit Reset', message: 'Connection security lock released.', type: 'success');
             
@@ -1073,8 +1073,8 @@ class WhatsappConfig extends Component
             [
                 'id' => 'webhook_setup',
                 'title' => 'Webhook Setup',
-                'status' => $state && in_array($state->value, ['ready', 'ready_warning', 'restricted', 'ACTIVE']) ? 'completed' : 'not_started',
-                'description' => $state && in_array($state->value, ['ready', 'ready_warning', 'restricted', 'ACTIVE']) ? 'Receiving events' : 'Not configured',
+                'status' => $state && ($state->isReady() || in_array($state, [IntegrationState::READY_WARNING, IntegrationState::RESTRICTED])) ? 'completed' : 'not_started',
+                'description' => $state && ($state->isReady() || in_array($state, [IntegrationState::READY_WARNING, IntegrationState::RESTRICTED])) ? 'Receiving events' : 'Not configured',
                 'icon' => 'webhook',
             ],
             [
@@ -1087,7 +1087,7 @@ class WhatsappConfig extends Component
             [
                 'id' => 'system_ready',
                 'title' => 'Messaging Ready',
-                'status' => in_array($state?->value, ['ready', 'ready_warning', 'ACTIVE']) ? 'completed' : ($state?->value === 'restricted' ? 'warning' : 'not_started'),
+                'status' => $state && ($state->isReady() || $state === IntegrationState::READY_WARNING) ? 'completed' : ($state === IntegrationState::RESTRICTED ? 'warning' : 'not_started'),
                 'description' => $state ? $state->label() : 'Pending verification',
                 'icon' => 'check-circle',
             ],

@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum IntegrationState: string
 {
+    // Primary States (Lowercase Values)
     case DISCONNECTED = 'disconnected';
     case AUTHENTICATED = 'authenticated';
     case PROVISIONED = 'provisioned';
@@ -11,10 +12,16 @@ enum IntegrationState: string
     case READY_WARNING = 'ready_warning';
     case SUSPENDED = 'suspended';
     case RESTRICTED = 'restricted';
+    case DEGRADED = 'degraded';
+    case CONNECTED = 'connected'; // Added to fix runtime error in resetCircuitBreaker
+
+    // Backward Compatibility / Legacy Mappings (Redirect to primary cases if possible)
+    case ACTIVE = 'ACTIVE'; // Unified with READY in labels/colors
     case NOT_CONFIGURED = 'NOT_CONFIGURED';
-    case ACTIVE = 'ACTIVE';
     case DISCONNECTED_UPPER = 'DISCONNECTED';
     case SUSPENDED_UPPER = 'SUSPENDED';
+
+    // Transient / Operational States
     case AUTHENTICATING = 'AUTHENTICATING';
     case TOKEN_EXCHANGE = 'TOKEN_EXCHANGE';
     case VALIDATING_CREDENTIALS = 'VALIDATING_CREDENTIALS';
@@ -24,7 +31,6 @@ enum IntegrationState: string
     case PHONE_REGISTRATION = 'PHONE_REGISTRATION';
     case SYNCING_TEMPLATES = 'SYNCING_TEMPLATES';
     case VERIFYING_SETUP = 'VERIFYING_SETUP';
-    case DEGRADED = 'DEGRADED';
     case TOKEN_EXPIRED = 'TOKEN_EXPIRED';
     case AUTH_FAILED = 'AUTH_FAILED';
     case TOKEN_EXCHANGE_FAILED = 'TOKEN_EXCHANGE_FAILED';
@@ -41,17 +47,15 @@ enum IntegrationState: string
     public function label(): string
     {
         return match ($this) {
-            self::DISCONNECTED => 'Disconnected',
+            self::DISCONNECTED, self::DISCONNECTED_UPPER => 'Disconnected',
             self::AUTHENTICATED => 'Authenticated',
             self::PROVISIONED => 'Provisioned',
-            self::READY => 'Ready',
+            self::READY, self::ACTIVE, self::CONNECTED => 'Ready',
             self::READY_WARNING => 'Ready (Action Required)',
-            self::SUSPENDED => 'Suspended (Action Required)',
+            self::SUSPENDED, self::SUSPENDED_UPPER => 'Suspended (Action Required)',
             self::RESTRICTED => 'Restricted (Policy Violation)',
             self::NOT_CONFIGURED => 'Not Connected',
-            self::ACTIVE => 'Ready',
-            self::DISCONNECTED_UPPER => 'Disconnected',
-            self::SUSPENDED_UPPER => 'Suspended (Action Required)',
+            self::DEGRADED => 'Degraded',
             default => 'Provisioning...',
         };
     }
@@ -59,18 +63,24 @@ enum IntegrationState: string
     public function color(): string
     {
         return match ($this) {
-            self::DISCONNECTED => 'slate',
+            self::DISCONNECTED, self::DISCONNECTED_UPPER, self::NOT_CONFIGURED => 'slate',
             self::AUTHENTICATED => 'amber',
             self::PROVISIONED => 'blue',
-            self::READY => 'green',
+            self::READY, self::ACTIVE, self::CONNECTED => 'green',
             self::READY_WARNING => 'amber',
-            self::SUSPENDED => 'rose',
-            self::RESTRICTED => 'rose',
-            self::NOT_CONFIGURED => 'slate',
-            self::ACTIVE => 'green',
-            self::DISCONNECTED_UPPER => 'slate',
-            self::SUSPENDED_UPPER => 'rose',
+            self::SUSPENDED, self::SUSPENDED_UPPER, self::RESTRICTED => 'rose',
+            self::DEGRADED => 'amber',
             default => 'blue',
         };
+    }
+
+    public function isReady(): bool
+    {
+        return in_array($this, [self::READY, self::ACTIVE, self::CONNECTED]);
+    }
+
+    public function isFailure(): bool
+    {
+        return in_array($this, [self::SUSPENDED, self::SUSPENDED_UPPER, self::RESTRICTED, self::AUTH_FAILED]);
     }
 }

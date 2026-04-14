@@ -134,15 +134,10 @@ class SendMessageJob implements ShouldQueue
             }
         }
 
-        $allowed = [
-            IntegrationState::READY,
-            IntegrationState::READY_WARNING,
-            IntegrationState::ACTIVE,
-            IntegrationState::DEGRADED,
-        ];
+        $state = $team->whatsapp_setup_state;
+        $isReady = $state && ($state->isReady() || in_array($state, [IntegrationState::READY_WARNING, IntegrationState::DEGRADED]));
 
-        if (! in_array($team->whatsapp_setup_state, $allowed, true)) {
-            $state = $team->whatsapp_setup_state;
+        if (! $isReady) {
             $label = $state ? $state->label() : 'Not Configured';
             $message = "Messaging blocked. Connection state: {$label}.";
 

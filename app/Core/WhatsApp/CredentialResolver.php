@@ -23,6 +23,11 @@ class CredentialResolver
             ?: config('whatsapp.app_id')
             ?: config('services.facebook.client_id');
 
+        $appSecret = $team->whatsapp_settings['manual_app_secret'] ?? null
+            ?: (function_exists('get_setting') ? get_setting('whatsapp_wm_fb_app_secret') : null)
+            ?: config('whatsapp.app_secret')
+            ?: config('services.facebook.client_secret');
+
         $verifyToken = $team->whatsapp_verify_token
             ?: config('whatsapp.webhook_verify_token')
             ?: config('whatsapp.verify_token');
@@ -39,6 +44,7 @@ class CredentialResolver
             'phone_number_id' => $phoneId,
             'waba_id' => $wabaId,
             'app_id' => $appId,
+            'app_secret' => $appSecret,
             'verify_token' => $verifyToken,
         ];
     }

@@ -34,8 +34,9 @@ class ManagementClient
      */
     public function exchangeToken(string $shortLivedToken): array
     {
-        $appId = $this->team ? $this->resolver->resolve($this->team)['app_id'] : config('whatsapp.app_id');
-        $appSecret = config('whatsapp.app_secret');
+        $creds = $this->team ? $this->resolver->resolve($this->team) : null;
+        $appId = $creds['app_id'] ?? config('whatsapp.app_id');
+        $appSecret = $creds['app_secret'] ?? config('whatsapp.app_secret');
 
         if (! $appId || ! $appSecret) {
             return ['success' => false, 'error' => 'App ID or Secret missing'];
@@ -61,8 +62,10 @@ class ManagementClient
      */
     public function subscribeToWebhooks(string $wabaId, string $token): array
     {
-        $appId = $this->team ? $this->resolver->resolve($this->team)['app_id'] : config('whatsapp.app_id');
-        $appSecret = config('whatsapp.app_secret');
+        $creds = $this->team ? $this->resolver->resolve($this->team) : null;
+        $appId = $creds['app_id'] ?? config('whatsapp.app_id');
+        $appSecret = $creds['app_secret'] ?? config('whatsapp.app_secret');
+
         $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}/subscribed_apps";
 
         $params = [
@@ -76,10 +79,6 @@ class ManagementClient
         }
 
         $response = Http::withToken($token)->post($url, $params);
-
-        if ($response->failed()) {
-            return ['status' => false, 'error' => $response->json('error.message') ?? 'Subscription failed'];
-        }
 
         if ($response->failed()) {
             return ['status' => false, 'error' => $response->json('error.message') ?? 'Subscription failed'];

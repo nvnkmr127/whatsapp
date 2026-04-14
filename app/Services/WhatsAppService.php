@@ -2089,25 +2089,20 @@ class WhatsAppService
         }
 
         $state = $this->team->whatsapp_setup_state;
-        $allowed = [
-            \App\Enums\IntegrationState::READY,
-            \App\Enums\IntegrationState::READY_WARNING,
-            \App\Enums\IntegrationState::ACTIVE,
-            \App\Enums\IntegrationState::DEGRADED,
-        ];
-
+        
         if ($state === \App\Enums\IntegrationState::PROVISIONED) {
             if (! empty($this->team->whatsapp_access_token) && ! empty($this->team->whatsapp_phone_number_id)) {
                 $this->team->whatsapp_setup_state = \App\Enums\IntegrationState::READY;
                 if (! $this->team->isDirty(['whatsapp_access_token', 'whatsapp_phone_number_id'])) {
                     $this->team->save();
                 }
-
-                return;
+                $state = \App\Enums\IntegrationState::READY;
             }
         }
 
-        if (! in_array($state, $allowed)) {
+        $isReady = $state && ($state->isReady() || in_array($state, [\App\Enums\IntegrationState::READY_WARNING, \App\Enums\IntegrationState::DEGRADED]));
+
+        if (! $isReady) {
             $label = $state ? $state->label() : 'Not Configured';
             $message = "Messaging blocked. Connection state: {$label}.";
 
