@@ -83,8 +83,84 @@
         </div>
     </div>
 
+    <!-- Step Indicators (Progress Stepper) -->
+    @if(!$this->team->isWhatsAppActive())
+        <div class="mt-8 mb-4">
+            <div class="relative flex items-center justify-between max-w-4xl mx-auto px-4">
+                {{-- Track Line --}}
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 dark:bg-slate-800 -z-10 rounded-full overflow-hidden">
+                    @php
+                        $progressWidth = match(strtoupper($integrationState)) {
+                            'DISCONNECTED', 'NOT_CONFIGURED' => '0%',
+                            'AUTHENTICATED' => '33%',
+                            'PROVISIONED' => '66%',
+                            'READY', 'READY_WARNING', 'ACTIVE' => '100%',
+                            default => '0%'
+                        };
+                    @endphp
+                    <div class="h-full bg-wa-teal transition-all duration-700 ease-out" style="width: {{ $progressWidth }}"></div>
+                </div>
+
+                <!-- Step 1: Link -->
+                <div class="flex flex-col items-center gap-2 group">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 {{ in_array(strtoupper($integrationState), ['DISCONNECTED', 'NOT_CONFIGURED']) ? 'bg-white border-2 border-slate-200' : 'bg-wa-teal shadow-lg shadow-wa-teal/20 text-white' }}">
+                        @if(in_array(strtoupper($integrationState), ['DISCONNECTED', 'NOT_CONFIGURED']))
+                            <span class="text-lg font-bold">1</span>
+                        @else
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        @endif
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Link Facebook</span>
+                </div>
+
+                <!-- Step 2: Discover -->
+                <div class="flex flex-col items-center gap-2 group">
+                    @php 
+                        $isStep2Active = in_array(strtoupper($integrationState), ['AUTHENTICATED', 'PROVISIONED', 'READY', 'READY_WARNING', 'ACTIVE']);
+                        $isStep2Done = in_array(strtoupper($integrationState), ['PROVISIONED', 'READY', 'READY_WARNING', 'ACTIVE']);
+                    @endphp
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 {{ !$isStep2Active ? 'bg-white border-2 border-slate-200' : ($isStep2Done ? 'bg-wa-teal shadow-lg text-white' : 'bg-white border-2 border-wa-teal text-wa-teal ring-4 ring-wa-teal/5') }}">
+                        @if(!$isStep2Done)
+                            <span class="text-lg font-bold">2</span>
+                        @else
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        @endif
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest {{ $isStep2Active ? 'text-wa-teal' : 'text-slate-500' }}">Discover Account</span>
+                </div>
+
+                <!-- Step 3: Activate -->
+                <div class="flex flex-col items-center gap-2 group">
+                    @php 
+                        $isStep3Active = in_array(strtoupper($integrationState), ['READY', 'READY_WARNING', 'ACTIVE']);
+                    @endphp
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 {{ !$isStep3Active ? 'bg-white border-2 border-slate-200' : 'bg-wa-teal shadow-lg text-white font-bold' }}">
+                        <span class="text-lg font-bold">3</span>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest {{ $isStep3Active ? 'text-wa-teal' : 'text-slate-500' }}">Activate Setup</span>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div
         class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-50 dark:border-slate-800">
+        
+        {{-- [STAFF-HARDENING] Critical App Mode Warning --}}
+        @if($integrationState === 'ready_warning' || (isset($setupProgress['tier1']['app_mode_warning']) && $setupProgress['tier1']['app_mode_warning']))
+            <div class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-3xl flex items-start gap-4 animate-pulse">
+                <div class="p-3 bg-amber-500 text-white rounded-2xl">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-amber-900 dark:text-amber-200 uppercase tracking-tight">Warning: Meta App in Development Mode</h4>
+                    <p class="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium leading-relaxed">
+                        Your WhatsApp integration is connected via a Meta App in <strong>Development Mode</strong>. Inbound messages will ONLY be received from registered App Developers. Switch your Meta App to <strong>Live Mode</strong> in the Meta Developer Portal to go public.
+                    </p>
+                </div>
+            </div>
+        @endif
+
         @if($is_whatsmark_connected)
                 <!-- Critical Alert Banner -->
                 <!-- Health & Governance Alert Banner -->
@@ -975,21 +1051,53 @@
                                 </label>
                                 <div
                                     class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 font-mono text-sm text-slate-700 dark:text-slate-300">
-                                    {{ $wm_business_account_id ?? '-' }}
+                                    @if(empty($wm_business_account_id) && !empty($available_wabas))
+                                        <div class="space-y-3">
+                                            <p class="text-xs text-blue-600 font-bold tracking-tight uppercase">Multiple Business Accounts Found:</p>
+                                            @foreach($available_wabas as $waba)
+                                                <div class="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all hover:border-blue-400">
+                                                    <div class="flex flex-col">
+                                                        <span class="font-bold text-slate-900 dark:text-white">{{ $waba['name'] }}</span>
+                                                        <span class="text-[10px] text-slate-500 font-mono tracking-tight uppercase">ID: {{ $waba['id'] }}</span>
+                                                    </div>
+                                                    <button wire:click="selectWaba('{{ $waba['id'] }}')"
+                                                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-xl uppercase tracking-widest transition-all hover:scale-105">
+                                                        SELECT
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        {{ $wm_business_account_id ?? '-' }}
+                                    @endif
                                 </div>
                             </div>
 
                             <div
-                                class="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800/30 text-green-700 dark:text-green-400">
-                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                </svg>
-                                <div class="text-sm font-medium">
-                                    <span class="block font-bold">{{ $wm_phone_display ?? '-' }}</span>
-                                    <span class="text-xs opacity-70 italic">Verified display name:
-                                        {{ $wm_verified_name ?? 'Not Verified' }}</span>
+                                class="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800/30 text-green-700 dark:text-green-400">
+                                <div class="flex items-center gap-4">
+                                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <div class="text-sm font-medium">
+                                        <span class="block font-bold">{{ $wm_phone_display ?? '-' }}</span>
+                                        <span class="text-xs opacity-70 italic">Verified display name:
+                                            {{ $wm_verified_name ?? 'Not Verified' }}</span>
+                                    </div>
                                 </div>
+                                @if($lastWebhookReceivedAt)
+                                    <div class="text-right flex flex-col items-end">
+                                        <div class="flex items-center gap-1.5 mb-0.5">
+                                            <span class="relative flex h-1.5 w-1.5">
+                                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                            </span>
+                                            <span class="text-[9px] font-black uppercase tracking-widest">Heartbeat Pulse</span>
+                                        </div>
+                                        <span class="text-[9px] font-bold opacity-60 uppercase">{{ $lastWebhookReceivedAt->diffForHumans() }}</span>
+                                    </div>
+                                @endif
                             </div>
 
                             {{-- Business Verification Status Card --}}
@@ -1048,34 +1156,79 @@
                                 </button>
                             </div>
 
-                            <div class="pt-2 text-right">
-                                @if(!$confirmingDisconnect)
-                                    <button wire:click="confirmDisconnect"
-                                        class="text-xs font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest transition-opacity hover:opacity-80">
-                                        &times; DISCONNECT ACCOUNT
-                                    </button>
-                                @else
-                                    <div
-                                        class="flex flex-col items-end gap-3 p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200 dark:border-rose-800">
-                                        <label class="text-[10px] font-black text-rose-600 uppercase">Type 'DISCONNECT' to
-                                            confirm</label>
-                                        <div class="flex gap-2">
-                                            <input type="text" wire:model="disconnectConfirmation" placeholder="Type here..."
-                                                class="text-xs rounded-xl border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 focus:ring-rose-500">
-                                            <button wire:click="disconnect"
-                                                class="px-4 py-2 bg-rose-600 text-white text-[10px] font-black rounded-xl">CONFIRM</button>
-                                            <button wire:click="cancelDisconnect" class="text-slate-400 hover:text-slate-600">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M6 18L18 6M6 6l12 12"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <p class="text-[9px] text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning:
-                                            This will stop all active bot automations instantly.</p>
+                            {{-- [STAFF-HARDENING] Circuit Breaker Reset --}}
+                            @if($integrationState === 'restricted')
+                                <div class="mt-4 p-5 bg-rose-50 dark:bg-rose-900/20 rounded-[2rem] border border-rose-100 dark:border-rose-800 flex flex-col items-center text-center gap-3">
+                                    <div class="p-3 bg-rose-600 text-white rounded-2xl shadow-lg shadow-rose-200 dark:shadow-none">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                                     </div>
-                                @endif
+                                    <div>
+                                        <h4 class="text-sm font-black text-rose-700 dark:text-rose-400 uppercase tracking-tight">Security Lock Engaged</h4>
+                                        <p class="text-[10px] text-rose-600/70 dark:text-rose-400/60 font-medium max-w-xs mx-auto mt-1 leading-relaxed">
+                                            Outbound traffic is suspended due to excessive delivery failures. Please verify your Meta account standing.
+                                        </p>
+                                    </div>
+                                    <button wire:click="resetCircuitBreaker" class="mt-2 px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black rounded-xl uppercase tracking-[0.2em] shadow-lg shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
+                                        RESET SECURITY LOCK
+                                    </button>
+                                </div>
+                            @endif
+
+                        {{-- Disconnect Section --}}
+                        <div class="pt-2 text-right">
+                            @if(!$confirmingDisconnect)
+                                <button wire:click="confirmDisconnect"
+                                    class="text-xs font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest transition-opacity hover:opacity-80">
+                                    &times; DISCONNECT ACCOUNT
+                                </button>
+                            @else
+                                <div
+                                    class="flex flex-col items-end gap-3 p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-200 dark:border-rose-800">
+                                    <label class="text-[10px] font-black text-rose-600 uppercase">Type 'DISCONNECT' to
+                                        confirm</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" wire:model="disconnectConfirmation" placeholder="Type here..."
+                                            class="text-xs rounded-xl border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 focus:ring-rose-500">
+                                        <button wire:click="disconnect"
+                                            class="px-4 py-2 bg-rose-600 text-white text-[10px] font-black rounded-xl">CONFIRM</button>
+                                        <button wire:click="cancelDisconnect" class="text-slate-400 hover:text-slate-600">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <p class="text-[9px] text-rose-500 italic mt-1 font-bold uppercase tracking-widest">Warning:
+                                        This will stop all active bot automations instantly.</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Test Connection Section --}}
+                        <div class="mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
+                            <h3 class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4">Validate Integration</h3>
+                            <div class="bg-slate-50 dark:bg-slate-800/40 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800">
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mb-4 uppercase tracking-tight">
+                                    Verify your connection by sending a real WhatsApp message.
+                                </p>
+                                <div class="flex flex-col md:flex-row gap-3">
+                                    <div class="flex-1 relative">
+                                        <input type="text" wire:model="wm_test_message" placeholder="Phone with country code (e.g. 9198XXX)"
+                                            class="w-full text-xs font-bold rounded-2xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-wa-teal px-5 py-3">
+                                        @error('wm_test_message') <span class="text-[10px] text-rose-500 mt-1 block px-2">{{ $message }}</span> @enderror
+                                    </div>
+                                    <button wire:click="sendTestMessage" wire:loading.attr="disabled"
+                                        class="px-8 py-3 bg-wa-teal hover:bg-wa-teal/90 text-white text-[11px] font-black rounded-2xl shadow-lg shadow-wa-teal/20 uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                                        <svg wire:loading wire:target="sendTestMessage" class="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4m2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span wire:loading.remove wire:target="sendTestMessage">TEST CONNECTION</span>
+                                        <span wire:loading wire:target="sendTestMessage">SENDING...</span>
+                                    </button>
+                                </div>
                             </div>
+                        </div>
                         </div>
                     </div>
 
@@ -1218,6 +1371,26 @@
                             </svg>
                             CONNECT WITH WHATSAPP
                         </button>
+
+                        {{-- [STAFF-HARDENING] Resume/Recovery Path --}}
+                        @if(in_array(strtoupper($integrationState), ['AUTHENTICATED', 'PROVISIONED']) && empty($available_wabas))
+                            <div class="mt-8 flex flex-col items-center gap-4 animate-in slide-in-from-bottom-4 duration-700">
+                                <div class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                    </span>
+                                    <span class="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">Incomplete Session Detected</span>
+                                </div>
+                                <button wire:click="resumeSetup" wire:loading.attr="disabled"
+                                    class="text-xs font-black text-wa-teal hover:text-green-600 transition-colors uppercase tracking-widest flex items-center gap-2">
+                                    <svg wire:loading wire:target="resumeSetup" class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <span wire:loading.remove wire:target="resumeSetup">↺ Resume discovery & sync</span>
+                                    <span wire:loading wire:target="resumeSetup">Working...</span>
+                                </button>
+                            </div>
+                        @endif
+
                         <div id="https-warning"
                             class="hidden mt-6 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 rounded-2xl text-rose-600 dark:text-rose-400 text-xs max-w-sm mx-auto">
                             <strong class="block mb-1 font-bold italic underline">⚠️ HTTPS REQUIRED</strong>
@@ -1360,7 +1533,7 @@
                 if (!checkHttps()) return;
 
                 if (!sdkInitialized || typeof FB === 'undefined') {
-                    alert('Facebook SDK is still loading. Please wait a moment.');
+                    @this.dispatch('notify', { title: 'SDK Loading', message: 'Facebook SDK is still loading. Please wait a moment.', type: 'info' });
                     return;
                 }
 
@@ -1374,15 +1547,27 @@
                         })
                             .then(function (res) {
                                 if (res.data.status) {
-                                    @this.handleEmbeddedSuccess(res.data.access_token, res.data.waba_id);
+                                    // Handle cases where multiple WABAs are found and user needs to pick
+                                    const wabaId = res.data.waba_id;
+                                    const options = res.data.waba_options || [];
+
+                                    console.log('WhatsApp Onboarding: Exchange success', { wabaId, optionsCount: options.length });
+
+                                    @this.handleEmbeddedSuccess(res.data.access_token, wabaId, options);
                                 } else {
-                                    alert('Error: ' + res.data.message);
+                                    @this.dispatch('notify', { title: 'Onboarding Error', message: res.data.message, type: 'error' });
                                 }
                             })
                             .catch(function (error) {
-                                console.error(error);
-                                alert('System error during token exchange. Check console for details.');
+                                console.error('WhatsApp Onboarding External Error:', error);
+                                const errorMsg = error.response?.data?.message || error.message || 'Unknown network error';
+                                @this.dispatch('notify', { title: 'Linkage Failed', message: errorMsg, type: 'error' });
                             });
+                    } else {
+                        // [NEW] Handle Cancellation
+                        console.log('WhatsApp Onboarding: User cancelled or did not fully authorize.');
+                        @this.dispatch('notify', { title: 'Onboarding Cancelled', message: 'You closed the Facebook login window before completing the setup.', type: 'info' });
+                        @this.set('isProcessing', false);
                     }
                 }, {
                     scope: 'whatsapp_business_management, whatsapp_business_messaging, business_management',

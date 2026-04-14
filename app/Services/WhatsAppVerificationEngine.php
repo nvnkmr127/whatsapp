@@ -58,6 +58,9 @@ class WhatsAppVerificationEngine
         // Tier 4: Health (Quality Rating)
         $results['tier4'] = $this->verifyTier4Health();
 
+        // Tier 5: Connectivity (Real-world Webhook Pulse)
+        $results['tier5'] = $this->verifyTier5Connectivity();
+
         // Determine final state based on results
         $finalState = $this->determineFinalState($results);
 
@@ -110,6 +113,13 @@ class WhatsAppVerificationEngine
         if (! empty($missing)) {
             // Log missing scopes but don't hard-fail if there's no scope metadata (common in some manual system tokens)
             Log::warning("Token missing recommended scopes for team {$this->team->id}: ".implode(', ', $missing));
+        }
+
+        // Rule: App Mode Check (Production Hardening)
+        $isLive = $data['app_mode'] ?? true; // Default to true if not present in legacy debug
+        if (!$isLive) {
+            Log::warning("WhatsApp Verification Warning: Team {$this->team->id} is connected via an App in DEVELOPMENT MODE. Webhooks will ONLY work for registered App Developers.");
+            $results['tier1']['app_mode_warning'] = true;
         }
 
         // Rule 2: Token Grace Period check
@@ -186,6 +196,28 @@ class WhatsAppVerificationEngine
         }
 
         return ['status' => true];
+    }
+
+    protected function verifyTier5Connectivity(): array
+    {
+        // Check for recent pulse (within last 48 hours is healthy for active teams)
+        $lastPulse = $this->team->last_webhook_received_at;
+        
+        if (!$lastPulse) {
+             return [
+                 'status' => true, 
+                 'is_verified' => false,
+                 'note' => 'No webhook signal received yet. Connection is API-only until first message or status update arrives.'
+             ];
+        }
+
+        $isHealthy = $lastPulse->diffInHours(now()) < 48;
+
+        return [
+            'status' => true,
+            'is_verified' => $isHealthy,
+            'last_pulse' => $lastPulse->toDateTimeString()
+        ];
     }
 
     protected function determineFinalState(array $results): IntegrationState

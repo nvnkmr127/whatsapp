@@ -15,7 +15,6 @@ trait WhatsApp
 
     protected ?\App\Core\WhatsApp\ManagementClient $mgmtClient = null;
 
-    protected bool $skipAppSecretProof = false;
 
     protected function mgmt(): \App\Core\WhatsApp\ManagementClient
     {
@@ -51,18 +50,26 @@ trait WhatsApp
         return "https://graph.facebook.com/{$version}/";
     }
 
-    protected function setSkipAppSecretProof(bool $skip): void
-    {
-        $this->skipAppSecretProof = $skip;
-    }
 
     protected function getAppId(): ?string
     {
         $team = $this->team ?? auth()->user()?->currentTeam;
 
+        // Sequence: Team Property -> Team Settings -> Global Setting -> Config
         return $team?->whatsapp_app_id
+            ?: ($team?->whatsapp_settings['manual_app_id'] ?? null)
             ?: (get_setting('whatsapp_wm_fb_app_id')
                 ?: (config('whatsapp.app_id') ?? config('services.facebook.client_id')));
+    }
+
+    protected function getAppSecret(): ?string
+    {
+        $team = $this->team ?? auth()->user()?->currentTeam;
+
+        // Sequence: Team Settings -> Global Setting -> Config
+        return ($team?->whatsapp_settings['manual_app_secret'] ?? null)
+            ?: (get_setting('whatsapp_wm_fb_app_secret')
+                ?: (config('whatsapp.app_secret') ?? config('services.facebook.client_secret')));
     }
 
     /**
@@ -117,18 +124,58 @@ trait WhatsApp
             ->setTeam($team)
             ->syncTemplates();
 
+        $phoneNumbers = [];
+        if ($res['success']) {
+            $wabaId = $wabaId ?? $team->whatsapp_business_account_id;
+            $token = $token ?? $team->whatsapp_access_token;
+            if ($wabaId && $token) {
+                $phoneRes = $this->getPhoneNumbers($wabaId, $token);
+                if ($phoneRes['status']) {
+                    $phoneNumbers = $phoneRes['data'];
+                }
+            }
+        }
+
         return [
             'status' => $res['success'],
             'message' => $res['success'] ? 'Templates synced' : ($res['error'] ?? 'Unknown error'),
             'count' => $res['count'] ?? 0,
+            'phone_numbers' => $phoneNumbers,
         ];
+    }
+
+    /**
+     * Fetch all phone numbers associated with a WABA.
+     */
+    public function getPhoneNumbers(string $wabaId, string $token): array
+    {
+        try {
+            $url = self::getBaseUrl()."{$wabaId}/phone_numbers";
+            $response = Http::timeout(15)->withToken($token)->get($url);
+
+            if ($response->failed()) {
+                return [
+                    'status' => false,
+                    'message' => $response->json('error.message') ?? 'Failed to fetch phone numbers',
+                ];
+            }
+
+            return [
+                'status' => true,
+                'data' => $response->json('data') ?? [],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp Trait: getPhoneNumbers Error: '.$e->getMessage());
+
+            return ['status' => false, 'message' => $e->getMessage()];
+        }
     }
 
     public function getPhoneNumberDetails(string $phoneNumberId): array
     {
         try {
             $token = $this->getToken();
-            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $appSecret = $this->getAppSecret();
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
@@ -137,32 +184,18 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
+            if ($appSecret) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
-            $response = Http::timeout(15)->get(self::getBaseUrl()."{$phoneNumberId}", $params);
-
-            // Retry without appsecret_proof if it fails with specific error
-            if ($response->failed()) {
-                $errorData = $response->json();
-                if (
-                    ($errorData['error']['code'] ?? 0) == 100 &&
-                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
-                ) {
-
-                    Log::warning('WhatsApp Trait: AppSecret Proof failed for Phone Details, retrying without proof.');
-                    $this->skipAppSecretProof = true;
-                    unset($params['appsecret_proof']);
-                    $response = Http::timeout(15)->get(self::getBaseUrl()."{$phoneNumberId}", $params);
-                }
-            }
+            $url = self::getBaseUrl()."{$phoneNumberId}";
+            $response = Http::timeout(15)->get($url, $params);
 
             if ($response->failed()) {
+                $this->handleTokenFailure($response, 'Phone Details');
                 $errorData = $response->json();
                 $errorCode = $errorData['error']['code'] ?? null;
                 $errorMessage = $errorData['error']['message'] ?? 'Unknown Error';
-                $this->handleTokenFailure($response, 'Phone Details');
 
                 if ($errorCode == 100 && str_contains($errorMessage, 'App_id in the input_token did not match')) {
                     return ['status' => false, 'message' => 'Configuration Error: The Access Token belongs to a different App ID than the one currently configured. Please regenerate your System User Token.'];
@@ -199,7 +232,7 @@ trait WhatsApp
                 return ['status' => false, 'message' => 'Access token not configured.'];
             }
 
-            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $appSecret = $this->getAppSecret();
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
@@ -210,7 +243,7 @@ trait WhatsApp
                 'pin' => $pin,
             ];
 
-            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
+            if ($appSecret) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -220,21 +253,6 @@ trait WhatsApp
             ]);
 
             $response = Http::timeout(15)->withToken($token)->post($url, $params);
-
-            // Retry without appsecret_proof if it fails with specific error
-            if ($response->failed()) {
-                $errorData = $response->json();
-                if (
-                    ($errorData['error']['code'] ?? 0) == 100 &&
-                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
-                ) {
-
-                    Log::warning('WhatsApp Trait: AppSecret Proof failed for Registration, retrying without proof.');
-                    $this->skipAppSecretProof = true;
-                    unset($params['appsecret_proof']);
-                    $response = Http::timeout(15)->withToken($token)->post($url, $params);
-                }
-            }
 
             if ($response->failed()) {
                 $errorData = $response->json();
@@ -302,7 +320,7 @@ trait WhatsApp
     {
         try {
             $appId = $this->getAppId();
-            $appSecret = config('whatsapp.app_secret');
+            $appSecret = $this->getAppSecret();
             $appToken = $appId.'|'.$appSecret;
 
             if (empty($appId) || empty($appSecret)) {
@@ -380,7 +398,7 @@ trait WhatsApp
         try {
             $url = self::getBaseUrl()."{$wabaId}/subscribed_apps";
             $appId = $this->getAppId();
-            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $appSecret = $this->getAppSecret();
 
             if (empty($appId)) {
                 Log::warning('WhatsApp Trait: Webhook check aborted because App ID is missing.');
@@ -398,26 +416,13 @@ trait WhatsApp
             $params = [];
             $params['app_id'] = $appId;
             
-            if (! $isSystemToken && ! $this->skipAppSecretProof) {
+            if ($appSecret) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
             $response = Http::timeout(15)->withToken($token)->get($url, $params);
 
-            // Retry without appsecret_proof if it fails with specific error
             if ($response->failed()) {
-                $errorData = $response->json();
-                if (
-                    ($errorData['error']['code'] ?? 0) == 100 &&
-                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
-                ) {
-
-                    Log::warning('WhatsApp Trait: AppSecret Proof failed on Check, retrying without proof.');
-                    $this->skipAppSecretProof = true;
-                    unset($params['appsecret_proof']);
-                    $response = Http::timeout(15)->withToken($token)->get($url, $params);
-                }
-            }
 
             if ($response->failed()) {
                 $errorData = $response->json();
@@ -537,16 +542,16 @@ trait WhatsApp
                 return ['status' => false, 'message' => 'WABA ID or Access Token not configured.'];
             }
 
-            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
-            $isSystemToken = str_starts_with($token, 'EAAB');
-            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
-
             $params = [
                 'fields' => 'id,name,account_review_status,business_verification_status',
                 'access_token' => $token,
             ];
 
-            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
+            $appSecret = $this->getAppSecret();
+            $isSystemToken = str_starts_with($token, 'EAAB');
+            $appSecretProof = hash_hmac('sha256', $token, $appSecret);
+
+            if ($appSecret) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -557,19 +562,7 @@ trait WhatsApp
 
             $response = Http::timeout(15)->get(self::getBaseUrl()."{$accountId}", $params);
 
-            // Retry without appsecret_proof on proof errors
             if ($response->failed()) {
-                $errorData = $response->json();
-                if (
-                    ($errorData['error']['code'] ?? 0) == 100 &&
-                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
-                ) {
-                    Log::warning('WhatsApp Trait: AppSecret Proof failed for verification status, retrying without proof.');
-                    $this->skipAppSecretProof = true;
-                    unset($params['appsecret_proof']);
-                    $response = Http::timeout(15)->get(self::getBaseUrl()."{$accountId}", $params);
-                }
-            }
 
             if ($response->failed()) {
                 $errorData = $response->json();
@@ -615,7 +608,7 @@ trait WhatsApp
     public function getFacebookBusinessId(string $wabaId, string $token): ?string
     {
         try {
-            $appSecret = config('whatsapp.app_secret') ?? config('services.facebook.client_secret');
+            $appSecret = $this->getAppSecret();
             $isSystemToken = str_starts_with($token, 'EAAB');
             $appSecretProof = hash_hmac('sha256', $token, $appSecret);
 
@@ -624,7 +617,7 @@ trait WhatsApp
                 'access_token' => $token,
             ];
 
-            if (! $isSystemToken && $appSecret && ! $this->skipAppSecretProof) {
+            if ($appSecret) {
                 $params['appsecret_proof'] = $appSecretProof;
             }
 
@@ -635,19 +628,7 @@ trait WhatsApp
 
             $response = Http::get(self::getBaseUrl()."{$wabaId}", $params);
 
-            // Retry without appsecret_proof if it fails
             if ($response->failed()) {
-                $errorData = $response->json();
-                if (
-                    ($errorData['error']['code'] ?? 0) == 100 &&
-                    str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')
-                ) {
-                    Log::warning('WhatsApp Trait: AppSecret Proof failed for Business ID fetch, retrying without proof.');
-                    $this->skipAppSecretProof = true;
-                    unset($params['appsecret_proof']);
-                    $response = Http::get(self::getBaseUrl()."{$wabaId}", $params);
-                }
-            }
 
             if ($response->failed()) {
                 $errorData = $response->json();

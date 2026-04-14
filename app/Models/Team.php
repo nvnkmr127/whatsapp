@@ -117,6 +117,7 @@ class Team extends JetstreamTeam
             'away_message_config' => 'array',
             'whatsapp_access_token' => 'encrypted',
             'whatsapp_verify_token' => 'encrypted',
+            'whatsapp_app_id' => 'encrypted',
             'opt_in_keywords' => 'array',
             'opt_out_keywords' => 'array',
             'opt_in_message_enabled' => 'boolean',

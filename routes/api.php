@@ -177,7 +177,7 @@ use App\Http\Controllers\WhatsAppWebhookController;
 
 Route::get('/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('api.webhook.whatsapp');
 Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])
-    ->middleware(\App\Http\Middleware\VerifyWhatsAppSignature::class);
+    ->middleware([\App\Http\Middleware\VerifyWhatsAppSignature::class, 'throttle:600,1']);
 
 // WhatsApp Calling Webhooks
 Route::get('/webhook/whatsapp/calls', [\App\Http\Controllers\Webhooks\WhatsAppCallWebhookController::class, 'verify']);

@@ -36,8 +36,15 @@ class WhatsAppOnboardingController extends Controller
                     \App\Services\WhatsAppEventBridge::logInteraction($team, $endpoint, 'failed', $payload, ['error' => $errorMsg]);
                 }
 
+                // [SECURITY] Mask sensitive info from raw response before logging
+                $safeResponse = $result['raw'] ?? null;
+                if ($safeResponse) {
+                    $safeResponse = preg_replace('/"access_token":\s*"[^"]+"/', '"access_token": "MATCHED_AND_REDACTED"', json_encode($safeResponse));
+                }
+
                 Log::error('WhatsApp Token Exchange Failed', [
                     'error' => $errorMsg,
+                    'raw_response' => $safeResponse,
                     'reference_id' => $referenceId,
                 ]);
 
@@ -77,6 +84,23 @@ class WhatsAppOnboardingController extends Controller
 
                 // 1. Try Granular Scopes (System Users / Explicit Grants)
                 $debug = $this->debugToken($longLivedToken);
+
+                // [CRITICAL] Mandatory Scope Validation
+                $scopes = $debug['data']['scopes'] ?? [];
+                $mandatoryScopes = ['whatsapp_business_messaging', 'whatsapp_business_management'];
+                $missingScopes = array_diff($mandatoryScopes, $scopes);
+
+                if (!empty($missingScopes)) {
+                    $errorMsg = 'Missing mandatory permissions: ' . implode(', ', $missingScopes) . '. Please ensure you grant all requested permissions in the Facebook popup.';
+                    Log::warning("WhatsApp Onboarding: Incomplete permissions for Team {$team->id}", ['missing' => $missingScopes]);
+                    
+                    return response()->json([
+                        'status' => false,
+                        'message' => $errorMsg,
+                        'retry_allowed' => true,
+                    ], 403);
+                }
+
                 $foundInScopes = false;
                 if ($debug['status'] && ! empty($debug['data']['granular_scopes'])) {
                     foreach ($debug['data']['granular_scopes'] as $scope) {
@@ -91,27 +115,38 @@ class WhatsAppOnboardingController extends Controller
 
                 // 2. Fallback: Fetch Accessible WABA IDs (Standard Users)
                 // If the frontend sent a User ID (which is common mistake), or we didn't find one in scopes
+                $wabaOptions = [];
                 if (! $foundInScopes) {
                     $accessibleWabas = $this->getAccessibleWabaIds($longLivedToken);
                     if (! empty($accessibleWabas)) {
-                        // If we have exactly one, use it.
-                        // If we have multiple, and the input looks like a user ID (short), pick the first one.
-                        // If the input matches one of them, use that.
-
-                        if (in_array($wabaId, $accessibleWabas)) {
-                            // The input was actually valid
-                        } elseif ($team->whatsapp_business_account_id && in_array($team->whatsapp_business_account_id, $accessibleWabas)) {
-                            // Preserve existing team linkage when refreshing/reconnecting through embedded flow.
-                            $wabaId = $team->whatsapp_business_account_id;
-                        } else {
-                            // Input was likely a User ID or null. Pick first.
+                        if (count($accessibleWabas) === 1) {
                             $wabaId = $accessibleWabas[0];
-                            Log::info("WhatsApp Onboarding: Discovered WABA ID {$wabaId} from accessible accounts list.");
+                        } else {
+                            // Multiple WABAs found. We should return them as options.
+                            foreach ($accessibleWabas as $optId) {
+                                // Fetch name for each WABA to make selection easier
+                                $wabaInfo = $this->mgmt()->getWabaStatus($optId, $longLivedToken);
+                                $wabaOptions[] = [
+                                    'id' => $optId,
+                                    'name' => $wabaInfo['data']['name'] ?? 'WABA '.$optId,
+                                    'status' => strtoupper($wabaInfo['data']['account_review_status'] ?? 'unknown'),
+                                    'verification' => strtoupper($wabaInfo['data']['business_verification_status'] ?? 'unknown'),
+                                ];
+                            }
                         }
                     }
                 }
 
                 if ($wabaId || $longLivedToken) {
+                    // [SAFEGUARD] Prevent accidental account switching if already connected
+                    if ($team->whatsapp_connected && !empty($team->whatsapp_business_account_id) && $wabaId && $team->whatsapp_business_account_id !== $wabaId) {
+                        Log::warning("WhatsApp Onboarding: Blocked account switch attempt for Team {$team->id}. Old: {$team->whatsapp_business_account_id}, New: {$wabaId}");
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'This team is already linked to a different WhatsApp Account. Please disconnect the current account before switching.',
+                        ], 409); // Conflict
+                    }
+
                     $fbBusinessId = $wabaId ? $this->getFacebookBusinessId($wabaId, $longLivedToken) : null;
                     
                     $team->forceFill([
@@ -131,13 +166,17 @@ class WhatsAppOnboardingController extends Controller
                 Log::info("WhatsApp Token & WABA ID Persisted for Team {$team->id}");
             }
 
+            $referenceId = \App\Models\WhatsAppSetupAudit::generateReferenceId();
+
             // 2. Return token with expiration info AND the discovered WABA ID
             return response()->json([
                 'status' => true,
                 'access_token' => $longLivedToken,
                 'waba_id' => $wabaId ?? $team->whatsapp_business_account_id,
+                'waba_options' => $wabaOptions,
                 'expires_in' => $expiresIn,
                 'expires_at' => now()->addSeconds($expiresIn)->toIso8601String(),
+                'reference_id' => $referenceId,
             ]);
 
         } catch (\Exception $e) {

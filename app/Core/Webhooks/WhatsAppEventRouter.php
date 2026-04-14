@@ -111,6 +111,28 @@ class WhatsAppEventRouter
                 'details' => $statusData,
             ];
 
+            // [STAFF-HARDENING] Circuit Breaker Logic
+            if ($statusData['status'] === 'failed' && $this->teamId) {
+                $errorKey = "whatsapp_consecutive_errors:{$this->teamId}";
+                $errors = \Illuminate\Support\Facades\Cache::increment($errorKey);
+                
+                if ($errors === 1) {
+                    \Illuminate\Support\Facades\Cache::put($errorKey, 1, 600); // 10 min window
+                }
+
+                if ($errors >= 10) {
+                    Log::critical("Circuit Breaker Tripped for Team {$this->teamId} due to 10+ consecutive delivery failures.");
+                    $team = Team::find($this->teamId);
+                    if ($team && $team->whatsapp_setup_state !== \App\Enums\IntegrationState::RESTRICTED) {
+                        $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::RESTRICTED]);
+                        \App\Events\WhatsAppAccountRisk::dispatch('CIRCUIT_BREAKER', ['errors' => $errors], $this->teamId);
+                    }
+                }
+            } elseif ($statusData['status'] === 'delivered' && $this->teamId) {
+                // Self-healing: Reset error count on success
+                \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$this->teamId}");
+            }
+
             \App\Jobs\UpdateMessageStatusJob::dispatch($payload, \App\Services\TraceContext::getTraceId())
                 ->onQueue('messages');
 

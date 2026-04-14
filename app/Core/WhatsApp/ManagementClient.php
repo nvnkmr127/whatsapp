@@ -65,22 +65,20 @@ class ManagementClient
         $appSecret = config('whatsapp.app_secret');
         $url = 'https://graph.facebook.com/'.config('whatsapp.api_version', 'v21.0')."/{$wabaId}/subscribed_apps";
 
-        $params = ['app_id' => $appId];
+        $params = [
+            'app_id' => $appId,
+            'subscribed_fields' => 'messages,messaging_postbacks,message_echoes,forwarded_messages,message_deliveries,message_reads'
+        ];
         
-        // Add appsecret_proof for enhanced permissions
-        if ($appSecret && !str_starts_with($token, 'EAAB')) {
+        // Add appsecret_proof for security
+        if ($appSecret) {
             $params['appsecret_proof'] = hash_hmac('sha256', $token, $appSecret);
         }
 
         $response = Http::withToken($token)->post($url, $params);
 
-        // [RESILIENCE] Retry without proof if it fails with Invalid AppSecret Proof
         if ($response->failed()) {
-            $errorData = $response->json();
-            if (($errorData['error']['code'] ?? 0) == 100 && str_contains($errorData['error']['message'] ?? '', 'Invalid appsecret_proof')) {
-                unset($params['appsecret_proof']);
-                $response = Http::withToken($token)->post($url, $params);
-            }
+            return ['status' => false, 'error' => $response->json('error.message') ?? 'Subscription failed'];
         }
 
         if ($response->failed()) {
