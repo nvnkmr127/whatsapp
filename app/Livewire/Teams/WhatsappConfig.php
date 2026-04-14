@@ -276,6 +276,8 @@ class WhatsappConfig extends Component
             $this->refreshHealth();
             $this->loadAvailablePhoneNumbers();
 
+            $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
+            
             // [PROACTIVE VALIDATION] If last validation is stale (> 6 hours), run a fresh background check
             if ($this->tokenLastValidated && $this->tokenLastValidated->diffInHours(now()) >= 6) {
                 \App\Jobs\ValidateWhatsAppTokens::dispatch($team->id)->onQueue('high');

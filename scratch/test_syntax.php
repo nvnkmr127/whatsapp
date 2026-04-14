@@ -1,4 +1,11 @@
 <?php
 require 'vendor/autoload.php';
-require 'app/Traits/WhatsApp.php';
-echo "Syntax OK\n";
+try {
+    class TestTrait {
+        use \App\Traits\WhatsApp;
+        protected \$team;
+    }
+    echo "Syntax OK\n";
+} catch (\Throwable \$e) {
+    echo "Error: " . \$e->getMessage() . " at " . \$e->getFile() . ":" . \$e->getLine() . "\n";
+}
