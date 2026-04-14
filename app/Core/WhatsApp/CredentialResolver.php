@@ -18,6 +18,15 @@ class CredentialResolver
         $phoneId = $team->whatsapp_phone_number_id;
         $wabaId = $team->whatsapp_business_account_id;
 
+        $appId = $team->whatsapp_app_id
+            ?: (function_exists('get_setting') ? get_setting('whatsapp_wm_fb_app_id') : null)
+            ?: config('whatsapp.app_id')
+            ?: config('services.facebook.client_id');
+
+        $verifyToken = $team->whatsapp_verify_token
+            ?: config('whatsapp.webhook_verify_token')
+            ?: config('whatsapp.verify_token');
+
         // If team-level is missing, could fall back to global, but usually teams have their own.
         // The user recently added 'whatsapp_app_id' and 'whatsapp_verify_token' to teams table.
 
@@ -29,8 +38,8 @@ class CredentialResolver
             'token' => $token,
             'phone_number_id' => $phoneId,
             'waba_id' => $wabaId,
-            'app_id' => $team->whatsapp_app_id ?: config('whatsapp.app_id'),
-            'verify_token' => $team->whatsapp_verify_token ?: config('whatsapp.verify_token'),
+            'app_id' => $appId,
+            'verify_token' => $verifyToken,
         ];
     }
 }
