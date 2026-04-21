@@ -93,18 +93,54 @@ class WhatsAppFlowService
         file_put_contents($tempPath, $jsonContent);
 
         // 3. Upload to Meta Assets Endpoint (multipart/form-data)
-        $response = Http::withToken((string) $this->token)
-            ->attach('file', file_get_contents($tempPath), 'flow.json', ['Content-Type' => 'application/json'])
-            ->post("{$this->baseUrl}/{$flow->flow_id}/assets", [
-                'name' => 'flow.json',
-                'asset_type' => 'FLOW_JSON',
-            ]);
+        // Meta sometimes has a propagation delay after Flow creation.
+        // We use a retry loop for "Object not found" errors.
+        
+        $maxRetries = 3;
+        $attempt = 0;
+        $response = null;
+
+        while ($attempt < $maxRetries) {
+            $attempt++;
+            
+            $response = Http::withToken((string) $this->token)
+                ->attach('file', file_get_contents($tempPath), 'flow.json', [
+                    'Content-Type' => 'application/json'
+                ])
+                ->post("{$this->baseUrl}/{$flow->flow_id}/assets", [
+                    'name' => 'flow.json',
+                    'asset_type' => 'FLOW_JSON',
+                ]);
+
+            if ($response->successful()) {
+                break;
+            }
+
+            $error = $response->json();
+            $shouldRetry = isset($error['error']['code']) && 
+                           $error['error']['code'] == 100 && 
+                           (isset($error['error']['error_subcode']) && $error['error']['error_subcode'] == 33);
+
+            if ($shouldRetry && $attempt < $maxRetries) {
+                Log::warning("Meta Asset Upload: Flow ID {$flow->flow_id} not found yet. Retry attempt {$attempt}...");
+                usleep(1500000); // Wait 1.5s
+                continue;
+            }
+
+            break; 
+        }
 
         // Cleanup
         @unlink($tempPath);
 
         if ($response->failed()) {
-            throw new \Exception('Meta Asset Upload Failed: '.$response->body());
+            $body = $response->body();
+            Log::error("Meta Asset Upload Failed for Flow {$flow->flow_id}", [
+                'response' => $body,
+                'team_id' => $this->team->id,
+                'trace_id' => \App\Services\TraceContext::getTraceId()
+            ]);
+            throw new \Exception('Meta Asset Upload Failed: '.$body);
         }
 
         $result = $response->json();
