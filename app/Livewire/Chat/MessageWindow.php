@@ -406,7 +406,7 @@ class MessageWindow extends Component
             // FIX: We'll make MessageWindow handle the ACTUAL send if it gets a temp path.
             // But wait, it's easier to let the sub-component handle the upload and we just get the path.
             $path = $this->newAttachmentData['path']; // Assuming path is provided by sub-component
-            $url = asset(Storage::url($path));
+            $url = Storage::disk('public')->url($path);
             $type = $this->getMediaType($this->newAttachmentData['mime_type']);
 
             $msgData['type'] = $type;
@@ -544,7 +544,7 @@ class MessageWindow extends Component
             Auth::user()->currentTeam->id,
             $this->conversation->contact->phone_number,
             'audio',
-            asset(Storage::url($path)),
+            Storage::disk('public')->url($path),
             null,
             'en_US',
             $message->id
@@ -1139,7 +1139,7 @@ class MessageWindow extends Component
                     'status' => $msg->status,
                     'created_at' => $msg->created_at->timestamp, // Unix for easier JS sort
                     'pretty_time' => $msg->created_at->format('H:i'),
-                    'media_url' => $msg->media_url ? (str_starts_with($msg->media_url, 'http') ? $msg->media_url : \Illuminate\Support\Facades\Storage::url($msg->media_url)) : null,
+                    'media_url' => $msg->media_url ? (str_starts_with($msg->media_url, 'http') ? $msg->media_url : \Illuminate\Support\Facades\Storage::disk('public')->url($msg->media_url)) : null,
                     'media_type' => $msg->media_type,
                     'caption' => $msg->caption,
                     'error_message' => $msg->error_message, // For failed status

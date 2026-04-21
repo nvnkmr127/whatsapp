@@ -207,7 +207,7 @@ trait HasNodeEditing
         }
 
         $path = $this->uploadFile->store('automation-uploads', 'public');
-        $this->nodeUrl = Storage::url($path);
+        $this->nodeUrl = Storage::disk('public')->url($path);
 
         $this->reset('uploadFile');
         $this->updateNodeData();

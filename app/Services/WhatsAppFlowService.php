@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Team;
 use App\Models\WhatsAppFlow;
 use App\Models\WhatsAppFlowResponse;
+use App\Core\WhatsApp\CredentialResolver;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 

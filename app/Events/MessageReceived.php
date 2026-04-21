@@ -59,7 +59,7 @@ class MessageReceived implements ShouldBroadcastNow
                 'status' => $this->message->status,
                 'created_at' => $this->message->created_at->timestamp,
                 'pretty_time' => $this->message->created_at->format('H:i'),
-                'media_url' => $this->message->media_url ? (\Illuminate\Support\Facades\Storage::url($this->message->media_url)) : null,
+                'media_url' => $this->message->media_url ? (\Illuminate\Support\Facades\Storage::disk('public')->url($this->message->media_url)) : null,
                 'media_type' => $this->message->media_type,
                 'caption' => $this->message->caption,
                 'error_message' => $this->message->error_message,

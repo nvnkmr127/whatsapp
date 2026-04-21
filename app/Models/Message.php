@@ -20,11 +20,24 @@ class Message extends Model
         'is_starred' => 'boolean',
     ];
 
-    protected $appends = ['pretty_time'];
+    protected $appends = ['pretty_time', 'full_media_url'];
 
     public function getPrettyTimeAttribute()
     {
         return $this->created_at->format('H:i');
+    }
+
+    public function getFullMediaUrlAttribute()
+    {
+        if (!$this->media_url) {
+            return null;
+        }
+
+        if (str_starts_with($this->media_url, 'http')) {
+            return $this->media_url;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->media_url);
     }
 
     public function contact()

@@ -61,8 +61,19 @@ class MediaService
         $filename = Str::random(40).'.'.$extension;
         $path = "whatsapp/{$team->id}/{$filename}";
 
-        // 4. Store
-        Storage::disk('public')->put($path, $binaryResponse->body());
+        // 4. Ensure Directory Exists (Public disk)
+        $directory = dirname($path);
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
+        }
+
+        // 5. Store with explicit public visibility and check for success
+        $stored = Storage::disk('public')->put($path, $binaryResponse->body(), 'public');
+
+        if (!$stored) {
+            Log::error("Media download failed: Could not write to disk at {$path}");
+            return null;
+        }
 
         // Return public URL or relative path?
         // Returning relative path is safer, can wrap with Storage::url() in UI.

@@ -23,7 +23,7 @@ class MediaController extends Controller
 
         return response()->json([
             'path' => $path,
-            'url' => Storage::url($path),
+            'url' => Storage::disk('public')->url($path),
             'type' => $request->type,
         ]);
     }

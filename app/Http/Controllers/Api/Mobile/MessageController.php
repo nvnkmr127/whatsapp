@@ -28,6 +28,10 @@ class MessageController extends Controller
             if ($msg->replyTo) {
                 $data['reply_to_content'] = $msg->replyTo->content;
             }
+            // Ensure full URL for media
+            if ($msg->media_url) {
+                $data['media_url'] = $msg->full_media_url;
+            }
             return $data;
         });
 
