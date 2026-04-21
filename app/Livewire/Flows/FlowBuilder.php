@@ -308,6 +308,7 @@ class FlowBuilder extends Component
             if (! $flow->flow_id) {
                 $service->createFlowOnMeta($flow);
                 $flow->refresh(); // Reload to get flow_id
+                usleep(500000); // 500ms safety delay for Meta propagation
             }
 
             // Readiness Check before Publish

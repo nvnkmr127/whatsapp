@@ -100,6 +100,11 @@ class WhatsAppFlowService
         $attempt = 0;
         $response = null;
 
+        $flowId = trim($flow->flow_id);
+        if (! $flowId) {
+            throw new \Exception('Missing Meta Flow ID. Please create the flow on Meta first.');
+        }
+
         while ($attempt < $maxRetries) {
             $attempt++;
             
@@ -107,23 +112,22 @@ class WhatsAppFlowService
                 ->attach('file', file_get_contents($tempPath), 'flow.json', [
                     'Content-Type' => 'application/json'
                 ])
-                ->post("{$this->baseUrl}/{$flow->flow_id}/assets", [
-                    'name' => 'flow.json',
-                    'asset_type' => 'FLOW_JSON',
-                ]);
+                ->attach('name', 'flow.json')
+                ->attach('asset_type', 'FLOW_JSON')
+                ->post("{$this->baseUrl}/{$flowId}/assets");
 
             if ($response->successful()) {
                 break;
             }
 
             $error = $response->json();
-            $shouldRetry = isset($error['error']['code']) && 
-                           $error['error']['code'] == 100 && 
-                           (isset($error['error']['error_subcode']) && $error['error']['error_subcode'] == 33);
+            $code = $error['error']['code'] ?? 0;
+            $subcode = $error['error']['error_subcode'] ?? 0;
 
-            if ($shouldRetry && $attempt < $maxRetries) {
-                Log::warning("Meta Asset Upload: Flow ID {$flow->flow_id} not found yet. Retry attempt {$attempt}...");
-                usleep(1500000); // Wait 1.5s
+            // Handle "Object not found" (Code 100 / Subcode 33) - usually propagation delay
+            if ($code == 100 && $subcode == 33 && $attempt < $maxRetries) {
+                Log::warning("Meta Asset Upload: Flow ID {$flow->flow_id} not found/propagated yet. Retry attempt {$attempt}...");
+                usleep(2000000); // Wait 2s
                 continue;
             }
 
