@@ -702,6 +702,18 @@ class WhatsAppService
             }
         }
 
+        // ID Fallback: If name lookup failed but name is numeric, try searching by ID
+        if (! $tpl && is_numeric($templateName)) {
+            $idFallback = \App\Models\WhatsappTemplate::where('team_id', $this->team->id)
+                ->where('id', $templateName)
+                ->first();
+            if ($idFallback) {
+                $tpl = $idFallback;
+                $templateName = $tpl->name; // Use the actual name for Meta
+                $language = $tpl->language ?: $language;
+            }
+        }
+
         if (! $tpl) {
             Log::error("Template not found for team {$this->team->id}", ['name' => $templateName, 'lang' => $language]);
 

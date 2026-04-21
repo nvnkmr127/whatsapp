@@ -25,11 +25,15 @@ class CampaignSnapshotService
 
             $count = $query->count();
 
+            // 2. Resolve Template Details (Fallback to relationship if direct fields are empty)
+            $templateName = $campaign->template_name ?: ($campaign->template?->name);
+            $templateLanguage = $campaign->template_language ?: ($campaign->template?->language ?? 'en_US');
+
             // 2. Create Snapshot record
             $snapshot = CampaignSnapshot::create([
                 'campaign_id' => $campaign->id,
-                'template_name' => $campaign->template_name,
-                'template_language' => $campaign->template_language ?? 'en_US',
+                'template_name' => $templateName,
+                'template_language' => $templateLanguage,
                 'template_variables' => $campaign->template_variables ?? [],
                 'header_params' => $campaign->header_params ?? [],
                 'footer_params' => $campaign->footer_params ?? [],

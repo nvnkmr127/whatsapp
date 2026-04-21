@@ -212,7 +212,7 @@ class WhatsAppFlowService
             }
 
             $response = Http::withToken((string) $this->token)
-                ->post("{$this->baseUrl}/{$this->wabaId}/public_key", [
+                ->post("{$this->baseUrl}/{$this->wabaId}", [
                     'public_key' => $publicKey,
                 ]);
 

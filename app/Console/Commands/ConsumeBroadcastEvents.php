@@ -253,8 +253,9 @@ class ConsumeBroadcastEvents extends Command
         }
 
         try {
-            SendCampaignMessageJob::dispatch($campaignId, $contactId)->onQueue('broadcasts');
-            $this->info("Dispatched Job for Campaign {$campaignId}, Contact {$contactId} (Event: {$id})");
+            $snapshotId = $payload['snapshot_id'] ?? null;
+            SendCampaignMessageJob::dispatch($campaignId, $contactId, $this->traceId, $snapshotId)->onQueue('broadcasts');
+            $this->info("Dispatched Job for Campaign {$campaignId}, Contact {$contactId} (Event: {$id}, Snapshot: {$snapshotId})");
             $this->eventBus->ack($this->stream, $group, [$id]);
         } catch (\Exception $e) {
             $this->error("Failed to process event {$id}: ".$e->getMessage());

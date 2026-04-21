@@ -309,6 +309,7 @@ class Wizard extends Component
             'campaign_name' => $this->name,
             'campaign_type' => $this->campaignType,
             'template_id' => $this->selectedTemplateId,
+            'template_name' => $this->selectedTemplateId ? WhatsappTemplate::find($this->selectedTemplateId)?->name : null,
             'template_language' => $this->selectedTemplateId ? WhatsappTemplate::find($this->selectedTemplateId)?->language : 'en_US',
             'template_variables' => array_values($this->templateVars),
             'steps' => $this->campaignType === 'drip' ? $this->dripSteps : null,

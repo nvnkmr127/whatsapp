@@ -222,14 +222,23 @@ class MessageController extends Controller
 
         $request->validate(['template_id' => 'required', 'variables' => 'nullable|array']);
 
+        $template = \App\Models\WhatsappTemplate::where('team_id', $conversation->team_id)
+            ->where('id', $request->template_id)
+            ->firstOrFail();
+
         $message = $conversation->messages()->create([
             'team_id' => $conversation->team_id,
             'user_id' => $request->user()->id,
             'direction' => 'outbound',
             'type' => 'template',
-            'content' => 'Official Template',
+            'content' => 'Official Template: ' . $template->name,
             'status' => 'pending',
-            'metadata' => ['template_id' => $request->template_id, 'variables' => $request->variables ?? []],
+            'metadata' => [
+                'template_id' => $template->id,
+                'template_name' => $template->name,
+                'variables' => $request->variables ?? [],
+                'language' => $template->language ?? 'en_US'
+            ],
         ]);
 
         \App\Jobs\SendMessageJob::dispatch($message);

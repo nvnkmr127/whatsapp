@@ -38,11 +38,14 @@ class SendCampaignMessageJob implements ShouldQueue
      */
     public $backoff = [60, 300, 600, 1200, 3600];
 
-    public function __construct($campaignId, $contactId, $traceId = null)
+    protected $snapshotId;
+
+    public function __construct($campaignId, $contactId, $traceId = null, $snapshotId = null)
     {
         $this->campaignId = $campaignId;
         $this->contactId = $contactId;
         $this->traceId = $traceId ?? \App\Services\TraceContext::getTraceId();
+        $this->snapshotId = $snapshotId;
     }
 
     /**
@@ -133,14 +136,24 @@ class SendCampaignMessageJob implements ShouldQueue
                 throw new \Exception("Preflight re-check failed mid-queue: {$preflight['reason']} [Code: {$preflight['code']}]");
             }
 
+            // --- RESOLVE TEMPLATE DETAILS (UC-SAFE-09) ---
+            $snapshot = $this->snapshotId ? \App\Models\CampaignSnapshot::find($this->snapshotId) : null;
+            $templateName = $campaign->template_name ?: ($snapshot?->template_name ?: $campaign->template?->name);
+            $templateLanguage = $campaign->template_language ?: ($snapshot?->template_language ?: ($campaign->template?->language ?? 'en_US'));
+
+            if (! $templateName) {
+                Log::error("SendCampaignMessageJob: Could not resolve template name for Campaign {$campaign->id}");
+                throw new \Exception("Safeguard Block: No template name associated with this campaign.");
+            }
+
             // --- SAFEGUARD: Check Template Status ---
             // Prevent sending if template was paused/rejected mid-campaign
             $tpl = \App\Models\WhatsappTemplate::where('team_id', $campaign->team_id)
-                ->where('name', $campaign->template_name)
+                ->where('name', $templateName)
                 ->first();
 
             if ($tpl && $tpl->status !== 'APPROVED') {
-                throw new \Exception("Safeguard Block: Template '{$campaign->template_name}' is {$tpl->status}.");
+                throw new \Exception("Safeguard Block: Template '{$templateName}' is {$tpl->status}.");
             }
 
             // Find or Create the attempt record
@@ -150,8 +163,8 @@ class SendCampaignMessageJob implements ShouldQueue
 
             $response = $waService->sendTemplate(
                 $contact->phone_number,
-                $campaign->template_name,
-                $campaign->template_language,
+                $templateName,
+                $templateLanguage,
                 $bodyVars,
                 $headerVars,
                 [], // Footer
@@ -198,7 +211,7 @@ class SendCampaignMessageJob implements ShouldQueue
                         'type' => 'template',
                         'direction' => 'outbound',
                         'status' => 'failed',
-                        'content' => "Template: {$campaign->template_name}",
+                        'content' => "Template: " . ($templateName ?? 'Unknown'),
                     ]);
                 } catch (\Exception $createEx) {
                     Log::error('Failed to create error message record: '.$createEx->getMessage());

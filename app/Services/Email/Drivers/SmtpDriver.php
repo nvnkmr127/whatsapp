@@ -34,6 +34,12 @@ class SmtpDriver implements EmailProviderContract
         $subject = $payload->subject;
 
         try {
+            // Priority 0: If global mailer is set to 'log', respect it immediately
+            if (config('mail.default') === 'log') {
+                $this->sendLegacy($to, $useCase, $mailable);
+                return EmailResult::ok('log', 'logged_via_default_override');
+            }
+
             if (SmtpConfig::count() === 0) {
                 $this->sendLegacy($to, $useCase, $mailable);
 
