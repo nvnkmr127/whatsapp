@@ -27,6 +27,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
     // Templates
     Route::get('/templates', [\App\Http\Controllers\Api\ExternalTemplateController::class, 'index']);
+    Route::get('/templates/{id}', [\App\Http\Controllers\Api\ExternalTemplateController::class, 'show']);
 
     // Conversations
     Route::get('/conversations/{phone}', [\App\Http\Controllers\ExternalConversationController::class, 'index']);
@@ -75,9 +76,14 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
     // Mobile Core
     Route::prefix('mobile')->group(function () {
-        // Auth & Identity
+        // AI Assistant
+        Route::get('/ai/settings', [\App\Http\Controllers\Api\Mobile\AiController::class, 'index']);
+        Route::post('/ai/settings', [\App\Http\Controllers\Api\Mobile\AiController::class, 'update']);
+
+        // Dashboard
         Route::get('/auth/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
         Route::get('/auth/teams', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'teams']);
+        Route::get('/auth/numbers', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'numbers']);
         Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
 
         // FCM Tokens
@@ -94,9 +100,12 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/conversations', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'index']);
         Route::get('/conversations/{conversation}', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'show']);
         Route::post('/conversations/{conversation}/read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
-        Route::post('/conversations/{conversation}/assign', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'assign']);
+        Route::post('/conversations/{conversation}/toggle-ai', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'toggleAi']);
+        Route::get('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getNotes']);
         Route::post('/conversations/{conversation}/close', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'close']);
         Route::post('/conversations/{conversation}/mark-read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
+        Route::post('/conversations/{conversation}/assign', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'assign']);
+        Route::get('/canned-messages', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getCannedMessages']);
 
         Route::get('/analytics/dashboard', [\App\Http\Controllers\Api\Mobile\AnalyticsController::class, 'dashboard']);
         Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'index']);
@@ -108,12 +117,30 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/templates', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'getTemplates']);
         Route::post('/conversations/{conversation}/send-template', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'sendTemplate']);
 
+        // Automations
+        Route::apiResource('automations', \App\Http\Controllers\Api\Mobile\AutomationController::class);
+        Route::post('automations/{automation}/toggle', [\App\Http\Controllers\Api\Mobile\AutomationController::class, 'toggle']);
+
+        // Activity Logs
+        Route::get('/activities', [\App\Http\Controllers\Api\Mobile\ActivityController::class, 'index']);
+        Route::get('/activities/{activity}', [\App\Http\Controllers\Api\Mobile\ActivityController::class, 'show']);
+
         // Internal Notes
         Route::get('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getNotes']);
         Route::post('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'storeNote']);
 
-        // Canned Messages
-        Route::get('/canned-messages', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getCannedMessages']);
+        // Contacts
+        Route::get('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'index']);
+        Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
+        Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
+        Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);
+        Route::get('/contacts/{contact}/activity', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'activity']);
+        Route::post('/contacts/{contact}/tags/toggle', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
+        Route::put('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'update']);
+
+        Route::get('/templates', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'index']);
+        Route::get('/templates/{id}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'show']);
+        Route::post('/templates/{id}/send-test', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'sendTest']);
 
         // Media Uploads
         Route::post('/media/upload', [\App\Http\Controllers\Api\Mobile\MediaController::class, 'upload']);

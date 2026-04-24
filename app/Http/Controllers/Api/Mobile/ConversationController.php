@@ -22,6 +22,17 @@ class ConversationController extends Controller
 
         $query = Conversation::where('team_id', $team->id);
 
+        // --- GLOBAL SCOPING ---
+        // 1. WhatsApp Number Scoping
+        if ($numberId = $request->header('X-WhatsApp-Number-ID')) {
+            $query->where('whatsapp_phone_number_id', $numberId);
+        }
+
+        // 2. Member/Impersonation Scoping
+        if ($memberId = $request->header('X-Member-ID')) {
+            $query->where('assigned_to', $memberId);
+        }
+
         // Apply Filters
         $filter = $request->input('filter', 'all');
         if ($filter === 'unread') {
@@ -32,7 +43,14 @@ class ConversationController extends Controller
             $query->where('assigned_to', $user->id);
         }
 
-        $conversations = $query->with(['contact:id,name,phone_number', 'lastMessage'])
+        // Search Support
+        if ($search = $request->input('query')) {
+            $query->whereHas('contact', function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")->orWhere('phone_number', 'like', "%$search%");
+            });
+        }
+
+        $conversations = $query->with(['contact:id,name,phone_number', 'lastMessage', 'assignee:id,name', 'contact.tags'])
             ->withCount(['messages as unread_count' => function ($query) {
                 $query->where('direction', 'inbound')->whereNull('read_at');
             }])
@@ -54,7 +72,15 @@ class ConversationController extends Controller
                 ] : null,
                 'unread_count' => $conv->unread_count,
                 'status' => $conv->status,
-                'assigned_to' => $conv->assigned_to,
+                'assignee' => $conv->assignee ? [
+                    'id' => $conv->assignee->id,
+                    'name' => $conv->assignee->name,
+                    'initials' => strtoupper(substr($conv->assignee->name, 0, 2)),
+                ] : null,
+                'tags' => $conv->contact->tags->map(fn($t) => [
+                    'name' => $t->name,
+                    'color' => $t->color ?? '#E91E63',
+                ]),
                 'last_interaction' => $conv->last_message_at ? $conv->last_message_at->timestamp : null,
                 'is_within_24_hours' => $conv->isWithin24Hours(),
             ];
@@ -84,6 +110,7 @@ class ConversationController extends Controller
             'assigned_to' => $conversation->assigned_to,
             'metadata' => $conversation->metadata,
             'is_within_24_hours' => $conversation->isWithin24Hours(),
+            'is_ai_enabled' => !($conversation->contact->is_bot_paused ?? false),
         ]);
     }
 
@@ -183,6 +210,28 @@ class ConversationController extends Controller
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Toggle AI Assistant (Bot) for the conversation's contact.
+     */
+    public function toggleAi(Request $request, Conversation $conversation)
+    {
+        $this->authorizeConversation($request->user(), $conversation);
+        $contact = $conversation->contact;
+
+        $isEnabled = (bool) $request->input('enabled', false);
+        
+        $contact->update([
+            'is_bot_paused' => !$isEnabled,
+            'bot_paused_at' => !$isEnabled ? now() : null,
+            'bot_paused_reason' => !$isEnabled ? 'Manually paused by agent via mobile' : null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'is_ai_enabled' => $isEnabled,
+        ]);
     }
 
     protected function authorizeConversation($user, $conversation)

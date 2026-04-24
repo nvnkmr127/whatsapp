@@ -9,16 +9,77 @@ use Illuminate\Http\Request;
 class ContactController extends Controller
 {
     /**
+     * Get paginated contacts for the current team.
+     */
+    public function index(Request $request)
+    {
+        $team = $request->user()->currentTeam;
+        if (!$team) return response()->json([]);
+
+        $query = Contact::where('team_id', $team->id)
+            ->with(['tags'])
+            ->withCount('messages');
+
+        // Search
+        if ($request->filled('query')) {
+            $q = $request->input('query');
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('phone_number', 'like', "%{$q}%");
+            });
+        }
+
+        // Sort
+        $sort = $request->input('sort', 'last_activity');
+        if ($sort === 'last_activity') {
+            $query->latest('updated_at');
+        } elseif ($sort === 'name') {
+            $query->orderBy('name');
+        }
+
+        $contacts = $query->paginate($request->input('per_page', 40));
+
+        return response()->json($contacts);
+    }
+
+    /**
+
      * Get details for a specific contact.
      */
     public function show(Request $request, Contact $contact)
     {
         $this->authorizeContact($request->user(), $contact);
 
-        return response()->json($contact->load(['tags', 'activeConversation']));
+        $team = $request->user()->currentTeam;
+        $schema = \App\Models\ContactField::where('team_id', $team->id)->get();
+
+        return response()->json([
+            'contact' => $contact->load([
+                'tags', 
+                'activeConversation', 
+                'notes.user', 
+                'contactEvents' => fn($q) => $q->latest()->take(10)
+            ]),
+            'schema' => $schema
+        ]);
     }
 
     /**
+     * Get the full activity timeline for a contact.
+     */
+    public function activity(Request $request, Contact $contact)
+    {
+        $this->authorizeContact($request->user(), $contact);
+
+        $events = \App\Models\ContactEvent::where('contact_id', $contact->id)
+            ->latest()
+            ->paginate(30);
+
+        return response()->json($events);
+    }
+
+    /**
+
      * Update details for a contact (e.g. name, custom attributes).
      */
     public function update(Request $request, Contact $contact)

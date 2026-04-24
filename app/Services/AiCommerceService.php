@@ -29,7 +29,7 @@ class AiCommerceService
         $readinessService = app(\App\Services\CommerceReadinessService::class);
         if (! $readinessService->canPerformAction($team, 'ai_shop')) {
             Log::info("AiCommerceService: AI Bot blocked for team {$team->name} due to readiness failure.");
-
+            $this->logAiActivity($contact, 'ai_blocked', 'AI Bot blocked due to readiness failure');
             return false;
         }
 
@@ -38,7 +38,7 @@ class AiCommerceService
 
         if (! $e->hasFeature('ai')) {
             Log::info("AiCommerceService: AI Bot blocked for team {$team->name} [{$e->statusLabel()}] - feature 'ai' not included.");
-
+            $this->logAiActivity($contact, 'ai_blocked', 'AI Bot blocked: feature "ai" not included in plan');
             return false;
         }
 
@@ -151,13 +151,7 @@ class AiCommerceService
             }
 
             // Record Usage for Billing
-            \App\Models\ActivityLog::create([
-                'team_id' => $teamId,
-                'action' => 'ai_interaction',
-                'description' => "AI Response sent to {$contact->phone_number}",
-                'subject_type' => get_class($contact),
-                'subject_id' => $contact->id,
-            ]);
+            $this->logAiActivity($contact, 'ai_sent', "AI Response sent: " . substr($aiJson['reply_text'], 0, 50) . "...");
 
             // Check for grounding failure (unanswered)
             if (str_contains($aiJson['reply_text'], "I'm sorry, I don't have information about that in my business knowledge base.")) {
@@ -251,5 +245,17 @@ class AiCommerceService
         } catch (\Exception $e) {
             Log::error('AiCommerceService: Prefill failed: '.$e->getMessage());
         }
+    }
+
+    protected function logAiActivity(Contact $contact, string $action, string $description)
+    {
+        \App\Models\ActivityLog::create([
+            'team_id' => $contact->team_id,
+            'action' => $action,
+            'description' => $description,
+            'subject_type' => get_class($contact),
+            'subject_id' => $contact->id,
+            'metadata' => ['is_ai' => true],
+        ]);
     }
 }

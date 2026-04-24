@@ -51,10 +51,36 @@ class AnalyticsController extends Controller
         $deliveryRate = $outboundCount > 0 ? (int) (($deliveredCount / $outboundCount) * 100) : 100;
         $readRate = $deliveredCount > 0 ? (int) (($readCount / $deliveredCount) * 100) : 0;
 
+        // 3. Sent Today
+        $sentToday = Message::where('team_id', $team->id)
+            ->where('direction', 'outbound')
+            ->where('created_at', '>=', $now->copy()->startOfDay())
+            ->count();
+
+        // 4. Credits
+        $credits = $team->wallet->balance ?? 0.00;
+
+        // 5. Message Activity (Daily counts for last 7 days)
+        $activityLabels = [];
+        $activityValues = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = $now->copy()->subDays($i);
+            $activityLabels[] = $date->format('D');
+            $activityValues[] = Message::where('team_id', $team->id)
+                ->where('direction', 'outbound')
+                ->whereDate('created_at', $date->toDateString())
+                ->count();
+        }
+
         return response()->json([
+            'credits' => round((float) $credits, 2),
             'conversations' => [
                 'active' => $activeCount,
                 'unread' => $unreadCount,
+            ],
+            'summary' => [
+                'sent_today' => $sentToday,
+                'total_30d' => $outboundCount,
             ],
             'messages_30d' => [
                 'sent' => $outboundCount,
@@ -63,7 +89,12 @@ class AnalyticsController extends Controller
                 'delivery_rate' => $deliveryRate,
                 'read_rate' => $readRate,
             ],
+            'message_activity' => [
+                'labels' => $activityLabels,
+                'values' => $activityValues,
+            ],
             'last_sync' => now()->toISOString(),
         ]);
+
     }
 }
