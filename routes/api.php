@@ -16,6 +16,9 @@ Route::prefix('v1/mobile/auth')->middleware('throttle:api')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
+        Route::get('/teams', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'teams']);
+        Route::get('/numbers', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'numbers']);
+        Route::post('/finalize', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'finalize']);
         Route::post('/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
     });
 });
@@ -75,15 +78,13 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     Route::post('/products/{product}/lock', [\App\Http\Controllers\Api\EcommerceIntegrationController::class, 'lockField']);
 
     // Mobile Core
-    Route::prefix('mobile')->group(function () {
+    Route::prefix('mobile')->name('mobile.')->group(function () {
         // AI Assistant
         Route::get('/ai/settings', [\App\Http\Controllers\Api\Mobile\AiController::class, 'index']);
         Route::post('/ai/settings', [\App\Http\Controllers\Api\Mobile\AiController::class, 'update']);
 
         // Dashboard
-        Route::get('/auth/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
-        Route::get('/auth/teams', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'teams']);
-        Route::get('/auth/numbers', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'numbers']);
+        // Moved /auth/me, teams, numbers etc. to the non-tenant group above
         Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
 
         // FCM Tokens
