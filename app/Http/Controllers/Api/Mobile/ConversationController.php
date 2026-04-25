@@ -13,80 +13,89 @@ class ConversationController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user();
-        $team = $user->currentTeam;
+        try {
+            $user = $request->user();
+            $team = $user->currentTeam;
 
-        if (! $team) {
-            return response()->json(['error' => 'No team associated'], 400);
-        }
+            if (! $team) {
+                return response()->json(['error' => 'No team associated'], 400);
+            }
 
-        $query = Conversation::where('team_id', $team->id);
+            $query = Conversation::where('team_id', $team->id);
 
-        // --- GLOBAL SCOPING ---
-        // 1. WhatsApp Number Scoping
-        if ($numberId = $request->header('X-WhatsApp-Number-ID')) {
-            $query->where('whatsapp_phone_number_id', $numberId);
-        }
+            // --- GLOBAL SCOPING ---
+            if ($numberId = $request->header('X-WhatsApp-Number-ID')) {
+                $query->where('whatsapp_phone_number_id', $numberId);
+            }
 
-        // 2. Member/Impersonation Scoping
-        if ($memberId = $request->header('X-Member-ID')) {
-            $query->where('assigned_to', $memberId);
-        }
+            if ($memberId = $request->header('X-Member-ID')) {
+                $query->where('assigned_to', $memberId);
+            }
 
-        // Apply Filters
-        $filter = $request->input('filter', 'all');
-        if ($filter === 'unread') {
-            $query->whereHas('messages', function($q) {
-                $q->where('direction', 'inbound')->whereNull('read_at');
+            // Apply Filters
+            $filter = $request->input('filter', 'all');
+            if ($filter === 'unread') {
+                $query->whereHas('messages', function($q) {
+                    $q->where('direction', 'inbound')->whereNull('read_at');
+                });
+            } elseif ($filter === 'assigned') {
+                $query->where('assigned_to', $user->id);
+            }
+
+            // Search Support
+            if ($search = $request->input('query')) {
+                $query->whereHas('contact', function($q) use ($search) {
+                    $q->where('name', 'like', "%$search%")->orWhere('phone_number', 'like', "%$search%");
+                });
+            }
+
+            $conversations = $query->with(['contact:id,name,phone_number', 'lastMessage', 'assignee:id,name', 'contact.tags'])
+                ->withCount(['messages as unread_count' => function ($query) {
+                    $query->where('direction', 'inbound')->whereNull('read_at');
+                }])
+                ->orderBy('last_message_at', 'desc')
+                ->paginate($request->input('per_page', 20));
+
+            // Transform to match WhatsApp-like expectations
+            $conversations->getCollection()->transform(function ($conv) {
+                return [
+                    'id' => $conv->id,
+                    'name' => $conv->contact?->name ?? $conv->contact?->phone_number ?? 'Unknown Contact',
+                    'phone' => $conv->contact?->phone_number ?? 'Unknown',
+                    'last_message' => $conv->lastMessage ? [
+                        'content' => $conv->lastMessage->content,
+                        'type' => $conv->lastMessage->type,
+                        'is_outbound' => $conv->lastMessage->direction === 'outbound',
+                        'timestamp' => $conv->lastMessage->created_at->timestamp,
+                        'pretty_time' => $conv->lastMessage->created_at->format('H:i'),
+                    ] : null,
+                    'unread_count' => $conv->unread_count,
+                    'status' => $conv->status,
+                    'assignee' => $conv->assignee ? [
+                        'id' => $conv->assignee->id,
+                        'name' => $conv->assignee->name,
+                        'initials' => strtoupper(substr($conv->assignee->name, 0, 2)),
+                    ] : null,
+                    'tags' => $conv->contact?->tags ? $conv->contact->tags->map(fn($t) => [
+                        'name' => $t->name,
+                        'color' => $t->color ?? '#E91E63',
+                    ]) : [],
+                    'last_interaction' => $conv->last_message_at ? $conv->last_message_at->timestamp : null,
+                    'is_within_24_hours' => $conv->isWithin24Hours(),
+                ];
             });
-        } elseif ($filter === 'assigned') {
-            $query->where('assigned_to', $user->id);
+
+            return response()->json($conversations);
+        } catch (\Exception $e) {
+            \Log::error('[MOBILE_INBOX_ERROR] ' . $e->getMessage(), [
+                'user_id' => $request->user()?->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Internal Server Error',
+                'error' => app()->environment('local') ? $e->getMessage() : 'An unexpected error occurred.'
+            ], 500);
         }
-
-        // Search Support
-        if ($search = $request->input('query')) {
-            $query->whereHas('contact', function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")->orWhere('phone_number', 'like', "%$search%");
-            });
-        }
-
-        $conversations = $query->with(['contact:id,name,phone_number', 'lastMessage', 'assignee:id,name', 'contact.tags'])
-            ->withCount(['messages as unread_count' => function ($query) {
-                $query->where('direction', 'inbound')->whereNull('read_at');
-            }])
-            ->orderBy('last_message_at', 'desc')
-            ->paginate($request->input('per_page', 20));
-
-        // Transform to match WhatsApp-like expectations
-        $conversations->getCollection()->transform(function ($conv) {
-            return [
-                'id' => $conv->id,
-                'name' => $conv->contact->name ?? $conv->contact->phone_number,
-                'phone' => $conv->contact->phone_number,
-                'last_message' => $conv->lastMessage ? [
-                    'content' => $conv->lastMessage->content,
-                    'type' => $conv->lastMessage->type,
-                    'is_outbound' => $conv->lastMessage->direction === 'outbound',
-                    'timestamp' => $conv->lastMessage->created_at->timestamp,
-                    'pretty_time' => $conv->lastMessage->created_at->format('H:i'),
-                ] : null,
-                'unread_count' => $conv->unread_count,
-                'status' => $conv->status,
-                'assignee' => $conv->assignee ? [
-                    'id' => $conv->assignee->id,
-                    'name' => $conv->assignee->name,
-                    'initials' => strtoupper(substr($conv->assignee->name, 0, 2)),
-                ] : null,
-                'tags' => $conv->contact->tags->map(fn($t) => [
-                    'name' => $t->name,
-                    'color' => $t->color ?? '#E91E63',
-                ]),
-                'last_interaction' => $conv->last_message_at ? $conv->last_message_at->timestamp : null,
-                'is_within_24_hours' => $conv->isWithin24Hours(),
-            ];
-        });
-
-        return response()->json($conversations);
     }
 
     /**
