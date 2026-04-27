@@ -51,6 +51,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $user->membership?->role ?? 'admin', // Global or team role
             ],
             'teams' => $teams,
@@ -94,6 +95,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $user->membership?->role ?? 'admin',
             ],
             'teams' => $teams,
@@ -142,6 +144,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $user->membership?->role ?? 'admin',
             ],
             'teams' => $teams,
@@ -185,5 +188,79 @@ class AuthController extends Controller
         $request->user()?->tokens()->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $request->validate(['phone' => 'required|string']);
+        
+        $phone = $request->phone;
+        // Normalize phone (remove +, spaces, etc if needed)
+        
+        $user = User::where('phone', $phone)->first();
+        if (!$user) {
+            return response()->json(['message' => 'Phone number not registered'], 404);
+        }
+
+        // Generate 6-digit OTP
+        $otp = app()->environment('local') ? '123456' : rand(100000, 999999);
+        
+        // Store OTP in cache for 10 minutes
+        \Illuminate\Support\Facades\Cache::put("otp_$phone", $otp, now()->addMinutes(10));
+
+        // Mock SMS sending
+        Log::info("OTP for $phone: $otp");
+        
+        return response()->json(['success' => true, 'message' => 'OTP sent successfully']);
+    }
+
+    public function loginWithOtp(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|string',
+            'otp' => 'required|string',
+        ]);
+
+        $phone = $request->phone;
+        $otp = $request->otp;
+
+        $cachedOtp = \Illuminate\Support\Facades\Cache::get("otp_$phone");
+
+        if (!$cachedOtp || $cachedOtp !== $otp) {
+            return response()->json(['message' => 'Invalid or expired OTP'], 422);
+        }
+
+        \Illuminate\Support\Facades\Cache::forget("otp_$phone");
+
+        $user = User::where('phone', $phone)->first();
+        if (!$user) {
+             return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        $teams = $user->allTeams()
+            ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])
+            ->values();
+
+        $currentTeam = $user->currentTeam;
+        $members = $currentTeam ? $currentTeam->allUsers()->map(fn($u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'role' => $u->membership?->role ?? 'agent',
+        ])->values() : [];
+
+        return response()->json([
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->membership?->role ?? 'admin',
+            ],
+            'teams' => $teams,
+            'members' => $members,
+        ]);
     }
 }

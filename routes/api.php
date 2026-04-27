@@ -13,6 +13,8 @@ Route::post('/webhooks/workflow-incoming/{webhookUrlId}', [\App\Http\Controllers
 
 Route::prefix('v1/mobile/auth')->middleware('throttle:api')->group(function () {
     Route::post('/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login']);
+    Route::post('/send-otp', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'sendOtp']);
+    Route::post('/login-otp', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'loginWithOtp']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);

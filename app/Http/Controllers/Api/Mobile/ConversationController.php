@@ -25,7 +25,16 @@ class ConversationController extends Controller
 
             // --- GLOBAL SCOPING ---
             if ($numberId = $request->header('X-WhatsApp-Number-ID')) {
-                $query->where('whatsapp_phone_number_id', $numberId);
+                // The whatsapp_phone_number_id is on the team, not the conversation.
+                // We verify it matches the current team's number to ensure context.
+                if ($team->whatsapp_phone_number_id != $numberId) {
+                    return response()->json([
+                        'data' => [],
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'total' => 0
+                    ]);
+                }
             }
 
             if ($memberId = $request->header('X-Member-ID')) {
