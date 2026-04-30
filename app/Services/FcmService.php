@@ -33,7 +33,27 @@ class FcmService
         $notification = Notification::create($title, $body);
         $message = CloudMessage::new()
             ->withNotification($notification)
-            ->withData($data);
+            ->withData($data)
+            ->withAndroidConfig([
+                'priority' => 'high',
+                'notification' => [
+                    'channel_id' => 'high_importance_channel',
+                    'sound' => 'default',
+                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                ],
+            ])
+            ->withApnsConfig([
+                'payload' => [
+                    'aps' => [
+                        'alert' => [
+                            'title' => $title,
+                            'body' => $body,
+                        ],
+                        'sound' => 'default',
+                        'badge' => 1,
+                    ],
+                ],
+            ]);
 
         try {
             $report = $messaging->sendMulticast($message, $tokens);
