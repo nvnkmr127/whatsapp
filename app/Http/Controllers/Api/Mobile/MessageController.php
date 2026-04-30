@@ -90,7 +90,7 @@ class MessageController extends Controller
             'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $request->input('media_url'),
             'metadata' => empty($metadata) ? null : $metadata,
-            'status' => 'pending',
+            'status' => 'queued',
         ]);
 
         $jobContent = $isMedia ? $request->input('media_url') : ($request->type === 'text' ? $request->input('content') : []);
@@ -161,7 +161,7 @@ class MessageController extends Controller
             'type' => $message->type,
             'content' => $message->content,
             'media_url' => $message->media_url,
-            'status' => 'pending',
+            'status' => 'queued',
         ]);
 
         \App\Jobs\SendMessageJob::dispatch($newMsg);
@@ -242,7 +242,7 @@ class MessageController extends Controller
             'direction' => 'outbound',
             'type' => 'template',
             'content' => 'Official Template: ' . $template->name,
-            'status' => 'pending',
+            'status' => 'queued',
             'metadata' => [
                 'template_id' => $template->id,
                 'template_name' => $template->name,
