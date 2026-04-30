@@ -26,21 +26,36 @@ class CsatService
         // Don't send if contact already rated this conversation
         if (CsatRating::where('conversation_id', $conversation->id)->exists()) return false;
 
-        // Build a 5-star interactive button message
+        // Build a 1-5 star interactive list message (Buttons are limited to 3)
         $payload = [
             'messaging_product' => 'whatsapp',
             'to'                => $contact->phone_number,
             'type'              => 'interactive',
             'interactive'       => [
-                'type' => 'button',
+                'type' => 'list',
+                'header' => [
+                    'type' => 'text',
+                    'text' => 'Feedback Request',
+                ],
                 'body' => [
                     'text' => "Hi {$contact->name}! 👋 We've just resolved your conversation.\n\nHow would you rate your experience with us today?",
                 ],
+                'footer' => [
+                    'text' => 'Your feedback helps us improve!',
+                ],
                 'action' => [
-                    'buttons' => [
-                        ['type' => 'reply', 'reply' => ['id' => "csat_{$conversation->id}_5", 'title' => '⭐⭐⭐⭐⭐ Excellent']],
-                        ['type' => 'reply', 'reply' => ['id' => "csat_{$conversation->id}_4", 'title' => '⭐⭐⭐⭐ Good']],
-                        ['type' => 'reply', 'reply' => ['id' => "csat_{$conversation->id}_3", 'title' => '⭐⭐⭐ Okay']],
+                    'button' => 'Select Rating',
+                    'sections' => [
+                        [
+                            'title' => 'Rate our Service',
+                            'rows' => [
+                                ['id' => "csat_{$conversation->id}_5", 'title' => '⭐⭐⭐⭐⭐', 'description' => 'Excellent'],
+                                ['id' => "csat_{$conversation->id}_4", 'title' => '⭐⭐⭐⭐', 'description' => 'Good'],
+                                ['id' => "csat_{$conversation->id}_3", 'title' => '⭐⭐⭐', 'description' => 'Average'],
+                                ['id' => "csat_{$conversation->id}_2", 'title' => '⭐⭐', 'description' => 'Poor'],
+                                ['id' => "csat_{$conversation->id}_1", 'title' => '⭐', 'description' => 'Very Poor'],
+                            ],
+                        ],
                     ],
                 ],
             ],

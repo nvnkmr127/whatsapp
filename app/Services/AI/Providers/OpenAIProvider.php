@@ -117,6 +117,35 @@ class OpenAIProvider implements AIProviderInterface
         return trim($response['content'] ?? '');
     }
 
+    public function transcribe(string $filePath, array $options = []): string
+    {
+        if (! file_exists($filePath)) {
+            Log::error("Whisper transcription failed: File not found at {$filePath}");
+            return '';
+        }
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(60)
+                ->attach('file', fopen($filePath, 'r'), basename($filePath))
+                ->post("{$this->baseUrl}/audio/transcriptions", [
+                    'model' => $options['model'] ?? 'whisper-1',
+                    'language' => $options['language'] ?? null,
+                    'prompt' => $options['prompt'] ?? null,
+                ]);
+
+            if ($response->failed()) {
+                Log::error('OpenAI Whisper Failed: '.$response->body());
+                return '';
+            }
+
+            return $response->json('text') ?? '';
+        } catch (\Exception $e) {
+            Log::error('OpenAI Whisper Error: '.$e->getMessage());
+            return '';
+        }
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {

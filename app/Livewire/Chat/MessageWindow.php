@@ -565,6 +565,14 @@ class MessageWindow extends Component
                 'closed_at' => now(),
                 'close_reason' => $reason,
             ]);
+
+            // Trigger CSAT Survey
+            try {
+                app(\App\Services\CsatService::class)->sendSurvey($this->conversation);
+            } catch (\Exception $e) {
+                Log::warning("Failed to send CSAT survey for Conversation #{$this->conversation->id}: " . $e->getMessage());
+            }
+
             // Dispatch event for UI updates if needed
             $this->dispatch('conversation-closed');
             $this->loadConversation();

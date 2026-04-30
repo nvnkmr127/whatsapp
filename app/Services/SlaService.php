@@ -51,17 +51,21 @@ class SlaService
     // ─────────────────────────────────────────────────────────────────────────
     // Run the breach check (called by the scheduled job / artisan command)
     // ─────────────────────────────────────────────────────────────────────────
-    public function checkBreaches(Team $team): array
+    public function checkBreaches(?Team $team = null): array
     {
         $now      = now();
         $breached = [];
         $warning  = [];
 
-        $conversations = Conversation::where('team_id', $team->id)
-            ->where('status', 'open')
+        $query = Conversation::where('status', 'open')
             ->whereNotNull('sla_policy_id')
-            ->whereNotIn('sla_status', ['breached'])
-            ->get();
+            ->whereNotIn('sla_status', ['breached']);
+
+        if ($team) {
+            $query->where('team_id', $team->id);
+        }
+
+        $conversations = $query->get();
 
         foreach ($conversations as $conversation) {
             $status = $this->computeStatus($conversation);
@@ -144,12 +148,16 @@ class SlaService
         $userToNotify = $conversation->assignee ?? $conversation->team?->owner;
         if (! $userToNotify) return;
 
+        // 1. Internal Notification
         $userToNotify->notify(new \App\Notifications\WhatsAppHealthNotification(
             $conversation->team,
             'sla_breach',
             "🚨 SLA Breached: Conversation #{$conversation->id} with {$conversation->contact?->name} exceeded SLA.",
             ['conversation_id' => $conversation->id]
         ));
+
+        // 2. Mobile Push Notification
+        \App\Jobs\SendPushNotificationJob::dispatch(null, 'sla_breach', $conversation->id);
     }
 
     private function notifyWarningSoon(Conversation $conversation): void
@@ -157,11 +165,15 @@ class SlaService
         $userToNotify = $conversation->assignee ?? $conversation->team?->owner;
         if (! $userToNotify) return;
 
+        // 1. Internal Notification
         $userToNotify->notify(new \App\Notifications\WhatsAppHealthNotification(
             $conversation->team,
             'sla_warning',
             "⚠️ SLA Warning: Conversation #{$conversation->id} is about to breach SLA in the next 30 minutes.",
             ['conversation_id' => $conversation->id]
         ));
+
+        // 2. Mobile Push Notification
+        \App\Jobs\SendPushNotificationJob::dispatch(null, 'sla_warning', $conversation->id);
     }
 }

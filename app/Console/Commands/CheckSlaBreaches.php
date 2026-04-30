@@ -26,40 +26,16 @@ class CheckSlaBreaches extends Command
      */
     public function handle()
     {
-        $hours = $this->argument('hours');
-        $threshold = now()->subHours($hours);
+        $this->info('Starting Enterprise SLA check...');
 
-        $contacts = Contact::where('has_pending_reply', true)
-            ->where('last_customer_message_at', '<', $threshold)
-            ->whereNull('sla_breached_at')
-            ->get();
+        $result = app(\App\Services\SlaService::class)->checkBreaches();
 
-        foreach ($contacts as $contact) {
-            // Mark as breached
-            $contact->update(['sla_breached_at' => now()]);
-
-            // Add internal note
-            $contact->notes()->create([
-                'team_id' => $contact->team_id,
-                'user_id' => $contact->assigned_to ?? $contact->team->user_id, // Assigned agent or Team Owner
-                'body' => "⚠️ SLA ALERT: Customer has been waiting for more than {$hours} hours.",
-                'type' => 'system',
-            ]);
-
-            // Dispatch notification to assigned agent or team owner
-            $userToNotify = $contact->assignedAgent ?? $contact->team->owner;
-            if ($userToNotify) {
-                $userToNotify->notify(new \App\Notifications\WhatsAppHealthNotification(
-                    $contact->team,
-                    'sla_breach',
-                    "SLA Breach detected for Contact: {$contact->name} ({$contact->phone_number}). Waiting > {$hours}h.",
-                    ['contact_id' => $contact->id]
-                ));
-            }
-
-            $this->info("Flagged Contact ID: {$contact->id}");
+        if ($result['breached'] > 0 || $result['warning'] > 0) {
+            $this->warn("SLA Check Complete: Found {$result['breached']} breaches and {$result['warning']} warnings.");
+        } else {
+            $this->info('SLA Check Complete: No new breaches detected.');
         }
 
-        $this->info('SLA Check Complete.');
+        return self::SUCCESS;
     }
 }

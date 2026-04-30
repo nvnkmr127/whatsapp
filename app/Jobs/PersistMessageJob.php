@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Message;
 use App\Models\Team;
+use App\Jobs\SendPushNotificationJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -121,7 +122,13 @@ class PersistMessageJob implements ShouldQueue
 
             // 3. Conversation Management
             $conversationService = new \App\Services\ConversationService;
+            $wasNew = ! \App\Models\Conversation::where('contact_id', $contact->id)->where('status', 'open')->exists();
             $conversation = $conversationService->ensureActiveConversation($contact);
+            
+            if ($wasNew || ! $conversation->sla_policy_id) {
+                app(\App\Services\SlaService::class)->assignPolicy($conversation);
+            }
+
             $conversationService->handleIncomingMessage($conversation);
 
             // 4. Media Handling
@@ -217,10 +224,11 @@ class PersistMessageJob implements ShouldQueue
             // REMOVED: HandleIncomingWorkflowJob::dispatchSync($message->id, $team->id);
             // Reason: Redundant. MessageReceived event triggers AutomationTriggerListener.
 
-            // Broadcast Real-time Event
+            // Broadcast Real-time Event & Push Notification
             try {
                 \App\Events\MessageReceived::dispatch($message);
-                Log::info("PersistMessageJob: MessageReceived event dispatched for Message ID: {$message->id}");
+                SendPushNotificationJob::dispatch($message->id);
+                Log::info("PersistMessageJob: MessageReceived event and PushJob dispatched for Message ID: {$message->id}");
             } catch (\Exception $e) {
                 Log::error('PersistMessageJob: Failed to dispatch MessageReceived event: '.$e->getMessage());
                 // Do not fail the job, as persistence was successful

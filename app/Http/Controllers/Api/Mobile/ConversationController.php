@@ -244,6 +244,13 @@ class ConversationController extends Controller
             'closed_at' => now(),
         ]);
 
+        // Trigger CSAT Survey
+        try {
+            app(\App\Services\CsatService::class)->sendSurvey($conversation);
+        } catch (\Exception $e) {
+            \Log::warning("Failed to send CSAT survey for Conversation #{$conversation->id}: " . $e->getMessage());
+        }
+
         return response()->json(['success' => true]);
     }
 

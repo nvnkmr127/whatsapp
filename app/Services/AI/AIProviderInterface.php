@@ -14,6 +14,8 @@ interface AIProviderInterface
 
     public function classify(string $content, array $categories, array $options = []): string;
 
+    public function transcribe(string $filePath, array $options = []): string;
+
     public function testConnection(string $apiKey): bool;
 
     public function getAvailableModels(): array;

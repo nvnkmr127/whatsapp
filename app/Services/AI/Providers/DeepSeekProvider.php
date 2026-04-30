@@ -101,6 +101,11 @@ class DeepSeekProvider implements AIProviderInterface
         return trim($response['content'] ?? '');
     }
 
+    public function transcribe(string $filePath, array $options = []): string
+    {
+        return ''; // Not supported by DeepSeek
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {

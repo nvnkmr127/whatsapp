@@ -196,6 +196,10 @@ Route::middleware([
     Route::get('/analytics/explorer', \App\Livewire\Analytics\EventExplorer::class)->name('analytics.explorer')->middleware(['can:manage-settings', 'plan_feature:analytics']);
     Route::get('/analytics/templates', \App\Livewire\Analytics\TemplateHeatmap::class)->name('analytics.templates')->middleware(['can:manage-settings', 'plan_feature:analytics']);
     Route::get('/analytics/cohorts', \App\Livewire\Analytics\CohortAnalysis::class)->name('analytics.cohorts')->middleware(['can:manage-settings', 'plan_feature:analytics']);
+    
+    // Enterprise CSAT & SLA
+    Route::get('/chat/csat', \App\Livewire\Chat\CsatDashboard::class)->name('chat.csat')->middleware(['can:manage-settings', 'plan_feature:csat']);
+    Route::get('/chat/sla', \App\Livewire\Chat\SlaDashboard::class)->name('chat.sla')->middleware(['can:manage-settings', 'plan_feature:sla']);
 
     // WhatsApp Calling
     Route::get('/calls', \App\Livewire\Calls\CallHistory::class)->name('calls.history')->middleware('can:chat-access');

@@ -104,6 +104,16 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Transcription -->
+                        <template x-if="message.metadata && message.metadata.transcription">
+                            <div class="mt-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <x-icon name="sparkles" class="w-2.5 h-2.5 text-wa-teal" />
+                                    <span class="text-[8px] font-black uppercase tracking-widest text-wa-teal">AI Transcription</span>
+                                </div>
+                                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-300 italic leading-relaxed" x-text="message.metadata.transcription"></p>
+                            </div>
+                        </template>
                     </template>
                     <template
                         x-if="!message.media_type || (!message.media_type.startsWith('image') && !message.media_type.startsWith('video') && !message.media_type.startsWith('audio'))">

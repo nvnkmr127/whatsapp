@@ -16,6 +16,9 @@ class Conversation extends Model
         'last_message_at' => 'datetime',
         'sla_due_at' => 'datetime',
         'closed_at' => 'datetime',
+        'first_response_at' => 'datetime',
+        'sla_first_response_due_at' => 'datetime',
+        'sla_resolution_due_at' => 'datetime',
         'metadata' => 'array',
     ];
 
@@ -32,6 +35,11 @@ class Conversation extends Model
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function slaPolicy()
+    {
+        return $this->belongsTo(SlaPolicy::class);
     }
 
     public function messages()

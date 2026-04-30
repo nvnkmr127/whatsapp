@@ -121,6 +121,11 @@ class GeminiProvider implements AIProviderInterface
         return trim($response['content'] ?? '');
     }
 
+    public function transcribe(string $filePath, array $options = []): string
+    {
+        return ''; // Not supported by Gemini in this implementation
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {

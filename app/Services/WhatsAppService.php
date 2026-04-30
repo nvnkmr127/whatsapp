@@ -180,6 +180,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
                 \App\Events\MessageSent::dispatch($msg);
             } else {
@@ -260,6 +261,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
 
                 $msg->update([
                     'status' => 'sent',
@@ -353,6 +355,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
 
                 $msg->update([
                     'status' => 'sent',
@@ -483,6 +486,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
 
                 $msg->update([
                     'status' => 'sent',
@@ -548,6 +552,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
                 \App\Events\MessageSent::dispatch($msg);
             } else {
@@ -597,6 +602,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
                 \App\Events\MessageSent::dispatch($msg);
             } else {
@@ -667,6 +673,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
                 $msg->update(['status' => 'sent', 'whatsapp_message_id' => $wamId, 'sent_at' => now()]);
                 \App\Events\MessageSent::dispatch($msg);
             } else {
@@ -971,6 +978,7 @@ class WhatsAppService
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
                 $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
 
                 $msg->update([
                     'status' => 'sent',

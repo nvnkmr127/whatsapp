@@ -256,11 +256,33 @@ class WhatsAppEventRouter
         }
 
         $buttonReply = $messageData['interactive']['button_reply'] ?? null;
-        if (! $buttonReply) {
+        $listReply   = $messageData['interactive']['list_reply'] ?? null;
+        
+        $selectionId = ($buttonReply['id'] ?? null) ?: ($listReply['id'] ?? null);
+
+        if (! $selectionId) {
             return;
         }
 
-        $payload = json_decode($buttonReply['payload'] ?? '{}', true);
+        // 1. Handle CSAT Ratings
+        if (str_starts_with($selectionId, 'csat_')) {
+            $from = $messageData['from'] ?? null;
+            if ($from) {
+                $contact = \App\Models\Contact::where('team_id', $this->teamId)
+                    ->where('phone_number', \App\Helpers\PhoneNumberHelper::normalize($from))
+                    ->first();
+
+                if ($contact) {
+                    app(\App\Services\CsatService::class)->recordFromWebhook($selectionId, $contact->id);
+                    Log::info("[Router] CSAT rating recorded for Contact #{$contact->id} via Selection ID: {$selectionId}");
+                }
+            }
+            return;
+        }
+
+        // 2. Handle Call Permissions
+        $payloadRaw = $buttonReply['payload'] ?? '{}';
+        $payload = json_decode($payloadRaw, true);
         if (($payload['action'] ?? '') === 'grant_call_permission') {
             $permissionId = $payload['permission_id'] ?? null;
             if ($permissionId) {

@@ -119,6 +119,11 @@ class AnthropicProvider implements AIProviderInterface
         return trim($response['content'] ?? '');
     }
 
+    public function transcribe(string $filePath, array $options = []): string
+    {
+        return ''; // Not supported by Anthropic
+    }
+
     public function testConnection(string $apiKey): bool
     {
         try {

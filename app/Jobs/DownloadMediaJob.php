@@ -52,6 +52,15 @@ class DownloadMediaJob implements ShouldQueue
 
             Log::info("DownloadMediaJob SUCCESS: Message {$this->messageId}");
 
+            // ── Transcription ──────────────────────────────────────────────
+            if ($message->type === 'audio') {
+                try {
+                    app(\App\Services\VoiceTranscriptionService::class)->transcribe($message);
+                } catch (\Exception $e) {
+                    Log::warning("Transcription trigger failed for Message #{$message->id}: " . $e->getMessage());
+                }
+            }
+
             // Broadcast Update to Client
             \App\Events\MessageReceived::dispatch($message);
 

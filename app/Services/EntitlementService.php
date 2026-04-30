@@ -222,6 +222,8 @@ class EntitlementService
                 'flows',
                 'backups',
                 'cloud_backups',
+                'sla',
+                'csat',
             ];
             foreach ($planFeatureKeys as $f) {
                 // If a feature is explicitly disabled in the plan, record it as false
@@ -281,7 +283,7 @@ class EntitlementService
         $planFeatureKeys = [
             'chat', 'contacts', 'templates', 'campaigns', 'automations',
             'analytics', 'commerce', 'ai', 'api_access', 'webhooks',
-            'flows', 'backups', 'cloud_backups', 'calling',
+            'flows', 'backups', 'cloud_backups', 'calling', 'sla', 'csat',
         ];
 
         $offFeatures = [];
