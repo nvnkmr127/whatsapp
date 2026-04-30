@@ -255,7 +255,7 @@ class AiCommerceService
             'description' => $description,
             'subject_type' => get_class($contact),
             'subject_id' => $contact->id,
-            'metadata' => ['is_ai' => true],
+            'properties' => ['is_ai' => true],
         ]);
     }
 }

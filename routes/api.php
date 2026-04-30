@@ -149,6 +149,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/media/upload', [\App\Http\Controllers\Api\Mobile\MediaController::class, 'upload']);
 
         // Contacts
+        Route::get('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'index']);
         Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
         Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
         Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);

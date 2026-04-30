@@ -74,17 +74,22 @@ class MessageController extends Controller
 
         $isMedia = in_array($request->type, ['image', 'document', 'video', 'audio']);
 
+        $metadata = [];
+        if ($request->input('reply_to_message_id')) {
+            $metadata['reply_to_message_id'] = $request->input('reply_to_message_id');
+        }
+        $metadata['user_id'] = $user->id;
+
         $message = Message::create([
             'team_id' => $team->id,
             'contact_id' => $conversation->contact_id,
             'conversation_id' => $conversation->id,
-            'user_id' => $user->id,
             'direction' => 'outbound',
             'type' => $request->input('type', 'text'),
             'content' => $request->input('content'),
             'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $request->input('media_url'),
-            'reply_to_message_id' => $request->input('reply_to_message_id'),
+            'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'pending',
         ]);
 
