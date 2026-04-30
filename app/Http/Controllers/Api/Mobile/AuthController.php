@@ -90,6 +90,20 @@ class AuthController extends Controller
             'verified_name' => $currentTeam->whatsapp_verified_name ?? $currentTeam->name,
         ]] : [];
 
+        $businessProfile = null;
+        if ($currentTeam && $currentTeam->whatsapp_phone_number_id && $currentTeam->whatsapp_access_token) {
+            try {
+                $service = app(\App\Services\WhatsAppService::class);
+                $service->setTeam($currentTeam);
+                $metaResponse = $service->getBusinessProfile();
+                if (isset($metaResponse['data']['data'][0])) {
+                    $businessProfile = $metaResponse['data']['data'][0];
+                }
+            } catch (\Exception $e) {
+                // Ignore API failures to prevent blocking login
+            }
+        }
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -101,6 +115,7 @@ class AuthController extends Controller
             'teams' => $teams,
             'members' => $members,
             'numbers' => $numbers,
+            'business_profile' => $businessProfile,
         ]);
     }
 
@@ -202,14 +217,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'Phone number not registered'], 404);
         }
 
-        // Generate 6-digit OTP
-        $otp = app()->environment('local') ? '123456' : rand(100000, 999999);
-        
-        // Store OTP in cache for 10 minutes
-        \Illuminate\Support\Facades\Cache::put("otp_$phone", $otp, now()->addMinutes(10));
+        $otpService = app(\App\Services\OTPService::class);
+        $sent = $otpService->send($phone, 'phone');
 
-        // Mock SMS sending
-        Log::info("OTP for $phone: $otp");
+        if (!$sent) {
+            return response()->json(['message' => 'Failed to send OTP. Please try again later.'], 500);
+        }
         
         return response()->json(['success' => true, 'message' => 'OTP sent successfully']);
     }
@@ -224,13 +237,10 @@ class AuthController extends Controller
         $phone = $request->phone;
         $otp = $request->otp;
 
-        $cachedOtp = \Illuminate\Support\Facades\Cache::get("otp_$phone");
-
-        if (!$cachedOtp || $cachedOtp !== $otp) {
+        $otpService = app(\App\Services\OTPService::class);
+        if (!$otpService->verify($phone, $otp)) {
             return response()->json(['message' => 'Invalid or expired OTP'], 422);
         }
-
-        \Illuminate\Support\Facades\Cache::forget("otp_$phone");
 
         $user = User::where('phone', $phone)->first();
         if (!$user) {

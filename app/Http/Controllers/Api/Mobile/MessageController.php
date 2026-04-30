@@ -72,6 +72,8 @@ class MessageController extends Controller
         // Ensure we use the latest conversation context
         $contact = $conversation->contact;
 
+        $isMedia = in_array($request->type, ['image', 'document', 'video', 'audio']);
+
         $message = Message::create([
             'team_id' => $team->id,
             'contact_id' => $conversation->contact_id,
@@ -80,17 +82,20 @@ class MessageController extends Controller
             'direction' => 'outbound',
             'type' => $request->input('type', 'text'),
             'content' => $request->input('content'),
+            'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $request->input('media_url'),
             'reply_to_message_id' => $request->input('reply_to_message_id'),
             'status' => 'pending',
         ]);
+
+        $jobContent = $isMedia ? $request->input('media_url') : ($request->type === 'text' ? $request->input('content') : []);
 
         // Dispatch Job (reuse existing infrastructure)
         \App\Jobs\SendMessageJob::dispatchSync(
             $team->id,
             $contact->phone_number,
             $request->type,
-            $request->type === 'text' ? $request->input('content') : [], // Variables if template
+            $jobContent, // Uses media_url if image/document, otherwise content
             null, // Template name if template
             'en_US', // Language
             $message->id
