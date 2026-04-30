@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Team;
 use App\Models\Setting;
+use App\Services\AI\AIProviderManager;
+use Illuminate\Http\Request;
 
 class AiController extends Controller
 {
@@ -21,6 +24,7 @@ class AiController extends Controller
 
         $settings = [
             'enabled' => (bool) $team->ai_auto_reply_enabled,
+            'provider' => Setting::where('key', "ai_provider_{$teamId}")->value('value') ?? 'openai',
             'api_key' => Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? '',
             'model' => Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? 'gpt-4o',
             'persona' => Setting::where('key', "ai_persona_{$teamId}")->value('value') ?? '',
@@ -50,6 +54,7 @@ class AiController extends Controller
 
         // 2. Update Detailed Settings
         $keys = [
+            'provider' => "ai_provider_{$teamId}",
             'api_key' => "ai_openai_api_key_{$teamId}",
             'model' => "ai_openai_model_{$teamId}",
             'persona' => "ai_persona_{$teamId}",
@@ -69,5 +74,59 @@ class AiController extends Controller
         }
 
         return response()->json(['message' => 'AI settings updated successfully!']);
+    }
+
+    /**
+     * Generate an AI reply suggestion for a conversation.
+     * Returns a suggested response the agent can accept or edit before sending.
+     */
+    public function suggest(Request $request, Conversation $conversation)
+    {
+        $user = $request->user();
+
+        // Authorize access
+        if ($conversation->team_id !== $user->currentTeam?->id && !$user->isSuperAdmin()) {
+            abort(403, 'Unauthorized access to this conversation.');
+        }
+
+        $team = $user->currentTeam;
+        $teamId = $team->id;
+
+        // Build conversation context from the last 10 messages
+        $messages = Message::where('contact_id', $conversation->contact_id)
+            ->latest('id')
+            ->limit(10)
+            ->get()
+            ->reverse()
+            ->values();
+
+        if ($messages->isEmpty()) {
+            return response()->json(['error' => 'No messages to generate a suggestion from.'], 422);
+        }
+
+        // Build a transcript string for the AI prompt
+        $transcript = $messages->map(function ($msg) {
+            $role = $msg->direction === 'inbound' ? 'Customer' : 'Agent';
+            return "[{$role}]: " . ($msg->content ?? '(media)');
+        })->join("\n");
+
+        $persona = Setting::where('key', "ai_persona_{$teamId}")->value('value')
+            ?? 'You are a helpful and professional customer service agent.';
+
+        $prompt = "{$persona}\n\nConversation:\n{$transcript}\n\n"
+            . "Based on the above conversation, generate a concise and professional reply for the Agent to send next. "
+            . "Return ONLY the reply text, nothing else.";
+
+        try {
+            // Use the summarize method which accepts a plain prompt string
+            $suggestion = AIProviderManager::summarize($team, $prompt);
+
+            return response()->json([
+                'suggestion' => trim($suggestion),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('[AI_SUGGEST] Failed: ' . $e->getMessage(), ['team_id' => $teamId]);
+            return response()->json(['error' => 'AI suggestion failed. Please check your AI settings.'], 500);
+        }
     }
 }

@@ -120,6 +120,20 @@ class ConversationController extends Controller
             ->whereNull('read_at')
             ->count();
 
+        // Calculate session window expiry from last inbound message
+        $lastInbound = $conversation->messages()
+            ->where('direction', 'inbound')
+            ->latest('created_at')
+            ->first();
+
+        $sessionExpiresAt = null;
+        if ($lastInbound) {
+            $expiry = $lastInbound->created_at->addHours(24);
+            if ($expiry->isFuture()) {
+                $sessionExpiresAt = $expiry->toIso8601String();
+            }
+        }
+
         return response()->json([
             'id' => $conversation->id,
             'contact' => $conversation->contact,
@@ -129,6 +143,9 @@ class ConversationController extends Controller
             'metadata' => $conversation->metadata,
             'is_within_24_hours' => $conversation->isWithin24Hours(),
             'is_ai_enabled' => !($conversation->contact->is_bot_paused ?? false),
+            // ISO8601 expiry timestamp for mobile live countdown timer.
+            // null means the 24h window is closed (no inbound message in last 24h).
+            'session_expires_at' => $sessionExpiresAt,
         ]);
     }
 
@@ -228,6 +245,21 @@ class ConversationController extends Controller
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Reopen a closed/resolved conversation.
+     */
+    public function reopen(Request $request, Conversation $conversation)
+    {
+        $this->authorizeConversation($request->user(), $conversation);
+
+        $conversation->update([
+            'status' => 'open',
+            'closed_at' => null,
+        ]);
+
+        return response()->json(['success' => true, 'status' => 'open']);
     }
 
     /**

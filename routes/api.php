@@ -106,6 +106,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/conversations/{conversation}/toggle-ai', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'toggleAi']);
         Route::get('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getNotes']);
         Route::post('/conversations/{conversation}/close', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'close']);
+        Route::post('/conversations/{conversation}/reopen', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'reopen']);
         Route::post('/conversations/{conversation}/mark-read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
         Route::post('/conversations/{conversation}/assign', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'assign']);
         Route::get('/canned-messages', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getCannedMessages']);
@@ -117,7 +118,6 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/messages/{message}/forward', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'forward']);
         Route::post('/messages/{message}/star', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'toggleStar']);
         Route::post('/messages/{message}/react', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'react']);
-        Route::get('/templates', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'getTemplates']);
         Route::post('/conversations/{conversation}/send-template', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'sendTemplate']);
 
         // Automations
@@ -132,7 +132,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getNotes']);
         Route::post('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'storeNote']);
 
-        // Contacts
+        // Contacts (single canonical set of routes)
         Route::get('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'index']);
         Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
         Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
@@ -141,6 +141,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/contacts/{contact}/tags/toggle', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
         Route::put('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'update']);
 
+        // Templates (single canonical set)
         Route::get('/templates', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'index']);
         Route::get('/templates/{id}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'show']);
         Route::post('/templates/{id}/send-test', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'sendTest']);
@@ -148,20 +149,12 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Media Uploads
         Route::post('/media/upload', [\App\Http\Controllers\Api\Mobile\MediaController::class, 'upload']);
 
-        // Contacts
-        Route::get('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'index']);
-        Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
-        Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
-        Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);
-        Route::post('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'update']);
-        Route::post('/contacts/{contact}/toggle-tag', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
-
-        // Analytics
-        Route::get('/analytics/dashboard', [\App\Http\Controllers\Api\Mobile\AnalyticsController::class, 'dashboard']);
-
         // Campaigns / Broadcasting
         Route::get('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'index']);
         Route::post('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'store']);
+
+        // AI Suggest Reply (new)
+        Route::post('/conversations/{conversation}/ai-suggest', [\App\Http\Controllers\Api\Mobile\AiController::class, 'suggest']);
 
         // Team Management
         Route::get('/team/members', function (\Illuminate\Http\Request $request) {

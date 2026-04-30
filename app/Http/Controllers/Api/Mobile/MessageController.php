@@ -95,12 +95,12 @@ class MessageController extends Controller
 
         $jobContent = $isMedia ? $request->input('media_url') : ($request->type === 'text' ? $request->input('content') : []);
 
-        // Dispatch Job (reuse existing infrastructure)
-        \App\Jobs\SendMessageJob::dispatchSync(
+        // Dispatch Job asynchronously (do not block the HTTP response)
+        \App\Jobs\SendMessageJob::dispatch(
             $team->id,
             $contact->phone_number,
             $request->type,
-            $jobContent, // Uses media_url if image/document, otherwise content
+            $jobContent,
             null, // Template name if template
             'en_US', // Language
             $message->id
