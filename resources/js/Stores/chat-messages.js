@@ -119,10 +119,26 @@ export default {
     },
 
     receiveMessage(msg) {
-        if (this.messages.some(m => m.id === msg.id)) return;
+        const index = this.messages.findIndex(m => m.id === msg.id);
+        if (index !== -1) {
+            // Update existing message (e.g., when media finishes downloading)
+            this.messages[index] = { ...this.messages[index], ...msg };
+            return;
+        }
+        
         this.messages.push(msg);
         this.messages.sort((a, b) => a.created_at - b.created_at);
         window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
+
+        // Play sound if it's an inbound message or if it's from another agent
+        if (msg.direction === 'inbound' || (msg.is_outbound && msg.agent_id != this.myUserId)) {
+            this.playNotificationSound();
+        }
+    },
+
+    playNotificationSound() {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+        audio.play().catch(e => console.log('Sound play blocked by browser', e));
     },
 
     getDateLabel(timestamp) {

@@ -393,6 +393,10 @@ class MessageWindow extends Component
             'conversation_id' => $this->conversation->id,
             'direction' => 'outbound',
             'status' => 'queued',
+            'metadata' => [
+                'agent_id' => Auth::id(),
+                'agent_name' => Auth::user()->name,
+            ],
         ];
 
         $attachments = null;
@@ -538,6 +542,10 @@ class MessageWindow extends Component
             'type' => 'audio',
             'media_url' => $path,
             'media_type' => 'audio/ogg',
+            'metadata' => [
+                'agent_id' => Auth::id(),
+                'agent_name' => Auth::user()->name,
+            ],
         ]);
 
         \App\Jobs\SendMessageJob::dispatch(

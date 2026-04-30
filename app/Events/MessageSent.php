@@ -7,7 +7,13 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class MessageSent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -19,5 +25,51 @@ class MessageSent
     public function __construct(Message $message)
     {
         $this->message = $message;
+    }
+
+    /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MessageSent';
+    }
+
+    /**
+     * Get the channels the event should broadcast on.
+     */
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('teams.'.$this->message->team_id),
+            new PresenceChannel('conversation.'.$this->message->conversation_id),
+        ];
+    }
+
+    /**
+     * Data to broadcast.
+     */
+    public function broadcastWith(): array
+    {
+        return [
+            'message' => [
+                'id' => $this->message->id,
+                'direction' => $this->message->direction,
+                'content' => $this->message->content,
+                'type' => $this->message->type,
+                'status' => $this->message->status,
+                'created_at' => $this->message->created_at->timestamp,
+                'pretty_time' => $this->message->created_at->format('H:i'),
+                'media_url' => $this->message->media_url ? (\Illuminate\Support\Facades\Storage::disk('public')->url($this->message->media_url)) : null,
+                'media_type' => $this->message->media_type,
+                'caption' => $this->message->caption,
+                'error_message' => $this->message->error_message,
+                'is_outbound' => $this->message->direction === 'outbound',
+                'conversation_id' => $this->message->conversation_id,
+                'team_id' => $this->message->team_id,
+                'agent_id' => $this->message->metadata['agent_id'] ?? null,
+            ],
+            'timestamp' => now()->timestamp,
+        ];
     }
 }

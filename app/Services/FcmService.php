@@ -39,10 +39,14 @@ class FcmService
                 'notification' => [
                     'channel_id' => 'high_importance_channel',
                     'sound' => 'default',
+                    'priority' => 'high',
                     'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                 ],
             ])
             ->withApnsConfig([
+                'headers' => [
+                    'apns-priority' => '10',
+                ],
                 'payload' => [
                     'aps' => [
                         'alert' => [
@@ -51,6 +55,7 @@ class FcmService
                         ],
                         'sound' => 'default',
                         'badge' => 1,
+                        'content-available' => 1,
                     ],
                 ],
             ]);

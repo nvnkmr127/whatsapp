@@ -60,6 +60,11 @@ export default {
                 this.receiveMessage(e.message);
             }
         })
+        .listen('.MessageSent', (e) => {
+            if (e.message && e.message.conversation_id == this.conversationId) {
+                this.receiveMessage(e.message);
+            }
+        })
         .listen('.MessageStatusUpdated', (e) => {
             if (e.message) {
                 let msg = this.messages.find(m => m.id === e.message.id);
@@ -77,6 +82,11 @@ export default {
         if (this.teamId && this._teamChannelSubscribed !== this.teamId) {
             const teamChannel = window.Echo.private('teams.' + this.teamId);
             teamChannel.listen('.MessageReceived', (e) => {
+                if (e.message && e.message.conversation_id == this.conversationId) {
+                    this.receiveMessage(e.message);
+                }
+            });
+            teamChannel.listen('.MessageSent', (e) => {
                 if (e.message && e.message.conversation_id == this.conversationId) {
                     this.receiveMessage(e.message);
                 }

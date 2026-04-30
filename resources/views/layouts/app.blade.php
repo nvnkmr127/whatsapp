@@ -17,6 +17,14 @@
         {{ isset($title) ? $title . ' - ' : '' }}{{ auth()->check() && auth()->user()->currentTeam ? auth()->user()->currentTeam->name : ($appName ?? config('app.name', 'Laravel')) }}
     </title>
 
+    <script>
+        window.user = @json([
+            'id' => auth()->id(),
+            'name' => auth()->user()?->name,
+            'team_id' => auth()->user()?->current_team_id,
+        ]);
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
