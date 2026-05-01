@@ -18,11 +18,11 @@
     </title>
 
     <script>
-        window.user = @json([
+        window.user = {{ Js::from([
             'id' => auth()->id(),
             'name' => auth()->user()?->name,
             'team_id' => auth()->user()?->current_team_id,
-        ]);
+        ]) }};
     </script>
 
     <!-- Fonts -->

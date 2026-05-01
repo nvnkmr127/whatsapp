@@ -122,6 +122,25 @@
                             {{ __('Conversation Tags') }}
                         </h5>
                             <div class="flex flex-wrap gap-2">
+                                @forelse($this->activeTags as $category)
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider group"
+                                        style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}40;">
+                                        <span>{{ $category->name }}</span>
+                                        <button wire:click="toggleConversationTag({{ $category->id }})"
+                                            class="opacity-60 hover:opacity-100 transition-opacity">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                @empty
+                                    <div
+                                        class="w-full py-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-40">{{ __('No tags assigned') }}</span>
+                                    </div>
                                 @endforelse
                             </div>
                             
