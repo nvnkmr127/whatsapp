@@ -23,7 +23,7 @@ class ContactDetails extends Component
 
     public $heatmap = [];
 
-    public $activeTab = 'timeline'; // Default tab
+    public $activeTab = 'profile'; // Default tab
 
     public $newNoteBody = '';
 
@@ -52,7 +52,8 @@ class ContactDetails extends Component
             if ($this->contact) {
                 $this->timeline = $timelineService->getTimeline($this->contact, ! Auth::user()?->is_super_admin);
                 $this->mediaVault = $timelineService->getMediaVault($this->contact);
-                $this->heatmap = $timelineService->getInteractionHeatmap($this->contact);
+                // Heatmap is no longer needed in the simplified chat sidebar
+                $this->heatmap = [];
             } else {
                 $this->timeline = [];
                 $this->mediaVault = [];

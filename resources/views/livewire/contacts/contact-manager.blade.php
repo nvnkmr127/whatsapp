@@ -203,69 +203,239 @@
 
     @if($isViewModalOpen)
         <x-app-modal wire:model="isViewModalOpen" maxWidth="4xl">
-            <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                        Contact <span class="text-wa-teal">Details</span>
-                    </h2>
-                    <div class="mt-2 text-xs font-bold text-slate-500">
-                        {{ $viewingContact['phone_number'] ?? '' }}
+            @if($viewingContact)
+            <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-wa-teal/10 text-wa-teal rounded-2xl">
+                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                            Unified <span class="text-wa-teal">Profile</span>
+                        </h2>
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            {{ $viewingContact->phone_number }}
+                        </div>
                     </div>
                 </div>
-                <button type="button" wire:click="closeViewModal" class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-                    <x-icon name="x-mark" class="w-6 h-6" />
+                <button type="button" wire:click="closeViewModal" class="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+                    <x-icon name="x-mark" class="w-5 h-5" />
                 </button>
             </div>
 
-            <div class="p-8 space-y-6">
-                <div class="flex items-center gap-4">
-                    <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $viewingContact['name'] ?? '' }}"
-                        alt="{{ $viewingContact['name'] ?? '' }}"
-                        class="w-16 h-16 rounded-[1.75rem] bg-slate-100 dark:bg-slate-800 object-cover">
-                    <div class="min-w-0">
-                        <div class="text-lg font-black text-slate-900 dark:text-white truncate">{{ $viewingContact['name'] ?? '' }}</div>
-                        <div class="text-sm text-slate-500 font-medium truncate">{{ $viewingContact['email'] ?? 'No email linked' }}</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Messages</div>
-                        <div class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($viewingContact['messages_count'] ?? 0) }}</div>
-                    </div>
-                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Conversations</div>
-                        <div class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($viewingContact['conversations_count'] ?? 0) }}</div>
-                    </div>
-                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tags</div>
-                        <div class="text-2xl font-black text-slate-900 dark:text-white">{{ number_format($viewingContact['tags_count'] ?? 0) }}</div>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Classification</div>
-                    <div class="flex flex-wrap gap-2">
-                        @if(!empty($viewingContact['category']))
-                            @php $categoryColor = $viewingContact['category']['color'] ?? '#64748b'; @endphp
-                            <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
-                                style="background-color: {{ $categoryColor }}20; color: {{ $categoryColor }}; border-color: {{ $categoryColor }}40">
-                                {{ $viewingContact['category']['name'] ?? '' }}
-                            </span>
-                        @endif
-                        @foreach(($viewingContact['tags'] ?? []) as $tag)
-                            @php $tagColor = $tag['color'] ?? '#64748b'; @endphp
-                            <span class="px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter rounded-md border"
-                                style="background-color: {{ $tagColor }}10; color: {{ $tagColor }}; border-color: {{ $tagColor }}30">
-                                {{ $tag['name'] ?? '' }}
-                            </span>
-                        @endforeach
-                        @if(empty($viewingContact['category']) && empty($viewingContact['tags']))
-                            <div class="text-xs text-slate-400 italic">No classification</div>
-                        @endif
-                    </div>
-                </div>
+            <!-- Tabs -->
+            <div class="px-8 flex border-b border-slate-50 dark:border-slate-900 bg-white dark:bg-slate-950 overflow-x-auto no-scrollbar">
+                @foreach(['profile' => 'Profile', 'timeline' => 'Timeline', 'files' => 'Files', 'heatmap' => 'Engagement'] as $tab => $label)
+                    <button wire:click="$set('activeTab', '{{ $tab }}')"
+                        class="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap
+                        {{ $activeTab === $tab ? 'border-wa-teal text-wa-teal' : 'border-transparent text-slate-400 hover:text-slate-600' }}">
+                        {{ __($label) }}
+                    </button>
+                @endforeach
             </div>
+
+            <div class="max-h-[70vh] overflow-y-auto custom-scrollbar p-0 bg-white dark:bg-slate-950">
+                @if($activeTab === 'profile')
+                    <div class="p-8 space-y-8">
+                        <!-- Identity Header -->
+                        <div class="flex items-center gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
+                            <div class="relative group">
+                                <div class="absolute -inset-2 bg-gradient-to-tr from-wa-teal to-wa-teal rounded-full blur opacity-20"></div>
+                                <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $viewingContact->name }}"
+                                    alt="{{ $viewingContact->name }}"
+                                    class="relative h-20 w-20 rounded-3xl bg-white dark:bg-slate-800 object-cover shadow-xl">
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-2xl font-black text-slate-900 dark:text-white truncate">{{ $viewingContact->name }}</h3>
+                                <p class="text-sm font-bold text-slate-500">{{ $viewingContact->email ?: 'No email address' }}</p>
+                                <div class="mt-3 flex items-center gap-3">
+                                    <livewire:chat.whatsapp-call-button :contact="$viewingContact" :key="'call-mgr-' . $viewingContact->id" />
+                                    
+                                    <div class="bg-slate-50/50 dark:bg-slate-900/50 rounded-xl p-2 border border-slate-100/50 dark:border-slate-800/50 flex items-center justify-center gap-2">
+                                        <svg class="w-3 h-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Metadata Encrypted</span>
+                                    </div>
+                                    <div class="bg-slate-50/50 dark:bg-slate-900/50 rounded-xl p-2 border border-slate-100/50 dark:border-slate-800/50 flex items-center justify-center gap-2">
+                                        <svg class="w-3 h-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Profile Locked</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800 group hover:border-wa-teal/50 transition-colors">
+                                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Messages</div>
+                                <div class="text-3xl font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors">{{ number_format($viewingContact->messages_count) }}</div>
+                            </div>
+                            <div class="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800 group hover:border-wa-teal/50 transition-colors">
+                                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Conversations</div>
+                                <div class="text-3xl font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors">{{ number_format($viewingContact->conversations_count) }}</div>
+                            </div>
+                            <div class="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800 group hover:border-wa-teal/50 transition-colors">
+                                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Tags</div>
+                                <div class="text-3xl font-black text-slate-900 dark:text-white group-hover:text-wa-teal transition-colors">{{ number_format($viewingContact->tags_count) }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Info Sections -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <section>
+                                <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                                    {{ __('Classification') }}
+                                </h5>
+                                <div class="flex flex-wrap gap-2">
+                                    @if($viewingContact->category)
+                                        @php $categoryColor = $viewingContact->category->color ?: '#64748b'; @endphp
+                                        <span class="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl border"
+                                            style="background-color: {{ $categoryColor }}20; color: {{ $categoryColor }}; border-color: {{ $categoryColor }}40">
+                                            {{ $viewingContact->category->name }}
+                                        </span>
+                                    @endif
+                                    @foreach($viewingContact->tags as $tag)
+                                        @php $tagColor = $tag->color ?: '#64748b'; @endphp
+                                        <span class="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl border"
+                                            style="background-color: {{ $tagColor }}10; color: {{ $tagColor }}; border-color: {{ $tagColor }}30">
+                                            {{ $tag->name }}
+                                        </span>
+                                    @endforeach
+                                    @if($viewingContact->tags->isEmpty() && !$viewingContact->category)
+                                        <div class="text-xs text-slate-400 italic">No classification assigned</div>
+                                    @endif
+                                </div>
+                            </section>
+
+                            <section>
+                                <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+                                    {{ __('Metadata') }}
+                                </h5>
+                                <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 text-[10px] font-mono text-slate-500 max-h-40 overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800">
+                                    @if($viewingContact->custom_attributes)
+                                        <pre class="p-0 m-0 whitespace-pre-wrap">{{ json_encode($viewingContact->custom_attributes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                    @else
+                                        <span class="italic">{{ __('No additional attributes.') }}</span>
+                                    @endif
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                @elseif($activeTab === 'timeline')
+                    <div class="p-8">
+                        <div class="relative pl-4 space-y-6 before:absolute before:left-0 before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                            @forelse($timeline as $item)
+                                <div class="relative" wire:key="{{ $item['id'] }}">
+                                    <!-- Dot -->
+                                    <div class="absolute -left-[1.375rem] top-1.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-950 shadow-sm
+                                        {{ $item['type'] === 'message' ? 'bg-wa-teal' : '' }}
+                                        {{ $item['type'] === 'note' ? 'bg-amber-400' : '' }}
+                                        {{ $item['type'] === 'order' ? 'bg-indigo-500' : '' }}
+                                        {{ $item['type'] === 'deal' ? 'bg-emerald-500' : '' }}
+                                        {{ $item['type'] === 'automation' ? 'bg-purple-500' : '' }}
+                                        {{ in_array($item['type'], ['event', 'activity_log', 'crm_activity']) ? 'bg-slate-400' : '' }}
+                                    "></div>
+
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-black uppercase tracking-wider
+                                                {{ $item['type'] === 'message' ? 'text-wa-teal' : '' }}
+                                                {{ $item['type'] === 'note' ? 'text-amber-500' : '' }}
+                                                {{ $item['type'] === 'order' ? 'text-indigo-500' : '' }}
+                                                {{ $item['type'] === 'deal' ? 'text-emerald-500' : '' }}
+                                                {{ $item['type'] === 'automation' ? 'text-purple-500' : '' }}
+                                                {{ in_array($item['type'], ['event', 'activity_log', 'crm_activity']) ? 'text-slate-500' : 'text-slate-600' }}
+                                            ">
+                                                {{ __($item['title']) }}
+                                            </span>
+                                            <span class="text-[9px] font-bold text-slate-400">
+                                                {{ \Carbon\Carbon::parse($item['occurred_at'])->diffForHumans() }}
+                                            </span>
+                                        </div>
+                                        <div class="p-3 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                                            <p class="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                                                {{ $item['description'] }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="py-20 text-center opacity-30">
+                                    <x-icon name="clock" class="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                                    <p class="text-[10px] font-black uppercase tracking-widest">No activity history found</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                @elseif($activeTab === 'files')
+                    <div class="p-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        @forelse($mediaVault as $file)
+                            <div class="group relative aspect-square rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                                @if(in_array($file['media_type'] ?? 'image', ['image', 'video']))
+                                    <img src="{{ $file['media_url'] }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500">
+                                @else
+                                    <div class="w-full h-full flex flex-col items-center justify-center p-4">
+                                        <x-icon name="document" class="w-8 h-8 text-slate-300 mb-2" />
+                                        <span class="text-[8px] font-black text-slate-400 uppercase text-center truncate w-full">{{ $file['caption'] ?: 'Document' }}</span>
+                                    </div>
+                                @endif
+                                <div class="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <a href="{{ $file['media_url'] }}" target="_blank" class="p-3 bg-white rounded-2xl shadow-2xl transform translate-y-4 group-hover:translate-y-0 transition-all">
+                                         <x-icon name="eye" class="w-5 h-5 text-slate-950" />
+                                    </a>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="col-span-full py-20 text-center opacity-30">
+                                <x-icon name="photo" class="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                                <p class="text-[10px] font-black uppercase tracking-widest">No files discovered yet</p>
+                            </div>
+                        @endforelse
+                    </div>
+
+                @elseif($activeTab === 'heatmap')
+                    <div class="p-8">
+                        <div class="flex flex-col gap-1.5">
+                            @php $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; @endphp
+                            <div class="flex items-center gap-1.5 mb-3">
+                                <div class="w-10"></div>
+                                @foreach([0, 6, 12, 18] as $h)
+                                    <div class="flex-1 text-[8px] text-slate-400 font-black uppercase text-center">{{ $h }}:00</div>
+                                @endforeach
+                            </div>
+                            @foreach($days as $index => $day)
+                                @php $dayNum = $index + 1; @endphp
+                                <div class="flex items-center gap-1.5 h-4">
+                                    <div class="w-10 text-[9px] font-black text-slate-500 uppercase">{{ $day }}</div>
+                                    <div class="flex-1 flex gap-1 h-full">
+                                        @for($h = 0; $h < 24; $h++)
+                                            @php
+                                                $count = $heatmap[$dayNum][$h] ?? 0;
+                                                $intensity = ($count > 0) ? min(100, $count * 20 + 10) : 0;
+                                                $color = $intensity > 0 ? "rgba(34, 197, 94, " . ($intensity / 100) . ")" : "transparent";
+                                                if ($intensity > 0 && $intensity < 20) $color = "rgba(34, 197, 94, 0.1)";
+                                            @endphp
+                                            <div class="flex-1 rounded-sm border border-slate-50 dark:border-slate-800/30"
+                                                style="background-color: {{ $color }};"
+                                                title="{{ $count }} events at {{ $h }}:00 on {{ $day }}"></div>
+                                        @endfor
+                                    </div>
+                                </div>
+                            @endforeach
+                            <div class="mt-8 pt-6 border-t border-slate-50 dark:border-slate-900 text-center">
+                                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Signal Intelligence Analysis</p>
+                                <p class="mt-2 text-[8px] font-bold text-slate-500 uppercase">Displays peak interaction density derived from historical event logs.</p>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+            @endif
         </x-app-modal>
     @endif
 

@@ -48,6 +48,12 @@ class ContactManager extends Component
 
     public $customAttributes = []; // For holding dynamic field values
 
+    // Rich View Data
+    public $activeTab = 'profile';
+    public $timeline = [];
+    public $mediaVault = [];
+    public $heatmap = [];
+
     public $availableCountryCodes = [
         '+1' => 'United States/Canada (+1)',
         '+20' => 'Egypt (+20)',
@@ -197,7 +203,18 @@ class ContactManager extends Component
         $this->viewingContact = Contact::with(['tags', 'category'])
             ->withCount(['messages', 'conversations', 'tags'])
             ->findOrFail($id);
+
+        $this->loadRichData($this->viewingContact);
         $this->isViewModalOpen = true;
+    }
+
+    protected function loadRichData(Contact $contact)
+    {
+        $service = app(\App\Services\ContactTimelineService::class);
+        
+        $this->timeline = $service->getTimeline($contact);
+        $this->mediaVault = $service->getMediaVault($contact);
+        $this->heatmap = $service->getInteractionHeatmap($contact);
     }
 
     public function getConversationRoute($contactId)
@@ -218,6 +235,12 @@ class ContactManager extends Component
     {
         $this->isViewModalOpen = false;
         $this->viewingContact = null;
+        $this->activeTab = 'profile';
+        
+        // Clear rich data to reduce Livewire payload
+        $this->timeline = [];
+        $this->mediaVault = [];
+        $this->heatmap = [];
     }
 
     public function edit($id)

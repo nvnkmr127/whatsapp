@@ -39,12 +39,9 @@
                 <div
                     class="p-6 flex flex-col items-center bg-slate-50/30 dark:bg-slate-900/20 border-b border-slate-100/50 dark:border-slate-900">
                     <div class="relative group">
-                        <div
-                            class="absolute -inset-2 bg-gradient-to-tr from-wa-teal to-wa-teal rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity">
-                        </div>
                         <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $contact->name ?? 'Unknown' }}"
                             alt="{{ $contact->name }}"
-                            class="relative h-16 w-16 rounded-2xl bg-white dark:bg-slate-800 object-cover shadow-xl transition-transform group-hover:scale-105">
+                            class="relative h-16 w-16 rounded-2xl bg-white dark:bg-slate-800 object-cover shadow-md transition-transform group-hover:scale-105">
                     </div>
 
                     <h4 class="mt-4 text-sm font-black text-slate-800 dark:text-white tracking-tight text-center">
@@ -60,8 +57,7 @@
                 ? 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-200'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-wa-teal/10 hover:text-wa-teal hover:border-wa-teal/20' 
                                                                 }}">
-                            <!-- Default Text -->
-                            <span class="block {{ $contact->opt_in_status === 'opted_in' ? 'group-hover:hidden' : '' }}">
+                            <span class="block">
                                 {{ $contact->opt_in_status === 'opted_in' ? __('OPTED IN') : __('OPTED OUT') }}
                             </span>
                         </button>
@@ -123,30 +119,61 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>
-                            {{ __('Tags') }}
+                            {{ __('Conversation Tags') }}
                         </h5>
                             <div class="flex flex-wrap gap-2">
-                                @forelse($this->activeTags as $category)
-                                    <span
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider group"
-                                        style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}40;">
-                                        <span>{{ $category->name }}</span>
-                                        <button wire:click="toggleConversationTag({{ $category->id }})"
-                                            class="opacity-60 hover:opacity-100 transition-opacity">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd"
-                                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                                    clip-rule="evenodd" />
-                                            </svg>
-                                        </button>
-                                    </span>
-                                @empty
-                                    <div
-                                        class="w-full py-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-100 dark:border-slate-800 flex items-center justify-center">
-                                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-40">{{ __('No tags assigned') }}</span>
-                                    </div>
                                 @endforelse
                             </div>
+                            
+                            <!-- Tag Picker -->
+                            @if(!$this->availableTags->isEmpty())
+                                <div class="mt-3" x-data="{ open: false }">
+                                    <button @click="open = !open" class="text-[9px] font-black text-wa-teal uppercase tracking-widest hover:underline flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                                        {{ __('Add Conversation Tag') }}
+                                    </button>
+                                    <div x-show="open" @click.away="open = false" class="mt-2 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 flex flex-wrap gap-1.5">
+                                        @foreach($this->availableTags as $tag)
+                                            <button wire:click="toggleConversationTag({{ $tag->id }})" 
+                                                class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all hover:scale-105"
+                                                style="background-color: {{ $tag->color }}10; color: {{ $tag->color }}; border: 1px solid {{ $tag->color }}30;">
+                                                {{ $tag->name }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                    </section>
+
+                    <section>
+                        <h5
+                            class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            {{ __('Contact Identity') }}
+                        </h5>
+                        <div class="flex flex-wrap gap-2">
+                            @if($contact->category)
+                                @php $catColor = $contact->category->color ?: '#64748b'; @endphp
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                                    style="background-color: {{ $catColor }}20; color: {{ $catColor }}; border: 1px solid {{ $catColor }}40;">
+                                    {{ $contact->category->name }}
+                                </span>
+                            @endif
+                            @forelse($contact->tags as $tag)
+                                @php $tagColor = $tag->color ?: '#64748b'; @endphp
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                                    style="background-color: {{ $tagColor }}10; color: {{ $tagColor }}; border: 1px solid {{ $tagColor }}30;">
+                                    {{ $tag->name }}
+                                </span>
+                            @empty
+                                @if(!$contact->category)
+                                    <span class="text-[10px] font-bold text-slate-400 italic">{{ __('No permanent identity tags') }}</span>
+                                @endif
+                            @endforelse
+                        </div>
                     </section>
 
                     <section x-data="{ showData: false }">
@@ -170,7 +197,7 @@
                                 class="bg-slate-900 rounded-2xl p-4 text-[10px] font-mono text-slate-400 overflow-x-auto overflow-y-auto max-h-60 custom-scrollbar shadow-2xl">
                                 @if($contact->custom_attributes)
                                     <pre
-                                        class="p-0 m-0">{{ json_encode($contact->custom_attributes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                        class="p-0 m-0 text-wrap">{{ json_encode($contact->custom_attributes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                                 @else
                                     <span class="italic text-slate-600">{{ __('No extra information found.') }}</span>
                                 @endif
@@ -203,7 +230,7 @@
                         <form wire:submit.prevent="addNote" class="relative group">
                             <textarea wire:model="newNoteBody"
                                 class="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-[11px] font-medium text-slate-900 dark:text-white focus:ring-wa-teal/20 focus:border-wa-teal transition-all min-h-[100px]"
-                                placeholder="{{ __('Add an internal note for team visibility...') }}"></textarea>
+                                placeholder="{{ __('Add an internal note...') }}"></textarea>
                             <div class="absolute right-3 bottom-3">
                                 <button type="submit"
                                     class="p-2 bg-slate-900 dark:bg-wa-teal text-white rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all">
@@ -221,28 +248,19 @@
                 <div class="p-6">
                     <div class="space-y-6">
                         @forelse($timeline as $item)
-                            <div class="relative pl-8 pb-6 border-l border-slate-100 dark:border-slate-800 last:pb-0">
-                                <div class="absolute left-[-5.5px] top-0 w-3 h-3 rounded-full bg-white dark:bg-slate-950 border-2 border-wa-teal shadow-[0_0_10px_rgba(37,211,102,0.3)]"></div>
+                            <div class="relative pl-8 pb-6 border-l border-slate-100 dark:border-slate-800 last:pb-0" wire:key="{{ $item['id'] }}">
+                                <div class="absolute left-[-5.5px] top-0 w-3 h-3 rounded-full bg-white dark:bg-slate-950 border-2 border-wa-teal shadow-sm"></div>
                                 <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 shadow-sm">
                                     <div class="flex justify-between items-start mb-1">
                                         <span class="text-[10px] font-black uppercase text-wa-teal tracking-widest">{{ __($item['title']) }}</span>
                                         <span class="text-[9px] font-bold text-slate-400">{{ \Carbon\Carbon::parse($item['occurred_at'])->diffForHumans() }}</span>
                                     </div>
                                     <p class="text-[11px] font-medium text-slate-700 dark:text-slate-300 leading-relaxed">{{ __($item['description']) }}</p>
-                                    @if(isset($item['user']))
-                                        <div class="mt-2 text-[9px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1.5 opacity-60">
-                                            <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                                            {{ $item['user'] }}
-                                        </div>
-                                    @endif
                                 </div>
                             </div>
                         @empty
                             <div class="py-20 text-center opacity-30">
-                                <svg class="w-12 h-12 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p class="text-[10px] font-black uppercase tracking-widest">No timeline activity found</p>
+                                <p class="text-[10px] font-black uppercase tracking-widest">{{ __('No timeline activity found') }}</p>
                             </div>
                         @endforelse
                     </div>
@@ -253,7 +271,7 @@
                     @forelse($mediaVault as $file)
                         <div class="group relative aspect-square rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                             @if(in_array($file['media_type'] ?? 'image', ['image', 'video']))
-                                <img src="{{ $file['media_url'] }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all">
+                                <img src="{{ $file['media_url'] }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all">
                             @else
                                 <div class="w-full h-full flex flex-col items-center justify-center p-4">
                                     <svg class="w-8 h-8 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -268,8 +286,7 @@
                         </div>
                     @empty
                         <div class="col-span-2 py-20 text-center opacity-30">
-                            <svg class="w-12 h-12 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                            <p class="text-[10px] font-black uppercase tracking-widest">No media files found</p>
+                            <p class="text-[10px] font-black uppercase tracking-widest">{{ __('No media files found') }}</p>
                         </div>
                     @endforelse
                 </div>
@@ -277,15 +294,7 @@
         </div>
     @else
         <div class="flex-1 flex flex-col items-center justify-center p-12 text-center">
-            <div
-                class="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-[2.5rem] flex items-center justify-center text-slate-200 dark:text-slate-800 mb-6">
-                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-            </div>
             <h4 class="text-sm font-black text-slate-400 uppercase tracking-widest">{{ __('Select a contact') }}</h4>
-            <p class="mt-2 text-xs font-medium text-slate-500/50 dark:text-slate-600">{{ __('Select a conversation to view the contact\'s detailed unified profile.') }}</p>
         </div>
     @endif
 </div>

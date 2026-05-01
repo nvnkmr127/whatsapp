@@ -31,7 +31,7 @@ class ContactTimelineService
         });
 
         // 2. Notes
-        $contact->notes()->with('user')->get()->each(function ($note) use ($timeline, $excludeSuperAdmin) {
+        $contact->notes()->with('user')->latest()->take(50)->get()->each(function ($note) use ($timeline, $excludeSuperAdmin) {
             if ($excludeSuperAdmin && $note->user?->is_super_admin) {
                 return;
             }
@@ -46,7 +46,7 @@ class ContactTimelineService
         });
 
         // 3. Contact Events
-        $contact->contactEvents()->get()->each(function ($event) use ($timeline) {
+        $contact->contactEvents()->latest()->take(50)->get()->each(function ($event) use ($timeline) {
             $timeline->push([
                 'type' => 'event',
                 'id' => 'event-'.$event->id,
@@ -58,7 +58,7 @@ class ContactTimelineService
         });
 
         // 4. CRM Activities
-        $contact->crmActivities()->with('user')->get()->each(function ($activity) use ($timeline, $excludeSuperAdmin) {
+        $contact->crmActivities()->with('user')->latest()->take(50)->get()->each(function ($activity) use ($timeline, $excludeSuperAdmin) {
             if ($excludeSuperAdmin && $activity->user?->is_super_admin) {
                 return;
             }
@@ -74,7 +74,7 @@ class ContactTimelineService
         });
 
         // 5. Orders
-        $contact->orders()->get()->each(function ($order) use ($timeline) {
+        $contact->orders()->latest()->take(50)->get()->each(function ($order) use ($timeline) {
             $timeline->push([
                 'type' => 'order',
                 'id' => 'order-'.$order->id,
@@ -86,7 +86,7 @@ class ContactTimelineService
         });
 
         // 6. Deals
-        $contact->deals()->get()->each(function ($deal) use ($timeline) {
+        $contact->deals()->latest()->take(50)->get()->each(function ($deal) use ($timeline) {
             $timeline->push([
                 'type' => 'deal',
                 'id' => 'deal-'.$deal->id,
@@ -98,7 +98,7 @@ class ContactTimelineService
         });
 
         // 7. Workflow Logs
-        $contact->workflowLogs()->with('workflow')->get()->each(function ($log) use ($timeline) {
+        $contact->workflowLogs()->with('workflow')->latest()->take(50)->get()->each(function ($log) use ($timeline) {
             $timeline->push([
                 'type' => 'automation',
                 'id' => 'auto-'.$log->id,
@@ -110,7 +110,7 @@ class ContactTimelineService
         });
 
         // 8. Activity Logs
-        $contact->activityLogs()->with('user')->get()->each(function ($log) use ($timeline, $excludeSuperAdmin) {
+        $contact->activityLogs()->with('user')->latest()->take(30)->get()->each(function ($log) use ($timeline, $excludeSuperAdmin) {
             if ($excludeSuperAdmin && $log->user?->is_super_admin) {
                 return;
             }

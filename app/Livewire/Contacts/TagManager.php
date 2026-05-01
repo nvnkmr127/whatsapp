@@ -41,6 +41,8 @@ class TagManager extends Component
             'color' => $this->newTagColor,
         ]);
 
+        \Illuminate\Support\Facades\Cache::forget("team_".Auth::user()->currentTeam->id."_tags");
+
         $this->resetInput();
         session()->flash('message', 'Tag created successfully.');
     }
@@ -49,7 +51,9 @@ class TagManager extends Component
     {
         $tag = ContactTag::where('team_id', Auth::user()->currentTeam->id)->find($id);
         if ($tag) {
+            $tagId = $tag->team_id;
             $tag->delete();
+            \Illuminate\Support\Facades\Cache::forget("team_{$tagId}_tags");
             session()->flash('message', 'Tag deleted successfully.');
         }
     }
