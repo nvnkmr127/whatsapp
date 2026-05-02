@@ -259,6 +259,11 @@ class Team extends JetstreamTeam
         return $this->hasMany(WhatsappTemplate::class);
     }
 
+    public function message_bots()
+    {
+        return $this->hasMany(MessageBot::class);
+    }
+
     /**
      * Get active billing overrides.
      */

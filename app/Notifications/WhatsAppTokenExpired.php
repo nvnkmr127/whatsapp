@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notification;
 
 class WhatsAppTokenExpired extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, \Illuminate\Queue\SerializesModels;
 
     public $team;
 
@@ -21,7 +21,19 @@ class WhatsAppTokenExpired extends Notification implements ShouldQueue
 
     public function via($notifiable)
     {
-        return ['mail', 'database'];
+        return ['mail', 'database', \App\Channels\FcmChannel::class];
+    }
+
+    public function toFcm($notifiable)
+    {
+        return [
+            'title' => '🚨 WhatsApp Token Expired',
+            'body' => 'The WhatsApp Business API token for team "'.$this->team->name.'" has expired. Please reconnect.',
+            'data' => [
+                'type' => 'token_expired',
+                'team_id' => (string) $this->team->id,
+            ],
+        ];
     }
 
     public function toMail($notifiable)

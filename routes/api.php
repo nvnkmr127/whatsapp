@@ -22,6 +22,8 @@ Route::prefix('v1/mobile/auth')->middleware('throttle:api')->group(function () {
         Route::get('/numbers', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'numbers']);
         Route::post('/finalize', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'finalize']);
         Route::post('/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
+        Route::post('/profile', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'updateProfile']);
+        Route::post('/fcm-token', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'registerFcmToken']);
     });
 });
 
@@ -124,6 +126,15 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::apiResource('automations', \App\Http\Controllers\Api\Mobile\AutomationController::class);
         Route::post('automations/{automation}/toggle', [\App\Http\Controllers\Api\Mobile\AutomationController::class, 'toggle']);
 
+        // Message Bots
+        Route::get('/bots', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'index']);
+        Route::post('/bots', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'store']);
+        Route::get('/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'show']);
+        Route::post('/bots/{bot}/duplicate', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'duplicate']);
+        Route::post('/bots/{bot}/toggle', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'toggle']);
+        Route::patch('/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'update']);
+        Route::delete('/bots/{bot}', [\App\Http\Controllers\Api\Mobile\MessageBotController::class, 'destroy']);
+
         // Activity Logs
         Route::get('/activities', [\App\Http\Controllers\Api\Mobile\ActivityController::class, 'index']);
         Route::get('/activities/{activity}', [\App\Http\Controllers\Api\Mobile\ActivityController::class, 'show']);
@@ -143,8 +154,12 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
         // Templates (single canonical set)
         Route::get('/templates', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'index']);
-        Route::get('/templates/{id}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'show']);
-        Route::post('/templates/{id}/send-test', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'sendTest']);
+        Route::post('/templates', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'store']);
+        Route::get('/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'show']);
+        Route::patch('/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'update']);
+        Route::post('/templates/{template}/toggle', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'toggle']);
+        Route::post('/templates/{template}/send-test', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'sendTest']);
+        Route::delete('/templates/{template}', [\App\Http\Controllers\Api\Mobile\TemplateController::class, 'destroy']);
 
         // Media Uploads
         Route::post('/media/upload', [\App\Http\Controllers\Api\Mobile\MediaController::class, 'upload']);

@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notification;
 
 class GoogleDriveTokenRevoked extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, \Illuminate\Queue\SerializesModels;
 
     public $team;
 

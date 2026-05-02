@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 class ConversationAssignedNotification extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, \Illuminate\Queue\SerializesModels;
 
     protected $conversation;
 
@@ -33,7 +33,7 @@ class ConversationAssignedNotification extends Notification implements ShouldQue
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', \App\Channels\FcmChannel::class];
     }
 
     /**
@@ -48,6 +48,22 @@ class ConversationAssignedNotification extends Notification implements ShouldQue
             'contact_name' => $this->conversation->contact->name ?? $this->conversation->contact->phone_number,
             'message' => "You have been assigned a new conversation from {$this->assignedBy->name}.",
             'type' => 'conversation_assigned',
+        ];
+    }
+
+    /**
+     * Get the FCM push representation of the notification.
+     */
+    public function toFcm(object $notifiable): array
+    {
+        return [
+            'title' => 'New Conversation Assigned',
+            'body' => "{$this->assignedBy->name} assigned a conversation with " . ($this->conversation->contact->name ?? $this->conversation->contact->phone_number),
+            'data' => [
+                'type' => 'conversation_assigned',
+                'conversation_id' => (string) $this->conversation->id,
+                'team_id' => (string) $this->conversation->team_id,
+            ],
         ];
     }
 

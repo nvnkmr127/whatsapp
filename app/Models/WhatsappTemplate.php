@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WhatsappTemplate extends Model
 {
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
 
     protected $guarded = [];
@@ -17,10 +18,12 @@ class WhatsappTemplate extends Model
         'readiness_score' => 'integer',
         'is_paused' => 'boolean',
         'is_paused_by_meta' => 'boolean',
+        'is_mobile_draft' => 'boolean',
         'variable_config' => 'array',
         'total_sent' => 'integer',
         'total_read' => 'integer',
         'last_synced_at' => 'datetime',
+        'last_status_sync_at' => 'datetime',
     ];
 
     public function team()
@@ -80,5 +83,21 @@ class WhatsappTemplate extends Model
         return $query->where('status', 'APPROVED')
             ->where('is_paused', false)
             ->where('readiness_score', '>=', 70);
+    }
+
+    /**
+     * Scope a query to only include mobile drafts.
+     */
+    public function scopeDrafts($query)
+    {
+        return $query->where('is_mobile_draft', true);
+    }
+
+    /**
+     * Scope a query to only include live (non-draft) templates.
+     */
+    public function scopeLive($query)
+    {
+        return $query->where('is_mobile_draft', false);
     }
 }

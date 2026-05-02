@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\Mobile;
 use App\Http\Controllers\Controller;
 use App\Models\Automation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class AutomationController extends Controller
 {
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Automation::class);
+
         $automations = $request->user()->currentTeam->automations()
             ->withCount(['runs', 'steps'])
             ->get();
@@ -19,6 +22,8 @@ class AutomationController extends Controller
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Automation::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'trigger_type' => 'required|string',

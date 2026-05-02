@@ -29,7 +29,28 @@ class WhatsAppHealthNotification extends Notification
 
     public function via($notifiable): array
     {
-        return ['mail', 'database'];
+        return ['mail', 'database', \App\Channels\FcmChannel::class];
+    }
+
+    public function toFcm($notifiable): array
+    {
+        $title = match ($this->alertType) {
+            'quality_red' => '🚨 CRITICAL: WhatsApp Restricted',
+            'quality_yellow' => '⚠️ WARNING: WhatsApp Quality Drop',
+            'token_expiry' => '🔑 ACTION REQUIRED: Token Expiring',
+            'webhook_pulse' => '📉 ISSUE: WhatsApp Webhooks',
+            default => '🔔 WhatsApp System Alert'
+        };
+
+        return [
+            'title' => $title,
+            'body' => $this->message,
+            'data' => [
+                'type' => 'health_alert',
+                'alert_type' => $this->alertType,
+                'team_id' => (string) $this->team->id,
+            ],
+        ];
     }
 
     public function toMail($notifiable): MailMessage

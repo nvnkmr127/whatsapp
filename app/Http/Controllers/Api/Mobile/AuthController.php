@@ -273,4 +273,55 @@ class AuthController extends Controller
             'members' => $members,
         ]);
     }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->membership?->role ?? 'admin',
+            ]
+        ]);
+    }
+
+    public function registerFcmToken(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'platform' => 'sometimes|string|in:android,ios,web',
+        ]);
+
+        Log::info('FCM Token Registration Attempt', [
+            'user_id' => $request->user()->id,
+            'token' => substr($request->token, 0, 10) . '...',
+            'platform' => $request->platform,
+        ]);
+
+        $request->user()->fcmTokens()->updateOrCreate(
+            ['token' => $request->token],
+            [
+                'platform' => $request->platform ?? 'unknown',
+                'last_used_at' => now(),
+                'metadata' => [
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->header('User-Agent'),
+                ]
+            ]
+        );
+
+        return response()->json(['success' => true]);
+    }
 }

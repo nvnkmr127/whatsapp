@@ -37,7 +37,7 @@ class FcmService
             ->withAndroidConfig([
                 'priority' => 'high',
                 'notification' => [
-                    'channel_id' => 'high_importance_channel',
+                    'channel_id' => 'high_importance_channel_v2',
                     'sound' => 'default',
                     'priority' => 'high',
                     'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
