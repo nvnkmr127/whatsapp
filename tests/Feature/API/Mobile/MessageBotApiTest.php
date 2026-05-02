@@ -70,6 +70,20 @@ class MessageBotApiTest extends TestCase
             ->assertJsonPath('name', 'Original (Copy)');
     }
 
+    public function test_admin_can_delete_bot()
+    {
+        $bot = MessageBot::factory()->create(['team_id' => $this->team->id]);
+
+        $response = $this->deleteJson("/api/v1/mobile/bots/{$bot->id}", [], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Bot deleted');
+
+        $this->assertDatabaseMissing('message_bots', ['id' => $bot->id]);
+    }
+
     public function test_non_admin_cannot_create_bot()
     {
         $this->user->teams()->updateExistingPivot($this->team->id, ['role' => 'agent']);

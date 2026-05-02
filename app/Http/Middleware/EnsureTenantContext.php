@@ -17,6 +17,12 @@ class EnsureTenantContext
     {
         $user = $request->user();
 
+        \Illuminate\Support\Facades\Log::info('[DEBUG] [API] EnsureTenantContext checking', [
+            'user' => $user?->email,
+            'tenant_header' => $request->header('X-Tenant-ID'),
+            'path' => $request->path(),
+        ]);
+
         if (! $user) {
             return $next($request);
         }

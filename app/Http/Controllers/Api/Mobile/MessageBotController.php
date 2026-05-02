@@ -16,6 +16,13 @@ class MessageBotController extends Controller
      */
     public function index(Request $request)
     {
+        \Illuminate\Support\Facades\Log::info('[DEBUG] [API] MessageBotController@index reached', [
+            'user_id' => $request->user()?->id,
+            'team_id' => $request->user()?->current_team_id,
+            'tenant_header' => $request->header('X-Tenant-ID'),
+            'params' => $request->all(),
+        ]);
+
         Gate::authorize('viewAny', MessageBot::class);
 
         $bots = $request->user()->currentTeam->message_bots()
@@ -30,6 +37,10 @@ class MessageBotController extends Controller
      */
     public function store(StoreMessageBotRequest $request)
     {
+        \Illuminate\Support\Facades\Log::info('[DEBUG] [API] MessageBotController@store reached', [
+            'payload' => $request->all(),
+        ]);
+
         Gate::authorize('create', MessageBot::class);
 
         $bot = $request->user()->currentTeam->message_bots()->create(array_merge($request->validated(), [
