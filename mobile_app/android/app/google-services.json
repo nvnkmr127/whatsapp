@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "418746392451",
+    "firebase_url": "https://c2d-concept2designs.firebaseio.com",
+    "project_id": "c2d-concept2designs",
+    "storage_bucket": "c2d-concept2designs.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418746392451:android:2ba9e02ba94d3781bb60b6",
+        "android_client_info": {
+          "package_name": "com.example.whatsapp_pro_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2CVfemcmj4ACgKIZer_ERb8LumbxmvnM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418746392451:android:e4b008ce2d9b8272bb60b6",
+        "android_client_info": {
+          "package_name": "com.watxio.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2CVfemcmj4ACgKIZer_ERb8LumbxmvnM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

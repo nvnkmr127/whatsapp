@@ -95,7 +95,3 @@ composer.lock
 # New Technology Stack (Parallel Migration)
 v2/
 
-# Mobile Application Development
-MobileAppBuildPlan.md
-/mobile/
-/mobile_app/
