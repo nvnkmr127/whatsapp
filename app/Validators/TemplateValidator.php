@@ -257,16 +257,15 @@ class TemplateValidator
     protected function validateVariablesSequential(string $text): bool
     {
         if (preg_match_all('/\{\{(\d+)\}\}/', $text, $matches)) {
-            $indices = array_map('intval', $matches[1]);
+            $indices = array_unique(array_map('intval', $matches[1]));
+            sort($indices);
 
-            // Meta requires variables to be named sequentially {{1}}, {{2}}...
-            // They can be reused, but a new variable cannot skip a number.
-            $maxSeen = 0;
-            foreach ($indices as $value) {
-                if ($value > $maxSeen + 1) {
-                    return false; // Skipped a number or out of order
+            // Meta requires variables to be named sequentially starting from {{1}}
+            // They can appear in any order in the text as long as the set is contiguous.
+            for ($i = 0; $i < count($indices); $i++) {
+                if ($indices[$i] !== $i + 1) {
+                    return false; // Gap found or doesn't start at 1
                 }
-                $maxSeen = max($maxSeen, $value);
             }
         }
 

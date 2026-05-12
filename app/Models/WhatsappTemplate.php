@@ -49,6 +49,11 @@ class WhatsappTemplate extends Model
         if (is_string($value)) {
             $decoded = json_decode($value, true);
 
+            // Handle potential double encoding
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true);
+            }
+
             return is_array($decoded) ? $decoded : [];
         }
 
