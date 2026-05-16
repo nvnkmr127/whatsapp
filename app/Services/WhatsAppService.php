@@ -756,6 +756,17 @@ class WhatsAppService
 
         // Rule 1: Messaging Lock
 
+        // --- PARAMETER DISTRIBUTION ---
+        // If only bodyParams is provided (common for webhooks/automated triggers),
+        // we check if the template has multiple components and distribute them sequentially.
+        if (! empty($bodyParams) && empty($headerParams) && empty($footerParams)) {
+            $distributed = $this->distributeParameters($tpl, $bodyParams);
+            
+            $headerParams = $distributed['header'];
+            $bodyParams = $distributed['body'];
+            $footerParams = $distributed['footer'];
+        }
+
         $components = [];
 
         // Handle Header
@@ -2183,5 +2194,42 @@ class WhatsAppService
         ];
 
         return $this->updateBusinessProfile($payload);
+    }
+    /**
+     * Distribute flat parameters into Header, Body, Footer based on template structure.
+     */
+    protected function distributeParameters($template, array $flatParams): array
+    {
+        $result = ['header' => [], 'body' => [], 'footer' => []];
+        $currentIndex = 0;
+        $components = $template->components ?? [];
+
+        foreach (['HEADER', 'BODY', 'FOOTER'] as $type) {
+            $component = collect($components)->firstWhere('type', $type);
+            if (! $component) {
+                continue;
+            }
+
+            $count = 0;
+            // Text placeholders
+            if (isset($component['text'])) {
+                if (preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches)) {
+                    $count += count($matches[0]);
+                }
+            }
+            // Media placeholders (IMAGE, VIDEO, DOCUMENT)
+            if ($type === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+                $count++;
+            }
+
+            for ($i = 0; $i < $count; $i++) {
+                if (isset($flatParams[$currentIndex])) {
+                    $result[strtolower($type)][] = $flatParams[$currentIndex];
+                }
+                $currentIndex++;
+            }
+        }
+
+        return $result;
     }
 }

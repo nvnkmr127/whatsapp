@@ -501,7 +501,7 @@ class WebhookSourceManager extends Component
         $actionConfig = $this->buildActionConfig();
 
         // Build field mappings (nested by event type as required by the processing engine)
-        $fieldMappings = [];
+        $fieldMappings = $source->field_mappings ?: [];
         $eventType = $this->selectedEventType ?: 'custom';
         $currentEventMappings = [];
 
@@ -512,9 +512,10 @@ class WebhookSourceManager extends Component
             }
         }
 
-        // 2. Add phone number mapping (from flattened UI state)
-        if (isset($this->field_mappings['phone_number']) && $this->field_mappings['phone_number']) {
-            $currentEventMappings['phone_number'] = $this->field_mappings['phone_number'];
+        // 2. Add phone number mapping (from flattened UI state or nested structure)
+        $phoneNumberMapping = $this->field_mappings['phone_number'] ?? ($this->field_mappings[$eventType]['phone_number'] ?? null);
+        if ($phoneNumberMapping) {
+            $currentEventMappings['phone_number'] = $phoneNumberMapping;
         }
 
         // 3. Nest under event type if we have any mappings
@@ -527,7 +528,7 @@ class WebhookSourceManager extends Component
             'platform' => $this->platform,
             'auth_method' => $this->auth_method,
             'auth_config' => $this->auth_config,
-            'field_mappings' => $fieldMappings ?: $this->field_mappings,
+            'field_mappings' => $fieldMappings,
             'transformation_rules' => $this->transformation_rules,
             'action_config' => $actionConfig,
             'is_active' => $this->is_active,
@@ -677,6 +678,13 @@ class WebhookSourceManager extends Component
                 $config['otp_param_index'] = $this->otpParamIndex;
                 $config['otp_length'] = $this->otpLength;
             }
+        }
+
+        if ($this->actionType === 'send_media') {
+            $config['media_type'] = $this->action_config['media_type'] ?? 'document';
+            $config['media_url_field'] = $this->action_config['media_url_field'] ?? 'media_url';
+            $config['phone_field'] = $this->action_config['phone_field'] ?? 'phone_number';
+            $config['caption_field'] = $this->action_config['caption_field'] ?? null;
         }
 
         return $config;

@@ -40,6 +40,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
             match ($actionType) {
                 'send_template' => $this->sendTemplate(),
                 'send_otp' => $this->sendOtp(),
+                'send_media' => $this->sendMedia(),
                 'upsert_contact' => $this->upsertContact(),
                 'start_automation' => $this->startAutomation(),
                 'forward_webhook' => $this->forwardWebhook(),
@@ -118,6 +119,39 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
     }
 
+    /**
+     * Send a media message (PDF, Image, etc.)
+     */
+    protected function sendMedia(): void
+    {
+        $whatsappService = app(WhatsAppService::class)->setTeam($this->payload->source->team);
+        
+        $mediaType = $this->actionConfig['media_type'] ?? 'document';
+        $urlField = $this->actionConfig['media_url_field'] ?? 'media_url';
+        $phoneField = $this->actionConfig['phone_field'] ?? 'phone_number';
+        $captionField = $this->actionConfig['caption_field'] ?? null;
+        
+        $to = $this->payload->mapped_data[$phoneField] ?? null;
+        $url = $this->payload->mapped_data[$urlField] ?? null;
+        $caption = $captionField ? ($this->payload->mapped_data[$captionField] ?? null) : null;
+
+        if (!$to || !$url) {
+            throw new \Exception("Missing required fields for send_media (Phone: {$to}, URL: {$url})");
+        }
+
+        $response = $whatsappService->sendMedia($to, $mediaType, $url, $caption);
+
+        if (!($response['success'] ?? false)) {
+            throw new \Exception('Failed to send media via WhatsApp: '.json_encode($response['error'] ?? 'Unknown error'));
+        }
+
+        Log::info('Webhook triggered media send', [
+            'to' => $to,
+            'type' => $mediaType,
+            'url' => $url
+        ]);
+    }
+
     protected function sendTemplate(): void
     {
         $templateId = $this->actionConfig['template_id'] ?? null;
@@ -157,56 +191,8 @@ class ProcessMappedWebhookJob implements ShouldQueue
             throw new \Exception("Invalid phone number format for WhatsApp: {$phoneNumber}. Error: ".$e->getMessage());
         }
 
-        // Build template parameters
-        $parameters = [];
-        // Map configured parameters from action config to mapped keys in payload
-        if (! empty($parameterMapping) && is_array($parameterMapping)) {
-            foreach ($parameterMapping as $position => $mappedKey) {
-                // Handle case where mappedKey might be an array (malformed config)
-                if (is_array($mappedKey)) {
-                    Log::warning('Parameter mapping contains array value', [
-                        'payload_id' => $this->payload->id,
-                        'position' => $position,
-                        'mappedKey' => $mappedKey,
-                    ]);
-                    // Try to extract the actual key if it's a nested structure
-                    $mappedKey = is_string($mappedKey[0] ?? null) ? $mappedKey[0] : json_encode($mappedKey);
-                }
-
-                $rawVal = $this->resolveValue($mappedKey, (int) $position);
-
-                if ($rawVal === null && str_contains($mappedKey, '.')) {
-                    Log::warning("Value not found in raw payload for path: {$mappedKey}", [
-                        'payload_id' => $this->payload->id,
-                        'path' => $mappedKey,
-                        'available_mapped_keys' => array_keys($this->payload->mapped_data ?? []),
-                    ]);
-                }
-
-                // Handle array values (e.g. from JSON fields)
-                if (is_array($rawVal)) {
-                    $val = json_encode($rawVal);
-                } else {
-                    $val = (string) ($rawVal ?? '');
-                }
-
-                if ($val === '') {
-                    $mappedDataKeys = is_array($this->payload->mapped_data)
-                        ? array_keys($this->payload->mapped_data)
-                        : ['mapped_data is not an array'];
-
-                    Log::warning('Empty value for parameter mapping', [
-                        'payload_id' => $this->payload->id,
-                        'position' => $position,
-                        'mappedKey' => $mappedKey,
-                        'mapped_data_keys' => $mappedDataKeys,
-                        'parameter_mapping' => $parameterMapping,
-                    ]);
-                }
-
-                $parameters[] = $val;
-            }
-        }
+        // Build template parameters (sequentially, filling gaps to prevent #131008)
+        $parameters = $this->hydrateParameters($parameterMapping);
 
         // Send WhatsApp template
         $whatsappService = new WhatsAppService($template->team);
@@ -295,16 +281,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $otp = (string) rand(pow(10, $otpLength - 1), pow(10, $otpLength) - 1);
 
         // Build template parameters
-        $parameters = [];
-        foreach ($parameterMapping as $position => $mappedKey) {
-            $rawVal = $this->resolveValue($mappedKey, (int) $position);
-            if (is_array($rawVal)) {
-                $val = json_encode($rawVal);
-            } else {
-                $val = (string) ($rawVal ?? '');
-            }
-            $parameters[$position] = $val;
-        }
+        $parameters = $this->hydrateParameters($parameterMapping);
 
         // Use OTPService for secure storage and sending
         $otpService = new \App\Services\OTPService;
@@ -410,16 +387,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         // Build automation variables
-        $automationVariables = [];
-        foreach ($variables as $varName => $field) {
-            $rawVal = $this->resolveValue($field);
-            if (is_array($rawVal)) {
-                $val = json_encode($rawVal);
-            } else {
-                $val = (string) ($rawVal ?? '');
-            }
-            $automationVariables[$varName] = $val;
-        }
+        $automationVariables = $this->hydrateParameters($variables);
 
         $automation = \App\Models\Automation::find($automationId);
         if (! $automation || $automation instanceof \Illuminate\Database\Eloquent\Collection) {
@@ -536,11 +504,59 @@ class ProcessMappedWebhookJob implements ShouldQueue
     }
 
     /**
+     * Hydrate parameters sequentially from mapping, filling gaps with empty strings.
+     * This ensures the order matches {{1}}, {{2}}, {{3}}... for Meta API.
+     */
+    protected function hydrateParameters(array $mapping): array
+    {
+        if (empty($mapping)) {
+            return [];
+        }
+
+        $parameters = [];
+        $keys = array_keys($mapping);
+        
+        // Find max index. If keys are non-numeric, use the keys directly.
+        $isNumeric = collect($keys)->every(fn($k) => is_numeric($k));
+        
+        if ($isNumeric) {
+            $maxIndex = !empty($keys) ? max($keys) : 0;
+            for ($i = 1; $i <= $maxIndex; $i++) {
+                $mappedKey = $mapping[$i] ?? $mapping[(string)$i] ?? null;
+                $val = '';
+
+                if ($mappedKey) {
+                    $rawVal = $this->resolveValue(is_array($mappedKey) ? ($mappedKey[0] ?? json_encode($mappedKey)) : $mappedKey, $i);
+                    $val = is_array($rawVal) ? json_encode($rawVal) : (string) ($rawVal ?? '');
+
+                    if ($val === '') {
+                        Log::warning('Empty parameter value during webhook processing', [
+                            'payload_id' => $this->payload->id,
+                            'position' => $i,
+                            'mappedKey' => $mappedKey,
+                        ]);
+                    }
+                }
+                
+                $parameters[] = $val;
+            }
+        } else {
+            // For automation variables or named mappings
+            foreach ($mapping as $key => $path) {
+                $rawVal = $this->resolveValue($path);
+                $parameters[$key] = is_array($rawVal) ? json_encode($rawVal) : (string) ($rawVal ?? '');
+            }
+        }
+
+        return $parameters;
+    }
+
+    /**
      * Resolve a value from the payload or mapped data.
      */
     protected function resolveValue(string $mappedKey, ?int $position = null): mixed
     {
-        // 1. Check if this is explicitly mapped to a param position
+        // 1. Check if this is explicitly mapped to a param position in mapped_data
         if ($position !== null) {
             $paramKey = "param_{$position}";
             if (isset($this->payload->mapped_data[$paramKey])) {

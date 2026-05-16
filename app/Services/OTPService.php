@@ -222,7 +222,7 @@ class OTPService
         }
     }
 
-    public function sendWhatsApp(string $phone, string $code, ?int $teamId = null): bool
+    public function sendWhatsApp(string $phone, string $code, ?int $teamId = null, array $parameters = [], int $otpPosition = 0): bool
     {
         try {
             $team = $this->findSendingTeam($teamId);
@@ -262,7 +262,12 @@ class OTPService
                 'token_fingerprint' => $this->tokenFingerprint($team->whatsapp_access_token),
             ]);
 
-            return $this->sendCustomWhatsAppOtp($phone, $code, $tpl->name, $tpl->language, [$code], $team);
+            // If no parameters provided, just use the code
+            if (empty($parameters)) {
+                $parameters = [$code];
+            }
+
+            return $this->sendCustomWhatsAppOtp($phone, $code, $tpl->name, $tpl->language, $parameters, $team, $otpPosition);
         } catch (\Exception $e) {
             Log::error("Failed to send WhatsApp OTP to {$phone}: ".$e->getMessage());
 
