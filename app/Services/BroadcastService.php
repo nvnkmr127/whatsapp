@@ -69,16 +69,19 @@ class BroadcastService
         // Removed globally restrictive Commerce Readiness Check for UTILITY/TRANSACTIONAL templates
         // as these are frequently used for non-commerce alerts (student fees, appointments, etc.)
 
-        // 1. Create Snapshot (Immutable state for this run)
-        $snapshot = $this->snapshotService->createSnapshot($campaign);
+        // 1. Create Snapshot + transition status atomically
+        $snapshot = \Illuminate\Support\Facades\DB::transaction(function () use ($campaign) {
+            $snap = $this->snapshotService->createSnapshot($campaign);
 
-        // 2. Update Campaign Status
-        $campaign->update([
-            'status' => 'processing',
-            'started_at' => now(),
-        ]);
+            $campaign->update([
+                'status' => 'processing',
+                'started_at' => now(),
+            ]);
 
-        // 3. Dispatch Event Production (Async)
+            return $snap;
+        });
+
+        // 3. Dispatch Event Production (after commit so snapshot is visible to workers)
         ProduceBroadcastEventsJob::dispatch($snapshot->id);
 
         Log::info("Campaign {$campaign->id} transitioned to event production phase.");

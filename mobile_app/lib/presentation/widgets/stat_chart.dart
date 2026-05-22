@@ -34,7 +34,7 @@ class SimpleBarChart extends StatelessWidget {
                 children: [
                   Container(
                     width: 30,
-                    height: 150 * percentage,
+                    height: 120 * percentage,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.8),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),

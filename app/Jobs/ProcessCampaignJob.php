@@ -12,6 +12,12 @@ class ProcessCampaignJob implements ShouldQueue
 {
     use Queueable;
 
+    public $tries = 3;
+
+    public $backoff = [30, 120, 300];
+
+    public $timeout = 300;
+
     protected $campaignId;
 
     public function __construct($campaignId)

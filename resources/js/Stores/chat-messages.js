@@ -131,14 +131,19 @@ export default {
         window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
 
         // Play sound if it's an inbound message or if it's from another agent
-        if (msg.direction === 'inbound' || (msg.is_outbound && msg.agent_id != this.myUserId)) {
+        if (msg.direction === 'inbound' || (msg.is_outbound && msg.agent_id !== this.myUserId)) {
             this.playNotificationSound();
         }
     },
 
+    _audioPlaying: false,
     playNotificationSound() {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-        audio.play().catch(e => console.log('Sound play blocked by browser', e));
+        if (this._audioPlaying) return;
+        this._audioPlaying = true;
+        const audio = new Audio('/sounds/notification.mp3');
+        audio.onended = () => { this._audioPlaying = false; };
+        audio.onerror = () => { this._audioPlaying = false; };
+        audio.play().catch(() => { this._audioPlaying = false; });
     },
 
     getDateLabel(timestamp) {
@@ -191,7 +196,12 @@ export default {
             });
 
             if (addedCount > 0) {
-                this.messages.sort((a, b) => a.created_at - b.created_at);
+                // Sort chronologically; handle mixed number/string timestamps
+                this.messages.sort((a, b) => {
+                    const ta = typeof a.created_at === 'number' ? a.created_at : Date.parse(a.created_at) / 1000;
+                    const tb = typeof b.created_at === 'number' ? b.created_at : Date.parse(b.created_at) / 1000;
+                    return ta - tb;
+                });
                 window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
             }
         } catch (e) {

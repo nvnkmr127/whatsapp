@@ -107,7 +107,7 @@ class _BotListScreenState extends State<BotListScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF0F2F5),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Message Bots', style: TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: const Color(0xFF128C7E),
@@ -132,7 +132,9 @@ class _BotListScreenState extends State<BotListScreen> {
                   hintText: 'Search bots...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -263,6 +265,7 @@ class _BotListScreenState extends State<BotListScreen> {
                       ),
               ),
         floatingActionButton: FloatingActionButton(
+          heroTag: 'bot_list_fab',
           backgroundColor: const Color(0xFF128C7E),
           child: const Icon(Icons.add, color: Colors.white),
           onPressed: () => _showCreateOptions(),

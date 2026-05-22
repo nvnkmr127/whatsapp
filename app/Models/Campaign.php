@@ -8,7 +8,16 @@ class Campaign extends Model
 {
     use \App\Traits\HasTeam;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'team_id', 'name', 'campaign_name', 'status',
+        'template_id', 'template_name', 'template_language',
+        'template_variables', 'header_params', 'body_params', 'footer_params',
+        'audience_filters', 'total_contacts', 'sent_count', 'del_count', 'read_count',
+        'scheduled_at', 'started_at', 'completed_at',
+        'retry_config', 'is_ab_test', 'split_ratio', 'send_rate', 'steps',
+        'error_message', 'last_snapshot_id', 'snapshot_id',
+        'variant', 'drip_tracking',
+    ];
 
     protected $casts = [
         'template_variables' => 'array',

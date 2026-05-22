@@ -142,11 +142,11 @@ class _TemplateListScreenState extends State<TemplateListScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF0F2F5),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('WhatsApp Templates', style: TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF128C7E),
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? const Color(0xFF128C7E),
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(110),
             child: Column(
@@ -160,7 +160,9 @@ class _TemplateListScreenState extends State<TemplateListScreen> {
                       hintText: 'Search templates...',
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.15)
+                          : Colors.white,
                       contentPadding: EdgeInsets.zero,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -238,6 +240,7 @@ class _TemplateListScreenState extends State<TemplateListScreen> {
               ),
         floatingActionButton: isAdmin
             ? FloatingActionButton(
+                heroTag: 'template_list_fab',
                 backgroundColor: const Color(0xFF128C7E),
                 onPressed: () async {
                   final result = await Navigator.push(
@@ -270,27 +273,36 @@ class _TemplateListScreenState extends State<TemplateListScreen> {
               template['content'] ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white60
+                    : Colors.black54,
+              ),
             ),
           ],
         ),
         trailing: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildStatusBadge(template['status']),
             if (isAdmin) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               SizedBox(
-                height: 24,
-                child: Switch(
-                  value: !(template['is_paused'] ?? false),
-                  onChanged: (val) => _toggleTemplate(template['id']),
-                  activeColor: const Color(0xFF128C7E),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                height: 20,
+                child: Transform.scale(
+                  scale: 0.75,
+                  child: Switch(
+                    value: !(template['is_paused'] ?? false),
+                    onChanged: (val) => _toggleTemplate(template['id']),
+                    activeColor: const Color(0xFF128C7E),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
               ),
             ] else ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(template['language'] ?? 'en', style: const TextStyle(fontSize: 10, color: Colors.grey)),
             ],
           ],
@@ -363,9 +375,13 @@ class _TemplateListScreenState extends State<TemplateListScreen> {
           _fetchTemplates(isRefresh: true);
         },
         selectedColor: Colors.white,
-        checkmarkColor: const Color(0xFF128C7E),
-        backgroundColor: Colors.white.withValues(alpha: 0.2),
-        labelStyle: TextStyle(color: isSelected ? const Color(0xFF128C7E) : Colors.white, fontSize: 12),
+        checkmarkColor: Theme.of(context).primaryColor,
+        backgroundColor: Colors.white.withValues(alpha: 0.15),
+        labelStyle: TextStyle(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.white,
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide.none),
       ),
     );

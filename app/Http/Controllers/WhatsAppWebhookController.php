@@ -53,10 +53,11 @@ class WhatsAppWebhookController extends Controller
             return response('Invalid Signature', 403);
         }
 
-        // Store Raw Payload
+        // Store Raw Payload (mask sensitive fields before persisting)
         try {
+            $maskedData = $this->maskSensitiveData($data);
             $payloadRecord = \App\Models\WebhookPayload::create([
-                'payload' => $data,
+                'payload' => $maskedData,
                 'signature' => $signature,
                 'status' => 'pending',
                 'waba_id' => $data['entry'][0]['id'] ?? null,

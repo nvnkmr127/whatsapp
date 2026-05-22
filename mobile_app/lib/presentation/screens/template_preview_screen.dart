@@ -48,11 +48,11 @@ class _TemplatePreviewScreenState extends State<TemplatePreviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(widget.templateName),
-        backgroundColor: const Color(0xFF128C7E),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? const Color(0xFF128C7E),
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
         actions: [
           if (_template?['status'] == 'DRAFT') ...[
             IconButton(
@@ -136,7 +136,7 @@ class _TemplatePreviewScreenState extends State<TemplatePreviewScreen> {
             width: double.infinity,
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[850] : Colors.grey[200],
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -180,6 +180,7 @@ class _TemplatePreviewScreenState extends State<TemplatePreviewScreen> {
   Widget _buildButton(Map<String, dynamic> button) {
     final type = button['type']?.toString().toUpperCase();
     final text = button['text']?.toString() ?? 'Button';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
@@ -187,16 +188,26 @@ class _TemplatePreviewScreenState extends State<TemplatePreviewScreen> {
       child: OutlinedButton(
         onPressed: () {},
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFFE9EDEF)),
+          side: BorderSide(color: isDark ? Colors.white.withOpacity(0.15) : const Color(0xFFE9EDEF)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(_getButtonIcon(type), size: 18, color: const Color(0xFF008069)),
+            Icon(
+              _getButtonIcon(type),
+              size: 18,
+              color: isDark ? Theme.of(context).colorScheme.secondary : const Color(0xFF008069),
+            ),
             const SizedBox(width: 8),
-            Text(text, style: const TextStyle(color: Color(0xFF008069), fontWeight: FontWeight.bold)),
+            Text(
+              text,
+              style: TextStyle(
+                color: isDark ? Theme.of(context).colorScheme.secondary : const Color(0xFF008069),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),

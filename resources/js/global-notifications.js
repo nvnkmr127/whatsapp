@@ -1,8 +1,23 @@
+let _notificationAudioPlaying = false;
+
+function playNotificationSound() {
+    if (_notificationAudioPlaying) return;
+    _notificationAudioPlaying = true;
+    const audio = new Audio('/sounds/notification.mp3');
+    audio.onended = () => { _notificationAudioPlaying = false; };
+    audio.onerror = () => { _notificationAudioPlaying = false; };
+    audio.play().catch(() => { _notificationAudioPlaying = false; });
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+}
+
 window.addEventListener('echo-ready', () => {
     if (!window.user || !window.user.team_id) return;
 
-    console.log('Global Notifications: Listening on teams.' + window.user.team_id);
-    
     window.Echo.private('teams.' + window.user.team_id)
         .listen('.MessageReceived', (e) => {
             handleIncomingMessage(e, 'received');
@@ -16,31 +31,29 @@ function handleIncomingMessage(e, type) {
     const msg = e.message;
     if (!msg) return;
 
-    // Don't show toast if it's our own sent message
-    if (msg.direction === 'outbound' && msg.agent_id == window.user.id) return;
+    // Don't show toast for our own sent messages (strict equality)
+    if (msg.direction === 'outbound' && msg.agent_id === window.user?.id) return;
 
-    // Check if we are currently looking at this conversation
-    // We can check the Alpine store if it exists
+    // Skip if we are currently viewing this conversation
     if (window.Alpine && window.Alpine.store('chat')) {
         const chatStore = window.Alpine.store('chat');
         if (chatStore.conversationId == msg.conversation_id) {
-            // Already in this chat, don't show toast (the chat window handles it)
             return;
         }
     }
 
-    // Play sound
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-    audio.play().catch(() => {});
+    playNotificationSound();
 
-    // Show Toast
-    const title = type === 'received' ? 'New Message' : 'Agent Response';
-    const content = msg.content ? (msg.content.length > 50 ? msg.content.substring(0, 50) + '...' : msg.content) : 'Media message';
-    
-    window.dispatchEvent(new CustomEvent('notify', { 
-        detail: { 
-            message: `${title}: ${content}`, 
-            type: 'info' 
-        } 
+    // HTML-escape user content before use in notifications
+    const title = escapeHtml(type === 'received' ? 'New Message' : 'Agent Response');
+    const rawContent = msg.content ? String(msg.content) : 'Media message';
+    const truncated = rawContent.length > 50 ? rawContent.substring(0, 50) + '...' : rawContent;
+    const content = escapeHtml(truncated);
+
+    window.dispatchEvent(new CustomEvent('notify', {
+        detail: {
+            message: `${title}: ${content}`,
+            type: 'info'
+        }
     }));
 }

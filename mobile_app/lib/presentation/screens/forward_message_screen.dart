@@ -114,6 +114,7 @@ class _ForwardMessageScreenState extends State<ForwardMessageScreen> {
       ),
       floatingActionButton: _selectedContactIds.isNotEmpty
         ? FloatingActionButton(
+            heroTag: 'forward_message_fab',
             onPressed: _forward,
             backgroundColor: const Color(0xFF25D366),
             child: const Icon(Icons.send, color: Colors.white),

@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'marketing_url' => env('MARKETING_URL', 'https://watxio.com/'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

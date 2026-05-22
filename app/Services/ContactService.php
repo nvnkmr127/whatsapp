@@ -184,9 +184,10 @@ class ContactService
                     'updated_at' => $now,
                 ];
             }
-            ContactTag::insert($newTagsData);
+            // insertOrIgnore prevents duplicate-key errors from concurrent requests
+            ContactTag::insertOrIgnore($newTagsData);
 
-            // Fetch the newly created IDs
+            // Fetch the IDs (whether just created or already existing from a concurrent insert)
             $newTags = ContactTag::where('team_id', $teamId)
                 ->whereIn('name', $missingNames)
                 ->pluck('id')

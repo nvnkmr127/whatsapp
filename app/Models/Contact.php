@@ -20,7 +20,15 @@ class Contact extends Model
         });
     }
 
-    protected $guarded = [];
+    protected $fillable = [
+        'team_id', 'name', 'phone_number', 'email', 'custom_attributes', 'crm_source_id',
+        'opt_in_status', 'opt_in_at', 'opt_in_expires_at',
+        'last_interaction_at', 'last_customer_message_at', 'last_seen_at',
+        'is_bot_paused', 'bot_paused_at', 'bot_paused_until', 'has_pending_reply',
+        'assigned_to', 'category_id', 'version',
+        'avatar_url', 'company', 'notes_count',
+        'bot_paused_reason', 'last_seen_agent_id',
+    ];
 
     protected $attributes = [
         'opt_in_status' => 'opted_in',

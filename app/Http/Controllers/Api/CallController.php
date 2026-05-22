@@ -234,9 +234,10 @@ class CallController extends Controller
             $query->whereDate('created_at', '<=', $request->to_date);
         }
 
-        // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
+        // Sorting — whitelist allowed columns to prevent SQL injection
+        $allowedSortColumns = ['created_at', 'duration_seconds', 'status', 'direction', 'answered_at', 'ended_at'];
+        $sortBy = in_array($request->get('sort_by'), $allowedSortColumns) ? $request->get('sort_by') : 'created_at';
+        $sortOrder = $request->get('sort_order', 'desc') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sortBy, $sortOrder);
 
         // Pagination

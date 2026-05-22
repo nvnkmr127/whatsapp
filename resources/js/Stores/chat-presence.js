@@ -17,7 +17,8 @@ export default {
         this.typingUsers = [];
         this.isTyping = false;
         this.isCustomerTyping = false;
-        
+        this._typingTimers = {};
+
         setTimeout(() => {
             this.initEcho();
         }, 100);
@@ -38,7 +39,8 @@ export default {
         }
 
         if (this._currentChannelName) {
-            window.Echo.leave(this._currentChannelName);
+            try { window.Echo.leave(this._currentChannelName); } catch (e) { /* already left */ }
+            this._pChannel = null;
         }
 
         const channelName = 'conversation.' + this.conversationId;
@@ -120,11 +122,9 @@ export default {
     setTyping(id, name) {
         if (id === this.myUserId) return;
 
-        // Clear existing timer if any
-        if (this._typingTimers && this._typingTimers[id]) {
+        // Clear existing timer if any (_typingTimers is always initialized in initPresence)
+        if (this._typingTimers[id]) {
             clearTimeout(this._typingTimers[id]);
-        } else if (!this._typingTimers) {
-            this._typingTimers = {};
         }
 
         // Add to typingUsers if not already there

@@ -22,6 +22,7 @@ class ChatBubble extends StatefulWidget {
   final Function()? onLongPress;
   final Function(String url)? onMediaTap;
   final Function()? onRetry;
+  final String? heroTag;
 
   const ChatBubble({
     super.key,
@@ -41,6 +42,7 @@ class ChatBubble extends StatefulWidget {
     this.onMediaTap,
     this.metadata,
     this.onRetry,
+    this.heroTag,
   });
 
   @override
@@ -260,7 +262,7 @@ class _ChatBubbleState extends State<ChatBubble> with SingleTickerProviderStateM
                             GestureDetector(
                               onTap: () => widget.onMediaTap?.call(widget.mediaUrl!),
                               child: Hero(
-                                tag: widget.mediaUrl!,
+                                tag: widget.heroTag ?? widget.mediaUrl!,
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: CachedNetworkImage(

@@ -143,7 +143,7 @@ class App extends StatelessWidget {
                 title: 'Watxio',
                 debugShowCheckedModeBanner: false,
                 theme: AppTheme.light,
-                darkTheme: ThemeData.dark(),
+                darkTheme: AppTheme.dark,
                 themeMode: settings.themeMode,
                 navigatorKey: appNavigatorKey,
                 home: BlocBuilder<AuthBloc, AuthState>(

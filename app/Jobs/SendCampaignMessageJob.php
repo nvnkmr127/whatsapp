@@ -103,7 +103,7 @@ class SendCampaignMessageJob implements ShouldQueue
             return;
         }
 
-        $waService = new WhatsAppService;
+        $waService = app(WhatsAppService::class);
         $waService->setTeam($campaign->team);
 
         $bodyVars = $campaign->template_variables ?? [];
@@ -245,7 +245,7 @@ class SendCampaignMessageJob implements ShouldQueue
 
                 // Re-dispatch if batch is NOT cancelled
                 if (! $this->batch()?->cancelled()) {
-                    self::dispatch($this->campaignId, $this->contactId, $this->traceId)
+                    self::dispatch($this->campaignId, $this->contactId, $this->traceId, $this->snapshotId)
                         ->delay($nextRetryAt);
 
                     Log::info('Campaign message rescheduled for retry', [

@@ -20,7 +20,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Account'),
-        backgroundColor: const Color(0xFF128C7E),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? const Color(0xFF128C7E),
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(30),
@@ -86,7 +87,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Already have an account? Login', style: TextStyle(color: Color(0xFF128C7E))),
+                  child: const Text('Already have an account? Login'),
                 ),
               ),
             ],

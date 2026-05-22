@@ -109,7 +109,7 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
         backgroundColor: const Color(0xFF128C7E),
         elevation: 0,
@@ -132,7 +132,9 @@ class _ContactPickerScreenState extends State<ContactPickerScreen> {
                 hintText: 'Search name or number...',
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.15)
+                    : Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),

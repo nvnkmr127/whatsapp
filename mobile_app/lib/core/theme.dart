@@ -111,6 +111,12 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: secondaryColor,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
       cardTheme: const CardThemeData(
         elevation: 1,
         color: Color(0xFF1F2C34),

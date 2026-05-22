@@ -92,7 +92,7 @@ class _BotEditScreenState extends State<BotEditScreen> {
     final bool isEdit = widget.bot != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(isEdit ? 'Edit Bot' : 'New Custom Bot'),
         backgroundColor: const Color(0xFF128C7E),
@@ -176,7 +176,9 @@ class _BotEditScreenState extends State<BotEditScreen> {
                     children: _triggers.map((t) => Chip(
                       label: Text(t),
                       onDeleted: () => _removeTrigger(t),
-                      backgroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[800]
+                          : Colors.grey[200],
                       deleteIconColor: Colors.red,
                     )).toList(),
                   ),

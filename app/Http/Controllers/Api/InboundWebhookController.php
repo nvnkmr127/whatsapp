@@ -61,6 +61,11 @@ class InboundWebhookController extends Controller
             ], 'ERR_WEBHOOK_AUTH_FAILED');
         }
 
+        // Reject oversized payloads before deserializing (max 1 MB)
+        if ($request->header('Content-Length') > 1048576) {
+            return $this->error('Payload too large (max 1 MB)', 413, null, 'ERR_PAYLOAD_TOO_LARGE');
+        }
+
         // Get payload
         $payload = $request->all();
 
@@ -226,7 +231,8 @@ class InboundWebhookController extends Controller
             try {
                 $contactPhone = $mappedData['phone_number'] ?? $payload['customer']['phone'] ?? $payload['phone'] ?? null;
                 if ($contactPhone) {
-                    $contact = \App\Models\Contact::where('phone_number', $contactPhone)->first();
+                    $contact = \App\Models\Contact::where('team_id', $source->team_id)
+                    ->where('phone_number', $contactPhone)->first();
                     if ($contact) {
                         app(\App\Services\AutomationService::class)->checkSpecialTriggers($contact, 'webhook_payload_received', array_merge([
                             'source_id' => $source->id,

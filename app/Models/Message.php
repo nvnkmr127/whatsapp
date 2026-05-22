@@ -9,7 +9,16 @@ class Message extends Model
     use \App\Traits\HasTeam;
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'team_id', 'contact_id', 'conversation_id', 'campaign_id', 'attributed_campaign_id',
+        'webhook_workflow_id', 'webhook_source_id', 'automation_id', 'automation_run_id',
+        'reply_to_message_id', 'agent_id',
+        'whatsapp_message_id', 'external_id',
+        'direction', 'type', 'content', 'metadata', 'status',
+        'media_url', 'media_type', 'caption',
+        'error_message', 'last_error', 'retry_count', 'next_retry_at',
+        'is_starred', 'sent_at', 'delivered_at', 'read_at',
+    ];
 
     protected $casts = [
         'metadata' => 'array',

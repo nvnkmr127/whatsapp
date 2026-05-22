@@ -152,21 +152,21 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> with Single
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Contact Details'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save, color: Color(0xFF128C7E)),
+            icon: const Icon(Icons.save),
             tooltip: 'Save Profile',
             onPressed: _saveProfile,
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFF128C7E),
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF128C7E),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Profile'),
             Tab(text: 'Activity'),
@@ -185,7 +185,8 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> with Single
 
   Widget _buildProfileTab() {
     final tags = (_contact?['tags'] as List?) ?? [];
-    final attrs = (_contact?['custom_attributes'] as Map?) ?? {};
+    final rawAttrs = _contact?['custom_attributes'];
+    final attrs = rawAttrs is Map ? rawAttrs : {};
     final optIn = (_contact?['opt_in_status'] ?? 'unknown').toString();
 
     return ListView(
@@ -219,7 +220,7 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> with Single
           controller: _nameController,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           ),
         ),
@@ -335,7 +336,8 @@ class _ContactProfileScreenState extends State<ContactProfileScreen> with Single
   }
 
   Future<void> _updateAttribute(String key, dynamic val) async {
-    final attrs = Map<String, dynamic>.from(_contact?['custom_attributes'] ?? {});
+    final rawAttrs = _contact?['custom_attributes'];
+    final attrs = rawAttrs is Map ? Map<String, dynamic>.from(rawAttrs) : <String, dynamic>{};
     attrs[key] = val;
     try {
       await context.read<ApiService>().updateContact(widget.id!, {'custom_attributes': attrs});

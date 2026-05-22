@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import '../../data/models/message.dart';
 import '../widgets/chat_bubble.dart';
+import 'media_viewer.dart';
 
 class StarredMessagesScreen extends StatefulWidget {
   final Isar isar;
@@ -25,7 +26,8 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Starred Messages'),
-        backgroundColor: const Color(0xFF075E54),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? const Color(0xFF075E54),
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
       ),
       body: StreamBuilder<List<LocalMessage>>(
         stream: _starredStream,
@@ -72,6 +74,17 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
                         type: msg.type,
                         status: msg.status,
                         readAt: msg.readAt,
+                        mediaUrl: msg.mediaUrl,
+                        heroTag: 'starred_media_${msg.id}_${msg.mediaUrl}',
+                        onMediaTap: (url) => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MediaViewerPage(
+                              imageUrl: url,
+                              heroTag: 'starred_media_${msg.id}_${msg.mediaUrl}',
+                            ),
+                          ),
+                        ),
                     ),
                   ],
                 ),

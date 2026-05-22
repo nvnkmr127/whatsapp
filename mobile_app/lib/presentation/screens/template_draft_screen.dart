@@ -150,7 +150,7 @@ class _TemplateDraftScreenState extends State<TemplateDraftScreen> {
     final bool isEdit = widget.template != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(isEdit ? 'Edit Draft' : 'New Template Draft'),
         backgroundColor: const Color(0xFF128C7E),

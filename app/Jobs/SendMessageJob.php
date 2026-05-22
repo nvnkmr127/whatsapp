@@ -180,7 +180,7 @@ class SendMessageJob implements ShouldQueue
                     $this->phone,
                     $this->type,
                     $this->content,
-                    $existingMessage->caption ?? null,
+                    $existingMessage ? ($existingMessage->caption ?? null) : null,
                     $existingMessage
                 );
             }

@@ -9,8 +9,9 @@ import 'package:share_plus/share_plus.dart';
 
 class MediaViewerPage extends StatefulWidget {
   final String imageUrl;
+  final String? heroTag;
 
-  const MediaViewerPage({super.key, required this.imageUrl});
+  const MediaViewerPage({super.key, required this.imageUrl, this.heroTag});
 
   @override
   State<MediaViewerPage> createState() => _MediaViewerPageState();
@@ -89,7 +90,7 @@ class _MediaViewerPageState extends State<MediaViewerPage> {
           minScale: 0.5,
           maxScale: 4.0,
           child: Hero(
-            tag: widget.imageUrl,
+            tag: widget.heroTag ?? widget.imageUrl,
             child: Image.network(
               widget.imageUrl,
               fit: BoxFit.contain,

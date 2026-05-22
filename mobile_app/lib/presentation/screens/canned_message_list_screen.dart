@@ -73,6 +73,7 @@ class _CannedMessageListScreenState extends State<CannedMessageListScreen> {
                   },
                 ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'canned_message_list_fab',
         backgroundColor: const Color(0xFF128C7E),
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(

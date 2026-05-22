@@ -44,7 +44,8 @@ class AutomationTriggerListener
 
         try {
             $automationService = app(AutomationService::class);
-            $handoffService = new \App\Services\BotHandoffService;
+            $handoffService = app(\App\Services\BotHandoffService::class);
+            $assignmentService = app(\App\Services\AssignmentService::class);
 
             // 1. Global Handoff Keywords
             $handoffKeywords = ['human', 'agent', 'person', 'representative', 'help', 'support', 'talk to someone'];
@@ -52,7 +53,7 @@ class AutomationTriggerListener
             foreach ($handoffKeywords as $kw) {
                 if ($cleanContent === $kw) {
                     $handoffService->pause($contact, 'keyword_trigger');
-                    (new \App\Services\AssignmentService)->assign($contact);
+                    $assignmentService->assign($contact);
 
                     return;
                 }

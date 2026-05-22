@@ -61,27 +61,31 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> {
             itemCount: media.length,
             itemBuilder: (context, i) {
               final msg = media[i];
+              final String uniqueHeroTag = 'gallery_media_${msg.id}_${msg.mediaUrl}';
               return InkWell(
                 onTap: () {
                   if (msg.mediaUrl != null) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (ctx) => MediaViewerPage(imageUrl: msg.mediaUrl!))
+                      MaterialPageRoute(builder: (ctx) => MediaViewerPage(imageUrl: msg.mediaUrl!, heroTag: uniqueHeroTag))
                     );
                   }
                 },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: CachedNetworkImage(
-                    imageUrl: msg.mediaUrl ?? '',
-                    placeholder: (context, url) => Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Icon(Icons.image, color: Colors.grey, size: 40),
+                child: Hero(
+                  tag: uniqueHeroTag,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: CachedNetworkImage(
+                      imageUrl: msg.mediaUrl ?? '',
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: Icon(Icons.image, color: Colors.grey, size: 40),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => const Icon(Icons.broken_image),
+                      fit: BoxFit.cover,
                     ),
-                  ),
-                    errorWidget: (context, url, error) => const Icon(Icons.broken_image),
-                    fit: BoxFit.cover,
                   ),
                 ),
               );

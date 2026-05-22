@@ -60,7 +60,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF0F2F5),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
           backgroundColor: const Color(0xFF128C7E),
@@ -230,7 +230,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildMetricRow(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(15)),
       child: Row(
         children: [
           Icon(icon, color: color),

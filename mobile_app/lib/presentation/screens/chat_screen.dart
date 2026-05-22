@@ -816,6 +816,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             metadata: msg.metadata,
                             isNote: msg.type == 'note',
                             showTail: isFirstInGroup,
+                            heroTag: 'chat_media_${msg.id}_${msg.mediaUrl}',
                             onReaction: (emoji) {
                               if (msg.remoteId != null) {
                                 context.read<ApiService>().reactToMessage(msg.remoteId!, emoji);
@@ -864,7 +865,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 );
                             },
-                            onMediaTap: (url) => Navigator.push(context, MaterialPageRoute(builder: (context) => MediaViewerPage(imageUrl: url))),
+                            onMediaTap: (url) => Navigator.push(context, MaterialPageRoute(builder: (context) => MediaViewerPage(imageUrl: url, heroTag: 'chat_media_${msg.id}_${msg.mediaUrl}'))),
                             onRetry: () {
                               if (msg.id != null) {
                                 context.read<MessageBloc>().add(RetryMessage(msg.id!));
@@ -895,7 +896,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 return Container(
                   height: 50, 
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -931,7 +932,9 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).cardColor
+                  : Colors.white.withValues(alpha: 0.9),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -948,9 +951,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF0F0F0),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF0F0F0),
                       borderRadius: BorderRadius.circular(12),
-                      border: const Border(left: BorderSide(color: Color(0xFF128C7E), width: 4)),
+                      border: Border(left: BorderSide(color: Theme.of(context).primaryColor, width: 4)),
                     ),
                     child: Row(
                       children: [
@@ -967,7 +972,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                 _replyToMessage.content ?? 'Media',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.black87, fontSize: 13),
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white70
+                                      : Colors.black87,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
@@ -986,10 +996,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: _isNoteMode ? const Color(0xFFFFF9C4) : const Color(0xFFF5F6F7),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? (_isNoteMode ? const Color(0xFF4A4526) : Colors.white.withValues(alpha: 0.05))
+                              : (_isNoteMode ? const Color(0xFFFFF9C4) : const Color(0xFFF5F6F7)),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: _isNoteMode ? Colors.orange.shade300 : Colors.transparent,
+                            color: _isNoteMode
+                                ? (Theme.of(context).brightness == Brightness.dark ? Colors.orange.shade800 : Colors.orange.shade300)
+                                : Colors.transparent,
                             width: 1,
                           ),
                         ),
@@ -1012,7 +1026,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                   onChanged: _onComposerChanged,
                                   maxLines: 5,
                                   minLines: 1,
-                                  style: const TextStyle(fontSize: 15),
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
                                   decoration: InputDecoration(
                                     hintText: _isNoteMode ? 'Internal Note (Team only)' : 'Type a message',
                                     hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 15),

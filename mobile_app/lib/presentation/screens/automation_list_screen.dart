@@ -87,6 +87,7 @@ class _AutomationListScreenState extends State<AutomationListScreen> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'automation_list_fab',
         onPressed: () => _navigateToForm(null),
         child: const Icon(Icons.add),
       ),

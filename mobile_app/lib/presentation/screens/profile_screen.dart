@@ -351,10 +351,15 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildInfoTile(IconData icon, String title, String value, {Color? color}) {
-    return ListTile(
-      leading: Icon(icon, color: color ?? Colors.black87),
-      title: Text(title, style: const TextStyle(fontSize: 13, color: Colors.grey)),
-      subtitle: Text(value, style: TextStyle(color: color ?? Colors.black87, fontWeight: FontWeight.w600, fontSize: 15)),
+    return Builder(
+      builder: (context) {
+        final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+        return ListTile(
+          leading: Icon(icon, color: color ?? onSurfaceColor),
+          title: Text(title, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          subtitle: Text(value, style: TextStyle(color: color ?? onSurfaceColor, fontWeight: FontWeight.w600, fontSize: 15)),
+        );
+      }
     );
   }
 

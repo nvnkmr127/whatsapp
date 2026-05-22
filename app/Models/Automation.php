@@ -9,7 +9,10 @@ class Automation extends Model
 {
     use HasTeam;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'team_id', 'name', 'is_active', 'trigger_type', 'trigger_config',
+        'flow_data', 'publish_log', 'description',
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

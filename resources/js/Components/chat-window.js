@@ -1,6 +1,6 @@
 export default (wire, conversationId, teamId, userId) => ({
-    itemHeight: 72, // Slightly tighter estimate
-    buffer: 15, // Larger buffer to handle varied heights better
+    itemHeight: 72,
+    buffer: 15,
     viewportHeight: 0,
     scrollTop: 0,
     msgBody: '',
@@ -15,50 +15,66 @@ export default (wire, conversationId, teamId, userId) => ({
     audioChunks: [],
     shouldSendRecording: false,
     recInterval: null,
+    _submitting: false,
+    _boundHandlers: null,
 
     init() {
-        // Initialize Store
         this.$store.chat.setMyUser(userId);
         this.$store.chat.init(wire, conversationId, teamId);
 
-        // Drag and Drop Listeners
-        window.addEventListener('dragover', (e) => { e.preventDefault(); this.$store.chat.isDragging = true; });
-        window.addEventListener('dragleave', (e) => { e.preventDefault(); if (e.relatedTarget === null) this.$store.chat.isDragging = false; });
-        window.addEventListener('drop', (e) => {
-            e.preventDefault();
-            this.$store.chat.isDragging = false;
-            if (e.dataTransfer.files.length > 0) {
-                wire.upload('newAttachment', e.dataTransfer.files[0]);
-            }
-        });
+        // Store bound handler references so we can remove them on destroy
+        this._boundHandlers = {
+            dragover: (e) => { e.preventDefault(); this.$store.chat.isDragging = true; },
+            dragleave: (e) => { e.preventDefault(); if (e.relatedTarget === null) this.$store.chat.isDragging = false; },
+            drop: (e) => {
+                e.preventDefault();
+                this.$store.chat.isDragging = false;
+                if (e.dataTransfer?.files?.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    const maxBytes = 16 * 1024 * 1024; // 16 MB
+                    if (file.size > maxBytes) {
+                        window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'File too large (max 16 MB)', type: 'error' } }));
+                        return;
+                    }
+                    wire.upload('newAttachment', file);
+                }
+            },
+            scrollBottom: () => this.scrollToBottom(),
+            initialLoaded: () => this.scrollToBottom(),
+            updateBody: (e) => {
+                this.msgBody = e.detail.body;
+                if (this.$refs.messageInput) this.$refs.messageInput.focus();
+            },
+        };
+
+        window.addEventListener('dragover', this._boundHandlers.dragover);
+        window.addEventListener('dragleave', this._boundHandlers.dragleave);
+        window.addEventListener('drop', this._boundHandlers.drop);
+        window.addEventListener('chat-scroll-bottom', this._boundHandlers.scrollBottom);
+        window.addEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
+        window.addEventListener('update-message-body', this._boundHandlers.updateBody);
 
         this.viewportHeight = this.$el.clientHeight;
 
-        // Debug logs
-        console.log('MessageWindow: Init', {
-            convId: conversationId,
-            viewport: this.viewportHeight
-        });
-
-        // Initialize Scroll
         this.$watch('$store.chat.messages', (val, old) => {
-            console.log('MessageWindow: Messages Updated', { count: val.length, old: old.length });
             if (old.length === 0 && val.length > 0) {
                 this.$nextTick(() => this.scrollToBottom());
             }
         });
+    },
 
-        // Event Listeners
-        window.addEventListener('chat-scroll-bottom', () => this.scrollToBottom());
-        window.addEventListener('chat-initial-loaded', () => {
-            console.log('MessageWindow: Initial Load Complete', this.$store.chat.messages);
-            this.scrollToBottom();
-        });
-
-        window.addEventListener('update-message-body', (e) => {
-            this.msgBody = e.detail.body;
-            if (this.$refs.messageInput) this.$refs.messageInput.focus();
-        });
+    destroy() {
+        if (this._boundHandlers) {
+            window.removeEventListener('dragover', this._boundHandlers.dragover);
+            window.removeEventListener('dragleave', this._boundHandlers.dragleave);
+            window.removeEventListener('drop', this._boundHandlers.drop);
+            window.removeEventListener('chat-scroll-bottom', this._boundHandlers.scrollBottom);
+            window.removeEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
+            window.removeEventListener('update-message-body', this._boundHandlers.updateBody);
+            this._boundHandlers = null;
+        }
+        if (this.recInterval) clearInterval(this.recInterval);
+        this.$store.chat.stopHeartbeat?.();
     },
 
     scrollToBottom() {
@@ -69,8 +85,7 @@ export default (wire, conversationId, teamId, userId) => ({
 
     handleScroll(e) {
         this.scrollTop = e.target.scrollTop;
-        // Load More Trigger
-        if (this.scrollTop < 100 && this.$store.chat.messages.length > 0) {
+        if (this.scrollTop < 100 && this.$store.chat.messages.length > 0 && !this.$store.chat.loading) {
             const oldHeight = this.$el.scrollHeight;
             const oldTop = this.$el.scrollTop;
             this.$store.chat.loadMessages().then(() => {
@@ -101,16 +116,11 @@ export default (wire, conversationId, teamId, userId) => ({
         let visibleCount = Math.ceil(this.viewportHeight / this.itemHeight) + (2 * this.buffer);
         let end = Math.min(count, start + visibleCount);
 
-        let topH = start * this.itemHeight;
-        let bottomH = (count - end) * this.itemHeight;
-
-        return { start, end, top: topH, bottom: bottomH };
+        return { start, end, top: start * this.itemHeight, bottom: (count - end) * this.itemHeight };
     },
 
     get visibleMessages() {
-        if (!this.$store.chat || !this.$store.chat.messages) {
-            return [];
-        }
+        if (!this.$store.chat || !this.$store.chat.messages) return [];
         const conf = this.renderConfig;
         return this.$store.chat.messages.slice(conf.start, conf.end);
     },
@@ -139,74 +149,98 @@ export default (wire, conversationId, teamId, userId) => ({
     },
 
     async handleSubmit() {
+        if (this._submitting) return;
         if (this.msgBody.trim() === '' && !wire.newAttachment) return;
 
-        // Handle Internal Note
-        if (this.isNoteMode) {
-            wire.set('messageBody', this.msgBody);
-            await wire.saveInternalNote();
-            this.msgBody = '';
-            this.isNoteMode = false;
-            return;
-        }
+        this._submitting = true;
+        try {
+            if (this.isNoteMode) {
+                wire.set('messageBody', this.msgBody);
+                try {
+                    await wire.saveInternalNote();
+                } catch (e) {
+                    window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to save note. Please try again.', type: 'error' } }));
+                    return;
+                }
+                this.msgBody = '';
+                this.isNoteMode = false;
+                return;
+            }
 
-        // Check for attachment (Legacy Path)
-        if (wire.newAttachment) {
-            wire.set('messageBody', this.msgBody);
-            await wire.sendMessage(); // Legacy
-            this.msgBody = '';
-            return;
-        }
+            if (wire.newAttachment) {
+                wire.set('messageBody', this.msgBody);
+                try {
+                    await wire.sendMessage();
+                } catch (e) {
+                    window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Failed to send message. Please try again.', type: 'error' } }));
+                    return;
+                }
+                this.msgBody = '';
+                return;
+            }
 
-        // Text Only (Optimistic Path)
-        const body = this.msgBody;
-        this.msgBody = ''; // Clear immediately
-        this.$store.chat.sendMessage(body);
+            const body = this.msgBody;
+            this.msgBody = '';
+            this.$store.chat.sendMessage(body);
+        } finally {
+            this._submitting = false;
+        }
     },
 
     async startRecording() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            this.mediaRecorder = new MediaRecorder(stream);
-            this.audioChunks = [];
-
-            this.mediaRecorder.ondataavailable = (e) => {
-                this.audioChunks.push(e.data);
-            };
-
-            this.mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
-                if (this.shouldSendRecording) {
-                    // Upload to Livewire
-                    wire.upload('newAttachment', audioBlob, (uploadedFilename) => {
-                        wire.sendVoiceNote(uploadedFilename);
-                    });
-                }
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            this.mediaRecorder.start();
-            this.isRecording = true;
-            this.shouldSendRecording = false;
-
-            let sec = 0;
-            this.recInterval = setInterval(() => {
-                sec++;
-                let m = Math.floor(sec / 60);
-                let s = sec % 60;
-                this.recordingTime = `${m}:${s < 10 ? '0' : ''}${s}`;
-            }, 1000);
-        } catch (err) {
-            alert('Could not access microphone: ' + err.message);
+        if (!navigator.mediaDevices?.getUserMedia) {
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Microphone not supported in this browser.', type: 'error' } }));
+            return;
         }
+
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            const msg = err.name === 'NotAllowedError'
+                ? 'Microphone permission denied. Please allow access in your browser settings.'
+                : 'Could not access microphone: ' + err.message;
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: msg, type: 'error' } }));
+            return;
+        }
+
+        this.mediaRecorder = new MediaRecorder(stream);
+        this.audioChunks = [];
+
+        this.mediaRecorder.ondataavailable = (e) => {
+            this.audioChunks.push(e.data);
+        };
+
+        this.mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(track => track.stop());
+            const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
+            if (this.shouldSendRecording) {
+                wire.upload('newAttachment', audioBlob, (uploadedFilename) => {
+                    wire.sendVoiceNote(uploadedFilename);
+                });
+            }
+        };
+
+        this.mediaRecorder.start();
+        this.isRecording = true;
+        this.shouldSendRecording = false;
+
+        let sec = 0;
+        this.recInterval = setInterval(() => {
+            sec++;
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            this.recordingTime = `${m}:${s < 10 ? '0' : ''}${s}`;
+        }, 1000);
     },
 
     stopRecording(send = true) {
         this.isRecording = false;
         this.shouldSendRecording = send;
-        if (this.mediaRecorder) {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.mediaRecorder.stop();
         }
         clearInterval(this.recInterval);
+        this.recInterval = null;
     }
 });

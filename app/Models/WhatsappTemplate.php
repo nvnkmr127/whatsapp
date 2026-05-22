@@ -10,7 +10,13 @@ class WhatsappTemplate extends Model
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'team_id', 'whatsapp_template_id', 'name', 'language', 'category', 'status',
+        'components', 'validation_results', 'variable_config',
+        'readiness_score', 'is_paused', 'is_paused_by_meta', 'is_mobile_draft',
+        'total_sent', 'total_read', 'last_synced_at', 'last_status_sync_at',
+        'namespace', 'header_type', 'footer_text',
+    ];
 
     protected $casts = [
         'components' => 'array',

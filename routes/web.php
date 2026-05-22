@@ -7,7 +7,7 @@ use App\Livewire\Settings\AiSettings;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->to('https://watxio.com/');
+    return redirect()->to(config('app.marketing_url', env('MARKETING_URL', 'https://watxio.com/')));
 });
 
 Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
@@ -271,6 +271,6 @@ Route::get('/embed/chat', [\App\Http\Controllers\EmbedController::class, 'show']
  * These routes are ONLY loaded if the routes/local.php file exists.
  * This file is git-ignored and intended for local testing tools.
  */
-if (file_exists(__DIR__.'/local.php')) {
+if (app()->isLocal() && file_exists(__DIR__.'/local.php')) {
     require __DIR__.'/local.php';
 }

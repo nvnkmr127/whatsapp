@@ -24,7 +24,7 @@ class ManagementScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Admin Console', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF128C7E),

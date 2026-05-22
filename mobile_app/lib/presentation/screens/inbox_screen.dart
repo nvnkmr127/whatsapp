@@ -393,6 +393,7 @@ class _InboxScreenState extends State<InboxScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'inbox_fab',
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (c) => const ContactPickerScreen()));
         },
@@ -476,144 +477,8 @@ class _InboxScreenState extends State<InboxScreen> {
                   final lastMsg = conv['last_message'];
                   final bool isSelected = _selectedIds.contains(conv['id']);
 
-                  return ListTile(
+                  return InkWell(
                     key: ValueKey(conv['id']),
-                    isThreeLine: true,
-                    selected: isSelected,
-                    selectedTileColor: Colors.teal.withValues(alpha: 0.05),
-                    leading: isSelected 
-                      ? const CircleAvatar(backgroundColor: Color(0xFF25D366), child: Icon(Icons.check, color: Colors.white))
-                      : ChatAvatar(name: conv['name'], imageUrl: null),
-                    title: Row(
-                      children: [
-                        if (_pinnedIds.contains(conv['id']))
-                          const Padding(
-                            padding: EdgeInsets.only(right: 4),
-                            child: Icon(Icons.push_pin, size: 12, color: Colors.grey),
-                          ),
-                        Expanded(
-                          child: Text(
-                            conv['name'] ?? 'Unknown',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                        ),
-                        if (lastMsg != null)
-                          Text(
-                            conv['last_interaction'] != null 
-                            ? timeago.format(DateTime.fromMillisecondsSinceEpoch(conv['last_interaction'] * 1000), locale: 'en_short')
-                            : '',
-                            style: TextStyle(
-                              fontSize: 11, 
-                              color: (conv['unread_count'] ?? 0) > 0 ? const Color(0xFF25D366) : Colors.grey
-                            ),
-                          ),
-                      ],
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 2),
-                        (state).typingAgents.containsKey(conv['id'])
-                          ? Text(
-                              '${(state).typingAgents[conv['id']]} is typing...',
-                              style: const TextStyle(color: Color(0xFF25D366), fontStyle: FontStyle.italic, fontSize: 13),
-                            )
-                          : Row(
-                              children: [
-                                if (lastMsg != null && lastMsg['is_outbound'])
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 4),
-                                    child: Icon(Icons.done_all, size: 14, color: Colors.blue),
-                                  ),
-                                Expanded(
-                                  child: Text(
-                                    lastMsg?['content'] ?? 'No messages yet',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
-                                  ),
-                                ),
-                                if ((conv['unread_count'] ?? 0) > 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(color: const Color(0xFF25D366), borderRadius: BorderRadius.circular(10)),
-                                    child: Text(
-                                      conv['unread_count'].toString(),
-                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            if (conv['assignee'] != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.person, size: 10, color: Colors.blue),
-                                    const SizedBox(width: 2),
-                                    Text(conv['assignee']['name'], style: TextStyle(fontSize: 9, color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            if (conv['sla_status'] != null && conv['sla_status'] != 'on_track')
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: conv['sla_status'] == 'breached' ? Colors.red.shade50 : Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: conv['sla_status'] == 'breached' ? Colors.red.shade200 : Colors.orange.shade200),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.alarm, size: 10, color: conv['sla_status'] == 'breached' ? Colors.red : Colors.orange.shade700),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      conv['sla_status'] == 'breached' ? 'SLA BREACH' : 'SLA SOON',
-                                      style: TextStyle(
-                                        fontSize: 9, 
-                                        color: conv['sla_status'] == 'breached' ? Colors.red : Colors.orange.shade800, 
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            if (conv['tags'] != null)
-                              Expanded(
-                                child: Wrap(
-                                  spacing: 4,
-                                  children: (conv['tags'] as List).take(2).map((tag) => Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: _parseColor(tag['color']).withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    child: Text(
-                                      tag['name'].toString().toUpperCase(),
-                                      style: TextStyle(fontSize: 8, color: _parseColor(tag['color']), fontWeight: FontWeight.bold),
-                                    ),
-                                  )).toList(),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    onLongPress: () {
-                      setState(() {
-                        _selectedIds.add(conv['id']);
-                      });
-                    },
                     onTap: () {
                        if (_selectedIds.isNotEmpty) {
                          setState(() {
@@ -635,6 +500,157 @@ class _InboxScreenState extends State<InboxScreen> {
                          );
                        }
                     },
+                    onLongPress: () {
+                      setState(() {
+                        _selectedIds.add(conv['id']);
+                      });
+                    },
+                    child: Container(
+                      color: isSelected ? Colors.teal.withValues(alpha: 0.05) : Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          isSelected 
+                            ? const CircleAvatar(
+                                backgroundColor: Color(0xFF25D366),
+                                radius: 24,
+                                child: Icon(Icons.check, color: Colors.white),
+                              )
+                            : ChatAvatar(name: conv['name'], imageUrl: null),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (_pinnedIds.contains(conv['id']))
+                                      const Padding(
+                                        padding: EdgeInsets.only(right: 4),
+                                        child: Icon(Icons.push_pin, size: 12, color: Colors.grey),
+                                      ),
+                                    Expanded(
+                                      child: Text(
+                                        conv['name'] ?? 'Unknown',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      ),
+                                    ),
+                                    if (lastMsg != null)
+                                      Text(
+                                        conv['last_interaction'] != null 
+                                        ? timeago.format(DateTime.fromMillisecondsSinceEpoch(conv['last_interaction'] * 1000), locale: 'en_short')
+                                        : '',
+                                        style: TextStyle(
+                                          fontSize: 11, 
+                                          color: (conv['unread_count'] ?? 0) > 0 ? const Color(0xFF25D366) : Colors.grey
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                (state).typingAgents.containsKey(conv['id'])
+                                  ? Text(
+                                      '${(state).typingAgents[conv['id']]} is typing...',
+                                      style: const TextStyle(color: Color(0xFF25D366), fontStyle: FontStyle.italic, fontSize: 13),
+                                    )
+                                  : Row(
+                                      children: [
+                                        if (lastMsg != null && lastMsg['is_outbound'])
+                                          const Padding(
+                                            padding: EdgeInsets.only(right: 4),
+                                            child: Icon(Icons.done_all, size: 14, color: Colors.blue),
+                                          ),
+                                        Expanded(
+                                          child: Text(
+                                            lastMsg?['content'] ?? 'No messages yet',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(color: Colors.blueGrey, fontSize: 13),
+                                          ),
+                                        ),
+                                        if ((conv['unread_count'] ?? 0) > 0)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(color: const Color(0xFF25D366), borderRadius: BorderRadius.circular(10)),
+                                            child: Text(
+                                              conv['unread_count'].toString(),
+                                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    if (conv['assignee'] != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        margin: const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.person, size: 10, color: Colors.blue),
+                                            const SizedBox(width: 2),
+                                            Text(conv['assignee']['name'], style: TextStyle(fontSize: 9, color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                      ),
+                                    if (conv['sla_status'] != null && conv['sla_status'] != 'on_track')
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        margin: const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(
+                                          color: conv['sla_status'] == 'breached' ? Colors.red.shade50 : Colors.orange.shade50,
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: conv['sla_status'] == 'breached' ? Colors.red.shade200 : Colors.orange.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.alarm, size: 10, color: conv['sla_status'] == 'breached' ? Colors.red : Colors.orange.shade700),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              conv['sla_status'] == 'breached' ? 'SLA BREACH' : 'SLA SOON',
+                                              style: TextStyle(
+                                                fontSize: 9, 
+                                                color: conv['sla_status'] == 'breached' ? Colors.red : Colors.orange.shade800, 
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    if (conv['tags'] != null)
+                                      Expanded(
+                                        child: Wrap(
+                                          spacing: 4,
+                                          runSpacing: 4,
+                                          children: (conv['tags'] as List).take(2).map((tag) => Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: _parseColor(tag['color']).withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                            child: Text(
+                                              tag['name'].toString().toUpperCase(),
+                                              style: TextStyle(fontSize: 8, color: _parseColor(tag['color']), fontWeight: FontWeight.bold),
+                                            ),
+                                          )).toList(),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                       },
                     ),
@@ -680,8 +696,13 @@ class _FilterChip extends StatelessWidget {
           context.read<ChatBloc>().add(FetchConversations(isRefresh: true, filter: value));
         }
       },
-      selectedColor: const Color(0xFF25D366),
-      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
+      selectedColor: Theme.of(context).colorScheme.primary,
+      labelStyle: TextStyle(
+        color: isSelected
+            ? Colors.white
+            : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
     );
   }
 }

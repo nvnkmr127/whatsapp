@@ -156,7 +156,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).cardColor
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButton<String>(
@@ -185,7 +187,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).cardColor
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButton<String>(
@@ -297,7 +301,9 @@ class _PasswordToggleFieldState extends State<_PasswordToggleField> {
           decoration: InputDecoration(
             hintText: widget.hint,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).cardColor
+                : Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.all(16),
             suffixIcon: widget.isPassword ? IconButton(
