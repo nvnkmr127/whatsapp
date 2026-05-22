@@ -86,11 +86,13 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\View::composer('*', \App\Http\View\Composers\GlobalSettingsComposer::class);
 
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
-            // Limit by Team ID if authenticated, otherwise IP
             $key = $request->user()?->current_team_id ?: $request->ip();
 
-            // 600 requests per minute per Team (10 req/sec)
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(600)->by($key);
+        });
+
+        \Illuminate\Support\Facades\RateLimiter::for('mobile-auth', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(10)->by($request->ip());
         });
 
         \Illuminate\Support\Facades\Event::listen(

@@ -11,10 +11,10 @@ Route::post('/webhooks/trigger/{id}', [\App\Http\Controllers\Api\WebhookTriggerC
 Route::post('/webhooks/workflow/{workflowId}', [\App\Http\Controllers\Api\WorkflowWebhookController::class, 'handle'])->middleware('auth:sanctum');
 Route::post('/webhooks/workflow-incoming/{webhookUrlId}', [\App\Http\Controllers\Api\WorkflowIncomingWebhookController::class, 'handle'])->middleware('auth:sanctum');
 
-Route::prefix('v1/mobile/auth')->middleware('throttle:api')->group(function () {
-    Route::post('/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login']);
-    Route::post('/send-otp', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'sendOtp']);
-    Route::post('/login-otp', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'loginWithOtp']);
+Route::prefix('v1/mobile/auth')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'login'])->middleware('throttle:mobile-auth');
+    Route::post('/send-otp', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'sendOtp'])->middleware('throttle:mobile-auth');
+    Route::post('/login-otp', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'loginWithOtp'])->middleware('throttle:mobile-auth');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'me']);
