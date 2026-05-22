@@ -22,6 +22,7 @@ class RestoreTest extends TestCase
     {
         parent::setUp();
         $this->backupService = new BackupService;
+        Team::$useRealEntitlementInTests = true;
 
         // Setup default plans for feature gating
         \App\Models\Plan::create([
@@ -31,6 +32,12 @@ class RestoreTest extends TestCase
             'agent_limit' => 1,
             'features' => ['backups' => true, 'cloud_backups' => false],
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Team::$useRealEntitlementInTests = false;
+        parent::tearDown();
     }
 
     public function test_tenant_restore_atomic_success()

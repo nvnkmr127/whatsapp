@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Contact extends Model
 {
     use \App\Traits\HasTeam;
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use SoftDeletes;
 
     protected static function booted()
     {

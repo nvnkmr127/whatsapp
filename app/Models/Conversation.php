@@ -5,12 +5,18 @@ namespace App\Models;
 use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Conversation extends Model
 {
-    use HasFactory, HasTeam;
+    use HasFactory, HasTeam, SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'team_id', 'contact_id', 'assigned_to', 'status',
+        'last_message_at', 'sla_due_at', 'closed_at', 'close_reason',
+        'first_response_at', 'sla_first_response_due_at', 'sla_resolution_due_at',
+        'sla_status', 'sla_policy_id', 'metadata',
+    ];
 
     protected $casts = [
         'last_message_at' => 'datetime',

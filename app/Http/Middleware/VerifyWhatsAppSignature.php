@@ -24,7 +24,7 @@ class VerifyWhatsAppSignature
         $signature = $request->header('X-Hub-Signature-256');
 
         try {
-            \Illuminate\Support\Facades\Log::channel('whatsapp')->info('MIDDLEWARE RECEIVED SIG: '.($signature ?? 'MISSING'));
+            \Illuminate\Support\Facades\Log::channel('whatsapp')->debug('WhatsApp webhook signature received: '.($signature ? 'present' : 'MISSING'));
         } catch (\Exception $e) {
             // Silently fail
         }
@@ -55,17 +55,8 @@ class VerifyWhatsAppSignature
 
         if (! hash_equals($expected, $signature)) {
             Log::warning('WhatsApp Webhook: Invalid Signature', [
-                'expected' => $expected,
-                'received' => $signature,
                 'app_env' => config('app.env'),
             ]);
-
-            // SECURITY BYPASS FOR LOCAL DEV
-            if (config('app.env') === 'local') {
-                Log::warning('BYPASSING SIGNATURE CHECK IN LOCAL ENVIRONMENT');
-
-                return $next($request);
-            }
 
             return response('Invalid Signature', 403);
         }

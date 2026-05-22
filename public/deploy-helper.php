@@ -9,19 +9,24 @@
  * 3. Access via: yourdomain.com/deploy.php?key=YOUR_SECRET&cmd=migrate
  */
 
-// --- CONFIGURATION ---
-$secret = 'update_this_to_something_secure';
-// ---------------------
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+// --- CONFIGURATION (loaded after bootstrap so env() works) ---
+$secret = env('DEPLOY_HELPER_SECRET', '');
+// -------------------------------------------------------------
+
+if (empty($secret)) {
+    header('HTTP/1.1 403 Forbidden');
+    exit('Deploy helper is disabled. Set DEPLOY_HELPER_SECRET in .env to enable.');
+}
 
 if (($_GET['key'] ?? '') !== $secret) {
     header('HTTP/1.1 403 Forbidden');
     exit('Unauthorized access.');
 }
-
-require __DIR__.'/../vendor/autoload.php';
-$app = require_once __DIR__.'/../bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-$kernel->bootstrap();
 
 use Illuminate\Support\Facades\Artisan;
 

@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Automation extends Model
 {
     use HasTeam;
+    use SoftDeletes;
 
     protected $fillable = [
         'team_id', 'name', 'is_active', 'trigger_type', 'trigger_config',

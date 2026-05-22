@@ -126,8 +126,8 @@ return [
     ],
 
     // Emergency global bypass for subscription/features/limits/wallet gates.
-    // When enabled, all teams can access all capabilities.
-    'full_access_all' => (bool) env('FULL_ACCESS_ALL', true),
+    // When enabled, all teams can access all capabilities. MUST be false in production.
+    'full_access_all' => (bool) env('FULL_ACCESS_ALL', false),
 
     'default_country_code' => env('DEFAULT_COUNTRY_CODE', '+91'),
 

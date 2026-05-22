@@ -22,6 +22,7 @@ class FeatureGatingTest extends TestCase
         $this->backupService = new BackupService;
 
         config(['app.full_access_all' => false]);
+        Team::$useRealEntitlementInTests = true;
 
         // Setup default plans
         Plan::create([
@@ -95,5 +96,11 @@ class FeatureGatingTest extends TestCase
         $this->expectExceptionMessage('The backup feature is not available for your team.');
 
         $this->backupService->backupTenant($team);
+    }
+
+    protected function tearDown(): void
+    {
+        Team::$useRealEntitlementInTests = false;
+        parent::tearDown();
     }
 }

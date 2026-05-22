@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Message extends Model
 {
     use \App\Traits\HasTeam;
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'team_id', 'contact_id', 'conversation_id', 'campaign_id', 'attributed_campaign_id',

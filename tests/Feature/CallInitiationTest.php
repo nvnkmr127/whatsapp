@@ -49,8 +49,9 @@ class CallInitiationTest extends TestCase
             ['expires_at' => now()->addDays(30), 'value' => '1000', 'reason' => 'test']
         );
 
-        // Disable the full_access_all logic for these tests
+        // Disable the full_access_all logic and enable real entitlement for these tests
         config(['app.full_access_all' => false]);
+        Team::$useRealEntitlementInTests = true;
 
         // Ensure entitlement cache is completely clean before setting up plans
         app(\App\Services\EntitlementService::class)->flush($this->team);
@@ -442,5 +443,11 @@ class CallInitiationTest extends TestCase
         // If sanitize returns empty or null, it might still send it or fail.
 
         $response->assertStatus(200); // Sanitize might just clear it if it's not strictly validating here.
+    }
+
+    protected function tearDown(): void
+    {
+        Team::$useRealEntitlementInTests = false;
+        parent::tearDown();
     }
 }

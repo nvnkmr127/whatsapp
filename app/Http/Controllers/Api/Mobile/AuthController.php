@@ -92,16 +92,20 @@ class AuthController extends Controller
 
         $businessProfile = null;
         if ($currentTeam && $currentTeam->whatsapp_phone_number_id && $currentTeam->whatsapp_access_token) {
-            try {
-                $service = app(\App\Services\WhatsAppService::class);
-                $service->setTeam($currentTeam);
-                $metaResponse = $service->getBusinessProfile();
-                if (isset($metaResponse['data']['data'][0])) {
-                    $businessProfile = $metaResponse['data']['data'][0];
+            $cacheKey = 'business_profile_'.$currentTeam->id;
+            $businessProfile = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(20), function () use ($currentTeam) {
+                try {
+                    $service = app(\App\Services\WhatsAppService::class);
+                    $service->setTeam($currentTeam);
+                    $metaResponse = $service->getBusinessProfile();
+
+                    return $metaResponse['data']['data'][0] ?? null;
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('Could not fetch business profile for team '.$currentTeam->id.': '.$e->getMessage());
+
+                    return null;
                 }
-            } catch (\Exception $e) {
-                // Ignore API failures to prevent blocking login
-            }
+            });
         }
 
         return response()->json([

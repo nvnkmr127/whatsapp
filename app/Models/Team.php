@@ -300,40 +300,21 @@ class Team extends JetstreamTeam
     }
 
     /**
+     * Set to true in tests that need real entitlement checking instead of the
+     * default "allow everything" test shortcut. Reset to false in tearDown.
+     *
+     * @see Tests\Feature\Backup\FeatureGatingTest
+     */
+    public static bool $useRealEntitlementInTests = false;
+
+    /**
      * Centralized feature check logic.
      * Delegates to EntitlementService; preserved for backward compatibility.
      */
     public function hasFeature(string $feature): bool
     {
-        // When running tests, we want to default to allowing features to prevent tests from failing
-        // because of the strict entitlement checking unless the test specifically requires testing entitlements.
         if (app()->environment('testing')) {
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $testName = '';
-            foreach ($trace as $frame) {
-                if (isset($frame['file'])) {
-                    $testName .= $frame['file'].'|';
-                }
-            }
-
-            // For FeatureGatingTest and Backup tests, we MUST use real entitlement
-            if (str_contains($testName, 'FeatureGatingTest') ||
-                str_contains($testName, 'BackupServiceTest') ||
-                str_contains($testName, 'RestoreTest') ||
-                str_contains($testName, 'Backup/')) {
-                app(\App\Services\EntitlementService::class)->flush($this);
-
-                return app(\App\Services\EntitlementService::class)->for($this)->hasFeature($feature);
-            }
-
-            // For Domain tests, we MUST use real entitlement
-            if (str_contains($testName, 'DomainReviewFixesTest')) {
-                app(\App\Services\EntitlementService::class)->flush($this);
-
-                return app(\App\Services\EntitlementService::class)->for($this)->hasFeature($feature);
-            }
-
-            // Allow tests to override via DB for other tests
+            // Explicit DB overrides always take precedence.
             $override = \App\Models\BillingOverride::where('team_id', $this->id)
                 ->where('key', $feature)
                 ->where('type', 'feature')
@@ -342,35 +323,23 @@ class Team extends JetstreamTeam
                 return (bool) $override->value;
             }
 
-            // If it's a Call test, we need calling feature enabled except when disabled plan
-            if (str_contains($testName, 'CallInitiationTest') ||
-                str_contains($testName, 'CallWebhookTest') ||
-                str_contains($testName, 'WhatsAppCallIntegrationTest') ||
-                str_contains($testName, 'CallTest')) {
-                if ($feature === 'calling') {
-                    if ($this->subscription_plan === 'test_plan_no_calling') {
-                        return false;
-                    }
+            // Tests that exercise entitlement logic opt in via this flag.
+            if (static::$useRealEntitlementInTests) {
+                app(\App\Services\EntitlementService::class)->flush($this);
 
-                    return true;
-                }
+                return app(\App\Services\EntitlementService::class)->for($this)->hasFeature($feature);
             }
 
-            // For all other tests, we just assume they have the feature
             return true;
         }
 
-        $entitlement = app(\App\Services\EntitlementService::class)->for($this);
-
-        return $entitlement->hasFeature($feature);
+        return app(\App\Services\EntitlementService::class)->for($this)->hasFeature($feature);
     }
 
     public function limit(string $limitKey): int|float|null
     {
-        // For testing, always return 10000 for limits to prevent quota exceeded,
-        // EXCEPT when we explicitly want to test the quota logic.
         if (app()->environment('testing')) {
-            // First check if there's a DB override - respect it!
+            // Explicit DB overrides always take precedence.
             $override = \App\Models\BillingOverride::where('team_id', $this->id)
                 ->where('key', $limitKey)
                 ->where('type', 'limit')
@@ -379,75 +348,17 @@ class Team extends JetstreamTeam
                 return (float) $override->value;
             }
 
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $testName = '';
-            foreach ($trace as $frame) {
-                if (isset($frame['file'])) {
-                    $testName .= $frame['file'].'|';
-                }
-            }
-
-            // Domain and FeatureGating tests specifically check limits
-            if (str_contains($testName, 'DomainReviewFixesTest') ||
-                str_contains($testName, 'FeatureGatingTest') ||
-                str_contains($testName, 'BackupServiceTest') ||
-                str_contains($testName, 'RestoreTest') ||
-                str_contains($testName, 'Backup/')) {
+            // Tests that exercise entitlement logic opt in via this flag.
+            if (static::$useRealEntitlementInTests) {
                 app(\App\Services\EntitlementService::class)->flush($this);
 
                 return app(\App\Services\EntitlementService::class)->for($this)->limit($limitKey);
             }
 
-            // Call tests check call quota
-            if (str_contains($testName, 'CallInitiationTest') ||
-                str_contains($testName, 'CallWebhookTest') ||
-                str_contains($testName, 'WhatsAppCallIntegrationTest') ||
-                str_contains($testName, 'CallTest')) {
-                if ($limitKey === 'max_call_minutes_per_month') {
-                    if ($this->subscription_plan === 'test_plan_0') {
-                        return 0;
-                    }
-
-                    return 1000;
-                }
-            }
-
-            if ($limitKey === 'message_limit') {
-                $isQuotaTest = false;
-                foreach ($trace as $frame) {
-                    try {
-                        if (isset($frame['function']) && $frame['function'] === 'it_blocks_campaign_if_quota_exceeded') {
-                            $isQuotaTest = true;
-                            break;
-                        }
-                        if (isset($frame['args'])) {
-                            $argsStr = json_encode($frame['args']);
-                            if ($argsStr && str_contains($argsStr, 'it_blocks_campaign_if_quota_exceeded')) {
-                                $isQuotaTest = true;
-                                break;
-                            }
-                        }
-                    } catch (\Throwable $e) {
-                        // Ignore serialization errors
-                    }
-                }
-
-                if ($isQuotaTest) {
-                    app(\App\Services\EntitlementService::class)->flush($this);
-
-                    return app(\App\Services\EntitlementService::class)->for($this)->limit($limitKey);
-                }
-
-                // For other campaign tests we still want to allow 10000
-                return 10000;
-            }
-
             return 10000;
         }
 
-        $entitlement = app(\App\Services\EntitlementService::class)->for($this);
-
-        return $entitlement->limit($limitKey);
+        return app(\App\Services\EntitlementService::class)->for($this)->limit($limitKey);
     }
 
     /**
