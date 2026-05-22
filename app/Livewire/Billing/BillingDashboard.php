@@ -145,11 +145,7 @@ class BillingDashboard extends Component
         $this->isProcessingPayment = true;
 
         // In production, this would call a real gateway like Stripe
-        // For now, we simulate a 1.5s delay to mimic real-world processing
         $this->dispatch('simulating-payment');
-
-        // We use Livewire's background-like delay simulation
-        sleep(2); 
 
         $billingService = new BillingService;
         $billingService->deposit($this->team, $this->topUpAmount, 'Gateway Deposit (Simulated)');

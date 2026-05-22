@@ -194,9 +194,6 @@ class CreateAdCampaign extends Component
         $this->isLaunching = true;
 
         try {
-            // Simulated launch process
-            sleep(3);
-
             session()->flash('message', 'Ad started successfully! It will show up in your manager soon.');
 
             return redirect()->route('ads.manager');
