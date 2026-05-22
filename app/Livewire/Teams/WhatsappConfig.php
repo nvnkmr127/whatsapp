@@ -530,6 +530,7 @@ class WhatsappConfig extends Component
             $response = $waService->updateBusinessProfile($profileData);
 
             if ($response['success'] ?? false) {
+                \Illuminate\Support\Facades\Cache::forget('business_profile_'.$team->id);
                 $this->dispatch('notify', title: 'Profile Updated', message: 'Business profile updated successfully.', type: 'success');
                 $this->is_editing_profile = false;
                 $this->profile_photo = null; // Reset
