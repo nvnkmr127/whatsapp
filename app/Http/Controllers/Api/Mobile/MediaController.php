@@ -16,11 +16,15 @@ class MediaController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:20480', // 20MB limit
+            'file' => [
+                'required', 'file', 'max:20480',
+                'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,mp3,ogg,wav,pdf,doc,docx,xls,xlsx,csv',
+            ],
         ]);
 
         $file = $request->file('file');
-        $extension = $file->getClientOriginalExtension();
+        // Derive extension from MIME type (not client-supplied filename) to prevent .php uploads
+        $extension = $file->extension() ?: 'bin';
         $fileName = Str::uuid() . '.' . $extension;
         
         // Determine type based on mime

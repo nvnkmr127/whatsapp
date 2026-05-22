@@ -102,7 +102,7 @@ class ExternalConversationController extends Controller
         ]);
 
         // Dispatch Job
-        \App\Jobs\SendMessageJob::dispatchSync(
+        \App\Jobs\SendMessageJob::dispatch(
             $team->id,
             $request->phone_number,
             $request->type,

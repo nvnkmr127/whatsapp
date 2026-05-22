@@ -48,7 +48,7 @@ class CallSettingsController extends Controller
         try {
             // Update Meta's system settings
             $whatsappService = new WhatsAppService($team);
-            $metaResponse = $whatsappService->updateSystemCallSettings($request->all());
+            $metaResponse = $whatsappService->updateSystemCallSettings($validator->validated());
 
             if (! ($metaResponse['success'] ?? false)) {
                 return response()->json([
