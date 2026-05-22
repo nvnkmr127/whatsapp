@@ -30,16 +30,23 @@ class ShopifyWebhookController extends Controller
         $data = $request->getContent();
         $secret = config('services.shopify.webhook_secret'); // Should be per integration ideally
 
-        if ($hmac && $secret) {
-            $calculatedHmac = base64_encode(hash_hmac('sha256', $data, $secret, true));
-            if (! hash_equals($hmac, $calculatedHmac)) {
-                Log::error("Shopify Webhook HMAC mismatch for shop: {$request->header('X-Shopify-Shop-Domain')}");
+        if (! $hmac) {
+            Log::warning('Shopify Webhook rejected: missing X-Shopify-Hmac-Sha256 header.');
 
-                return response()->json(['error' => 'Invalid signature'], 401);
-            }
-        } else {
-            Log::warning('Shopify Webhook received without HMAC or Secret configured.');
-            // In strict mode, return 401. For now, log and proceed if you want to allow it.
+            return response()->json(['error' => 'Missing signature'], 401);
+        }
+
+        if (! $secret) {
+            Log::critical('Shopify Webhook rejected: services.shopify.webhook_secret not configured.');
+
+            return response()->json(['error' => 'Webhook secret not configured'], 500);
+        }
+
+        $calculatedHmac = base64_encode(hash_hmac('sha256', $data, $secret, true));
+        if (! hash_equals($hmac, $calculatedHmac)) {
+            Log::error("Shopify Webhook HMAC mismatch for shop: {$request->header('X-Shopify-Shop-Domain')}");
+
+            return response()->json(['error' => 'Invalid signature'], 401);
         }
 
         $shopDomain = $request->header('X-Shopify-Shop-Domain');

@@ -68,6 +68,13 @@ class Conversation extends Model
         return $this->hasMany(WhatsAppCall::class);
     }
 
+    public function lastInboundMessage()
+    {
+        return $this->hasOne(Message::class)
+            ->where('direction', 'inbound')
+            ->latestOfMany();
+    }
+
     public function getHasActiveCallAttribute()
     {
         return $this->calls()->whereIn('status', ['initiated', 'ringing', 'in_progress'])->exists();
@@ -75,20 +82,21 @@ class Conversation extends Model
 
     /**
      * Check if the conversation is within the Meta 24-hour service window.
+     *
+     * Uses the `lastInboundMessage` eager-loaded relation when available to
+     * avoid an extra query per conversation in list views.
      */
     public function isWithin24Hours(): bool
     {
-        if (!$this->last_message_at) {
+        if (! $this->last_message_at) {
             return false;
         }
 
-        // Only inbound messages from the customer reset the window for standard text
-        $lastInbound = $this->messages()
-            ->where('direction', 'inbound')
-            ->latest('id')
-            ->first();
+        $lastInbound = $this->relationLoaded('lastInboundMessage')
+            ? $this->lastInboundMessage
+            : $this->messages()->where('direction', 'inbound')->latest('id')->first();
 
-        if (!$lastInbound) {
+        if (! $lastInbound) {
             return false;
         }
 

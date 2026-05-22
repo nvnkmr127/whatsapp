@@ -50,9 +50,15 @@ class WooCommerceWebhookController extends Controller
             return response()->json(['message' => 'Shop not integrated'], 200);
         }
 
-        // Verify Secret if configured
+        // Require signature verification when a secret is configured; reject if signature missing
         $secret = $integration->webhook_secret ?? config('services.woocommerce.webhook_secret');
-        if ($secret && $signature) {
+        if ($secret) {
+            if (! $signature) {
+                Log::warning("WooCommerce Webhook rejected: missing signature for integration: {$integration->id}");
+
+                return response()->json(['error' => 'Missing signature'], 401);
+            }
+
             $expectedSignature = base64_encode(hash_hmac('sha256', $data, $secret, true));
             if (! hash_equals($signature, $expectedSignature)) {
                 Log::error("WooCommerce Webhook Signature mismatch for integration: {$integration->id}");

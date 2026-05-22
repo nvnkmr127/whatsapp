@@ -40,15 +40,11 @@ class VerifyWhatsAppSignature
         $appSecret = config('whatsapp.app_secret'); // Centralized config source
 
         if (! $appSecret) {
-            if (app()->environment('production')) {
-                Log::critical('WhatsApp Webhook: APP_SECRET not configured in PRODUCTION! Rejecting request.');
+            Log::critical('WhatsApp Webhook: APP_SECRET not configured. Rejecting request.', [
+                'app_env' => config('app.env'),
+            ]);
 
-                return response('Server misconfiguration - signature verification required', 500);
-            }
-
-            Log::warning('WhatsApp Webhook: APP_SECRET not configured. Skipping signature verification (DEV MODE ONLY).');
-
-            return $next($request);
+            return response('Server misconfiguration - signature verification required', 500);
         }
 
         $expected = 'sha256='.hash_hmac('sha256', $request->getContent(), $appSecret);
