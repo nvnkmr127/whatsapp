@@ -96,12 +96,40 @@ class TemplateHealthService
     }
 
     /**
-     * Calculate a simplified "Fatigue Score" for a template.
-     * Just a placeholder for advanced analytics for now.
+     * Calculate a "Fatigue Score" (0 = healthy, 100 = fully fatigued).
+     *
+     * Algorithm:
+     *  - Below minimum send volume → 0 (insufficient data)
+     *  - Read rate ≥ target (30 %) → 0
+     *  - Read rate ≤ floor (3 %)  → 100
+     *  - Linear interpolation between floor and target otherwise
      */
     public function getFatigueScore(WhatsappTemplate $template): int
     {
-        // Future: Check send/read ratio from aggregations
-        return 0; // 0 = Healthy, 100 = Fatigued
+        $minVolume = 200;
+
+        if ($template->total_sent < $minVolume) {
+            return 0;
+        }
+
+        $readRate = $template->total_sent > 0
+            ? $template->total_read / $template->total_sent
+            : 0.0;
+
+        $targetRate = 0.30; // 30 % read rate → perfectly healthy
+        $floorRate  = 0.03; // 3 % read rate → completely fatigued
+
+        if ($readRate >= $targetRate) {
+            return 0;
+        }
+
+        if ($readRate <= $floorRate) {
+            return 100;
+        }
+
+        // Map [$floorRate .. $targetRate] → [100 .. 0]
+        $score = (int) round(100 * ($targetRate - $readRate) / ($targetRate - $floorRate));
+
+        return max(0, min(100, $score));
     }
 }

@@ -67,27 +67,25 @@ class MonitorAccountHealth implements ShouldQueue
     {
         Log::warning("MonitorAccountHealth: Pausing active campaigns for Team {$team->id} due to Account Risk.");
 
-        // Example: Pause all 'active' campaigns
-        // \App\Models\Campaign::where('team_id', $team->id)->where('status', 'active')->update(['status' => 'paused']);
-        // Leaving commented as explicit implementation depends on Campaign model, but this is the place.
+        \App\Models\Campaign::where('team_id', $team->id)
+            ->where('status', 'active')
+            ->update(['status' => 'paused']);
 
-        // Update Team Integration State to Warning
         $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::READY_WARNING]);
     }
 
     protected function notifyAdmins(WhatsAppAccountRisk $event, ?Team $team)
     {
         $teamName = $team ? $team->name : 'Unknown Team';
-        $msg = "CRITICAL: WhatsApp Account Risk detected for {$teamName}. Type: {$event->type}. Check logs.";
-
-        // Send to Slack/Email (Implementation generic)
-        Log::critical($msg);
+        Log::critical("CRITICAL: WhatsApp Account Risk detected for {$teamName}. Type: {$event->type}. Check logs.");
     }
 
     protected function notifyTeamOwner(WhatsAppAccountRisk $event, Team $team)
     {
-        // Notify user via internal notification system
-        // $team->owner->notify(new \App\Notifications\WhatsAppAccountRiskNotification($event));
-        Log::info("MonitorAccountHealth: Notification sent to team owner of {$team->name}.");
+        $owner = \App\Models\User::find($team->user_id);
+        if ($owner) {
+            $owner->notify(new \App\Notifications\WhatsAppAccountRiskNotification($event));
+        }
+        Log::info("MonitorAccountHealth: Notifying owner of team {$team->name} about risk type {$event->type}.");
     }
 }

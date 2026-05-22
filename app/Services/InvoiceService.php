@@ -43,7 +43,10 @@ class InvoiceService
 
             // Update Totals
             $subtotal = $invoice->items()->sum('amount');
-            $tax = $subtotal * 0.00; // Placeholder for tax logic
+
+            // Tax rate: per-team override → global config → zero
+            $taxRate = $team->billing_tax_rate ?? config('billing.tax_rate', 0.0);
+            $tax = round($subtotal * $taxRate, 2);
 
             $invoice->update([
                 'subtotal' => $subtotal,

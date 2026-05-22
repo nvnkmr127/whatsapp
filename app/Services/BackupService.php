@@ -729,8 +729,21 @@ class BackupService
             $this->executeSql($sql);
         }
 
-        // 4. Restore Assets
-        // (Placeholder for assets extraction to storage/app/public/tenants/{id}/)
+        // 4. Restore Assets — extract storage/public/** entries from the ZIP
+        $assetPrefix = 'storage/public/';
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if (str_starts_with($name, $assetPrefix)) {
+                $relativePath = substr($name, strlen($assetPrefix));
+                if ($relativePath === '') {
+                    continue;
+                }
+                $contents = $zip->getFromIndex($i);
+                if ($contents !== false) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($relativePath, $contents);
+                }
+            }
+        }
 
         $zip->close();
         if (file_exists($zipPath)) {

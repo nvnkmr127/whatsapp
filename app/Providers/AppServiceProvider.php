@@ -137,6 +137,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PersistDomainEvents::class
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\WhatsAppAccountRisk::class,
+            \App\Listeners\MonitorAccountHealth::class
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\UsageThresholdReached::class,
+            \App\Listeners\NotifyTeamOfBillingAlert::class
+        );
+
         // Register Workflow Event Subscriber for advanced trigger events
         \Illuminate\Support\Facades\Event::subscribe(\App\Listeners\WorkflowEventSubscriber::class);
 

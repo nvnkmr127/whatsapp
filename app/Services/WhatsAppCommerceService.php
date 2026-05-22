@@ -28,9 +28,14 @@ class WhatsAppCommerceService
     {
         $this->team = $team;
         $this->token = $team->whatsapp_access_token;
-        // Assuming catalog_id is stored in team metadata or settings.
-        // For now, let's look for it in team config or require it passed.
-        $this->catalogId = '123456789'; // Placeholder or fetch from DB
+
+        // Resolve catalog_id from the team's meta_commerce integration credentials
+        $integration = \App\Models\Integration::where('team_id', $team->id)
+            ->where('type', 'meta_commerce')
+            ->where('status', 'active')
+            ->first();
+
+        $this->catalogId = $integration ? ($integration->credentials['catalog_id'] ?? '') : '';
 
         return $this;
     }
@@ -51,10 +56,13 @@ class WhatsAppCommerceService
             throw new \Exception('WhatsApp credentials missing for this team.');
         }
 
+        if (! $this->catalogId) {
+            throw new \Exception('Meta catalog ID not configured. Add a Meta Commerce integration with a valid catalog_id.');
+        }
+
         $product->update(['sync_state' => 'syncing']);
 
         try {
-            // Mock API Payload construction
             $payload = [
                 'retailer_id' => $product->retailer_id,
                 'name' => $product->name,
@@ -64,15 +72,18 @@ class WhatsAppCommerceService
                 'price' => (int) ($product->price * 100),
                 'currency' => $product->currency,
                 'image_url' => $product->image_url,
-                'url' => $product->url ?? 'https://example.com',
+                'url' => $product->url ?? config('app.url'),
             ];
 
-            // Simulation of API Call
-            // $response = Http::withToken($this->token)->post("{$this->baseUrl}/{$this->catalogId}/products", $payload);
+            $response = Http::withToken($this->token)
+                ->post("{$this->baseUrl}/{$this->catalogId}/products", $payload);
 
-            // For demo purposes, we simulate success
+            if ($response->failed()) {
+                throw new \Exception('Meta API error: '.$response->json('error.message', 'Unknown error'));
+            }
+
             $product->update([
-                'meta_product_id' => 'META_'.strtoupper(bin2hex(random_bytes(4))),
+                'meta_product_id' => $response->json('id'),
                 'sync_state' => 'synced',
                 'sync_errors' => null,
             ]);
@@ -89,9 +100,32 @@ class WhatsAppCommerceService
 
     public function sendProductMessage($to, Product $product)
     {
-        // messaging_product: whatsapp
-        // type: interactive
-        // interactive: type: product
-        // action: catalog_id, product_retailer_id
+        if (! $this->token || ! $this->catalogId) {
+            throw new \Exception('WhatsApp token or catalog ID not configured.');
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'product',
+                'body' => ['text' => $product->description ?? $product->name],
+                'action' => [
+                    'catalog_id' => $this->catalogId,
+                    'product_retailer_id' => $product->retailer_id,
+                ],
+            ],
+        ];
+
+        $response = Http::withToken($this->token)
+            ->post("{$this->baseUrl}/messages", $payload);
+
+        if ($response->failed()) {
+            throw new \Exception('Failed to send product message: '.$response->json('error.message', 'Unknown error'));
+        }
+
+        return $response->json();
     }
 }

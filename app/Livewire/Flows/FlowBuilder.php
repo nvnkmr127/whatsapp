@@ -212,7 +212,7 @@ class FlowBuilder extends Component
 
                     return;
                 }
-                $component['src'] = 'https://via.placeholder.com/800x400';
+                $component['src'] = asset('images/flow-placeholder.png');
                 $component['height'] = 200;
                 break;
         }

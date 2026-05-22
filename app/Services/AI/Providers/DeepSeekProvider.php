@@ -103,7 +103,7 @@ class DeepSeekProvider implements AIProviderInterface
 
     public function transcribe(string $filePath, array $options = []): string
     {
-        return ''; // Not supported by DeepSeek
+        throw new \RuntimeException('DeepSeek does not support audio transcription. Configure OpenAI or another provider for this feature.');
     }
 
     public function testConnection(string $apiKey): bool
