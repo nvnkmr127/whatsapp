@@ -29,8 +29,9 @@ class AuditTemplateCompliance extends Command
     {
         $this->info('Starting Compliance Audit...');
 
-        $templates = WhatsappTemplate::all();
-        $bar = $this->output->createProgressBar($templates->count());
+        $total = WhatsappTemplate::count();
+        $templates = WhatsappTemplate::cursor();
+        $bar = $this->output->createProgressBar($total);
         $violations = [];
         $stats = [
             'total' => 0,
