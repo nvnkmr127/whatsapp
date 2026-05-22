@@ -22,19 +22,18 @@ class CheckIntegrationHealth implements ShouldQueue
     {
         Log::info('Starting global integration health check...');
 
-        $integrations = Integration::where('status', '!=', 'inactive')->get();
+        Integration::where('status', '!=', 'inactive')->chunk(100, function ($integrations) use ($healthService): void {
+            foreach ($integrations as $integration) {
+                try {
+                    $status = $healthService->checkHealth($integration);
 
-        foreach ($integrations as $integration) {
-            try {
-                $status = $healthService->checkHealth($integration);
-
-                if ($status['state'] === 'broken') {
-                    Log::error("Integration {$integration->id} ({$integration->name}) is BROKEN.");
-                    // Trigger notifications if needed
+                    if ($status['state'] === 'broken') {
+                        Log::error("Integration {$integration->id} ({$integration->name}) is BROKEN.");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to check health for integration {$integration->id}: ".$e->getMessage());
                 }
-            } catch (\Exception $e) {
-                Log::error("Failed to check health for integration {$integration->id}: ".$e->getMessage());
             }
-        }
+        });
     }
 }

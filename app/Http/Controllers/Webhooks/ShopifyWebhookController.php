@@ -60,16 +60,16 @@ class ShopifyWebhookController extends Controller
         // Optimization: Find by credentials domain directly if possible
         // Better: Use a dedicated 'shop_domain' column or cache.
         $integration = Integration::where('type', 'shopify')
-            ->where('status', '!=', 'broken') // Don't process for broken integrations
+            ->where('status', 'active')
             ->get()
             ->first(function ($int) use ($shopDomain) {
                 return str_contains($int->credentials['domain'] ?? ($int->credentials['shop_url'] ?? ''), $shopDomain);
             });
 
         if (! $integration) {
-            Log::info("Received Shopify webhook for unknown or broken shop: {$shopDomain}");
+            Log::info("Received Shopify webhook for unknown or inactive shop: {$shopDomain}");
 
-            return response()->json(['message' => 'Shop not integrated or integration broken'], 200);
+            return response()->json(['message' => 'Shop not integrated or integration inactive'], 200);
         }
 
         $payload = $request->all();

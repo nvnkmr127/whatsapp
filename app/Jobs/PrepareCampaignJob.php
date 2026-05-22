@@ -101,10 +101,12 @@ class PrepareCampaignJob implements ShouldQueue
             ]);
 
             if ($campaign->campaign_type === 'drip') {
-                $details = CampaignDetail::where('campaign_id', $campaign->id)->get();
-                foreach ($details as $detail) {
-                    \App\Jobs\ProcessDripStepJob::dispatch($campaign->id, $detail->contact_id, 0); // Start Step 0
-                }
+                CampaignDetail::where('campaign_id', $campaign->id)
+                    ->chunk(500, function ($details) use ($campaign): void {
+                        foreach ($details as $detail) {
+                            \App\Jobs\ProcessDripStepJob::dispatch($campaign->id, $detail->contact_id, 0);
+                        }
+                    });
             }
 
             Log::info("Campaign {$campaign->id} prepared with {$count} contacts.");
