@@ -36,7 +36,7 @@ class TemplateController extends Controller
         }
 
         $templates = $query->latest()
-            ->paginate($request->input('per_page', 20));
+            ->paginate(min((int) $request->input('per_page', 20), 100));
 
         return response()->json($templates);
     }

@@ -69,7 +69,7 @@ class ConversationController extends Controller
                     $query->where('direction', 'inbound')->whereNull('read_at');
                 }])
                 ->orderBy('last_message_at', 'desc')
-                ->paginate($request->input('per_page', 20));
+                ->paginate(min((int) $request->input('per_page', 20), 100));
 
             // Transform to match WhatsApp-like expectations
             $conversations->getCollection()->transform(function ($conv) {

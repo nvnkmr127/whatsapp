@@ -20,7 +20,7 @@ class MessageController extends Controller
         $messages = Message::where('contact_id', $conversation->contact_id)
             ->with('replyTo:id,content')
             ->latest('id')
-            ->cursorPaginate($request->input('per_page', 40));
+            ->cursorPaginate(min((int) $request->input('per_page', 40), 100));
 
         // Transform to include reply context
         $messages->getCollection()->transform(function($msg) {

@@ -37,7 +37,7 @@ class ContactController extends Controller
             $query->orderBy('name');
         }
 
-        $contacts = $query->paginate($request->input('per_page', 40));
+        $contacts = $query->paginate(min((int) $request->input('per_page', 40), 100));
 
         return response()->json($contacts);
     }
