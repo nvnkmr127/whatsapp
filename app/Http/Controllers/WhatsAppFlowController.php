@@ -25,8 +25,6 @@ class WhatsAppFlowController extends Controller
             $encryptor = new FlowEncryptionService;
             $decryptedData = $encryptor->decryptRequest($encryptedFlowData, $encryptedAesKey, $initialVector);
 
-            Log::info('Flow Request Decrypted', ['data' => $decryptedData]);
-
             // 3. Process Logic
             $service = new WhatsAppFlowService;
             $responsePayload = $service->handleRequest($decryptedData);

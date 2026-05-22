@@ -19,7 +19,7 @@ class WorkflowIncomingWebhookController extends Controller
      */
     public function handle(Request $request, $webhookUrlId)
     {
-        Log::info("Incoming Workflow Webhook hit for URL ID: {$webhookUrlId}", $request->all());
+        Log::info("Incoming Workflow Webhook hit for URL ID: {$webhookUrlId}");
 
         $workflow = Workflow::where('trigger_type', 'webhook_incoming')
             ->where('trigger_config->webhook_url_id', $webhookUrlId)

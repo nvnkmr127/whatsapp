@@ -46,7 +46,7 @@ class CampaignController extends Controller
             abort(403);
         }
 
-        $template = WhatsappTemplate::findOrFail($request->template_id);
+        $template = WhatsappTemplate::where('team_id', $team->id)->findOrFail($request->template_id);
 
         $campaign = Campaign::create([
             'team_id' => $team->id,

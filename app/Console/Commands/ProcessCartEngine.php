@@ -31,51 +31,43 @@ class ProcessCartEngine extends Command
         $this->info('Starting Cart Engine Processing...');
 
         // 1. Mark Expired Carts as Abandoned
-        // We find ACTIVE carts where expires_at < now
-        $expiredCarts = Cart::active()
+        $abandoned = 0;
+        Cart::active()
             ->where('expires_at', '<', now())
-            ->get();
+            ->chunk(200, function ($carts) use (&$abandoned): void {
+                foreach ($carts as $cart) {
+                    $cart->update(['status' => 'abandoned']);
+                    $abandoned++;
+                }
+            });
 
-        foreach ($expiredCarts as $cart) {
-            $cart->update(['status' => 'abandoned']);
-            Log::info("Cart {$cart->id} marked as abandoned.");
-        }
-
-        $this->info('Marked '.$expiredCarts->count().' carts as abandoned.');
+        $this->info("Marked {$abandoned} carts as abandoned.");
 
         // 2. Process Reminders for Abandoned Carts
-        // We iterate through teams to get their specific delay settings
-        $teams = Team::all(); // Optimization: Chunk if many teams
+        Team::chunk(100, function ($teams): void {
+            foreach ($teams as $team) {
+                $config = $team->commerce_config ?? [];
+                $reminderDelay = $config['cart_reminder_minutes'] ?? 30;
 
-        foreach ($teams as $team) {
-            $config = $team->commerce_config ?? [];
-            $reminderDelay = $config['cart_reminder_minutes'] ?? 30;
+                Cart::where('team_id', $team->id)
+                    ->where('status', 'abandoned')
+                    ->whereNull('reminder_sent_at')
+                    ->where('expires_at', '<=', now()->subMinutes((int) $reminderDelay))
+                    ->chunk(100, function ($carts): void {
+                        foreach ($carts as $cart) {
+                            $this->sendReminder($cart);
 
-            // Find abandoned carts for this team that haven't had a reminder yet
-            // AND match the time criteria (abandoned_at + delay <= now)
-            // Note: 'updated_at' is used as proxy for 'abandoned_at' time since we just updated it above
-            // Better: We should probably trust 'expires_at' as the abandonment time.
-
-            $abandonedCarts = Cart::where('team_id', $team->id)
-                ->where('status', 'abandoned')
-                ->whereNull('reminder_sent_at')
-                ->where('expires_at', '<=', now()->subMinutes((int) $reminderDelay))
-                ->get();
-
-            foreach ($abandonedCarts as $cart) {
-                $this->sendReminder($cart);
-
-                // Advanced Automation Engine Trigger (T7. cart_abandoned)
-                try {
-                    $automationService = app(\App\Services\AutomationService::class);
-                    $automationService->checkSpecialTriggers($cart->contact, 'cart_abandoned', [
-                        'cart_uuid' => $cart->uuid,
-                        'total_amount' => $cart->total_amount,
-                    ]);
-                } catch (\Exception $e) {
-                }
+                            try {
+                                app(\App\Services\AutomationService::class)->checkSpecialTriggers($cart->contact, 'cart_abandoned', [
+                                    'cart_uuid' => $cart->uuid,
+                                    'total_amount' => $cart->total_amount,
+                                ]);
+                            } catch (\Exception $e) {
+                            }
+                        }
+                    });
             }
-        }
+        });
 
         $this->info('Cart Engine Processing Complete.');
     }

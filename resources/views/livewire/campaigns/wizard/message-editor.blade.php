@@ -99,7 +99,7 @@
                                         $previewText = str_replace('{{'.($idx+1).'}}', $v ?: '...', $previewText);
                                     }
                                 @endphp
-                                {!! nl2br($previewText) !!}
+                                {!! nl2br(e($previewText)) !!}
                             </p>
                         </div>
                     @else

@@ -45,7 +45,7 @@ class MetaCommerceWebhookController extends Controller
     {
         $payload = $request->all();
 
-        Log::info('MetaCommerceWebhook: Received event', ['payload' => $payload]);
+        Log::info('MetaCommerceWebhook: Received event');
 
         // Meta webhooks usually have an 'entry' array
         foreach ($payload['entry'] ?? [] as $entry) {
