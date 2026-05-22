@@ -106,7 +106,6 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/conversations/{conversation}', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'show']);
         Route::post('/conversations/{conversation}/read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
         Route::post('/conversations/{conversation}/toggle-ai', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'toggleAi']);
-        Route::get('/conversations/{conversation}/notes', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getNotes']);
         Route::post('/conversations/{conversation}/close', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'close']);
         Route::post('/conversations/{conversation}/reopen', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'reopen']);
         Route::post('/conversations/{conversation}/mark-read', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'markAsRead']);
