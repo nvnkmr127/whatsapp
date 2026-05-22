@@ -388,7 +388,6 @@ class WebhookSourceManager extends Component
 
     public function openNewSource()
     {
-        \Illuminate\Support\Facades\Log::info('Opening new source wizard');
         $this->cancelEdit();
         $this->showWizardModal = true;
         $this->showLogsModal = false;
@@ -402,7 +401,6 @@ class WebhookSourceManager extends Component
     public function edit($id)
     {
         try {
-            \Illuminate\Support\Facades\Log::info("Triggering edit for source ID: {$id}");
             $source = WebhookSource::findOrFail($id);
             $this->authorize('update', $source);
 
@@ -477,7 +475,6 @@ class WebhookSourceManager extends Component
             $this->showWizardModal = true;
             $this->showLogsModal = false;
             $this->showTestModal = false;
-            \Illuminate\Support\Facades\Log::info("Wizard modal shown for ID: {$id}. State: active.");
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error in WebhookSourceManager@edit: '.$e->getMessage());
             \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
@@ -744,7 +741,6 @@ class WebhookSourceManager extends Component
     public function viewLogs($id)
     {
         try {
-            \Illuminate\Support\Facades\Log::info("Opening logs for source ID: {$id}");
             $this->logsSourceId = $id;
             $this->showLogsModal = true;
             $this->showWizardModal = false;
@@ -759,9 +755,7 @@ class WebhookSourceManager extends Component
     public function refreshLogs()
     {
         if ($this->logsSourceId) {
-            \Illuminate\Support\Facades\Log::info("Refreshing logs for source ID: {$this->logsSourceId}");
             $this->recentLogs = $this->getRecentPayloads($this->logsSourceId);
-            \Illuminate\Support\Facades\Log::info('Found '.count($this->recentLogs).' recent logs.');
 
             $source = WebhookSource::find($this->logsSourceId);
             if ($source) {
@@ -772,7 +766,6 @@ class WebhookSourceManager extends Component
                     'rate' => $source->getSuccessRate(),
                     'name' => $source->name,
                 ];
-                \Illuminate\Support\Facades\Log::info('Stats updated: ', $this->logsSourceStats);
 
                 // Force Livewire to update the view
                 $this->dispatch('stats-loaded');
@@ -1154,7 +1147,6 @@ class WebhookSourceManager extends Component
 
     public function render()
     {
-        \Illuminate\Support\Facades\Log::info('Rendering WebhookSourceManager. Wizards: '.($this->showWizardModal ? 'YES' : 'NO').' | Logs: '.($this->showLogsModal ? 'YES' : 'NO'));
         $user = auth()->user();
         $team = $user->currentTeam;
 
@@ -1199,7 +1191,9 @@ class WebhookSourceManager extends Component
         $templateParams = [];
         $selectedTemplate = null;
         if ($this->selectedTemplateId) {
-            $selectedTemplate = WhatsappTemplate::find($this->selectedTemplateId);
+            $selectedTemplate = $team
+                ? WhatsappTemplate::where('team_id', $team->id)->find($this->selectedTemplateId)
+                : WhatsappTemplate::find($this->selectedTemplateId);
             if ($selectedTemplate && is_iterable($selectedTemplate->components)) {
                 foreach ($selectedTemplate->components as $component) {
                     // Extract {{1}}, {{2}}, etc. from all components with text

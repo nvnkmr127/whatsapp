@@ -210,7 +210,7 @@ class ConversationController extends Controller
             return response()->json([]);
         }
 
-        return response()->json(\App\Models\CannedMessage::where('team_id', $team->id)->orderBy('shortcut')->get());
+        return response()->json(\App\Models\CannedMessage::where('team_id', $team->id)->orderBy('shortcut')->limit(200)->get());
     }
 
     /**

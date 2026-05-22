@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
@@ -21,7 +22,6 @@ class AnalyticsController extends Controller
         }
 
         $now = Carbon::now();
-        $startOfMonth = $now->copy()->startOfMonth();
 
         // 1. Conversation Stats
         $activeCount = Conversation::where('team_id', $team->id)->whereNull('closed_at')->count();
@@ -60,16 +60,21 @@ class AnalyticsController extends Controller
         // 4. Credits
         $credits = $team->wallet->balance ?? 0.00;
 
-        // 5. Message Activity (Daily counts for last 7 days)
+        // 5. Message Activity (Daily counts for last 7 days — single query)
+        $sevenDaysAgo = $now->copy()->subDays(6)->startOfDay();
+        $activityRows = Message::where('team_id', $team->id)
+            ->where('direction', 'outbound')
+            ->where('created_at', '>=', $sevenDaysAgo)
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
+            ->groupBy('date')
+            ->pluck('count', 'date');
+
         $activityLabels = [];
         $activityValues = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $now->copy()->subDays($i);
             $activityLabels[] = $date->format('D');
-            $activityValues[] = Message::where('team_id', $team->id)
-                ->where('direction', 'outbound')
-                ->whereDate('created_at', $date->toDateString())
-                ->count();
+            $activityValues[] = (int) ($activityRows[$date->toDateString()] ?? 0);
         }
 
         return response()->json([

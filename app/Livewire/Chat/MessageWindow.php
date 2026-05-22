@@ -372,11 +372,6 @@ class MessageWindow extends Component
 
     public function sendMessage()
     {
-        Log::info('MessageWindow: sendMessage called', [
-            'body' => $this->msgBody,
-            'has_attachment' => $this->newAttachmentData ? true : false,
-            'conversation_id' => $this->conversationId,
-        ]);
         $this->validate([
             'msgBody' => 'nullable|required_without:newAttachmentData|string',
             'newAttachmentData' => 'nullable|array', // Validate as array from sub-component
@@ -1138,12 +1133,6 @@ class MessageWindow extends Component
             ->skip($offset)
             ->take($limit)
             ->get();
-
-        \Log::info('MessageWindow: loadMessagesJson', [
-            'conversation_id' => $this->conversationId,
-            'count' => $messages->count(),
-            'offset' => $offset,
-        ]);
 
         return $messages
             ->map(function ($msg) {

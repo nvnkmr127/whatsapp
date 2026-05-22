@@ -38,8 +38,12 @@ class ActivityController extends Controller
         return response()->json($query->paginate(20));
     }
 
-    public function show(ActivityLog $activity)
+    public function show(Request $request, ActivityLog $activity)
     {
+        if ($activity->team_id !== $request->user()->current_team_id) {
+            abort(403);
+        }
+
         $activity->load(['user', 'subject']);
         return response()->json($activity);
     }
