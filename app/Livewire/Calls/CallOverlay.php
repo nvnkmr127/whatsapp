@@ -84,7 +84,7 @@ class CallOverlay extends Component
 
     public function handleInitiation($data)
     {
-        Log::info('CallOverlay: Received initiate-whatsapp-call event', ['data' => $data]);
+        Log::debug('CallOverlay: Received initiate-whatsapp-call event', ['contact_id' => $data['contact_id'] ?? null]);
 
         // Robustly get contact ID and phone number
         $contactId = $data['contact_id'] ?? null;
@@ -106,8 +106,7 @@ class CallOverlay extends Component
 
     public function initiateWhatsAppCall($phoneNumber, $contactId, $sdp = null)
     {
-        Log::info('CallOverlay: initiateWhatsAppCall requested', [
-            'to' => $phoneNumber,
+        Log::debug('CallOverlay: initiateWhatsAppCall requested', [
             'contact_id' => $contactId,
             'has_sdp' => ! empty($sdp),
         ]);
@@ -156,7 +155,7 @@ class CallOverlay extends Component
 
     public function handleOffered($event)
     {
-        Log::info('CallOverlay: Received CallOffered event', ['event' => $event]);
+        Log::debug('CallOverlay: Received CallOffered event', ['call_id' => $event['call_id'] ?? null, 'direction' => $event['direction'] ?? null]);
 
         $this->callId = $event['call_id'] ?? null;
         $this->status = 'ringing';
@@ -188,7 +187,7 @@ class CallOverlay extends Component
 
     public function handleAnswered($event)
     {
-        Log::info('CallOverlay: Received CallAnswered event', ['event' => $event]);
+        Log::debug('CallOverlay: Received CallAnswered event', ['call_id' => ($event['call'] ?? $event)['call_id'] ?? null]);
 
         $callData = $event['call'] ?? $event;
         $callId = $callData['call_id'] ?? null;
@@ -335,12 +334,12 @@ class CallOverlay extends Component
 
             if ($session) {
                 $preAccept = $whatsappService->preAcceptCall($this->callId, $session, $phoneNumberId);
-                Log::info('CallOverlay: Meta Pre-Accept Response', ['response' => $preAccept]);
+                Log::debug('CallOverlay: Meta Pre-Accept Response', ['success' => $preAccept['success'] ?? null]);
             }
 
             $response = $whatsappService->answerCall($this->callId, $session, $phoneNumberId);
 
-            Log::info('CallOverlay: Meta Answer Response', ['response' => $response]);
+            Log::debug('CallOverlay: Meta Answer Response', ['success' => $response['success'] ?? null]);
 
             if ($response['success']) {
                 $this->status = 'active';
