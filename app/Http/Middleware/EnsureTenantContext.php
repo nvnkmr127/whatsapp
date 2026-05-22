@@ -17,12 +17,6 @@ class EnsureTenantContext
     {
         $user = $request->user();
 
-        \Illuminate\Support\Facades\Log::info('[DEBUG] [API] EnsureTenantContext checking', [
-            'user' => $user?->email,
-            'tenant_header' => $request->header('X-Tenant-ID'),
-            'path' => $request->path(),
-        ]);
-
         if (! $user) {
             return $next($request);
         }
@@ -49,6 +43,13 @@ class EnsureTenantContext
                 abort(403, 'No tenant (team) selected for the current user.');
             }
             abort(403, 'No active workspace selected. Please select or create a team.');
+        }
+
+        if (app()->bound('sentry')) {
+            \Sentry\configureScope(function (\Sentry\State\Scope $scope) use ($user): void {
+                $scope->setUser(['id' => $user->id, 'email' => $user->email]);
+                $scope->setTag('team_id', (string) $user->current_team_id);
+            });
         }
 
         return $next($request);

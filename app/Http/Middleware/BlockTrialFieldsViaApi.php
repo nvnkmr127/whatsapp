@@ -46,21 +46,12 @@ class BlockTrialFieldsViaApi
         'offer_claimed_at',
         'offer_excluded',
         'offer_converted_churned',
-        'offer_converted_churned',
         'has_claimed_offer',
         'is_super_admin',
     ];
 
     public function handle(Request $request, Closure $next): Response
     {
-        Log::info('[DEBUG] [API] BlockTrialFieldsViaApi check', [
-            'method' => $request->method(),
-            'path' => $request->path(),
-            'all_keys' => array_keys($request->all()),
-            'user_id' => $request->user()?->id,
-            'team_id' => $request->user()?->current_team_id,
-        ]);
-
         $attempted = array_intersect(
             array_keys($request->all()),
             self::PROTECTED_FIELDS

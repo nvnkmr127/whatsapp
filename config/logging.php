@@ -134,6 +134,12 @@ return [
             'path' => storage_path('logs/whatsapp_debug.log'),
             'level' => 'debug',
         ],
+
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('SENTRY_LOG_LEVEL', 'warning'),
+            'bubble' => true,
+        ],
     ],
 
 ];
