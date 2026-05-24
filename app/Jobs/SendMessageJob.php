@@ -205,7 +205,7 @@ class SendMessageJob implements ShouldQueue
                 }
 
                 if ($errorCode == 200) {
-                    $this->markMessageFailed("WhatsApp Permission (#200): Cannot send messages. If this account was connected via Embedded Signup, the generated 'USER' token cannot be used for messaging per Meta rules. You must either configure a global 'WHATSAPP_SYSTEM_ACCESS_TOKEN' in your .env (if you are a Tech Provider) or manually connect using a System User Token generated from the Facebook Business Settings.");
+                    $this->markMessageFailed("WhatsApp Permission Error (#200): Cannot send messages. If this account was connected via Embedded Signup, the generated 'USER' token cannot be used for messaging per Meta rules. You must either configure a global 'WHATSAPP_SYSTEM_ACCESS_TOKEN' in your .env (if you are a Tech Provider) or manually connect using a System User Token generated from the Facebook Business Settings.");
 
                     return;
                 }
