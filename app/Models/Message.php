@@ -17,7 +17,7 @@ class Message extends Model
         'reply_to_message_id', 'agent_id',
         'whatsapp_message_id', 'external_id',
         'direction', 'type', 'content', 'metadata', 'status',
-        'media_url', 'media_type', 'caption',
+        'media_id', 'media_url', 'media_type', 'caption',
         'error_message', 'last_error', 'retry_count', 'next_retry_at',
         'is_starred', 'sent_at', 'delivered_at', 'read_at',
     ];

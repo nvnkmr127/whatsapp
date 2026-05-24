@@ -70,4 +70,112 @@ class InboundMessageTest extends TestCase
         // Check Event Dispatched
         Event::assertDispatched(\App\Events\MessageReceived::class);
     }
+
+    public function test_inbound_message_updates_placeholder_contact_name()
+    {
+        $team = Team::factory()->create([
+            'whatsapp_phone_number_id' => '123456789',
+            'whatsapp_business_account_id' => '987654321',
+        ]);
+
+        $contact = Contact::create([
+            'team_id' => $team->id,
+            'phone_number' => \App\Helpers\PhoneNumberHelper::normalize('15550000000'),
+            'name' => 'Webhook Contact',
+        ]);
+
+        $payload = [
+            'provider_id' => 'wamid.test.'.uniqid(),
+            'to_phone_id' => '123456789',
+            'waba_id' => '987654321',
+            'from_phone' => '15550000000',
+            'contact_name' => 'John Doe',
+            'timestamp' => time(),
+            'type' => 'text',
+            'content' => [
+                'type' => 'text',
+                'text' => ['body' => 'Hello World'],
+            ],
+        ];
+
+        Event::fake([\App\Events\MessageReceived::class]);
+
+        $job = new PersistMessageJob($payload);
+        $job->handle();
+
+        $contact->refresh();
+        $this->assertEquals('John Doe', $contact->name);
+    }
+
+    public function test_inbound_message_does_not_overwrite_real_contact_name_with_null()
+    {
+        $team = Team::factory()->create([
+            'whatsapp_phone_number_id' => '123456789',
+            'whatsapp_business_account_id' => '987654321',
+        ]);
+
+        $contact = Contact::create([
+            'team_id' => $team->id,
+            'phone_number' => \App\Helpers\PhoneNumberHelper::normalize('15550000000'),
+            'name' => 'John Doe',
+        ]);
+
+        $payload = [
+            'provider_id' => 'wamid.test.'.uniqid(),
+            'to_phone_id' => '123456789',
+            'waba_id' => '987654321',
+            'from_phone' => '15550000000',
+            'contact_name' => null,
+            'timestamp' => time(),
+            'type' => 'text',
+            'content' => [
+                'type' => 'text',
+                'text' => ['body' => 'Hello World'],
+            ],
+        ];
+
+        Event::fake([\App\Events\MessageReceived::class]);
+
+        $job = new PersistMessageJob($payload);
+        $job->handle();
+
+        $contact->refresh();
+        $this->assertEquals('John Doe', $contact->name);
+    }
+
+    public function test_inbound_message_does_not_overwrite_real_contact_name_with_placeholder()
+    {
+        $team = Team::factory()->create([
+            'whatsapp_phone_number_id' => '123456789',
+            'whatsapp_business_account_id' => '987654321',
+        ]);
+
+        $contact = Contact::create([
+            'team_id' => $team->id,
+            'phone_number' => \App\Helpers\PhoneNumberHelper::normalize('15550000000'),
+            'name' => 'John Doe',
+        ]);
+
+        $payload = [
+            'provider_id' => 'wamid.test.'.uniqid(),
+            'to_phone_id' => '123456789',
+            'waba_id' => '987654321',
+            'from_phone' => '15550000000',
+            'contact_name' => 'Webhook Contact',
+            'timestamp' => time(),
+            'type' => 'text',
+            'content' => [
+                'type' => 'text',
+                'text' => ['body' => 'Hello World'],
+            ],
+        ];
+
+        Event::fake([\App\Events\MessageReceived::class]);
+
+        $job = new PersistMessageJob($payload);
+        $job->handle();
+
+        $contact->refresh();
+        $this->assertEquals('John Doe', $contact->name);
+    }
 }

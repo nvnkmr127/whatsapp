@@ -25,6 +25,12 @@ class TemplateConsentFinalizationTest extends TestCase
             'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
             'whatsapp_connected' => true,
         ]);
+
+        \App\Models\TeamWallet::create([
+            'team_id' => $team->id,
+            'balance' => 100.00,
+        ]);
+
         $user = User::factory()->create(['current_team_id' => $team->id]);
         $this->actingAs($user);
 

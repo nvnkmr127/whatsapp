@@ -304,6 +304,7 @@ class ContactManager extends Component
                 'opt_in_status' => $this->opt_in_status,
                 'category_id' => $this->category_id ?: null,
                 'custom_attributes' => $this->customAttributes,
+                'force_name_update' => true,
             ];
 
             if ($this->contactId) {

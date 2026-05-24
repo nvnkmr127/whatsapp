@@ -106,11 +106,44 @@ class ShopifyWebhookController extends Controller
             return response()->json(['message' => 'No Customer Phone'], 200);
         }
 
-        // Resolve Contact
-        $contact = Contact::firstOrCreate(
-            ['team_id' => $teamId, 'phone_number' => $phone],
-            ['name' => $customer['first_name'].' '.$customer['last_name'], 'email' => $email]
-        );
+        $resolvedName = trim(($customer['first_name'] ?? '').' '.($customer['last_name'] ?? ''));
+        if (empty($resolvedName)) {
+            $resolvedName = 'Shopify Customer';
+        }
+
+        $contact = Contact::where('team_id', $teamId)
+            ->where('phone_number', $phone)
+            ->first();
+
+        if (! $contact) {
+            $contact = Contact::create([
+                'team_id' => $teamId,
+                'phone_number' => $phone,
+                'name' => $resolvedName,
+                'email' => $email,
+            ]);
+        } else {
+            $updates = [];
+            if (empty($contact->email) && $email) {
+                $updates['email'] = $email;
+            }
+
+            // Check if current name is placeholder or phone number
+            $currentName = $contact->name;
+            $placeholders = ['Webhook Contact', 'Friend', 'Shopify Customer', 'WooCommerce Customer'];
+            $cleanPhone = preg_replace('/[^\d]/', '', $currentName ?? '');
+            $isPhoneName = ($cleanPhone !== '' && ($currentName === $cleanPhone || '+' . $cleanPhone === $currentName));
+
+            if (empty($currentName) || in_array($currentName, $placeholders) || $isPhoneName) {
+                if ($resolvedName && !in_array($resolvedName, $placeholders)) {
+                    $updates['name'] = $resolvedName;
+                }
+            }
+
+            if (! empty($updates)) {
+                $contact->update($updates);
+            }
+        }
 
         $order = Order::updateOrCreate(
             [

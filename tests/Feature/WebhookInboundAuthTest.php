@@ -117,4 +117,57 @@ class WebhookInboundAuthTest extends TestCase
         $this->assertEquals('Test User', $contact->name);
         $this->assertTrue($contact->tags->contains($tag));
     }
+
+    public function test_webhook_inbound_updates_placeholder_contact_name()
+    {
+        $team = Team::factory()->create();
+        $apiKey = Str::random(32);
+
+        // Pre-create the contact with 'Webhook Contact' placeholder name
+        $contact = \App\Models\Contact::create([
+            'team_id' => $team->id,
+            'phone_number' => '+15555551234',
+            'name' => 'Webhook Contact',
+        ]);
+
+        $source = WebhookSource::create([
+            'team_id' => $team->id,
+            'name' => 'Ad Leads',
+            'platform' => 'custom',
+            'auth_method' => 'api_key',
+            'auth_config' => ['key' => $apiKey, 'header' => 'X-API-Key'],
+            'is_active' => true,
+            'field_mappings' => [
+                'custom' => [
+                    'phone_number' => 'customer_phone',
+                    'customer_name' => 'customer_name',
+                ]
+            ],
+            'action_config' => [
+                'type' => 'upsert_contact',
+                'phone_field' => 'phone_number',
+                'name_field' => 'customer_name',
+            ]
+        ]);
+
+        // Send payload containing real name
+        $response = $this->postJson("/api/v1/webhooks/inbound/{$source->slug}", [
+            'customer_phone' => '+15555551234',
+            'customer_name' => 'Real Customer Name',
+        ], [
+            'X-API-Key' => $apiKey,
+        ]);
+
+        $response->assertStatus(200);
+
+        $payload = \App\Models\WebhookPayload::latest()->first();
+        $this->assertNotNull($payload);
+
+        $job = new \App\Jobs\ProcessMappedWebhookJob($payload, $source->action_config);
+        $job->handle();
+
+        // Verify the contact name was updated from 'Webhook Contact' to 'Real Customer Name'
+        $contact->refresh();
+        $this->assertEquals('Real Customer Name', $contact->name);
+    }
 }

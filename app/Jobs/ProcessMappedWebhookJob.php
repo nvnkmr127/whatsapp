@@ -338,9 +338,10 @@ class ProcessMappedWebhookJob implements ShouldQueue
             throw new \Exception("Invalid phone number format for contact: {$phoneNumber}. Error: ".$e->getMessage());
         }
 
+        $resolvedName = $this->payload->mapped_data[$nameField] ?? null;
+
         $contactData = [
             'phone_number' => $phoneNumber,
-            'name' => $this->payload->mapped_data[$nameField] ?? null,
             'team_id' => $this->payload->source->team_id,
         ];
 
@@ -351,10 +352,18 @@ class ProcessMappedWebhookJob implements ShouldQueue
             }
         }
 
-        Contact::updateOrCreate(
-            ['phone_number' => $phoneNumber, 'team_id' => $this->payload->source->team_id],
-            $contactData
-        );
+        $contact = $this->getOrCreateContact($phoneNumber, $resolvedName);
+
+        if ($resolvedName) {
+            $contactData['name'] = $resolvedName;
+        }
+
+        unset($contactData['phone_number']);
+        unset($contactData['team_id']);
+
+        if (! empty($contactData)) {
+            $contact->update($contactData);
+        }
 
         Log::info('Webhook created/updated contact', [
             'phone_number' => $phoneNumber,
@@ -402,10 +411,8 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $teamId = $this->payload->source->team_id;
-        $contact = Contact::firstOrCreate(
-            ['team_id' => $teamId, 'phone_number' => $phoneNumber],
-            ['name' => 'Webhook Contact']
-        );
+        $resolvedName = $this->resolveContactName();
+        $contact = $this->getOrCreateContact($phoneNumber, $resolvedName);
 
         $automationService = app(\App\Services\AutomationService::class);
         $automationService->start($automation, $contact, $automationVariables);
@@ -589,15 +596,8 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         // Find or create contact
-        $contact = Contact::firstOrCreate(
-            ['phone_number' => $phoneNumber, 'team_id' => $source->team_id],
-            [
-                'name' => $this->payload->mapped_data['customer_name'] 
-                    ?? $this->payload->payload['customer']['name'] 
-                    ?? $this->payload->payload['name'] 
-                    ?? 'Webhook Contact'
-            ]
-        );
+        $resolvedName = $this->resolveContactName();
+        $contact = $this->getOrCreateContact($phoneNumber, $resolvedName);
 
         // Sync tag without detaching
         $contact->tags()->syncWithoutDetaching([$source->contact_tag_id]);
@@ -606,6 +606,65 @@ class ProcessMappedWebhookJob implements ShouldQueue
             'contact_id' => $contact->id,
             'tag_id' => $source->contact_tag_id,
         ]);
+    }
+
+    protected function getOrCreateContact(string $phoneNumber, ?string $resolvedName = null): Contact
+    {
+        $teamId = $this->payload->source->team_id;
+
+        $contact = Contact::where('team_id', $teamId)
+            ->where('phone_number', $phoneNumber)
+            ->first();
+
+        $nameToSet = $resolvedName ?: 'Webhook Contact';
+
+        if (! $contact) {
+            $contact = Contact::create([
+                'team_id' => $teamId,
+                'phone_number' => $phoneNumber,
+                'name' => $nameToSet,
+            ]);
+        } elseif ($resolvedName && $this->shouldUpdateName($contact->name, $resolvedName)) {
+            $contact->update(['name' => $resolvedName]);
+        }
+
+        return $contact;
+    }
+
+    protected function shouldUpdateName(?string $currentName, string $newName): bool
+    {
+        if (empty($currentName)) {
+            return true;
+        }
+
+        if (empty($newName) || $newName === 'Webhook Contact') {
+            return false;
+        }
+
+        $placeholders = ['Webhook Contact', 'Friend'];
+        if (in_array($currentName, $placeholders)) {
+            return true;
+        }
+
+        // If current name is just the phone number (numeric or starting with + followed by numeric)
+        $cleanPhone = preg_replace('/[^\d]/', '', $currentName);
+        if ($cleanPhone !== '' && ($currentName === $cleanPhone || '+' . $cleanPhone === $currentName)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function resolveContactName(): string
+    {
+        $nameField = $this->actionConfig['name_field'] ?? 'customer_name';
+
+        return $this->payload->mapped_data[$nameField]
+            ?? $this->payload->mapped_data['customer_name']
+            ?? $this->payload->mapped_data['name']
+            ?? $this->payload->payload['customer']['name']
+            ?? $this->payload->payload['name']
+            ?? 'Webhook Contact';
     }
 
     /**

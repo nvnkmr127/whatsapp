@@ -271,6 +271,6 @@ Route::get('/embed/chat', [\App\Http\Controllers\EmbedController::class, 'show']
  * These routes are ONLY loaded if the routes/local.php file exists.
  * This file is git-ignored and intended for local testing tools.
  */
-if (app()->isLocal() && file_exists(__DIR__.'/local.php')) {
+if (app()->environment(['local', 'testing']) && file_exists(__DIR__.'/local.php')) {
     require __DIR__.'/local.php';
 }

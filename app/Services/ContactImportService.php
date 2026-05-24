@@ -477,6 +477,7 @@ class ContactImportService
             unset($data['category_name']);
         }
 
+        $data['force_name_update'] = true;
         $contact = $this->contactService->createOrUpdate($data);
 
         if (! empty($tags)) {

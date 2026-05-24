@@ -2230,6 +2230,10 @@ class WhatsAppService
             }
         }
 
+        if (empty($result['header']) && empty($result['body']) && empty($result['footer'])) {
+            $result['body'] = $flatParams;
+        }
+
         return $result;
     }
 }

@@ -47,14 +47,14 @@ class ReadinessEngineTest extends TestCase
             'components' => [['type' => 'BODY', 'text' => 'Here is your code {{1}} and your link {{2}}']],
         ]);
 
-        // Jumbled sequence
+        // Non-sequential sequence (gap)
         $tpl2 = WhatsappTemplate::create([
             'team_id' => $team->id,
             'name' => 'bad',
             'language' => 'en_US',
             'category' => 'UTILITY',
             'status' => 'APPROVED',
-            'components' => [['type' => 'BODY', 'text' => 'Here is your link {{2}} and your code {{1}}']],
+            'components' => [['type' => 'BODY', 'text' => 'Here is your link {{1}} and your code {{3}}']],
         ]);
 
         $validator = new TemplateValidator;

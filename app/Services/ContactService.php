@@ -71,7 +71,24 @@ class ContactService
             }
 
             // Fill other fields
-            $contact->fill(Arr::except($data, ['team_id', 'phone_number', 'id']));
+            $fillData = Arr::except($data, ['team_id', 'phone_number', 'id']);
+
+            if (array_key_exists('name', $fillData)) {
+                $newName = $fillData['name'];
+                $forceNameUpdate = $data['force_name_update'] ?? false;
+
+                if ($contact->exists) {
+                    if (!$forceNameUpdate && !$this->shouldUpdateName($contact->name, $newName)) {
+                        unset($fillData['name']);
+                    }
+                } else {
+                    if (empty($newName)) {
+                        $fillData['name'] = 'Webhook Contact';
+                    }
+                }
+            }
+
+            $contact->fill(Arr::except($fillData, ['force_name_update']));
             $contact->save();
 
             // Trigger automation if this is a new contact
@@ -229,6 +246,43 @@ class ContactService
                 }
             }
         }
+    }
+
+    /**
+     * Determine if contact name should be updated with new name.
+     */
+    protected function shouldUpdateName(?string $currentName, ?string $newName): bool
+    {
+        if (empty($currentName)) {
+            return !empty($newName);
+        }
+
+        if (empty($newName)) {
+            return false;
+        }
+
+        $placeholders = ['Webhook Contact', 'Friend', 'Shopify Customer', 'WooCommerce Customer', 'Unknown'];
+
+        if (in_array($currentName, $placeholders)) {
+            return !in_array($newName, $placeholders);
+        }
+
+        if (in_array($newName, $placeholders)) {
+            return false;
+        }
+
+        // If current name is just the phone number (numeric or starting with + followed by numeric)
+        $cleanPhone = preg_replace('/[^\d]/', '', $currentName);
+        if ($cleanPhone !== '' && ($currentName === $cleanPhone || '+' . $cleanPhone === $currentName)) {
+            // Only update if the new name is not a phone number
+            $newCleanPhone = preg_replace('/[^\d]/', '', $newName);
+            if ($newCleanPhone !== '' && ($newName === $newCleanPhone || '+' . $newCleanPhone === $newName)) {
+                return false;
+            }
+            return true;
+        }
+
+        return false;
     }
 
     /**

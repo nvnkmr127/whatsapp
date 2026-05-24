@@ -56,11 +56,40 @@ class CustomSiteWebhookController extends Controller
 
         $teamId = $integration->team_id;
 
-        // 2. Resolve Contact
-        $contact = Contact::firstOrCreate(
-            ['team_id' => $teamId, 'phone_number' => $payload['customer']['phone']],
-            ['name' => $payload['customer']['name'] ?? 'Friend', 'email' => $payload['customer']['email']]
-        );
+        $resolvedName = $payload['customer']['name'] ?? 'Friend';
+
+        $contact = Contact::where('team_id', $teamId)
+            ->where('phone_number', $payload['customer']['phone'])
+            ->first();
+
+        if (! $contact) {
+            $contact = Contact::create([
+                'team_id' => $teamId,
+                'phone_number' => $payload['customer']['phone'],
+                'name' => $resolvedName,
+                'email' => $payload['customer']['email'] ?? null,
+            ]);
+        } else {
+            $updates = [];
+            if (empty($contact->email) && ($payload['customer']['email'] ?? null)) {
+                $updates['email'] = $payload['customer']['email'];
+            }
+
+            $currentName = $contact->name;
+            $placeholders = ['Webhook Contact', 'Friend'];
+            $cleanPhone = preg_replace('/[^\d]/', '', $currentName ?? '');
+            $isPhoneName = ($cleanPhone !== '' && ($currentName === $cleanPhone || '+' . $cleanPhone === $currentName));
+
+            if (empty($currentName) || in_array($currentName, $placeholders) || $isPhoneName) {
+                if ($resolvedName && !in_array($resolvedName, $placeholders)) {
+                    $updates['name'] = $resolvedName;
+                }
+            }
+
+            if (! empty($updates)) {
+                $contact->update($updates);
+            }
+        }
 
         // 3. Update Order
         $order = Order::updateOrCreate(

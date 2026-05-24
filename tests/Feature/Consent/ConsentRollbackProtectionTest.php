@@ -266,7 +266,7 @@ class ConsentRollbackProtectionTest extends TestCase
 
         $backupFilename = 'consent_test_'.$team->id.'.zip.enc';
 
-        $backup = TenantBackup::create([
+        $backup = new TenantBackup([
             'team_id' => $team->id,
             'filename' => $backupFilename,
             'path' => "tenants/{$team->id}/",
@@ -274,6 +274,8 @@ class ConsentRollbackProtectionTest extends TestCase
             'checksum' => hash_file('sha256', $zipPath.'.enc'),
             'type' => 'tenant',
         ]);
+        $backup->created_at = now()->subDays(2);
+        $backup->save();
 
         Storage::disk('local')->put(
             "backups/tenants/{$team->id}/{$backupFilename}",

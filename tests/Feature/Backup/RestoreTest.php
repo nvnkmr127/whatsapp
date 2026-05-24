@@ -42,7 +42,7 @@ class RestoreTest extends TestCase
 
     public function test_tenant_restore_atomic_success()
     {
-        $team = Team::factory()->create();
+        $team = Team::factory()->create(['subscription_plan' => 'basic']);
         $user = User::factory()->create(['current_team_id' => $team->id]);
         $team->users()->attach($user, ['role' => 'admin']);
         $this->actingAs($user);
@@ -66,7 +66,7 @@ class RestoreTest extends TestCase
         $encryptedData = openssl_encrypt(file_get_contents($zipPath), 'aes-256-cbc', $key, 0, $iv);
         file_put_contents($zipPath.'.enc', $iv.$encryptedData);
 
-        $backup = TenantBackup::create([
+        $backup = new TenantBackup([
             'team_id' => $team->id,
             'filename' => 'test_restore.zip.enc',
             'path' => 'tenants/'.$team->id.'/',
@@ -74,6 +74,8 @@ class RestoreTest extends TestCase
             'checksum' => hash_file('sha256', $zipPath.'.enc'),
             'type' => 'tenant',
         ]);
+        $backup->created_at = now()->subDays(2);
+        $backup->save();
 
         Storage::disk('local')->put('backups/tenants/'.$team->id.'/test_restore.zip.enc', file_get_contents($zipPath.'.enc'));
 

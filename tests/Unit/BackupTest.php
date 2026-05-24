@@ -21,11 +21,26 @@ class BackupTest extends TestCase
         $this->backupService = new BackupService;
         Storage::fake('local');
         Storage::fake('public');
+        Team::$useRealEntitlementInTests = true;
+
+        \App\Models\Plan::create([
+            'name' => 'basic',
+            'monthly_price' => 0,
+            'message_limit' => 100,
+            'agent_limit' => 1,
+            'features' => ['backups' => true, 'cloud_backups' => false],
+        ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Team::$useRealEntitlementInTests = false;
+        parent::tearDown();
     }
 
     public function test_tenant_backup_creates_record_and_encrypted_file()
     {
-        $team = Team::factory()->create(['name' => 'Team Alpha']);
+        $team = Team::factory()->create(['name' => 'Team Alpha', 'subscription_plan' => 'basic']);
 
         $backupRecord = $this->backupService->backupTenant($team);
         $backupRecord->refresh();

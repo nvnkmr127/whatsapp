@@ -32,10 +32,30 @@ class EmbedController extends Controller
 
         // Find or Create Contact (to ensure ID exists)
         // We use the existing logic: simple find or create
-        $contact = Contact::firstOrCreate(
-            ['team_id' => $user->currentTeam->id, 'phone_number' => $request->phone_number],
-            ['name' => $request->input('name', 'Unknown')]
-        );
+        $contact = Contact::where('team_id', $user->currentTeam->id)
+            ->where('phone_number', $request->phone_number)
+            ->first();
+
+        $resolvedName = $request->input('name', 'Unknown');
+
+        if (! $contact) {
+            $contact = Contact::create([
+                'team_id' => $user->currentTeam->id,
+                'phone_number' => $request->phone_number,
+                'name' => $resolvedName,
+            ]);
+        } else {
+            $currentName = $contact->name;
+            $placeholders = ['Webhook Contact', 'Friend', 'Unknown'];
+            $cleanPhone = preg_replace('/[^\d]/', '', $currentName ?? '');
+            $isPhoneName = ($cleanPhone !== '' && ($currentName === $cleanPhone || '+' . $cleanPhone === $currentName));
+
+            if (empty($currentName) || in_array($currentName, $placeholders) || $isPhoneName) {
+                if ($request->has('name') && !in_array($request->input('name'), $placeholders)) {
+                    $contact->update(['name' => $request->input('name')]);
+                }
+            }
+        }
 
         $permissions = $request->input('permissions', ['read', 'write']);
 

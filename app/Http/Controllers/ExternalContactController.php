@@ -36,11 +36,31 @@ class ExternalContactController extends Controller
             return response()->json(['error' => 'Unauthorized access to this Team'], 403);
         }
 
-        // 2. Create/Find Contact
-        $contact = Contact::firstOrCreate(
-            ['team_id' => $request->team_id, 'phone_number' => $request->phone],
-            ['name' => $request->name ?? $request->phone]
-        );
+        // 2. Resolve Contact
+        $contact = Contact::where('team_id', $request->team_id)
+            ->where('phone_number', $request->phone)
+            ->first();
+
+        $resolvedName = $request->name ?? $request->phone;
+
+        if (! $contact) {
+            $contact = Contact::create([
+                'team_id' => $request->team_id,
+                'phone_number' => $request->phone,
+                'name' => $resolvedName,
+            ]);
+        } else {
+            $currentName = $contact->name;
+            $placeholders = ['Webhook Contact', 'Friend'];
+            $cleanPhone = preg_replace('/[^\d]/', '', $currentName ?? '');
+            $isPhoneName = ($cleanPhone !== '' && ($currentName === $cleanPhone || '+' . $cleanPhone === $currentName));
+
+            if (empty($currentName) || in_array($currentName, $placeholders) || $isPhoneName) {
+                if ($request->name && !in_array($request->name, $placeholders)) {
+                    $contact->update(['name' => $request->name]);
+                }
+            }
+        }
 
         // Update Custom Attributes (Context)
         if ($request->has('custom_attributes')) {
