@@ -899,6 +899,66 @@
                                 </div>
                             </div>
 
+                            {{-- Contact Tagging --}}
+                            <div class="bg-slate-50 dark:bg-slate-800/20 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/30 text-wa-teal flex items-center justify-center">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <h5 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Contact Tagging</h5>
+                                    </div>
+                                    @if(! $isCreatingTag)
+                                        <button wire:click="$set('isCreatingTag', true)" type="button" class="text-[10px] font-black text-wa-teal hover:text-wa-teal uppercase tracking-widest flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                            Create New Tag
+                                        </button>
+                                    @endif
+                                </div>
+
+                                @if($isCreatingTag)
+                                    <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800/80 space-y-4 animate-in slide-in-from-top duration-300">
+                                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Create Custom Contact Tag</div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="space-y-1">
+                                                <x-label value="Tag Name" class="uppercase text-[9px] tracking-widest font-black text-slate-400" />
+                                                <x-input type="text" wire:model="newTagName" placeholder="e.g. Lead Source A" class="w-full bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-xs font-bold" />
+                                                <x-input-error for="newTagName" />
+                                            </div>
+                                            <div class="space-y-1">
+                                                <x-label value="Tag Color" class="uppercase text-[9px] tracking-widest font-black text-slate-400" />
+                                                <div class="flex items-center gap-2">
+                                                    <input type="color" wire:model="newTagColor" class="w-8 h-8 rounded-lg border-0 cursor-pointer p-0 bg-transparent shrink-0" />
+                                                    <x-input type="text" wire:model="newTagColor" placeholder="#10B981" class="w-full bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-xs font-mono font-bold" />
+                                                </div>
+                                                <x-input-error for="newTagColor" />
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-end gap-2 pt-2">
+                                            <button wire:click="$set('isCreatingTag', false)" type="button" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-350 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors">Cancel</button>
+                                            <button wire:click="createNewTag" type="button" class="px-5 py-2 bg-wa-teal hover:bg-wa-teal text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Save Tag</button>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="space-y-3">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Contact Tag</label>
+                                        <div class="relative">
+                                            <select wire:model="contact_tag_id" class="w-full bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3 px-4 font-bold text-xs text-slate-900 dark:text-white focus:border-purple-500/30 transition-all shadow-sm cursor-pointer">
+                                                <option value="">-- No Tag (Do Not Tag Contacts) --</option>
+                                                @foreach($tags as $tag)
+                                                    <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                                            When any payload is received from this webhook source, the contact will be automatically associated with the selected tag.
+                                        </p>
+                                    </div>
+                                @endif
+                            </div>
+
                             {{-- Process Delay --}}
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm">

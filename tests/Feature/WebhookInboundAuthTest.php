@@ -58,4 +58,63 @@ class WebhookInboundAuthTest extends TestCase
         $result = $service->verify($request, 'none', 'some-string');
         $this->assertTrue($result);
     }
+
+    public function test_webhook_inbound_tags_contact()
+    {
+        $team = Team::factory()->create();
+        $apiKey = Str::random(32);
+        
+        $tag = \App\Models\ContactTag::create([
+            'team_id' => $team->id,
+            'name' => 'Ad Campaign',
+            'color' => '#10B981'
+        ]);
+
+        $source = WebhookSource::create([
+            'team_id' => $team->id,
+            'name' => 'Ad Leads',
+            'platform' => 'custom',
+            'auth_method' => 'api_key',
+            'auth_config' => ['key' => $apiKey, 'header' => 'X-API-Key'],
+            'is_active' => true,
+            'contact_tag_id' => $tag->id,
+            'field_mappings' => [
+                'custom' => [
+                    'phone_number' => 'customer_phone',
+                    'customer_name' => 'customer_name',
+                ]
+            ],
+            'action_config' => [
+                'type' => 'upsert_contact',
+                'phone_field' => 'phone_number',
+                'name_field' => 'customer_name',
+            ]
+        ]);
+
+        // Send payload matching the mapping
+        $response = $this->postJson("/api/v1/webhooks/inbound/{$source->slug}", [
+            'customer_phone' => '+15555551234',
+            'customer_name' => 'Test User',
+        ], [
+            'X-API-Key' => $apiKey,
+        ]);
+
+        $response->assertStatus(200);
+
+        // Resolve payload and run job synchronously
+        $payload = \App\Models\WebhookPayload::latest()->first();
+        $this->assertNotNull($payload);
+
+        $job = new \App\Jobs\ProcessMappedWebhookJob($payload, $source->action_config);
+        $job->handle();
+
+        // Verify contact is created and tagged
+        $contact = \App\Models\Contact::where('team_id', $team->id)
+            ->where('phone_number', '+15555551234')
+            ->first();
+
+        $this->assertNotNull($contact);
+        $this->assertEquals('Test User', $contact->name);
+        $this->assertTrue($contact->tags->contains($tag));
+    }
 }

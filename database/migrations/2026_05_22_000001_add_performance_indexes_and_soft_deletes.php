@@ -147,6 +147,13 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $index): bool
     {
+        if (\Illuminate\Support\Facades\DB::getDriverName() === 'sqlite') {
+            $indexes = \Illuminate\Support\Facades\DB::select(
+                "PRAGMA index_list(`{$table}`)"
+            );
+            return collect($indexes)->contains('name', $index);
+        }
+
         $indexes = \Illuminate\Support\Facades\DB::select(
             "SHOW INDEX FROM `{$table}` WHERE Key_name = ?",
             [$index]

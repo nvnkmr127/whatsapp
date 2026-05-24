@@ -18,6 +18,14 @@ class WebhookSourceManager extends Component
 
     public $name;
 
+    public $contact_tag_id = null;
+
+    public $newTagName = '';
+
+    public $newTagColor = '#10B981';
+
+    public $isCreatingTag = false;
+
     public $platform = 'custom';
 
     public $auth_method = 'api_key';
@@ -124,6 +132,10 @@ class WebhookSourceManager extends Component
         $this->currentStep = 1;
         $this->isCapturing = false;
         $this->capturedPayload = null;
+        $this->contact_tag_id = null;
+        $this->newTagName = '';
+        $this->newTagColor = '#10B981';
+        $this->isCreatingTag = false;
 
         // Reset retry defaults
         $this->retry_enabled = false;
@@ -223,6 +235,7 @@ class WebhookSourceManager extends Component
             'auth_method' => $this->auth_method,
             'auth_config' => $this->auth_config,
             'is_active' => true,
+            'contact_tag_id' => $this->contact_tag_id,
         ]);
         $this->editingId = $source->id;
     }
@@ -415,6 +428,7 @@ class WebhookSourceManager extends Component
             $this->filtering_rules_ui = ! empty($source->filtering_rules) ? $source->filtering_rules : [['field' => '', 'operator' => 'equals', 'value' => '']];
             $this->is_active = $source->is_active;
             $this->process_delay = $source->process_delay;
+            $this->contact_tag_id = $source->contact_tag_id;
 
             // Load retry configuration
             $retryConfig = $source->retry_config ?? [];
@@ -531,6 +545,7 @@ class WebhookSourceManager extends Component
             'is_active' => $this->is_active,
             'filtering_rules' => $this->filtering_rules_ui,
             'process_delay' => $this->process_delay,
+            'contact_tag_id' => $this->contact_tag_id,
             'retry_config' => [
                 'enabled' => (bool) $this->retry_enabled,
                 'max_retries' => (int) $this->max_retries,
@@ -539,7 +554,7 @@ class WebhookSourceManager extends Component
             ],
         ]);
 
-        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal']);
+        $this->reset(['editingId', 'name', 'platform', 'auth_method', 'auth_config', 'field_mappings', 'transformation_rules', 'action_config', 'is_active', 'templateParameters', 'filtering_rules_ui', 'process_delay', 'currentStep', 'capturedPayload', 'showWizardModal', 'contact_tag_id', 'newTagName', 'newTagColor', 'isCreatingTag']);
         $this->initializeDefaults();
         $this->dispatch('notify', 'Webhook source saved successfully.');
     }
@@ -1212,6 +1227,42 @@ class WebhookSourceManager extends Component
             }
         }
 
-        return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate'));
+        $tags = [];
+        if ($team) {
+            $tags = \App\Models\ContactTag::where('team_id', $team->id)->get();
+        }
+
+        return view('livewire.developer.webhook-source-manager', compact('sources', 'platforms', 'templates', 'templateParams', 'selectedTemplate', 'tags'));
+    }
+
+    public function createNewTag()
+    {
+        $this->validate([
+            'newTagName' => 'required|string|max:50',
+            'newTagColor' => 'required|string|regex:/^#[a-fA-F0-9]{6}$/',
+        ]);
+
+        $user = auth()->user();
+        $team = $user->currentTeam ?? ($user->isSuperAdmin() ? \App\Models\Team::first() : null);
+
+        if (! $team) {
+            $this->dispatch('notify', 'Please select a team context before creating a tag.', 'error');
+            return;
+        }
+
+        $tag = \App\Models\ContactTag::create([
+            'team_id' => $team->id,
+            'name' => $this->newTagName,
+            'color' => $this->newTagColor,
+        ]);
+
+        \Illuminate\Support\Facades\Cache::forget("team_{$team->id}_tags");
+
+        $this->contact_tag_id = $tag->id;
+        $this->newTagName = '';
+        $this->newTagColor = '#10B981';
+        $this->isCreatingTag = false;
+
+        $this->dispatch('notify', 'Contact tag created and selected successfully.');
     }
 }

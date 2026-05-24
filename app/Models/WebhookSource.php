@@ -39,6 +39,11 @@ class WebhookSource extends Model
         return $this->belongsTo(Team::class);
     }
 
+    public function contactTag()
+    {
+        return $this->belongsTo(ContactTag::class);
+    }
+
     public function payloads()
     {
         return $this->hasMany(WebhookPayload::class);

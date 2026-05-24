@@ -85,7 +85,7 @@ class SendOrderLifecycleNotification implements ShouldQueue
                 $bodyParams
             );
 
-            Log::info("Sent order status notification ({$status}) to {$order->contact->phone_number}");
+            Log::info("Sent order status notification ({$status}) to contact #{$order->contact_id}");
 
         } catch (\Exception $e) {
             Log::error('Failed to send order lifecycle notification: '.$e->getMessage());

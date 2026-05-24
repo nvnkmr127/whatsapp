@@ -37,6 +37,8 @@ class ProcessMappedWebhookJob implements ShouldQueue
         $actionType = $this->actionConfig['type'] ?? null;
 
         try {
+            $this->syncContactTag();
+
             match ($actionType) {
                 'send_template' => $this->sendTemplate(),
                 'send_otp' => $this->sendOtp(),
@@ -337,7 +339,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         $contactData = [
-            'phone' => $phoneNumber,
+            'phone_number' => $phoneNumber,
             'name' => $this->payload->mapped_data[$nameField] ?? null,
             'team_id' => $this->payload->source->team_id,
         ];
@@ -350,12 +352,12 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         Contact::updateOrCreate(
-            ['phone' => $phoneNumber, 'team_id' => $this->payload->source->team_id],
+            ['phone_number' => $phoneNumber, 'team_id' => $this->payload->source->team_id],
             $contactData
         );
 
         Log::info('Webhook created/updated contact', [
-            'phone' => $phoneNumber,
+            'phone_number' => $phoneNumber,
             'data' => $contactData,
         ]);
     }
@@ -549,6 +551,61 @@ class ProcessMappedWebhookJob implements ShouldQueue
         }
 
         return $parameters;
+    }
+
+    /**
+     * Synchronize the contact tag to the contact if configured on the webhook source.
+     */
+    protected function syncContactTag(): void
+    {
+        $source = $this->payload->source;
+        if (! $source || ! $source->contact_tag_id) {
+            return;
+        }
+
+        // Try to find the phone number in mapped_data first, then fallback to payload paths
+        $phoneNumber = $this->payload->mapped_data['phone_number'] 
+            ?? $this->payload->payload['customer']['phone'] 
+            ?? $this->payload->payload['phone'] 
+            ?? null;
+
+        if (! $phoneNumber) {
+            Log::info('No phone number found in webhook payload to sync contact tag.', [
+                'payload_id' => $this->payload->id,
+                'source_id' => $source->id
+            ]);
+            return;
+        }
+
+        // Normalize phone number
+        try {
+            $phoneNumber = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+        } catch (\Exception $e) {
+            Log::warning('Failed to normalize phone number for webhook contact tagging', [
+                'phone' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+            return;
+        }
+
+        // Find or create contact
+        $contact = Contact::firstOrCreate(
+            ['phone_number' => $phoneNumber, 'team_id' => $source->team_id],
+            [
+                'name' => $this->payload->mapped_data['customer_name'] 
+                    ?? $this->payload->payload['customer']['name'] 
+                    ?? $this->payload->payload['name'] 
+                    ?? 'Webhook Contact'
+            ]
+        );
+
+        // Sync tag without detaching
+        $contact->tags()->syncWithoutDetaching([$source->contact_tag_id]);
+
+        Log::info('Webhook associated contact with tag', [
+            'contact_id' => $contact->id,
+            'tag_id' => $source->contact_tag_id,
+        ]);
     }
 
     /**

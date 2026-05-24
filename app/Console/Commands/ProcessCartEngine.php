@@ -116,7 +116,7 @@ class ProcessCartEngine extends Command
             }
 
             if (isset($result['success']) && $result['success']) {
-                Log::info("Sent Abandoned Cart Reminder to {$contact->phone_number} for Cart {$cart->uuid}");
+                Log::info("Sent Abandoned Cart Reminder to contact #{$contact->id} for Cart {$cart->uuid}");
 
                 $cart->update([
                     'reminder_sent_at' => now(),
