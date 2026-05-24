@@ -11,14 +11,14 @@ class Campaign extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'team_id', 'name', 'campaign_name', 'status',
+        'team_id', 'name', 'campaign_name', 'status', 'campaign_type',
         'template_id', 'template_name', 'template_language',
         'template_variables', 'header_params', 'body_params', 'footer_params',
         'audience_filters', 'total_contacts', 'sent_count', 'del_count', 'read_count',
         'scheduled_at', 'started_at', 'completed_at',
         'retry_config', 'is_ab_test', 'split_ratio', 'send_rate', 'steps',
         'error_message', 'last_snapshot_id', 'snapshot_id',
-        'variant', 'drip_tracking',
+        'variant', 'drip_tracking', 'drip_trigger_type', 'drip_send_to_existing',
     ];
 
     protected $casts = [
@@ -39,6 +39,7 @@ class Campaign extends Model
         'split_ratio' => 'integer',
         'send_rate' => 'integer',
         'steps' => 'array',
+        'drip_send_to_existing' => 'boolean',
     ];
 
     protected static function booted()
@@ -66,7 +67,7 @@ class Campaign extends Model
             }
 
             // Progress preservation
-            if (in_array($oldStatus, ['sending', 'processing', 'paused']) && in_array($newStatus, ['scheduled', 'draft'])) {
+            if (in_array($oldStatus, ['sending', 'processing', 'paused', 'active']) && in_array($newStatus, ['scheduled', 'draft'])) {
                 throw new \Exception("Cannot revert a campaign to {$newStatus} once sending has begun.");
             }
         });
@@ -98,6 +99,7 @@ class Campaign extends Model
         return match ($this->status) {
             'completed', 'sent' => 'bg-wa-green/10 text-wa-green border-wa-green/20',
             'processing', 'sending' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20',
+            'active' => 'bg-wa-teal/10 text-wa-teal border-wa-teal/20 animate-pulse',
             'paused' => 'bg-wa-orange/10 text-wa-orange border-wa-orange/20',
             'scheduled' => 'bg-wa-orange/10 text-wa-orange border-wa-orange/20',
             'failed' => 'bg-rose-50 text-rose-600 border-rose-100',

@@ -83,6 +83,46 @@
                             </div>
                         </div>
 
+                        @if ($campaignType === 'drip')
+                            <div class="p-8 bg-slate-50 dark:bg-slate-800/30 rounded-[2rem] border border-slate-100 dark:border-slate-800/50 space-y-6 animate-in slide-in-from-top-4 duration-500">
+                                <h4 class="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em]">Drip Campaign Settings</h4>
+
+                                <div class="space-y-4">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Trigger Method</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <button type="button" wire:click="$set('dripTriggerType', 'instant')"
+                                            class="p-5 rounded-2xl border-2 text-left transition-all {{ $dripTriggerType === 'instant' ? 'border-orange-500 bg-orange-500/5' : 'border-slate-100 dark:border-slate-800' }}">
+                                            <p class="font-black text-xs uppercase text-slate-900 dark:text-white">Run Once</p>
+                                            <p class="text-[9px] text-slate-500 mt-1 font-medium leading-relaxed">Send to matching contacts at launch time</p>
+                                        </button>
+                                        <button type="button" wire:click="$set('dripTriggerType', 'tag_added')"
+                                            class="p-5 rounded-2xl border-2 text-left transition-all {{ $dripTriggerType === 'tag_added' ? 'border-orange-500 bg-orange-500/5' : 'border-slate-100 dark:border-slate-800' }}">
+                                            <p class="font-black text-xs uppercase text-slate-900 dark:text-white">Dynamic (24/7)</p>
+                                            <p class="text-[9px] text-slate-500 mt-1 font-medium leading-relaxed">Trigger instantly when contact gets the tag</p>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if ($dripTriggerType === 'tag_added')
+                                    <div class="space-y-4 animate-in fade-in duration-300">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Target Existing Contacts?</label>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <button type="button" wire:click="$set('dripSendToExisting', true)"
+                                                class="p-5 rounded-2xl border-2 text-left transition-all {{ $dripSendToExisting ? 'border-orange-500 bg-orange-500/5' : 'border-slate-100 dark:border-slate-800' }}">
+                                                <p class="font-black text-xs uppercase text-slate-900 dark:text-white">Send to All</p>
+                                                <p class="text-[9px] text-slate-500 mt-1 font-medium leading-relaxed">Includes existing tag contacts + new ones</p>
+                                            </button>
+                                            <button type="button" wire:click="$set('dripSendToExisting', false)"
+                                                class="p-5 rounded-2xl border-2 text-left transition-all {{ !$dripSendToExisting ? 'border-orange-500 bg-orange-500/5' : 'border-slate-100 dark:border-slate-800' }}">
+                                                <p class="font-black text-xs uppercase text-slate-900 dark:text-white">Only New Contacts</p>
+                                                <p class="text-[9px] text-slate-500 mt-1 font-medium leading-relaxed">Only contacts tagged from now on</p>
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+
                         <div>
                             <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Campaign
                                 Name</label>
@@ -261,15 +301,18 @@
         {{-- Step 2: Audience --}}
         @if ($step === 2)
             <livewire:campaigns.wizard.audience-selector 
+                wire:key="step-2-audience-selector"
                 :selectedTags="$selectedTags"
                 :selectedContacts="$selectedContacts"
                 :audienceType="$audienceType"
+                :dripTriggerType="$dripTriggerType"
             />
         @endif
 
         {{-- Step 3: Message & Preview --}}
         @if ($step === 3)
             <livewire:campaigns.wizard.message-editor 
+                wire:key="step-3-message-editor"
                 wire:model="message" 
                 :campaignType="$campaignType"
                 :selectedTemplateId="$selectedTemplateId"

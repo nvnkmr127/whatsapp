@@ -15,6 +15,19 @@ class AudienceSelector extends Component
     public $audienceType = 'tags';
 
     public $contactSearch = '';
+    public $dripTriggerType = 'instant';
+
+    public function mount($selectedTags = [], $selectedContacts = [], $audienceType = 'tags', $dripTriggerType = 'instant')
+    {
+        $this->selectedTags = $selectedTags;
+        $this->selectedContacts = $selectedContacts;
+        $this->audienceType = $audienceType;
+        $this->dripTriggerType = $dripTriggerType;
+
+        if ($this->dripTriggerType === 'tag_added') {
+            $this->audienceType = 'tags';
+        }
+    }
 
     public function updatedSelectedTags()
     {

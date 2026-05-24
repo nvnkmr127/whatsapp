@@ -7,14 +7,20 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
         <div class="space-y-6">
-            <div class="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
-                <button wire:click="$set('audienceType', 'tags')" 
-                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'tags' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">By Tags</button>
-                <button wire:click="$set('audienceType', 'contacts')" 
-                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'contacts' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">Individual</button>
-                <button wire:click="$set('audienceType', 'all')" 
-                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'all' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">All</button>
-            </div>
+            @if ($dripTriggerType !== 'tag_added')
+                <div class="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
+                    <button wire:click="$set('audienceType', 'tags')" 
+                        class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'tags' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">By Tags</button>
+                    <button wire:click="$set('audienceType', 'contacts')" 
+                        class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'contacts' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">Individual</button>
+                    <button wire:click="$set('audienceType', 'all')" 
+                        class="px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all {{ $audienceType === 'all' ? 'bg-white dark:bg-slate-700 text-wa-teal shadow-sm' : 'text-slate-500' }}">All</button>
+                </div>
+            @else
+                <div class="px-6 py-3 bg-orange-500/10 text-orange-500 dark:text-orange-400 rounded-2xl text-[10px] font-black uppercase tracking-widest w-fit border border-orange-500/20">
+                    Dynamic Trigger: Tag Filter Only
+                </div>
+            @endif
 
             @if($audienceType === 'tags')
                 <div class="grid grid-cols-2 gap-3">

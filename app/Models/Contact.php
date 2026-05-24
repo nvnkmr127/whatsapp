@@ -76,7 +76,8 @@ class Contact extends Model
 
     public function tags()
     {
-        return $this->belongsToMany(ContactTag::class, 'contact_tag_pivot', 'contact_id', 'tag_id');
+        return $this->belongsToMany(ContactTag::class, 'contact_tag_pivot', 'contact_id', 'tag_id')
+            ->using(ContactTagPivot::class);
     }
 
     public function assignedToUser()

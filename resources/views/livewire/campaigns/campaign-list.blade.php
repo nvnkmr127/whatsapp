@@ -71,7 +71,7 @@
                         @if($campaign->status === 'completed') bg-wa-teal/10 text-wa-teal border border-wa-teal/20
                         @elseif($campaign->status === 'failed') bg-rose-500/10 text-rose-500 border border-rose-500/20
                         @elseif($campaign->status === 'paused') bg-wa-orange/10 text-wa-orange border border-wa-orange/20
-                        @elseif($campaign->status === 'processing' || $campaign->status === 'sending') bg-wa-blue/10 text-wa-blue border border-wa-blue/20 animate-pulse
+                        @elseif($campaign->status === 'processing' || $campaign->status === 'sending' || $campaign->status === 'active') bg-wa-teal/10 text-wa-teal border border-wa-teal/20 animate-pulse
                         @else bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 @endif">
                         {{ $campaign->status }}
                     </span>
@@ -107,7 +107,7 @@
                     <div
                         class="mt-auto flex items-center justify-between pt-6 border-t border-slate-50 dark:border-slate-800/50">
                         <div class="flex items-center gap-2">
-                            @if(in_array($campaign->status, ['processing', 'sending', 'queued']))
+                            @if(in_array($campaign->status, ['processing', 'sending', 'queued', 'active']))
                                 <a href="{{ route('campaigns.live', $campaign->id) }}"
                                     class="px-4 py-2 bg-wa-teal text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-wa-teal/20">
                                     Live

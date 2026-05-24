@@ -93,7 +93,12 @@ class PrepareCampaignJob implements ShouldQueue
 
             // Update Counts
             $count = CampaignDetail::where('campaign_id', $campaign->id)->count();
-            $status = ($campaign->campaign_type === 'drip') ? 'processing' : 'scheduled';
+            
+            if ($campaign->campaign_type === 'drip') {
+                $status = ($campaign->drip_trigger_type === 'tag_added') ? 'active' : 'processing';
+            } else {
+                $status = 'scheduled';
+            }
 
             $campaign->update([
                 'total_contacts' => $count,

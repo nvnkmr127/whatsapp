@@ -30,6 +30,10 @@ class Wizard extends Component
 
     public $scheduleMode = 'now'; // 'now' or 'later'
 
+    public $dripTriggerType = 'instant'; // 'instant' or 'tag_added'
+
+    public $dripSendToExisting = true;
+
     // Step 2: Audience
     public $audienceType = 'tags'; // 'tags', 'contacts', or 'all'
 
@@ -98,6 +102,9 @@ class Wizard extends Component
             $this->max_retries = $campaign->retry_config['max_retries'] ?? 3;
             $this->retry_interval = $campaign->retry_config['retry_interval'] ?? 60;
             $this->retry_strategy = $campaign->retry_config['retry_strategy'] ?? 'exponential';
+            
+            $this->dripTriggerType = $campaign->drip_trigger_type ?? 'instant';
+            $this->dripSendToExisting = (bool) ($campaign->drip_send_to_existing ?? true);
             
             if ($this->campaignType === 'drip') {
                 $steps = $campaign->steps ?? [];
@@ -168,6 +175,13 @@ class Wizard extends Component
         $this->calculateAudience();
     }
 
+    public function updatedDripTriggerType($value)
+    {
+        if ($value === 'tag_added') {
+            $this->audienceType = 'tags';
+        }
+    }
+
     #[On('audienceUpdated')]
     public function updateAudience($selectedTags = null, $selectedContacts = null)
     {
@@ -192,6 +206,15 @@ class Wizard extends Component
         }
 
         $this->step = $step;
+    }
+
+    #[On('messageEditorUpdated')]
+    public function updateMessageEditorState($selectedTemplateId = null, $templateVars = null, $headerMediaUrl = null, $dripSteps = null)
+    {
+        if ($selectedTemplateId !== null) $this->selectedTemplateId = $selectedTemplateId;
+        if ($templateVars !== null) $this->templateVars = $templateVars;
+        if ($headerMediaUrl !== null) $this->headerMediaUrl = $headerMediaUrl;
+        if ($dripSteps !== null) $this->dripSteps = $dripSteps;
     }
 
     public function calculateAudience()
@@ -308,6 +331,8 @@ class Wizard extends Component
             'name' => $this->name,
             'campaign_name' => $this->name,
             'campaign_type' => $this->campaignType,
+            'drip_trigger_type' => $this->dripTriggerType,
+            'drip_send_to_existing' => (bool) $this->dripSendToExisting,
             'template_id' => $this->selectedTemplateId,
             'template_name' => $this->selectedTemplateId ? WhatsappTemplate::find($this->selectedTemplateId)?->name : null,
             'template_language' => $this->selectedTemplateId ? WhatsappTemplate::find($this->selectedTemplateId)?->language : 'en_US',
@@ -341,12 +366,18 @@ class Wizard extends Component
 
     public function launch()
     {
-        $this->validate([
+        $rules = [
             'name' => 'required|min:3',
             'selectedTemplateId' => 'required',
-            'audienceCount' => 'numeric|min:1',
             'scheduled_at' => $this->scheduleMode === 'later' ? 'required|date|after:now' : 'nullable',
-        ]);
+        ];
+
+        // Only validate audienceCount > 0 if not dynamic drip targeting new contacts only
+        if (!($this->campaignType === 'drip' && $this->dripTriggerType === 'tag_added' && !$this->dripSendToExisting)) {
+            $rules['audienceCount'] = 'numeric|min:1';
+        }
+
+        $this->validate($rules);
 
         if ($this->scheduleMode === 'now') {
             $this->scheduled_at = now();
@@ -380,6 +411,8 @@ class Wizard extends Component
             'name' => $this->name,
             'campaign_name' => $this->name,
             'campaign_type' => $this->campaignType,
+            'drip_trigger_type' => $this->dripTriggerType,
+            'drip_send_to_existing' => (bool) $this->dripSendToExisting,
             'template_id' => $template->id,
             'template_name' => $template->name,
             'template_language' => $template->language,
@@ -402,7 +435,7 @@ class Wizard extends Component
                 'all' => $this->audienceType === 'all',
             ],
             'scheduled_at' => $this->scheduled_at,
-            'status' => 'scheduled',
+            'status' => ($this->campaignType === 'drip' && $this->dripTriggerType === 'tag_added' && !$this->dripSendToExisting) ? 'active' : 'scheduled',
             'filename' => $finalHeaderMedia, // Store file path for reference
             'retry_config' => [
                 'enabled' => (bool) $this->retry_enabled,
@@ -417,6 +450,11 @@ class Wizard extends Component
             $campaign->update($campaignData);
         } else {
             $campaign = Campaign::create($campaignData);
+        }
+
+        if ($this->campaignType === 'drip' && $this->dripTriggerType === 'tag_added' && !$this->dripSendToExisting) {
+            $this->flash('Dynamic Drip Campaign Activated!', 'success');
+            return redirect()->route('campaigns.index');
         }
 
         $delay = Carbon::parse($this->scheduled_at);
