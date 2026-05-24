@@ -71,10 +71,58 @@ class Dashboard extends Component
         return round($sentInLast5Min / 5, 1); // msgs per minute
     }
 
-    #[On('echo-private:campaign.{campaignId}.progress,progress.updated')]
+    public function getListeners()
+    {
+        return [
+            "echo-private:campaign.{$this->campaignId}.progress,progress.updated" => 'onProgressUpdate',
+        ];
+    }
+
     public function onProgressUpdate($data)
     {
         $this->dispatch('$refresh');
+    }
+
+    public function replayAllFailed()
+    {
+        try {
+            $campaign = Campaign::findOrFail($this->campaignId);
+            $failedMessages = \App\Models\Message::where('campaign_id', $this->campaignId)
+                ->where('status', 'failed')
+                ->get();
+
+            if ($failedMessages->isEmpty()) {
+                $this->dispatch('notify', message: 'No failed messages found to replay.', type: 'info');
+                return;
+            }
+
+            foreach ($failedMessages as $message) {
+                // Reset message status
+                $message->update([
+                    'status' => 'queued',
+                    'error_message' => null,
+                    'last_error' => null,
+                    'retry_count' => 0,
+                    'next_retry_at' => null,
+                ]);
+
+                // Reset CampaignDetail status
+                \App\Models\CampaignDetail::where('campaign_id', $this->campaignId)
+                    ->where('contact_id', $message->contact_id)
+                    ->update([
+                        'status' => 'pending',
+                    ]);
+
+                // Re-dispatch the job
+                \App\Jobs\SendCampaignMessageJob::dispatch($this->campaignId, $message->contact_id);
+            }
+
+            $this->dispatch('notify', message: count($failedMessages) . ' failed message(s) re-queued for delivery.', type: 'success');
+            $this->dispatch('$refresh');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Manual Campaign Replay All Error: ' . $e->getMessage());
+            $this->dispatch('notify', message: 'Replay failed: ' . $e->getMessage(), type: 'error');
+        }
     }
 
     #[Layout('layouts.app')]

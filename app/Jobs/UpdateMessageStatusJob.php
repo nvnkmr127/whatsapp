@@ -153,7 +153,7 @@ class UpdateMessageStatusJob implements ShouldQueue
 
         // Update Campaign Stats if applicable
         if ($message->campaign_id) {
-            $this->updateCampaignStats($message, $oldStatus, $newRank);
+            $this->updateCampaignStats($message, $oldStatus, $status);
         }
     }
 

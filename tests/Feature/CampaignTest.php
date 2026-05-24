@@ -137,4 +137,112 @@ class CampaignTest extends TestCase
 
         \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\ProduceBroadcastEventsJob::class);
     }
+
+    public function test_message_status_updates_campaign_stats_and_details_with_string_status()
+    {
+        $team = \App\Models\Team::factory()->create();
+        $contact = \App\Models\Contact::factory()->create(['team_id' => $team->id, 'phone_number' => '+1234567890']);
+
+        $campaign = \App\Models\Campaign::create([
+            'team_id' => $team->id,
+            'campaign_name' => 'Metrics Test Campaign',
+            'status' => 'processing',
+            'total_contacts' => 1,
+            'audience_filters' => ['all' => true],
+            'template_name' => 'hello_world',
+            'template_language' => 'en_US',
+        ]);
+
+        $detail = \App\Models\CampaignDetail::create([
+            'campaign_id' => $campaign->id,
+            'contact_id' => $contact->id,
+            'variant' => 'A',
+            'phone' => '+1234567890',
+            'status' => 'pending',
+        ]);
+
+        $message = \App\Models\Message::create([
+            'team_id' => $team->id,
+            'campaign_id' => $campaign->id,
+            'contact_id' => $contact->id,
+            'whatsapp_message_id' => 'wam_test_123',
+            'status' => 'sent',
+            'direction' => 'outbound',
+            'to' => '+1234567890',
+        ]);
+
+        // Dispatch UpdateMessageStatusJob to 'delivered'
+        $job = new \App\Jobs\UpdateMessageStatusJob([
+            'provider_message_id' => 'wam_test_123',
+            'status' => 'delivered',
+            'timestamp' => time(),
+        ]);
+        $job->handle();
+
+        $campaign->refresh();
+        $detail->refresh();
+        $message->refresh();
+
+        $this->assertEquals('delivered', $message->status);
+        $this->assertEquals('delivered', $detail->status); // Verify stored as string 'delivered' (not rank integer)
+        $this->assertEquals(1, $campaign->del_count); // Verify incremented correctly
+    }
+
+    public function test_replay_all_failed_messages_on_live_dashboard()
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = \App\Models\User::factory()->withPersonalTeam()->create();
+        $team = $user->currentTeam;
+        $contact = \App\Models\Contact::factory()->create(['team_id' => $team->id, 'phone_number' => '+1234567890']);
+
+        $campaign = \App\Models\Campaign::create([
+            'team_id' => $team->id,
+            'campaign_name' => 'Failed Replay Test Campaign',
+            'status' => 'active',
+            'total_contacts' => 1,
+            'audience_filters' => ['all' => true],
+            'template_name' => 'hello_world',
+            'template_language' => 'en_US',
+        ]);
+
+        $detail = \App\Models\CampaignDetail::create([
+            'campaign_id' => $campaign->id,
+            'contact_id' => $contact->id,
+            'variant' => 'A',
+            'phone' => '+1234567890',
+            'status' => 'failed',
+        ]);
+
+        $message = \App\Models\Message::create([
+            'team_id' => $team->id,
+            'campaign_id' => $campaign->id,
+            'contact_id' => $contact->id,
+            'whatsapp_message_id' => 'wam_failed_123',
+            'status' => 'failed',
+            'error_message' => 'Some API Error',
+            'direction' => 'outbound',
+            'to' => '+1234567890',
+        ]);
+
+        \Livewire\Livewire::actingAs($user)
+            ->test(\App\Livewire\Campaigns\Dashboard::class, ['campaign' => $campaign])
+            ->call('replayAllFailed')
+            ->assertHasNoErrors();
+
+        $message->refresh();
+        $detail->refresh();
+
+        $this->assertEquals('queued', $message->status);
+        $this->assertEquals('pending', $detail->status);
+        $this->assertNull($message->error_message);
+
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendCampaignMessageJob::class, function ($job) use ($campaign, $contact) {
+            $ref = new \ReflectionClass($job);
+            $cId = $ref->getProperty('campaignId')->getValue($job);
+            $conId = $ref->getProperty('contactId')->getValue($job);
+
+            return $cId === $campaign->id && $conId === $contact->id;
+        });
+    }
 }

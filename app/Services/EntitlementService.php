@@ -425,7 +425,10 @@ class EntitlementService
 
     private function resolvePlan(Team $team): ?object
     {
-        $name = $team->subscription_plan ?? 'basic';
+        $name = $team->subscription_plan ?? 'trial';
+        if ($name === 'trial') {
+            $name = 'pro';
+        }
 
         // Force fresh load in testing to avoid cached state issues
         if (app()->environment('testing')) {
