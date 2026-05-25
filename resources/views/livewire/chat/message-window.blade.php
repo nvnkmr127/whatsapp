@@ -1,14 +1,16 @@
 <div class="flex-1 flex flex-col h-full relative bg-slate-200 dark:bg-wa-dark-bg overflow-hidden ring-0 border-none outline-none"
-    x-data="(() => {
-        let data = chatWindow(
-            $wire, 
-            '{{ $conversation?->id }}', 
-            '{{ $conversation?->team_id }}', 
-            '{{ auth()->id() }}'
-        );
-        data.quickReplies = @js($this->quickReplies);
-        return data;
-    })()">
+    x-data="chatWindow(
+        $wire, 
+        '{{ $conversation?->id }}', 
+        '{{ $conversation?->team_id }}', 
+        '{{ auth()->id() }}',
+        $wire.entangle('showTransferModal'),
+        $wire.entangle('showInteractiveButtonsModal'),
+        $wire.entangle('isNoteMode'),
+        $wire.entangle('lightboxOpen'),
+        $wire.entangle('lightboxImage'),
+        @js($this->quickReplies)
+    )">
 
     <!-- Chat Header -->
     <div

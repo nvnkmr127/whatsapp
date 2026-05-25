@@ -1,4 +1,4 @@
-export default (wire, conversationId, teamId, userId) => ({
+export default (wire, conversationId, teamId, userId, showTransferModal, showInteractiveButtonsModal, isNoteMode, lightboxOpen, lightboxImage, quickReplies) => ({
     itemHeight: 72,
     buffer: 15,
     viewportHeight: 0,
@@ -8,11 +8,12 @@ export default (wire, conversationId, teamId, userId) => ({
     showEmoji: false,
     showQR: false,
     qrFilter: '',
-    showTransferModal: null,
-    showInteractiveButtonsModal: null,
-    isNoteMode: false,
-    lightboxOpen: false,
-    lightboxImage: '',
+    showTransferModal,
+    showInteractiveButtonsModal,
+    isNoteMode,
+    lightboxOpen,
+    lightboxImage,
+    quickReplies,
     isRecording: false,
     recordingTime: '0:00',
     mediaRecorder: null,
@@ -25,12 +26,6 @@ export default (wire, conversationId, teamId, userId) => ({
     init() {
         this.$store.chat.setMyUser(userId);
         this.$store.chat.init(wire, conversationId, teamId);
-
-        this.showTransferModal = wire.entangle('showTransferModal');
-        this.showInteractiveButtonsModal = wire.entangle('showInteractiveButtonsModal');
-        this.isNoteMode = wire.entangle('isNoteMode');
-        this.lightboxOpen = wire.entangle('lightboxOpen');
-        this.lightboxImage = wire.entangle('lightboxImage');
 
         // Store bound handler references so we can remove them on destroy
         this._boundHandlers = {
