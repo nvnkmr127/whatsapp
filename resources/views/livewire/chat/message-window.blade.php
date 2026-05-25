@@ -6,11 +6,6 @@
             '{{ $conversation?->team_id }}', 
             '{{ auth()->id() }}'
         );
-        data.showTransferModal = $wire.entangle('showTransferModal');
-        data.showInteractiveButtonsModal = $wire.entangle('showInteractiveButtonsModal');
-        data.isNoteMode = $wire.entangle('isNoteMode');
-        data.lightboxOpen = $wire.entangle('lightboxOpen');
-        data.lightboxImage = $wire.entangle('lightboxImage');
         data.quickReplies = @js($this->quickReplies);
         return data;
     })()">

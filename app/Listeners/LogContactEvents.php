@@ -35,17 +35,22 @@ class LogContactEvents implements ShouldQueue
             return;
         }
 
-        ContactEvent::create([
-            'team_id' => $contact->team_id,
-            'contact_id' => $contact->id,
-            'event_type' => 'LifecycleChanged',
-            'event_data' => [
-                'old_state' => $event->oldState,
-                'new_state' => $event->newState,
-            ],
-            'occurred_at' => now(),
-            'idempotency_key' => $idempotencyKey,
-        ]);
+        try {
+            ContactEvent::create([
+                'team_id' => $contact->team_id,
+                'contact_id' => $contact->id,
+                'event_type' => 'LifecycleChanged',
+                'event_data' => [
+                    'old_state' => $event->oldState,
+                    'new_state' => $event->newState,
+                ],
+                'occurred_at' => now(),
+                'idempotency_key' => $idempotencyKey,
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Logged already by another concurrent worker/process, ignore and exit
+            return;
+        }
 
         Cache::put($idempotencyKey, true, 60);
     }
@@ -56,15 +61,20 @@ class LogContactEvents implements ShouldQueue
 
         $idempotencyKey = "log_optout:{$contact->id}:".now()->timestamp;
 
-        ContactEvent::create([
-            'team_id' => $contact->team_id,
-            'contact_id' => $contact->id,
-            'event_type' => 'OptedOut',
-            'event_data' => [
-                'source' => $contact->opt_in_source ?? 'Unknown',
-            ],
-            'occurred_at' => now(),
-            'idempotency_key' => $idempotencyKey,
-        ]);
+        try {
+            ContactEvent::create([
+                'team_id' => $contact->team_id,
+                'contact_id' => $contact->id,
+                'event_type' => 'OptedOut',
+                'event_data' => [
+                    'source' => $contact->opt_in_source ?? 'Unknown',
+                ],
+                'occurred_at' => now(),
+                'idempotency_key' => $idempotencyKey,
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Logged already, ignore and exit
+            return;
+        }
     }
 }

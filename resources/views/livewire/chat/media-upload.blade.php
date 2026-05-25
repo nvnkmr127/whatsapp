@@ -1,4 +1,4 @@
-<div x-data="{ uploadError: @entangle('uploadError') }" 
+<div x-data="{ uploadError: $wire.entangle('uploadError') }" 
      @open-file-input.window="$refs.fileInput.click()">
     
     <input type="file" wire:model.live="newAttachment" class="hidden" x-ref="fileInput"

@@ -61,7 +61,7 @@
                 length: 6,
                 otp: Array(6).fill(''),
                 verifying: false,
-                code: @entangle('code'),
+                code: $wire.entangle('code'),
                 init() {
                     this.$watch('otp', value => {
                         this.code = value.join('');

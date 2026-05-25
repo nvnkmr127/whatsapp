@@ -1,4 +1,4 @@
-<div class="space-y-8" x-data="{ showRaw: @entangle('showRawData') }">
+<div class="space-y-8" x-data="{ showRaw: $wire.entangle('showRawData') }">
 
 
     {{-- Page Header --}}

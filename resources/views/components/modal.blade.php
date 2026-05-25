@@ -19,7 +19,7 @@
 
 <div 
     x-data="{ 
-        show: @if($wireModel) @entangle($wireModel) @else {{ $show ? 'true' : 'false' }} @endif 
+        show: @if($wireModel) $wire.entangle(@js($wireModel->value())) @else {{ $show ? 'true' : 'false' }} @endif 
     }"
     x-on:close.stop="show = false"
     x-on:keydown.escape.window="show = false"

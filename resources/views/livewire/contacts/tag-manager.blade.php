@@ -1,4 +1,4 @@
-<div x-data="{ open: @entangle('isOpen') }">
+<div x-data="{ open: $wire.entangle('isOpen') }">
     <x-app-modal wire:model="isOpen" maxWidth="lg">
         <div class="p-8 pb-0">
             <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">

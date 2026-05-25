@@ -20,7 +20,7 @@ $maxWidthClass = [
 <div
     role="dialog"
     aria-modal="true"
-    x-data="{ show: @entangle($attributes->wire('model')) }"
+    x-data="{ show: $wire.entangle(@js($attributes->wire('model')->value())) }"
     x-show="show"
     x-on:close.stop="show = false"
     x-on:keydown.escape.window="show = false"

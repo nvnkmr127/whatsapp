@@ -1,10 +1,10 @@
 <div x-data="{ 
-        status: @entangle('status').live,
-        isLocked: @entangle('isLocked').live,
-        occupiedBy: @entangle('occupiedBy').live,
-        direction: @entangle('direction').live,
-        offerSdp: @entangle('offerSdp').live,
-        startTime: @entangle('startTime').live,
+        status: $wire.entangle('status').live,
+        isLocked: $wire.entangle('isLocked').live,
+        occupiedBy: $wire.entangle('occupiedBy').live,
+        direction: $wire.entangle('direction').live,
+        offerSdp: $wire.entangle('offerSdp').live,
+        startTime: $wire.entangle('startTime').live,
         
         isVisible: false,
         duration: 0,

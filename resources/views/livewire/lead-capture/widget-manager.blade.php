@@ -125,7 +125,7 @@
     @endif
 
     <!-- Configuration Modal -->
-    <div x-data="{ show: @entangle('showCreateModal'), tab: 'basic' }" x-show="show" x-cloak class="fixed inset-0 z-[100] overflow-y-auto">
+    <div x-data="{ show: $wire.entangle('showCreateModal'), tab: 'basic' }" x-show="show" x-cloak class="fixed inset-0 z-[100] overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 pb-20 text-center sm:block sm:p-0">
             <div x-show="show" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fixed inset-0 transition-opacity bg-slate-950/80 backdrop-blur-sm"></div>
 
@@ -386,7 +386,7 @@
     </div>
 
     <!-- Integration Code Modal -->
-    <div x-data="{ show: @entangle('showCodeModal') }" x-show="show" x-cloak class="fixed inset-0 z-[100] overflow-y-auto">
+    <div x-data="{ show: $wire.entangle('showCodeModal') }" x-show="show" x-cloak class="fixed inset-0 z-[100] overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 pb-20 text-center sm:block sm:p-0">
             <div x-show="show" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="fixed inset-0 transition-opacity bg-slate-950/80 backdrop-blur-sm"></div>
 

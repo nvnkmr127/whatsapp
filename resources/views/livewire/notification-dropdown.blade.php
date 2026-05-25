@@ -1,4 +1,4 @@
-<div class="relative" x-data="{ open: @entangle('isOpen') }">
+<div class="relative" x-data="{ open: $wire.entangle('isOpen') }">
     <button wire:click="toggle"
         class="relative p-2.5 rounded-2xl text-slate-400 hover:text-wa-primary hover:bg-white dark:hover:bg-slate-900 shadow-none hover:shadow-lg transition-all duration-300 focus:outline-none group">
 

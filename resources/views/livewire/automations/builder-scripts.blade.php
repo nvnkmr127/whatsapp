@@ -2,8 +2,8 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('flowBuilder', () => ({
-            nodes: @entangle('nodes'),
-            edges: @entangle('edges'),
+            nodes: [],
+            edges: [],
             scale: 1,
             panX: 0,
             panY: 0,
@@ -13,10 +13,10 @@
             selectedEdgeIndex: null,
             animationOffset: 0,
             availableTags: @js($this->availableTags),
-            debugLogs: @entangle('debugLogs'),
-            validationIssues: @entangle('validationIssues'),
-            stepMetadata: @entangle('stepMetadata'),
-            isDirty: @entangle('isDirty'),
+            debugLogs: [],
+            validationIssues: [],
+            stepMetadata: {},
+            isDirty: false,
 
             get nodesArray() {
                 return Array.isArray(this.nodes) ? this.nodes : Object.values(this.nodes || {});
@@ -93,6 +93,13 @@
             },
 
             init() {
+                this.nodes = this.$wire.entangle('nodes');
+                this.edges = this.$wire.entangle('edges');
+                this.debugLogs = this.$wire.entangle('debugLogs');
+                this.validationIssues = this.$wire.entangle('validationIssues');
+                this.stepMetadata = this.$wire.entangle('stepMetadata');
+                this.isDirty = this.$wire.entangle('isDirty');
+
                 const canvas = this.$refs.canvas;
                 this.ctx = canvas.getContext('2d');
                 
