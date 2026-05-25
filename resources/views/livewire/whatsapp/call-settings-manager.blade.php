@@ -215,7 +215,7 @@
             </div>
 
             <!-- Automated Responses -->
-            <div class="glass-card p-10 rounded-[2.5rem] hover-lift overflow-hidden" x-data="{ expanded: @entangle('awayMessageEnabled') }">
+            <div class="glass-card p-10 rounded-[2.5rem] hover-lift overflow-hidden" x-data="{ expanded: $wire.entangle('awayMessageEnabled') }">
                 <div class="flex items-center justify-between mb-8 cursor-pointer" @click="expanded = !expanded">
                    <div class="flex items-center gap-4">
                         <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl shadow-inner">
@@ -251,7 +251,7 @@
             </div>
 
             <!-- SIP Card -->
-            <div class="glass-card p-10 rounded-[2.5rem] hover-lift overflow-hidden" x-data="{ expanded: @entangle('sipEnabled') }">
+            <div class="glass-card p-10 rounded-[2.5rem] hover-lift overflow-hidden" x-data="{ expanded: $wire.entangle('sipEnabled') }">
                 <div class="flex items-center justify-between mb-8 cursor-pointer" @click="expanded = !expanded">
                    <div class="flex items-center gap-4">
                         <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl shadow-inner">

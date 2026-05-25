@@ -11,7 +11,7 @@
                 <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                     Stop Keywords <span class="text-red-500">*</span>
                 </label>
-                <div x-data="{ tags: @entangle('stop_bots_keyword'), newTag: '' }">
+                <div x-data="{ tags: $wire.entangle('stop_bots_keyword'), newTag: '' }">
                     <div class="flex gap-2">
                         <input type="text" x-model="newTag"
                             x-on:keydown.enter.prevent="if(newTag) { tags.push(newTag); newTag = ''; }"

@@ -36,8 +36,8 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" x-data="{
-            scheduledDate: @entangle('send_now'),
-            relationTypeDynamicData: @entangle('relation_type_dynamic'),
+            scheduledDate: $wire.entangle('send_now'),
+            relationTypeDynamicData: $wire.entangle('relation_type_dynamic'),
             campaignsSelected: false,
             campaignsTypeSelected: false,
             fileError: null,
@@ -49,11 +49,11 @@
             buttons: [],
             inputType: 'item',
             inputAccept: '',
-            headerInputs: @entangle('headerInputs'),
-            bodyInputs: @entangle('bodyInputs'),
-            footerInputs: @entangle('footerInputs'),
-            mergeFields: @entangle('mergeFields'),
-            editTemplateId: @entangle('template_id'),
+            headerInputs: $wire.entangle('headerInputs'),
+            bodyInputs: $wire.entangle('bodyInputs'),
+            footerInputs: $wire.entangle('footerInputs'),
+            mergeFields: $wire.entangle('mergeFields'),
+            editTemplateId: $wire.entangle('template_id'),
             headerInputErrors: [],
             bodyInputErrors: [],
             footerInputErrors: [],
@@ -64,7 +64,7 @@
             relType: '',
             previewUrl: '',
             previewFileName: '',
-            file: @entangle('file'),
+            file: $wire.entangle('file'),
             
             initTribute() {
                  this.$nextTick(() => {
@@ -185,7 +185,7 @@
             </div>
 
             <!-- A/B Testing & Speed Control -->
-            <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8" x-data="{ is_ab_test: @entangle('is_ab_test') }">
+            <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 p-8" x-data="{ is_ab_test: $wire.entangle('is_ab_test') }">
                 <div class="flex items-center justify-between mb-6">
                     <div>
                         <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Optimization & Speed</h2>
