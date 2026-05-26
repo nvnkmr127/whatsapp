@@ -11,6 +11,7 @@ export interface Conversation {
   unread: number;
   status: MessageStatus;
   tag: ConversationTag;
+  phone?: string;
   online?: boolean;
   pinned?: boolean;
   reply?: 'me';
@@ -66,7 +67,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
   Chat: { contact: Conversation };
-  Contact: undefined;
+  Contact: { conversationId: number; contactId: number };
   Broadcast: undefined;
   Login: undefined;
 };

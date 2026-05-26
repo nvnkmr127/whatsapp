@@ -12,11 +12,12 @@ interface Props {
   onSend: () => void;
   onAttach?: () => void;
   onVoice?: () => void;
+  hasMedia?: boolean;
 }
 
-export function Composer({ value, onChange, onSend, onAttach, onVoice }: Props) {
+export function Composer({ value, onChange, onSend, onAttach, onVoice, hasMedia }: Props) {
   const { tokens } = useTokens();
-  const hasText = value.trim().length > 0;
+  const hasContent = value.trim().length > 0 || hasMedia;
 
   return (
     <View className="bg-surface dark:bg-d-surface px-3 py-2.5 flex-row items-center gap-2">
@@ -33,7 +34,7 @@ export function Composer({ value, onChange, onSend, onAttach, onVoice }: Props) 
         />
         <Smile size={18} color={tokens.muted} strokeWidth={1.6} />
       </View>
-      {hasText ? (
+      {hasContent ? (
         <Pressable
           onPress={onSend}
           className="w-[42px] h-[42px] rounded-full bg-accent dark:bg-d-accent items-center justify-center active:opacity-85"

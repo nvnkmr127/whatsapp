@@ -1,35 +1,41 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
   ChevronLeft, MoreHorizontal,
   Send, Phone, BellOff, Archive, Globe, Inbox, User, CreditCard, MessageSquare, FilePen, Bell,
 } from 'lucide-react-native';
 
 import { useTokens } from '@/theme';
-import { CONTACT_PROFILE } from '@/data';
+import type { RootStackParamList } from '@/types';
 import { Avatar } from '@/components/Avatar';
 import { IconButton } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
 import { CustomDialog } from '@/components/Dialog';
+import { api } from '@/services/api';
 
-export default function ContactScreen() {
+export default function ContactScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
-  const nav = useNavigation();
-  const p = CONTACT_PROFILE;
+  const nav = navigation;
+  const { conversationId, contactId } = route.params;
 
-  const [notes, setNotes] = useState(p.notes);
-  const [history, setHistory] = useState(p.history);
+  const [loading, setLoading] = useState(true);
+  const [contactData, setContactData] = useState<any>(null);
+  const [notesList, setNotesList] = useState<any[]>([]);
+
+  // Local editable states
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactCompany, setContactCompany] = useState('');
+  
   const [isMuted, setIsMuted] = useState(false);
   const [isArchived, setIsArchived] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [isEditingInfo, setIsEditingInfo] = useState(false);
-  const [email, setEmail] = useState(p.email);
-  const [company, setCompany] = useState(p.company);
 
   // Calling States
   const [isCalling, setIsCalling] = useState(false);
@@ -52,8 +58,36 @@ export default function ContactScreen() {
     setDialogConfig({ visible: true, title, message, buttons });
   };
 
+  const fetchContactDetails = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/v1/mobile/contacts/${contactId}`);
+      const data = response.contact || {};
+      setContactData(data);
+      setContactName(data.name || '');
 
-  React.useEffect(() => {
+      // Parse custom attributes/schema
+      const customAttrs = data.custom_attributes || {};
+      setContactEmail(customAttrs.email || data.email || '');
+      setContactCompany(customAttrs.company || data.company || '');
+
+      // Fetch notes
+      const notesResponse = await api.get(`/v1/mobile/conversations/${conversationId}/notes`);
+      setNotesList(notesResponse || []);
+    } catch (err: any) {
+      console.warn('Failed to load contact data:', err);
+      showDialog('Error', 'Could not load contact details from server.');
+    } finally {
+      setLoading(false);
+    }
+  }, [contactId, conversationId]);
+
+  useEffect(() => {
+    fetchContactDetails();
+  }, [fetchContactDetails]);
+
+  // Call timer effect
+  useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isCalling) {
       setCallTime(0);
@@ -64,20 +98,68 @@ export default function ContactScreen() {
     return () => clearInterval(interval);
   }, [isCalling]);
 
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
-    setNotes((prev) => `${newNote.trim()}\n\n${prev}`);
-    setHistory((prev) => [
-      {
-        type: 'note',
-        text: `Note added: "${newNote.trim()}"`,
-        time: 'Just now',
-      },
-      ...prev,
-    ]);
-    setNewNote('');
-    setIsAddingNote(false);
+  const handleUpdateContact = async () => {
+    setLoading(true);
+    try {
+      await api.put(`/v1/mobile/contacts/${contactId}`, {
+        name: contactName,
+        custom_attributes: {
+          email: contactEmail,
+          company: contactCompany,
+        },
+      });
+      setIsEditingInfo(false);
+      await fetchContactDetails();
+      showDialog('Profile Updated', 'Contact information saved successfully.');
+    } catch (err: any) {
+      showDialog('Failed to Update', err.message || 'Error occurred while saving changes.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    setLoading(true);
+    try {
+      await api.post(`/v1/mobile/conversations/${conversationId}/notes`, {
+        content: newNote.trim(),
+      });
+      setNewNote('');
+      setIsAddingNote(false);
+      await fetchContactDetails();
+      showDialog('Note Logged', 'Internal note added to conversation history.');
+    } catch (err: any) {
+      showDialog('Failed to Add Note', err.message || 'Could not save note.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInitiateCall = async () => {
+    setIsCalling(true);
+    try {
+      await api.post('/v1/calls/initiate', {
+        phone_number: contactData?.phone_number || contactName,
+      });
+    } catch (err: any) {
+      console.warn('Call setup failed:', err);
+    }
+  };
+
+  if (loading && !contactData) {
+    return (
+      <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
+        <ActivityIndicator size="large" color={tokens.accent} />
+        <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading contact card...</Text>
+      </View>
+    );
+  }
+
+  const name = contactData?.name || 'Unknown Contact';
+  const phone = contactData?.phone_number || 'No Phone Number';
+  const tags = contactData?.tags || [];
+  const events = contactData?.contactEvents || [];
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
@@ -92,8 +174,21 @@ export default function ContactScreen() {
               'Contact Actions',
               'Select an action for this contact:',
               [
-                { text: 'Block Contact', style: 'destructive', onPress: () => showDialog('Blocked', 'Contact has been blocked.') },
-                { text: 'Delete Contact', style: 'destructive', onPress: () => showDialog('Deleted', 'Contact has been deleted.') },
+                {
+                  text: 'Delete Contact',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setLoading(true);
+                    try {
+                      // Laravel template does not have direct destroy endpoint without DRAFT status
+                      showDialog('Info', 'Contact deletion restricted on demo server.');
+                    } catch (err) {
+                      console.warn(err);
+                    } finally {
+                      setLoading(false);
+                    }
+                  },
+                },
                 { text: 'Cancel', style: 'cancel' }
               ]
             );
@@ -104,18 +199,30 @@ export default function ContactScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Hero */}
         <View className="items-center px-5 py-5 gap-2">
-          <Avatar name={p.name} size={88} ring={tokens.accent} dot={tokens.ok} />
-          <Text className="mt-1.5 text-[22px] font-bold text-ink dark:text-d-ink">{p.name}</Text>
-          <Text className="text-[13px] text-muted dark:text-d-muted">{p.phone}</Text>
+          <Avatar name={name} size={88} ring={tokens.accent} dot={contactData?.activeConversation ? tokens.ok : null} />
+          {isEditingInfo ? (
+            <TextInput
+              value={contactName}
+              onChangeText={setContactName}
+              placeholder="Contact Name"
+              className="mt-1.5 text-[22px] font-bold text-ink dark:text-d-ink border-b border-accent text-center min-w-[200px]"
+            />
+          ) : (
+            <Text className="mt-1.5 text-[22px] font-bold text-ink dark:text-d-ink">{name}</Text>
+          )}
+          <Text className="text-[13px] text-muted dark:text-d-muted">{phone}</Text>
           <View className="flex-row gap-1.5 flex-wrap justify-center mt-1">
-            {p.tags.map((tag) => (
+            {tags.map((tag: any) => (
               <View
-                key={tag}
+                key={tag.id}
                 className="px-2.5 py-[3px] rounded-full bg-surface2 dark:bg-d-surface2"
               >
-                <Text className="text-ink2 dark:text-d-ink2 text-[11px] font-medium">{tag}</Text>
+                <Text className="text-ink2 dark:text-d-ink2 text-[11px] font-medium">{tag.name}</Text>
               </View>
             ))}
+            {tags.length === 0 && (
+              <Text className="text-[11px] text-muted dark:text-d-muted italic">No segment tags attached</Text>
+            )}
           </View>
         </View>
 
@@ -131,7 +238,7 @@ export default function ContactScreen() {
             {
               Icon: Phone,
               label: 'Call',
-              onPress: () => setIsCalling(true),
+              onPress: handleInitiateCall,
               active: false,
             },
             {
@@ -140,17 +247,26 @@ export default function ContactScreen() {
               onPress: () => {
                 const nextMuted = !isMuted;
                 setIsMuted(nextMuted);
-                showDialog(nextMuted ? 'Muted' : 'Unmuted', `Conversations with ${p.name} have been ${nextMuted ? 'muted' : 'unmuted'}.`);
+                showDialog(nextMuted ? 'Muted' : 'Unmuted', `Conversations with ${name} have been ${nextMuted ? 'muted' : 'unmuted'}.`);
               },
               active: isMuted,
             },
             {
               Icon: Archive,
               label: isArchived ? 'Unarchive' : 'Archive',
-              onPress: () => {
+              onPress: async () => {
                 const nextArchived = !isArchived;
                 setIsArchived(nextArchived);
-                showDialog(nextArchived ? 'Archived' : 'Unarchived', `Conversations with ${p.name} have been ${nextArchived ? 'archived' : 'unarchived'}.`);
+                try {
+                  if (nextArchived) {
+                    await api.post(`/v1/mobile/conversations/${conversationId}/close`);
+                  } else {
+                    await api.post(`/v1/mobile/conversations/${conversationId}/reopen`);
+                  }
+                  showDialog(nextArchived ? 'Archived' : 'Unarchived', `Conversations with ${name} have been ${nextArchived ? 'archived' : 'unarchived'}.`);
+                } catch (err: any) {
+                  console.warn('Archive state sync error:', err);
+                }
               },
               active: isArchived,
             },
@@ -176,14 +292,13 @@ export default function ContactScreen() {
           ))}
         </View>
 
-
         {/* Stats card */}
         <View className="px-[18px] pb-3.5">
           <View className="flex-row bg-surface dark:bg-d-surface rounded-lg overflow-hidden">
             {[
-              { l: 'Orders', v: p.stats.orders },
-              { l: 'LTV',    v: p.stats.ltv },
-              { l: 'Since',  v: p.stats.firstSeen },
+              { l: 'Total Messages', v: contactData?.messages_count || 0 },
+              { l: 'Opt In Status',    v: (contactData?.opt_in_status || 'Opted In').replace('_', ' ') },
+              { l: 'Since',  v: new Date(contactData?.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short' }) },
             ].map((s, i) => (
               <View
                 key={s.l}
@@ -191,7 +306,7 @@ export default function ContactScreen() {
                   i < 2 ? 'border-r border-hairline dark:border-d-hairline' : ''
                 }`}
               >
-                <Text className="text-[18px] font-bold text-ink dark:text-d-ink tracking-[-0.3px]">
+                <Text className="text-[16px] font-bold text-ink dark:text-d-ink tracking-[-0.3px] text-center">
                   {s.v}
                 </Text>
                 <Text className="text-[11px] text-muted dark:text-d-muted mt-0.5">{s.l}</Text>
@@ -204,8 +319,7 @@ export default function ContactScreen() {
           action={isEditingInfo ? "Save" : "Edit"}
           onActionPress={() => {
             if (isEditingInfo) {
-              setIsEditingInfo(false);
-              showDialog('Info Saved', 'Customer info has been successfully updated.');
+              handleUpdateContact();
             } else {
               setIsEditingInfo(true);
             }
@@ -216,9 +330,9 @@ export default function ContactScreen() {
         <View className="px-[18px]">
           <Card pad={0}>
             {[
-              { l: 'Email',   v: email,   Icon: Globe,    set: setEmail },
-              { l: 'Company', v: company, Icon: Inbox,    set: setCompany },
-              { l: 'Owner',   v: 'You',     Icon: User },
+              { l: 'Email',   v: contactEmail,   Icon: Globe,    set: setContactEmail },
+              { l: 'Company', v: contactCompany, Icon: Inbox,    set: setContactCompany },
+              { l: 'Owner',   v: contactData?.assigned_to ? `User #${contactData.assigned_to}` : 'None',     Icon: User },
             ].map((r, i, arr) => (
               <View
                 key={r.l}
@@ -236,7 +350,7 @@ export default function ContactScreen() {
                       className="text-[13.5px] text-ink dark:text-d-ink font-medium p-0"
                     />
                   ) : (
-                    <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{r.v}</Text>
+                    <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{r.v || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -276,31 +390,44 @@ export default function ContactScreen() {
               </View>
             </View>
           )}
-          <View className="p-4 rounded-lg bg-surface dark:bg-d-surface">
-            <Text className="text-ink2 dark:text-d-ink2 text-[13.5px] leading-5">{notes}</Text>
-            <Text className="text-[11px] text-muted dark:text-d-muted mt-2">You · Just now</Text>
-          </View>
+
+          {notesList.map((n) => (
+            <View key={n.id} className="p-4 rounded-lg bg-surface dark:bg-d-surface mb-2">
+              <Text className="text-ink2 dark:text-d-ink2 text-[13.5px] leading-5">{n.content}</Text>
+              <Text className="text-[11px] text-muted dark:text-d-muted mt-2">
+                {n.user?.name || 'Agent'} · {new Date(n.created_at).toLocaleDateString()}
+              </Text>
+            </View>
+          ))}
+          {notesList.length === 0 && (
+            <View className="p-4 rounded-lg bg-surface dark:bg-d-surface items-center justify-center">
+              <Text className="text-[13px] text-muted dark:text-d-muted italic">No internal notes logged.</Text>
+            </View>
+          )}
         </View>
 
-        <SectionLabel>Activity</SectionLabel>
+        <SectionLabel>Activity Events</SectionLabel>
         <View className="px-[18px]">
-          {history.map((h, i) => {
-            const Icon =
-              h.type === 'order' ? CreditCard :
-              h.type === 'message' ? MessageSquare :
-              h.type === 'note' ? FilePen : Bell;
+          {events.map((h: any, i: number) => {
             return (
               <View key={i} className="flex-row gap-3 py-3">
                 <View className="w-7 h-7 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
-                  <Icon size={13} color={tokens.ink2} strokeWidth={1.8} />
+                  <MessageSquare size={13} color={tokens.ink2} strokeWidth={1.8} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{h.text}</Text>
-                  <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">{h.time}</Text>
+                  <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{h.event_type?.replace(/_/g, ' ') || 'Interaction'}</Text>
+                  <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
+                    {h.metadata?.message || 'Contact triggered backend interaction.'} · {new Date(h.created_at).toLocaleDateString()}
+                  </Text>
                 </View>
               </View>
             );
           })}
+          {events.length === 0 && (
+            <View className="py-4 items-center justify-center">
+              <Text className="text-xs text-muted dark:text-d-muted">No recent activity events recorded.</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -309,9 +436,9 @@ export default function ContactScreen() {
         <Modal transparent visible={isCalling} animationType="slide">
           <View className="flex-1 bg-ink/95 dark:bg-black/95 items-center justify-center px-6">
             <View className="items-center gap-6">
-              <Avatar name={p.name} size={110} ring={tokens.ok} />
+              <Avatar name={name} size={110} ring={tokens.ok} />
               <View className="items-center">
-                <Text className="text-white text-2xl font-bold mt-2">{p.name}</Text>
+                <Text className="text-white text-2xl font-bold mt-2">{name}</Text>
                 <Text className="text-ok text-sm font-semibold tracking-wide mt-1 uppercase">
                   Calling via WhatsApp API...
                 </Text>
@@ -334,6 +461,7 @@ export default function ContactScreen() {
           </View>
         </Modal>
       )}
+
       {/* Reusable Dialog */}
       <CustomDialog
         visible={dialogConfig.visible}
@@ -345,4 +473,3 @@ export default function ContactScreen() {
     </View>
   );
 }
-

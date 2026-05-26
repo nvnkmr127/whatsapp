@@ -1,36 +1,38 @@
 // src/screens/InboxScreen.tsx — conversation list with filter chips + FAB.
 // Tapping a row opens the Chat screen with that contact preloaded.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, Pressable, ScrollView, RefreshControl, FlatList, TextInput,
+  View, Text, Pressable, ScrollView, RefreshControl, FlatList, TextInput, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Search, SquarePen, ChevronDown, Pin } from 'lucide-react-native';
 
 import { useTokens } from '@/theme';
-import { CONVERSATIONS, BUSINESS } from '@/data';
 import type { Conversation, RootStackParamList } from '@/types';
 import { Avatar } from '@/components/Avatar';
 import { Chip } from '@/components/Chip';
 import { useGlobalState } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
+import { api } from '@/services/api';
 
 type FilterKey = 'All' | 'Unread' | 'Open' | 'Mine' | 'Bots';
 const FILTERS: FilterKey[] = ['All', 'Unread', 'Open', 'Mine', 'Bots'];
-const COUNTS: Record<FilterKey, number> = { All: 8, Unread: 3, Open: 5, Mine: 4, Bots: 1 };
 
-export default function InboxScreen() {
+export default function InboxScreen({ navigation }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
-  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const nav = navigation;
   const [filter, setFilter] = useState<FilterKey>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [globalState, setGlobalState] = useGlobalState();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [counts, setCounts] = useState<Record<FilterKey, number>>({ All: 0, Unread: 0, Open: 0, Mine: 0, Bots: 0 });
+  const [loading, setLoading] = useState(false);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -49,29 +51,119 @@ export default function InboxScreen() {
     setDialogConfig({ visible: true, title, message, buttons });
   };
 
+  // Fetch Conversations from API
+  const fetchConversations = useCallback(async (isSilent = false) => {
+    if (!globalState.token) return;
+    if (!isSilent) setLoading(true);
 
-  const items = useMemo(() => {
-    let filtered = CONVERSATIONS.filter((c) =>
-      filter === 'All' ? true :
-      filter === 'Unread' ? c.unread > 0 :
-      filter === 'Mine' ? c.reply === 'me' || c.unread > 0 :
-      filter === 'Bots' ? !!c.bot :
-      !c.bot
-    );
-    if (searchQuery.trim().length > 0) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.last.toLowerCase().includes(q)
-      );
+    try {
+      let apiFilter = 'all';
+      if (filter === 'Unread') apiFilter = 'unread';
+      if (filter === 'Mine') apiFilter = 'assigned';
+
+      const response = await api.get(`/v1/mobile/conversations?filter=${apiFilter}&query=${searchQuery}`);
+      const rawData = response.data || [];
+
+      // Map backend model to frontend UI types
+      const mapped: Conversation[] = rawData.map((c: any) => {
+        return {
+          id: c.id,
+          name: c.name || c.phone || 'Unknown Contact',
+          last: c.last_message ? c.last_message.content : 'No messages yet',
+          time: c.last_message ? c.last_message.pretty_time : '',
+          unread: c.unread_count || 0,
+          status: c.status === 'closed' ? 'delivered' : 'read',
+          tag: c.tags && c.tags[0] ? c.tags[0].name : 'Sales',
+          online: c.is_within_24_hours || false,
+          pinned: false,
+          reply: c.last_message?.is_outbound ? 'me' : undefined,
+          bot: c.is_ai_enabled || false,
+        };
+      });
+
+      setConversations(mapped);
+
+      // Dynamically calculate counts based on loaded data for simplicity
+      const allCount = mapped.length;
+      const unreadCount = mapped.filter((c) => c.unread > 0).length;
+      const openCount = mapped.filter((c) => c.status !== 'delivered').length;
+      const mineCount = mapped.filter((c) => c.reply === 'me' || c.unread > 0).length;
+      const botsCount = mapped.filter((c) => c.bot).length;
+
+      setCounts({
+        All: allCount,
+        Unread: unreadCount,
+        Open: openCount,
+        Mine: mineCount,
+        Bots: botsCount,
+      });
+    } catch (err: any) {
+      console.error('Fetch conversations failed:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    return filtered;
+  }, [globalState.token, filter, searchQuery]);
+
+  // Load conversations when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations(true);
+      const interval = setInterval(() => fetchConversations(true), 15000); // Poll every 15s
+      return () => clearInterval(interval);
+    }, [fetchConversations])
+  );
+
+  // Trigger load on filter change or query change
+  useEffect(() => {
+    fetchConversations();
   }, [filter, searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 900);
+    fetchConversations(true);
+  };
+
+  const handleSwitchTeam = async (teamId: number, teamName: string) => {
+    setLoading(true);
+    try {
+      // 1. Tell backend to switch team
+      await api.post('/v1/mobile/auth/switch-team', { team_id: teamId });
+      
+      // 2. Set active team headers
+      api.setTeamId(teamId);
+
+      // 3. Fetch active numbers for this team
+      const numbers = await api.get('/v1/mobile/auth/numbers');
+      const activeNumber = numbers[0] || null;
+
+      // 4. Update store
+      setGlobalState({
+        activeTeamId: teamId,
+        businessName: teamName,
+        waNumber: activeNumber ? activeNumber.display_number : '+1 (415) 555-0118',
+        numbers: numbers,
+      });
+
+      // 5. Reload conversations
+      await fetchConversations();
+      showDialog('Workspace Switched', `Active workspace changed to ${teamName}.`);
+    } catch (err: any) {
+      showDialog('Error Switching Workspace', err.message || 'Could not complete team swap.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerWorkspaceDialog = () => {
+    const buttons: Array<{ text: string; onPress?: () => any; style?: "default" | "cancel" | "destructive" }> = globalState.teams.map((team) => ({
+      text: team.name,
+      onPress: () => handleSwitchTeam(team.id, team.name),
+    }));
+
+    buttons.push({ text: 'Cancel', style: 'cancel', onPress: async () => {} });
+
+    showDialog('Switch Active Workspace', 'Choose a WhatsApp Business team to display:', buttons);
   };
 
   return (
@@ -107,17 +199,7 @@ export default function InboxScreen() {
               Inbox
             </Text>
             <Pressable
-              onPress={() => {
-                showDialog(
-                  'Switch Workspace / Active Number',
-                  'Select a verified business phone number and workspace:',
-                  [
-                    { text: 'Acme Coffee Roasters (+1 415 555-0118)', onPress: () => setGlobalState({ businessName: 'Acme Coffee Roasters', waNumber: '+1 (415) 555-0118' }) },
-                    { text: 'Acme Wholesale HQ (+1 800 555-9213)', onPress: () => setGlobalState({ businessName: 'Acme Wholesale HQ', waNumber: '+1 (800) 555-9213' }) },
-                    { text: 'Cancel', style: 'cancel' }
-                  ]
-                );
-              }}
+              onPress={triggerWorkspaceDialog}
               className="flex-row items-center gap-1 mt-[3px]"
             >
               <Text className="text-xs text-muted dark:text-d-muted font-normal">{globalState.businessName} · {globalState.waNumber}</Text>
@@ -156,38 +238,50 @@ export default function InboxScreen() {
             key={f}
             label={f}
             active={filter === f}
-            count={COUNTS[f]}
+            count={counts[f]}
             onPress={() => setFilter(f)}
           />
         ))}
       </ScrollView>
 
-      {/* List */}
-      <FlatList
-        className="flex-1"
-        data={items}
-        keyExtractor={(c) => String(c.id)}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={tokens.accent}
-          />
-        }
-        renderItem={({ item, index }) => (
-          <Row
-            c={item}
-            divider={index < items.length - 1}
-            onPress={() => nav.navigate('Chat', { contact: item })}
-          />
-        )}
-        ListFooterComponent={<View className="h-[100px]" />}
-      />
+      {/* Loading Indicator */}
+      {loading && !refreshing ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={tokens.accent} />
+        </View>
+      ) : (
+        /* List */
+        <FlatList
+          className="flex-1"
+          data={conversations}
+          keyExtractor={(c) => String(c.id)}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={tokens.accent}
+            />
+          }
+          renderItem={({ item, index }) => (
+            <Row
+              c={item}
+              divider={index < conversations.length - 1}
+              onPress={() => nav.navigate('Chat', { contact: item })}
+            />
+          )}
+          ListEmptyComponent={
+            <View className="py-20 items-center justify-center">
+              <Text className="text-sm text-muted dark:text-d-muted">No conversations found.</Text>
+            </View>
+          }
+          ListFooterComponent={<View className="h-[100px]" />}
+        />
+      )}
 
       {/* Floating Action Button (FAB) */}
       <Pressable
         onPress={() => nav.navigate('Broadcast')}
-        className="absolute bottom-6 right-5 w-[54px] h-[54px] bg-accent dark:bg-d-accent items-center justify-center shadow-lg shadow-accent/20 active:opacity-85 z-50"
+        className="absolute bottom-6 right-5 w-[54px] h-[54px] bg-accent dark:bg-d-accent items-center justify-center shadow-lg shadow-accent/20 active:opacity-85 z-50 rounded-full"
       >
         <SquarePen size={20} color="#FFFFFF" strokeWidth={2} />
       </Pressable>
@@ -263,4 +357,3 @@ function Row({ c, divider, onPress }: RowProps) {
     </Pressable>
   );
 }
-

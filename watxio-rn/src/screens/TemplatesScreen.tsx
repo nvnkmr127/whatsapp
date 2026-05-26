@@ -1,27 +1,28 @@
 // src/screens/TemplatesScreen.tsx — tab-filtered template library + FAB.
 
-import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, FlatList, Pressable, TextInput, Modal } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, FlatList, Pressable, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Search, Plus } from 'lucide-react-native';
 
 import { useTokens, Tokens } from '@/theme';
-import { TEMPLATES } from '@/data';
 import type { Template, RootStackParamList } from '@/types';
 import { Chip } from '@/components/Chip';
 import { CustomDialog } from '@/components/Dialog';
+import { api } from '@/services/api';
 
 type TabKey = 'All' | 'Approved' | 'Pending' | 'Rejected';
 const TABS: TabKey[] = ['All', 'Approved', 'Pending', 'Rejected'];
 
-export default function TemplatesScreen() {
+export default function TemplatesScreen({ navigation }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
-  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const nav = navigation;
   const [tab, setTab] = useState<TabKey>('All');
-  const [list, setList] = useState<Template[]>(TEMPLATES);
+  const [list, setList] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -49,6 +50,43 @@ export default function TemplatesScreen() {
     setDialogConfig({ visible: true, title, message, buttons });
   };
 
+  // Fetch Templates
+  const fetchTemplates = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    try {
+      const response = await api.get('/v1/mobile/templates');
+      const rawData = response.data || [];
+
+      const mapped: Template[] = rawData.map((t: any) => {
+        const bodyPreview = t.components?.find((c: any) => c.type === 'BODY')?.text || t.content || '';
+        return {
+          name: t.name,
+          cat: t.category === 'MARKETING' ? 'Marketing' : t.category === 'UTILITY' ? 'Utility' : 'Authentication',
+          lang: t.language || 'en_US',
+          status: t.status === 'APPROVED' ? 'Approved' : t.status === 'PENDING' ? 'Pending' : t.status === 'DRAFT' ? 'Pending' : 'Rejected',
+          uses: String(t.total_sent || 0),
+          preview: bodyPreview,
+        };
+      });
+
+      setList(mapped);
+    } catch (err: any) {
+      console.warn('Failed to load templates:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchTemplates(true);
+    }, [fetchTemplates])
+  );
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
   const items = useMemo(() => {
     let filtered = list.filter((x) => (tab === 'All' ? true : x.status === tab));
     if (searchQuery.trim().length > 0) {
@@ -62,19 +100,45 @@ export default function TemplatesScreen() {
   const approvedCount = useMemo(() => list.filter((x) => x.status === 'Approved').length, [list]);
   const pendingCount = useMemo(() => list.filter((x) => x.status === 'Pending').length, [list]);
 
-  const onDuplicate = (tpl: Template) => {
-    setList((prev) => {
+  const onDuplicate = async (tpl: Template) => {
+    setLoading(true);
+    try {
       let suffix = 1;
-      let newName = `${tpl.name}_copy`;
-      while (prev.some((x) => x.name === newName)) {
-        newName = `${tpl.name}_copy${suffix}`;
+      let dupName = `${tpl.name}_copy`;
+      while (list.some((x) => x.name === dupName)) {
+        dupName = `${tpl.name}_copy${suffix}`;
         suffix++;
       }
-      return [...prev, { ...tpl, name: newName, uses: '0' }];
-    });
+
+      const langMapping: Record<string, string> = {
+        EN: 'en_US',
+        ES: 'es_ES',
+        PT: 'pt_BR',
+        FR: 'fr_FR',
+      };
+
+      await api.post('/v1/mobile/templates', {
+        name: dupName,
+        category: tpl.cat.toUpperCase(),
+        language: langMapping[tpl.lang] || tpl.lang,
+        components: [
+          {
+            type: 'BODY',
+            text: tpl.preview,
+          },
+        ],
+      });
+
+      await fetchTemplates();
+      showDialog('Template Duplicated', `Created new template draft: "${dupName}"`);
+    } catch (err: any) {
+      showDialog('Error Duplicating', err.message || 'Could not duplicate template.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const onCreateTemplate = () => {
+  const onCreateTemplate = async () => {
     if (!newName.trim() || !newPreview.trim()) {
       showDialog('Required Fields', 'Please fill in all fields before creating a template.');
       return;
@@ -84,23 +148,40 @@ export default function TemplatesScreen() {
       showDialog('Duplicate Name', `A template named "${cleanName}" already exists.`);
       return;
     }
-    setList((prev) => [
-      ...prev,
-      {
-        name: cleanName,
-        cat: newCat,
-        lang: newLang,
-        status: 'Approved',
-        uses: '0',
-        preview: newPreview.trim(),
-      },
-    ]);
-    setShowCreateModal(false);
-    setNewName('');
-    setNewPreview('');
-    showDialog('Template Created', `"${cleanName}" has been created and approved.`);
-  };
 
+    const langMapping: Record<string, string> = {
+      EN: 'en_US',
+      ES: 'es_ES',
+      PT: 'pt_BR',
+      FR: 'fr_FR',
+    };
+
+    setLoading(true);
+    try {
+      await api.post('/v1/mobile/templates', {
+        name: cleanName,
+        category: newCat.toUpperCase(),
+        language: langMapping[newLang] || 'en_US',
+        components: [
+          {
+            type: 'BODY',
+            text: newPreview.trim(),
+          },
+        ],
+      });
+
+      setShowCreateModal(false);
+      setNewName('');
+      setNewPreview('');
+      
+      await fetchTemplates();
+      showDialog('Template Created', `"${cleanName}" has been submitted as a draft.`);
+    } catch (err: any) {
+      showDialog('Failed to Create Template', err.message || 'Ensure name only contains lowercase alphanumeric and underscores.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
@@ -135,7 +216,7 @@ export default function TemplatesScreen() {
               Templates
             </Text>
             <Text className="text-xs text-muted dark:text-d-muted mt-0.5">
-              {approvedCount} approved · {pendingCount} pending
+              {approvedCount} approved · {pendingCount} pending/draft
             </Text>
           </View>
           <Pressable
@@ -166,20 +247,31 @@ export default function TemplatesScreen() {
       </ScrollView>
 
       {/* List */}
-      <FlatList
-        className="flex-1"
-        data={items}
-        keyExtractor={(t) => t.name}
-        contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 100, gap: 10 }}
-        renderItem={({ item }) => (
-          <TemplateCard
-            tpl={item}
-            tokens={tokens}
-            onDuplicate={() => onDuplicate(item)}
-            onUse={() => nav.navigate('Broadcast')}
-          />
-        )}
-      />
+      {loading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={tokens.accent} />
+        </View>
+      ) : (
+        <FlatList
+          className="flex-1"
+          data={items}
+          keyExtractor={(t) => t.name}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 100, gap: 10 }}
+          ListEmptyComponent={
+            <View className="py-20 items-center justify-center">
+              <Text className="text-sm text-muted dark:text-d-muted">No templates found.</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <TemplateCard
+              tpl={item}
+              tokens={tokens}
+              onDuplicate={() => onDuplicate(item)}
+              onUse={() => nav.navigate('Broadcast')}
+            />
+          )}
+        />
+      )}
 
       {/* FAB Button */}
       <Fab tokens={tokens} onPress={() => setShowCreateModal(true)} />
@@ -195,9 +287,9 @@ export default function TemplatesScreen() {
               </Pressable>
             </View>
 
-            <View className="gap-3">
+            <ScrollView contentContainerStyle={{ gap: 14 }}>
               <View>
-                <Text className="text-xs font-semibold text-muted dark:text-d-muted mb-1.5 uppercase tracking-wide">Template Name</Text>
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted mb-1.5 uppercase tracking-wide">Template Name (lowercase, numbers, underscores)</Text>
                 <TextInput
                   value={newName}
                   onChangeText={setNewName}
@@ -253,13 +345,13 @@ export default function TemplatesScreen() {
                   multiline
                 />
               </View>
-            </View>
+            </ScrollView>
 
             <Pressable
               onPress={onCreateTemplate}
               className="bg-accent dark:bg-d-accent py-3.5 rounded-xl items-center active:opacity-90 mt-2"
             >
-              <Text className="text-accent-ink dark:text-d-accent-ink font-bold text-sm">Save & Submit for Approval</Text>
+              <Text className="text-accent-ink dark:text-d-accent-ink font-bold text-sm">Save & Submit as Draft</Text>
             </Pressable>
           </View>
         </View>
@@ -351,4 +443,3 @@ function Fab({ tokens, onPress }: { tokens: Tokens; onPress: () => void }) {
     </Pressable>
   );
 }
-

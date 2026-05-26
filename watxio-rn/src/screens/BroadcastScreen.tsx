@@ -1,6 +1,6 @@
 // src/screens/BroadcastScreen.tsx — segment-based broadcast composer.
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -10,27 +10,30 @@ import { useTokens } from '@/theme';
 import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
 import { PrimaryButton, IconButton } from '@/components/Button';
-import { TEMPLATES } from '@/data';
 import type { Template } from '@/types';
 import { CustomDialog } from '@/components/Dialog';
+import { api } from '@/services/api';
 
-const SEGMENTS = [
-  { name: 'VIP',           count: 142 },
-  { name: 'Subscribers',   count: 1284 },
-  { name: 'Recent buyers', count: 482 },
-  { name: 'Wholesale',     count: 38 },
-] as const;
+interface TagItem {
+  id: number;
+  name: string;
+  count?: number; // Optional local/remote count
+}
 
-export default function BroadcastScreen() {
+export default function BroadcastScreen({ navigation }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
-  const nav = useNavigation<any>();
+  const nav = navigation;
 
-  const [audience, setAudience] = useState<string[]>(['VIP']);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [tagsList, setTagsList] = useState<TagItem[]>([]);
+  const [templatesList, setTemplatesList] = useState<any[]>([]);
+
+  const [selectedTagId, setSelectedTagId] = useState<number | null>(null);
   const [schedule, setSchedule] = useState<'now' | 'later'>('now');
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(TEMPLATES[1]); // cart_recovery
+  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -49,42 +52,89 @@ export default function BroadcastScreen() {
     setDialogConfig({ visible: true, title, message, buttons });
   };
 
-
-  const total = useMemo(
-    () => audience.reduce((s, a) => s + (SEGMENTS.find((x) => x.name === a)?.count ?? 0), 0),
-    [audience],
-  );
-
-  const toggle = (n: string) =>
-    setAudience((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
-
-  const handleSend = () => {
-    if (selectedTemplate.status !== 'Approved') {
-      showDialog('Unable to Send', 'Only approved templates can be used for broadcasts.');
-      return;
-    }
-    if (total === 0) {
-      showDialog('No Contacts Selected', 'Please select at least one audience segment.');
-      return;
-    }
+  const loadBroadcastFormOptions = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (schedule === 'now') {
-        showDialog(
-          'Broadcast Sent',
-          `Your broadcast "${selectedTemplate.name}" has been successfully queued for ${total.toLocaleString()} contacts.`,
-          [{ text: 'OK', onPress: () => nav.goBack() }]
-        );
-      } else {
-        showDialog(
-          'Broadcast Scheduled',
-          `Your broadcast "${selectedTemplate.name}" has been scheduled for ${total.toLocaleString()} contacts.`,
-          [{ text: 'OK', onPress: () => nav.goBack() }]
-        );
+    try {
+      // 1. Load tags
+      const tagsResponse = await api.get('/v1/mobile/contacts/tags');
+      setTagsList(tagsResponse || []);
+      if (tagsResponse && tagsResponse.length > 0) {
+        setSelectedTagId(tagsResponse[0].id);
       }
-    }, 1200);
+
+      // 2. Load templates
+      const templatesResponse = await api.get('/v1/mobile/templates');
+      const data = templatesResponse.data || [];
+      setTemplatesList(data);
+      
+      const approved = data.find((t: any) => t.status === 'APPROVED');
+      if (approved) {
+        setSelectedTemplate(approved);
+      } else if (data.length > 0) {
+        setSelectedTemplate(data[0]);
+      }
+    } catch (err: any) {
+      console.warn('Failed to load broadcast options:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBroadcastFormOptions();
+  }, [loadBroadcastFormOptions]);
+
+  const handleSend = async () => {
+    if (!selectedTemplate) {
+      showDialog('Template Required', 'Please select a WhatsApp message template.');
+      return;
+    }
+    if (selectedTemplate.status !== 'APPROVED') {
+      showDialog('Unable to Send', 'Only approved templates can be used for campaigns.');
+      return;
+    }
+    if (!selectedTagId) {
+      showDialog('No Contacts Selected', 'Please select an audience segment tag.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const selectedTagName = tagsList.find((t) => t.id === selectedTagId)?.name || 'Campaign';
+      const campaignName = `MobileBroadcast_${selectedTemplate.name}_${selectedTagName}_${Date.now()}`;
+
+      await api.post('/v1/mobile/campaigns', {
+        name: campaignName,
+        template_id: selectedTemplate.id,
+        tag_id: selectedTagId,
+        variables: [],
+      });
+
+      setActionLoading(false);
+      showDialog(
+        'Broadcast Queued',
+        `Your campaign "${campaignName}" has been successfully created and queued for delivery.`,
+        [{ text: 'OK', onPress: () => nav.goBack() }]
+      );
+    } catch (err: any) {
+      setActionLoading(false);
+      showDialog('Campaign Failed', err.message || 'Error occurred while creating the broadcast.');
+    }
   };
+
+  const selectedTemplatePreview = useMemo(() => {
+    if (!selectedTemplate) return 'No template selected';
+    return selectedTemplate.components?.find((c: any) => c.type === 'BODY')?.text || selectedTemplate.content || '';
+  }, [selectedTemplate]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
+        <ActivityIndicator size="large" color={tokens.accent} />
+        <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading broadcast parameters...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
@@ -94,43 +144,21 @@ export default function BroadcastScreen() {
         <Text className="flex-1 text-base font-bold text-ink dark:text-d-ink">
           New broadcast
         </Text>
-         <Pressable
-          onPress={() => {
-            showDialog('Draft Saved', 'Your broadcast draft has been saved successfully.', [
-              { text: 'OK', onPress: () => nav.goBack() }
-            ]);
-          }}
-          className="px-3 py-1.5 rounded-full active:bg-surface2 dark:active:bg-d-surface2"
-        >
-          <Text className="text-muted dark:text-d-muted text-xs font-semibold">Save draft</Text>
-        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 120 }}>
-        {/* Headline target counter */}
-        <View className="py-1 flex-row items-end justify-between">
-          <View>
-            <Text className="text-xs text-muted dark:text-d-muted">Sending to</Text>
-            <Text className="text-[36px] font-bold text-ink dark:text-d-ink tracking-[-0.8px] mt-1">
-              {total.toLocaleString()}
-            </Text>
-            <Text className="text-xs text-muted dark:text-d-muted mt-0.5">contacts</Text>
-          </View>
-          <Users size={32} color={tokens.muted} strokeWidth={1.4} />
-        </View>
-
-        <SectionLabel>Audience</SectionLabel>
+        <SectionLabel>Audience Tag Segment</SectionLabel>
         <View className="gap-1">
-          {SEGMENTS.map((s) => {
-            const on = audience.includes(s.name);
+          {tagsList.map((s) => {
+            const on = selectedTagId === s.id;
             return (
               <Pressable
-                key={s.name}
-                onPress={() => toggle(s.name)}
+                key={s.id}
+                onPress={() => setSelectedTagId(s.id)}
                 className="flex-row items-center gap-3 px-3.5 py-3.5 rounded-md bg-surface dark:bg-d-surface active:bg-surface2 dark:active:bg-d-surface2"
               >
                 <View
-                  className={`w-5 h-5 rounded-sm items-center justify-center ${
+                  className={`w-5 h-5 rounded-full items-center justify-center ${
                     on ? 'bg-accent dark:bg-d-accent border-0' : 'border border-faint dark:border-d-faint bg-transparent'
                   }`}
                   style={on ? {} : { borderWidth: 1.5 }}
@@ -140,53 +168,64 @@ export default function BroadcastScreen() {
                 <View className="flex-1">
                   <Text className="text-sm font-medium text-ink dark:text-d-ink">{s.name}</Text>
                   <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
-                    {s.count.toLocaleString()} contacts
+                    Targeting tag segment
                   </Text>
                 </View>
               </Pressable>
             );
           })}
+          {tagsList.length === 0 && (
+            <View className="p-4 bg-surface dark:bg-d-surface rounded items-center justify-center">
+              <Text className="text-xs text-muted dark:text-d-muted italic">No contact tags loaded from server.</Text>
+            </View>
+          )}
         </View>
 
         <SectionLabel action="Browse →" onActionPress={() => setShowTemplatePicker(true)}>Template</SectionLabel>
-        <Pressable onPress={() => setShowTemplatePicker(true)}>
-          <Card pad={14}>
-            <View className="flex-row items-start gap-2.5">
-              <View className="w-[38px] h-[38px] rounded-md bg-surface2 dark:bg-d-surface2 items-center justify-center">
-                <FileText size={18} color={tokens.ink2} strokeWidth={1.6} />
-              </View>
-              <View className="flex-1">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-sm font-semibold text-ink dark:text-d-ink font-mono">
-                    {selectedTemplate.name}
-                  </Text>
-                  <View className="flex-row items-center gap-1">
-                    <View
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        selectedTemplate.status === 'Approved' ? 'bg-ok dark:bg-d-ok' : 'bg-warn dark:bg-d-warn'
-                      }`}
-                    />
-                    <Text
-                      className={`text-[11px] font-semibold ${
-                        selectedTemplate.status === 'Approved' ? 'text-ok dark:text-d-ok' : 'text-warn dark:text-d-warn'
-                      }`}
-                    >
-                      {selectedTemplate.status}
-                    </Text>
-                  </View>
+        {selectedTemplate ? (
+          <Pressable onPress={() => setShowTemplatePicker(true)}>
+            <Card pad={14}>
+              <View className="flex-row items-start gap-2.5">
+                <View className="w-[38px] h-[38px] rounded-md bg-surface2 dark:bg-d-surface2 items-center justify-center">
+                  <FileText size={18} color={tokens.ink2} strokeWidth={1.6} />
                 </View>
-                <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
-                  {selectedTemplate.cat} · {selectedTemplate.lang} · {selectedTemplate.uses} uses
+                <View className="flex-1">
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-sm font-semibold text-ink dark:text-d-ink font-mono">
+                      {selectedTemplate.name}
+                    </Text>
+                    <View className="flex-row items-center gap-1">
+                      <View
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          selectedTemplate.status === 'APPROVED' ? 'bg-ok dark:bg-d-ok' : 'bg-warn dark:bg-d-warn'
+                        }`}
+                      />
+                      <Text
+                        className={`text-[11px] font-semibold ${
+                          selectedTemplate.status === 'APPROVED' ? 'text-ok dark:text-d-ok' : 'text-warn dark:text-d-warn'
+                        }`}
+                      >
+                        {selectedTemplate.status}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
+                    {selectedTemplate.category} · {selectedTemplate.language} · {selectedTemplate.total_sent || 0} uses
+                  </Text>
+                </View>
+              </View>
+              <View className="mt-3 py-[11px] px-[13px] bg-bubble-out dark:bg-d-bubble-out rounded-md">
+                <Text className="text-[13px] text-ink dark:text-d-ink leading-5">
+                  {selectedTemplatePreview}
                 </Text>
               </View>
-            </View>
-            <View className="mt-3 py-[11px] px-[13px] bg-bubble-out dark:bg-d-bubble-out rounded-md">
-              <Text className="text-[13px] text-ink dark:text-d-ink leading-5">
-                {selectedTemplate.preview}
-              </Text>
-            </View>
-          </Card>
-        </Pressable>
+            </Card>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => setShowTemplatePicker(true)} className="p-6 bg-surface dark:bg-d-surface rounded-lg items-center border border-dashed border-hairline">
+            <Text className="text-xs text-muted dark:text-d-muted">Click to select an approved template</Text>
+          </Pressable>
+        )}
 
         <SectionLabel>Schedule</SectionLabel>
         <View className="flex-row gap-2">
@@ -222,7 +261,7 @@ export default function BroadcastScreen() {
           full
           size="lg"
           icon={Send}
-          label={schedule === 'now' ? `Send to ${total.toLocaleString()}` : `Schedule for ${total.toLocaleString()}`}
+          label={schedule === 'now' ? 'Send Broadcast Campaign' : 'Schedule Broadcast Campaign'}
           onPress={handleSend}
         />
       </View>
@@ -238,11 +277,12 @@ export default function BroadcastScreen() {
               </Pressable>
             </View>
             <FlatList
-              data={TEMPLATES}
-              keyExtractor={(item) => item.name}
+              data={templatesList}
+              keyExtractor={(item) => String(item.id)}
               contentContainerStyle={{ padding: 18, gap: 10 }}
               renderItem={({ item }) => {
-                const isApproved = item.status === 'Approved';
+                const isApproved = item.status === 'APPROVED';
+                const bodyPreview = item.components?.find((c: any) => c.type === 'BODY')?.text || item.content || '';
                 return (
                   <Pressable
                     onPress={() => {
@@ -254,7 +294,7 @@ export default function BroadcastScreen() {
                       setShowTemplatePicker(false);
                     }}
                     className={`p-3.5 rounded-lg border bg-surface2 dark:bg-d-surface2 ${
-                      selectedTemplate.name === item.name ? 'border-accent dark:border-d-accent' : 'border-transparent'
+                      selectedTemplate?.id === item.id ? 'border-accent dark:border-d-accent' : 'border-transparent'
                     }`}
                   >
                     <View className="flex-row justify-between items-center mb-1.5">
@@ -264,7 +304,7 @@ export default function BroadcastScreen() {
                         <Text className={`text-[11px] font-semibold ${isApproved ? 'text-ok dark:text-d-ok' : 'text-warn dark:text-d-warn'}`}>{item.status}</Text>
                       </View>
                     </View>
-                    <Text numberOfLines={2} className="text-xs text-muted dark:text-d-muted leading-4">{item.preview}</Text>
+                    <Text numberOfLines={2} className="text-xs text-muted dark:text-d-muted leading-4">{bodyPreview}</Text>
                   </Pressable>
                 );
               }}
@@ -274,7 +314,7 @@ export default function BroadcastScreen() {
       </Modal>
 
       {/* Action Loading Modal */}
-      <Modal transparent visible={loading} animationType="fade">
+      <Modal transparent visible={actionLoading} animationType="fade">
         <View className="flex-1 bg-black/40 items-center justify-center">
           <View className="bg-surface dark:bg-d-surface p-6 rounded-2xl items-center gap-3 shadow-xl">
             <ActivityIndicator size="large" color={tokens.accent} />
@@ -294,4 +334,3 @@ export default function BroadcastScreen() {
     </View>
   );
 }
-

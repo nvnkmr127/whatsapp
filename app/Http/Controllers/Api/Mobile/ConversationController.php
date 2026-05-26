@@ -17,7 +17,7 @@ class ConversationController extends Controller
             $user = $request->user();
             $team = $user->currentTeam;
 
-            if (! $team) {
+            if (!$team) {
                 return response()->json(['error' => 'No team associated'], 400);
             }
 
@@ -44,7 +44,7 @@ class ConversationController extends Controller
             // Apply Filters
             $filter = $request->input('filter', 'all');
             if ($filter === 'unread') {
-                $query->whereHas('messages', function($q) {
+                $query->whereHas('messages', function ($q) {
                     $q->where('direction', 'inbound')->whereNull('read_at');
                 });
             } elseif ($filter === 'assigned') {
@@ -53,36 +53,23 @@ class ConversationController extends Controller
 
             // Search Support
             if ($search = $request->input('query')) {
-                $query->whereHas('contact', function($q) use ($search) {
+                $query->whereHas('contact', function ($q) use ($search) {
                     $q->where('name', 'like', "%$search%")->orWhere('phone_number', 'like', "%$search%");
                 });
             }
 
             $conversations = $query->with([
-                    'contact:id,name,phone_number',
-                    'lastMessage' => function ($query) {
-                        $query->select([
-                            'messages.id',
-                            'messages.conversation_id',
-                            'messages.content',
-                            'messages.type',
-                            'messages.direction',
-                            'messages.created_at',
-                        ]);
-                    },
-                    'assignee:id,name',
-                    'contact.tags',
-                    'lastInboundMessage' => function ($query) {
-                        $query->select([
-                            'messages.id',
-                            'messages.conversation_id',
-                            'messages.created_at',
-                        ]);
-                    },
+                'contact:id,name,phone_number',
+                'lastMessage',
+                'assignee:id,name',
+                'contact.tags',
+                'lastInboundMessage',
+            ])
+                ->withCount([
+                    'messages as unread_count' => function ($query) {
+                        $query->where('direction', 'inbound')->whereNull('read_at');
+                    }
                 ])
-                ->withCount(['messages as unread_count' => function ($query) {
-                    $query->where('direction', 'inbound')->whereNull('read_at');
-                }])
                 ->orderBy('last_message_at', 'desc')
                 ->paginate(min((int) $request->input('per_page', 20), 100));
 
@@ -221,7 +208,7 @@ class ConversationController extends Controller
     public function getCannedMessages(Request $request)
     {
         $team = $request->user()->currentTeam;
-        if (! $team) {
+        if (!$team) {
             return response()->json([]);
         }
 
@@ -299,7 +286,7 @@ class ConversationController extends Controller
         $contact = $conversation->contact;
 
         $isEnabled = (bool) $request->input('enabled', false);
-        
+
         $contact->update([
             'is_bot_paused' => !$isEnabled,
             'bot_paused_at' => !$isEnabled ? now() : null,
@@ -314,7 +301,7 @@ class ConversationController extends Controller
 
     protected function authorizeConversation($user, $conversation)
     {
-        if ($conversation->team_id !== $user->currentTeam?->id && ! $user->isSuperAdmin()) {
+        if ($conversation->team_id !== $user->currentTeam?->id && !$user->isSuperAdmin()) {
             abort(403, 'Unauthorized access to this conversation.');
         }
     }

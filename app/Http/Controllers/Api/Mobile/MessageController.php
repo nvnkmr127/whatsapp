@@ -52,9 +52,9 @@ class MessageController extends Controller
         $this->authorizeConversation($request->user(), $conversation);
 
         $request->validate([
-            'type' => 'required|in:text,image,document,template',
-            'content' => 'required_if:type,text|string',
-            'media_url' => 'required_if:type,image,document|string',
+            'type' => 'required|in:text,image,document,video,audio,template',
+            'content' => 'required_if:type,text|nullable|string',
+            'media_url' => 'required_if:type,image,document,video,audio|string',
         ]);
 
         $user = $request->user();
@@ -93,18 +93,8 @@ class MessageController extends Controller
             'status' => 'queued',
         ]);
 
-        $jobContent = $isMedia ? $request->input('media_url') : ($request->type === 'text' ? $request->input('content') : []);
-
         // Dispatch Job asynchronously (do not block the HTTP response)
-        \App\Jobs\SendMessageJob::dispatch(
-            $team->id,
-            $contact->phone_number,
-            $request->type,
-            $jobContent,
-            null, // Template name if template
-            'en_US', // Language
-            $message->id
-        );
+        \App\Jobs\SendMessageJob::dispatch($message);
 
         return response()->json([
             'success' => true,
