@@ -69,6 +69,7 @@ export default function InboxScreen({ navigation }: any) {
         return {
           id: c.id,
           name: c.name || c.phone || 'Unknown Contact',
+          phone: c.phone,
           last: c.last_message ? c.last_message.content : 'No messages yet',
           time: c.last_message ? c.last_message.pretty_time : '',
           unread: c.unread_count || 0,

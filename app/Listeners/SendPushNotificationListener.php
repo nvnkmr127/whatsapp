@@ -17,7 +17,19 @@ class SendPushNotificationListener implements ShouldQueue
     /**
      * Handle the event.
      */
-    public function handle(MessageReceived $event): void
+    public function handle(object $event): void
+    {
+        if ($event instanceof MessageReceived) {
+            $this->handleMessageReceived($event);
+        } elseif ($event instanceof \App\Events\CallOffered) {
+            $this->handleCallOffered($event);
+        }
+    }
+
+    /**
+     * Handle message received event.
+     */
+    protected function handleMessageReceived(MessageReceived $event): void
     {
         $message = $event->message;
 
@@ -60,5 +72,48 @@ class SendPushNotificationListener implements ShouldQueue
         }
 
         Log::info("Push Notification dispatched for message {$message->id}");
+    }
+
+    /**
+     * Handle call offered event.
+     */
+    protected function handleCallOffered(\App\Events\CallOffered $event): void
+    {
+        $call = $event->call;
+
+        // Skip outbound calls
+        if ($call->direction !== 'inbound') {
+            return;
+        }
+
+        $team = $call->team;
+        if (! $team) {
+            return;
+        }
+
+        // Get all users in the team (owner + members)
+        $users = $team->allUsers();
+
+        foreach ($users as $user) {
+            // Don't send if the user has no FCM tokens
+            if ($user->fcmTokens->isEmpty()) {
+                continue;
+            }
+
+            $contactName = $call->contact?->name ?? $call->from_number ?? 'Unknown';
+            $title = 'Incoming WhatsApp Call';
+            $body = 'from ' . $contactName;
+
+            $this->fcmService->sendToUser($user, $title, $body, [
+                'type' => 'call.incoming',
+                'call_id' => (string) $call->call_id,
+                'conversation_id' => (string) $call->conversation_id,
+                'team_id' => (string) $call->team_id,
+                'contact_name' => $contactName,
+                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+            ]);
+        }
+
+        Log::info("Push Notification dispatched for incoming call {$call->call_id}");
     }
 }

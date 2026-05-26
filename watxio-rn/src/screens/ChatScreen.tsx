@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, KeyboardAvoidingView, Platform, Animated, Pressable, Keyboard, BackHandler,
-  Modal, FlatList, ActivityIndicator, Image
+  Modal, FlatList, ActivityIndicator, Image, Vibration
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -136,6 +136,16 @@ export default function ChatScreen({ navigation, route }: any) {
         const countChanged = prev.length !== mapped.length;
         const lastChanged  = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time;
         if (!countChanged && !lastChanged) return prev; // nothing changed — skip re-render
+
+        // Haptic feedback (Vibration) on new inbound message in foreground
+        if (newLast && newLast.kind === 'in') {
+          try {
+            Vibration.vibrate(500);
+          } catch (e) {
+            // Ignore in environments without haptics
+          }
+        }
+
         return mapped;
       });
 
