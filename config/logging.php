@@ -135,6 +135,14 @@ return [
             'level' => 'debug',
         ],
 
+        'mobile' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/mobile.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+            'tap' => [\App\Logging\CustomizeLogger::class],
+        ],
+
         'sentry' => [
             'driver' => 'sentry',
             'level' => env('SENTRY_LOG_LEVEL', 'warning'),

@@ -65,9 +65,9 @@ class OTPService
         }
 
         if (app()->environment('local')) {
-            Log::info("OTP for {$identifier}: {$code}");
+            Log::channel('mobile')->info("OTP for {$identifier}: {$code}");
             if (!$sent) {
-                Log::info("Bypassing OTP send failure in local environment.");
+                Log::channel('mobile')->info("Bypassing OTP send failure in local environment.");
                 $sent = true;
             }
             $this->persistOtp($identifier, $code, $type, $teamId);
@@ -131,7 +131,7 @@ class OTPService
     public function verify(string $identifier, string $code, bool $consume = true): bool
     {
         if (app()->environment('local') && $code === '123456') {
-            Log::info("OTP bypass: local environment and code is 123456 for {$identifier}");
+            Log::channel('mobile')->info("OTP bypass: local environment and code is 123456 for {$identifier}");
             return true;
         }
 
