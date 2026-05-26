@@ -7,6 +7,8 @@ use App\Models\Campaign;
 use App\Models\Contact;
 use App\Models\WhatsappTemplate;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
+use App\Jobs\PrepareCampaignJob;
 
 class CampaignController extends Controller
 {
@@ -39,6 +41,7 @@ class CampaignController extends Controller
             'template_id' => 'required|exists:whatsapp_templates,id',
             'tag_id' => 'required|exists:contact_tags,id',
             'variables' => 'nullable|array',
+            'scheduled_at' => 'nullable|date',
         ]);
 
         $team = $request->user()->currentTeam;
@@ -48,24 +51,34 @@ class CampaignController extends Controller
 
         $template = WhatsappTemplate::where('team_id', $team->id)->findOrFail($request->template_id);
 
+        $scheduledAt = $request->scheduled_at ? Carbon::parse($request->scheduled_at) : now();
+        if ($scheduledAt->isPast()) {
+            $scheduledAt = now();
+        }
+
         $campaign = Campaign::create([
             'team_id' => $team->id,
             'user_id' => $request->user()->id,
             'name' => $request->name,
             'whatsapp_template_id' => $template->whatsapp_template_id,
             'template_id' => $template->id,
-            'status' => 'preparing',
+            'status' => 'scheduled',
             'total_contacts' => Contact::where('team_id', $team->id)->whereHas('tags', function ($q) use ($request) {
                 $q->where('contact_tags.id', $request->tag_id);
             })->count(),
             'template_variables' => $request->variables ?? [],
+            'scheduled_at' => $scheduledAt,
         ]);
 
-        // Logic here would call a dedicated CampaignService (matching web)
-        // For now, assume a background job is already linked to campaign creation
-        if ($campaign->total_contacts > 0) {
-            // \App\Jobs\ProcessCampaignJob::dispatch($campaign);
-        }
+        $delaySeconds = now()->diffInSeconds($scheduledAt, false);
+        $delaySeconds = $delaySeconds > 0 ? $delaySeconds : 0;
+
+        $criteria = [
+            'selection_type' => 'tags',
+            'tags' => [$request->tag_id],
+        ];
+
+        PrepareCampaignJob::dispatch($campaign->id, $criteria)->delay($delaySeconds);
 
         return response()->json([
             'success' => true,

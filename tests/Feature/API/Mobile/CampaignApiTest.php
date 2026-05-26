@@ -78,7 +78,39 @@ class CampaignApiTest extends TestCase
             'team_id' => $this->team->id,
             'name' => 'New Broadcast Test Campaign',
             'template_id' => $template->id,
-            'status' => 'preparing',
+            'status' => 'scheduled',
         ]);
+    }
+
+    public function test_can_store_scheduled_campaign()
+    {
+        $template = WhatsappTemplate::factory()->create(['team_id' => $this->team->id]);
+        $tag = ContactTag::create(['team_id' => $this->team->id, 'name' => 'VIP Customers']);
+        $futureDate = now()->addHours(2)->toIso8601String();
+
+        $payload = [
+            'name' => 'New Scheduled Campaign',
+            'template_id' => $template->id,
+            'tag_id' => $tag->id,
+            'scheduled_at' => $futureDate,
+        ];
+
+        $response = $this->postJson('/api/v1/mobile/campaigns', $payload, [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('campaigns', [
+            'team_id' => $this->team->id,
+            'name' => 'New Scheduled Campaign',
+            'template_id' => $template->id,
+            'status' => 'scheduled',
+        ]);
+
+        $campaign = Campaign::where('name', 'New Scheduled Campaign')->first();
+        $this->assertNotNull($campaign->scheduled_at);
+        $this->assertTrue(\Carbon\Carbon::parse($campaign->scheduled_at)->isFuture());
     }
 }

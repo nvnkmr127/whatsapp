@@ -8,7 +8,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Search, SquarePen, ChevronDown, Pin } from 'lucide-react-native';
+import { Search, SquarePen, ChevronDown, Pin, UserPlus } from 'lucide-react-native';
+import { Modal } from 'react-native';
 
 import { useTokens } from '@/theme';
 import type { Conversation, RootStackParamList } from '@/types';
@@ -32,6 +33,12 @@ export default function InboxScreen({ navigation }: any) {
   const [globalState, setGlobalState] = useGlobalState();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [counts, setCounts] = useState<Record<FilterKey, number>>({ All: 0, Unread: 0, Open: 0, Mine: 0, Bots: 0 });
+  const [showCreateContactModal, setShowCreateContactModal] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactCompany, setNewContactCompany] = useState('');
+  const [isCreatingContact, setIsCreatingContact] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Dialog State
@@ -118,6 +125,100 @@ export default function InboxScreen({ navigation }: any) {
       setRefreshing(false);
     }
   }, [globalState.token, filter, searchQuery]);
+
+  const handleCreateContact = async () => {
+    if (!newContactPhone.trim()) {
+      showDialog('Phone Required', 'Please enter a valid WhatsApp phone number.');
+      return;
+    }
+
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    const phoneClean = newContactPhone.trim().replace(/[\s-()]/g, '');
+    if (!phoneRegex.test(phoneClean)) {
+      showDialog('Invalid Phone', 'Please enter a valid international phone number (e.g. +15551234567).');
+      return;
+    }
+
+    setIsCreatingContact(true);
+    try {
+      const response = await api.post('/v1/mobile/contacts', {
+        phone_number: phoneClean,
+        name: newContactName.trim() || undefined,
+        email: newContactEmail.trim() || undefined,
+        custom_attributes: {
+          email: newContactEmail.trim() || undefined,
+          company: newContactCompany.trim() || undefined,
+        },
+      });
+
+      setShowCreateContactModal(false);
+      setNewContactName('');
+      setNewContactPhone('');
+      setNewContactEmail('');
+      setNewContactCompany('');
+
+      // Refresh list
+      await fetchConversations(true);
+
+      // Navigate to chat
+      if (response.conversation) {
+        nav.navigate('Chat', { conversation: response.conversation });
+      }
+    } catch (err: any) {
+      if (err.message?.includes('already exists') || err.status === 409 || err.code === 409) {
+        const existingContact = err.data?.contact || err.contact;
+        if (existingContact) {
+          showDialog(
+            'Contact Exists',
+            'A contact with this phone number already exists. Would you like to open their chat history?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Open Chat',
+                onPress: async () => {
+                  try {
+                    setLoading(true);
+                    const res = await api.get(`/v1/mobile/contacts/${existingContact.id}`);
+                    const contactDetail = res.contact || {};
+                    if (contactDetail.activeConversation) {
+                      const activeConv = {
+                        id: contactDetail.activeConversation.id,
+                        contact_id: existingContact.id,
+                        name: existingContact.name || existingContact.phone_number,
+                        phone: existingContact.phone_number,
+                        unread: 0,
+                        status: contactDetail.activeConversation.status || 'open',
+                        online: false,
+                        bot: !(existingContact.is_bot_paused ?? false),
+                      };
+                      setShowCreateContactModal(false);
+                      setNewContactName('');
+                      setNewContactPhone('');
+                      setNewContactEmail('');
+                      setNewContactCompany('');
+                      nav.navigate('Chat', { conversation: activeConv });
+                    } else {
+                      showDialog('Chat Error', 'No active conversation found for this contact.');
+                    }
+                  } catch (fetchErr) {
+                    showDialog('Error', 'Failed to open conversation for existing contact.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          showDialog('Error', 'Contact with this number already exists.');
+        }
+      } else {
+        showDialog('Failed to Create', err.message || 'Could not save the new contact.');
+      }
+    } finally {
+      setIsCreatingContact(false);
+    }
+  };
 
   // Load conversations when screen gains focus
   useFocusEffect(
@@ -230,6 +331,13 @@ export default function InboxScreen({ navigation }: any) {
               <Search size={20} color={tokens.ink} strokeWidth={1.6} />
             </Pressable>
             <Pressable
+              onPress={() => setShowCreateContactModal(true)}
+              className="w-9 h-9 items-center justify-center rounded-full active:opacity-60"
+              hitSlop={8}
+            >
+              <UserPlus size={20} color={tokens.ink} strokeWidth={1.6} />
+            </Pressable>
+            <Pressable
               onPress={() => nav.navigate('Broadcast')}
               className="w-9 h-9 items-center justify-center rounded-full active:opacity-60"
               hitSlop={8}
@@ -294,11 +402,107 @@ export default function InboxScreen({ navigation }: any) {
 
       {/* Floating Action Button (FAB) */}
       <Pressable
-        onPress={() => nav.navigate('Broadcast')}
+        onPress={() => setShowCreateContactModal(true)}
         className="absolute bottom-6 right-5 w-[54px] h-[54px] bg-accent dark:bg-d-accent items-center justify-center shadow-lg shadow-accent/20 active:opacity-85 z-50 rounded-full"
       >
-        <SquarePen size={20} color="#FFFFFF" strokeWidth={2} />
+        <UserPlus size={20} color="#FFFFFF" strokeWidth={2} />
       </Pressable>
+
+      {/* Create Contact Modal */}
+      <Modal transparent visible={showCreateContactModal} animationType="slide">
+        <View className="flex-1 bg-black/40 justify-end">
+          <View
+            className="bg-surface dark:bg-d-surface rounded-t-2xl px-[18px] pt-4"
+            style={{ paddingBottom: insets.bottom + 16 }}
+          >
+            <View className="flex-row items-center justify-between pb-4 border-b border-hairline dark:border-d-hairline mb-4">
+              <Text className="text-base font-bold text-ink dark:text-d-ink">Create New Contact</Text>
+              <Pressable
+                onPress={() => {
+                  setShowCreateContactModal(false);
+                  setNewContactName('');
+                  setNewContactPhone('');
+                  setNewContactEmail('');
+                  setNewContactCompany('');
+                }}
+                className="p-1"
+              >
+                <Text className="text-accent dark:text-d-accent font-semibold text-sm">Cancel</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView className="max-h-[400px]">
+              <View className="mb-4">
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Phone Number *</Text>
+                <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                  <TextInput
+                    value={newContactPhone}
+                    onChangeText={setNewContactPhone}
+                    placeholder="+15551234567"
+                    placeholderTextColor={tokens.muted}
+                    keyboardType="phone-pad"
+                    className="flex-1 text-ink dark:text-d-ink text-sm p-0 font-mono"
+                  />
+                </View>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Name</Text>
+                <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                  <TextInput
+                    value={newContactName}
+                    onChangeText={setNewContactName}
+                    placeholder="John Doe"
+                    placeholderTextColor={tokens.muted}
+                    className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                  />
+                </View>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Email</Text>
+                <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                  <TextInput
+                    value={newContactEmail}
+                    onChangeText={setNewContactEmail}
+                    placeholder="john@example.com"
+                    placeholderTextColor={tokens.muted}
+                    keyboardType="email-address"
+                    className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                  />
+                </View>
+              </View>
+
+              <View className="mb-6">
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Company</Text>
+                <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                  <TextInput
+                    value={newContactCompany}
+                    onChangeText={setNewContactCompany}
+                    placeholder="Acme Corp"
+                    placeholderTextColor={tokens.muted}
+                    className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                  />
+                </View>
+              </View>
+
+              <View className="mb-2">
+                <Pressable
+                  onPress={handleCreateContact}
+                  disabled={isCreatingContact}
+                  className="w-full bg-accent dark:bg-d-accent py-3.5 rounded-lg items-center justify-center active:opacity-90 disabled:opacity-50"
+                >
+                  {isCreatingContact ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text className="text-white text-[15px] font-bold">Create Contact & Start Chat</Text>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Reusable Dialog */}
       <CustomDialog

@@ -83,9 +83,24 @@ class ContactController extends Controller
             'opt_in_status' => $validated['opt_in_status'] ?? 'opted_in',
         ]);
 
+        $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($contact);
+
         return response()->json([
             'success' => true,
             'contact' => $contact,
+            'conversation' => [
+                'id' => $conversation->id,
+                'contact_id' => $conversation->contact_id,
+                'name' => $contact->name,
+                'phone' => $contact->phone_number,
+                'last' => 'No messages yet',
+                'time' => '',
+                'unread' => 0,
+                'status' => 'new',
+                'online' => false,
+                'pinned' => false,
+                'bot' => true,
+            ],
         ], 201);
     }
 

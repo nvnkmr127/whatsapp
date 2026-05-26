@@ -92,10 +92,6 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Moved /auth/me, teams, numbers etc. to the non-tenant group above
         Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
 
-        // FCM Tokens
-        Route::post('/fcm/register', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
-        Route::post('/fcm/remove', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'destroy']);
-
         // Presence (Active Chat State)
         Route::post('/presence/heartbeat', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'heartbeat']);
         Route::post('/presence/leave', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'leave']);

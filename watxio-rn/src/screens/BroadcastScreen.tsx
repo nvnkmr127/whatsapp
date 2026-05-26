@@ -1,7 +1,8 @@
 // src/screens/BroadcastScreen.tsx — campaign list + composer.
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, Modal, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, Modal, FlatList, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { X, Users, Check, FileText, Send, Plus, ChevronLeft, Calendar } from 'lucide-react-native';
@@ -39,6 +40,13 @@ export default function BroadcastScreen({ navigation }: any) {
 
   const [selectedTagId, setSelectedTagId] = useState<number | null>(null);
   const [schedule, setSchedule] = useState<'now' | 'later'>('now');
+  const [scheduledDate, setScheduledDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + 10); // default to 10 mins in the future
+    return d;
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
@@ -127,12 +135,18 @@ export default function BroadcastScreen({ navigation }: any) {
       const selectedTagName = tagsList.find((t) => t.id === selectedTagId)?.name || 'Campaign';
       const campaignName = `MobileBroadcast_${selectedTemplate.name}_${selectedTagName}_${Date.now()}`;
 
-      await api.post('/v1/mobile/campaigns', {
+      const payload: any = {
         name: campaignName,
         template_id: selectedTemplate.id,
         tag_id: selectedTagId,
         variables: [],
-      });
+      };
+
+      if (schedule === 'later') {
+        payload.scheduled_at = scheduledDate.toISOString();
+      }
+
+      await api.post('/v1/mobile/campaigns', payload);
 
       setActionLoading(false);
       showDialog(
@@ -349,7 +363,7 @@ export default function BroadcastScreen({ navigation }: any) {
                 <View className="flex-row gap-2">
                   {([
                     { id: 'now',   l: 'Send now',  s: 'Estimated 2–4 min' },
-                    { id: 'later', l: 'Schedule',  s: 'Tue · 10:00 AM' },
+                    { id: 'later', l: 'Schedule',  s: scheduledDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' · ' + scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
                   ] as const).map((o) => {
                     const on = schedule === o.id;
                     return (
@@ -368,6 +382,65 @@ export default function BroadcastScreen({ navigation }: any) {
                     );
                   })}
                 </View>
+
+                {schedule === 'later' && (
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    className="mt-3.5 flex-row items-center justify-between px-3.5 py-3.5 rounded-md bg-surface dark:bg-d-surface active:bg-surface2 dark:active:bg-d-surface2 border border-hairline dark:border-d-hairline"
+                  >
+                    <View className="flex-row items-center gap-2.5">
+                      <Calendar size={18} color={tokens.accent} />
+                      <View>
+                        <Text className="text-xs text-muted dark:text-d-muted">Scheduled For</Text>
+                        <Text className="text-sm font-semibold text-ink dark:text-d-ink mt-0.5">
+                          {scheduledDate.toLocaleString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-xs text-accent dark:text-d-accent font-medium">Change</Text>
+                  </Pressable>
+                )}
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={scheduledDate}
+                    mode="date"
+                    display="default"
+                    minimumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        const newDate = new Date(scheduledDate);
+                        newDate.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                        setScheduledDate(newDate);
+                        setTimeout(() => {
+                          setShowTimePicker(true);
+                        }, 300);
+                      }
+                    }}
+                  />
+                )}
+
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={scheduledDate}
+                    mode="time"
+                    display="default"
+                    onChange={(event, selectedTime) => {
+                      setShowTimePicker(false);
+                      if (selectedTime) {
+                        const newDate = new Date(scheduledDate);
+                        newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+                        setScheduledDate(newDate);
+                      }
+                    }}
+                  />
+                )}
               </ScrollView>
 
               {/* Sticky CTA */}
