@@ -116,6 +116,10 @@ class ContactImportService
         $consentSource = $options['consent_source'] ?? 'FILE_IMPORT';
         $consentProof = $options['consent_proof_url'] ?? null;
 
+        $entitlement = app(\App\Services\EntitlementService::class)->for($this->team);
+        $limit = $entitlement->limit('contact_limit');
+        $currentCount = $this->team->contacts()->count();
+
         $successCount = 0;
         $createdCount = 0;
         $updatedCount = 0;
@@ -222,6 +226,12 @@ class ContactImportService
                         ->first();
                 }
 
+                if (! $existingContact && $limit > 0 && $currentCount >= $limit) {
+                    $errors[] = 'Row '.($index + 1).': Contact limit reached ('.$limit.' contacts).';
+
+                    continue;
+                }
+
                 \Illuminate\Support\Facades\Log::info('Processing Contact for Row '.($index + 1), [
                     'is_update' => (bool) $existingContact,
                     'contact_data' => $contactData,
@@ -249,6 +259,7 @@ class ContactImportService
                     $updatedCount++;
                 } else {
                     $createdCount++;
+                    $currentCount++;
                 }
 
                 \Illuminate\Support\Facades\Log::info('Successfully processed Row '.($index + 1), [

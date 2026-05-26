@@ -175,7 +175,7 @@
                                     Features</h4>
                                 <div class="grid grid-cols-2 gap-3">
                                     @foreach($plan->features as $feature => $enabled)
-                                        @if($enabled)
+                                        @if($enabled && !in_array($feature, ['call_minutes_limit', 'max_call_minutes_per_month']))
                                             <div class="flex items-center gap-2">
                                                 <svg class="w-4 h-4 text-wa-teal flex-shrink-0" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">

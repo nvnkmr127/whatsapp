@@ -528,7 +528,7 @@ class Team extends JetstreamTeam
      */
     public function getMaxCallMinutesPerMonthAttribute($value): int
     {
-        if ($value !== null) {
+        if ($value !== null && (int)$value > 0) {
             return (int) $value;
         }
 

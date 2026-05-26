@@ -49,6 +49,17 @@ class ExternalContactController extends Controller
             return $this->error('No team context selected.', 400, null, 'ERR_NO_TEAM_CONTEXT');
         }
 
+        $exists = Contact::where('team_id', $team->id)
+            ->where('phone_number', $request->phone_number)
+            ->exists();
+
+        if (! $exists) {
+            $entitlement = app(\App\Services\EntitlementService::class)->for($team);
+            if (! $entitlement->can('add_contact')) {
+                return $this->error('Contact limit reached: '.$entitlement->denialReason('add_contact'), 422, null, 'ERR_CONTACT_LIMIT_REACHED');
+            }
+        }
+
         $contact = Contact::updateOrCreate(
             [
                 'team_id' => $team->id,

@@ -82,7 +82,20 @@ class PlanManager extends Component
         if (! is_array($features)) {
             $features = [];
         }
-        $this->features = $features;
+        $defaultFeatures = [
+            'chat' => false,
+            'contacts' => false,
+            'templates' => false,
+            'campaigns' => false,
+            'automations' => false,
+            'analytics' => false,
+            'commerce' => false,
+            'ai' => false,
+            'api_access' => false,
+            'webhooks' => false,
+            'calling' => false,
+        ];
+        $this->features = array_merge($defaultFeatures, $features);
 
         $this->call_minutes_limit = $this->features['call_minutes_limit'] ?? 0;
         $this->showModal = true;

@@ -185,9 +185,11 @@ class OfferSettingsService
         'agent_limit' => 'offer_agent_limit',
         'whatsapp_limit' => 'offer_whatsapp_limit',
         'contacts_limit' => 'offer_contacts_limit',
+        'contact_limit' => 'offer_contacts_limit',
         'campaign_limit' => 'offer_campaign_limit',
         'automation_limit' => 'offer_automation_limit',
         'call_minutes' => 'offer_call_minutes_limit',
+        'max_call_minutes_per_month' => 'offer_call_minutes_limit',
         'team_limit' => 'offer_team_limit',
     ];
 

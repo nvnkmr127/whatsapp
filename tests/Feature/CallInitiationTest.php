@@ -34,10 +34,10 @@ class CallInitiationTest extends TestCase
             ['name' => 'test_plan'],
             ['monthly_price' => 0, 'features' => ['calling' => true, 'max_call_minutes_per_month' => 1000]]
         );
-        $this->team->update([
+        $this->team->forceFill([
             'subscription_plan' => 'test_plan',
             'subscription_status' => 'active', // Ensure it's active
-        ]);
+        ])->save();
 
         \App\Models\BillingOverride::updateOrCreate(
             ['team_id' => $this->team->id, 'type' => 'feature_enable', 'key' => 'calling'],
@@ -129,10 +129,10 @@ class CallInitiationTest extends TestCase
             ['name' => 'test_plan_no_calling'],
             ['monthly_price' => 0, 'features' => ['calling' => false], 'max_call_minutes_per_month' => 1000]
         );
-        $this->team->update([
+        $this->team->forceFill([
             'subscription_plan' => 'test_plan_no_calling',
             'subscription_status' => 'active',
-        ]);
+        ])->save();
 
         // Ensure entitlement cache is clean
         app(\App\Services\EntitlementService::class)->flush($this->team);
@@ -181,10 +181,10 @@ class CallInitiationTest extends TestCase
             ['name' => 'test_plan_0'],
             ['monthly_price' => 0, 'features' => ['calling' => true], 'max_call_minutes_per_month' => 0]
         );
-        $this->team->update([
+        $this->team->forceFill([
             'subscription_plan' => 'test_plan_0',
             'subscription_status' => 'active',
-        ]);
+        ])->save();
 
         // Ensure entitlement limits are cached/flushed correctly
         app(\App\Services\EntitlementService::class)->flush($this->team);
@@ -467,10 +467,10 @@ class CallInitiationTest extends TestCase
             ],
         ]);
 
-        $this->team->update([
+        $this->team->forceFill([
             'subscription_plan' => 'test_calling_plan',
             'subscription_status' => 'active',
-        ]);
+        ])->save();
 
         // Flush entitlement cache
         app(\App\Services\EntitlementService::class)->flush($this->team);

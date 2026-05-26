@@ -309,6 +309,13 @@ class ContactManager extends Component
 
             if ($this->contactId) {
                 $data['id'] = $this->contactId;
+            } else {
+                $entitlement = app(\App\Services\EntitlementService::class)->for(Auth::user()->currentTeam);
+                if (! $entitlement->can('add_contact')) {
+                    $this->error('Contact limit reached: ' . $entitlement->denialReason('add_contact'));
+
+                    return;
+                }
             }
 
             $contactService = new \App\Services\ContactService;

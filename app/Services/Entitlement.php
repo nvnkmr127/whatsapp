@@ -196,6 +196,7 @@ final class Entitlement
         return match ($capability) {
             'send_message' => $this->canSendMessage(),
             'add_agent' => $this->canAddAgent(),
+            'add_contact' => $this->canAddContact(),
             default => $this->hasFeature($capability),
         };
     }
@@ -279,6 +280,11 @@ final class Entitlement
         }
 
         return ($this->usage['agent_count'] ?? 0) < $limit;
+    }
+
+    private function canAddContact(): bool
+    {
+        return $this->withinLimit('contact_limit');
     }
 
     private function bypassAllAccess(): bool

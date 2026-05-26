@@ -348,8 +348,26 @@ class EntitlementService
             $limitKey = $this->offerSettings->limitKey($key); // e.g., 'offer_message_limit'
 
             // Prioritize snapshot values if available
-            if (is_array($snapshot) && array_key_exists($limitKey, $snapshot)) {
-                return (int) $snapshot[$limitKey];
+            if (is_array($snapshot)) {
+                if (array_key_exists($limitKey, $snapshot)) {
+                    return (int) $snapshot[$limitKey];
+                }
+                if (array_key_exists($key, $snapshot)) {
+                    return (int) $snapshot[$key];
+                }
+                // Alternate variations (e.g. contact_limit vs contacts_limit)
+                $alternateKey = $key;
+                if ($key === 'contact_limit') {
+                    $alternateKey = 'contacts_limit';
+                } elseif ($key === 'contacts_limit') {
+                    $alternateKey = 'contact_limit';
+                }
+                if (array_key_exists($alternateKey, $snapshot)) {
+                    return (int) $snapshot[$alternateKey];
+                }
+                if (($key === 'call_minutes' || $key === 'max_call_minutes_per_month') && array_key_exists('call_minutes_limit', $snapshot)) {
+                    return (int) $snapshot['call_minutes_limit'];
+                }
             }
 
             // Fallback to dynamic global settings if no snapshot exists
@@ -359,7 +377,9 @@ class EntitlementService
         // 3. Plan limit
         $plan = $this->resolvePlan($team);
         if ($plan) {
-            return (int) ($plan->{$key} ?? 0);
+            $val = $plan->{$key};
+
+            return $val !== null ? (int) $val : 0;
         }
 
         return 0;
@@ -384,6 +404,8 @@ class EntitlementService
 
         $agents = $team->users()->count() + $team->teamInvitations()->count();
 
+        $contacts = $team->contacts()->count();
+
         // Backup usage
         $backupStats = \App\Models\TenantBackup::where('team_id', $team->id)
             ->where('status', 'completed')
@@ -398,6 +420,8 @@ class EntitlementService
         return [
             'messages_this_month' => $messages,
             'agent_count' => $agents,
+            'contact_limit_count' => $contacts,
+            'contacts_limit_count' => $contacts,
             'max_backups_per_team_count' => $backupStats->count ?? 0,
             'max_storage_mb_count' => round(($backupStats->total_size ?? 0) / (1024 * 1024), 2),
             'last_backup_at' => $lastBackup?->created_at,
