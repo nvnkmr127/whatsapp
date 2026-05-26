@@ -51,6 +51,12 @@ class MessageController extends Controller
     {
         $this->authorizeConversation($request->user(), $conversation);
 
+        \Log::info('[MOBILE_API_MESSAGE_STORE] Incoming request', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $request->user()?->id,
+            'input' => $request->all(),
+        ]);
+
         $request->validate([
             'type' => 'required|in:text,image,document,video,audio,template',
             'content' => $request->input('type') === 'text' ? 'required|string' : 'nullable|string',
@@ -62,6 +68,10 @@ class MessageController extends Controller
         
         // Meta Policy: Check 24-hour window for text/media messages
         if (in_array($request->type, ['text', 'image', 'document']) && !$conversation->isWithin24Hours()) {
+            \Log::warning('[MOBILE_API_MESSAGE_STORE] Policy Violation: 24-hour window closed.', [
+                'conversation_id' => $conversation->id,
+                'type' => $request->type,
+            ]);
             return response()->json([
                 'success' => false,
                 'error' => 'Policy Violation: 24-hour window closed. Please use a Template message.',
@@ -91,6 +101,12 @@ class MessageController extends Controller
             'media_url' => $request->input('media_url'),
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
+        ]);
+
+        \Log::info('[MOBILE_API_MESSAGE_STORE] Message created and queued', [
+            'message_id' => $message->id,
+            'type' => $message->type,
+            'status' => $message->status,
         ]);
 
         // Dispatch Job asynchronously (do not block the HTTP response)
