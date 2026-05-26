@@ -43,7 +43,53 @@ class ContactController extends Controller
     }
 
     /**
+     * Create a new contact for the current team.
+     */
+    public function store(Request $request)
+    {
+        $team = $request->user()->currentTeam;
+        if (!$team) {
+            return response()->json(['error' => 'No active team selected'], 403);
+        }
 
+        $validated = $request->validate([
+            'phone_number' => ['required', 'string', 'regex:/^\+?[1-9]\d{1,14}$/'], // E.164-ish compliance
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'custom_attributes' => 'nullable|array',
+            'custom_attributes.email' => 'nullable|email|max:255',
+            'custom_attributes.company' => 'nullable|string|max:255',
+            'opt_in_status' => 'nullable|string|in:opted_in,opted_out,pending',
+        ]);
+
+        // Check if a contact with this phone number already exists in this team
+        $existing = Contact::where('team_id', $team->id)
+            ->where('phone_number', $validated['phone_number'])
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'Contact already exists.',
+                'contact' => $existing,
+            ], 409);
+        }
+
+        $contact = Contact::create([
+            'team_id' => $team->id,
+            'phone_number' => $validated['phone_number'],
+            'name' => $validated['name'] ?? $validated['phone_number'],
+            'email' => $validated['email'] ?? null,
+            'custom_attributes' => $request->input('custom_attributes', []),
+            'opt_in_status' => $validated['opt_in_status'] ?? 'opted_in',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'contact' => $contact,
+        ], 201);
+    }
+
+    /**
      * Get details for a specific contact.
      */
     public function show(Request $request, Contact $contact)
@@ -89,6 +135,8 @@ class ContactController extends Controller
         $request->validate([
             'name' => 'nullable|string|max:255',
             'custom_attributes' => 'nullable|array',
+            'custom_attributes.email' => 'nullable|email|max:255',
+            'custom_attributes.company' => 'nullable|string|max:255',
             'opt_in_status' => 'nullable|string|in:opted_in,opted_out,pending',
         ]);
 

@@ -60,6 +60,8 @@ export default function InboxScreen({ navigation }: any) {
       let apiFilter = 'all';
       if (filter === 'Unread') apiFilter = 'unread';
       if (filter === 'Mine') apiFilter = 'assigned';
+      if (filter === 'Open') apiFilter = 'open';
+      if (filter === 'Bots') apiFilter = 'bots';
 
       const response = await api.get(`/v1/mobile/conversations?filter=${apiFilter}&query=${searchQuery}`);
       const rawData = response.data || [];
@@ -68,6 +70,7 @@ export default function InboxScreen({ navigation }: any) {
       const mapped: Conversation[] = rawData.map((c: any) => {
         return {
           id: c.id,
+          contact_id: c.contact_id,
           name: c.name || c.phone || 'Unknown Contact',
           phone: c.phone,
           last: c.last_message ? c.last_message.content : 'No messages yet',
@@ -84,20 +87,30 @@ export default function InboxScreen({ navigation }: any) {
 
       setConversations(mapped);
 
-      // Dynamically calculate counts based on loaded data for simplicity
-      const allCount = mapped.length;
-      const unreadCount = mapped.filter((c) => c.unread > 0).length;
-      const openCount = mapped.filter((c) => c.status !== 'delivered').length;
-      const mineCount = mapped.filter((c) => c.reply === 'me' || c.unread > 0).length;
-      const botsCount = mapped.filter((c) => c.bot).length;
+      if (response.counts) {
+        setCounts({
+          All: response.counts.All ?? 0,
+          Unread: response.counts.Unread ?? 0,
+          Open: response.counts.Open ?? 0,
+          Mine: response.counts.Mine ?? 0,
+          Bots: response.counts.Bots ?? 0,
+        });
+      } else {
+        // Fallback to local calculation if server doesn't provide them
+        const allCount = mapped.length;
+        const unreadCount = mapped.filter((c) => c.unread > 0).length;
+        const openCount = mapped.filter((c) => c.status !== 'delivered').length;
+        const mineCount = mapped.filter((c) => c.reply === 'me' || c.unread > 0).length;
+        const botsCount = mapped.filter((c) => c.bot).length;
 
-      setCounts({
-        All: allCount,
-        Unread: unreadCount,
-        Open: openCount,
-        Mine: mineCount,
-        Bots: botsCount,
-      });
+        setCounts({
+          All: allCount,
+          Unread: unreadCount,
+          Open: openCount,
+          Mine: mineCount,
+          Bots: botsCount,
+        });
+      }
     } catch (err: any) {
       console.error('Fetch conversations failed:', err);
     } finally {
@@ -267,7 +280,7 @@ export default function InboxScreen({ navigation }: any) {
             <Row
               c={item}
               divider={index < conversations.length - 1}
-              onPress={() => nav.navigate('Chat', { contact: item })}
+              onPress={() => nav.navigate('Chat', { conversation: item })}
             />
           )}
           ListEmptyComponent={

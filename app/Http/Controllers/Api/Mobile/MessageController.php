@@ -162,6 +162,7 @@ class MessageController extends Controller
 
         $newMsg = $target->messages()->create([
             'team_id' => $target->team_id,
+            'contact_id' => $target->contact_id,
             'user_id' => $request->user()->id,
             'direction' => 'outbound',
             'type' => $message->type,

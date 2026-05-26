@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Check, CheckCheck } from 'lucide-react-native';
+import { Check, CheckCheck, Star } from 'lucide-react-native';
 import { useTokens } from '@/theme';
 import type { MessageStatus } from '@/types';
 
@@ -14,9 +14,10 @@ interface Props {
   status?: MessageStatus;
   variant?: 'rounded' | 'squared' | 'tail';
   radius?: number;
+  isStarred?: boolean;
 }
 
-export function Bubble({ kind, children, time, status, variant = 'tail', radius = 18 }: Props) {
+export function Bubble({ kind, children, time, status, variant = 'tail', radius = 18, isStarred }: Props) {
   const { tokens } = useTokens();
   const isOut = kind === 'out';
   const baseR = variant === 'squared' ? Math.min(8, radius * 0.45) : radius;
@@ -34,6 +35,9 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
     >
       <Text className="text-ink dark:text-d-ink text-[14px] leading-5 font-normal">{children}</Text>
       <View className="mt-[3px] flex-row items-center justify-end gap-1">
+        {isStarred ? (
+          <Star size={10} color="#EAB308" fill="#EAB308" style={{ marginRight: 2 }} />
+        ) : null}
         {time ? (
           <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium">{time}</Text>
         ) : null}

@@ -41,6 +41,15 @@ class AutomationController extends Controller
         return response()->json($automation);
     }
 
+    public function show(Request $request, Automation $automation)
+    {
+        $this->authorize('view', $automation);
+
+        $automation->loadCount(['runs', 'steps']);
+
+        return response()->json($automation);
+    }
+
     public function update(Request $request, Automation $automation)
     {
         $this->authorize('update', $automation);

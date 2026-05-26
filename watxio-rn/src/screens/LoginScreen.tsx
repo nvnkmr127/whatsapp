@@ -91,6 +91,7 @@ export default function LoginScreen({ navigation }: any) {
         userName: response.user.name,
         userRole: response.user.role || 'Member',
         numbers: teamNumbers,
+        websocket: response.websocket,
       });
 
       setLoading(false);

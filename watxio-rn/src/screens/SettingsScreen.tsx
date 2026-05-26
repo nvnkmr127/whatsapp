@@ -7,7 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types';
 import {
-  Search, ChevronRight, Phone, Users, CreditCard, Bell, Smile, Globe, Shield,
+  Search, ChevronRight, Phone, Users, CreditCard, Bell, Smile, Globe, Shield, History, Bot, Sparkles,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
@@ -184,7 +184,10 @@ export default function SettingsScreen({ navigation }: any) {
             <SettingRow tokens={tokens} Icon={Bell}   label="Notifications" value="Heads-up" onPress={() => showDialog('Notifications', 'Notification preferences changed.')} />
             <SettingRow tokens={tokens} Icon={Smile}  label="Theme"         value={`Sage · ${scheme === 'dark' ? 'Dark' : 'Light'}`} onPress={toggleTheme} />
             <SettingRow tokens={tokens} Icon={Globe}  label="Language"      value="English (US)" onPress={() => showDialog('Language', 'Language preferences changed.')} />
-            <SettingRow tokens={tokens} Icon={Shield} label="Privacy"       value="" onPress={() => showDialog('Privacy', 'Privacy settings and policy.')} last />
+            <SettingRow tokens={tokens} Icon={Shield} label="Privacy"       value="" onPress={() => showDialog('Privacy', 'Privacy settings and policy.')} />
+            <SettingRow tokens={tokens} Icon={Bot}    label="Message Bots"  value="" onPress={() => nav.navigate('Bots')} />
+            <SettingRow tokens={tokens} Icon={Sparkles} label="AI Assistant" value="" onPress={() => nav.navigate('AiSettings')} />
+            <SettingRow tokens={tokens} Icon={History} label="Activity Logs" value="" onPress={() => nav.navigate('Activities')} last />
           </Card>
 
           <SectionLabel>Devices</SectionLabel>

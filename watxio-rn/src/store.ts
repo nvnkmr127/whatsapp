@@ -21,6 +21,13 @@ export interface UserInfo {
   role: string;
 }
 
+export interface WebsocketConfig {
+  key: string;
+  host: string;
+  port: number | string;
+  scheme: string;
+}
+
 export interface GlobalState {
   token: string | null;
   baseUrl: string;
@@ -33,6 +40,7 @@ export interface GlobalState {
   user: UserInfo | null;
   teams: TeamInfo[];
   numbers: NumberInfo[];
+  websocket?: WebsocketConfig;
 }
 
 const getDevMachineIp = () => {

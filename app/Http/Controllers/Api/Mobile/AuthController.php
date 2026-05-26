@@ -56,6 +56,7 @@ class AuthController extends Controller
             ],
             'teams' => $teams,
             'members' => $members,
+            'websocket' => $this->getWebsocketConfig(),
         ]);
     }
 
@@ -120,10 +121,21 @@ class AuthController extends Controller
             'members' => $members,
             'numbers' => $numbers,
             'business_profile' => $businessProfile,
+            'websocket' => $this->getWebsocketConfig(),
         ]);
     }
 
+    public function teams(Request $request)
+    {
+        /** @var User $user */
+        $user = $request->user();
 
+        $teams = $user->allTeams()
+            ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])
+            ->values();
+
+        return response()->json($teams);
+    }
 
     public function finalize(Request $request)
     {
@@ -169,6 +181,7 @@ class AuthController extends Controller
             'teams' => $teams,
             'members' => $members,
             'numbers' => $numbers,
+            'websocket' => $this->getWebsocketConfig(),
         ]);
     }
 
@@ -298,6 +311,7 @@ class AuthController extends Controller
             ],
             'teams' => $teams,
             'members' => $members,
+            'websocket' => $this->getWebsocketConfig(),
         ]);
     }
 
@@ -324,31 +338,22 @@ class AuthController extends Controller
         ]);
     }
 
-    public function registerFcmToken(Request $request)
+    private function getWebsocketConfig()
     {
-        $request->validate([
-            'token' => 'required|string',
-            'platform' => 'sometimes|string|in:android,ios,web',
-        ]);
+        $default = config('broadcasting.default');
+        $conn = config("broadcasting.connections.{$default}");
 
-        Log::info('FCM Token Registration Attempt', [
-            'user_id' => $request->user()->id,
-            'token' => substr($request->token, 0, 10) . '...',
-            'platform' => $request->platform,
-        ]);
+        if (!$conn) {
+            // Fallback to reverb if default is null or not found
+            $conn = config("broadcasting.connections.reverb") ?? config("broadcasting.connections.pusher");
+        }
 
-        $request->user()->fcmTokens()->updateOrCreate(
-            ['token' => $request->token],
-            [
-                'platform' => $request->platform ?? 'unknown',
-                'last_used_at' => now(),
-                'metadata' => [
-                    'ip' => $request->ip(),
-                    'user_agent' => $request->header('User-Agent'),
-                ]
-            ]
-        );
-
-        return response()->json(['success' => true]);
+        return [
+            'key' => $conn['key'] ?? env('REVERB_APP_KEY') ?? env('PUSHER_APP_KEY'),
+            'host' => $conn['options']['host'] ?? env('REVERB_SERVER_HOST') ?? env('PUSHER_HOST') ?? '127.0.0.1',
+            'port' => $conn['options']['port'] ?? env('REVERB_SERVER_PORT') ?? env('PUSHER_PORT') ?? 8080,
+            'scheme' => $conn['options']['scheme'] ?? env('REVERB_SERVER_SCHEME') ?? env('PUSHER_SCHEME') ?? 'http',
+        ];
     }
 }
+

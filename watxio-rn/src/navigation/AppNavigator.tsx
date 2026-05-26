@@ -24,6 +24,10 @@ import AutomationsScreen from '@/screens/AutomationsScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import OnboardingScreen from '@/screens/OnboardingScreen';
+import ActivitiesScreen from '@/screens/ActivitiesScreen';
+import ActivityDetailScreen from '@/screens/ActivityDetailScreen';
+import BotsScreen from '@/screens/BotsScreen';
+import AiSettingsScreen from '@/screens/AiSettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -140,6 +144,10 @@ export default function AppNavigator() {
           component={LoginScreen}
           options={{ presentation: 'modal' }}
         />
+        <Stack.Screen name="Activities" component={ActivitiesScreen} />
+        <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+        <Stack.Screen name="Bots" component={BotsScreen} />
+        <Stack.Screen name="AiSettings" component={AiSettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

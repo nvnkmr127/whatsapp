@@ -1,10 +1,10 @@
-// src/screens/BroadcastScreen.tsx — segment-based broadcast composer.
+// src/screens/BroadcastScreen.tsx — campaign list + composer.
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Modal, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { X, Users, Check, FileText, Send } from 'lucide-react-native';
+import { X, Users, Check, FileText, Send, Plus, ChevronLeft, Calendar } from 'lucide-react-native';
 
 import { useTokens } from '@/theme';
 import { Card } from '@/components/Card';
@@ -25,8 +25,15 @@ export default function BroadcastScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const nav = navigation;
 
+  const [mode, setMode] = useState<'list' | 'create'>('list');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Campaigns list state
+  const [campaignsList, setCampaignsList] = useState<any[]>([]);
+
+  // Composer Form options
   const [tagsList, setTagsList] = useState<TagItem[]>([]);
   const [templatesList, setTemplatesList] = useState<any[]>([]);
 
@@ -51,6 +58,19 @@ export default function BroadcastScreen({ navigation }: any) {
   const showDialog = (title: string, message: string, buttons: typeof dialogConfig.buttons = [{ text: 'OK' }]) => {
     setDialogConfig({ visible: true, title, message, buttons });
   };
+
+  const loadCampaigns = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    try {
+      const response = await api.get('/v1/mobile/campaigns');
+      setCampaignsList(response || []);
+    } catch (err: any) {
+      console.warn('Failed to load campaigns:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   const loadBroadcastFormOptions = useCallback(async () => {
     setLoading(true);
@@ -81,8 +101,12 @@ export default function BroadcastScreen({ navigation }: any) {
   }, []);
 
   useEffect(() => {
-    loadBroadcastFormOptions();
-  }, [loadBroadcastFormOptions]);
+    if (mode === 'list') {
+      loadCampaigns();
+    } else {
+      loadBroadcastFormOptions();
+    }
+  }, [mode, loadCampaigns, loadBroadcastFormOptions]);
 
   const handleSend = async () => {
     if (!selectedTemplate) {
@@ -114,7 +138,13 @@ export default function BroadcastScreen({ navigation }: any) {
       showDialog(
         'Broadcast Queued',
         `Your campaign "${campaignName}" has been successfully created and queued for delivery.`,
-        [{ text: 'OK', onPress: () => nav.goBack() }]
+        [{
+          text: 'OK',
+          onPress: () => {
+            setMode('list');
+            loadCampaigns();
+          }
+        }]
       );
     } catch (err: any) {
       setActionLoading(false);
@@ -127,144 +157,236 @@ export default function BroadcastScreen({ navigation }: any) {
     return selectedTemplate.components?.find((c: any) => c.type === 'BODY')?.text || selectedTemplate.content || '';
   }, [selectedTemplate]);
 
-  if (loading) {
-    return (
-      <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
-        <ActivityIndicator size="large" color={tokens.accent} />
-        <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading broadcast parameters...</Text>
-      </View>
-    );
-  }
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadCampaigns(true);
+  };
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
       {/* Header */}
-      <View className="px-3 py-2.5 flex-row items-center gap-2">
-        <IconButton icon={X} onPress={() => nav.goBack()} />
-        <Text className="flex-1 text-base font-bold text-ink dark:text-d-ink">
-          New broadcast
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 120 }}>
-        <SectionLabel>Audience Tag Segment</SectionLabel>
-        <View className="gap-1">
-          {tagsList.map((s) => {
-            const on = selectedTagId === s.id;
-            return (
-              <Pressable
-                key={s.id}
-                onPress={() => setSelectedTagId(s.id)}
-                className="flex-row items-center gap-3 px-3.5 py-3.5 rounded-md bg-surface dark:bg-d-surface active:bg-surface2 dark:active:bg-d-surface2"
-              >
-                <View
-                  className={`w-5 h-5 rounded-full items-center justify-center ${
-                    on ? 'bg-accent dark:bg-d-accent border-0' : 'border border-faint dark:border-d-faint bg-transparent'
-                  }`}
-                  style={on ? {} : { borderWidth: 1.5 }}
-                >
-                  {on ? <Check size={12} color={tokens.accentInk} strokeWidth={3} /> : null}
-                </View>
-                <View className="flex-1">
-                  <Text className="text-sm font-medium text-ink dark:text-d-ink">{s.name}</Text>
-                  <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
-                    Targeting tag segment
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-          {tagsList.length === 0 && (
-            <View className="p-4 bg-surface dark:bg-d-surface rounded items-center justify-center">
-              <Text className="text-xs text-muted dark:text-d-muted italic">No contact tags loaded from server.</Text>
-            </View>
-          )}
+      {mode === 'list' ? (
+        <View className="px-3 py-2.5 flex-row items-center gap-2 border-b border-hairline dark:border-d-hairline">
+          <IconButton icon={X} onPress={() => nav.goBack()} />
+          <Text className="flex-1 text-base font-bold text-ink dark:text-d-ink">
+            Broadcast Campaigns
+          </Text>
+          <IconButton icon={Plus} onPress={() => setMode('create')} />
         </View>
+      ) : (
+        <View className="px-3 py-2.5 flex-row items-center gap-2 border-b border-hairline dark:border-d-hairline">
+          <IconButton icon={ChevronLeft} onPress={() => setMode('list')} />
+          <Text className="flex-1 text-base font-bold text-ink dark:text-d-ink">
+            New broadcast
+          </Text>
+        </View>
+      )}
 
-        <SectionLabel action="Browse →" onActionPress={() => setShowTemplatePicker(true)}>Template</SectionLabel>
-        {selectedTemplate ? (
-          <Pressable onPress={() => setShowTemplatePicker(true)}>
-            <Card pad={14}>
-              <View className="flex-row items-start gap-2.5">
-                <View className="w-[38px] h-[38px] rounded-md bg-surface2 dark:bg-d-surface2 items-center justify-center">
-                  <FileText size={18} color={tokens.ink2} strokeWidth={1.6} />
-                </View>
-                <View className="flex-1">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-sm font-semibold text-ink dark:text-d-ink font-mono">
-                      {selectedTemplate.name}
-                    </Text>
-                    <View className="flex-row items-center gap-1">
-                      <View
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          selectedTemplate.status === 'APPROVED' ? 'bg-ok dark:bg-d-ok' : 'bg-warn dark:bg-d-warn'
-                        }`}
-                      />
-                      <Text
-                        className={`text-[11px] font-semibold ${
-                          selectedTemplate.status === 'APPROVED' ? 'text-ok dark:text-d-ok' : 'text-warn dark:text-d-warn'
-                        }`}
-                      >
-                        {selectedTemplate.status}
+      {mode === 'list' ? (
+        loading && campaignsList.length === 0 ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color={tokens.accent} />
+            <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading campaigns...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={campaignsList}
+            keyExtractor={(item) => String(item.id)}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={tokens.accent}
+              />
+            }
+            contentContainerStyle={{ padding: 18, gap: 12 }}
+            renderItem={({ item }) => {
+              const status = item.status || 'pending';
+              const isCompleted = status === 'completed' || status === 'sent';
+              const isFailed = status === 'failed';
+              const statusColor = isCompleted ? tokens.ok : isFailed ? tokens.danger : tokens.warn;
+
+              return (
+                <Card pad={14}>
+                  <View className="flex-row justify-between items-start gap-2">
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-ink dark:text-d-ink" numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text className="text-xs text-muted dark:text-d-muted mt-1 font-mono">
+                        Template: {item.template?.name || 'Unknown'}
+                      </Text>
+                    </View>
+                    <View className="px-2.5 py-0.5 rounded-full bg-surface2 dark:bg-d-surface2">
+                      <Text style={{ color: statusColor }} className="text-[11px] font-bold uppercase tracking-wider">
+                        {status}
                       </Text>
                     </View>
                   </View>
-                  <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
-                    {selectedTemplate.category} · {selectedTemplate.language} · {selectedTemplate.total_sent || 0} uses
-                  </Text>
+
+                  <View className="flex-row items-center justify-between border-t border-hairline dark:border-d-hairline mt-3 pt-3">
+                    <View className="flex-row items-center gap-1">
+                      <Users size={12} color={tokens.muted} />
+                      <Text className="text-[11.5px] text-muted dark:text-d-muted">
+                        {item.total_contacts || 0} recipients
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center gap-1">
+                      <Calendar size={12} color={tokens.muted} />
+                      <Text className="text-[11.5px] text-muted dark:text-d-muted">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              );
+            }}
+            ListEmptyComponent={
+              <View className="py-20 items-center justify-center">
+                <Text className="text-sm text-muted dark:text-d-muted">No campaigns created yet.</Text>
+                <Pressable
+                  onPress={() => setMode('create')}
+                  className="mt-4 px-4 py-2 bg-accent dark:bg-d-accent rounded-lg"
+                >
+                  <Text className="text-accent-ink dark:text-d-accent-ink text-xs font-bold">New Broadcast</Text>
+                </Pressable>
+              </View>
+            }
+          />
+        )
+      ) : (
+        /* Create campaign form mode */
+        <View className="flex-1">
+          {loading ? (
+            <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
+              <ActivityIndicator size="large" color={tokens.accent} />
+              <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading broadcast parameters...</Text>
+            </View>
+          ) : (
+            <>
+              <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 120 }}>
+                <SectionLabel>Audience Tag Segment</SectionLabel>
+                <View className="gap-1">
+                  {tagsList.map((s) => {
+                    const on = selectedTagId === s.id;
+                    return (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => setSelectedTagId(s.id)}
+                        className="flex-row items-center gap-3 px-3.5 py-3.5 rounded-md bg-surface dark:bg-d-surface active:bg-surface2 dark:active:bg-d-surface2"
+                      >
+                        <View
+                          className={`w-5 h-5 rounded-full items-center justify-center ${
+                            on ? 'bg-accent dark:bg-d-accent border-0' : 'border border-faint dark:border-d-faint bg-transparent'
+                          }`}
+                          style={on ? {} : { borderWidth: 1.5 }}
+                        >
+                          {on ? <Check size={12} color={tokens.accentInk} strokeWidth={3} /> : null}
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-sm font-medium text-ink dark:text-d-ink">{s.name}</Text>
+                          <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
+                            Targeting tag segment
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                  {tagsList.length === 0 && (
+                    <View className="p-4 bg-surface dark:bg-d-surface rounded items-center justify-center">
+                      <Text className="text-xs text-muted dark:text-d-muted italic">No contact tags loaded from server.</Text>
+                    </View>
+                  )}
                 </View>
-              </View>
-              <View className="mt-3 py-[11px] px-[13px] bg-bubble-out dark:bg-d-bubble-out rounded-md">
-                <Text className="text-[13px] text-ink dark:text-d-ink leading-5">
-                  {selectedTemplatePreview}
-                </Text>
-              </View>
-            </Card>
-          </Pressable>
-        ) : (
-          <Pressable onPress={() => setShowTemplatePicker(true)} className="p-6 bg-surface dark:bg-d-surface rounded-lg items-center border border-dashed border-hairline">
-            <Text className="text-xs text-muted dark:text-d-muted">Click to select an approved template</Text>
-          </Pressable>
-        )}
 
-        <SectionLabel>Schedule</SectionLabel>
-        <View className="flex-row gap-2">
-          {([
-            { id: 'now',   l: 'Send now',  s: 'Estimated 2–4 min' },
-            { id: 'later', l: 'Schedule',  s: 'Tue · 10:00 AM' },
-          ] as const).map((o) => {
-            const on = schedule === o.id;
-            return (
-              <Pressable
-                key={o.id}
-                onPress={() => setSchedule(o.id)}
-                className={`flex-1 px-3.5 py-3.5 rounded-md bg-surface dark:bg-d-surface active:bg-surface2 dark:active:bg-d-surface2 ${
-                  on ? 'border-[1.5px] border-accent dark:border-d-accent' : ''
-                }`}
+                <SectionLabel action="Browse →" onActionPress={() => setShowTemplatePicker(true)}>Template</SectionLabel>
+                {selectedTemplate ? (
+                  <Pressable onPress={() => setShowTemplatePicker(true)}>
+                    <Card pad={14}>
+                      <View className="flex-row items-start gap-2.5">
+                        <View className="w-[38px] h-[38px] rounded-md bg-surface2 dark:bg-d-surface2 items-center justify-center">
+                          <FileText size={18} color={tokens.ink2} strokeWidth={1.6} />
+                        </View>
+                        <View className="flex-1">
+                          <View className="flex-row items-center gap-2">
+                            <Text className="text-sm font-semibold text-ink dark:text-d-ink font-mono">
+                              {selectedTemplate.name}
+                            </Text>
+                            <View className="flex-row items-center gap-1">
+                              <View
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  selectedTemplate.status === 'APPROVED' ? 'bg-ok dark:bg-d-ok' : 'bg-warn dark:bg-d-warn'
+                                }`}
+                              />
+                              <Text
+                                className={`text-[11px] font-semibold ${
+                                  selectedTemplate.status === 'APPROVED' ? 'text-ok dark:text-d-ok' : 'text-warn dark:text-d-warn'
+                                }`}
+                              >
+                                {selectedTemplate.status}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
+                            {selectedTemplate.category} · {selectedTemplate.language} · {selectedTemplate.total_sent || 0} uses
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="mt-3 py-[11px] px-[13px] bg-bubble-out dark:bg-d-bubble-out rounded-md">
+                        <Text className="text-[13px] text-ink dark:text-d-ink leading-5">
+                          {selectedTemplatePreview}
+                        </Text>
+                      </View>
+                    </Card>
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => setShowTemplatePicker(true)} className="p-6 bg-surface dark:bg-d-surface rounded-lg items-center border border-dashed border-hairline">
+                    <Text className="text-xs text-muted dark:text-d-muted">Click to select an approved template</Text>
+                  </Pressable>
+                )}
+
+                <SectionLabel>Schedule</SectionLabel>
+                <View className="flex-row gap-2">
+                  {([
+                    { id: 'now',   l: 'Send now',  s: 'Estimated 2–4 min' },
+                    { id: 'later', l: 'Schedule',  s: 'Tue · 10:00 AM' },
+                  ] as const).map((o) => {
+                    const on = schedule === o.id;
+                    return (
+                      <Pressable
+                        key={o.id}
+                        onPress={() => setSchedule(o.id)}
+                        className={`flex-1 px-3.5 py-3.5 rounded-md bg-surface dark:bg-d-surface active:bg-surface2 dark:active:bg-d-surface2 ${
+                          on ? 'border-[1.5px] border-accent dark:border-d-accent' : ''
+                        }`}
+                      >
+                        <Text className={`text-[13.5px] font-semibold ${on ? 'text-accent dark:text-d-accent' : 'text-ink dark:text-d-ink'}`}>
+                          {o.l}
+                        </Text>
+                        <Text className="text-[11.5px] text-muted dark:text-d-muted mt-[3px]">{o.s}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              {/* Sticky CTA */}
+              <View
+                className="absolute left-0 right-0 px-[18px]"
+                style={{ bottom: insets.bottom + 12 }}
               >
-                <Text className={`text-[13.5px] font-semibold ${on ? 'text-accent dark:text-d-accent' : 'text-ink dark:text-d-ink'}`}>
-                  {o.l}
-                </Text>
-                <Text className="text-[11.5px] text-muted dark:text-d-muted mt-[3px]">{o.s}</Text>
-              </Pressable>
-            );
-          })}
+                <PrimaryButton
+                  full
+                  size="lg"
+                  icon={Send}
+                  label={schedule === 'now' ? 'Send Broadcast Campaign' : 'Schedule Broadcast Campaign'}
+                  onPress={handleSend}
+                />
+              </View>
+            </>
+          )}
         </View>
-      </ScrollView>
-
-      {/* Sticky CTA */}
-      <View
-        className="absolute left-0 right-0 px-[18px]"
-        style={{ bottom: insets.bottom + 12 }}
-      >
-        <PrimaryButton
-          full
-          size="lg"
-          icon={Send}
-          label={schedule === 'now' ? 'Send Broadcast Campaign' : 'Schedule Broadcast Campaign'}
-          onPress={handleSend}
-        />
-      </View>
+      )}
 
       {/* Template Selector Modal */}
       <Modal transparent visible={showTemplatePicker} animationType="slide">

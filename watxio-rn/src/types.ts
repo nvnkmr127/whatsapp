@@ -5,6 +5,7 @@ export type MessageStatus = 'sent' | 'delivered' | 'read';
 
 export interface Conversation {
   id: number;
+  contact_id?: number;
   name: string;
   last: string;
   time: string;
@@ -21,10 +22,12 @@ export interface Conversation {
 
 export type ChatMessageKind = 'in' | 'out' | 'date';
 export interface ChatMessage {
+  id?: number;
   kind: ChatMessageKind;
   text: string;
   time?: string;
   status?: MessageStatus;
+  isStarred?: boolean;
 }
 
 export interface ContactProfile {
@@ -66,10 +69,14 @@ export interface KpiCard {
 export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
-  Chat: { contact: Conversation };
+  Chat: { conversation: Conversation };
   Contact: { conversationId: number; contactId: number };
   Broadcast: undefined;
   Login: undefined;
+  Activities: undefined;
+  ActivityDetail: { activityId: number };
+  Bots: undefined;
+  AiSettings: undefined;
 };
 
 export type MainTabParamList = {

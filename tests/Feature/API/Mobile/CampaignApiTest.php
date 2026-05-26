@@ -1,0 +1,84 @@
+<?php
+
+namespace Tests\Feature\Api\Mobile;
+
+use App\Models\Campaign;
+use App\Models\Contact;
+use App\Models\ContactTag;
+use App\Models\Team;
+use App\Models\User;
+use App\Models\WhatsappTemplate;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class CampaignApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected $user;
+    protected $team;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->team = Team::factory()->create(['user_id' => $this->user->id]);
+        $this->user->teams()->attach($this->team, ['role' => 'admin']);
+        $this->user->forceFill(['current_team_id' => $this->team->id])->save();
+
+        Sanctum::actingAs($this->user);
+    }
+
+    public function test_can_list_campaigns()
+    {
+        $template = WhatsappTemplate::factory()->create(['team_id' => $this->team->id]);
+
+        $campaign = Campaign::create([
+            'team_id' => $this->team->id,
+            'name' => 'Past Mobile Broadcast Campaign',
+            'campaign_name' => 'Past Mobile Broadcast Campaign',
+            'status' => 'completed',
+            'template_id' => $template->id,
+            'whatsapp_template_id' => $template->whatsapp_template_id,
+            'total_contacts' => 5,
+        ]);
+
+        $response = $this->getJson('/api/v1/mobile/campaigns', [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1);
+        $response->assertJsonPath('0.id', $campaign->id);
+        $response->assertJsonPath('0.name', 'Past Mobile Broadcast Campaign');
+    }
+
+    public function test_can_store_campaign()
+    {
+        $template = WhatsappTemplate::factory()->create(['team_id' => $this->team->id]);
+        $tag = ContactTag::create(['team_id' => $this->team->id, 'name' => 'VIP Customers']);
+
+        $payload = [
+            'name' => 'New Broadcast Test Campaign',
+            'template_id' => $template->id,
+            'tag_id' => $tag->id,
+        ];
+
+        $response = $this->postJson('/api/v1/mobile/campaigns', $payload, [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('campaign.name', 'New Broadcast Test Campaign');
+
+        $this->assertDatabaseHas('campaigns', [
+            'team_id' => $this->team->id,
+            'name' => 'New Broadcast Test Campaign',
+            'template_id' => $template->id,
+            'status' => 'preparing',
+        ]);
+    }
+}

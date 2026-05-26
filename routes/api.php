@@ -23,7 +23,8 @@ Route::prefix('v1/mobile/auth')->middleware('mobile_logger')->group(function () 
         Route::post('/finalize', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'finalize']);
         Route::post('/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
         Route::post('/profile', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'updateProfile']);
-        Route::post('/fcm-token', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'registerFcmToken']);
+        Route::post('/fcm-token', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
+        Route::post('/fcm-token/remove', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'destroy']);
     });
 });
 
@@ -56,11 +57,11 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     // Embed Token (if needed)
     Route::post('/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
 
-    // Conversation Locks (Multi-Agent) - Moved to web.php for Session Auth
-    // Route::post('/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
-    // Route::post('/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
-    // Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
-    // Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
+    // Conversation Locks (Multi-Agent) - Enabled for Sanctum Token Auth
+    Route::post('/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
+    Route::post('/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
+    Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
+    Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
 
     // Inbox Contact Integration
     Route::prefix('inbox/contacts')->group(function () {
@@ -144,6 +145,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
         // Contacts (single canonical set of routes)
         Route::get('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'index']);
+        Route::post('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'store']);
         Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
         Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
         Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);

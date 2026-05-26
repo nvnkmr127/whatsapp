@@ -81,6 +81,8 @@ class InboxContactController extends Controller
             'email' => 'sometimes|email|nullable',
             'assigned_to' => 'sometimes|integer|nullable',
             'custom_attributes' => 'sometimes|array',
+            'custom_attributes.email' => 'sometimes|email|nullable|max:255',
+            'custom_attributes.company' => 'sometimes|string|nullable|max:255',
         ]);
 
         $user = $request->user();

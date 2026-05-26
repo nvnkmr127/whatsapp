@@ -54,7 +54,7 @@ class CampaignController extends Controller
             'name' => $request->name,
             'whatsapp_template_id' => $template->whatsapp_template_id,
             'template_id' => $template->id,
-            'status' => 'pending',
+            'status' => 'preparing',
             'total_contacts' => Contact::where('team_id', $team->id)->whereHas('tags', function ($q) use ($request) {
                 $q->where('contact_tags.id', $request->tag_id);
             })->count(),

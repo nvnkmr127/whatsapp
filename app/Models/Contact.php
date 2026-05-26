@@ -20,6 +20,37 @@ class Contact extends Model
         static::created(function ($contact) {
             \App\Events\ContactCreated::dispatch($contact);
         });
+
+        static::saving(function ($contact) {
+            if ($contact->isDirty('custom_attributes')) {
+                $customAttributes = $contact->custom_attributes;
+                if (is_array($customAttributes)) {
+                    // Extract email if set
+                    if (array_key_exists('email', $customAttributes)) {
+                        $contact->email = !empty($customAttributes['email']) ? $customAttributes['email'] : null;
+                        unset($customAttributes['email']);
+                    }
+                    
+                    // Extract company if set
+                    if (array_key_exists('company', $customAttributes)) {
+                        $companyName = trim($customAttributes['company'] ?? '');
+                        if (!empty($companyName)) {
+                            // Find or create company under this team
+                            $company = \App\Models\Company::firstOrCreate([
+                                'team_id' => $contact->team_id,
+                                'name' => $companyName,
+                            ]);
+                            $contact->company_id = $company->id;
+                        } else {
+                            $contact->company_id = null;
+                        }
+                        unset($customAttributes['company']);
+                    }
+                    
+                    $contact->custom_attributes = $customAttributes;
+                }
+            }
+        });
     }
 
     protected $fillable = [
@@ -28,8 +59,8 @@ class Contact extends Model
         'last_interaction_at', 'last_customer_message_at', 'last_seen_at',
         'is_bot_paused', 'bot_paused_at', 'bot_paused_until', 'has_pending_reply',
         'assigned_to', 'category_id', 'version',
-        'avatar_url', 'company', 'notes_count',
-        'bot_paused_reason', 'last_seen_agent_id',
+        'avatar_url', 'company_id', 'notes_count',
+        'bot_paused_reason', 'last_seen_agent_id', 'job_title',
     ];
 
     protected $attributes = [
@@ -47,6 +78,8 @@ class Contact extends Model
         'bot_paused_until' => 'datetime',
         'has_pending_reply' => 'boolean',
     ];
+
+    protected $appends = ['company'];
 
     /**
      * Check if contact has valid consent for marketing.
@@ -162,5 +195,15 @@ class Contact extends Model
         ], function ($query) {
             $query->where('direction', 'outbound');
         });
+    }
+
+    public function companyRelation()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function getCompanyAttribute()
+    {
+        return $this->companyRelation?->name;
     }
 }

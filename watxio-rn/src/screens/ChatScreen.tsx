@@ -12,13 +12,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { useTokens } from '@/theme';
-import type { ChatMessage, RootStackParamList, Template } from '@/types';
+import type { ChatMessage, Conversation, RootStackParamList, Template } from '@/types';
 import { Avatar } from '@/components/Avatar';
 import { Bubble } from '@/components/Bubble';
 import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { useGlobalState } from '@/store';
 import {
   cacheMessages, cacheMeta,
   loadCachedMessages, loadCachedMeta,
@@ -28,7 +29,10 @@ export default function ChatScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
   const nav = navigation;
-  const contact = route.params.contact;
+  const [globalState] = useGlobalState();
+  const conversation = route.params.conversation;
+  const conversationId = conversation.id;
+  const contact = conversation;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -41,7 +45,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isWithin24Hours, setIsWithin24Hours] = useState(true);
   const [isAiEnabled, setIsAiEnabled] = useState(true);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
-  const [dbContactId, setDbContactId] = useState<number>(contact.id);
+  const [dbContactId, setDbContactId] = useState<number>(conversation.contact_id || 0);
 
   // New States for Actions
   const [isCalling, setIsCalling] = useState(false);
@@ -61,6 +65,22 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isMuted, setIsMuted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Conversation Lock States
+  const [lockOwner, setLockOwner] = useState<{ id: number; name: string } | null>(null);
+  const [hasLock, setHasLock] = useState(false);
+  const hasLockRef = useRef(false);
+
+  // WebSocket Connection State
+  const [wsConnected, setWsConnected] = useState(false);
+
+  // Message Actions Context Menu & Forward States
+  const [showMsgActions, setShowMsgActions] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState<ChatMessage | null>(null);
+  const [showForwardPicker, setShowForwardPicker] = useState(false);
+  const [forwardingMsg, setForwardingMsg] = useState<ChatMessage | null>(null);
+  const [activeConversations, setActiveConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -89,8 +109,8 @@ export default function ChatScreen({ navigation, route }: any) {
     try {
       // Fire both requests at the same time instead of waiting one-by-one
       const [details, msgsData] = await Promise.all([
-        api.get(`/v1/mobile/conversations/${contact.id}`),
-        api.get(`/v1/mobile/conversations/${contact.id}/messages`),
+        api.get(`/v1/mobile/conversations/${conversationId}`),
+        api.get(`/v1/mobile/conversations/${conversationId}/messages`),
       ]);
 
       const newIsWithin24 = details.is_within_24_hours;
@@ -122,10 +142,12 @@ export default function ChatScreen({ navigation, route }: any) {
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
         mapped.push({
+          id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
           text: m.content || (m.type === 'image' ? '📷 Image' : m.type === 'video' ? '🎥 Video' : '📄 Document'),
           time: msgTime,
           status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
+          isStarred: !!m.is_starred,
         });
       });
 
@@ -151,8 +173,8 @@ export default function ChatScreen({ navigation, route }: any) {
 
       // ── Persist to local cache so next open is instant ──
       await Promise.all([
-        cacheMessages(contact.id, mapped),
-        cacheMeta(contact.id, {
+        cacheMessages(conversationId, mapped),
+        cacheMeta(conversationId, {
           isWithin24Hours: newIsWithin24,
           isAiEnabled: newIsAi,
           sessionExpiresAt: newSession,
@@ -192,7 +214,7 @@ export default function ChatScreen({ navigation, route }: any) {
     let isMounted = true;
     let failCount = 0;
 
-    const POLL_INTERVAL = 8000;   // 8s when healthy
+    const POLL_INTERVAL = wsConnected ? 40000 : 8000;   // 40s when WS is alive, 8s fallback when not
     const MAX_BACKOFF   = 120000; // max 2 min backoff when server is down
 
     const poll = async () => {
@@ -215,8 +237,8 @@ export default function ChatScreen({ navigation, route }: any) {
     // ── Step 1: Load cache immediately (no spinner if cache exists) ──
     (async () => {
       const [cachedMsgs, cachedMeta] = await Promise.all([
-        loadCachedMessages(contact.id),
-        loadCachedMeta(contact.id),
+        loadCachedMessages(conversationId),
+        loadCachedMeta(conversationId),
       ]);
 
       if (cachedMsgs && cachedMsgs.length > 0) {
@@ -246,7 +268,262 @@ export default function ChatScreen({ navigation, route }: any) {
       isMounted = false;
       clearTimeout(pollTimer);
     };
-  }, [contact.id]);
+  }, [conversationId, wsConnected]);
+
+  // Sync state to ref to avoid triggering unnecessary effect dependency updates
+  useEffect(() => {
+    hasLockRef.current = hasLock;
+  }, [hasLock]);
+
+  // Presence Lifecycle: heartbeat every 30s, leave on unmount
+  useEffect(() => {
+    let presenceTimer: ReturnType<typeof setInterval>;
+    let active = true;
+
+    const sendPresenceHeartbeat = async () => {
+      try {
+        await api.post('/v1/mobile/presence/heartbeat', {
+          conversation_id: conversationId,
+        });
+      } catch (err) {
+        console.warn('[Presence] Heartbeat failed:', err);
+      }
+    };
+
+    const sendPresenceLeave = async () => {
+      try {
+        await api.post('/v1/mobile/presence/leave', {
+          conversation_id: conversationId,
+        });
+      } catch (err) {
+        console.warn('[Presence] Leave failed:', err);
+      }
+    };
+
+    // Send immediately on mount
+    sendPresenceHeartbeat();
+
+    // Heartbeat every 30 seconds
+    presenceTimer = setInterval(() => {
+      if (active) {
+        sendPresenceHeartbeat();
+      }
+    }, 30000);
+
+    return () => {
+      active = false;
+      clearInterval(presenceTimer);
+      sendPresenceLeave();
+    };
+  }, [conversationId]);
+
+  // Lock Lifecycle: lock on mount, heartbeat every 20s, unlock on unmount
+  useEffect(() => {
+    let heartbeatTimer: ReturnType<typeof setInterval>;
+    let active = true;
+
+    const performLock = async () => {
+      try {
+        const response = await api.post(`/v1/conversations/${conversationId}/lock`);
+        if (!active) return;
+        
+        if (response.success) {
+          setHasLock(true);
+          setLockOwner(null);
+        } else if (response.code === 'ERR_CONVERSATION_LOCKED') {
+          setHasLock(false);
+          const ownerData = response.data || {};
+          setLockOwner({
+            id: ownerData.owner || 0,
+            name: ownerData.owner_name || 'Another Agent',
+          });
+          showDialog(
+            'Conversation Locked',
+            `This conversation is currently locked by ${ownerData.owner_name || 'another agent'}.`,
+            [
+              { text: 'View Only', style: 'cancel' },
+              {
+                text: 'Take Over',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    setLoading(true);
+                    const takeoverRes = await api.post(`/v1/conversations/${conversationId}/takeover`);
+                    if (takeoverRes.success) {
+                      setHasLock(true);
+                      setLockOwner(null);
+                      showDialog('Lock Acquired', 'You have successfully taken over this conversation.');
+                    } else {
+                      showDialog('Takeover Failed', takeoverRes.message || 'Could not take over the conversation.');
+                    }
+                  } catch (takeoverErr: any) {
+                    showDialog('Takeover Failed', takeoverErr.message || 'Error occurred.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              }
+            ]
+          );
+        }
+      } catch (err) {
+        console.warn('[Lock] Failed to lock:', err);
+      }
+    };
+
+    const performHeartbeat = async () => {
+      try {
+        const response = await api.post(`/v1/conversations/${conversationId}/heartbeat`);
+        if (!active) return;
+
+        if (!response.success) {
+          setHasLock(false);
+        }
+      } catch (err: any) {
+        console.warn('[Lock] Heartbeat failed:', err);
+        if (err?.status === 401 || err?.data?.code === 'ERR_LOCK_LOST') {
+          setHasLock(false);
+        }
+      }
+    };
+
+    const performUnlock = async () => {
+      try {
+        await api.post(`/v1/conversations/${conversationId}/unlock`);
+      } catch (err) {
+        console.warn('[Lock] Unlock failed:', err);
+      }
+    };
+
+    performLock();
+
+    heartbeatTimer = setInterval(() => {
+      if (active && hasLockRef.current) {
+        performHeartbeat();
+      }
+    }, 20000);
+
+    return () => {
+      active = false;
+      clearInterval(heartbeatTimer);
+      if (hasLockRef.current) {
+        performUnlock();
+      }
+    };
+  }, [conversationId]);
+
+  // Real-time WebSocket Messaging listener (Reverb / Pusher)
+  useEffect(() => {
+    const socketConfig = globalState.websocket;
+    if (!socketConfig) return;
+
+    let ws: WebSocket | null = null;
+    let active = true;
+
+    // Resolve connection parameters dynamically
+    let wsHost = socketConfig.host;
+    let wsPort = socketConfig.port;
+    let wsScheme = socketConfig.scheme;
+    const isSecure = globalState.baseUrl.startsWith('https');
+
+    if (isSecure) {
+      wsScheme = 'wss';
+      wsPort = '';
+    } else {
+      wsScheme = 'ws';
+    }
+
+    if (wsHost === '127.0.0.1' || wsHost === 'localhost') {
+      const match = globalState.baseUrl.match(/^https?:\/\/([^:/]+)/);
+      if (match && match[1]) {
+        wsHost = match[1];
+      }
+    }
+
+    const portSuffix = wsPort ? `:${wsPort}` : '';
+    const wsUrl = `${wsScheme}://${wsHost}${portSuffix}/app/${socketConfig.key}?protocol=7&client=js&version=8.4.0-rc2&flash=false`;
+
+    const channelName = `presence-conversation.${conversationId}`;
+
+    const connect = () => {
+      if (!active) return;
+      
+      console.log(`[WS] Connecting to ${wsUrl}`);
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('[WS] Connection opened');
+      };
+
+      ws.onmessage = async (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          
+          if (payload.event === 'pusher:connection_established') {
+            const data = JSON.parse(payload.data);
+            const socketId = data.socket_id;
+            console.log(`[WS] Connection established with socket_id: ${socketId}`);
+
+            // Authenticate subscription with backend
+            try {
+              const authRes = await api.post('/v1/mobile/broadcasting/auth', {
+                socket_id: socketId,
+                channel_name: channelName,
+              });
+
+              if (active && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  event: 'pusher:subscribe',
+                  data: {
+                    channel: channelName,
+                    auth: authRes.auth,
+                    channel_data: authRes.channel_data,
+                  }
+                }));
+                console.log(`[WS] Subscribing to channel ${channelName}`);
+                setWsConnected(true);
+              }
+            } catch (authErr) {
+              console.warn('[WS] Subscription auth failed:', authErr);
+              setWsConnected(false);
+            }
+          } else if (
+            payload.event === 'MessageReceived' ||
+            payload.event === 'MessageSent' ||
+            payload.event === 'MessageStatusUpdated'
+          ) {
+            console.log(`[WS] Invalidation event received: ${payload.event}`);
+            fetchConversationDetails(true);
+          }
+        } catch (err) {
+          console.warn('[WS] Error processing message:', err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.warn('[WS] Error:', err);
+        setWsConnected(false);
+      };
+
+      ws.onclose = (event) => {
+        console.log(`[WS] Connection closed: code=${event.code}, reason=${event.reason}`);
+        setWsConnected(false);
+        // Reconnect after 5 seconds if still active
+        if (active) {
+          setTimeout(connect, 5000);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      active = false;
+      if (ws) {
+        ws.close();
+      }
+    };
+  }, [conversationId, globalState.websocket, globalState.baseUrl]);
 
   useEffect(() => {
     const currentCount = messages.length;
@@ -268,6 +545,70 @@ export default function ChatScreen({ navigation, route }: any) {
     });
     return unsubscribe;
   }, [nav]);
+
+  const handleMessageLongPress = (msg: ChatMessage) => {
+    if (!msg.id) return;
+    setSelectedMsg(msg);
+    setShowMsgActions(true);
+  };
+
+  const openForwardModal = async (msg: ChatMessage) => {
+    setForwardingMsg(msg);
+    setShowForwardPicker(true);
+    setLoadingConversations(true);
+    try {
+      const response = await api.get('/v1/mobile/conversations');
+      const rawData = response.data || [];
+      const mapped: Conversation[] = rawData.map((c: any) => {
+        return {
+          id: c.id,
+          contact_id: c.contact_id,
+          name: c.name || c.phone || 'Unknown Contact',
+          phone: c.phone,
+          last: c.last_message ? c.last_message.content : 'No messages yet',
+          time: c.last_message ? c.last_message.pretty_time : '',
+          unread: c.unread_count || 0,
+          status: c.status === 'closed' ? 'delivered' : 'read',
+          tag: c.tags && c.tags[0] ? c.tags[0].name : 'Sales',
+          online: c.is_within_24_hours || false,
+          pinned: false,
+          reply: c.last_message?.is_outbound ? 'me' : undefined,
+          bot: c.is_ai_enabled || false,
+        };
+      });
+      // Filter out the current conversation so users can't forward to the same chat
+      const filtered = mapped.filter((c) => c.id !== conversationId);
+      setActiveConversations(filtered);
+    } catch (err: any) {
+      console.warn('Could not load conversations for forwarding', err);
+      showDialog('Error', 'Failed to load conversations for forwarding.');
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
+  const handleForwardMessage = async (toConversationId: number, toConversationName: string) => {
+    if (!forwardingMsg || !forwardingMsg.id) return;
+    
+    setShowForwardPicker(false);
+    setLoading(true);
+    try {
+      const res = await api.post(`/v1/messages/${forwardingMsg.id}/forward`, {
+        to_conversation_id: toConversationId,
+      });
+      if (res.success) {
+        showDialog(
+          'Message Forwarded',
+          `Message successfully forwarded to ${toConversationName}.`
+        );
+      }
+    } catch (err: any) {
+      showDialog('Forwarding Failed', err.message || 'Could not forward message.');
+    } finally {
+      setLoading(false);
+      setForwardingMsg(null);
+    }
+  };
 
   const handleBack = () => {
     Keyboard.dismiss();
@@ -406,6 +747,39 @@ export default function ChatScreen({ navigation, route }: any) {
     const text = draft.trim();
     if (!text && !selectedMedia) return;
 
+    // Check lock ownership before sending
+    if (!hasLock && lockOwner) {
+      showDialog(
+        'Conversation Locked',
+        `This conversation is locked by ${lockOwner.name}. You must take it over before you can send messages.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Take Over',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setLoading(true);
+                const takeoverRes = await api.post(`/v1/conversations/${conversationId}/takeover`);
+                if (takeoverRes.success) {
+                  setHasLock(true);
+                  setLockOwner(null);
+                  showDialog('Lock Acquired', 'You have successfully taken over this conversation. You can now send messages.');
+                } else {
+                  showDialog('Takeover Failed', takeoverRes.message || 'Could not take over the conversation.');
+                }
+              } catch (takeoverErr: any) {
+                showDialog('Takeover Failed', takeoverErr.message || 'Error occurred.');
+              } finally {
+                setLoading(false);
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }
+
     // Check policy limits: 24h window constraint
     if (!isWithin24Hours) {
       showDialog(
@@ -479,7 +853,7 @@ export default function ChatScreen({ navigation, route }: any) {
         payload.media_url = mediaUrl;
       }
 
-      await api.post(`/v1/mobile/conversations/${contact.id}/messages`, payload);
+      await api.post(`/v1/mobile/conversations/${conversationId}/messages`, payload);
       fetchConversationDetails();
     } catch (err: any) {
       showDialog('Failed to Send Message', err.message || 'Error occurred while sending.');
@@ -499,7 +873,7 @@ export default function ChatScreen({ navigation, route }: any) {
         return;
       }
 
-      await api.post(`/v1/mobile/conversations/${contact.id}/send-template`, {
+      await api.post(`/v1/mobile/conversations/${conversationId}/send-template`, {
         template_id: matched.id,
         variables: [],
       });
@@ -518,7 +892,7 @@ export default function ChatScreen({ navigation, route }: any) {
     setShowOptions(false);
     const nextVal = !isAiEnabled;
     try {
-      await api.post(`/v1/mobile/conversations/${contact.id}/toggle-ai`, {
+      await api.post(`/v1/mobile/conversations/${conversationId}/toggle-ai`, {
         enabled: nextVal,
       });
       setIsAiEnabled(nextVal);
@@ -536,7 +910,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const handleCloseConversation = async () => {
     setShowOptions(false);
     try {
-      await api.post(`/v1/mobile/conversations/${contact.id}/close`);
+      await api.post(`/v1/mobile/conversations/${conversationId}/close`);
       showDialog('Conversation Resolved', 'Closed this ticket and sent customer CSAT survey.', [
         { text: 'OK', onPress: () => nav.goBack() }
       ]);
@@ -609,7 +983,7 @@ export default function ChatScreen({ navigation, route }: any) {
         >
           <IconButton icon={ChevronLeft} onPress={handleBack} />
           <Pressable
-            onPress={() => nav.navigate('Contact', { conversationId: contact.id, contactId: dbContactId })}
+            onPress={() => nav.navigate('Contact', { conversationId, contactId: dbContactId })}
             className="flex-1 flex-row items-center gap-[10px] min-w-0"
           >
             <Avatar name={contact.name} size={36} dot={contact.online ? tokens.ok : null} />
@@ -667,9 +1041,21 @@ export default function ChatScreen({ navigation, route }: any) {
                   );
                 }
                 return (
-                  <Bubble key={i} kind={m.kind} time={m.time} status={m.status} variant="tail">
-                    {m.text}
-                  </Bubble>
+                  <Pressable
+                    key={i}
+                    onLongPress={() => handleMessageLongPress(m)}
+                    className="active:opacity-85"
+                  >
+                    <Bubble
+                      kind={m.kind}
+                      time={m.time}
+                      status={m.status}
+                      variant="tail"
+                      isStarred={m.isStarred}
+                    >
+                      {m.text}
+                    </Bubble>
+                  </Pressable>
                 );
               })}
               {typing ? <TypingDots /> : null}
@@ -702,13 +1088,13 @@ export default function ChatScreen({ navigation, route }: any) {
                   // Prepend locally
                   setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent' }]);
                   
-                  try {
-                    await api.post(`/v1/mobile/conversations/${contact.id}/messages`, {
-                      type: 'document',
-                      media_url: 'https://watxio-recordings.s3.amazonaws.com/voice-temp.aac',
-                      content: `Voice message (${timeStr})`,
-                    });
-                    fetchConversationDetails();
+                    try {
+                      await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
+                        type: 'document',
+                        media_url: 'https://watxio-recordings.s3.amazonaws.com/voice-temp.aac',
+                        content: `Voice message (${timeStr})`,
+                      });
+                      fetchConversationDetails();
                   } catch (err: any) {
                     console.warn('Voice upload api block:', err);
                   }
@@ -922,6 +1308,126 @@ export default function ChatScreen({ navigation, route }: any) {
                       </Pressable>
                     );
                   }}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Message Actions Sheet Menu */}
+      {showMsgActions && selectedMsg && (
+        <Modal transparent visible={showMsgActions} animationType="fade">
+          <Pressable onPress={() => {
+            setShowMsgActions(false);
+            setSelectedMsg(null);
+          }} className="flex-1 bg-black/40 justify-end">
+            <View className="bg-surface dark:bg-d-surface rounded-t-2xl p-4 gap-2" style={{ paddingBottom: insets.bottom + 16 }}>
+              <View className="items-center pb-2 border-b border-hairline dark:border-d-hairline">
+                <Text className="text-xs text-muted dark:text-d-muted font-bold uppercase tracking-wider">Message Actions</Text>
+              </View>
+              <Pressable
+                onPress={async () => {
+                  setShowMsgActions(false);
+                  const msg = selectedMsg;
+                  if (!msg || !msg.id) return;
+                  try {
+                    setLoading(true);
+                    const res = await api.post(`/v1/messages/${msg.id}/star`);
+                    if (res.success) {
+                      // Update local messages state instantly
+                      setMessages((prevMsgs) =>
+                        prevMsgs.map((m) =>
+                          m.id === msg.id ? { ...m, isStarred: res.is_starred } : m
+                        )
+                      );
+                    }
+                  } catch (err: any) {
+                    showDialog('Action Failed', err.message || 'Could not toggle star on this message.');
+                  } finally {
+                    setLoading(false);
+                    setSelectedMsg(null);
+                  }
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">
+                  {selectedMsg.isStarred ? '⭐ Unstar Message' : '⭐ Star Message'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMsgActions(false);
+                  const msg = selectedMsg;
+                  setSelectedMsg(null);
+                  if (msg) {
+                    openForwardModal(msg);
+                  }
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">➡️ Forward Message</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMsgActions(false);
+                  setSelectedMsg(null);
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-danger dark:text-d-danger">❌ Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
+
+      {/* Forward Destination Modal */}
+      {showForwardPicker && (
+        <Modal transparent visible={showForwardPicker} animationType="slide">
+          <View className="flex-1 bg-black/40 justify-end">
+            <View className="bg-surface dark:bg-d-surface rounded-t-2xl max-h-[75%]" style={{ paddingBottom: insets.bottom + 16 }}>
+              <View className="flex-row items-center justify-between px-[18px] py-4 border-b border-hairline dark:border-d-hairline">
+                <Text className="text-base font-bold text-ink dark:text-d-ink">Forward Message</Text>
+                <Pressable onPress={() => {
+                  setShowForwardPicker(false);
+                  setForwardingMsg(null);
+                }} className="p-1">
+                  <Text className="text-accent dark:text-d-accent font-semibold text-sm">Cancel</Text>
+                </Pressable>
+              </View>
+
+              {loadingConversations ? (
+                <View className="py-20 items-center justify-center">
+                  <ActivityIndicator size="small" color={tokens.accent} />
+                  <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading conversations...</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={activeConversations}
+                  keyExtractor={(item) => String(item.id)}
+                  contentContainerStyle={{ padding: 18, gap: 10 }}
+                  ListEmptyComponent={
+                    <View className="py-12 items-center justify-center">
+                      <Text className="text-xs text-muted dark:text-d-muted">No active conversations found.</Text>
+                    </View>
+                  }
+                  renderItem={({ item }) => (
+                    <Pressable
+                      onPress={() => handleForwardMessage(item.id, item.name)}
+                      className="flex-row items-center gap-3 p-3.5 rounded-lg border border-hairline dark:border-d-hairline bg-surface2 dark:bg-d-surface2 active:bg-surface3"
+                    >
+                      <Avatar name={item.name} size={36} dot={item.online ? tokens.ok : null} />
+                      <View className="flex-1 min-w-0">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-ink dark:text-d-ink">
+                          {item.name}
+                        </Text>
+                        <Text className="text-[11.5px] text-muted dark:text-d-muted mt-[3px]">
+                          {item.tag} · {item.phone}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  )}
                 />
               )}
             </View>

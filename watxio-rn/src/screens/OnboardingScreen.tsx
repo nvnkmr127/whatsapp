@@ -105,7 +105,36 @@ export default function OnboardingScreen({ navigation }: any) {
     try {
       const payload = JSON.parse(data);
       if (!payload.token) {
-        throw new Error('Missing pairing token');
+        if (payload.baseUrl && payload.email) {
+          let targetBaseUrl = payload.baseUrl;
+
+          // Auto-replace localhost/127.0.0.1 with Android emulator host IP if needed
+          if (Platform.OS === 'android') {
+            targetBaseUrl = targetBaseUrl
+              .replace('localhost', '10.0.2.2')
+              .replace('127.0.0.1', '10.0.2.2');
+          }
+
+          if (targetBaseUrl.endsWith('/v1')) {
+            targetBaseUrl = targetBaseUrl.substring(0, targetBaseUrl.length - 3); // trim '/v1'
+          }
+
+          api.setBaseUrl(targetBaseUrl);
+          setServerUrl(targetBaseUrl);
+          setGlobalState({ baseUrl: targetBaseUrl });
+          setEmail(payload.email);
+          setLoginMode('email');
+          setShowServerConfig(true);
+          setLoading(false);
+
+          showDialog(
+            'Connection Configured',
+            'Your server URL and email have been pre-filled. Please enter your password to sign in and complete pairing.'
+          );
+          return;
+        }
+
+        throw new Error('Missing pairing token. Please generate a setup token on the web dashboard first, or log in manually.');
       }
 
       // Base URL normalization
@@ -149,6 +178,7 @@ export default function OnboardingScreen({ navigation }: any) {
         userRole: response.user.role || 'Member',
         numbers: teamNumbers,
         baseUrl: targetBaseUrl,
+        websocket: response.websocket,
       });
 
       setLoading(false);
@@ -213,6 +243,7 @@ export default function OnboardingScreen({ navigation }: any) {
           userName: response.user.name,
           userRole: response.user.role || 'Member',
           numbers: teamNumbers,
+          websocket: response.websocket,
         });
 
         setLoading(false);
@@ -302,6 +333,7 @@ export default function OnboardingScreen({ navigation }: any) {
             userName: response.user.name,
             userRole: response.user.role || 'Member',
             numbers: teamNumbers,
+            websocket: response.websocket,
           });
 
           setLoading(false);

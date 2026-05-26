@@ -41,6 +41,9 @@ class ConversationController extends Controller
                 $query->where('assigned_to', $memberId);
             }
 
+            // Clone base query for count calculations before filters and search are applied
+            $baseQuery = clone $query;
+
             // Apply Filters
             $filter = $request->input('filter', 'all');
             if ($filter === 'unread') {
@@ -49,17 +52,26 @@ class ConversationController extends Controller
                 });
             } elseif ($filter === 'assigned') {
                 $query->where('assigned_to', $user->id);
+            } elseif ($filter === 'open') {
+                $query->where('status', '!=', 'closed');
+            } elseif ($filter === 'bots') {
+                $query->whereHas('contact', function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->where('is_bot_paused', false)->orWhereNull('is_bot_paused');
+                    });
+                });
             }
 
             // Search Support
-            if ($search = $request->input('query')) {
+            $search = $request->input('query') ?? $request->input('search');
+            if ($search) {
                 $query->whereHas('contact', function ($q) use ($search) {
                     $q->where('name', 'like', "%$search%")->orWhere('phone_number', 'like', "%$search%");
                 });
             }
 
             $conversations = $query->with([
-                'contact:id,name,phone_number',
+                'contact:id,name,phone_number,is_bot_paused',
                 'lastMessage',
                 'assignee:id,name',
                 'contact.tags',
@@ -77,6 +89,7 @@ class ConversationController extends Controller
             $conversations->getCollection()->transform(function ($conv) {
                 return [
                     'id' => $conv->id,
+                    'contact_id' => $conv->contact_id,
                     'name' => $conv->contact?->name ?? $conv->contact?->phone_number ?? 'Unknown Contact',
                     'phone' => $conv->contact?->phone_number ?? 'Unknown',
                     'last_message' => $conv->lastMessage ? [
@@ -99,10 +112,43 @@ class ConversationController extends Controller
                     ]) : [],
                     'last_interaction' => $conv->last_message_at ? $conv->last_message_at->timestamp : null,
                     'is_within_24_hours' => $conv->isWithin24Hours(),
+                    'is_ai_enabled' => !($conv->contact?->is_bot_paused ?? false),
                 ];
             });
 
-            return response()->json($conversations);
+            // Calculate True Counts on the Server
+            $allCount = (clone $baseQuery)->count();
+            
+            $unreadCount = (clone $baseQuery)
+                ->whereHas('messages', function ($q) {
+                    $q->where('direction', 'inbound')->whereNull('read_at');
+                })->count();
+                
+            $openCount = (clone $baseQuery)
+                ->where('status', '!=', 'closed')
+                ->count();
+                
+            $mineCount = (clone $baseQuery)
+                ->where('assigned_to', $user->id)
+                ->count();
+                
+            $botsCount = (clone $baseQuery)
+                ->whereHas('contact', function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->where('is_bot_paused', false)->orWhereNull('is_bot_paused');
+                    });
+                })->count();
+
+            $responseData = $conversations->toArray();
+            $responseData['counts'] = [
+                'All' => $allCount,
+                'Unread' => $unreadCount,
+                'Open' => $openCount,
+                'Mine' => $mineCount,
+                'Bots' => $botsCount,
+            ];
+
+            return response()->json($responseData);
         } catch (\Exception $e) {
             \Log::error('[MOBILE_INBOX_ERROR] ' . $e->getMessage(), [
                 'user_id' => $request->user()?->id,

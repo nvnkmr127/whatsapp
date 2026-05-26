@@ -25,6 +25,7 @@ export default function ContactScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(true);
   const [contactData, setContactData] = useState<any>(null);
   const [notesList, setNotesList] = useState<any[]>([]);
+  const [callHistory, setCallHistory] = useState<any[]>([]);
 
   // Local editable states
   const [contactName, setContactName] = useState('');
@@ -74,6 +75,14 @@ export default function ContactScreen({ navigation, route }: any) {
       // Fetch notes
       const notesResponse = await api.get(`/v1/mobile/conversations/${conversationId}/notes`);
       setNotesList(notesResponse || []);
+
+      // Fetch call history
+      try {
+        const callsRes = await api.get(`/v1/calls/contacts/${contactId}/history`);
+        setCallHistory(callsRes.data || callsRes || []);
+      } catch (callsErr) {
+        console.warn('Failed to load call history:', callsErr);
+      }
     } catch (err: any) {
       console.warn('Failed to load contact data:', err);
       showDialog('Error', 'Could not load contact details from server.');
@@ -442,6 +451,44 @@ export default function ContactScreen({ navigation, route }: any) {
           {notesList.length === 0 && (
             <View className="p-4 rounded-lg bg-surface dark:bg-d-surface items-center justify-center">
               <Text className="text-[13px] text-muted dark:text-d-muted italic">No internal notes logged.</Text>
+            </View>
+          )}
+        </View>
+
+        <SectionLabel>Call History</SectionLabel>
+        <View className="px-[18px]">
+          {callHistory.map((c: any) => {
+            const isMissed = c.status === 'missed' || c.status === 'rejected';
+            const isOutbound = c.direction === 'outbound';
+            
+            let iconColor = tokens.ink2;
+            if (isMissed) {
+              iconColor = tokens.danger;
+            } else if (isOutbound) {
+              iconColor = tokens.accent;
+            } else {
+              iconColor = tokens.ok;
+            }
+
+            return (
+              <View key={c.id} className="flex-row gap-3 py-3 border-b border-hairline dark:border-d-hairline last:border-0">
+                <View className="w-7 h-7 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
+                  <Phone size={13} color={iconColor} strokeWidth={1.8} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium capitalize">
+                    {c.direction} Call · {c.status}
+                  </Text>
+                  <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
+                    {c.duration_seconds ? `${c.duration_seconds}s duration` : 'No answer'} · {new Date(c.created_at || c.initiated_at).toLocaleDateString()} {new Date(c.created_at || c.initiated_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+          {callHistory.length === 0 && (
+            <View className="p-4 rounded-lg bg-surface dark:bg-d-surface items-center justify-center">
+              <Text className="text-[13px] text-muted dark:text-d-muted italic">No call history recorded.</Text>
             </View>
           )}
         </View>
