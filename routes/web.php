@@ -88,6 +88,9 @@ Route::middleware([
 
     Route::get('/team/members', \App\Livewire\Teams\MembersManager::class)->name('teams.members');
 
+    // Logout and Exit Impersonation (Universal) - Must be before wildcard {user} route
+    Route::get('/admin/impersonate/exit', [\App\Http\Controllers\Admin\ImpersonationController::class, 'exit'])->name('admin.impersonate.exit');
+
     // Super Admin Routes
     Route::middleware([\App\Http\Middleware\EnsureUserIsSuperAdmin::class])->group(function () {
         Route::get('/admin', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('admin.dashboard');
@@ -145,9 +148,6 @@ Route::middleware([
         Route::post('/admin/health/jobs/retry', [\App\Http\Controllers\Admin\SystemHealthController::class, 'retryJobs'])->name('admin.health.jobs.retry');
         Route::post('/admin/health/jobs/clear', [\App\Http\Controllers\Admin\SystemHealthController::class, 'clearJobs'])->name('admin.health.jobs.clear');
     });
-
-    // Logout and Exit Impersonation (Universal)
-    Route::get('/admin/impersonate/exit', [\App\Http\Controllers\Admin\ImpersonationController::class, 'exit'])->name('admin.impersonate.exit');
 
     // Agent Console (Agents, Managers, Admins)
     Route::get('/chat', \App\Livewire\Chat\ChatDashboard::class)->name('chat')->middleware(['can:chat-access', 'plan_feature:chat']);
