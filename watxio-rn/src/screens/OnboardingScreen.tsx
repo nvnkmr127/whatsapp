@@ -229,7 +229,7 @@ export default function OnboardingScreen({ navigation }: any) {
           return;
         }
 
-        const fullPhone = `${country.code}${trimmedPhone.replace(/\D/g, '')}`;
+        const fullPhone = trimmedPhone; // Don't force country code, let it match exactly what the user types
         setLoading(true);
 
         try {
@@ -241,7 +241,21 @@ export default function OnboardingScreen({ navigation }: any) {
           showDialog('OTP Sent', `A verification code has been sent to ${fullPhone}.`);
         } catch (err: any) {
           setLoading(false);
-          showDialog('OTP Failed', err.message || 'Failed to send OTP. Ensure your number is registered.');
+          // Auto-fallback: If strict match fails, try with country code as a fallback
+          try {
+            const fallbackPhone = `${country.code}${trimmedPhone.replace(/\D/g, '')}`;
+            await api.post('/v1/mobile/auth/send-otp', {
+              phone: fallbackPhone,
+            });
+            setLoading(false);
+            setIsOtpSent(true);
+            showDialog('OTP Sent', `A verification code has been sent to ${fallbackPhone}.`);
+            // Update the phone number state so the verify step uses the correct format
+            setPhoneNumber(fallbackPhone);
+          } catch (fallbackErr: any) {
+            setLoading(false);
+            showDialog('OTP Failed', fallbackErr.message || 'Failed to send OTP. Ensure your number is registered exactly as shown.');
+          }
         }
       } else {
         const trimmedOtp = otp.trim();
@@ -250,7 +264,7 @@ export default function OnboardingScreen({ navigation }: any) {
           return;
         }
 
-        const fullPhone = `${country.code}${phoneNumber.trim().replace(/\D/g, '')}`;
+        const fullPhone = phoneNumber.trim();
         setLoading(true);
 
         try {

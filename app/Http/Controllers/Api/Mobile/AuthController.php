@@ -214,15 +214,27 @@ class AuthController extends Controller
         $request->validate(['phone' => 'required|string']);
         
         $phone = $request->phone;
-        // Normalize phone (remove +, spaces, etc if needed)
+        // Normalize phone to match how web login handles it
+        try {
+            $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phone);
+        } catch (\Exception $e) {
+            $normalizedPhone = $phone;
+        }
         
-        $user = User::where('phone', $phone)->first();
+        $user = User::where('phone', $normalizedPhone)->orWhere('phone', $phone)->first();
         if (!$user) {
-            return response()->json(['message' => 'Phone number not registered'], 404);
+            // Also try suffix match like web app
+            if (strlen($phone) >= 10) {
+                $suffix = substr($phone, -10);
+                $user = User::where('phone', 'like', "%{$suffix}")->first();
+            }
+            if (!$user) {
+                return response()->json(['message' => 'Phone number not registered'], 404);
+            }
         }
 
         $otpService = app(\App\Services\OTPService::class);
-        $sent = $otpService->send($phone, 'phone');
+        $sent = $otpService->send($user->phone, 'phone');
 
         if (!$sent) {
             return response()->json(['message' => 'Failed to send OTP. Please try again later.'], 500);
@@ -241,14 +253,25 @@ class AuthController extends Controller
         $phone = $request->phone;
         $otp = $request->otp;
 
-        $otpService = app(\App\Services\OTPService::class);
-        if (!$otpService->verify($phone, $otp)) {
-            return response()->json(['message' => 'Invalid or expired OTP'], 422);
+        try {
+            $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phone);
+        } catch (\Exception $e) {
+            $normalizedPhone = $phone;
         }
 
-        $user = User::where('phone', $phone)->first();
+        $user = User::where('phone', $normalizedPhone)->orWhere('phone', $phone)->first();
+        if (!$user && strlen($phone) >= 10) {
+            $suffix = substr($phone, -10);
+            $user = User::where('phone', 'like', "%{$suffix}")->first();
+        }
+
         if (!$user) {
              return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $otpService = app(\App\Services\OTPService::class);
+        if (!$otpService->verify($user->phone, $otp)) {
+            return response()->json(['message' => 'Invalid or expired OTP'], 422);
         }
 
         $token = $user->createToken('mobile')->plainTextToken;
