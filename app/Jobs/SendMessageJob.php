@@ -58,6 +58,8 @@ class SendMessageJob implements ShouldQueue
             if ($message->type === 'template') {
                 $this->templateName = $message->metadata['template_name'] ?? $message->metadata['template_id'] ?? null;
                 $this->content = $message->metadata['variables'] ?? [];
+            } elseif (in_array($message->type, ['image', 'video', 'audio', 'document'])) {
+                $this->content = $message->full_media_url;
             } else {
                 $this->content = $message->content;
             }

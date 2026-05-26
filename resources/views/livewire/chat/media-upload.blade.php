@@ -2,7 +2,16 @@
      @open-file-input.window="$refs.fileInput.click()">
     
     <input type="file" wire:model.live="newAttachment" class="hidden" x-ref="fileInput"
-           x-on:livewire-upload-error="uploadError = 'File upload failed.'; showUploadErrorModal = true;"
+           x-on:change="
+               const file = $event.target.files[0];
+               if (file && file.size > 16 * 1024 * 1024) {
+                   $event.stopImmediatePropagation();
+                   $event.preventDefault();
+                   $event.target.value = '';
+                   uploadError = 'File is too large. Maximum allowed size is 16MB.';
+               }
+           "
+           x-on:livewire-upload-error="uploadError = 'File upload failed. The file may exceed the server allowed size limit.';"
            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
 
     <!-- Attachment Preview Area (When file is picked) -->
