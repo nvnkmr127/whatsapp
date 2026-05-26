@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronDown, QrCode, Mail, Lock, Server } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -126,14 +126,12 @@ export default function LoginScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
       >
         {/* Brand mark */}
-        <View className="w-16 h-16 rounded-xl bg-accent dark:bg-d-accent items-center justify-center mt-8 mb-6">
-          <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M4 12c0-4.4 3.6-8 8-8 4.4 0 8 3.6 8 8 0 4.4-3.6 8-8 8-1.5 0-2.9-.4-4.1-1.1L4 20l1.1-3.9C4.4 14.9 4 13.5 4 12z"
-              stroke={tokens.accentInk} strokeWidth={1.7} strokeLinejoin="round"
-            />
-            <Path d="M9 11l2 2 4-4" stroke={tokens.accentInk} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
+        <View className="w-16 h-16 rounded-xl items-center justify-center mt-8 mb-6 overflow-hidden shadow-sm">
+          <Image
+            source={require('../assets/app logo.png')}
+            style={{ width: 64, height: 64, borderRadius: 12 }}
+            resizeMode="cover"
+          />
         </View>
 
         <Text className="text-[26px] font-bold tracking-[-0.6px] text-ink dark:text-d-ink text-center">

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -109,14 +110,14 @@ export default function OnboardingScreen({ navigation }: any) {
 
       // Base URL normalization
       let targetBaseUrl = payload.baseUrl || globalState.baseUrl;
-      
+
       // Auto-replace localhost/127.0.0.1 with Android emulator host IP if needed
       if (Platform.OS === 'android') {
         targetBaseUrl = targetBaseUrl
           .replace('localhost', '10.0.2.2')
           .replace('127.0.0.1', '10.0.2.2');
       }
-      
+
       if (targetBaseUrl.endsWith('/v1')) {
         targetBaseUrl = targetBaseUrl.substring(0, targetBaseUrl.length - 3); // trim '/v1'
       }
@@ -130,7 +131,7 @@ export default function OnboardingScreen({ navigation }: any) {
 
       // Verify and finalize with backend
       const response = await api.post('/v1/mobile/auth/finalize');
-      
+
       const userTeams = response.teams || [];
       const activeTeam = userTeams[0] || null;
       const teamNumbers = response.numbers || [];
@@ -330,20 +331,20 @@ export default function OnboardingScreen({ navigation }: any) {
           }}
           keyboardShouldPersistTaps="handled"
         >
+          <Text className="text-[28px] font-extrabold text-white text-center tracking-tight">
+            {isOtpSent ? 'Verify Code' : 'Welcome to'}
+          </Text>
           {/* Squirclish Logo Container */}
-          <View className="w-18 h-18 bg-[#5bb393] rounded-[22px] items-center justify-center shadow-lg shadow-[#5bb393]/25 mt-10 mb-6">
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M12 2C6.48 2 2 6.48 2 12c0 2.05.62 3.96 1.69 5.56L2.05 22l4.58-1.64C8.12 21.39 9.99 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm-2 15l-4-4 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                fill="#0F1515"
-              />
-            </Svg>
+          <View className="w-18 h-18 rounded-[22px] items-center justify-center shadow-lg mt-10 mb-6 overflow-hidden bg-transparent">
+            <Image
+              source={require('../assets/app logo.png')}
+              style={{ width: 150, height: 72, borderRadius: 22 }}
+              resizeMode="cover"
+            />
           </View>
 
           {/* Welcome Text */}
-          <Text className="text-[28px] font-extrabold text-white text-center tracking-tight">
-            {isOtpSent ? 'Verify Code' : 'Welcome to Watxio'}
-          </Text>
+
           <Text className="text-sm text-gray-400 text-center mt-2.5 leading-relaxed px-5 max-w-[310px]">
             {isOtpSent
               ? `Enter the 6-digit OTP verification code sent to ${country.code} ${phoneNumber}.`
@@ -606,7 +607,7 @@ export default function OnboardingScreen({ navigation }: any) {
       {/* Country Picker Modal */}
       <Modal transparent visible={showCountryPicker} animationType="slide">
         <Pressable onPress={() => setShowCountryPicker(false)} className="flex-1 bg-black/40 justify-end">
-          <Pressable onPress={() => {}} className="bg-[#141A1A] rounded-t-2xl p-5 gap-3 border-t border-[#242E2E]" style={{ paddingBottom: insets.bottom + 16 }}>
+          <Pressable onPress={() => { }} className="bg-[#141A1A] rounded-t-2xl p-5 gap-3 border-t border-[#242E2E]" style={{ paddingBottom: insets.bottom + 16 }}>
             <View className="flex-row items-center justify-between border-b border-[#242E2E] pb-2.5">
               <Text className="text-base font-bold text-white">Select Country</Text>
               <Pressable onPress={() => setShowCountryPicker(false)}>

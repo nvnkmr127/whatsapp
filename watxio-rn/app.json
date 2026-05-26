@@ -3,6 +3,7 @@
     "name": "Watxio",
     "slug": "watxio-rn",
     "version": "1.0.0",
+    "icon": "./src/assets/appicon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "watxio",
@@ -14,6 +15,7 @@
     "android": {
       "package": "com.watxio.app",
       "adaptiveIcon": {
+        "foregroundImage": "./src/assets/appicon.png",
         "backgroundColor": "#2F8F6F"
       }
     },
