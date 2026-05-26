@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from '@/navigation/AppNavigator';
 import { useTokens, ThemeProvider } from '@/theme';
 import { useColorScheme as useNWColorScheme } from 'nativewind';
+import { CallOverlayManager } from '@/components/CallOverlayManager';
 
 function Root() {
   const { scheme } = useTokens();
@@ -25,6 +26,7 @@ function Root() {
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <AppNavigator />
+      <CallOverlayManager />
     </>
   );
 }

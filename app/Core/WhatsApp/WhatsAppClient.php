@@ -229,6 +229,19 @@ class WhatsAppClient
             ];
         }
 
+        if ($errorCode === 138006 || ($responseJson['error']['error_subcode'] ?? null) === 2593090) {
+            Log::info('WhatsApp: No approved call permission from recipient (#138006)', ['url' => $url]);
+
+            return [
+                'success' => false,
+                'no_call_permission' => true,
+                'error' => $responseJson,
+                'error_code' => 'NO_APPROVED_CALL_PERMISSION',
+                'status_code' => $response->status(),
+                'message' => $responseJson['error']['message'] ?? 'No approved call permission from the recipient',
+            ];
+        }
+
         if (($response->status() === 401 || $errorCode === 200) && $this->team) {
             $this->team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::SUSPENDED]);
             \App\Services\WhatsAppEventBridge::logInteraction($this->team, $endpoint, 'critical', $this->maskSensitiveData($data), ['error' => $responseJson]);

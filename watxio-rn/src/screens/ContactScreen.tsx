@@ -144,6 +144,46 @@ export default function ContactScreen({ navigation, route }: any) {
       });
     } catch (err: any) {
       console.warn('Call setup failed:', err);
+      setIsCalling(false);
+
+      const isPermissionErr =
+        err?.code === 'NO_APPROVED_CALL_PERMISSION' ||
+        err?.data?.code === 'NO_APPROVED_CALL_PERMISSION' ||
+        err?.message?.includes('No approved call permission') ||
+        err?.data?.message?.includes('No approved call permission') ||
+        err?.data?.errors?.error?.code === 138006;
+
+      if (isPermissionErr) {
+        showDialog(
+          'Call Permission Required',
+          'WhatsApp requires permission from the recipient before a business can call them. Would you like to send a Call Permission Request template now?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Send Request',
+              onPress: async () => {
+                try {
+                  setLoading(true);
+                  const res = await api.post('/v1/whatsapp/calls/request-permission', {
+                    contact_id: contactId,
+                  });
+                  if (res.success) {
+                    showDialog('Request Sent', 'Call permission request template has been sent.');
+                  } else {
+                    showDialog('Request Failed', res.error || 'Failed to send call permission request.');
+                  }
+                } catch (requestErr: any) {
+                  showDialog('Request Failed', requestErr.message || 'Failed to send call permission request.');
+                } finally {
+                  setLoading(false);
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        showDialog('Call Failed', err.message || 'Could not initiate the call.');
+      }
     }
   };
 
