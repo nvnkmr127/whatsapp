@@ -50,9 +50,9 @@ class CampaignApiTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonCount(1);
-        $response->assertJsonPath('0.id', $campaign->id);
-        $response->assertJsonPath('0.name', 'Past Mobile Broadcast Campaign');
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $campaign->id);
+        $response->assertJsonPath('data.0.name', 'Past Mobile Broadcast Campaign');
     }
 
     public function test_can_store_campaign()
@@ -112,5 +112,37 @@ class CampaignApiTest extends TestCase
         $campaign = Campaign::where('name', 'New Scheduled Campaign')->first();
         $this->assertNotNull($campaign->scheduled_at);
         $this->assertTrue(\Carbon\Carbon::parse($campaign->scheduled_at)->isFuture());
+    }
+
+    public function test_can_get_campaign_details()
+    {
+        $template = WhatsappTemplate::factory()->create(['team_id' => $this->team->id]);
+
+        $campaign = Campaign::create([
+            'team_id' => $this->team->id,
+            'name' => 'Details Test Campaign',
+            'campaign_name' => 'Details Test Campaign',
+            'status' => 'completed',
+            'template_id' => $template->id,
+            'whatsapp_template_id' => $template->whatsapp_template_id,
+            'total_contacts' => 10,
+            'sent_count' => 8,
+            'del_count' => 6,
+            'read_count' => 4,
+        ]);
+
+        $response = $this->getJson("/api/v1/mobile/campaigns/{$campaign->id}", [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('id', $campaign->id);
+        $response->assertJsonPath('name', 'Details Test Campaign');
+        $response->assertJsonPath('delivery_percentage', 80);
+        $response->assertJsonPath('read_percentage', 50);
+        $response->assertJsonStructure([
+            'id', 'name', 'status', 'total_contacts', 'sent_count', 'del_count', 'read_count',
+            'delivery_percentage', 'read_percentage', 'template', 'messages'
+        ]);
     }
 }

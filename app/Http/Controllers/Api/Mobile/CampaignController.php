@@ -12,21 +12,22 @@ use App\Jobs\PrepareCampaignJob;
 
 class CampaignController extends Controller
 {
-    /**
-     * Get recent mobile campaigns for the team.
-     */
     public function index(Request $request)
     {
         $team = $request->user()->currentTeam;
         if (! $team) {
-            return response()->json([]);
+            return response()->json([
+                'current_page' => 1,
+                'data' => [],
+                'last_page' => 1,
+                'total' => 0,
+            ]);
         }
 
         $campaigns = Campaign::where('team_id', $team->id)
             ->with('template')
             ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+            ->paginate(min((int) $request->input('per_page', 10), 100));
 
         return response()->json($campaigns);
     }
@@ -84,5 +85,31 @@ class CampaignController extends Controller
             'success' => true,
             'campaign' => $campaign->load('template'),
         ]);
+    }
+
+    /**
+     * Get details for a campaign including statistics and messages.
+     */
+    public function show(Request $request, Campaign $campaign)
+    {
+        $team = $request->user()->currentTeam;
+        if (! $team || $campaign->team_id !== $team->id) {
+            abort(403, 'Unauthorized access to this campaign.');
+        }
+
+        $campaign->load([
+            'template',
+            'messages' => function ($query) {
+                $query->with('contact:id,name,phone')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(100);
+            }
+        ]);
+
+        $data = $campaign->toArray();
+        $data['delivery_percentage'] = $campaign->delivery_percentage;
+        $data['read_percentage'] = $campaign->read_percentage;
+
+        return response()->json($data);
     }
 }

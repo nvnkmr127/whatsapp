@@ -13,6 +13,7 @@ import type { LucideIcon } from 'lucide-react-native';
 
 import { useTokens } from '@/theme';
 import type { RootStackParamList, MainTabParamList } from '@/types';
+import { navigationRef } from './navigationRef';
 
 import InboxScreen from '@/screens/InboxScreen';
 import ChatScreen from '@/screens/ChatScreen';
@@ -26,8 +27,11 @@ import SettingsScreen from '@/screens/SettingsScreen';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import ActivitiesScreen from '@/screens/ActivitiesScreen';
 import ActivityDetailScreen from '@/screens/ActivityDetailScreen';
+import CampaignDetailScreen from '@/screens/CampaignDetailScreen';
+import CallsScreen from '@/screens/CallsScreen';
 import BotsScreen from '@/screens/BotsScreen';
 import AiSettingsScreen from '@/screens/AiSettingsScreen';
+import StarredMessagesScreen from '@/screens/StarredMessagesScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -128,7 +132,7 @@ export default function AppNavigator() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Main"      component={MainTabs} />
@@ -146,8 +150,11 @@ export default function AppNavigator() {
         />
         <Stack.Screen name="Activities" component={ActivitiesScreen} />
         <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+        <Stack.Screen name="CampaignDetail" component={CampaignDetailScreen} />
+        <Stack.Screen name="Calls" component={CallsScreen} />
         <Stack.Screen name="Bots" component={BotsScreen} />
         <Stack.Screen name="AiSettings" component={AiSettingsScreen} />
+        <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

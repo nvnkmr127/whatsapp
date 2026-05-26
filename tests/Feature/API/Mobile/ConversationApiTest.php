@@ -155,6 +155,59 @@ class ConversationApiTest extends TestCase
         $this->assertTrue($message->fresh()->is_starred);
     }
 
+    public function test_can_list_starred_messages()
+    {
+        $contact = Contact::factory()->create(['team_id' => $this->team->id]);
+        $conversation = Conversation::factory()->create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+        ]);
+        
+        $starredMessage1 = Message::factory()->create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'direction' => 'inbound',
+            'is_starred' => true,
+            'content' => 'Starred message 1',
+        ]);
+        $starredMessage2 = Message::factory()->create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'direction' => 'outbound',
+            'is_starred' => true,
+            'content' => 'Starred message 2',
+        ]);
+        $unstarredMessage = Message::factory()->create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'direction' => 'inbound',
+            'is_starred' => false,
+            'content' => 'Unstarred message',
+        ]);
+
+        $response = $this->getJson("/api/v1/mobile/messages/starred", [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'current_page',
+            'data',
+            'last_page',
+            'total',
+        ]);
+        
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonPath('data.0.id', $starredMessage2->id); // Descending order
+        $response->assertJsonPath('data.1.id', $starredMessage1->id);
+        $response->assertJsonPath('data.0.contact.name', $contact->name);
+        $response->assertJsonPath('data.0.conversation.id', $conversation->id);
+    }
+
+
     public function test_can_forward_message()
     {
         $contact = Contact::factory()->create(['team_id' => $this->team->id]);

@@ -85,7 +85,24 @@ class ContactApiTest extends TestCase
         ]);
 
         $response->assertStatus(409)
-            ->assertJsonPath('message', 'Contact already exists.');
+            ->assertJsonPath('message', 'Contact already exists.')
+            ->assertJsonStructure([
+                'message',
+                'contact',
+                'conversation' => [
+                    'id',
+                    'contact_id',
+                    'name',
+                    'phone',
+                    'last',
+                    'time',
+                    'unread',
+                    'status',
+                    'online',
+                    'pinned',
+                    'bot',
+                ]
+            ]);
     }
 
     public function test_can_update_contact()
@@ -117,6 +134,36 @@ class ContactApiTest extends TestCase
         ]);
     }
 
+    public function test_update_contact_syncs_email_column()
+    {
+        $contact = Contact::factory()->create([
+            'team_id' => $this->team->id,
+            'phone_number' => '+15551234567',
+            'name' => 'John Doe',
+            'email' => 'old@example.com',
+        ]);
+
+        $payload = [
+            'custom_attributes' => [
+                'email' => 'new@example.com',
+                'company' => 'Acme Corp',
+            ],
+        ];
+
+        $response = $this->putJson("/api/v1/mobile/contacts/{$contact->id}", $payload, [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('contact.email', 'new@example.com');
+
+        $this->assertDatabaseHas('contacts', [
+            'id' => $contact->id,
+            'email' => 'new@example.com',
+        ]);
+    }
+
     public function test_can_toggle_tag()
     {
         $contact = Contact::factory()->create(['team_id' => $this->team->id]);
@@ -132,6 +179,54 @@ class ContactApiTest extends TestCase
         $this->assertDatabaseHas('contact_tag_pivot', [
             'contact_id' => $contact->id,
             'tag_id' => $tag->id,
+        ]);
+    }
+
+    public function test_can_create_tag()
+    {
+        $response = $this->postJson("/api/v1/mobile/contacts/tags", [
+            'name' => 'New Premium Tag',
+            'color' => '#FF5733',
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson([
+            'success' => true,
+            'tag' => [
+                'name' => 'New Premium Tag',
+                'color' => '#FF5733',
+                'team_id' => $this->team->id,
+            ]
+        ]);
+
+        $this->assertDatabaseHas('contact_tags', [
+            'name' => 'New Premium Tag',
+            'color' => '#FF5733',
+            'team_id' => $this->team->id,
+        ]);
+    }
+
+    public function test_cannot_create_duplicate_tag()
+    {
+        ContactTag::create([
+            'team_id' => $this->team->id,
+            'name' => 'Duplicate Tag',
+            'color' => '#10B981',
+        ]);
+
+        $response = $this->postJson("/api/v1/mobile/contacts/tags", [
+            'name' => 'Duplicate Tag',
+            'color' => '#123456',
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'A tag with this name already exists.',
         ]);
     }
 }

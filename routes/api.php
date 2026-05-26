@@ -110,6 +110,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::get('/canned-messages', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getCannedMessages']);
 
         Route::get('/analytics/dashboard', [\App\Http\Controllers\Api\Mobile\AnalyticsController::class, 'dashboard']);
+        Route::get('/messages/starred', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'starred']);
         Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'store']);
         Route::delete('/messages/{message}', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'destroy']);
@@ -144,6 +145,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'store']);
         Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
         Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
+        Route::post('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'storeTag']);
         Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);
         Route::get('/contacts/{contact}/activity', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'activity']);
         Route::post('/contacts/{contact}/tags/toggle', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
@@ -164,6 +166,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Campaigns / Broadcasting
         Route::get('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'index']);
         Route::post('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'store']);
+        Route::get('/campaigns/{campaign}', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'show']);
 
         // AI Suggest Reply (new)
         Route::post('/conversations/{conversation}/ai-suggest', [\App\Http\Controllers\Api\Mobile\AiController::class, 'suggest']);

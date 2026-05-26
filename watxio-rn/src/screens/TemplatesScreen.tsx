@@ -33,6 +33,11 @@ export default function TemplatesScreen({ navigation }: any) {
   const [newLang, setNewLang] = useState('EN');
   const [newPreview, setNewPreview] = useState('');
 
+  // Send Test States
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testTemplate, setTestTemplate] = useState<Template | null>(null);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -60,6 +65,7 @@ export default function TemplatesScreen({ navigation }: any) {
       const mapped: Template[] = rawData.map((t: any) => {
         const bodyPreview = t.components?.find((c: any) => c.type === 'BODY')?.text || t.content || '';
         return {
+          id: t.id,
           name: t.name,
           cat: t.category === 'MARKETING' ? 'Marketing' : t.category === 'UTILITY' ? 'Utility' : 'Authentication',
           lang: t.language || 'en_US',
@@ -183,6 +189,29 @@ export default function TemplatesScreen({ navigation }: any) {
     }
   };
 
+  const onConfirmSendTest = async () => {
+    if (!testTemplate || !testTemplate.id) return;
+    if (!testPhoneNumber.trim()) {
+      showDialog('Required Field', 'Please enter a destination phone number.');
+      return;
+    }
+
+    setLoading(true);
+    setShowTestModal(false);
+    try {
+      await api.post(`/v1/mobile/templates/${testTemplate.id}/send-test`, {
+        phone_number: testPhoneNumber.trim(),
+      });
+      showDialog('Success', 'Test template message sent successfully.');
+    } catch (err: any) {
+      showDialog('Failed to Send Test', err.message || 'Could not send test message.');
+    } finally {
+      setLoading(false);
+      setTestTemplate(null);
+      setTestPhoneNumber('');
+    }
+  };
+
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -268,6 +297,10 @@ export default function TemplatesScreen({ navigation }: any) {
               tokens={tokens}
               onDuplicate={() => onDuplicate(item)}
               onUse={() => nav.navigate('Broadcast')}
+              onSendTest={() => {
+                setTestTemplate(item);
+                setShowTestModal(true);
+              }}
             />
           )}
         />
@@ -357,6 +390,49 @@ export default function TemplatesScreen({ navigation }: any) {
         </View>
       </Modal>
 
+      {/* Send Test Modal */}
+      <Modal transparent visible={showTestModal} animationType="slide">
+        <View className="flex-1 bg-black/40 justify-end">
+          <View className="bg-surface dark:bg-d-surface rounded-t-2xl p-5 gap-4" style={{ paddingBottom: insets.bottom + 16 }}>
+            <View className="flex-row items-center justify-between border-b border-hairline dark:border-d-hairline pb-2.5">
+              <Text className="text-base font-bold text-ink dark:text-d-ink">Send Test Template</Text>
+              <Pressable onPress={() => {
+                setShowTestModal(false);
+                setTestTemplate(null);
+                setTestPhoneNumber('');
+              }}>
+                <Text className="text-muted dark:text-d-muted font-semibold text-sm">Cancel</Text>
+              </Pressable>
+            </View>
+
+            <View className="gap-3">
+              <Text className="text-[13px] text-ink2 dark:text-d-ink2">
+                This will send a test message using template <Text className="font-mono font-bold text-ink dark:text-d-ink">{testTemplate?.name}</Text> to the phone number below.
+              </Text>
+              <View>
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted mb-1.5 uppercase tracking-wide">Destination Phone Number</Text>
+                <TextInput
+                  value={testPhoneNumber}
+                  onChangeText={setTestPhoneNumber}
+                  placeholder="e.g. +1234567890"
+                  keyboardType="phone-pad"
+                  placeholderTextColor={tokens.faint}
+                  className="bg-surface2 dark:bg-d-surface2 p-3 text-sm rounded-lg text-ink dark:text-d-ink font-medium"
+                  autoFocus
+                />
+              </View>
+            </View>
+
+            <Pressable
+              onPress={onConfirmSendTest}
+              className="bg-accent dark:bg-d-accent py-3.5 rounded-xl items-center active:opacity-90 mt-2"
+            >
+              <Text className="text-accent-ink dark:text-d-accent-ink font-bold text-sm">Send Test Message</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <CustomDialog
         visible={dialogConfig.visible}
         title={dialogConfig.title}
@@ -379,11 +455,13 @@ function TemplateCard({
   tokens,
   onDuplicate,
   onUse,
+  onSendTest,
 }: {
   tpl: Template;
   tokens: Tokens;
   onDuplicate: () => void;
   onUse: () => void;
+  onSendTest?: () => void;
 }) {
   const sc = statusClasses(tpl.status);
   return (
@@ -421,6 +499,14 @@ function TemplateCard({
           <Text className="text-ink2 dark:text-d-ink2 text-[12.5px] font-medium">Duplicate</Text>
         </Pressable>
         <View className="flex-1" />
+        {tpl.status === 'Approved' && onSendTest && (
+          <Pressable
+            onPress={onSendTest}
+            className="bg-surface2 dark:bg-d-surface2 px-3.5 py-2 rounded-md active:bg-tint dark:active:bg-d-tint mr-2"
+          >
+            <Text className="text-ink2 dark:text-d-ink2 text-[12.5px] font-medium">Send Test</Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={onUse}
           className="bg-ink dark:bg-d-ink px-3.5 py-2 rounded-md active:opacity-90"

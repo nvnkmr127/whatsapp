@@ -111,13 +111,19 @@ class TemplateController extends Controller
 
         $request->validate([
             'phone_number' => 'required|string',
-            'whatsapp_number_id' => 'required|integer',
+            'whatsapp_number_id' => 'nullable|integer',
         ]);
+
+        $whatsappNumberId = $request->input('whatsapp_number_id') ?? $request->user()->currentTeam?->whatsapp_phone_number_id;
+
+        if (!$whatsappNumberId) {
+            return response()->json(['error' => 'No active WhatsApp number ID found for this team.'], 422);
+        }
 
         try {
             $service = app(\App\Services\WhatsAppService::class);
             $service->sendTemplateMessage(
-                $request->whatsapp_number_id,
+                $whatsappNumberId,
                 $request->phone_number,
                 $template->name,
                 $template->language,

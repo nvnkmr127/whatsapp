@@ -94,4 +94,68 @@ class AutomationApiTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_can_create_custom_automation()
+    {
+        $response = $this->postJson('/api/v1/mobile/automations', [
+            'name' => 'Custom Flow',
+            'trigger_type' => 'event_webhook',
+            'is_active' => true,
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+
+        $automation = Automation::where('name', 'Custom Flow')->first();
+        $this->assertNotNull($automation);
+        $this->assertEquals('event_webhook', $automation->trigger_type);
+        $this->assertCount(3, $automation->flow_data['nodes']);
+        $this->assertCount(2, $automation->flow_data['edges']);
+
+        // Check step records in DB
+        $this->assertDatabaseHas('automation_steps', [
+            'automation_id' => $automation->id,
+            'type' => 'trigger',
+            'order_index' => 0,
+        ]);
+        $this->assertDatabaseHas('automation_steps', [
+            'automation_id' => $automation->id,
+            'type' => 'message',
+            'order_index' => 1,
+        ]);
+        $this->assertDatabaseHas('automation_steps', [
+            'automation_id' => $automation->id,
+            'type' => 'stop',
+            'order_index' => 2,
+        ]);
+
+        // Check that validation passes
+        $validation = $automation->validate();
+        $this->assertTrue($validation['is_activatable']);
+        $this->assertEquals(0, $validation['critical_errors']);
+    }
+
+    public function test_can_create_birthday_wishes_template_automation()
+    {
+        $response = $this->postJson('/api/v1/mobile/automations', [
+            'name' => 'Birthday wishes',
+            'trigger_type' => 'birthday_event',
+            'is_active' => true,
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+
+        $automation = Automation::where('name', 'Birthday wishes')->first();
+        $this->assertNotNull($automation);
+        $this->assertEquals('birthday_event', $automation->trigger_type);
+        $this->assertStringContainsString('Happy Birthday', $automation->flow_data['nodes'][1]['data']['text']);
+
+        // Check that validation passes
+        $validation = $automation->validate();
+        $this->assertTrue($validation['is_activatable']);
+        $this->assertEquals(0, $validation['critical_errors']);
+    }
 }

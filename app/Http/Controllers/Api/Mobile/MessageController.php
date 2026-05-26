@@ -262,4 +262,36 @@ class MessageController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Get starred messages for the current team.
+     */
+    public function starred(Request $request)
+    {
+        $team = $request->user()->currentTeam;
+        if (! $team) {
+            return response()->json([
+                'current_page' => 1,
+                'data' => [],
+                'last_page' => 1,
+                'total' => 0,
+            ]);
+        }
+
+        $messages = Message::where('team_id', $team->id)
+            ->where('is_starred', true)
+            ->with(['contact:id,name,phone_number', 'conversation:id'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(min((int) $request->input('per_page', 20), 100));
+
+        $messages->getCollection()->transform(function($msg) {
+            $data = $msg->toArray();
+            if ($msg->media_url) {
+                $data['media_url'] = $msg->full_media_url;
+            }
+            return $data;
+        });
+
+        return response()->json($messages);
+    }
 }

@@ -68,9 +68,25 @@ class ContactController extends Controller
             ->first();
 
         if ($existing) {
+            $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($existing);
+            $lastMsg = $conversation->lastMessage;
+
             return response()->json([
                 'message' => 'Contact already exists.',
                 'contact' => $existing,
+                'conversation' => [
+                    'id' => $conversation->id,
+                    'contact_id' => $conversation->contact_id,
+                    'name' => $existing->name,
+                    'phone' => $existing->phone_number,
+                    'last' => $lastMsg ? $lastMsg->content : 'No messages yet',
+                    'time' => $lastMsg ? $lastMsg->created_at->format('H:i') : '',
+                    'unread' => $conversation->messages()->where('direction', 'inbound')->whereNull('read_at')->count(),
+                    'status' => $conversation->status === 'closed' ? 'delivered' : 'read',
+                    'online' => $conversation->isWithin24Hours(),
+                    'pinned' => false,
+                    'bot' => !($existing->is_bot_paused ?? false),
+                ],
             ], 409);
         }
 
@@ -149,13 +165,24 @@ class ContactController extends Controller
 
         $request->validate([
             'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
             'custom_attributes' => 'nullable|array',
             'custom_attributes.email' => 'nullable|email|max:255',
             'custom_attributes.company' => 'nullable|string|max:255',
             'opt_in_status' => 'nullable|string|in:opted_in,opted_out,pending',
         ]);
 
-        $contact->update($request->only('name', 'custom_attributes', 'opt_in_status'));
+        $updateData = $request->only('name', 'custom_attributes', 'opt_in_status', 'email');
+
+        if ($request->has('custom_attributes.email')) {
+            $updateData['email'] = $request->input('custom_attributes.email');
+        } elseif ($request->has('email')) {
+            $customAttrs = $request->input('custom_attributes', $contact->custom_attributes ?? []);
+            $customAttrs['email'] = $request->input('email');
+            $updateData['custom_attributes'] = $customAttrs;
+        }
+
+        $contact->update($updateData);
 
         return response()->json([
             'success' => true,
@@ -174,6 +201,47 @@ class ContactController extends Controller
         }
 
         return response()->json(\App\Models\ContactTag::where('team_id', $team->id)->get());
+    }
+
+    /**
+     * Create a new tag for the current team.
+     */
+    public function storeTag(Request $request)
+    {
+        $team = $request->user()->currentTeam;
+        if (! $team) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:50',
+            'color' => 'nullable|string|regex:/^#[a-fA-F0-9]{6}$/',
+        ]);
+
+        $existing = \App\Models\ContactTag::where('team_id', $team->id)
+            ->where('name', $request->name)
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A tag with this name already exists.',
+                'tag' => $existing,
+            ], 422);
+        }
+
+        $tag = \App\Models\ContactTag::create([
+            'team_id' => $team->id,
+            'name' => $request->name,
+            'color' => $request->color ?? '#10B981',
+        ]);
+
+        \Illuminate\Support\Facades\Cache::forget("team_{$team->id}_tags");
+
+        return response()->json([
+            'success' => true,
+            'tag' => $tag,
+        ], 201);
     }
 
     /**

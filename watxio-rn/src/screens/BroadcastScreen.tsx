@@ -31,8 +31,11 @@ export default function BroadcastScreen({ navigation }: any) {
   const [actionLoading, setActionLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Campaigns list state
+  // Campaigns list and pagination state
   const [campaignsList, setCampaignsList] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Composer Form options
   const [tagsList, setTagsList] = useState<TagItem[]>([]);
@@ -67,18 +70,47 @@ export default function BroadcastScreen({ navigation }: any) {
     setDialogConfig({ visible: true, title, message, buttons });
   };
 
-  const loadCampaigns = useCallback(async (isRefresh = false) => {
-    if (!isRefresh) setLoading(true);
+  const loadCampaigns = useCallback(async (pageNum = 1, append = false, isRefresh = false) => {
+    if (pageNum === 1 && !isRefresh) {
+      setLoading(true);
+    } else if (pageNum > 1) {
+      setLoadingMore(true);
+    }
     try {
-      const response = await api.get('/v1/mobile/campaigns');
-      setCampaignsList(response || []);
+      const response = await api.get(`/v1/mobile/campaigns?page=${pageNum}`);
+      const rawData = response?.data || [];
+      const currentPageNum = response?.current_page || 1;
+      const lastPageNum = response?.last_page || 1;
+
+      setPage(currentPageNum);
+      setLastPage(lastPageNum);
+
+      if (append) {
+        setCampaignsList((prev) => {
+          const combined = [...prev, ...rawData];
+          const seenIds = new Set();
+          return combined.filter((c) => {
+            if (seenIds.has(c.id)) return false;
+            seenIds.add(c.id);
+            return true;
+          });
+        });
+      } else {
+        setCampaignsList(rawData);
+      }
     } catch (err: any) {
       console.warn('Failed to load campaigns:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   }, []);
+
+  const loadMore = () => {
+    if (loading || loadingMore || page >= lastPage) return;
+    loadCampaigns(page + 1, true, false);
+  };
 
   const loadBroadcastFormOptions = useCallback(async () => {
     setLoading(true);
@@ -173,7 +205,7 @@ export default function BroadcastScreen({ navigation }: any) {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadCampaigns(true);
+    loadCampaigns(1, false, true);
   };
 
   return (
@@ -214,6 +246,15 @@ export default function BroadcastScreen({ navigation }: any) {
               />
             }
             contentContainerStyle={{ padding: 18, gap: 12 }}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={
+              loadingMore ? (
+                <View className="py-4 items-center justify-center">
+                  <ActivityIndicator size="small" color={tokens.accent} />
+                </View>
+              ) : null
+            }
             renderItem={({ item }) => {
               const status = item.status || 'pending';
               const isCompleted = status === 'completed' || status === 'sent';
@@ -221,38 +262,43 @@ export default function BroadcastScreen({ navigation }: any) {
               const statusColor = isCompleted ? tokens.ok : isFailed ? tokens.danger : tokens.warn;
 
               return (
-                <Card pad={14}>
-                  <View className="flex-row justify-between items-start gap-2">
-                    <View className="flex-1">
-                      <Text className="text-sm font-semibold text-ink dark:text-d-ink" numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      <Text className="text-xs text-muted dark:text-d-muted mt-1 font-mono">
-                        Template: {item.template?.name || 'Unknown'}
-                      </Text>
+                <Pressable
+                  onPress={() => nav.navigate('CampaignDetail', { campaignId: item.id })}
+                  className="active:opacity-80"
+                >
+                  <Card pad={14}>
+                    <View className="flex-row justify-between items-start gap-2">
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-ink dark:text-d-ink" numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text className="text-xs text-muted dark:text-d-muted mt-1 font-mono">
+                          Template: {item.template?.name || 'Unknown'}
+                        </Text>
+                      </View>
+                      <View className="px-2.5 py-0.5 rounded-full bg-surface2 dark:bg-d-surface2">
+                        <Text style={{ color: statusColor }} className="text-[11px] font-bold uppercase tracking-wider">
+                          {status}
+                        </Text>
+                      </View>
                     </View>
-                    <View className="px-2.5 py-0.5 rounded-full bg-surface2 dark:bg-d-surface2">
-                      <Text style={{ color: statusColor }} className="text-[11px] font-bold uppercase tracking-wider">
-                        {status}
-                      </Text>
-                    </View>
-                  </View>
 
-                  <View className="flex-row items-center justify-between border-t border-hairline dark:border-d-hairline mt-3 pt-3">
-                    <View className="flex-row items-center gap-1">
-                      <Users size={12} color={tokens.muted} />
-                      <Text className="text-[11.5px] text-muted dark:text-d-muted">
-                        {item.total_contacts || 0} recipients
-                      </Text>
+                    <View className="flex-row items-center justify-between border-t border-hairline dark:border-d-hairline mt-3 pt-3">
+                      <View className="flex-row items-center gap-1">
+                        <Users size={12} color={tokens.muted} />
+                        <Text className="text-[11.5px] text-muted dark:text-d-muted">
+                          {item.total_contacts || 0} recipients
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-1">
+                        <Calendar size={12} color={tokens.muted} />
+                        <Text className="text-[11.5px] text-muted dark:text-d-muted">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
                     </View>
-                    <View className="flex-row items-center gap-1">
-                      <Calendar size={12} color={tokens.muted} />
-                      <Text className="text-[11.5px] text-muted dark:text-d-muted">
-                        {new Date(item.created_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
+                  </Card>
+                </Pressable>
               );
             }}
             ListEmptyComponent={

@@ -50,12 +50,12 @@ export const CONTACT_PROFILE: ContactProfile = {
 };
 
 export const TEMPLATES: Template[] = [
-  { name: 'order_shipped_v2', cat: 'Utility',        lang: 'EN', status: 'Approved', uses: '2.4k',  preview: 'Your order {{1}} has shipped! Track it here: {{2}}' },
-  { name: 'cart_recovery',    cat: 'Marketing',      lang: 'EN', status: 'Approved', uses: '892',   preview: 'You left {{1}} in your cart — grab it before it’s gone.' },
-  { name: 'otp_login_v3',     cat: 'Authentication', lang: 'EN', status: 'Approved', uses: '14.1k', preview: '{{1}} is your Acme Coffee verification code.' },
-  { name: 'review_request',   cat: 'Marketing',      lang: 'EN', status: 'Pending',  uses: '—',     preview: 'Loved your beans? Leave a 30s review and get 10% off.' },
-  { name: 'invoice_reminder', cat: 'Utility',        lang: 'EN', status: 'Approved', uses: '331',   preview: 'Invoice {{1}} is due in 3 days.' },
-  { name: 'launch_announce',  cat: 'Marketing',      lang: 'EN', status: 'Rejected', uses: '—',     preview: '🔥 Limited drop — 200 bags only.' },
+  { id: 1, name: 'order_shipped_v2', cat: 'Utility',        lang: 'EN', status: 'Approved', uses: '2.4k',  preview: 'Your order {{1}} has shipped! Track it here: {{2}}' },
+  { id: 2, name: 'cart_recovery',    cat: 'Marketing',      lang: 'EN', status: 'Approved', uses: '892',   preview: 'You left {{1}} in your cart — grab it before it’s gone.' },
+  { id: 3, name: 'otp_login_v3',     cat: 'Authentication', lang: 'EN', status: 'Approved', uses: '14.1k', preview: '{{1}} is your Acme Coffee verification code.' },
+  { id: 4, name: 'review_request',   cat: 'Marketing',      lang: 'EN', status: 'Pending',  uses: '—',     preview: 'Loved your beans? Leave a 30s review and get 10% off.' },
+  { id: 5, name: 'invoice_reminder', cat: 'Utility',        lang: 'EN', status: 'Approved', uses: '331',   preview: 'Invoice {{1}} is due in 3 days.' },
+  { id: 6, name: 'launch_announce',  cat: 'Marketing',      lang: 'EN', status: 'Rejected', uses: '—',     preview: '🔥 Limited drop — 200 bags only.' },
 ];
 
 export const AUTOMATIONS: Automation[] = [

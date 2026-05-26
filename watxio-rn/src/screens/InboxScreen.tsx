@@ -40,6 +40,9 @@ export default function InboxScreen({ navigation }: any) {
   const [newContactCompany, setNewContactCompany] = useState('');
   const [isCreatingContact, setIsCreatingContact] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -59,9 +62,10 @@ export default function InboxScreen({ navigation }: any) {
   };
 
   // Fetch Conversations from API
-  const fetchConversations = useCallback(async (isSilent = false) => {
+  const fetchConversations = useCallback(async (isSilent = false, pageNum = 1, append = false, overwrite = false) => {
     if (!globalState.token) return;
-    if (!isSilent) setLoading(true);
+    if (!isSilent && pageNum === 1) setLoading(true);
+    if (pageNum > 1) setLoadingMore(true);
 
     try {
       let apiFilter = 'all';
@@ -70,8 +74,10 @@ export default function InboxScreen({ navigation }: any) {
       if (filter === 'Open') apiFilter = 'open';
       if (filter === 'Bots') apiFilter = 'bots';
 
-      const response = await api.get(`/v1/mobile/conversations?filter=${apiFilter}&query=${searchQuery}`);
+      const response = await api.get(`/v1/mobile/conversations?filter=${apiFilter}&query=${searchQuery}&page=${pageNum}`);
       const rawData = response.data || [];
+      const currentPage = response.current_page || 1;
+      const totalPages = response.last_page || 1;
 
       // Map backend model to frontend UI types
       const mapped: Conversation[] = rawData.map((c: any) => {
@@ -92,7 +98,23 @@ export default function InboxScreen({ navigation }: any) {
         };
       });
 
-      setConversations(mapped);
+      if (append) {
+        setConversations((prev) => {
+          const combined = [...prev, ...mapped];
+          return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        });
+      } else {
+        setConversations((prev) => {
+          if (!overwrite && prev.length > 0 && pageNum === 1) {
+            const merged = [...mapped, ...prev];
+            return merged.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+          }
+          return mapped;
+        });
+      }
+
+      setPage(currentPage);
+      setLastPage(totalPages);
 
       if (response.counts) {
         setCounts({
@@ -123,6 +145,7 @@ export default function InboxScreen({ navigation }: any) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   }, [globalState.token, filter, searchQuery]);
 
@@ -167,6 +190,7 @@ export default function InboxScreen({ navigation }: any) {
     } catch (err: any) {
       if (err.message?.includes('already exists') || err.status === 409 || err.code === 409) {
         const existingContact = err.data?.contact || err.contact;
+        const existingConv = err.data?.conversation || err.conversation;
         if (existingContact) {
           showDialog(
             'Contact Exists',
@@ -176,6 +200,16 @@ export default function InboxScreen({ navigation }: any) {
               {
                 text: 'Open Chat',
                 onPress: async () => {
+                  if (existingConv) {
+                    setShowCreateContactModal(false);
+                    setNewContactName('');
+                    setNewContactPhone('');
+                    setNewContactEmail('');
+                    setNewContactCompany('');
+                    nav.navigate('Chat', { conversation: existingConv });
+                    return;
+                  }
+
                   try {
                     setLoading(true);
                     const res = await api.get(`/v1/mobile/contacts/${existingContact.id}`);
@@ -223,20 +257,27 @@ export default function InboxScreen({ navigation }: any) {
   // Load conversations when screen gains focus
   useFocusEffect(
     useCallback(() => {
-      fetchConversations(true);
-      const interval = setInterval(() => fetchConversations(true), 15000); // Poll every 15s
+      fetchConversations(true, 1, false, false);
+      const interval = setInterval(() => fetchConversations(true, 1, false, false), 15000); // Poll every 15s
       return () => clearInterval(interval);
     }, [fetchConversations])
   );
 
   // Trigger load on filter change or query change
   useEffect(() => {
-    fetchConversations();
+    setPage(1);
+    setLastPage(1);
+    fetchConversations(false, 1, false, true);
   }, [filter, searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchConversations(true);
+    fetchConversations(true, 1, false, true);
+  };
+
+  const loadMore = () => {
+    if (loadingMore || page >= lastPage) return;
+    fetchConversations(true, page + 1, true, false);
   };
 
   const handleSwitchTeam = async (teamId: number, teamName: string) => {
@@ -261,7 +302,9 @@ export default function InboxScreen({ navigation }: any) {
       });
 
       // 5. Reload conversations
-      await fetchConversations();
+      setPage(1);
+      setLastPage(1);
+      await fetchConversations(false, 1, false, true);
       showDialog('Workspace Switched', `Active workspace changed to ${teamName}.`);
     } catch (err: any) {
       showDialog('Error Switching Workspace', err.message || 'Could not complete team swap.');
@@ -396,7 +439,17 @@ export default function InboxScreen({ navigation }: any) {
               <Text className="text-sm text-muted dark:text-d-muted">No conversations found.</Text>
             </View>
           }
-          ListFooterComponent={<View className="h-[100px]" />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <View className="py-4 items-center justify-center">
+                <ActivityIndicator size="small" color={tokens.accent} />
+              </View>
+            ) : (
+              <View className="h-[100px]" />
+            )
+          }
         />
       )}
 

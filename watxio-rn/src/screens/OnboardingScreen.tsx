@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -56,9 +56,24 @@ export default function OnboardingScreen({ navigation }: any) {
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [showQrScanner, setShowQrScanner] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  // Auto-login is intentionally disabled.
-  // Users must log in manually via email/password, OTP, or QR scan.
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const hasSession = await store.loadSession();
+        if (hasSession) {
+          navigation.replace('Main');
+        } else {
+          setCheckingSession(false);
+        }
+      } catch (e) {
+        console.error('Error loading session:', e);
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [navigation]);
 
 
   // Dialog State
@@ -345,6 +360,14 @@ export default function OnboardingScreen({ navigation }: any) {
       }
     }
   };
+
+  if (checkingSession) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0F1515', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#5bb393" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

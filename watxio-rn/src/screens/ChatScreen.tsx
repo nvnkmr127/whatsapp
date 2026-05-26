@@ -36,6 +36,8 @@ export default function ChatScreen({ navigation, route }: any) {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(true);      // first paint spinner
   const [isRefreshing, setIsRefreshing] = useState(false); // silent bg refresh indicator
@@ -103,6 +105,12 @@ export default function ChatScreen({ navigation, route }: any) {
   // Track previous message count to avoid scrolling on polls with no new messages
   const prevMsgCountRef = useRef<number>(0);
 
+  const getCursorFromUrl = (url: string | null) => {
+    if (!url) return null;
+    const match = url.match(/[?&]cursor=([^&]+)/);
+    return match ? match[1] : null;
+  };
+
   // Fetch Conversation metadata and Messages — parallel requests for speed
   const fetchConversationDetails = async (isBackground = false) => {
     if (isBackground) setIsRefreshing(true);
@@ -123,6 +131,12 @@ export default function ChatScreen({ navigation, route }: any) {
       setSessionExpiresAt(newSession);
       setDbContactId(newDbId);
       setServerDown(false); // server is back
+
+      const nextUrl = msgsData.next_page_url || null;
+      const parsedCursor = getCursorFromUrl(nextUrl);
+      setNextCursor((current) => {
+        return isBackground && current ? current : parsedCursor;
+      });
 
       const rawMsgs = msgsData.data || [];
       // Sort chronological (oldest first)
@@ -153,14 +167,57 @@ export default function ChatScreen({ navigation, route }: any) {
 
       // Only update messages state if content actually changed (avoids re-render on every poll)
       setMessages((prev) => {
+        // Find the first message in mapped that has an ID (the oldest one in page 1)
+        const firstMappedWithId = mapped.find(m => m.kind !== 'date' && m.id);
+
+        let merged: ChatMessage[] = [];
+        if (firstMappedWithId && prev.length > 0) {
+          // Find where page 1 starts in the previous messages state
+          const stopIndex = prev.findIndex(m => m.kind !== 'date' && m.id && m.id >= firstMappedWithId.id!);
+
+          let prefix: ChatMessage[] = [];
+          if (stopIndex !== -1) {
+            prefix = prev.slice(0, stopIndex);
+          } else {
+            prefix = prev;
+          }
+
+          // Combine older messages prefix and newly fetched page 1 messages
+          merged = [...prefix, ...mapped];
+        } else {
+          merged = mapped;
+        }
+
+        // Clean up adjacent duplicate date headers
+        const cleaned: ChatMessage[] = [];
+        let lastHeaderSeen = '';
+        merged.forEach((msg) => {
+          if (msg.kind === 'date') {
+            if (msg.text !== lastHeaderSeen) {
+              cleaned.push(msg);
+              lastHeaderSeen = msg.text;
+            }
+          } else {
+            cleaned.push(msg);
+          }
+        });
+
         const prevLast = prev[prev.length - 1];
-        const newLast  = mapped[mapped.length - 1];
-        const countChanged = prev.length !== mapped.length;
-        const lastChanged  = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time;
-        if (!countChanged && !lastChanged) return prev; // nothing changed — skip re-render
+        const newLast  = cleaned[cleaned.length - 1];
+        const countChanged = prev.length !== cleaned.length;
+        const lastChanged  = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time || prevLast?.status !== newLast?.status;
+
+        if (!countChanged && !lastChanged) {
+          // Check if any message status/content inside changed (e.g. read receipts)
+          const anyMessageChanged = cleaned.some((m, idx) => {
+            const p = prev[idx];
+            return !p || p.id !== m.id || p.status !== m.status || p.text !== m.text;
+          });
+          if (!anyMessageChanged) return prev;
+        }
 
         // Haptic feedback (Vibration) on new inbound message in foreground
-        if (newLast && newLast.kind === 'in') {
+        if (newLast && newLast.kind === 'in' && (!prevLast || prevLast.id !== newLast.id)) {
           try {
             Vibration.vibrate(500);
           } catch (e) {
@@ -168,7 +225,7 @@ export default function ChatScreen({ navigation, route }: any) {
           }
         }
 
-        return mapped;
+        return cleaned;
       });
 
       // ── Persist to local cache so next open is instant ──
@@ -194,6 +251,67 @@ export default function ChatScreen({ navigation, route }: any) {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+    }
+  };
+
+  const loadEarlierMessages = async () => {
+    if (!nextCursor || loadingEarlier) return;
+    setLoadingEarlier(true);
+    try {
+      const response = await api.get(`/v1/mobile/conversations/${conversationId}/messages?cursor=${nextCursor}`);
+      const rawMsgs = response.data || [];
+      const nextUrl = response.next_page_url || null;
+      setNextCursor(getCursorFromUrl(nextUrl));
+
+      const sorted = [...rawMsgs].reverse();
+
+      const mapped: ChatMessage[] = [];
+      let lastDateStr = '';
+
+      sorted.forEach((m: any) => {
+        const msgDate = new Date(m.created_at);
+        const dateStr = msgDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        if (dateStr !== lastDateStr) {
+          mapped.push({ kind: 'date', text: dateStr });
+          lastDateStr = dateStr;
+        }
+
+        const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+        mapped.push({
+          id: m.id,
+          kind: m.direction === 'inbound' ? 'in' : 'out',
+          text: m.content || (m.type === 'image' ? '📷 Image' : m.type === 'video' ? '🎥 Video' : '📄 Document'),
+          time: msgTime,
+          status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
+          isStarred: !!m.is_starred,
+        });
+      });
+
+      setMessages((prev) => {
+        const combined = [...mapped, ...prev];
+        const cleaned: ChatMessage[] = [];
+        let lastHeaderSeen = '';
+        
+        combined.forEach((msg) => {
+          if (msg.kind === 'date') {
+            if (msg.text !== lastHeaderSeen) {
+              cleaned.push(msg);
+              lastHeaderSeen = msg.text;
+            }
+          } else {
+            if (!cleaned.some(x => x.id === msg.id)) {
+              cleaned.push(msg);
+            }
+          }
+        });
+        
+        return cleaned;
+      });
+    } catch (err: any) {
+      console.warn('Failed to load earlier messages:', err);
+    } finally {
+      setLoadingEarlier(false);
     }
   };
 
@@ -525,18 +643,27 @@ export default function ChatScreen({ navigation, route }: any) {
     };
   }, [conversationId, globalState.websocket, globalState.baseUrl]);
 
-  useEffect(() => {
-    const currentCount = messages.length;
-    const prevCount    = prevMsgCountRef.current;
+  const prevLastMsgRef = useRef<ChatMessage | null>(null);
+  const prevTypingRef = useRef(false);
 
-    // Only auto-scroll to bottom when NEW messages arrive (count increased)
-    // Not on every poll that returns the same messages
-    if (currentCount > prevCount) {
-      const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: currentCount - prevCount <= 2 }), 80);
-      prevMsgCountRef.current = currentCount;
+  useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    const prevLastMsg = prevLastMsgRef.current;
+    
+    const isInitialLoad = !prevLastMsg && lastMsg;
+    const isNewMessageAdded = lastMsg && prevLastMsg && (lastMsg.id !== prevLastMsg.id || lastMsg.text !== prevLastMsg.text || lastMsg.time !== prevLastMsg.time);
+    const typingStarted = typing && !prevTypingRef.current;
+    
+    if (isInitialLoad || isNewMessageAdded || typingStarted) {
+      const shouldAnimate = isNewMessageAdded || typingStarted;
+      const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: shouldAnimate }), 80);
+      prevLastMsgRef.current = lastMsg;
+      prevTypingRef.current = typing;
       return () => clearTimeout(t);
     }
-    prevMsgCountRef.current = currentCount;
+    
+    prevLastMsgRef.current = lastMsg;
+    prevTypingRef.current = typing;
   }, [messages, typing]);
 
   useEffect(() => {
@@ -658,6 +785,7 @@ export default function ChatScreen({ navigation, route }: any) {
       const mapped: Template[] = rawData.map((t: any) => {
         const bodyPreview = t.components?.find((c: any) => c.type === 'BODY')?.text || t.content || '';
         return {
+          id: t.id,
           name: t.name,
           cat: t.category === 'MARKETING' ? 'Marketing' : t.category === 'UTILITY' ? 'Utility' : 'Authentication',
           lang: t.language || 'en_US',
@@ -1028,7 +1156,21 @@ export default function ChatScreen({ navigation, route }: any) {
             <ScrollView
               ref={scroller}
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 }}
+              maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
             >
+              {nextCursor && (
+                <Pressable
+                  onPress={loadEarlierMessages}
+                  disabled={loadingEarlier}
+                  className="self-center py-2 px-4 rounded-full bg-surface2 dark:bg-d-surface2 mb-2 active:opacity-75"
+                >
+                  {loadingEarlier ? (
+                    <ActivityIndicator size="small" color={tokens.accent} />
+                  ) : (
+                    <Text className="text-xs font-semibold text-accent dark:text-d-accent">Load earlier messages</Text>
+                  )}
+                </Pressable>
+              )}
               {messages.map((m, i) => {
                 if (m.kind === 'date') {
                   return (

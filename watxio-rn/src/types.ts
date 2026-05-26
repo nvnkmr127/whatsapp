@@ -42,6 +42,7 @@ export interface ContactProfile {
 }
 
 export interface Template {
+  id: number;
   name: string;
   cat: 'Marketing' | 'Utility' | 'Authentication';
   lang: string;
@@ -75,8 +76,11 @@ export type RootStackParamList = {
   Login: undefined;
   Activities: undefined;
   ActivityDetail: { activityId: number };
+  CampaignDetail: { campaignId: number };
+  Calls: undefined;
   Bots: undefined;
   AiSettings: undefined;
+  StarredMessages: undefined;
 };
 
 export type MainTabParamList = {

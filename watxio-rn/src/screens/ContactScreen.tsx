@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
   ChevronLeft, MoreHorizontal,
-  Send, Phone, BellOff, Archive, Globe, Inbox, User, CreditCard, MessageSquare, FilePen, Bell,
+  Send, Phone, BellOff, Archive, Globe, Inbox, User, CreditCard, MessageSquare, FilePen, Bell, Tag, Plus, Check,
 } from 'lucide-react-native';
 
 import { useTokens } from '@/theme';
@@ -37,6 +37,76 @@ export default function ContactScreen({ navigation, route }: any) {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [isEditingInfo, setIsEditingInfo] = useState(false);
+
+  // Tag Management States
+  const [showTagsModal, setShowTagsModal] = useState(false);
+  const [availableTags, setAvailableTags] = useState<any[]>([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#10B981');
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [loadingTags, setLoadingTags] = useState(false);
+
+  const PRESET_COLORS = ['#10B981', '#3B82F6', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899'];
+
+  const fetchAvailableTags = useCallback(async () => {
+    setLoadingTags(true);
+    try {
+      const res = await api.get('/v1/mobile/contacts/tags');
+      setAvailableTags(res || []);
+    } catch (err) {
+      console.warn('Failed to load team tags:', err);
+    } finally {
+      setLoadingTags(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showTagsModal) {
+      fetchAvailableTags();
+    }
+  }, [showTagsModal, fetchAvailableTags]);
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) {
+      showDialog('Validation Error', 'Please enter a name for the new tag.');
+      return;
+    }
+    setCreatingTag(true);
+    try {
+      const res = await api.post('/v1/mobile/contacts/tags', {
+        name: newTagName.trim(),
+        color: newTagColor,
+      });
+      if (res.success && res.tag) {
+        // Automatically associate the new tag to this contact
+        await api.post(`/v1/mobile/contacts/${contactId}/tags/toggle`, {
+          tag_id: res.tag.id,
+        });
+        
+        setNewTagName('');
+        // Refresh lists
+        fetchAvailableTags();
+        fetchContactDetails();
+      }
+    } catch (err: any) {
+      showDialog('Error Creating Tag', err.message || 'Could not create new tag.');
+    } finally {
+      setCreatingTag(false);
+    }
+  };
+
+  const handleToggleTag = async (tagId: number) => {
+    try {
+      const res = await api.post(`/v1/mobile/contacts/${contactId}/tags/toggle`, {
+        tag_id: tagId,
+      });
+      if (res.success) {
+        fetchContactDetails();
+      }
+    } catch (err: any) {
+      showDialog('Error Toggling Tag', err.message || 'Could not toggle tag.');
+    }
+  };
 
   // Calling States
   const [isCalling, setIsCalling] = useState(false);
@@ -260,19 +330,38 @@ export default function ContactScreen({ navigation, route }: any) {
             <Text className="mt-1.5 text-[22px] font-bold text-ink dark:text-d-ink">{name}</Text>
           )}
           <Text className="text-[13px] text-muted dark:text-d-muted">{phone}</Text>
-          <View className="flex-row gap-1.5 flex-wrap justify-center mt-1">
+          <Pressable 
+            onPress={() => setShowTagsModal(true)} 
+            className="flex-row gap-1.5 flex-wrap justify-center mt-2 px-3 py-1 bg-surface dark:bg-d-surface rounded-full border border-hairline dark:border-d-hairline active:opacity-80 max-w-[90%]"
+          >
             {tags.map((tag: any) => (
               <View
                 key={tag.id}
-                className="px-2.5 py-[3px] rounded-full bg-surface2 dark:bg-d-surface2"
+                style={{ 
+                  borderColor: tag.color || '#10B981', 
+                  backgroundColor: (tag.color || '#10B981') + '15',
+                  borderWidth: 1,
+                }}
+                className="px-2 py-[2px] rounded-full"
               >
-                <Text className="text-ink2 dark:text-d-ink2 text-[11px] font-medium">{tag.name}</Text>
+                <Text 
+                  style={{ color: tag.color || '#10B981' }} 
+                  className="text-[10px] font-semibold"
+                >
+                  {tag.name}
+                </Text>
               </View>
             ))}
-            {tags.length === 0 && (
-              <Text className="text-[11px] text-muted dark:text-d-muted italic">No segment tags attached</Text>
+            {tags.length === 0 ? (
+              <Text className="text-[11px] text-muted dark:text-d-muted font-semibold px-1.5">
+                + Add tags
+              </Text>
+            ) : (
+              <Text className="text-[10px] text-muted dark:text-d-muted font-bold px-1.5 align-middle self-center">
+                + Edit
+              </Text>
             )}
-          </View>
+          </Pressable>
         </View>
 
         {/* Quick actions */}
@@ -548,6 +637,134 @@ export default function ContactScreen({ navigation, route }: any) {
           </View>
         </Modal>
       )}
+
+      {/* Tag Management Modal */}
+      <Modal transparent visible={showTagsModal} animationType="slide">
+        <View className="flex-1 bg-black/50 justify-end">
+          <View 
+            className="bg-surface dark:bg-d-surface rounded-t-2xl p-5 gap-4" 
+            style={{ maxHeight: '80%', paddingBottom: insets.bottom + 16 }}
+          >
+            {/* Header */}
+            <View className="flex-row items-center justify-between border-b border-hairline dark:border-d-hairline pb-2.5">
+              <View className="flex-row items-center gap-2">
+                <Tag size={16} color={tokens.accent} />
+                <Text className="text-base font-bold text-ink dark:text-d-ink">Manage Contact Tags</Text>
+              </View>
+              <Pressable onPress={() => setShowTagsModal(false)}>
+                <Text className="text-muted dark:text-d-muted font-semibold text-sm">Close</Text>
+              </Pressable>
+            </View>
+
+            {/* Create Tag Section */}
+            <View className="bg-surface2 dark:bg-d-surface2 p-3.5 rounded-xl gap-3">
+              <Text className="text-xs font-bold text-muted dark:text-d-muted uppercase tracking-wide">
+                Create New Tag
+              </Text>
+              <View className="flex-row gap-2">
+                <TextInput
+                  placeholder="e.g. VIP, Wholesale"
+                  placeholderTextColor={tokens.faint}
+                  value={newTagName}
+                  onChangeText={setNewTagName}
+                  className="flex-1 bg-surface dark:bg-d-surface px-3 py-2 text-sm rounded-lg text-ink dark:text-d-ink border border-hairline dark:border-d-hairline font-medium"
+                />
+                <Pressable
+                  disabled={creatingTag}
+                  onPress={handleCreateTag}
+                  className="bg-accent dark:bg-d-accent px-4 py-2 rounded-lg items-center justify-center active:opacity-90 flex-row gap-1.5"
+                >
+                  {creatingTag ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
+                      <Text className="text-white text-xs font-bold">Create</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* Color Preset Selectors */}
+              <View className="flex-row gap-3 mt-1 items-center">
+                <Text className="text-[11px] text-muted dark:text-d-muted font-medium">Tag Color:</Text>
+                <View className="flex-row gap-2">
+                  {PRESET_COLORS.map((c) => {
+                    const isSelected = newTagColor === c;
+                    return (
+                      <Pressable
+                        key={c}
+                        onPress={() => setNewTagColor(c)}
+                        style={{ backgroundColor: c, width: 22, height: 22, borderRadius: 11 }}
+                        className="items-center justify-center relative active:scale-95"
+                      >
+                        {isSelected && (
+                          <View className="w-4 h-4 rounded-full bg-black/20 items-center justify-center">
+                            <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                          </View>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
+            {/* List Section */}
+            <Text className="text-xs font-bold text-muted dark:text-d-muted uppercase tracking-wide mt-2">
+              Available Segment Tags
+            </Text>
+
+            {loadingTags ? (
+              <View className="py-10 items-center justify-center">
+                <ActivityIndicator size="small" color={tokens.accent} />
+              </View>
+            ) : (
+              <ScrollView 
+                className="max-h-[300px]"
+                contentContainerStyle={{ gap: 8, paddingBottom: 16 }}
+              >
+                {availableTags.map((tag) => {
+                  const isAttached = tags.some((t: any) => t.id === tag.id);
+                  return (
+                    <Pressable
+                      key={tag.id}
+                      onPress={() => handleToggleTag(tag.id)}
+                      className="flex-row items-center justify-between p-3 rounded-lg bg-surface2 dark:bg-d-surface2 border border-hairline dark:border-d-hairline active:opacity-90"
+                    >
+                      <View className="flex-row items-center gap-2.5">
+                        <View 
+                          style={{ backgroundColor: tag.color || '#10B981', width: 12, height: 12, borderRadius: 6 }} 
+                        />
+                        <Text className="text-sm font-semibold text-ink dark:text-d-ink">
+                          {tag.name}
+                        </Text>
+                      </View>
+                      <View 
+                        className={`w-5 h-5 rounded-md items-center justify-center border ${
+                          isAttached 
+                            ? 'bg-accent dark:bg-d-accent border-accent' 
+                            : 'border-faint dark:border-d-faint bg-surface dark:bg-d-surface'
+                        }`}
+                      >
+                        {isAttached && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+
+                {availableTags.length === 0 && (
+                  <View className="py-10 items-center justify-center">
+                    <Text className="text-xs text-muted dark:text-d-muted italic text-center">
+                      No tags available for this workspace. Create one above to get started!
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Reusable Dialog */}
       <CustomDialog
