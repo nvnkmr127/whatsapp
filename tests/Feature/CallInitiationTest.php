@@ -445,6 +445,42 @@ class CallInitiationTest extends TestCase
         $response->assertStatus(200); // Sanitize might just clear it if it's not strictly validating here.
     }
 
+    /** @test */
+    public function it_resolves_calling_feature_and_minutes_limit_from_plan()
+    {
+        // Disable full access and enable real entitlement
+        config(['app.full_access_all' => false]);
+        Team::$useRealEntitlementInTests = true;
+
+        // Delete billing overrides so we rely strictly on the plan
+        \App\Models\BillingOverride::where('team_id', $this->team->id)->delete();
+
+        // Create a plan with calling enabled and 500 call minutes
+        $plan = \App\Models\Plan::create([
+            'name' => 'test_calling_plan',
+            'monthly_price' => 50.00,
+            'message_limit' => 5000,
+            'agent_limit' => 5,
+            'features' => [
+                'calling' => true,
+                'call_minutes_limit' => 500,
+            ],
+        ]);
+
+        $this->team->update([
+            'subscription_plan' => 'test_calling_plan',
+            'subscription_status' => 'active',
+        ]);
+
+        // Flush entitlement cache
+        app(\App\Services\EntitlementService::class)->flush($this->team);
+
+        // Verify that the team has the calling feature and the correct call minutes limit
+        $this->assertTrue($this->team->hasFeature('calling'));
+        $this->assertEquals(500, $this->team->max_call_minutes_per_month);
+        $this->assertEquals(500, $this->team->getPlanLimit('max_call_minutes_per_month'));
+    }
+
     protected function tearDown(): void
     {
         Team::$useRealEntitlementInTests = false;

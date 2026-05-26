@@ -108,4 +108,18 @@ class Plan extends Model
 
         return $symbol.number_format((float) $this->monthly_price, 2);
     }
+
+    /**
+     * Get max call minutes per month from features array
+     */
+    public function getMaxCallMinutesPerMonthAttribute(): int
+    {
+        $features = $this->features ?? [];
+        if (is_string($features)) {
+            $features = json_decode($features, true) ?? [];
+        }
+
+        return (int) ($features['call_minutes_limit'] ?? $features['max_call_minutes_per_month'] ?? 0);
+    }
 }
+

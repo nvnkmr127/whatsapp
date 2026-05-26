@@ -505,9 +505,9 @@ class BillingService
             ];
         }
 
-        $currentMonth = now()->format('Y-m');
         $minutesUsed = \App\Models\WhatsAppCall::where('team_id', $team->id)
-            ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
             ->sum('duration_seconds') / 60;
 
         $limit = $team->max_call_minutes_per_month;

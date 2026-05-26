@@ -1587,9 +1587,9 @@ class WhatsAppService
 
         // Check monthly call limits
         if ($this->team->max_call_minutes_per_month) {
-            $currentMonth = now()->format('Y-m');
             $minutesUsed = \App\Models\WhatsAppCall::where('team_id', $this->team->id)
-                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
                 ->sum('duration_seconds') / 60;
 
             if ($minutesUsed >= $this->team->max_call_minutes_per_month) {

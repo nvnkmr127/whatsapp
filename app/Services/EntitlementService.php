@@ -222,6 +222,7 @@ class EntitlementService
                 'flows',
                 'backups',
                 'cloud_backups',
+                'calling',
                 'sla',
                 'csat',
             ];

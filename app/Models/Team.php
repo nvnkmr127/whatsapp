@@ -522,4 +522,17 @@ class Team extends JetstreamTeam
     {
         return $this->morphMany(CrmActivity::class, 'related_to');
     }
+
+    /**
+     * Get max call minutes per month from the plan if not explicitly set on the team.
+     */
+    public function getMaxCallMinutesPerMonthAttribute($value): int
+    {
+        if ($value !== null) {
+            return (int) $value;
+        }
+
+        return (int) $this->getPlanLimit('max_call_minutes_per_month', 0);
+    }
 }
+

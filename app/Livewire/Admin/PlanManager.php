@@ -24,6 +24,12 @@ class PlanManager extends Component
 
     public $agent_limit;
 
+    public $contact_limit;
+
+    public $automation_run_limit;
+
+    public $ai_conversation_limit;
+
     public $features = [];
 
     public $call_minutes_limit;
@@ -34,6 +40,9 @@ class PlanManager extends Component
         'initial_wallet_balance' => 'required|numeric|min:0',
         'message_limit' => 'required|integer|min:0',
         'agent_limit' => 'required|integer|min:1',
+        'contact_limit' => 'required|integer|min:0',
+        'automation_run_limit' => 'required|integer|min:0',
+        'ai_conversation_limit' => 'required|integer|min:0',
         'call_minutes_limit' => 'nullable|integer|min:0',
     ];
 
@@ -62,6 +71,9 @@ class PlanManager extends Component
         $this->initial_wallet_balance = $plan->initial_wallet_balance;
         $this->message_limit = $plan->message_limit;
         $this->agent_limit = $plan->agent_limit;
+        $this->contact_limit = $plan->contact_limit ?? 1000;
+        $this->automation_run_limit = $plan->automation_run_limit ?? 100;
+        $this->ai_conversation_limit = $plan->ai_conversation_limit ?? 50;
 
         $features = $plan->features ?? [];
         if (is_string($features)) {
@@ -94,6 +106,9 @@ class PlanManager extends Component
             'initial_wallet_balance' => $this->initial_wallet_balance,
             'message_limit' => $this->message_limit,
             'agent_limit' => $this->agent_limit,
+            'contact_limit' => $this->contact_limit,
+            'automation_run_limit' => $this->automation_run_limit,
+            'ai_conversation_limit' => $this->ai_conversation_limit,
             'features' => array_merge($currentFeatures, ['call_minutes_limit' => $this->call_minutes_limit]),
         ];
 
@@ -130,6 +145,9 @@ class PlanManager extends Component
         $this->initial_wallet_balance = 0.00;
         $this->message_limit = '';
         $this->agent_limit = '';
+        $this->contact_limit = 1000;
+        $this->automation_run_limit = 100;
+        $this->ai_conversation_limit = 50;
         $this->features = [
             'chat' => false,
             'contacts' => false,
