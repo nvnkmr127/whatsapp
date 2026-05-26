@@ -461,8 +461,10 @@ export default function ChatScreen({ navigation, route }: any) {
 
       const payload: any = {
         type: msgType,
-        content: text,
       };
+      if (msgType === 'text' || text) {
+        payload.content = text;
+      }
       if (mediaUrl) {
         payload.media_url = mediaUrl;
       }

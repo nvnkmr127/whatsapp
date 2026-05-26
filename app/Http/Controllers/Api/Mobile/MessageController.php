@@ -53,8 +53,8 @@ class MessageController extends Controller
 
         $request->validate([
             'type' => 'required|in:text,image,document,video,audio,template',
-            'content' => 'required_if:type,text|nullable|string',
-            'media_url' => 'required_if:type,image,document,video,audio|string',
+            'content' => $request->input('type') === 'text' ? 'required|string' : 'nullable|string',
+            'media_url' => in_array($request->input('type'), ['image', 'document', 'video', 'audio']) ? 'required|string' : 'nullable|string',
         ]);
 
         $user = $request->user();

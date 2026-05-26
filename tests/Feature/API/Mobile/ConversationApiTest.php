@@ -52,4 +52,33 @@ class ConversationApiTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('data.0.id', $conversation->id);
     }
+
+    public function test_can_send_media_message()
+    {
+        $contact = Contact::factory()->create(['team_id' => $this->team->id]);
+        $conversation = Conversation::factory()->create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+        ]);
+
+        // Create inbound message within 24h
+        Message::factory()->create([
+            'team_id' => $this->team->id,
+            'contact_id' => $contact->id,
+            'conversation_id' => $conversation->id,
+            'direction' => 'inbound',
+            'created_at' => now(),
+        ]);
+
+        $response = $this->postJson("/api/v1/mobile/conversations/{$conversation->id}/messages", [
+            'type' => 'image',
+            'content' => '',
+            'media_url' => 'https://example.com/image.jpg',
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200);
+    }
 }
+
