@@ -1739,12 +1739,7 @@ class WhatsAppService
             'action' => 'accept',
         ];
 
-        // Only include 'to' for outbound calls (business calling user)
-        // Use peer number (customer) for "to"
-        $peerNumber = $this->getCallPeerNumber($call);
-        if ($peerNumber) {
-            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
-        }
+        // The 'to' parameter is not permitted when accepting a call.
 
         if ($session) {
             $payload['session'] = $session;
@@ -1877,11 +1872,7 @@ class WhatsAppService
             'action' => 'pre_accept',
             'call_id' => $callId,
         ];
-        // Use peer number (customer) for "to"
-        $peerNumber = $this->getCallPeerNumber($call);
-        if ($peerNumber) {
-            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
-        }
+        // The 'to' parameter is not permitted when pre-accepting a call.
         if ($session) {
             $payload['session'] = $session;
         }
@@ -1924,11 +1915,7 @@ class WhatsAppService
             'action' => 'reject',
             'call_id' => $callId,
         ];
-        // Use peer number (customer) for "to"
-        $peerNumber = $this->getCallPeerNumber($call);
-        if ($peerNumber) {
-            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
-        }
+        // The 'to' parameter is not permitted when rejecting a call.
         if (! empty($call->metadata['biz_opaque_callback_data'])) {
             $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
         }
@@ -1980,11 +1967,7 @@ class WhatsAppService
             'action' => 'terminate',
             'call_id' => $callId,
         ];
-        // Use peer number (customer) for "to"
-        $peerNumber = $this->getCallPeerNumber($call);
-        if ($peerNumber) {
-            $payload['to'] = $this->normalizeCallNumber($peerNumber) ?: $peerNumber;
-        }
+        // The 'to' parameter is not permitted when terminating a call.
         if (! empty($call->metadata['biz_opaque_callback_data'])) {
             $payload['biz_opaque_callback_data'] = $call->metadata['biz_opaque_callback_data'];
         }

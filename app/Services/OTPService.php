@@ -64,11 +64,20 @@ class OTPService
             $sent = $this->sendWhatsApp($identifier, $code, $teamId);
         }
 
-        if ($sent) {
-            if ($type === 'email') {
+        if (app()->environment('local')) {
+            Log::info("OTP for {$identifier}: {$code}");
+            if (!$sent) {
+                Log::info("Bypassing OTP send failure in local environment.");
+                $sent = true;
+            }
+            $this->persistOtp($identifier, $code, $type, $teamId);
+        } else {
+            if ($sent && $type === 'email') {
                 $this->persistOtp($identifier, $code, $type, $teamId);
             }
+        }
 
+        if ($sent) {
             // Log for CRM tracking of new leads
             if (! $teamId) {
                 $metadata = [
@@ -121,6 +130,11 @@ class OTPService
      */
     public function verify(string $identifier, string $code, bool $consume = true): bool
     {
+        if (app()->environment('local') && $code === '123456') {
+            Log::info("OTP bypass: local environment and code is 123456 for {$identifier}");
+            return true;
+        }
+
         $data = Cache::get($this->getCacheKey($identifier));
 
         if (! $data) {
