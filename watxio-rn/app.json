@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Watxio",
+    "slug": "watxio-rn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "watxio",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.watxio.app"
+    },
+    "android": {
+      "package": "com.watxio.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#2F8F6F"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

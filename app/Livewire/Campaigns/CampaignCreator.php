@@ -132,6 +132,8 @@ class CampaignCreator extends Component
     public function save()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-campaigns');
+
+        $this->validate([
             'campaign_name' => 'required|min:3',
             'template_id' => 'required',
             'template_b_id' => 'required_if:is_ab_test,true',
