@@ -60,10 +60,25 @@ class ConversationController extends Controller
 
             $conversations = $query->with([
                     'contact:id,name,phone_number',
-                    'lastMessage:id,conversation_id,content,type,direction,created_at',
+                    'lastMessage' => function ($query) {
+                        $query->select([
+                            'messages.id',
+                            'messages.conversation_id',
+                            'messages.content',
+                            'messages.type',
+                            'messages.direction',
+                            'messages.created_at',
+                        ]);
+                    },
                     'assignee:id,name',
                     'contact.tags',
-                    'lastInboundMessage:id,conversation_id,created_at',
+                    'lastInboundMessage' => function ($query) {
+                        $query->select([
+                            'messages.id',
+                            'messages.conversation_id',
+                            'messages.created_at',
+                        ]);
+                    },
                 ])
                 ->withCount(['messages as unread_count' => function ($query) {
                     $query->where('direction', 'inbound')->whereNull('read_at');
