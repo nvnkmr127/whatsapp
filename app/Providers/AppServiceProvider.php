@@ -49,6 +49,53 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── Safe Broadcasters (Pusher & Reverb) ─────────────────────────
+        \Illuminate\Support\Facades\Broadcast::extend('reverb', function ($app, array $config) {
+            $client = new \GuzzleHttp\Client(array_merge(
+                $config['client_options'] ?? [],
+                [
+                    'http_errors' => false,
+                ]
+            ));
+
+            $pusher = new \Pusher\Pusher(
+                $config['key'],
+                $config['secret'],
+                $config['app_id'],
+                $config['options'] ?? [],
+                $client
+            );
+
+            if ($config['log'] ?? false) {
+                $pusher->setLogger($app->make(\Psr\Log\LoggerInterface::class));
+            }
+
+            return new \App\Broadcasting\SafePusherBroadcaster($pusher);
+        });
+
+        \Illuminate\Support\Facades\Broadcast::extend('pusher', function ($app, array $config) {
+            $client = new \GuzzleHttp\Client(array_merge(
+                $config['client_options'] ?? [],
+                [
+                    'http_errors' => false,
+                ]
+            ));
+
+            $pusher = new \Pusher\Pusher(
+                $config['key'],
+                $config['secret'],
+                $config['app_id'],
+                $config['options'] ?? [],
+                $client
+            );
+
+            if ($config['log'] ?? false) {
+                $pusher->setLogger($app->make(\Psr\Log\LoggerInterface::class));
+            }
+
+            return new \App\Broadcasting\SafePusherBroadcaster($pusher);
+        });
+
         // ── Trace ID Propagation: Inject into all Job Payloads ──
         Queue::createPayloadUsing(function ($connection, $queue, $payload) {
             $traceId = TraceContext::getTraceId();
