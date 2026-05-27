@@ -43,11 +43,14 @@ export function CallOverlayManager() {
 
     const checkActiveCalls = async () => {
       try {
-        const response = await api.get<ActiveCall[]>('/v1/calls/active', {
-          'X-Silent-Errors': 'true',
-        });
-        if (response && response.length > 0) {
-          setActiveCall(response[0]);
+        // The API returns a standard envelope: { success, message, data: ActiveCall[] }
+        const response = await api.get<{ success: boolean; data: ActiveCall[] }>(
+          '/v1/calls/active',
+          { 'X-Silent-Errors': 'true' }
+        );
+        const calls = response?.data ?? [];
+        if (calls.length > 0) {
+          setActiveCall(calls[0]);
         } else {
           setActiveCall(null);
         }

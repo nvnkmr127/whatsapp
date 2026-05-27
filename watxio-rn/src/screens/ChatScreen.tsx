@@ -1048,11 +1048,23 @@ export default function ChatScreen({ navigation, route }: any) {
   };
 
   const handleInitiateCall = async () => {
+    // Guard: a phone number (digits only) is required. contact.name is a display
+    // name and would fail the server-side regex validation — never use it as
+    // a fallback for phone_number.
+    const phoneNumber = contact.phone;
+    if (!phoneNumber) {
+      showDialog('Call Failed', 'No phone number is available for this contact.');
+      return;
+    }
     setIsCalling(true);
     try {
       await api.post('/v1/calls/initiate', {
-        phone_number: contact.phone || contact.name,
+        phone_number: phoneNumber,
       });
+      // Call initiated — the global CallOverlayManager will pick it up via polling.
+      // Dismiss the local "ringing" indicator after a short delay so the user can
+      // see the transition to the real overlay.
+      setTimeout(() => setIsCalling(false), 3000);
     } catch (err: any) {
       console.warn('Call setup failed:', err);
       setIsCalling(false);
