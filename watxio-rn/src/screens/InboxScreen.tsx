@@ -18,6 +18,9 @@ import { Chip } from '@/components/Chip';
 import { useGlobalState } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { cacheInbox, loadCachedInbox } from '@/services/chatCache';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 type FilterKey = 'All' | 'Unread' | 'Open' | 'Mine' | 'Bots';
 const FILTERS: FilterKey[] = ['All', 'Unread', 'Open', 'Mine', 'Bots'];
@@ -26,6 +29,7 @@ export default function InboxScreen({ navigation }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
   const nav = navigation;
+  const isOnline = useNetworkStatus();
   const [filter, setFilter] = useState<FilterKey>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -64,6 +68,19 @@ export default function InboxScreen({ navigation }: any) {
   // Fetch Conversations from API
   const fetchConversations = useCallback(async (isSilent = false, pageNum = 1, append = false, overwrite = false) => {
     if (!globalState.token) return;
+
+    // When offline, load from cache and skip API call
+    if (!isOnline) {
+      const cached = await loadCachedInbox();
+      if (cached && cached.length > 0) {
+        setConversations(cached);
+      }
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+      return;
+    }
+
     if (!isSilent && pageNum === 1) setLoading(true);
     if (pageNum > 1) setLoadingMore(true);
 
@@ -116,6 +133,11 @@ export default function InboxScreen({ navigation }: any) {
       setPage(currentPage);
       setLastPage(totalPages);
 
+      // Cache the first page of conversations for offline use
+      if (pageNum === 1 && !append) {
+        cacheInbox(mapped).catch(() => {});
+      }
+
       if (response.counts) {
         setCounts({
           All: response.counts.All ?? 0,
@@ -147,7 +169,7 @@ export default function InboxScreen({ navigation }: any) {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [globalState.token, filter, searchQuery]);
+  }, [globalState.token, filter, searchQuery, isOnline]);
 
   const handleCreateContact = async () => {
     if (!newContactPhone.trim()) {
@@ -254,6 +276,15 @@ export default function InboxScreen({ navigation }: any) {
     }
   };
 
+  // Load cached inbox immediately on first mount
+  useEffect(() => {
+    loadCachedInbox().then((cached) => {
+      if (cached && cached.length > 0) {
+        setConversations(cached);
+      }
+    });
+  }, []);
+
   // Load conversations when screen gains focus
   useFocusEffect(
     useCallback(() => {
@@ -326,6 +357,8 @@ export default function InboxScreen({ navigation }: any) {
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
+      {/* Offline banner */}
+      <OfflineBanner />
       {/* Header */}
       {isSearching ? (
         <View className="flex-row items-center gap-2 px-[18px] pt-4 pb-[10px]">
