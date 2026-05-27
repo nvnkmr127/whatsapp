@@ -101,6 +101,21 @@ export default function ChatScreen({ navigation, route }: any) {
   const [forwardingMsg, setForwardingMsg] = useState<ChatMessage | null>(null);
   const [activeConversations, setActiveConversations] = useState<Conversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
+  const [androidKbHeight, setAndroidKbHeight] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setAndroidKbHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setAndroidKbHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -430,17 +445,18 @@ export default function ChatScreen({ navigation, route }: any) {
       try {
         await api.post('/v1/mobile/presence/heartbeat', {
           conversation_id: conversationId,
-        });
+        }, { 'X-Silent-Errors': 'true' });
       } catch (err) {
         console.warn('[Presence] Heartbeat failed:', err);
       }
     };
 
     const sendPresenceLeave = async () => {
+      if (!api.getToken()) return;
       try {
         await api.post('/v1/mobile/presence/leave', {
           conversation_id: conversationId,
-        });
+        }, { 'X-Silent-Errors': 'true' });
       } catch (err) {
         console.warn('[Presence] Leave failed:', err);
       }
@@ -519,7 +535,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const performHeartbeat = async () => {
       try {
-        const response = await api.post(`/v1/mobile/conversations/${conversationId}/heartbeat`);
+        const response = await api.post(`/v1/mobile/conversations/${conversationId}/heartbeat`, undefined, { 'X-Silent-Errors': 'true' });
         if (!active) return;
 
         if (!response.success) {
@@ -534,8 +550,9 @@ export default function ChatScreen({ navigation, route }: any) {
     };
 
     const performUnlock = async () => {
+      if (!api.getToken()) return;
       try {
-        await api.post(`/v1/mobile/conversations/${conversationId}/unlock`);
+        await api.post(`/v1/mobile/conversations/${conversationId}/unlock`, undefined, { 'X-Silent-Errors': 'true' });
       } catch (err) {
         console.warn('[Lock] Unlock failed:', err);
       }
@@ -1361,7 +1378,7 @@ export default function ChatScreen({ navigation, route }: any) {
             />
           </View>
         )}
-        <View className="bg-surface dark:bg-d-surface" style={{ height: insets.bottom }} />
+        <View className="bg-surface dark:bg-d-surface" style={{ height: Platform.OS === 'android' && androidKbHeight > 0 ? androidKbHeight + 20 : insets.bottom }} />
       </KeyboardAvoidingView>
 
       {/* Simulated Calling Overlay */}

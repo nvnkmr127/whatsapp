@@ -112,7 +112,10 @@ export const api = {
 
       if (!response.ok) {
         if (response.status === 401) {
-          unauthorizedCallback?.();
+          const isLockLost = data?.code === 'ERR_LOCK_LOST';
+          if (!isLockLost) {
+            unauthorizedCallback?.();
+          }
         }
         throw {
           status: response.status,
