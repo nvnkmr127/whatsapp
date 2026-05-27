@@ -469,7 +469,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const performLock = async () => {
       try {
-        const response = await api.post(`/v1/conversations/${conversationId}/lock`);
+        const response = await api.post(`/v1/mobile/conversations/${conversationId}/lock`);
         if (!active) return;
         
         if (response.success) {
@@ -493,7 +493,7 @@ export default function ChatScreen({ navigation, route }: any) {
                 onPress: async () => {
                   try {
                     setLoading(true);
-                    const takeoverRes = await api.post(`/v1/conversations/${conversationId}/takeover`);
+                    const takeoverRes = await api.post(`/v1/mobile/conversations/${conversationId}/takeover`);
                     if (takeoverRes.success) {
                       setHasLock(true);
                       setLockOwner(null);
@@ -518,7 +518,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const performHeartbeat = async () => {
       try {
-        const response = await api.post(`/v1/conversations/${conversationId}/heartbeat`);
+        const response = await api.post(`/v1/mobile/conversations/${conversationId}/heartbeat`);
         if (!active) return;
 
         if (!response.success) {
@@ -534,7 +534,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const performUnlock = async () => {
       try {
-        await api.post(`/v1/conversations/${conversationId}/unlock`);
+        await api.post(`/v1/mobile/conversations/${conversationId}/unlock`);
       } catch (err) {
         console.warn('[Lock] Unlock failed:', err);
       }
