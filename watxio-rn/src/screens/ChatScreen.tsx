@@ -19,6 +19,7 @@ import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { CallWebRTC } from '@/services/webrtc';
 import { useGlobalState } from '@/store';
 import {
   cacheMessages, cacheMeta,
@@ -1058,14 +1059,20 @@ export default function ChatScreen({ navigation, route }: any) {
     }
     setIsCalling(true);
     try {
+      // Meta's Calls API requires a WebRTC SDP offer ("session" parameter).
+      // Generate one here before hitting the server so we already have the
+      // local PeerConnection ready when the remote answer arrives.
+      const sdp = await CallWebRTC.session().initOutbound();
+
       await api.post('/v1/calls/initiate', {
         phone_number: phoneNumber,
+        sdp,
       });
-      // Call initiated — the global CallOverlayManager will pick it up via polling.
-      // Dismiss the local "ringing" indicator after a short delay so the user can
-      // see the transition to the real overlay.
+      // Call initiated — the global CallOverlayManager picks it up via polling.
+      // Dismiss the local ringing indicator after a short delay.
       setTimeout(() => setIsCalling(false), 3000);
     } catch (err: any) {
+      CallWebRTC.end(); // clean up the WebRTC session on failure
       console.warn('Call setup failed:', err);
       setIsCalling(false);
 

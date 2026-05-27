@@ -10,17 +10,28 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.watxio.app"
+      "bundleIdentifier": "com.watxio.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Watxio needs microphone access to make and receive WhatsApp Business calls."
+      }
     },
     "android": {
       "package": "com.watxio.app",
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/appicon.png",
         "backgroundColor": "#2F8F6F"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "plugins": [
+      "@config-plugins/react-native-webrtc"
+    ]
   }
 }
