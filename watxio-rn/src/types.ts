@@ -28,6 +28,8 @@ export interface ChatMessage {
   time?: string;
   status?: MessageStatus;
   isStarred?: boolean;
+  media_url?: string | null;
+  media_type?: string | null;
 }
 
 export interface ContactProfile {

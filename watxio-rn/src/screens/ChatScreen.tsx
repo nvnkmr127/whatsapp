@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, KeyboardAvoidingView, Platform, Animated, Pressable, Keyboard, BackHandler,
-  Modal, FlatList, ActivityIndicator, Image, Vibration
+  Modal, FlatList, ActivityIndicator, Image, Vibration, TextInput
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -68,6 +68,13 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isMuted, setIsMuted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Save Contact States
+  const [showSaveContact, setShowSaveContact] = useState(false);
+  const [saveContactName, setSaveContactName] = useState('');
+  const [saveContactEmail, setSaveContactEmail] = useState('');
+  const [saveContactNotes, setSaveContactNotes] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
 
   // Conversation Lock States
   const [lockOwner, setLockOwner] = useState<{ id: number; name: string } | null>(null);
@@ -1117,6 +1124,34 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
+  const handleSaveContact = async () => {
+    if (!saveContactName.trim()) return;
+    setSavingContact(true);
+    try {
+      if (dbContactId) {
+        await api.put(`/v1/mobile/contacts/${dbContactId}`, {
+          name: saveContactName.trim(),
+          email: saveContactEmail.trim() || undefined,
+          notes: saveContactNotes.trim() || undefined,
+        });
+      } else {
+        const res = await api.post('/v1/mobile/contacts', {
+          phone_number: contact.phone,
+          name: saveContactName.trim(),
+          email: saveContactEmail.trim() || undefined,
+          notes: saveContactNotes.trim() || undefined,
+        });
+        if (res?.data?.id) setDbContactId(res.data.id);
+      }
+      setShowSaveContact(false);
+      showDialog('Saved', 'Contact saved successfully.');
+    } catch (e: any) {
+      showDialog('Error', e?.message || 'Could not save contact.');
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg">
       <KeyboardAvoidingView
@@ -1343,6 +1378,22 @@ export default function ChatScreen({ navigation, route }: any) {
               <View className="items-center pb-2 border-b border-hairline dark:border-d-hairline">
                 <Text className="text-xs text-muted dark:text-d-muted font-bold uppercase tracking-wider">Chat Options</Text>
               </View>
+              <Pressable
+                onPress={() => {
+                  setShowOptions(false);
+                  // Pre-fill name if it looks like a name (not just digits)
+                  const nameToFill = contact.name && !/^\d+$/.test(contact.name) ? contact.name : '';
+                  setSaveContactName(nameToFill);
+                  setSaveContactEmail('');
+                  setSaveContactNotes('');
+                  setShowSaveContact(true);
+                }}
+                className="flex-row items-center justify-between py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">
+                  {dbContactId ? '✏️ Edit Contact' : '💾 Save Contact'}
+                </Text>
+              </Pressable>
               <Pressable
                 onPress={toggleAiAssistant}
                 className="flex-row items-center justify-between py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
@@ -1591,6 +1642,89 @@ export default function ChatScreen({ navigation, route }: any) {
                   )}
                 />
               )}
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Save / Edit Contact Modal */}
+      {showSaveContact && (
+        <Modal transparent visible={showSaveContact} animationType="slide">
+          <View className="flex-1 bg-black/40 justify-end">
+            <View
+              className="bg-surface dark:bg-d-surface rounded-t-2xl px-[18px] pt-4"
+              style={{ paddingBottom: insets.bottom + 16 }}
+            >
+              <View className="flex-row items-center justify-between pb-4 border-b border-hairline dark:border-d-hairline mb-4">
+                <Text className="text-base font-bold text-ink dark:text-d-ink">
+                  {dbContactId ? 'Edit Contact' : 'Save Contact'}
+                </Text>
+                <Pressable onPress={() => setShowSaveContact(false)} className="p-1">
+                  <Text className="text-accent dark:text-d-accent font-semibold text-sm">Cancel</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView className="max-h-[360px]">
+                <View className="mb-4">
+                  <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Name *</Text>
+                  <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                    <TextInput
+                      value={saveContactName}
+                      onChangeText={setSaveContactName}
+                      placeholder="Contact name"
+                      placeholderTextColor={tokens.muted}
+                      className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Email (optional)</Text>
+                  <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                    <TextInput
+                      value={saveContactEmail}
+                      onChangeText={setSaveContactEmail}
+                      placeholder="email@example.com"
+                      placeholderTextColor={tokens.muted}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-6">
+                  <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Notes (optional)</Text>
+                  <View className="bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                    <TextInput
+                      value={saveContactNotes}
+                      onChangeText={setSaveContactNotes}
+                      placeholder="Add a note..."
+                      placeholderTextColor={tokens.muted}
+                      multiline
+                      numberOfLines={3}
+                      className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                      style={{ minHeight: 60 }}
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-2">
+                  <Pressable
+                    onPress={handleSaveContact}
+                    disabled={savingContact || !saveContactName.trim()}
+                    className="w-full bg-accent dark:bg-d-accent py-3.5 rounded-lg items-center justify-center active:opacity-90 disabled:opacity-50"
+                  >
+                    {savingContact ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-white text-[15px] font-bold">
+                        {dbContactId ? 'Save Changes' : 'Save Contact'}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>

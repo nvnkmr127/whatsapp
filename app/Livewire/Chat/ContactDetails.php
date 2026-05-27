@@ -27,6 +27,14 @@ class ContactDetails extends Component
 
     public $newNoteBody = '';
 
+    public bool $editing = false;
+
+    public string $editName = '';
+
+    public string $editEmail = '';
+
+    public string $editNotes = '';
+
     protected $listeners = ['refresh-tags' => 'loadData'];
 
     public function mount($conversationId)
@@ -65,6 +73,45 @@ class ContactDetails extends Component
             $this->mediaVault = [];
             $this->heatmap = [];
         }
+    }
+
+    public function startEdit()
+    {
+        if (! $this->contact) {
+            return;
+        }
+        $this->editName  = $this->contact->name ?? '';
+        $this->editEmail = $this->contact->email ?? '';
+        $this->editNotes = $this->contact->notes ?? '';
+        $this->editing   = true;
+    }
+
+    public function cancelEdit()
+    {
+        $this->editing = false;
+    }
+
+    public function saveContact()
+    {
+        $this->validate([
+            'editName'  => 'required|string|max:255',
+            'editEmail' => 'nullable|email|max:255',
+            'editNotes' => 'nullable|string|max:2000',
+        ]);
+
+        if (! $this->contact) {
+            return;
+        }
+
+        $this->contact->update([
+            'name'  => trim($this->editName),
+            'email' => trim($this->editEmail) ?: null,
+            'notes' => trim($this->editNotes) ?: null,
+        ]);
+
+        $this->editing = false;
+        $this->loadData();
+        session()->flash('contact_saved', true);
     }
 
     public function assignToSelf()
