@@ -14,6 +14,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useTokens } from '@/theme';
 import type { RootStackParamList, MainTabParamList } from '@/types';
 import { navigationRef } from './navigationRef';
+import { useNotificationNavigation } from '@/services/notifications';
 
 import InboxScreen from '@/screens/InboxScreen';
 import ChatScreen from '@/screens/ChatScreen';
@@ -116,6 +117,9 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const { tokens, scheme } = useTokens();
+
+  // Handle notification taps → navigate to the right screen
+  useNotificationNavigation(navigationRef);
 
   // Build a React Navigation theme from our tokens so push transitions and
   // screen backgrounds don't flash white on dark mode.
