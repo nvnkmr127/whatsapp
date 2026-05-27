@@ -43,6 +43,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [loading, setLoading] = useState(true);      // first paint spinner
   const [isRefreshing, setIsRefreshing] = useState(false); // silent bg refresh indicator
   const [serverDown, setServerDown] = useState(false);     // 503 / network offline
@@ -682,8 +683,7 @@ export default function ChatScreen({ navigation, route }: any) {
     const typingStarted = typing && !prevTypingRef.current;
     
     if (isInitialLoad || isNewMessageAdded || typingStarted) {
-      const shouldAnimate = isNewMessageAdded || typingStarted;
-      const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: shouldAnimate }), 80);
+      const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: false }), 80);
       prevLastMsgRef.current = lastMsg;
       prevTypingRef.current = typing;
       return () => clearTimeout(t);
@@ -899,6 +899,7 @@ export default function ChatScreen({ navigation, route }: any) {
   };
 
   const send = async () => {
+    if (isSending) return;
     const text = draft.trim();
     if (!text && !selectedMedia) return;
 
@@ -956,6 +957,7 @@ export default function ChatScreen({ navigation, route }: any) {
     const mediaToUpload = selectedMedia;
     setSelectedMedia(null);
 
+    setIsSending(true);
     try {
       let mediaUrl = null;
       let msgType = 'text';
@@ -1012,6 +1014,8 @@ export default function ChatScreen({ navigation, route }: any) {
       fetchConversationDetails();
     } catch (err: any) {
       showDialog('Failed to Send Message', err.message || 'Error occurred while sending.');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -1220,13 +1224,6 @@ export default function ChatScreen({ navigation, route }: any) {
             {serverDown && (
               <View className="flex-row items-center justify-center gap-1.5 py-1.5 bg-warn/15">
                 <Text className="text-[11px] text-warn dark:text-d-warn font-semibold">⚠️ Server unavailable · Showing cached messages</Text>
-              </View>
-            )}
-            {/* Subtle "syncing" indicator — only while background-refreshing normally */}
-            {isRefreshing && !serverDown && (
-              <View className="flex-row items-center justify-center gap-1.5 py-1 bg-surface2 dark:bg-d-surface2">
-                <ActivityIndicator size={10} color={tokens.muted} />
-                <Text className="text-[10px] text-muted dark:text-d-muted font-medium">Syncing...</Text>
               </View>
             )}
             <ScrollView

@@ -100,7 +100,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 // ── Send token to Laravel backend ────────────────────────────────────────────
 async function sendTokenToBackend(token: string) {
   try {
-    await api.post('/v1/mobile/fcm-token', {
+    await api.post('/v1/mobile/auth/fcm-token', {
       token,
       platform: Platform.OS, // 'ios' or 'android'
       device_id: Device.modelName ?? undefined,
@@ -115,7 +115,7 @@ async function sendTokenToBackend(token: string) {
 export async function unregisterPushNotifications(token?: string | null) {
   if (!token) return;
   try {
-    await api.post('/v1/mobile/fcm-token/remove', { token });
+    await api.post('/v1/mobile/auth/fcm-token/remove', { token });
   } catch (_) {}
 }
 
@@ -130,8 +130,8 @@ export interface NotificationPayload {
 // ── Hook: handle tap on notification (foreground + background + killed) ──────
 // Pass the navigationRef from AppNavigator so we can navigate from outside React.
 export function useNotificationNavigation(navRef: any) {
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     // Foreground notification received (just logging — handler above shows it)
