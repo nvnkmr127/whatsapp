@@ -68,8 +68,6 @@ npm-debug.log
 yarn-error.log
 package-lock.json
 
-google-services.json
-
 
 # Composer
 /vendor/
