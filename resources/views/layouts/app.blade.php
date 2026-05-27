@@ -3,9 +3,11 @@
 
 <head>
     <script>
-        // Always dark
-        document.documentElement.classList.add('dark');
-        localStorage.theme = 'dark';
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
     </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -70,7 +72,7 @@
     </style>
 </head>
 
-<body class="font-sans antialiased bg-zinc-950">
+<body class="font-sans antialiased bg-[#f8f8f6] dark:bg-zinc-950">
     <livewire:calls.call-overlay />
     <livewire:chat.chat-beacon />
     @livewire('onboarding.basic-details-popup')
@@ -84,7 +86,7 @@
         <x-layouts.sidebar />
 
         <!-- Content Area -->
-        <div class="flex flex-col flex-1 overflow-hidden bg-zinc-950">
+        <div class="flex flex-col flex-1 overflow-hidden bg-[#f8f8f6] dark:bg-zinc-950">
             <!-- Top Header -->
             <x-layouts.header :header="$header ?? null" />
 

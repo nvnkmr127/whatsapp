@@ -11,7 +11,7 @@
             }
         }
     }"
-    class="flex items-center justify-between px-8 py-4 bg-zinc-950/90 backdrop-blur-3xl border-b border-zinc-800/60 sticky top-0 z-40 transition-all duration-500">
+    class="flex items-center justify-between px-8 py-4 bg-[#f8f8f6]/95 dark:bg-zinc-950/90 backdrop-blur-3xl border-b border-black/[0.06] dark:border-zinc-800/60 sticky top-0 z-40 transition-all duration-500">
 
     <!-- Subtle Gradient Accent Line at top -->
     <div
@@ -30,8 +30,8 @@
 
         <!-- Page Heading -->
         <div
-            class="hidden lg:flex items-center gap-4 min-w-fit pr-4 border-r border-zinc-800/60">
-            <h1 class="text-[15px] font-black text-zinc-50 uppercase tracking-[0.15em] leading-none">
+            class="hidden lg:flex items-center gap-4 min-w-fit pr-4 border-r border-black/[0.08] dark:border-zinc-800/60">
+            <h1 class="text-[15px] font-black text-slate-800 dark:text-zinc-50 uppercase tracking-[0.15em] leading-none">
                 {{ $header ?? __('Dashboard') }}
             </h1>
         </div>
@@ -46,7 +46,7 @@
             <livewire:auth.agent-availability-toggle />
         </div>
 
-        <div class="h-6 w-px bg-zinc-800/60 mx-1"></div>
+        <div class="h-6 w-px bg-black/10 dark:bg-zinc-800/60 mx-1"></div>
 
         <!-- Right Side Actions -->
         <div class="flex items-center gap-2">
@@ -55,7 +55,7 @@
 
             <!-- Theme Toggle -->
             <button @click="toggleTheme()"
-                class="p-2.5 rounded-2xl text-zinc-400 hover:text-orange-400 hover:bg-zinc-900 shadow-none hover:shadow-lg transition-all duration-300 focus:outline-none group">
+                class="p-2.5 rounded-2xl text-slate-400 dark:text-zinc-400 hover:text-orange-500 hover:bg-black/5 dark:hover:bg-zinc-900 shadow-none hover:shadow-lg transition-all duration-300 focus:outline-none group">
                 <svg class="w-5 h-5 hidden dark:block group-hover:rotate-45 transition-transform duration-500"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
