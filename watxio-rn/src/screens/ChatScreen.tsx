@@ -18,9 +18,11 @@ import { Bubble } from '@/components/Bubble';
 import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { api } from '@/services/api';
 import { CallWebRTC } from '@/services/webrtc';
 import { useGlobalState } from '@/store';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
   cacheMessages, cacheMeta,
   loadCachedMessages, loadCachedMeta,
@@ -68,6 +70,9 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isMuted, setIsMuted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Network Status
+  const isOnline = useNetworkStatus();
 
   // Save Contact States
   const [showSaveContact, setShowSaveContact] = useState(false);
@@ -121,6 +126,12 @@ export default function ChatScreen({ navigation, route }: any) {
 
   // Fetch Conversation metadata and Messages — parallel requests for speed
   const fetchConversationDetails = async (isBackground = false) => {
+    // When offline, skip API call and rely on already-loaded cache
+    if (!isOnline) {
+      if (isBackground) setIsRefreshing(false);
+      setLoading(false);
+      return false;
+    }
     if (isBackground) setIsRefreshing(true);
     try {
       // Fire both requests at the same time instead of waiting one-by-one
@@ -1184,6 +1195,9 @@ export default function ChatScreen({ navigation, route }: any) {
           <IconButton icon={Phone} onPress={handleInitiateCall} />
           <IconButton icon={MoreHorizontal} onPress={() => setShowOptions(true)} />
         </View>
+
+        {/* Offline banner */}
+        <OfflineBanner />
 
         {/* Loading messages indicator */}
         {loading ? (
