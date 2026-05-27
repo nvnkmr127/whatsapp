@@ -19,6 +19,7 @@ import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { MediaViewer } from '@/components/MediaViewer';
 import { api } from '@/services/api';
 import { CallWebRTC } from '@/services/webrtc';
 import { useGlobalState } from '@/store';
@@ -73,6 +74,9 @@ export default function ChatScreen({ navigation, route }: any) {
 
   // Network Status
   const isOnline = useNetworkStatus();
+
+  // Media Viewer State
+  const [mediaViewer, setMediaViewer] = useState<{ uri: string; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
 
   // Save Contact States
   const [showSaveContact, setShowSaveContact] = useState(false);
@@ -177,10 +181,12 @@ export default function ChatScreen({ navigation, route }: any) {
         mapped.push({
           id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
-          text: m.content || (m.type === 'image' ? '📷 Image' : m.type === 'video' ? '🎥 Video' : '📄 Document'),
+          text: m.content || '',
           time: msgTime,
           status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
           isStarred: !!m.is_starred,
+          media_url: m.media_url || null,
+          media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
         });
       });
 
@@ -300,10 +306,12 @@ export default function ChatScreen({ navigation, route }: any) {
         mapped.push({
           id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
-          text: m.content || (m.type === 'image' ? '📷 Image' : m.type === 'video' ? '🎥 Video' : '📄 Document'),
+          text: m.content || '',
           time: msgTime,
           status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
           isStarred: !!m.is_starred,
+          media_url: m.media_url || null,
+          media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
         });
       });
 
@@ -1262,8 +1270,14 @@ export default function ChatScreen({ navigation, route }: any) {
                       status={m.status}
                       variant="tail"
                       isStarred={m.isStarred}
+                      mediaUrl={m.media_url}
+                      mediaType={m.media_type}
+                      onMediaPress={m.media_url && m.media_type ? () => setMediaViewer({
+                        uri: m.media_url!,
+                        type: m.media_type as any,
+                      }) : undefined}
                     >
-                      {m.text}
+                      {m.text || ''}
                     </Bubble>
                   </Pressable>
                 );
@@ -1752,6 +1766,16 @@ export default function ChatScreen({ navigation, route }: any) {
         buttons={dialogConfig.buttons}
         onClose={() => setDialogConfig((c) => ({ ...c, visible: false }))}
       />
+
+      {/* Media Viewer */}
+      {mediaViewer && (
+        <MediaViewer
+          visible
+          uri={mediaViewer.uri}
+          type={mediaViewer.type}
+          onClose={() => setMediaViewer(null)}
+        />
+      )}
     </View>
   );
 }
