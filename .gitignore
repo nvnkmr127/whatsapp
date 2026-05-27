@@ -95,3 +95,4 @@ composer.lock
 # New Technology Stack (Parallel Migration)
 v2/
 
+.claude/
