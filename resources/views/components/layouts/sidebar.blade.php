@@ -85,7 +85,7 @@
                                             class="w-full group flex items-center justify-between px-4 py-3 text-sm font-bold rounded-xl transition-all duration-200 {{ $isActive ? 'bg-zinc-800/60 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-900' }}">
                                             
                                             <div class="flex items-center">
-                                                <svg class="mr-4 h-5 w-5 transition-transform duration-200 {{ $isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-slate-300' }}"
+                                                <svg class="mr-4 h-5 w-5 transition-transform duration-200 {{ $isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300' }}"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $link['icon'] }}" />
                                                 </svg>
@@ -177,7 +177,7 @@
                         @elseif(Auth::user()->currentTeam && Auth::user()->ownsTeam(Auth::user()->currentTeam))
                             <span class="px-1.5 py-0.5 bg-orange-500/10 text-orange-400 text-[7px] font-black uppercase tracking-widest border border-orange-500/20 rounded-md">Workspace Admin</span>
                         @else
-                            <span class="px-1.5 py-0.5 bg-slate-500/10 text-zinc-500 text-[7px] font-black uppercase tracking-widest border border-slate-500/20 rounded-md">Collaborator</span>
+                            <span class="px-1.5 py-0.5 bg-zinc-500/10 text-zinc-400 text-[7px] font-black uppercase tracking-widest border border-zinc-500/20 rounded-md">Collaborator</span>
                         @endif
                     </div>
                     <div class="text-[9px] font-bold text-zinc-500 truncate uppercase tracking-wider group-hover:text-orange-400 transition-colors">
