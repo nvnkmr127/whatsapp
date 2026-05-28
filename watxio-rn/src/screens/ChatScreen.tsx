@@ -583,28 +583,13 @@ export default function ChatScreen({ navigation, route }: any) {
     let ws: WebSocket | null = null;
     let active = true;
 
-    // Resolve connection parameters dynamically
-    let wsHost = socketConfig.host;
-    let wsPort = socketConfig.port;
-    let wsScheme = socketConfig.scheme;
-    const isSecure = globalState.baseUrl.startsWith('https');
-
-    if (isSecure) {
-      wsScheme = 'wss';
-      wsPort = '';
-    } else {
-      wsScheme = 'ws';
-    }
-
-    if (wsHost === '127.0.0.1' || wsHost === 'localhost') {
-      const match = globalState.baseUrl.match(/^https?:\/\/([^:/]+)/);
-      if (match && match[1]) {
-        wsHost = match[1];
-      }
-    }
-
-    const portSuffix = wsPort ? `:${wsPort}` : '';
-    const wsUrl = `${wsScheme}://${wsHost}${portSuffix}/app/${socketConfig.key}?protocol=7&client=js&version=8.4.0-rc2&flash=false`;
+    // Backend now sends the public-facing Reverb config directly.
+    // Convert http/https scheme to ws/wss for the WebSocket URL.
+    const wsScheme = socketConfig.scheme === 'https' ? 'wss' : 'ws';
+    const portSuffix = socketConfig.port && socketConfig.port !== 443 && socketConfig.port !== 80
+      ? `:${socketConfig.port}`
+      : '';
+    const wsUrl = `${wsScheme}://${socketConfig.host}${portSuffix}/app/${socketConfig.key}?protocol=7&client=js&version=8.4.0-rc2&flash=false`;
 
     const channelName = `presence-conversation.${conversationId}`;
 
