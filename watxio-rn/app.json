@@ -51,6 +51,12 @@
           "defaultChannel": "default",
           "sounds": []
         }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Watxio needs microphone access to record voice notes."
+        }
       ]
     ],
     "extra": {
