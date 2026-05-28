@@ -243,6 +243,19 @@ class MessageController extends Controller
             ->where('id', $request->template_id)
             ->firstOrFail();
 
+        $variables = $request->variables ?? [];
+
+        // Auto-fill template variables if the mobile app sends none
+        if (empty($variables)) {
+            $tplService = new \App\Services\TemplateService();
+            $placeholders = $tplService->extractAllPlaceholders($template);
+            
+            foreach ($placeholders as $placeholder) {
+                // Default to the contact's name for missing variables
+                $variables[] = $conversation->contact->name ?? 'there';
+            }
+        }
+
         $message = $conversation->messages()->create([
             'team_id' => $conversation->team_id,
             'contact_id' => $conversation->contact_id,
@@ -254,7 +267,7 @@ class MessageController extends Controller
                 'user_id' => $request->user()->id,
                 'template_id' => $template->id,
                 'template_name' => $template->name,
-                'variables' => $request->variables ?? [],
+                'variables' => $variables,
                 'language' => $template->language ?? 'en_US'
             ],
         ]);
