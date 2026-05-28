@@ -75,6 +75,7 @@ class SendPushNotificationJob implements ShouldQueue
             'contact_id' => (string) $contact->id,
             'team_id' => (string) $team->id,
             'message_id' => (string) ($message->id ?? ''),
+            'contact_name' => $contact->name ?: $contact->phone_number,
         ];
 
         $users = User::whereIn('id', $targetUserIds)->get();
@@ -83,6 +84,6 @@ class SendPushNotificationJob implements ShouldQueue
             $fcmService->sendToUser($user, $title, $body, $data);
         }
 
-        Log::info("Push notification sent for message #{$message->id} to " . count($users) . " users.");
+        Log::info("Push notification sent for message #{$this->messageId} to " . count($users) . " users.");
     }
 }
