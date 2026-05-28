@@ -115,6 +115,7 @@ export default {
             console.error('Retry failed', e);
             this.messages[index].status = 'failed';
             this.messages[index].error_message = e.message;
+            window.dispatchEvent(new CustomEvent('notify', { detail: { type: 'error', message: e.message } }));
         }
     },
 

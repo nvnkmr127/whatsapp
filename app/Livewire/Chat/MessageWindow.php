@@ -1163,8 +1163,17 @@ class MessageWindow extends Component
     #[\Livewire\Attributes\Renderless]
     public function sendMessageJson($body, $tempId)
     {
-        if (empty($body) || ! $this->conversation) {
-            return ['status' => 'error', 'message' => 'Invalid session'];
+        if (empty($body)) {
+            return ['status' => 'error', 'message' => 'Message body is empty'];
+        }
+
+        // Component state can be lost after long idle periods — reload before failing.
+        if (! $this->conversation && $this->conversationId) {
+            $this->loadConversation();
+        }
+
+        if (! $this->conversation) {
+            return ['status' => 'error', 'message' => 'Conversation not found. Please refresh the page.'];
         }
 
         // Removed strict collision check to allow rapid messaging by same agent.
