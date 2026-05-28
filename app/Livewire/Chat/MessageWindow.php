@@ -520,8 +520,9 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
-        // This is called after Livewire finishes uploading the blob
-        $file = $audioFile ?: $this->newAttachmentData; // Changed from newAttachment
+        // wire.upload('newAttachment', blob, callback) sets $this->newAttachment
+        // to a TemporaryUploadedFile — $audioFile is just the temp filename string.
+        $file = $this->newAttachment;
         if (! $this->conversation || ! $file) {
             return;
         }
@@ -553,9 +554,7 @@ class MessageWindow extends Component
             $message->id
         );
 
-        if ($this->newAttachmentData) { // Changed from newAttachment
-            $this->reset('newAttachmentData'); // Changed from newAttachment
-        }
+        $this->reset('newAttachment');
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
