@@ -6,10 +6,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronLeft, Phone, MoreHorizontal, BellOff } from 'lucide-react-native';
+import { ChevronLeft, Phone, MoreHorizontal, BellOff, LayoutTemplate } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Audio } from 'expo-av';
 
 import { useTokens } from '@/theme';
 import type { ChatMessage, Conversation, RootStackParamList, Template } from '@/types';
@@ -72,6 +73,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isMuted, setIsMuted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   // Network Status
   const isOnline = useNetworkStatus();
@@ -111,6 +113,10 @@ export default function ChatScreen({ navigation, route }: any) {
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
       setAndroidKbHeight(0);
     });
+    
+    // Load templates in background silently so they are ready for message rendering
+    loadTemplatesList(true);
+    
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -203,6 +209,7 @@ export default function ChatScreen({ navigation, route }: any) {
           isStarred: !!m.is_starred,
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
+          metadata: m.metadata || null,
         });
       });
 
@@ -764,7 +771,7 @@ export default function ChatScreen({ navigation, route }: any) {
     setShowForwardPicker(false);
     setLoading(true);
     try {
-      const res = await api.post(`/v1/messages/${forwardingMsg.id}/forward`, {
+      const res = await api.post(`/v1/mobile/messages/${forwardingMsg.id}/forward`, {
         to_conversation_id: toConversationId,
       });
       if (res.success) {
@@ -821,10 +828,11 @@ export default function ChatScreen({ navigation, route }: any) {
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  const loadTemplatesList = async () => {
+  const loadTemplatesList = async (isSilent = false) => {
     setLoadingTemplates(true);
     try {
-      const response = await api.get('/v1/mobile/templates');
+      const headers = isSilent ? { 'X-Silent-Errors': 'true' } : undefined;
+      const response = await api.get('/v1/mobile/templates', headers);
       const rawData = response.data || [];
       const mapped: Template[] = rawData.map((t: any) => {
         const bodyPreview = t.components?.find((c: any) => c.type === 'BODY')?.text || t.content || '';
@@ -840,7 +848,9 @@ export default function ChatScreen({ navigation, route }: any) {
       });
       setTemplates(mapped);
     } catch (err: any) {
-      console.warn('Could not load templates', err);
+      if (!isSilent) {
+        console.warn('Could not load templates', err);
+      }
     } finally {
       setLoadingTemplates(false);
     }
@@ -933,7 +943,7 @@ export default function ChatScreen({ navigation, route }: any) {
             onPress: async () => {
               try {
                 setLoading(true);
-                const takeoverRes = await api.post(`/v1/conversations/${conversationId}/takeover`);
+                const takeoverRes = await api.post(`/v1/mobile/conversations/${conversationId}/takeover`);
                 if (takeoverRes.success) {
                   setHasLock(true);
                   setLockOwner(null);
@@ -1055,7 +1065,6 @@ export default function ChatScreen({ navigation, route }: any) {
       });
 
       setShowTemplatePicker(false);
-      showDialog('Template Sent', `WhatsApp template "${templateName}" dispatched.`);
       fetchConversationDetails();
     } catch (err: any) {
       showDialog('Failed to Send Template', err.message || 'Error occurred.');
@@ -1221,7 +1230,7 @@ export default function ChatScreen({ navigation, route }: any) {
               </Text>
             </View>
           </Pressable>
-          <IconButton icon={Phone} onPress={handleInitiateCall} />
+          <IconButton icon={LayoutTemplate} onPress={openTemplateSelector} />
           <IconButton icon={MoreHorizontal} onPress={() => setShowOptions(true)} />
         </View>
 
@@ -1272,6 +1281,21 @@ export default function ChatScreen({ navigation, route }: any) {
                     </View>
                   );
                 }
+
+                let displayText = m.text || '';
+                if (displayText.startsWith('Official Template: ') && templates.length > 0) {
+                  const tName = displayText.replace('Official Template: ', '').trim();
+                  const matched = templates.find((t) => t.name === tName);
+                  if (matched && matched.preview) {
+                    displayText = matched.preview;
+                    if (m.metadata?.variables && Array.isArray(m.metadata.variables)) {
+                      m.metadata.variables.forEach((val: string, index: number) => {
+                        displayText = displayText.replace(new RegExp(`\\{\\{${index + 1}\\}\\}`, 'g'), val);
+                      });
+                    }
+                  }
+                }
+
                 return (
                   <Pressable
                     key={i}
@@ -1291,7 +1315,7 @@ export default function ChatScreen({ navigation, route }: any) {
                         type: m.media_type as any,
                       }) : undefined}
                     >
-                      {m.text || ''}
+                      {displayText}
                     </Bubble>
                   </Pressable>
                 );
@@ -1312,7 +1336,15 @@ export default function ChatScreen({ navigation, route }: any) {
             </View>
             <View className="flex-row gap-2">
               <Pressable
-                onPress={() => setIsRecording(false)}
+                onPress={async () => {
+                  setIsRecording(false);
+                  if (recordingRef.current) {
+                    try {
+                      await recordingRef.current.stopAndUnloadAsync();
+                    } catch (e) {}
+                    recordingRef.current = null;
+                  }
+                }}
                 className="px-3.5 py-1.5 rounded-full bg-surface2 dark:bg-d-surface2 active:opacity-75"
               >
                 <Text className="text-muted dark:text-d-muted text-xs font-bold">Cancel</Text>
@@ -1320,21 +1352,47 @@ export default function ChatScreen({ navigation, route }: any) {
               <Pressable
                 onPress={async () => {
                   setIsRecording(false);
-                  const duration = recordingSeconds || 3;
+                  let uri: string | null = null;
+                  if (recordingRef.current) {
+                    try {
+                      await recordingRef.current.stopAndUnloadAsync();
+                      uri = recordingRef.current.getURI();
+                    } catch (e) {
+                      console.warn('Failed to stop recording:', e);
+                    }
+                    recordingRef.current = null;
+                  }
+
+                  const duration = recordingSeconds || 1;
                   const timeStr = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
                   
                   // Prepend locally
                   setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent' }]);
                   
-                    try {
-                      await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
-                        type: 'document',
-                        media_url: 'https://watxio-recordings.s3.amazonaws.com/voice-temp.aac',
-                        content: `Voice message (${timeStr})`,
-                      });
-                      fetchConversationDetails();
+                  if (!uri) {
+                    showDialog('Error', 'Failed to get recording URI.');
+                    return;
+                  }
+                  
+                  try {
+                    const formData = new FormData();
+                    formData.append('file', {
+                      uri,
+                      name: 'voice.m4a',
+                      type: 'audio/m4a',
+                    } as any);
+
+                    const uploadRes = await api.post('/v1/mobile/media/upload', formData);
+
+                    await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
+                      type: 'audio',
+                      media_url: uploadRes.url,
+                      content: `Voice message (${timeStr})`,
+                    });
+                    fetchConversationDetails();
                   } catch (err: any) {
                     console.warn('Voice upload api block:', err);
+                    showDialog('Failed to Send Voice Note', err.message || 'Upload failed.');
                   }
                 }}
                 className="px-3.5 py-1.5 rounded-full bg-accent dark:bg-d-accent active:opacity-85"
@@ -1370,9 +1428,27 @@ export default function ChatScreen({ navigation, route }: any) {
               onChange={setDraft}
               onSend={send}
               onAttach={() => setShowAttachmentMenu(true)}
-              onVoice={() => {
-                setIsRecording(true);
-                setRecordingSeconds(0);
+              onVoice={async () => {
+                try {
+                  const permission = await Audio.requestPermissionsAsync();
+                  if (permission.status === 'granted') {
+                    await Audio.setAudioModeAsync({
+                      allowsRecordingIOS: true,
+                      playsInSilentModeIOS: true,
+                    });
+                    const { recording } = await Audio.Recording.createAsync(
+                      Audio.RecordingOptionsPresets.HIGH_QUALITY
+                    );
+                    recordingRef.current = recording;
+                    setIsRecording(true);
+                    setRecordingSeconds(0);
+                  } else {
+                    showDialog('Permission Denied', 'Microphone permission is required to send voice notes.');
+                  }
+                } catch (err) {
+                  console.error('Failed to start recording', err);
+                  showDialog('Error', 'Could not start recording audio.');
+                }
               }}
               hasMedia={!!selectedMedia}
             />
@@ -1587,7 +1663,7 @@ export default function ChatScreen({ navigation, route }: any) {
                   if (!msg || !msg.id) return;
                   try {
                     setLoading(true);
-                    const res = await api.post(`/v1/messages/${msg.id}/star`);
+                    const res = await api.post(`/v1/mobile/messages/${msg.id}/star`);
                     if (res.success) {
                       // Update local messages state instantly
                       setMessages((prevMsgs) =>

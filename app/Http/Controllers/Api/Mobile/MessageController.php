@@ -256,12 +256,52 @@ class MessageController extends Controller
             }
         }
 
+        $previewParts = [];
+        if (is_iterable($template->components)) {
+            $header = '';
+            $body = '';
+            $footer = '';
+            $buttons = [];
+            
+            foreach ($template->components as $c) {
+                $type = $c['type'] ?? '';
+                if ($type === 'HEADER' && isset($c['text'])) {
+                    $header = $c['text'];
+                } elseif ($type === 'BODY' && isset($c['text'])) {
+                    $body = $c['text'];
+                } elseif ($type === 'FOOTER' && isset($c['text'])) {
+                    $footer = $c['text'];
+                } elseif ($type === 'BUTTONS' && isset($c['buttons'])) {
+                    foreach ($c['buttons'] as $btn) {
+                        $btnText = $btn['text'] ?? '';
+                        if (($btn['type'] ?? '') === 'URL' && isset($btn['url'])) {
+                            $btnText .= ' - ' . $btn['url'];
+                        }
+                        if ($btnText) {
+                            $buttons[] = '🔘 ' . $btnText;
+                        }
+                    }
+                }
+            }
+            
+            if ($header) $previewParts[] = $header;
+            if ($body) $previewParts[] = $body;
+            if ($footer) $previewParts[] = $footer;
+            if (!empty($buttons)) $previewParts[] = implode("\n", $buttons);
+        }
+        
+        $preview = implode("\n\n", $previewParts) ?: ('Official Template: ' . $template->name);
+        
+        foreach ($variables as $index => $value) {
+            $preview = str_replace('{{' . ($index + 1) . '}}', $value, $preview);
+        }
+
         $message = $conversation->messages()->create([
             'team_id' => $conversation->team_id,
             'contact_id' => $conversation->contact_id,
             'direction' => 'outbound',
             'type' => 'template',
-            'content' => 'Official Template: ' . $template->name,
+            'content' => $preview,
             'status' => 'queued',
             'metadata' => [
                 'user_id' => $request->user()->id,

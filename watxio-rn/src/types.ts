@@ -30,6 +30,7 @@ export interface ChatMessage {
   isStarred?: boolean;
   media_url?: string | null;
   media_type?: string | null;
+  metadata?: any;
 }
 
 export interface ContactProfile {
