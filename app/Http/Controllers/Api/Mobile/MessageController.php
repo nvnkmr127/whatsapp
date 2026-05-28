@@ -245,12 +245,13 @@ class MessageController extends Controller
 
         $message = $conversation->messages()->create([
             'team_id' => $conversation->team_id,
-            'user_id' => $request->user()->id,
+            'contact_id' => $conversation->contact_id,
             'direction' => 'outbound',
             'type' => 'template',
             'content' => 'Official Template: ' . $template->name,
             'status' => 'queued',
             'metadata' => [
+                'user_id' => $request->user()->id,
                 'template_id' => $template->id,
                 'template_name' => $template->name,
                 'variables' => $request->variables ?? [],
