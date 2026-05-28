@@ -30,6 +30,8 @@ class FcmService
     {
         $messaging = app('firebase.messaging');
 
+        $channelId = (isset($data['type']) && $data['type'] === 'call_incoming') ? 'calls' : 'default';
+
         $notification = Notification::create($title, $body);
         $message = CloudMessage::new()
             ->withNotification($notification)
@@ -37,10 +39,9 @@ class FcmService
             ->withAndroidConfig([
                 'priority' => 'high',
                 'notification' => [
-                    'channel_id' => 'high_importance_channel_v2',
+                    'channel_id' => $channelId,
                     'sound' => 'default',
                     'priority' => 'high',
-                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                 ],
             ])
             ->withApnsConfig([

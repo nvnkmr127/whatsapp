@@ -63,11 +63,10 @@ class SendPushNotificationListener implements ShouldQueue
             $body = $message->content ?: ($message->type === 'image' ? '📷 Image' : '📎 Attachment');
 
             $this->fcmService->sendToUser($user, $title, $body, [
-                'type' => 'message.inbound',
+                'type' => 'new_message',
                 'conversation_id' => (string) $message->conversation_id,
                 'team_id' => (string) $message->team_id,
                 'message_id' => (string) $message->id,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
             ]);
         }
 
@@ -105,12 +104,11 @@ class SendPushNotificationListener implements ShouldQueue
             $body = 'from ' . $contactName;
 
             $this->fcmService->sendToUser($user, $title, $body, [
-                'type' => 'call.incoming',
+                'type' => 'call_incoming',
                 'call_id' => (string) $call->call_id,
                 'conversation_id' => (string) $call->conversation_id,
                 'team_id' => (string) $call->team_id,
                 'contact_name' => $contactName,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
             ]);
         }
 

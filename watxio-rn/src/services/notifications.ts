@@ -56,9 +56,9 @@ export async function setupAndroidChannel() {
 
 // ── Permission + token registration ─────────────────────────────────────────
 export async function registerForPushNotifications(): Promise<string | null> {
-  // Must be a physical device (simulators don't get push tokens)
-  if (!Device.isDevice) {
-    console.log('[FCM] Skipping — not a real device');
+  // Must be a physical device for iOS (simulators < iOS 16.4 don't get push tokens reliably). Android emulators work fine.
+  if (!Device.isDevice && Platform.OS === 'ios') {
+    console.log('[FCM] Skipping — not a real device (iOS Simulator)');
     return null;
   }
 
