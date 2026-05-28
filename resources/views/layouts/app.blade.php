@@ -4,9 +4,9 @@
 <head>
     <script>
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark')
+            document.documentElement.classList.add('dark');
         } else {
-            document.documentElement.classList.remove('dark')
+            document.documentElement.classList.remove('dark');
         }
     </script>
     <meta charset="utf-8">
@@ -44,9 +44,9 @@
     <!-- Custom Style Injection -->
     <style>
         :root {
-            --wa-primary:
-                {{ $brandPrimaryColor }}
-            ;
+            --wa-primary: {{ $brandPrimaryColor }};
+            --brand: #f97316;
+            --brand-dim: #ea580c;
         }
 
         .bg-wa-primary {
@@ -64,10 +64,15 @@
         .ring-wa-primary {
             --tw-ring-color: var(--wa-primary);
         }
+
+        .bg-brand { background-color: var(--brand); }
+        .text-brand { color: var(--brand); }
+        .border-brand { border-color: var(--brand); }
+        .ring-brand { --tw-ring-color: var(--brand); }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
+<body class="font-sans antialiased bg-[#f8f8f6] dark:bg-zinc-950">
     <livewire:calls.call-overlay />
     <livewire:chat.chat-beacon />
     @livewire('onboarding.basic-details-popup')
@@ -81,7 +86,7 @@
         <x-layouts.sidebar />
 
         <!-- Content Area -->
-        <div class="flex flex-col flex-1 overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <div class="flex flex-col flex-1 overflow-hidden bg-[#f8f8f6] dark:bg-zinc-950">
             <!-- Top Header -->
             <x-layouts.header :header="$header ?? null" />
 

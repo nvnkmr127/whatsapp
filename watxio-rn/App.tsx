@@ -13,14 +13,26 @@ import AppNavigator from '@/navigation/AppNavigator';
 import { useTokens, ThemeProvider } from '@/theme';
 import { useColorScheme as useNWColorScheme } from 'nativewind';
 import { CallOverlayManager } from '@/components/CallOverlayManager';
+import { useGlobalState } from '@/store';
+import { registerForPushNotifications } from '@/services/notifications';
 
 function Root() {
   const { scheme } = useTokens();
   const { setColorScheme } = useNWColorScheme();
+  const [globalState] = useGlobalState();
 
   React.useEffect(() => {
     setColorScheme(scheme);
   }, [scheme]);
+
+  // Register for push notifications once the user is authenticated
+  React.useEffect(() => {
+    if (globalState.token) {
+      registerForPushNotifications().catch((e) =>
+        console.warn('[FCM] Registration error:', e)
+      );
+    }
+  }, [globalState.token]);
 
   return (
     <>

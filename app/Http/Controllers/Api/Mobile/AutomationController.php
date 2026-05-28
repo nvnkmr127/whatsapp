@@ -30,13 +30,67 @@ class AutomationController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $automation = $request->user()->currentTeam->automations()->create([
-            'name' => $validated['name'],
-            'trigger_type' => $validated['trigger_type'],
-            'trigger_config' => [],
-            'is_active' => $validated['is_active'] ?? true,
-            'flow_data' => [],
-        ]);
+        $defaultText = match ($validated['trigger_type']) {
+            'birthday_event' => '🎉 Happy Birthday! We hope you have a fantastic day. As a special gift from us, here is a 15% discount coupon for your next purchase: BDAY15. Enjoy! 🎁',
+            'order_delivered' => 'Thank you for shopping with us! 📦 Your order has been delivered. On a scale of 1-10, how likely are you to recommend us to a friend or colleague? Reply with a number from 1 to 10.',
+            'outbound_spam' => '⚠️ Your outbound message was flagged by our system spam filter due to suspicious keywords. Please review our fair usage policy.',
+            'inbound_translation' => '🌐 [System] Translating inbound message to workspace default language...',
+            default => '⚡ Custom automation flow has been triggered successfully.',
+        };
+
+        $flowData = [
+            'nodes' => [
+                ['id' => '1', 'type' => 'trigger'],
+                ['id' => '2', 'type' => 'message', 'data' => ['text' => $defaultText]],
+                ['id' => '3', 'type' => 'stop'],
+            ],
+            'edges' => [
+                ['source' => '1', 'target' => '2'],
+                ['source' => '2', 'target' => '3'],
+            ],
+        ];
+
+        $automation = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $defaultText, $flowData, $request) {
+            $automation = $request->user()->currentTeam->automations()->create([
+                'name' => $validated['name'],
+                'trigger_type' => $validated['trigger_type'],
+                'trigger_config' => [],
+                'is_active' => $validated['is_active'] ?? true,
+                'flow_data' => $flowData,
+            ]);
+
+            $automation->steps()->create([
+                'team_id' => $automation->team_id,
+                'type' => 'trigger',
+                'config' => [],
+                'order_index' => 0,
+            ]);
+
+            $automation->steps()->create([
+                'team_id' => $automation->team_id,
+                'type' => 'message',
+                'config' => ['text' => $defaultText],
+                'order_index' => 1,
+            ]);
+
+            $automation->steps()->create([
+                'team_id' => $automation->team_id,
+                'type' => 'stop',
+                'config' => [],
+                'order_index' => 2,
+            ]);
+
+            return $automation;
+        });
+
+        return response()->json($automation);
+    }
+
+    public function show(Request $request, Automation $automation)
+    {
+        $this->authorize('view', $automation);
+
+        $automation->loadCount(['runs', 'steps']);
 
         return response()->json($automation);
     }

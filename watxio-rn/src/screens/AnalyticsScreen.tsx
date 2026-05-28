@@ -54,7 +54,7 @@ export default function AnalyticsScreen({ navigation }: any) {
     if (!isSilent) setLoading(true);
     try {
       // Fetch mobile dashboard statistics
-      const response = await api.get('/v1/mobile/analytics/dashboard');
+      const response = await api.get(`/v1/mobile/analytics/dashboard?range=${range}`);
       setDashboardData(response);
     } catch (err: any) {
       console.warn('Failed to load analytics dashboard:', err);
@@ -62,7 +62,7 @@ export default function AnalyticsScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [range]);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,11 +83,9 @@ export default function AnalyticsScreen({ navigation }: any) {
   const kpis = useMemo(() => {
     if (!dashboardData) return [];
 
-    const factor = range === '7d' ? 0.23 : range === '90d' ? 3.12 : 1;
-
     // Extract values
-    const conversationsCount = Math.round((dashboardData.conversations?.active || 0) * factor);
-    const sentCount = Math.round((dashboardData.summary?.total_30d || 0) * factor);
+    const conversationsCount = dashboardData.conversations?.active || 0;
+    const sentCount = dashboardData.summary?.total_30d || 0;
     const activityTrend = dashboardData.message_activity?.values || [4, 5, 8, 2, 9, 3, 5];
 
     return [
@@ -106,14 +104,14 @@ export default function AnalyticsScreen({ navigation }: any) {
         trend: [10, 10, 10, 10, 10],
       },
       {
-        label: 'Messages Sent (30d)',
+        label: `Messages Sent (${range})`,
         value: sentCount.toLocaleString(),
         delta: `Today: ${dashboardData.summary?.sent_today || 0}`,
         up: true,
         trend: activityTrend,
       },
       {
-        label: 'Read Rate (30d)',
+        label: `Read Rate (${range})`,
         value: `${dashboardData.messages_30d?.read_rate || 0}%`,
         delta: `Delivery: ${dashboardData.messages_30d?.delivery_rate || 0}%`,
         up: (dashboardData.messages_30d?.read_rate || 0) > 50,
@@ -125,10 +123,9 @@ export default function AnalyticsScreen({ navigation }: any) {
   const funnel = useMemo(() => {
     if (!dashboardData) return [];
     
-    const factor = range === '7d' ? 0.23 : range === '90d' ? 3.12 : 1;
-    const sent = Math.round((dashboardData.messages_30d?.sent || 0) * factor);
-    const delivered = Math.round((dashboardData.messages_30d?.delivered || 0) * factor);
-    const read = Math.round((dashboardData.messages_30d?.read || 0) * factor);
+    const sent = dashboardData.messages_30d?.sent || 0;
+    const delivered = dashboardData.messages_30d?.delivered || 0;
+    const read = dashboardData.messages_30d?.read || 0;
     const replied = Math.round(read * 0.4); // Estimate replies based on read count
 
     return [

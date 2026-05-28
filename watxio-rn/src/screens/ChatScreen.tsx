@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, KeyboardAvoidingView, Platform, Animated, Pressable, Keyboard, BackHandler,
-  Modal, FlatList, ActivityIndicator, Image, Vibration
+  Modal, FlatList, ActivityIndicator, Image, Vibration, TextInput
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -12,13 +12,18 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { useTokens } from '@/theme';
-import type { ChatMessage, RootStackParamList, Template } from '@/types';
+import type { ChatMessage, Conversation, RootStackParamList, Template } from '@/types';
 import { Avatar } from '@/components/Avatar';
 import { Bubble } from '@/components/Bubble';
 import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { MediaViewer } from '@/components/MediaViewer';
 import { api } from '@/services/api';
+import { CallWebRTC } from '@/services/webrtc';
+import { useGlobalState } from '@/store';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import {
   cacheMessages, cacheMeta,
   loadCachedMessages, loadCachedMeta,
@@ -28,11 +33,17 @@ export default function ChatScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
   const nav = navigation;
-  const contact = route.params.contact;
+  const [globalState] = useGlobalState();
+  const conversation = route.params.conversation;
+  const conversationId = conversation.id;
+  const contact = conversation;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [loading, setLoading] = useState(true);      // first paint spinner
   const [isRefreshing, setIsRefreshing] = useState(false); // silent bg refresh indicator
   const [serverDown, setServerDown] = useState(false);     // 503 / network offline
@@ -41,7 +52,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isWithin24Hours, setIsWithin24Hours] = useState(true);
   const [isAiEnabled, setIsAiEnabled] = useState(true);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
-  const [dbContactId, setDbContactId] = useState<number>(contact.id);
+  const [dbContactId, setDbContactId] = useState<number>(conversation.contact_id || 0);
 
   // New States for Actions
   const [isCalling, setIsCalling] = useState(false);
@@ -61,6 +72,50 @@ export default function ChatScreen({ navigation, route }: any) {
   const [isMuted, setIsMuted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Network Status
+  const isOnline = useNetworkStatus();
+
+  // Media Viewer State
+  const [mediaViewer, setMediaViewer] = useState<{ uri: string; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
+
+  // Save Contact States
+  const [showSaveContact, setShowSaveContact] = useState(false);
+  const [saveContactName, setSaveContactName] = useState('');
+  const [saveContactEmail, setSaveContactEmail] = useState('');
+  const [saveContactNotes, setSaveContactNotes] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+
+  // Conversation Lock States
+  const [lockOwner, setLockOwner] = useState<{ id: number; name: string } | null>(null);
+  const [hasLock, setHasLock] = useState(false);
+  const hasLockRef = useRef(false);
+
+  // WebSocket Connection State
+  const [wsConnected, setWsConnected] = useState(false);
+
+  // Message Actions Context Menu & Forward States
+  const [showMsgActions, setShowMsgActions] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState<ChatMessage | null>(null);
+  const [showForwardPicker, setShowForwardPicker] = useState(false);
+  const [forwardingMsg, setForwardingMsg] = useState<ChatMessage | null>(null);
+  const [activeConversations, setActiveConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [androidKbHeight, setAndroidKbHeight] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setAndroidKbHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setAndroidKbHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Dialog State
   const [dialogConfig, setDialogConfig] = useState<{
@@ -83,14 +138,26 @@ export default function ChatScreen({ navigation, route }: any) {
   // Track previous message count to avoid scrolling on polls with no new messages
   const prevMsgCountRef = useRef<number>(0);
 
+  const getCursorFromUrl = (url: string | null) => {
+    if (!url) return null;
+    const match = url.match(/[?&]cursor=([^&]+)/);
+    return match ? match[1] : null;
+  };
+
   // Fetch Conversation metadata and Messages — parallel requests for speed
   const fetchConversationDetails = async (isBackground = false) => {
+    // When offline, skip API call and rely on already-loaded cache
+    if (!isOnline) {
+      if (isBackground) setIsRefreshing(false);
+      setLoading(false);
+      return false;
+    }
     if (isBackground) setIsRefreshing(true);
     try {
       // Fire both requests at the same time instead of waiting one-by-one
       const [details, msgsData] = await Promise.all([
-        api.get(`/v1/mobile/conversations/${contact.id}`),
-        api.get(`/v1/mobile/conversations/${contact.id}/messages`),
+        api.get(`/v1/mobile/conversations/${conversationId}`),
+        api.get(`/v1/mobile/conversations/${conversationId}/messages`),
       ]);
 
       const newIsWithin24 = details.is_within_24_hours;
@@ -103,6 +170,12 @@ export default function ChatScreen({ navigation, route }: any) {
       setSessionExpiresAt(newSession);
       setDbContactId(newDbId);
       setServerDown(false); // server is back
+
+      const nextUrl = msgsData.next_page_url || null;
+      const parsedCursor = getCursorFromUrl(nextUrl);
+      setNextCursor((current) => {
+        return isBackground && current ? current : parsedCursor;
+      });
 
       const rawMsgs = msgsData.data || [];
       // Sort chronological (oldest first)
@@ -122,23 +195,70 @@ export default function ChatScreen({ navigation, route }: any) {
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
         mapped.push({
+          id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
-          text: m.content || (m.type === 'image' ? '📷 Image' : m.type === 'video' ? '🎥 Video' : '📄 Document'),
+          text: m.content || '',
           time: msgTime,
           status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
+          isStarred: !!m.is_starred,
+          media_url: m.media_url || null,
+          media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
         });
       });
 
       // Only update messages state if content actually changed (avoids re-render on every poll)
       setMessages((prev) => {
+        // Find the first message in mapped that has an ID (the oldest one in page 1)
+        const firstMappedWithId = mapped.find(m => m.kind !== 'date' && m.id);
+
+        let merged: ChatMessage[] = [];
+        if (firstMappedWithId && prev.length > 0) {
+          // Find where page 1 starts in the previous messages state
+          const stopIndex = prev.findIndex(m => m.kind !== 'date' && m.id && m.id >= firstMappedWithId.id!);
+
+          let prefix: ChatMessage[] = [];
+          if (stopIndex !== -1) {
+            prefix = prev.slice(0, stopIndex);
+          } else {
+            prefix = prev;
+          }
+
+          // Combine older messages prefix and newly fetched page 1 messages
+          merged = [...prefix, ...mapped];
+        } else {
+          merged = mapped;
+        }
+
+        // Clean up adjacent duplicate date headers
+        const cleaned: ChatMessage[] = [];
+        let lastHeaderSeen = '';
+        merged.forEach((msg) => {
+          if (msg.kind === 'date') {
+            if (msg.text !== lastHeaderSeen) {
+              cleaned.push(msg);
+              lastHeaderSeen = msg.text;
+            }
+          } else {
+            cleaned.push(msg);
+          }
+        });
+
         const prevLast = prev[prev.length - 1];
-        const newLast  = mapped[mapped.length - 1];
-        const countChanged = prev.length !== mapped.length;
-        const lastChanged  = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time;
-        if (!countChanged && !lastChanged) return prev; // nothing changed — skip re-render
+        const newLast  = cleaned[cleaned.length - 1];
+        const countChanged = prev.length !== cleaned.length;
+        const lastChanged  = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time || prevLast?.status !== newLast?.status;
+
+        if (!countChanged && !lastChanged) {
+          // Check if any message status/content inside changed (e.g. read receipts)
+          const anyMessageChanged = cleaned.some((m, idx) => {
+            const p = prev[idx];
+            return !p || p.id !== m.id || p.status !== m.status || p.text !== m.text;
+          });
+          if (!anyMessageChanged) return prev;
+        }
 
         // Haptic feedback (Vibration) on new inbound message in foreground
-        if (newLast && newLast.kind === 'in') {
+        if (newLast && newLast.kind === 'in' && (!prevLast || prevLast.id !== newLast.id)) {
           try {
             Vibration.vibrate(500);
           } catch (e) {
@@ -146,13 +266,13 @@ export default function ChatScreen({ navigation, route }: any) {
           }
         }
 
-        return mapped;
+        return cleaned;
       });
 
       // ── Persist to local cache so next open is instant ──
       await Promise.all([
-        cacheMessages(contact.id, mapped),
-        cacheMeta(contact.id, {
+        cacheMessages(conversationId, mapped),
+        cacheMeta(conversationId, {
           isWithin24Hours: newIsWithin24,
           isAiEnabled: newIsAi,
           sessionExpiresAt: newSession,
@@ -175,6 +295,69 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
+  const loadEarlierMessages = async () => {
+    if (!nextCursor || loadingEarlier) return;
+    setLoadingEarlier(true);
+    try {
+      const response = await api.get(`/v1/mobile/conversations/${conversationId}/messages?cursor=${nextCursor}`);
+      const rawMsgs = response.data || [];
+      const nextUrl = response.next_page_url || null;
+      setNextCursor(getCursorFromUrl(nextUrl));
+
+      const sorted = [...rawMsgs].reverse();
+
+      const mapped: ChatMessage[] = [];
+      let lastDateStr = '';
+
+      sorted.forEach((m: any) => {
+        const msgDate = new Date(m.created_at);
+        const dateStr = msgDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        if (dateStr !== lastDateStr) {
+          mapped.push({ kind: 'date', text: dateStr });
+          lastDateStr = dateStr;
+        }
+
+        const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+        mapped.push({
+          id: m.id,
+          kind: m.direction === 'inbound' ? 'in' : 'out',
+          text: m.content || '',
+          time: msgTime,
+          status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
+          isStarred: !!m.is_starred,
+          media_url: m.media_url || null,
+          media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
+        });
+      });
+
+      setMessages((prev) => {
+        const combined = [...mapped, ...prev];
+        const cleaned: ChatMessage[] = [];
+        let lastHeaderSeen = '';
+        
+        combined.forEach((msg) => {
+          if (msg.kind === 'date') {
+            if (msg.text !== lastHeaderSeen) {
+              cleaned.push(msg);
+              lastHeaderSeen = msg.text;
+            }
+          } else {
+            if (!cleaned.some(x => x.id === msg.id)) {
+              cleaned.push(msg);
+            }
+          }
+        });
+        
+        return cleaned;
+      });
+    } catch (err: any) {
+      console.warn('Failed to load earlier messages:', err);
+    } finally {
+      setLoadingEarlier(false);
+    }
+  };
+
   // Compress an image URI to max 1200px wide and 70% quality (~< 300KB)
   const compressImage = async (uri: string): Promise<{ uri: string; mimeType: string; name: string }> => {
     const result = await ImageManipulator.manipulateAsync(
@@ -192,7 +375,7 @@ export default function ChatScreen({ navigation, route }: any) {
     let isMounted = true;
     let failCount = 0;
 
-    const POLL_INTERVAL = 8000;   // 8s when healthy
+    const POLL_INTERVAL = wsConnected ? 40000 : 8000;   // 40s when WS is alive, 8s fallback when not
     const MAX_BACKOFF   = 120000; // max 2 min backoff when server is down
 
     const poll = async () => {
@@ -215,8 +398,8 @@ export default function ChatScreen({ navigation, route }: any) {
     // ── Step 1: Load cache immediately (no spinner if cache exists) ──
     (async () => {
       const [cachedMsgs, cachedMeta] = await Promise.all([
-        loadCachedMessages(contact.id),
-        loadCachedMeta(contact.id),
+        loadCachedMessages(conversationId),
+        loadCachedMeta(conversationId),
       ]);
 
       if (cachedMsgs && cachedMsgs.length > 0) {
@@ -246,20 +429,270 @@ export default function ChatScreen({ navigation, route }: any) {
       isMounted = false;
       clearTimeout(pollTimer);
     };
-  }, [contact.id]);
+  }, [conversationId, wsConnected]);
+
+  // Sync state to ref to avoid triggering unnecessary effect dependency updates
+  useEffect(() => {
+    hasLockRef.current = hasLock;
+  }, [hasLock]);
+
+  // Presence Lifecycle: heartbeat every 30s, leave on unmount
+  useEffect(() => {
+    let presenceTimer: ReturnType<typeof setInterval>;
+    let active = true;
+
+    const sendPresenceHeartbeat = async () => {
+      try {
+        await api.post('/v1/mobile/presence/heartbeat', {
+          conversation_id: conversationId,
+        }, { 'X-Silent-Errors': 'true' });
+      } catch (err) {
+        console.warn('[Presence] Heartbeat failed:', err);
+      }
+    };
+
+    const sendPresenceLeave = async () => {
+      if (!api.getToken()) return;
+      try {
+        await api.post('/v1/mobile/presence/leave', {
+          conversation_id: conversationId,
+        }, { 'X-Silent-Errors': 'true' });
+      } catch (err) {
+        console.warn('[Presence] Leave failed:', err);
+      }
+    };
+
+    // Send immediately on mount
+    sendPresenceHeartbeat();
+
+    // Heartbeat every 30 seconds
+    presenceTimer = setInterval(() => {
+      if (active) {
+        sendPresenceHeartbeat();
+      }
+    }, 30000);
+
+    return () => {
+      active = false;
+      clearInterval(presenceTimer);
+      sendPresenceLeave();
+    };
+  }, [conversationId]);
+
+  // Lock Lifecycle: lock on mount, heartbeat every 20s, unlock on unmount
+  useEffect(() => {
+    let heartbeatTimer: ReturnType<typeof setInterval>;
+    let active = true;
+
+    const performLock = async () => {
+      try {
+        const response = await api.post(`/v1/mobile/conversations/${conversationId}/lock`);
+        if (!active) return;
+        
+        if (response.success) {
+          setHasLock(true);
+          setLockOwner(null);
+        } else if (response.code === 'ERR_CONVERSATION_LOCKED') {
+          setHasLock(false);
+          const ownerData = response.data || {};
+          setLockOwner({
+            id: ownerData.owner || 0,
+            name: ownerData.owner_name || 'Another Agent',
+          });
+          showDialog(
+            'Conversation Locked',
+            `This conversation is currently locked by ${ownerData.owner_name || 'another agent'}.`,
+            [
+              { text: 'View Only', style: 'cancel' },
+              {
+                text: 'Take Over',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    setLoading(true);
+                    const takeoverRes = await api.post(`/v1/mobile/conversations/${conversationId}/takeover`);
+                    if (takeoverRes.success) {
+                      setHasLock(true);
+                      setLockOwner(null);
+                      showDialog('Lock Acquired', 'You have successfully taken over this conversation.');
+                    } else {
+                      showDialog('Takeover Failed', takeoverRes.message || 'Could not take over the conversation.');
+                    }
+                  } catch (takeoverErr: any) {
+                    showDialog('Takeover Failed', takeoverErr.message || 'Error occurred.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              }
+            ]
+          );
+        }
+      } catch (err) {
+        console.warn('[Lock] Failed to lock:', err);
+      }
+    };
+
+    const performHeartbeat = async () => {
+      try {
+        const response = await api.post(`/v1/mobile/conversations/${conversationId}/heartbeat`, undefined, { 'X-Silent-Errors': 'true' });
+        if (!active) return;
+
+        if (!response.success) {
+          setHasLock(false);
+        }
+      } catch (err: any) {
+        console.warn('[Lock] Heartbeat failed:', err);
+        if (err?.status === 401 || err?.data?.code === 'ERR_LOCK_LOST') {
+          setHasLock(false);
+        }
+      }
+    };
+
+    const performUnlock = async () => {
+      if (!api.getToken()) return;
+      try {
+        await api.post(`/v1/mobile/conversations/${conversationId}/unlock`, undefined, { 'X-Silent-Errors': 'true' });
+      } catch (err) {
+        console.warn('[Lock] Unlock failed:', err);
+      }
+    };
+
+    performLock();
+
+    heartbeatTimer = setInterval(() => {
+      if (active && hasLockRef.current) {
+        performHeartbeat();
+      }
+    }, 20000);
+
+    return () => {
+      active = false;
+      clearInterval(heartbeatTimer);
+      if (hasLockRef.current) {
+        performUnlock();
+      }
+    };
+  }, [conversationId]);
+
+  // Real-time WebSocket Messaging listener (Reverb / Pusher)
+  useEffect(() => {
+    const socketConfig = globalState.websocket;
+    if (!socketConfig) return;
+
+    let ws: WebSocket | null = null;
+    let active = true;
+
+    // Backend now sends the public-facing Reverb config directly.
+    // Convert http/https scheme to ws/wss for the WebSocket URL.
+    const wsScheme = socketConfig.scheme === 'https' ? 'wss' : 'ws';
+    const portSuffix = socketConfig.port && socketConfig.port !== 443 && socketConfig.port !== 80
+      ? `:${socketConfig.port}`
+      : '';
+    const wsUrl = `${wsScheme}://${socketConfig.host}${portSuffix}/app/${socketConfig.key}?protocol=7&client=js&version=8.4.0-rc2&flash=false`;
+
+    const channelName = `presence-conversation.${conversationId}`;
+
+    const connect = () => {
+      if (!active) return;
+      
+      console.log(`[WS] Connecting to ${wsUrl}`);
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('[WS] Connection opened');
+      };
+
+      ws.onmessage = async (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          
+          if (payload.event === 'pusher:connection_established') {
+            const data = JSON.parse(payload.data);
+            const socketId = data.socket_id;
+            console.log(`[WS] Connection established with socket_id: ${socketId}`);
+
+            // Authenticate subscription with backend
+            try {
+              const authRes = await api.post('/v1/mobile/broadcasting/auth', {
+                socket_id: socketId,
+                channel_name: channelName,
+              });
+
+              if (active && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  event: 'pusher:subscribe',
+                  data: {
+                    channel: channelName,
+                    auth: authRes.auth,
+                    channel_data: authRes.channel_data,
+                  }
+                }));
+                console.log(`[WS] Subscribing to channel ${channelName}`);
+                setWsConnected(true);
+              }
+            } catch (authErr) {
+              console.warn('[WS] Subscription auth failed:', authErr);
+              setWsConnected(false);
+            }
+          } else if (
+            payload.event === 'MessageReceived' ||
+            payload.event === 'MessageSent' ||
+            payload.event === 'MessageStatusUpdated'
+          ) {
+            console.log(`[WS] Invalidation event received: ${payload.event}`);
+            fetchConversationDetails(true);
+          }
+        } catch (err) {
+          console.warn('[WS] Error processing message:', err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.warn('[WS] Error:', err);
+        setWsConnected(false);
+      };
+
+      ws.onclose = (event) => {
+        console.log(`[WS] Connection closed: code=${event.code}, reason=${event.reason}`);
+        setWsConnected(false);
+        // Reconnect after 5 seconds if still active
+        if (active) {
+          setTimeout(connect, 5000);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      active = false;
+      if (ws) {
+        ws.close();
+      }
+    };
+  }, [conversationId, globalState.websocket, globalState.baseUrl]);
+
+  const prevLastMsgRef = useRef<ChatMessage | null>(null);
+  const prevTypingRef = useRef(false);
 
   useEffect(() => {
-    const currentCount = messages.length;
-    const prevCount    = prevMsgCountRef.current;
-
-    // Only auto-scroll to bottom when NEW messages arrive (count increased)
-    // Not on every poll that returns the same messages
-    if (currentCount > prevCount) {
-      const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: currentCount - prevCount <= 2 }), 80);
-      prevMsgCountRef.current = currentCount;
+    const lastMsg = messages[messages.length - 1];
+    const prevLastMsg = prevLastMsgRef.current;
+    
+    const isInitialLoad = !prevLastMsg && lastMsg;
+    const isNewMessageAdded = lastMsg && prevLastMsg && (lastMsg.id !== prevLastMsg.id || lastMsg.text !== prevLastMsg.text || lastMsg.time !== prevLastMsg.time);
+    const typingStarted = typing && !prevTypingRef.current;
+    
+    if (isInitialLoad || isNewMessageAdded || typingStarted) {
+      const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: false }), 80);
+      prevLastMsgRef.current = lastMsg;
+      prevTypingRef.current = typing;
       return () => clearTimeout(t);
     }
-    prevMsgCountRef.current = currentCount;
+    
+    prevLastMsgRef.current = lastMsg;
+    prevTypingRef.current = typing;
   }, [messages, typing]);
 
   useEffect(() => {
@@ -268,6 +701,70 @@ export default function ChatScreen({ navigation, route }: any) {
     });
     return unsubscribe;
   }, [nav]);
+
+  const handleMessageLongPress = (msg: ChatMessage) => {
+    if (!msg.id) return;
+    setSelectedMsg(msg);
+    setShowMsgActions(true);
+  };
+
+  const openForwardModal = async (msg: ChatMessage) => {
+    setForwardingMsg(msg);
+    setShowForwardPicker(true);
+    setLoadingConversations(true);
+    try {
+      const response = await api.get('/v1/mobile/conversations');
+      const rawData = response.data || [];
+      const mapped: Conversation[] = rawData.map((c: any) => {
+        return {
+          id: c.id,
+          contact_id: c.contact_id,
+          name: c.name || c.phone || 'Unknown Contact',
+          phone: c.phone,
+          last: c.last_message ? c.last_message.content : 'No messages yet',
+          time: c.last_message ? c.last_message.pretty_time : '',
+          unread: c.unread_count || 0,
+          status: c.status === 'closed' ? 'delivered' : 'read',
+          tag: c.tags && c.tags[0] ? c.tags[0].name : 'Sales',
+          online: c.is_within_24_hours || false,
+          pinned: false,
+          reply: c.last_message?.is_outbound ? 'me' : undefined,
+          bot: c.is_ai_enabled || false,
+        };
+      });
+      // Filter out the current conversation so users can't forward to the same chat
+      const filtered = mapped.filter((c) => c.id !== conversationId);
+      setActiveConversations(filtered);
+    } catch (err: any) {
+      console.warn('Could not load conversations for forwarding', err);
+      showDialog('Error', 'Failed to load conversations for forwarding.');
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
+  const handleForwardMessage = async (toConversationId: number, toConversationName: string) => {
+    if (!forwardingMsg || !forwardingMsg.id) return;
+    
+    setShowForwardPicker(false);
+    setLoading(true);
+    try {
+      const res = await api.post(`/v1/messages/${forwardingMsg.id}/forward`, {
+        to_conversation_id: toConversationId,
+      });
+      if (res.success) {
+        showDialog(
+          'Message Forwarded',
+          `Message successfully forwarded to ${toConversationName}.`
+        );
+      }
+    } catch (err: any) {
+      showDialog('Forwarding Failed', err.message || 'Could not forward message.');
+    } finally {
+      setLoading(false);
+      setForwardingMsg(null);
+    }
+  };
 
   const handleBack = () => {
     Keyboard.dismiss();
@@ -317,6 +814,7 @@ export default function ChatScreen({ navigation, route }: any) {
       const mapped: Template[] = rawData.map((t: any) => {
         const bodyPreview = t.components?.find((c: any) => c.type === 'BODY')?.text || t.content || '';
         return {
+          id: t.id,
           name: t.name,
           cat: t.category === 'MARKETING' ? 'Marketing' : t.category === 'UTILITY' ? 'Utility' : 'Authentication',
           lang: t.language || 'en_US',
@@ -403,8 +901,42 @@ export default function ChatScreen({ navigation, route }: any) {
   };
 
   const send = async () => {
+    if (isSending) return;
     const text = draft.trim();
     if (!text && !selectedMedia) return;
+
+    // Check lock ownership before sending
+    if (!hasLock && lockOwner) {
+      showDialog(
+        'Conversation Locked',
+        `This conversation is locked by ${lockOwner.name}. You must take it over before you can send messages.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Take Over',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setLoading(true);
+                const takeoverRes = await api.post(`/v1/conversations/${conversationId}/takeover`);
+                if (takeoverRes.success) {
+                  setHasLock(true);
+                  setLockOwner(null);
+                  showDialog('Lock Acquired', 'You have successfully taken over this conversation. You can now send messages.');
+                } else {
+                  showDialog('Takeover Failed', takeoverRes.message || 'Could not take over the conversation.');
+                }
+              } catch (takeoverErr: any) {
+                showDialog('Takeover Failed', takeoverErr.message || 'Error occurred.');
+              } finally {
+                setLoading(false);
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }
 
     // Check policy limits: 24h window constraint
     if (!isWithin24Hours) {
@@ -427,6 +959,7 @@ export default function ChatScreen({ navigation, route }: any) {
     const mediaToUpload = selectedMedia;
     setSelectedMedia(null);
 
+    setIsSending(true);
     try {
       let mediaUrl = null;
       let msgType = 'text';
@@ -479,10 +1012,12 @@ export default function ChatScreen({ navigation, route }: any) {
         payload.media_url = mediaUrl;
       }
 
-      await api.post(`/v1/mobile/conversations/${contact.id}/messages`, payload);
+      await api.post(`/v1/mobile/conversations/${conversationId}/messages`, payload);
       fetchConversationDetails();
     } catch (err: any) {
       showDialog('Failed to Send Message', err.message || 'Error occurred while sending.');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -499,7 +1034,7 @@ export default function ChatScreen({ navigation, route }: any) {
         return;
       }
 
-      await api.post(`/v1/mobile/conversations/${contact.id}/send-template`, {
+      await api.post(`/v1/mobile/conversations/${conversationId}/send-template`, {
         template_id: matched.id,
         variables: [],
       });
@@ -518,7 +1053,7 @@ export default function ChatScreen({ navigation, route }: any) {
     setShowOptions(false);
     const nextVal = !isAiEnabled;
     try {
-      await api.post(`/v1/mobile/conversations/${contact.id}/toggle-ai`, {
+      await api.post(`/v1/mobile/conversations/${conversationId}/toggle-ai`, {
         enabled: nextVal,
       });
       setIsAiEnabled(nextVal);
@@ -536,7 +1071,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const handleCloseConversation = async () => {
     setShowOptions(false);
     try {
-      await api.post(`/v1/mobile/conversations/${contact.id}/close`);
+      await api.post(`/v1/mobile/conversations/${conversationId}/close`);
       showDialog('Conversation Resolved', 'Closed this ticket and sent customer CSAT survey.', [
         { text: 'OK', onPress: () => nav.goBack() }
       ]);
@@ -546,12 +1081,30 @@ export default function ChatScreen({ navigation, route }: any) {
   };
 
   const handleInitiateCall = async () => {
+    // Guard: a phone number (digits only) is required. contact.name is a display
+    // name and would fail the server-side regex validation — never use it as
+    // a fallback for phone_number.
+    const phoneNumber = contact.phone;
+    if (!phoneNumber) {
+      showDialog('Call Failed', 'No phone number is available for this contact.');
+      return;
+    }
     setIsCalling(true);
     try {
+      // Meta's Calls API requires a WebRTC SDP offer ("session" parameter).
+      // Generate one here before hitting the server so we already have the
+      // local PeerConnection ready when the remote answer arrives.
+      const sdp = await CallWebRTC.session().initOutbound();
+
       await api.post('/v1/calls/initiate', {
-        phone_number: contact.phone || contact.name,
+        phone_number: phoneNumber,
+        sdp,
       });
+      // Call initiated — the global CallOverlayManager picks it up via polling.
+      // Dismiss the local ringing indicator after a short delay.
+      setTimeout(() => setIsCalling(false), 3000);
     } catch (err: any) {
+      CallWebRTC.end(); // clean up the WebRTC session on failure
       console.warn('Call setup failed:', err);
       setIsCalling(false);
 
@@ -596,6 +1149,34 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
+  const handleSaveContact = async () => {
+    if (!saveContactName.trim()) return;
+    setSavingContact(true);
+    try {
+      if (dbContactId) {
+        await api.put(`/v1/mobile/contacts/${dbContactId}`, {
+          name: saveContactName.trim(),
+          email: saveContactEmail.trim() || undefined,
+          notes: saveContactNotes.trim() || undefined,
+        });
+      } else {
+        const res = await api.post('/v1/mobile/contacts', {
+          phone_number: contact.phone,
+          name: saveContactName.trim(),
+          email: saveContactEmail.trim() || undefined,
+          notes: saveContactNotes.trim() || undefined,
+        });
+        if (res?.data?.id) setDbContactId(res.data.id);
+      }
+      setShowSaveContact(false);
+      showDialog('Saved', 'Contact saved successfully.');
+    } catch (e: any) {
+      showDialog('Error', e?.message || 'Could not save contact.');
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg">
       <KeyboardAvoidingView
@@ -609,7 +1190,7 @@ export default function ChatScreen({ navigation, route }: any) {
         >
           <IconButton icon={ChevronLeft} onPress={handleBack} />
           <Pressable
-            onPress={() => nav.navigate('Contact', { conversationId: contact.id, contactId: dbContactId })}
+            onPress={() => nav.navigate('Contact', { conversationId, contactId: dbContactId })}
             className="flex-1 flex-row items-center gap-[10px] min-w-0"
           >
             <Avatar name={contact.name} size={36} dot={contact.online ? tokens.ok : null} />
@@ -629,6 +1210,9 @@ export default function ChatScreen({ navigation, route }: any) {
           <IconButton icon={MoreHorizontal} onPress={() => setShowOptions(true)} />
         </View>
 
+        {/* Offline banner */}
+        <OfflineBanner />
+
         {/* Loading messages indicator */}
         {loading ? (
           <View className="flex-1 items-center justify-center">
@@ -644,17 +1228,24 @@ export default function ChatScreen({ navigation, route }: any) {
                 <Text className="text-[11px] text-warn dark:text-d-warn font-semibold">⚠️ Server unavailable · Showing cached messages</Text>
               </View>
             )}
-            {/* Subtle "syncing" indicator — only while background-refreshing normally */}
-            {isRefreshing && !serverDown && (
-              <View className="flex-row items-center justify-center gap-1.5 py-1 bg-surface2 dark:bg-d-surface2">
-                <ActivityIndicator size={10} color={tokens.muted} />
-                <Text className="text-[10px] text-muted dark:text-d-muted font-medium">Syncing...</Text>
-              </View>
-            )}
             <ScrollView
               ref={scroller}
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 }}
+              maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
             >
+              {nextCursor && (
+                <Pressable
+                  onPress={loadEarlierMessages}
+                  disabled={loadingEarlier}
+                  className="self-center py-2 px-4 rounded-full bg-surface2 dark:bg-d-surface2 mb-2 active:opacity-75"
+                >
+                  {loadingEarlier ? (
+                    <ActivityIndicator size="small" color={tokens.accent} />
+                  ) : (
+                    <Text className="text-xs font-semibold text-accent dark:text-d-accent">Load earlier messages</Text>
+                  )}
+                </Pressable>
+              )}
               {messages.map((m, i) => {
                 if (m.kind === 'date') {
                   return (
@@ -667,9 +1258,27 @@ export default function ChatScreen({ navigation, route }: any) {
                   );
                 }
                 return (
-                  <Bubble key={i} kind={m.kind} time={m.time} status={m.status} variant="tail">
-                    {m.text}
-                  </Bubble>
+                  <Pressable
+                    key={i}
+                    onLongPress={() => handleMessageLongPress(m)}
+                    className="active:opacity-85"
+                  >
+                    <Bubble
+                      kind={m.kind}
+                      time={m.time}
+                      status={m.status}
+                      variant="tail"
+                      isStarred={m.isStarred}
+                      mediaUrl={m.media_url}
+                      mediaType={m.media_type}
+                      onMediaPress={m.media_url && m.media_type ? () => setMediaViewer({
+                        uri: m.media_url!,
+                        type: m.media_type as any,
+                      }) : undefined}
+                    >
+                      {m.text || ''}
+                    </Bubble>
+                  </Pressable>
                 );
               })}
               {typing ? <TypingDots /> : null}
@@ -702,13 +1311,13 @@ export default function ChatScreen({ navigation, route }: any) {
                   // Prepend locally
                   setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent' }]);
                   
-                  try {
-                    await api.post(`/v1/mobile/conversations/${contact.id}/messages`, {
-                      type: 'document',
-                      media_url: 'https://watxio-recordings.s3.amazonaws.com/voice-temp.aac',
-                      content: `Voice message (${timeStr})`,
-                    });
-                    fetchConversationDetails();
+                    try {
+                      await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
+                        type: 'document',
+                        media_url: 'https://watxio-recordings.s3.amazonaws.com/voice-temp.aac',
+                        content: `Voice message (${timeStr})`,
+                      });
+                      fetchConversationDetails();
                   } catch (err: any) {
                     console.warn('Voice upload api block:', err);
                   }
@@ -754,7 +1363,7 @@ export default function ChatScreen({ navigation, route }: any) {
             />
           </View>
         )}
-        <View className="bg-surface dark:bg-d-surface" style={{ height: insets.bottom }} />
+        <View className="bg-surface dark:bg-d-surface" style={{ height: Platform.OS === 'android' && androidKbHeight > 0 ? androidKbHeight + 20 : insets.bottom }} />
       </KeyboardAvoidingView>
 
       {/* Simulated Calling Overlay */}
@@ -796,6 +1405,22 @@ export default function ChatScreen({ navigation, route }: any) {
               <View className="items-center pb-2 border-b border-hairline dark:border-d-hairline">
                 <Text className="text-xs text-muted dark:text-d-muted font-bold uppercase tracking-wider">Chat Options</Text>
               </View>
+              <Pressable
+                onPress={() => {
+                  setShowOptions(false);
+                  // Pre-fill name if it looks like a name (not just digits)
+                  const nameToFill = contact.name && !/^\d+$/.test(contact.name) ? contact.name : '';
+                  setSaveContactName(nameToFill);
+                  setSaveContactEmail('');
+                  setSaveContactNotes('');
+                  setShowSaveContact(true);
+                }}
+                className="flex-row items-center justify-between py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">
+                  {dbContactId ? '✏️ Edit Contact' : '💾 Save Contact'}
+                </Text>
+              </Pressable>
               <Pressable
                 onPress={toggleAiAssistant}
                 className="flex-row items-center justify-between py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
@@ -929,6 +1554,209 @@ export default function ChatScreen({ navigation, route }: any) {
         </Modal>
       )}
 
+      {/* Message Actions Sheet Menu */}
+      {showMsgActions && selectedMsg && (
+        <Modal transparent visible={showMsgActions} animationType="fade">
+          <Pressable onPress={() => {
+            setShowMsgActions(false);
+            setSelectedMsg(null);
+          }} className="flex-1 bg-black/40 justify-end">
+            <View className="bg-surface dark:bg-d-surface rounded-t-2xl p-4 gap-2" style={{ paddingBottom: insets.bottom + 16 }}>
+              <View className="items-center pb-2 border-b border-hairline dark:border-d-hairline">
+                <Text className="text-xs text-muted dark:text-d-muted font-bold uppercase tracking-wider">Message Actions</Text>
+              </View>
+              <Pressable
+                onPress={async () => {
+                  setShowMsgActions(false);
+                  const msg = selectedMsg;
+                  if (!msg || !msg.id) return;
+                  try {
+                    setLoading(true);
+                    const res = await api.post(`/v1/messages/${msg.id}/star`);
+                    if (res.success) {
+                      // Update local messages state instantly
+                      setMessages((prevMsgs) =>
+                        prevMsgs.map((m) =>
+                          m.id === msg.id ? { ...m, isStarred: res.is_starred } : m
+                        )
+                      );
+                    }
+                  } catch (err: any) {
+                    showDialog('Action Failed', err.message || 'Could not toggle star on this message.');
+                  } finally {
+                    setLoading(false);
+                    setSelectedMsg(null);
+                  }
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">
+                  {selectedMsg.isStarred ? '⭐ Unstar Message' : '⭐ Star Message'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMsgActions(false);
+                  const msg = selectedMsg;
+                  setSelectedMsg(null);
+                  if (msg) {
+                    openForwardModal(msg);
+                  }
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">➡️ Forward Message</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMsgActions(false);
+                  setSelectedMsg(null);
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-danger dark:text-d-danger">❌ Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
+
+      {/* Forward Destination Modal */}
+      {showForwardPicker && (
+        <Modal transparent visible={showForwardPicker} animationType="slide">
+          <View className="flex-1 bg-black/40 justify-end">
+            <View className="bg-surface dark:bg-d-surface rounded-t-2xl max-h-[75%]" style={{ paddingBottom: insets.bottom + 16 }}>
+              <View className="flex-row items-center justify-between px-[18px] py-4 border-b border-hairline dark:border-d-hairline">
+                <Text className="text-base font-bold text-ink dark:text-d-ink">Forward Message</Text>
+                <Pressable onPress={() => {
+                  setShowForwardPicker(false);
+                  setForwardingMsg(null);
+                }} className="p-1">
+                  <Text className="text-accent dark:text-d-accent font-semibold text-sm">Cancel</Text>
+                </Pressable>
+              </View>
+
+              {loadingConversations ? (
+                <View className="py-20 items-center justify-center">
+                  <ActivityIndicator size="small" color={tokens.accent} />
+                  <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading conversations...</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={activeConversations}
+                  keyExtractor={(item) => String(item.id)}
+                  contentContainerStyle={{ padding: 18, gap: 10 }}
+                  ListEmptyComponent={
+                    <View className="py-12 items-center justify-center">
+                      <Text className="text-xs text-muted dark:text-d-muted">No active conversations found.</Text>
+                    </View>
+                  }
+                  renderItem={({ item }) => (
+                    <Pressable
+                      onPress={() => handleForwardMessage(item.id, item.name)}
+                      className="flex-row items-center gap-3 p-3.5 rounded-lg border border-hairline dark:border-d-hairline bg-surface2 dark:bg-d-surface2 active:bg-surface3"
+                    >
+                      <Avatar name={item.name} size={36} dot={item.online ? tokens.ok : null} />
+                      <View className="flex-1 min-w-0">
+                        <Text numberOfLines={1} className="text-sm font-semibold text-ink dark:text-d-ink">
+                          {item.name}
+                        </Text>
+                        <Text className="text-[11.5px] text-muted dark:text-d-muted mt-[3px]">
+                          {item.tag} · {item.phone}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  )}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Save / Edit Contact Modal */}
+      {showSaveContact && (
+        <Modal transparent visible={showSaveContact} animationType="slide">
+          <View className="flex-1 bg-black/40 justify-end">
+            <View
+              className="bg-surface dark:bg-d-surface rounded-t-2xl px-[18px] pt-4"
+              style={{ paddingBottom: insets.bottom + 16 }}
+            >
+              <View className="flex-row items-center justify-between pb-4 border-b border-hairline dark:border-d-hairline mb-4">
+                <Text className="text-base font-bold text-ink dark:text-d-ink">
+                  {dbContactId ? 'Edit Contact' : 'Save Contact'}
+                </Text>
+                <Pressable onPress={() => setShowSaveContact(false)} className="p-1">
+                  <Text className="text-accent dark:text-d-accent font-semibold text-sm">Cancel</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView className="max-h-[360px]">
+                <View className="mb-4">
+                  <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Name *</Text>
+                  <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                    <TextInput
+                      value={saveContactName}
+                      onChangeText={setSaveContactName}
+                      placeholder="Contact name"
+                      placeholderTextColor={tokens.muted}
+                      className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Email (optional)</Text>
+                  <View className="flex-row items-center bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                    <TextInput
+                      value={saveContactEmail}
+                      onChangeText={setSaveContactEmail}
+                      placeholder="email@example.com"
+                      placeholderTextColor={tokens.muted}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-6">
+                  <Text className="text-xs font-semibold text-muted dark:text-d-muted uppercase tracking-wider mb-1.5">Notes (optional)</Text>
+                  <View className="bg-surface2 dark:bg-d-surface2 rounded-lg px-3 py-3">
+                    <TextInput
+                      value={saveContactNotes}
+                      onChangeText={setSaveContactNotes}
+                      placeholder="Add a note..."
+                      placeholderTextColor={tokens.muted}
+                      multiline
+                      numberOfLines={3}
+                      className="flex-1 text-ink dark:text-d-ink text-sm p-0"
+                      style={{ minHeight: 60 }}
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-2">
+                  <Pressable
+                    onPress={handleSaveContact}
+                    disabled={savingContact || !saveContactName.trim()}
+                    className="w-full bg-accent dark:bg-d-accent py-3.5 rounded-lg items-center justify-center active:opacity-90 disabled:opacity-50"
+                  >
+                    {savingContact ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-white text-[15px] font-bold">
+                        {dbContactId ? 'Save Changes' : 'Save Contact'}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* Reusable Custom Dialog */}
       <CustomDialog
         visible={dialogConfig.visible}
@@ -937,6 +1765,16 @@ export default function ChatScreen({ navigation, route }: any) {
         buttons={dialogConfig.buttons}
         onClose={() => setDialogConfig((c) => ({ ...c, visible: false }))}
       />
+
+      {/* Media Viewer */}
+      {mediaViewer && (
+        <MediaViewer
+          visible
+          uri={mediaViewer.uri}
+          type={mediaViewer.type}
+          onClose={() => setMediaViewer(null)}
+        />
+      )}
     </View>
   );
 }

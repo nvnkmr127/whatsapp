@@ -70,12 +70,12 @@ class ContactImportTest extends TestCase
         $john = Contact::where('phone_number', '+1234567890')->first();
         $this->assertNotNull($john);
         $this->assertEquals('John Doe', $john->name);
-        $this->assertEquals('Acme Corp', $john->custom_attributes['company']);
+        $this->assertEquals('Acme Corp', $john->company);
         $this->assertTrue($john->tags->contains('name', 'VIP'));
         $this->assertTrue($john->tags->contains('name', 'Lead'));
 
         $jane = Contact::where('phone_number', '+1987654321')->first();
-        $this->assertEquals('Globex', $jane->custom_attributes['company']);
+        $this->assertEquals('Globex', $jane->company);
         $this->assertTrue($jane->tags->contains('name', 'New'));
     }
 

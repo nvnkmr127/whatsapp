@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -56,9 +56,24 @@ export default function OnboardingScreen({ navigation }: any) {
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [showQrScanner, setShowQrScanner] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  // Auto-login is intentionally disabled.
-  // Users must log in manually via email/password, OTP, or QR scan.
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const hasSession = await store.loadSession();
+        if (hasSession) {
+          navigation.replace('Main');
+        } else {
+          setCheckingSession(false);
+        }
+      } catch (e) {
+        console.error('Error loading session:', e);
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [navigation]);
 
 
   // Dialog State
@@ -105,7 +120,36 @@ export default function OnboardingScreen({ navigation }: any) {
     try {
       const payload = JSON.parse(data);
       if (!payload.token) {
-        throw new Error('Missing pairing token');
+        if (payload.baseUrl && payload.email) {
+          let targetBaseUrl = payload.baseUrl;
+
+          // Auto-replace localhost/127.0.0.1 with Android emulator host IP if needed
+          if (Platform.OS === 'android') {
+            targetBaseUrl = targetBaseUrl
+              .replace('localhost', '10.0.2.2')
+              .replace('127.0.0.1', '10.0.2.2');
+          }
+
+          if (targetBaseUrl.endsWith('/v1')) {
+            targetBaseUrl = targetBaseUrl.substring(0, targetBaseUrl.length - 3); // trim '/v1'
+          }
+
+          api.setBaseUrl(targetBaseUrl);
+          setServerUrl(targetBaseUrl);
+          setGlobalState({ baseUrl: targetBaseUrl });
+          setEmail(payload.email);
+          setLoginMode('email');
+          setShowServerConfig(true);
+          setLoading(false);
+
+          showDialog(
+            'Connection Configured',
+            'Your server URL and email have been pre-filled. Please enter your password to sign in and complete pairing.'
+          );
+          return;
+        }
+
+        throw new Error('Missing pairing token. Please generate a setup token on the web dashboard first, or log in manually.');
       }
 
       // Base URL normalization
@@ -149,6 +193,7 @@ export default function OnboardingScreen({ navigation }: any) {
         userRole: response.user.role || 'Member',
         numbers: teamNumbers,
         baseUrl: targetBaseUrl,
+        websocket: response.websocket,
       });
 
       setLoading(false);
@@ -213,6 +258,7 @@ export default function OnboardingScreen({ navigation }: any) {
           userName: response.user.name,
           userRole: response.user.role || 'Member',
           numbers: teamNumbers,
+          websocket: response.websocket,
         });
 
         setLoading(false);
@@ -302,6 +348,7 @@ export default function OnboardingScreen({ navigation }: any) {
             userName: response.user.name,
             userRole: response.user.role || 'Member',
             numbers: teamNumbers,
+            websocket: response.websocket,
           });
 
           setLoading(false);
@@ -313,6 +360,14 @@ export default function OnboardingScreen({ navigation }: any) {
       }
     }
   };
+
+  if (checkingSession) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0F1515', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#5bb393" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

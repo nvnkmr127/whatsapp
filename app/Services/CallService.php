@@ -256,6 +256,11 @@ class CallService
                 'contact_name' => $call->contact->name ?? 'Unknown',
                 'contact_phone' => $call->contact->phone_number,
                 'initiated_at' => $call->initiated_at?->diffForHumans(),
+                // SDP fields needed by mobile WebRTC clients:
+                // • inbound call  → offer_sdp  is the caller's offer the agent must answer
+                // • outbound call → answer_sdp is the remote party's answer (set via webhook)
+                'offer_sdp' => $call->metadata['sdp'] ?? null,
+                'answer_sdp' => $call->metadata['answered_sdp'] ?? null,
             ];
         })->toArray();
     }

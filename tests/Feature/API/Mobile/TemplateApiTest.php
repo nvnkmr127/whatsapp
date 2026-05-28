@@ -70,4 +70,40 @@ class TemplateApiTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_send_test_resolves_whatsapp_number_id_from_team()
+    {
+        $this->team->update(['whatsapp_phone_number_id' => '123456789']);
+        $template = WhatsappTemplate::factory()->create(['team_id' => $this->team->id, 'name' => 'test_template', 'language' => 'en_US']);
+
+        $this->mock(\App\Services\WhatsAppService::class, function ($mock) {
+            $mock->shouldReceive('sendTemplateMessage')
+                ->once()
+                ->with('123456789', '+1234567890', 'test_template', 'en_US', []);
+        });
+
+        $response = $this->postJson("/api/v1/mobile/templates/{$template->id}/send-test", [
+            'phone_number' => '+1234567890',
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Test message sent successfully!');
+    }
+
+    public function test_send_test_fails_without_whatsapp_number_id_if_team_has_none()
+    {
+        $this->team->update(['whatsapp_phone_number_id' => null]);
+        $template = WhatsappTemplate::factory()->create(['team_id' => $this->team->id]);
+
+        $response = $this->postJson("/api/v1/mobile/templates/{$template->id}/send-test", [
+            'phone_number' => '+1234567890',
+        ], [
+            'X-Tenant-ID' => $this->team->id
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error', 'No active WhatsApp number ID found for this team.');
+    }
 }

@@ -284,32 +284,39 @@ class BillingService
             }
         }
 
-        // Handle Alerting Cooldowns (Strictly limit to 1 per day unless severity increases)
+        // Handle Alerting Cooldowns (max 1 per day, max 10 total — then stop)
         if (!empty($alertsToDispatch)) {
             $globalCooldownKey = "billing_alert_global_cooldown_{$team->id}";
+            $sendCountKey = "billing_alert_send_count_{$team->id}";
+
             $hasGlobalCooldown = \Illuminate\Support\Facades\Cache::has($globalCooldownKey);
+            $sendCount = (int) \Illuminate\Support\Facades\Cache::get($sendCountKey, 0);
+
+            // Hard stop after 10 lifetime alerts
+            if ($sendCount >= 10) {
+                return static::$warningCache[$cacheId] = $warnings;
+            }
 
             // Sort by severity (desc) so we pick the most critical one to send
             usort($alertsToDispatch, fn($a, $b) => $b['levelValue'] <=> $a['levelValue']);
             $mostCritical = $alertsToDispatch[0];
 
-            // Only fire if:
-            // 1. No alert sent in last 24h
-            // 2. OR this is a DANGER (100%+) alert that broke through
-            if (!$hasGlobalCooldown || $mostCritical['levelValue'] >= 3) {
+            // Only fire if no alert sent in the last 24h
+            if (!$hasGlobalCooldown) {
                 \App\Events\UsageThresholdReached::dispatch(
-                    $team, 
-                    $mostCritical['key'], 
-                    $mostCritical['level'], 
-                    $mostCritical['percent'], 
+                    $team,
+                    $mostCritical['key'],
+                    $mostCritical['level'],
+                    $mostCritical['percent'],
                     $mostCritical['message']
                 );
-                
+
                 // Update per-metric cache
                 \Illuminate\Support\Facades\Cache::put("billing_alert_{$team->id}_{$mostCritical['key']}", $mostCritical['level'], now()->addHours(24));
-                
-                // Update global cooldown
+
+                // Update global cooldown and increment lifetime counter
                 \Illuminate\Support\Facades\Cache::put($globalCooldownKey, true, now()->addHours(24));
+                \Illuminate\Support\Facades\Cache::put($sendCountKey, $sendCount + 1, now()->addDays(90));
             }
         }
 

@@ -162,6 +162,7 @@ class MessageController extends Controller
 
         $newMsg = $target->messages()->create([
             'team_id' => $target->team_id,
+            'contact_id' => $target->contact_id,
             'user_id' => $request->user()->id,
             'direction' => 'outbound',
             'type' => $message->type,
@@ -242,17 +243,31 @@ class MessageController extends Controller
             ->where('id', $request->template_id)
             ->firstOrFail();
 
+        $variables = $request->variables ?? [];
+
+        // Auto-fill template variables if the mobile app sends none
+        if (empty($variables)) {
+            $tplService = new \App\Services\TemplateService();
+            $placeholders = $tplService->extractAllPlaceholders($template);
+            
+            foreach ($placeholders as $placeholder) {
+                // Default to the contact's name for missing variables
+                $variables[] = $conversation->contact->name ?? 'there';
+            }
+        }
+
         $message = $conversation->messages()->create([
             'team_id' => $conversation->team_id,
-            'user_id' => $request->user()->id,
+            'contact_id' => $conversation->contact_id,
             'direction' => 'outbound',
             'type' => 'template',
             'content' => 'Official Template: ' . $template->name,
             'status' => 'queued',
             'metadata' => [
+                'user_id' => $request->user()->id,
                 'template_id' => $template->id,
                 'template_name' => $template->name,
-                'variables' => $request->variables ?? [],
+                'variables' => $variables,
                 'language' => $template->language ?? 'en_US'
             ],
         ]);
@@ -260,5 +275,37 @@ class MessageController extends Controller
         \App\Jobs\SendMessageJob::dispatch($message);
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Get starred messages for the current team.
+     */
+    public function starred(Request $request)
+    {
+        $team = $request->user()->currentTeam;
+        if (! $team) {
+            return response()->json([
+                'current_page' => 1,
+                'data' => [],
+                'last_page' => 1,
+                'total' => 0,
+            ]);
+        }
+
+        $messages = Message::where('team_id', $team->id)
+            ->where('is_starred', true)
+            ->with(['contact:id,name,phone_number', 'conversation:id'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(min((int) $request->input('per_page', 20), 100));
+
+        $messages->getCollection()->transform(function($msg) {
+            $data = $msg->toArray();
+            if ($msg->media_url) {
+                $data['media_url'] = $msg->full_media_url;
+            }
+            return $data;
+        });
+
+        return response()->json($messages);
     }
 }

@@ -7,7 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types';
 import {
-  Search, ChevronRight, Phone, Users, CreditCard, Bell, Smile, Globe, Shield,
+  Search, ChevronRight, Phone, Users, CreditCard, Bell, Smile, Globe, Shield, History, Bot, Sparkles, Star, X,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
@@ -26,6 +26,8 @@ export default function SettingsScreen({ navigation }: any) {
   const nav = navigation;
   const [globalState, setGlobalState] = useGlobalState();
   const [loading, setLoading] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Editor states
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -119,17 +121,159 @@ export default function SettingsScreen({ navigation }: any) {
         index: 0,
         routes: [{ name: 'Onboarding' }],
       });
+      setLoading(false);
     }
   };
+
+  const settingSections: {
+    title: string;
+    items: {
+      label: string;
+      Icon: any;
+      value: string;
+      valColor?: string;
+      onPress: () => void;
+    }[];
+  }[] = [
+    {
+      title: 'Active Workspace',
+      items: [
+        {
+          label: 'WhatsApp number',
+          Icon: Phone,
+          value: globalState.waNumber,
+          onPress: () => showDialog('WhatsApp Number', 'This is your active WhatsApp Display Number.'),
+        },
+        {
+          label: 'Team workspaces',
+          Icon: Users,
+          value: `${globalState.teams?.length || 1} joined`,
+          onPress: () => showDialog('Workspaces', 'You belong to these teams. Switch workspaces on the Inbox tab.'),
+        },
+      ],
+    },
+    {
+      title: 'Preferences',
+      items: [
+        {
+          label: 'Notifications',
+          Icon: Bell,
+          value: 'Heads-up',
+          onPress: () => showDialog('Notifications', 'Notification preferences changed.'),
+        },
+        {
+          label: 'Theme',
+          Icon: Smile,
+          value: `Sage · ${scheme === 'dark' ? 'Dark' : 'Light'}`,
+          onPress: toggleTheme,
+        },
+        {
+          label: 'Language',
+          Icon: Globe,
+          value: 'English (US)',
+          onPress: () => showDialog('Language', 'Language preferences changed.'),
+        },
+        {
+          label: 'Privacy',
+          Icon: Shield,
+          value: '',
+          onPress: () => showDialog('Privacy', 'Privacy settings and policy.'),
+        },
+        {
+          label: 'Message Bots',
+          Icon: Bot,
+          value: '',
+          onPress: () => nav.navigate('Bots'),
+        },
+        {
+          label: 'AI Assistant',
+          Icon: Sparkles,
+          value: '',
+          onPress: () => nav.navigate('AiSettings'),
+        },
+        {
+          label: 'Call History',
+          Icon: Phone,
+          value: '',
+          onPress: () => nav.navigate('Calls'),
+        },
+        {
+          label: 'Starred Messages',
+          Icon: Star,
+          value: '',
+          onPress: () => nav.navigate('StarredMessages'),
+        },
+        {
+          label: 'Activity Logs',
+          Icon: History,
+          value: '',
+          onPress: () => nav.navigate('Activities'),
+        },
+      ],
+    },
+    {
+      title: 'Devices',
+      items: [
+        {
+          label: 'Active Device',
+          Icon: Phone,
+          value: 'This app',
+          valColor: tokens.ok,
+          onPress: () => showDialog('Current Device', 'This device is currently active.'),
+        },
+      ],
+    },
+  ];
+
+  const filteredSections = searchQuery.trim()
+    ? settingSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) =>
+            item.label.toLowerCase().includes(searchQuery.toLowerCase())
+          ),
+        }))
+        .filter((section) => section.items.length > 0)
+    : settingSections;
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-[18px] pt-3.5 pb-2">
-        <Text className="text-2xl font-bold tracking-[-0.3px] text-ink dark:text-d-ink">
-          Settings
-        </Text>
-        <IconButton icon={Search} onPress={() => showDialog('Search Settings', 'Search functionality is not implemented in the settings demo.')} />
+      <View className="flex-row items-center justify-between px-[18px] pt-3.5 pb-2 h-14">
+        {isSearchActive ? (
+          <View className="flex-1 flex-row items-center gap-3 bg-surface2 dark:bg-d-surface2 px-3 py-1.5 rounded-xl border border-hairline dark:border-d-hairline">
+            <Search size={16} color={tokens.muted} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search settings..."
+              placeholderTextColor={tokens.faint}
+              autoFocus
+              className="flex-1 text-sm text-ink dark:text-d-ink font-medium p-0"
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} className="p-0.5">
+                <X size={14} color={tokens.muted} />
+              </Pressable>
+            )}
+            <Pressable 
+              onPress={() => {
+                setIsSearchActive(false);
+                setSearchQuery('');
+              }}
+              className="pl-1"
+            >
+              <Text className="text-accent dark:text-d-accent text-sm font-semibold">Cancel</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            <Text className="text-2xl font-bold tracking-[-0.3px] text-ink dark:text-d-ink">
+              Settings
+            </Text>
+            <IconButton icon={Search} onPress={() => setIsSearchActive(true)} />
+          </>
+        )}
       </View>
 
       {loading && !globalState.user ? (
@@ -138,83 +282,106 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 32 }}>
-          {/* Profile card */}
-          <Pressable
-            onPress={() => {
-              setEditUserName(globalState.userName);
-              setEditUserPhone(globalState.user?.phone || '');
-              setShowProfileModal(true);
-            }}
-            className="bg-surface dark:bg-d-surface rounded-lg p-3.5 flex-row items-center gap-3 active:bg-surface2 dark:active:bg-d-surface2"
-          >
-            <Avatar name={globalState.userName} size={44} />
-            <View className="flex-1">
-              <Text className="text-[15px] font-semibold text-ink dark:text-d-ink">{globalState.userName}</Text>
-              <Text className="text-xs text-muted dark:text-d-muted mt-0.5">{globalState.user?.email || globalState.userRole}</Text>
-            </View>
-            <ChevronRight size={16} color={tokens.muted} strokeWidth={1.6} />
-          </Pressable>
-
-          {/* Workspace */}
-          <SectionLabel>
-            Active Workspace
-          </SectionLabel>
-          <Card pad={0}>
-            <View className="flex-row items-center gap-3 px-4 py-3.5 border-b border-hairline dark:border-d-hairline">
-              <View className="w-9 h-9 rounded-md bg-accent dark:bg-d-accent items-center justify-center">
-                <Text className="text-accent-ink dark:text-d-accent-ink text-[13px] font-bold">
-                  {globalState.businessName.substring(0, 2).toUpperCase()}
-                </Text>
-              </View>
+          {/* Profile card - hide during active search */}
+          {!searchQuery.trim() && (
+            <Pressable
+              onPress={() => {
+                setEditUserName(globalState.userName);
+                setEditUserPhone(globalState.user?.phone || '');
+                setShowProfileModal(true);
+              }}
+              className="bg-surface dark:bg-d-surface rounded-lg p-3.5 flex-row items-center gap-3 active:bg-surface2 dark:active:bg-d-surface2"
+            >
+              <Avatar name={globalState.userName} size={44} />
               <View className="flex-1">
-                <Text className="text-[13.5px] font-semibold text-ink dark:text-d-ink">{globalState.businessName}</Text>
-                <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">{globalState.plan}</Text>
+                <Text className="text-[15px] font-semibold text-ink dark:text-d-ink">{globalState.userName}</Text>
+                <Text className="text-xs text-muted dark:text-d-muted mt-0.5">{globalState.user?.email || globalState.userRole}</Text>
               </View>
-              <View className="flex-row items-center gap-1.25">
-                <View className="w-1.5 h-1.5 rounded-full bg-ok dark:bg-d-ok" />
-                <Text className="text-[11.5px] text-ok dark:text-d-ok font-medium">Verified</Text>
-              </View>
+              <ChevronRight size={16} color={tokens.muted} strokeWidth={1.6} />
+            </Pressable>
+          )}
+
+          {/* Setting Sections */}
+          {filteredSections.map((section) => {
+            const isFirst = section.title === 'Active Workspace';
+            return (
+              <React.Fragment key={section.title}>
+                <SectionLabel>{section.title}</SectionLabel>
+                <Card pad={0}>
+                  {/* Show business name row ONLY in Active Workspace section when NOT searching */}
+                  {isFirst && !searchQuery.trim() && (
+                    <View className="flex-row items-center gap-3 px-4 py-3.5 border-b border-hairline dark:border-d-hairline">
+                      <View className="w-9 h-9 rounded-md bg-accent dark:bg-d-accent items-center justify-center">
+                        <Text className="text-accent-ink dark:text-d-accent-ink text-[13px] font-bold">
+                          {globalState.businessName.substring(0, 2).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[13.5px] font-semibold text-ink dark:text-d-ink">{globalState.businessName}</Text>
+                        <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">{globalState.plan}</Text>
+                      </View>
+                      <View className="flex-row items-center gap-1.25">
+                        <View className="w-1.5 h-1.5 rounded-full bg-ok dark:bg-d-ok" />
+                        <Text className="text-[11.5px] text-ok dark:text-d-ok font-medium">Verified</Text>
+                      </View>
+                    </View>
+                  )}
+                  {section.items.map((item, idx) => (
+                    <SettingRow
+                      key={item.label}
+                      tokens={tokens}
+                      Icon={item.Icon}
+                      label={item.label}
+                      value={item.value}
+                      valColor={item.valColor}
+                      onPress={item.onPress}
+                      last={idx === section.items.length - 1}
+                    />
+                  ))}
+                </Card>
+              </React.Fragment>
+            );
+          })}
+
+          {/* Empty Results state */}
+          {filteredSections.length === 0 && (
+            <View className="py-20 items-center justify-center">
+              <Search size={40} color={tokens.faint} strokeWidth={1.2} className="mb-2" />
+              <Text className="text-sm font-semibold text-ink dark:text-d-ink">No Results Found</Text>
+              <Text className="text-xs text-muted dark:text-d-muted text-center mt-1">
+                No setting options match "{searchQuery}"
+              </Text>
             </View>
-            <SettingRow tokens={tokens} Icon={Phone}      label="WhatsApp number" value={globalState.waNumber} onPress={() => showDialog('WhatsApp Number', 'This is your active WhatsApp Display Number.')} />
-            <SettingRow tokens={tokens} Icon={Users}      label="Team workspaces" value={`${globalState.teams?.length || 1} joined`} onPress={() => showDialog('Workspaces', 'You belong to these teams. Switch workspaces on the Inbox tab.')} last />
-          </Card>
+          )}
 
-          <SectionLabel>Preferences</SectionLabel>
-          <Card pad={0}>
-            <SettingRow tokens={tokens} Icon={Bell}   label="Notifications" value="Heads-up" onPress={() => showDialog('Notifications', 'Notification preferences changed.')} />
-            <SettingRow tokens={tokens} Icon={Smile}  label="Theme"         value={`Sage · ${scheme === 'dark' ? 'Dark' : 'Light'}`} onPress={toggleTheme} />
-            <SettingRow tokens={tokens} Icon={Globe}  label="Language"      value="English (US)" onPress={() => showDialog('Language', 'Language preferences changed.')} />
-            <SettingRow tokens={tokens} Icon={Shield} label="Privacy"       value="" onPress={() => showDialog('Privacy', 'Privacy settings and policy.')} last />
-          </Card>
+          {/* Sign Out Button - hide during active search */}
+          {!searchQuery.trim() && (
+            <Pressable
+              onPress={() => {
+                showDialog(
+                  'Sign Out',
+                  'Are you sure you want to sign out of this device?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Sign Out',
+                      style: 'destructive',
+                      onPress: handleSignOut,
+                    },
+                  ]
+                );
+              }}
+              className="mt-7 py-3.5 rounded-lg items-center justify-center active:bg-surface2 dark:active:bg-d-surface2"
+            >
+              <Text className="text-danger dark:text-d-danger text-sm font-medium">Sign out of this account</Text>
+            </Pressable>
+          )}
 
-          <SectionLabel>Devices</SectionLabel>
-          <Card pad={0}>
-            <SettingRow tokens={tokens} Icon={Phone} label="Active Device" value="This app" valColor={tokens.ok} onPress={() => showDialog('Current Device', 'This device is currently active.')} last />
-          </Card>
-
-          <Pressable
-            onPress={() => {
-              showDialog(
-                'Sign Out',
-                'Are you sure you want to sign out of this device?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Sign Out',
-                    style: 'destructive',
-                    onPress: handleSignOut,
-                  },
-                ]
-              );
-            }}
-            className="mt-7 py-3.5 rounded-lg items-center justify-center active:bg-surface2 dark:active:bg-d-surface2"
-          >
-            <Text className="text-danger dark:text-d-danger text-sm font-medium">Sign out of this account</Text>
-          </Pressable>
-
-          <Text className="text-center text-[11px] text-muted dark:text-d-muted p-2">
-            Watxio Mobile · v3.4.1
-          </Text>
+          {!searchQuery.trim() && (
+            <Text className="text-center text-[11px] text-muted dark:text-d-muted p-2">
+              Watxio Mobile · v3.4.1
+            </Text>
+          )}
         </ScrollView>
       )}
 

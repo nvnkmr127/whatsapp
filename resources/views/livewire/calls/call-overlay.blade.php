@@ -113,8 +113,25 @@
                 
                 const offer = await this.pc.createOffer();
                 await this.pc.setLocalDescription(offer);
-                
-                await $wire.initiateWhatsAppCall(data.phone_number, data.contact_id, this.sanitizeSdp(offer.sdp));
+
+                // Wait for ICE gathering to complete so the SDP includes all candidates.
+                // Without this the offer would have no ICE candidates and the WebRTC
+                // connection could never be established.
+                await new Promise(resolve => {
+                    if (this.pc.iceGatheringState === 'complete') resolve();
+                    else {
+                        const check = () => {
+                            if (this.pc.iceGatheringState === 'complete') {
+                                this.pc.removeEventListener('icegatheringstatechange', check);
+                                resolve();
+                            }
+                        };
+                        this.pc.addEventListener('icegatheringstatechange', check);
+                        setTimeout(resolve, 3000); // 3 s safety timeout
+                    }
+                });
+
+                await $wire.initiateWhatsAppCall(data.phone_number, data.contact_id, this.sanitizeSdp(this.pc.localDescription.sdp));
                 
                 this.pc.ontrack = (event) => {
                     const remoteAudio = document.getElementById('remote-audio');
@@ -173,9 +190,12 @@
         },
 
         handleOfferSdp(value) {
+            // For outbound calls: offerSdp receives the remote party's SDP *answer* via
+            // webhook → CallOverlay::handleAnswered().  We must apply it as a remote
+            // answer on our existing RTCPeerConnection — NOT start a brand-new
+            // inbound-style handshake with handleAnswer().
             if (value && this.status === 'ringing' && this.direction === 'outbound') {
-                 if (this.pc) this.stopCalling();
-                 this.performAction('answerCall');
+                this.applyRemoteAnswer(value);
             }
         },
 

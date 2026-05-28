@@ -1597,11 +1597,13 @@ class WhatsAppService
             }
         }
 
+        // The phone number is already identified by the URL path /{phone-number-id}/calls.
+        // Do NOT include 'from' in the body — passing the internal numeric Phone Number ID
+        // as 'from' triggers Meta error 131009 / 2494010 ("Parameter value is not valid").
         $payload = [
             'messaging_product' => 'whatsapp',
             'to' => $this->normalizeCallNumber($to) ?: $to,
             'action' => 'connect',
-            'from' => $phoneId, // Required when using root /calls endpoint
         ];
 
         if (! empty($options['biz_opaque_callback_data'])) {

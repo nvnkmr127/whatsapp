@@ -68,6 +68,7 @@ npm-debug.log
 yarn-error.log
 package-lock.json
 
+
 # Composer
 /vendor/
 composer.lock
@@ -95,3 +96,4 @@ composer.lock
 # New Technology Stack (Parallel Migration)
 v2/
 
+.claude/

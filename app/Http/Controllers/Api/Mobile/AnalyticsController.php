@@ -23,6 +23,18 @@ class AnalyticsController extends Controller
 
         $now = Carbon::now();
 
+        $request->validate([
+            'range' => 'sometimes|string|in:7d,30d,90d',
+        ]);
+
+        $range = $request->input('range', '30d');
+        $days = 30;
+        if ($range === '7d') {
+            $days = 7;
+        } elseif ($range === '90d') {
+            $days = 90;
+        }
+
         // 1. Conversation Stats
         $activeCount = Conversation::where('team_id', $team->id)->whereNull('closed_at')->count();
         $unreadCount = Conversation::where('team_id', $team->id)
@@ -30,22 +42,22 @@ class AnalyticsController extends Controller
                 $q->where('direction', 'inbound')->whereNull('read_at');
             })->count();
 
-        // 2. Message Stats (Last 30 Days)
+        // 2. Message Stats (Based on range)
         $outboundCount = Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
-            ->where('created_at', '>=', $now->copy()->subDays(30))
+            ->where('created_at', '>=', $now->copy()->subDays($days))
             ->count();
 
         $deliveredCount = Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
             ->where('status', 'delivered')
-            ->where('created_at', '>=', $now->copy()->subDays(30))
+            ->where('created_at', '>=', $now->copy()->subDays($days))
             ->count();
 
         $readCount = Message::where('team_id', $team->id)
             ->where('direction', 'outbound')
             ->where('status', 'read')
-            ->where('created_at', '>=', $now->copy()->subDays(30))
+            ->where('created_at', '>=', $now->copy()->subDays($days))
             ->count();
 
         $deliveryRate = $outboundCount > 0 ? (int) (($deliveredCount / $outboundCount) * 100) : 100;

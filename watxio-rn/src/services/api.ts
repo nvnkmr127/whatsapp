@@ -2,6 +2,7 @@ import { Platform, NativeModules } from 'react-native';
 
 let apiToken: string | null = null;
 let apiTeamId: number | null = null;
+let unauthorizedCallback: (() => void) | null = null;
 
 const getDevMachineIp = () => {
   const scriptURL = NativeModules.SourceCode?.scriptURL;
@@ -19,6 +20,10 @@ const defaultBaseUrl = `http://${getDevMachineIp()}:8000/api`;
 let apiBaseUrl: string = defaultBaseUrl;
 
 export const api = {
+  onUnauthorized(callback: () => void) {
+    unauthorizedCallback = callback;
+  },
+
   setToken(token: string | null) {
     apiToken = token;
   },
@@ -106,6 +111,12 @@ export const api = {
       }
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const isLockLost = data?.code === 'ERR_LOCK_LOST';
+          if (!isLockLost) {
+            unauthorizedCallback?.();
+          }
+        }
         throw {
           status: response.status,
           message: data?.message || `HTTP error! Status: ${response.status}`,

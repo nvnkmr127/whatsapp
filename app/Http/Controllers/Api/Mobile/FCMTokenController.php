@@ -28,13 +28,18 @@ class FCMTokenController extends Controller
             ],
             [
                 'user_id' => $user->id,
-                'platform' => $request->platform,
+                'platform' => $request->platform ?? 'unknown',
                 'device_id' => $request->device_id,
                 'last_used_at' => now(),
+                'metadata' => [
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->header('User-Agent'),
+                ]
             ]
         );
 
         return response()->json([
+            'success' => true,
             'message' => 'Token registered successfully',
             'token' => $fcmToken,
         ]);

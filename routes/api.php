@@ -23,7 +23,8 @@ Route::prefix('v1/mobile/auth')->middleware('mobile_logger')->group(function () 
         Route::post('/finalize', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'finalize']);
         Route::post('/logout', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'logout']);
         Route::post('/profile', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'updateProfile']);
-        Route::post('/fcm-token', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'registerFcmToken']);
+        Route::post('/fcm-token', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
+        Route::post('/fcm-token/remove', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'destroy']);
     });
 });
 
@@ -56,11 +57,11 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
     // Embed Token (if needed)
     Route::post('/embed-token', [\App\Http\Controllers\EmbedController::class, 'generateToken']);
 
-    // Conversation Locks (Multi-Agent) - Moved to web.php for Session Auth
-    // Route::post('/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
-    // Route::post('/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
-    // Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
-    // Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
+    // Conversation Locks (Multi-Agent) - Enabled for Sanctum Token Auth
+    Route::post('/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
+    Route::post('/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
+    Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
+    Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
 
     // Inbox Contact Integration
     Route::prefix('inbox/contacts')->group(function () {
@@ -91,10 +92,6 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Moved /auth/me, teams, numbers etc. to the non-tenant group above
         Route::post('/auth/switch-team', [\App\Http\Controllers\Api\Mobile\AuthController::class, 'switchTeam']);
 
-        // FCM Tokens
-        Route::post('/fcm/register', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
-        Route::post('/fcm/remove', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'destroy']);
-
         // Presence (Active Chat State)
         Route::post('/presence/heartbeat', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'heartbeat']);
         Route::post('/presence/leave', [\App\Http\Controllers\Api\Mobile\PresenceController::class, 'leave']);
@@ -112,7 +109,14 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         Route::post('/conversations/{conversation}/assign', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'assign']);
         Route::get('/canned-messages', [\App\Http\Controllers\Api\Mobile\ConversationController::class, 'getCannedMessages']);
 
+        // Mobile Conversation Locks
+        Route::post('/conversations/{id}/lock', [\App\Http\Controllers\Api\ConversationLockController::class, 'lock']);
+        Route::post('/conversations/{id}/unlock', [\App\Http\Controllers\Api\ConversationLockController::class, 'unlock']);
+        Route::post('/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
+        Route::post('/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
+
         Route::get('/analytics/dashboard', [\App\Http\Controllers\Api\Mobile\AnalyticsController::class, 'dashboard']);
+        Route::get('/messages/starred', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'starred']);
         Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'index']);
         Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'store']);
         Route::delete('/messages/{message}', [\App\Http\Controllers\Api\Mobile\MessageController::class, 'destroy']);
@@ -144,8 +148,10 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
 
         // Contacts (single canonical set of routes)
         Route::get('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'index']);
+        Route::post('/contacts', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'store']);
         Route::get('/contacts/search', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'search']);
         Route::get('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'getAvailableTags']);
+        Route::post('/contacts/tags', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'storeTag']);
         Route::get('/contacts/{contact}', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'show']);
         Route::get('/contacts/{contact}/activity', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'activity']);
         Route::post('/contacts/{contact}/tags/toggle', [\App\Http\Controllers\Api\Mobile\ContactController::class, 'toggleTag']);
@@ -166,6 +172,7 @@ Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Ht
         // Campaigns / Broadcasting
         Route::get('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'index']);
         Route::post('/campaigns', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'store']);
+        Route::get('/campaigns/{campaign}', [\App\Http\Controllers\Api\Mobile\CampaignController::class, 'show']);
 
         // AI Suggest Reply (new)
         Route::post('/conversations/{conversation}/ai-suggest', [\App\Http\Controllers\Api\Mobile\AiController::class, 'suggest']);

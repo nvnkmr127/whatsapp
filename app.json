@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "cec8a2f3-1a6e-4b96-a985-06df81f01b99"
+      }
+    },
+    "android": {
+      "package": "com.earnifyearn.watxio"
+    }
+  }
+}

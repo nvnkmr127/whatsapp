@@ -120,6 +120,10 @@ class CallController extends Controller
      */
     public function answer(Request $request, string $callId)
     {
+        $request->validate([
+            'sdp' => 'sometimes|nullable|string',
+        ]);
+
         $team = $request->user()->currentTeam;
         $this->whatsappService->setTeam($team);
 
@@ -132,8 +136,15 @@ class CallController extends Controller
                 return $this->error('Call not found.', 404);
             }
 
+            // Pass the WebRTC SDP answer from the client (mobile / web) so Meta can
+            // complete the media negotiation. Without it Meta returns error 131009.
+            $session = null;
+            if ($request->filled('sdp')) {
+                $session = ['sdp' => $request->sdp, 'sdp_type' => 'answer'];
+            }
+
             $phoneNumberId = $call->metadata['phone_number_id'] ?? null;
-            $response = $this->whatsappService->answerCall($callId, null, $phoneNumberId);
+            $response = $this->whatsappService->answerCall($callId, $session, $phoneNumberId);
 
             if (! ($response['success'] ?? false)) {
                 return $this->error($response['error'] ?? 'Failed to answer call', 400);

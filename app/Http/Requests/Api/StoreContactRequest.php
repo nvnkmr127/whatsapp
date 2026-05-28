@@ -24,6 +24,8 @@ class StoreContactRequest extends FormRequest
             'name' => 'nullable|string',
             'email' => 'nullable|email',
             'custom_attributes' => 'nullable|array',
+            'custom_attributes.email' => 'nullable|email|max:255',
+            'custom_attributes.company' => 'nullable|string|max:255',
             'opt_in' => 'nullable|boolean',
             'opt_in_source' => 'nullable|string',
             'opt_in_notes' => 'nullable|string',
