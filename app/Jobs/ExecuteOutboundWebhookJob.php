@@ -69,7 +69,7 @@ class ExecuteOutboundWebhookJob implements ShouldQueue
                 'attempted_at' => $attemptedAt,
             ]);
 
-            if ($response->failed() && $this->attempts() < $this->tries) {
+            if ($response->failed() && $response->serverError() && $this->attempts() < $this->tries) {
                 throw new \Exception('Webhook failed with status: '.$response->status());
             }
 
