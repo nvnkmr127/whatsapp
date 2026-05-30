@@ -13,7 +13,7 @@ class Automation extends Model
 
     protected $fillable = [
         'team_id', 'name', 'is_active', 'trigger_type', 'trigger_config',
-        'flow_data', 'publish_log', 'description',
+        'flow_data', 'publish_log', 'description', 'version', 'last_published_at',
     ];
 
     protected $casts = [
@@ -21,6 +21,7 @@ class Automation extends Model
         'trigger_config' => 'array',
         'flow_data' => 'array',
         'publish_log' => 'array',
+        'last_published_at' => 'datetime',
     ];
 
     public function steps()

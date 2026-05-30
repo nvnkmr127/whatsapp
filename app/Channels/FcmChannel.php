@@ -24,7 +24,7 @@ class FcmChannel
 
         $message = $notification->toFcm($notifiable);
 
-        if (!$message || empty($notifiable->fcmTokens)) {
+        if (!$message || $notifiable->fcmTokens->isEmpty()) {
             return;
         }
 

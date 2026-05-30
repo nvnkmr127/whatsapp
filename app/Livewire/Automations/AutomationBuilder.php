@@ -139,6 +139,8 @@ class AutomationBuilder extends Component
 
     public $publishLog = [];
 
+    public $selectedLogVersion = null;
+
     public $isDirty = false;
 
     // CRM / Context / Debug
@@ -237,6 +239,28 @@ class AutomationBuilder extends Component
         }
 
         return $risks;
+    }
+
+    public function viewVersion($version)
+    {
+        $log = collect($this->publishLog)->firstWhere('version', $version);
+        if ($log) {
+            $this->selectedLogVersion = $log;
+        }
+    }
+
+    public function rollbackToVersion($version)
+    {
+        $log = collect($this->publishLog)->firstWhere('version', $version);
+        if ($log && isset($log['nodes'])) {
+            $this->nodes = $log['nodes'];
+            $this->edges = $log['edges'] ?? [];
+            $this->isDirty = true;
+            $this->selectedLogVersion = null;
+            $this->success("Rolled back to version v{$version}. Save or publish to apply.");
+        } else {
+            $this->error("Cannot rollback: Flow data for version v{$version} is not found.");
+        }
     }
 
     public function mount($automationId = null)
