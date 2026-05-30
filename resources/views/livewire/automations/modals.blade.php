@@ -213,7 +213,7 @@
 </x-app-modal>
 
 {{-- Version History Details Modal --}}
-@if($selectedLogVersion)
+@if(isset($selectedLogVersion) && $selectedLogVersion)
 <x-dialog-modal wire:model.live="selectedLogVersion" maxWidth="2xl">
     <x-slot name="title">
         <div class="flex items-center gap-3">
