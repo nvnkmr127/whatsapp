@@ -33,8 +33,13 @@ Notifications.setNotificationHandler({
 export async function setupAndroidChannel() {
   if (Platform.OS !== 'android') return;
 
+  // Delete old channels first — Android ignores setNotificationChannelAsync
+  // updates to sound/vibration if the channel already exists with stale settings.
+  await Notifications.deleteNotificationChannelAsync('default').catch(() => {});
+  await Notifications.deleteNotificationChannelAsync('calls').catch(() => {});
+
   const defaultChannel = await Notifications.setNotificationChannelAsync('default', {
-    name: 'Watxio',
+    name: 'Watxio Messages',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#2F8F6F',

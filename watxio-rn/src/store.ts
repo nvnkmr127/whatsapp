@@ -184,6 +184,17 @@ export const store = {
       if (serialized) {
         const data = JSON.parse(serialized);
         if (data && data.token) {
+          // Validate cached websocket config — wipe it if it looks like a dev/stale
+          // value (localhost/127.0.0.1 host or null key) so the next login fetches fresh.
+          const ws = data.websocket;
+          const wsIsStale = !ws?.key
+            || ws?.host === '127.0.0.1'
+            || ws?.host === 'localhost';
+          if (wsIsStale) {
+            console.warn('[Session] Stale websocket config detected — clearing cached ws config. Will refresh on next API call.');
+            data.websocket = undefined;
+          }
+
           store.set({
             token: data.token,
             baseUrl: data.baseUrl || state.baseUrl,
