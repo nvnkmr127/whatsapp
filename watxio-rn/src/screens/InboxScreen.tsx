@@ -286,21 +286,20 @@ export default function InboxScreen({ navigation }: any) {
     });
   }, []);
 
-  // Load conversations when screen gains focus
+  // Load conversations when screen gains focus.
+  // fetchConversations already depends on filter + searchQuery via useCallback,
+  // so changing either re-creates the callback which re-fires useFocusEffect.
+  // A separate useEffect for filter/searchQuery changes would cause a double
+  // fetch while focused — removed to prevent that race condition.
   useFocusEffect(
     useCallback(() => {
-      fetchConversations(true, 1, false, false);
-      const interval = setInterval(() => fetchConversations(true, 1, false, false), 15000); // Poll every 15s
+      setPage(1);
+      setLastPage(1);
+      fetchConversations(true, 1, false, true);
+      const interval = setInterval(() => fetchConversations(true, 1, false, false), 15000);
       return () => clearInterval(interval);
     }, [fetchConversations])
   );
-
-  // Trigger load on filter change or query change
-  useEffect(() => {
-    setPage(1);
-    setLastPage(1);
-    fetchConversations(false, 1, false, true);
-  }, [filter, searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);

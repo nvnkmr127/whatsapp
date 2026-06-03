@@ -42,7 +42,7 @@ export function CallOverlayManager() {
   useEffect(() => {
     if (!globalState.token || !globalState.activeTeamId) {
       setActiveCall(null);
-      clearInterval(pollTimerRef.current!);
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
       return;
     }
@@ -99,7 +99,7 @@ export function CallOverlayManager() {
     pollTimerRef.current = setInterval(checkActiveCalls, 3000);
 
     return () => {
-      clearInterval(pollTimerRef.current!);
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
     };
   }, [globalState.token, globalState.activeTeamId]);
@@ -127,12 +127,14 @@ export function CallOverlayManager() {
         callTimerRef.current = setInterval(() => setCallTime((t) => t + 1), 1000);
       }
     } else {
-      clearInterval(callTimerRef.current!);
+      if (callTimerRef.current) clearInterval(callTimerRef.current);
       callTimerRef.current = null;
       setCallTime(0);
     }
+    // Cleanup runs on every status change AND on unmount — safe because we
+    // null the ref after clearing so double-clear is a no-op.
     return () => {
-      clearInterval(callTimerRef.current!);
+      if (callTimerRef.current) clearInterval(callTimerRef.current);
       callTimerRef.current = null;
     };
   }, [activeCall?.status]);

@@ -76,21 +76,35 @@ const state: GlobalState = {
 api.setBaseUrl(state.baseUrl);
 api.setToken(state.token);
 
-// Global 401 callback
+// Global 401 callback — debounced so a single transient 401 (e.g. clock skew,
+// brief server hiccup) doesn't immediately wipe the session. Two consecutive
+// 401s within 5 s will log the user out.
+let unauthorizedTimer: ReturnType<typeof setTimeout> | null = null;
+let unauthorizedCount = 0;
 api.onUnauthorized(() => {
-  store.set({
-    token: null,
-    user: null,
-    teams: [],
-    numbers: [],
-    activeTeamId: null,
-  });
-  if (navigationRef.isReady()) {
-    navigationRef.reset({
-      index: 0,
-      routes: [{ name: 'Onboarding' }],
-    });
-  }
+  unauthorizedCount++;
+  if (unauthorizedTimer) clearTimeout(unauthorizedTimer);
+  unauthorizedTimer = setTimeout(() => {
+    unauthorizedTimer = null;
+    if (unauthorizedCount >= 2) {
+      // Confirmed unauthorised — clear session and redirect
+      unauthorizedCount = 0;
+      store.set({
+        token: null,
+        user: null,
+        teams: [],
+        numbers: [],
+        activeTeamId: null,
+      });
+      if (navigationRef.isReady()) {
+        navigationRef.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
+      }
+    } else {
+      // Single 401 — likely transient. Reset counter but don't wipe session.
+      console.warn('[Auth] Single 401 received — treating as transient, not logging out.');
+      unauthorizedCount = 0;
+    }
+  }, 5000);
 });
 
 const STORAGE_KEY = '@watxio_session';

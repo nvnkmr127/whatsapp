@@ -149,6 +149,10 @@ export default function ChatScreen({ navigation, route }: any) {
   // Track previous message count to avoid scrolling on polls with no new messages
   const prevMsgCountRef = useRef<number>(0);
 
+  // Always-fresh ref to fetchConversationDetails so the polling effect never
+  // captures a stale closure (e.g. stale isOnline value).
+  const fetchConversationDetailsRef = useRef<typeof fetchConversationDetails>(null as any);
+
   const getCursorFromUrl = (url: string | null) => {
     if (!url) return null;
     const match = url.match(/[?&]cursor=([^&]+)/);
@@ -308,6 +312,9 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
+  // Keep ref in sync on every render so polling/WS callbacks always call the latest version
+  fetchConversationDetailsRef.current = fetchConversationDetails;
+
   const loadEarlierMessages = async () => {
     if (!nextCursor || loadingEarlier) return;
     setLoadingEarlier(true);
@@ -394,7 +401,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const poll = async () => {
       if (!isMounted) return;
-      const ok = await fetchConversationDetails(true);
+      const ok = await fetchConversationDetailsRef.current(true);
       if (!isMounted) return;
 
       if (ok) {
@@ -426,7 +433,7 @@ export default function ChatScreen({ navigation, route }: any) {
           setDbContactId(cachedMeta.dbContactId);
         }
         // ── Step 2: Silently refresh, then start backoff poll ──
-        const ok = await fetchConversationDetails(true);
+        const ok = await fetchConversationDetailsRef.current(true);
         if (isMounted) {
           failCount = ok ? 0 : 1;
           const delay = ok ? POLL_INTERVAL : Math.min(POLL_INTERVAL * 2, MAX_BACKOFF);
@@ -434,7 +441,7 @@ export default function ChatScreen({ navigation, route }: any) {
         }
       } else {
         // No cache — show spinner, fetch, then start poll
-        await fetchConversationDetails(false);
+        await fetchConversationDetailsRef.current(false);
         if (isMounted) pollTimer = setTimeout(poll, POLL_INTERVAL);
       }
     })();
@@ -596,6 +603,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     let ws: WebSocket | null = null;
     let active = true;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Backend now sends the public-facing Reverb config directly.
     // Convert http/https scheme to ws/wss for the WebSocket URL.
@@ -659,7 +667,9 @@ export default function ChatScreen({ navigation, route }: any) {
             payload.event?.endsWith('MessageReceived')
           ) {
             console.log(`[WS] Invalidation event received: ${payload.event}`);
-            fetchConversationDetails(true);
+            fetchConversationDetailsRef.current(true).catch((e) =>
+              console.warn('[WS] fetchConversationDetails failed:', e)
+            );
           }
         } catch (err) {
           console.warn('[WS] Error processing message:', err);
@@ -676,7 +686,7 @@ export default function ChatScreen({ navigation, route }: any) {
         setWsConnected(false);
         // Reconnect after 5 seconds if still active
         if (active) {
-          setTimeout(connect, 5000);
+          reconnectTimer = setTimeout(connect, 5000);
         }
       };
     };
@@ -685,9 +695,8 @@ export default function ChatScreen({ navigation, route }: any) {
 
     return () => {
       active = false;
-      if (ws) {
-        ws.close();
-      }
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
     };
   }, [conversationId, globalState.websocket, globalState.baseUrl]);
 
@@ -1051,7 +1060,9 @@ export default function ChatScreen({ navigation, route }: any) {
       }
 
       await api.post(`/v1/mobile/conversations/${conversationId}/messages`, payload);
-      fetchConversationDetails();
+      fetchConversationDetailsRef.current(true).catch((e) =>
+        console.warn('[Send] fetchConversationDetails failed:', e)
+      );
     } catch (err: any) {
       showDialog('Failed to Send Message', err.message || 'Error occurred while sending.');
     } finally {
@@ -1078,7 +1089,9 @@ export default function ChatScreen({ navigation, route }: any) {
       });
 
       setShowTemplatePicker(false);
-      fetchConversationDetails();
+      fetchConversationDetailsRef.current(true).catch((e) =>
+        console.warn('[Template] fetchConversationDetails failed:', e)
+      );
     } catch (err: any) {
       showDialog('Failed to Send Template', err.message || 'Error occurred.');
     } finally {
@@ -1285,10 +1298,12 @@ export default function ChatScreen({ navigation, route }: any) {
                 </Pressable>
               )}
               {messages.map((m, i) => {
+                // Use stable keys: message ID for bubbles, text+position for date separators
+                const stableKey = m.kind === 'date' ? `date-${m.text}-${i}` : `msg-${m.id ?? i}`;
                 if (m.kind === 'date') {
                   return (
                     <View
-                      key={i}
+                      key={stableKey}
                       className="self-center px-2.5 py-[3px] rounded-full bg-surface2 dark:bg-d-surface2 my-1"
                     >
                       <Text className="text-muted dark:text-d-muted text-[11px] font-semibold">{m.text}</Text>
@@ -1312,7 +1327,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
                 return (
                   <Pressable
-                    key={i}
+                    key={stableKey}
                     onLongPress={() => handleMessageLongPress(m)}
                     className="active:opacity-85"
                   >
