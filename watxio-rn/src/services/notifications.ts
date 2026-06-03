@@ -118,39 +118,54 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     if (!fcmToken) {
       console.error('[FCM DEBUG] ❌ Could not extract token string from tokenData:', JSON.stringify(tokenData));
+      Alert.alert('Push Error', 'Got empty FCM token from device. Check Firebase SHA-1 fingerprint is registered in Firebase Console.');
       return null;
     }
 
-    console.log('[FCM DEBUG] Token (first 30 chars):', fcmToken.substring(0, 30) + '...');
+    console.log('[FCM DEBUG] ✅ Token obtained (first 30 chars):', fcmToken.substring(0, 30) + '...');
 
-    // Register token with backend
-    await sendTokenToBackend(fcmToken);
+    // Register token with backend — this throws if it fails
+    const backendOk = await sendTokenToBackend(fcmToken);
+    if (!backendOk) {
+      Alert.alert(
+        'Push Setup Incomplete',
+        'Device token was generated but could not be saved to the server.\n\nCheck that your backend API is reachable and the /v1/mobile/auth/fcm-token route exists.',
+      );
+    }
 
     return fcmToken;
   } catch (e: any) {
     console.error('[FCM DEBUG] ❌ Failed to get device push token:', e?.message ?? e);
-    console.error('[FCM DEBUG] Error detail:', JSON.stringify(e));
+    Alert.alert(
+      'Push Notification Error',
+      `Failed to generate device token.\n\nError: ${e?.message ?? JSON.stringify(e)}\n\nFix: Register SHA-1 fingerprint 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25 in Firebase Console for app com.watxio.app`,
+    );
     return null;
   }
 }
 
 // ── Send token to Laravel backend ────────────────────────────────────────────
-async function sendTokenToBackend(token: string) {
+// Returns true on success, false on failure. Never throws.
+async function sendTokenToBackend(token: string): Promise<boolean> {
   const payload = {
     token,
     platform: Platform.OS,
     device_id: Device.modelName ?? undefined,
   };
-  console.log('[FCM DEBUG] Sending token to backend:', api.getBaseUrl() + '/v1/mobile/auth/fcm-token');
-  console.log('[FCM DEBUG] Payload:', JSON.stringify(payload));
+  const endpoint = '/v1/mobile/auth/fcm-token';
+  console.log('[FCM DEBUG] Sending token to backend:', api.getBaseUrl() + endpoint);
+  console.log('[FCM DEBUG] Payload:', JSON.stringify({ ...payload, token: token.substring(0, 20) + '...' }));
   try {
-    const response = await api.post('/v1/mobile/auth/fcm-token', payload);
+    const response = await api.post(endpoint, payload);
     console.log('[FCM DEBUG] ✅ Token registered with backend. Response:', JSON.stringify(response));
+    return true;
   } catch (e: any) {
     console.error('[FCM DEBUG] ❌ Failed to register token with backend');
     console.error('[FCM DEBUG] Error:', e?.message ?? e);
     console.error('[FCM DEBUG] Status:', e?.status);
-    console.error('[FCM DEBUG] Detail:', JSON.stringify(e));
+    console.error('[FCM DEBUG] Base URL was:', api.getBaseUrl());
+    console.error('[FCM DEBUG] Full error:', JSON.stringify(e));
+    return false;
   }
 }
 
