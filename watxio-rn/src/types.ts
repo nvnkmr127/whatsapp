@@ -1,7 +1,7 @@
 // src/types.ts — shared types used across screens.
 
 export type ConversationTag = 'Sales' | 'Support' | 'B2B' | 'Bot';
-export type MessageStatus = 'sent' | 'delivered' | 'read';
+export type MessageStatus = 'queued' | 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface Conversation {
   id: number;
@@ -11,7 +11,8 @@ export interface Conversation {
   time: string;
   unread: number;
   status: MessageStatus;
-  tag: ConversationTag;
+  tag?: string;
+  tagColor?: string;
   phone?: string;
   online?: boolean;
   pinned?: boolean;

@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronLeft, Phone, MoreHorizontal, BellOff, LayoutTemplate } from 'lucide-react-native';
+import { ChevronLeft, Phone, MoreHorizontal, BellOff, LayoutTemplate, Tag } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -68,6 +68,11 @@ export default function ChatScreen({ navigation, route }: any) {
   const [showOptions, setShowOptions] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [availableTags, setAvailableTags] = useState<{ id: number, name: string, color: string }[]>([]);
+  const [contactTags, setContactTags] = useState<{ id: number, name: string, color: string }[]>([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -113,10 +118,10 @@ export default function ChatScreen({ navigation, route }: any) {
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
       setAndroidKbHeight(0);
     });
-    
+
     // Load templates in background silently so they are ready for message rendering
     loadTemplatesList(true);
-    
+
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -167,9 +172,9 @@ export default function ChatScreen({ navigation, route }: any) {
       ]);
 
       const newIsWithin24 = details.is_within_24_hours;
-      const newIsAi       = details.is_ai_enabled;
-      const newSession    = details.session_expires_at;
-      const newDbId       = details.contact?.id ?? dbContactId;
+      const newIsAi = details.is_ai_enabled;
+      const newSession = details.session_expires_at;
+      const newDbId = details.contact?.id ?? dbContactId;
 
       setIsWithin24Hours(newIsWithin24);
       setIsAiEnabled(newIsAi);
@@ -200,12 +205,13 @@ export default function ChatScreen({ navigation, route }: any) {
         }
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+        const apiStatus = (m.status || '').toLowerCase();
         mapped.push({
           id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
           text: m.content || '',
           time: msgTime,
-          status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
+          status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
@@ -251,9 +257,9 @@ export default function ChatScreen({ navigation, route }: any) {
         });
 
         const prevLast = prev[prev.length - 1];
-        const newLast  = cleaned[cleaned.length - 1];
+        const newLast = cleaned[cleaned.length - 1];
         const countChanged = prev.length !== cleaned.length;
-        const lastChanged  = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time || prevLast?.status !== newLast?.status;
+        const lastChanged = prevLast?.text !== newLast?.text || prevLast?.time !== newLast?.time || prevLast?.status !== newLast?.status;
 
         if (!countChanged && !lastChanged) {
           // Check if any message status/content inside changed (e.g. read receipts)
@@ -326,12 +332,13 @@ export default function ChatScreen({ navigation, route }: any) {
         }
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+        const apiStatus = (m.status || '').toLowerCase();
         mapped.push({
           id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
           text: m.content || '',
           time: msgTime,
-          status: m.status === 'read' ? 'read' : m.status === 'delivered' ? 'delivered' : 'sent',
+          status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
@@ -342,7 +349,7 @@ export default function ChatScreen({ navigation, route }: any) {
         const combined = [...mapped, ...prev];
         const cleaned: ChatMessage[] = [];
         let lastHeaderSeen = '';
-        
+
         combined.forEach((msg) => {
           if (msg.kind === 'date') {
             if (msg.text !== lastHeaderSeen) {
@@ -355,7 +362,7 @@ export default function ChatScreen({ navigation, route }: any) {
             }
           }
         });
-        
+
         return cleaned;
       });
     } catch (err: any) {
@@ -383,7 +390,7 @@ export default function ChatScreen({ navigation, route }: any) {
     let failCount = 0;
 
     const POLL_INTERVAL = wsConnected ? 40000 : 8000;   // 40s when WS is alive, 8s fallback when not
-    const MAX_BACKOFF   = 120000; // max 2 min backoff when server is down
+    const MAX_BACKOFF = 120000; // max 2 min backoff when server is down
 
     const poll = async () => {
       if (!isMounted) return;
@@ -495,7 +502,7 @@ export default function ChatScreen({ navigation, route }: any) {
       try {
         const response = await api.post(`/v1/mobile/conversations/${conversationId}/lock`);
         if (!active) return;
-        
+
         if (response.success) {
           setHasLock(true);
           setLockOwner(null);
@@ -617,7 +624,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const connect = () => {
       if (!active) return;
-      
+
       console.log(`[WS] Connecting to ${wsUrl}`);
       ws = new WebSocket(wsUrl);
 
@@ -628,7 +635,7 @@ export default function ChatScreen({ navigation, route }: any) {
       ws.onmessage = async (event) => {
         try {
           const payload = JSON.parse(event.data);
-          
+
           if (payload.event === 'pusher:connection_established') {
             const data = JSON.parse(payload.data);
             const socketId = data.socket_id;
@@ -660,7 +667,11 @@ export default function ChatScreen({ navigation, route }: any) {
           } else if (
             payload.event === 'MessageReceived' ||
             payload.event === 'MessageSent' ||
-            payload.event === 'MessageStatusUpdated'
+            payload.event === 'MessageStatusUpdated' ||
+            payload.event === '.MessageStatusUpdated' ||
+            payload.event === 'App\\Events\\MessageStatusUpdated' ||
+            payload.event?.endsWith('MessageStatusUpdated') ||
+            payload.event?.endsWith('MessageReceived')
           ) {
             console.log(`[WS] Invalidation event received: ${payload.event}`);
             fetchConversationDetails(true);
@@ -701,18 +712,18 @@ export default function ChatScreen({ navigation, route }: any) {
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     const prevLastMsg = prevLastMsgRef.current;
-    
+
     const isInitialLoad = !prevLastMsg && lastMsg;
     const isNewMessageAdded = lastMsg && prevLastMsg && (lastMsg.id !== prevLastMsg.id || lastMsg.text !== prevLastMsg.text || lastMsg.time !== prevLastMsg.time);
     const typingStarted = typing && !prevTypingRef.current;
-    
+
     if (isInitialLoad || isNewMessageAdded || typingStarted) {
       const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: false }), 80);
       prevLastMsgRef.current = lastMsg;
       prevTypingRef.current = typing;
       return () => clearTimeout(t);
     }
-    
+
     prevLastMsgRef.current = lastMsg;
     prevTypingRef.current = typing;
   }, [messages, typing]);
@@ -767,7 +778,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
   const handleForwardMessage = async (toConversationId: number, toConversationName: string) => {
     if (!forwardingMsg || !forwardingMsg.id) return;
-    
+
     setShowForwardPicker(false);
     setLoading(true);
     try {
@@ -827,6 +838,23 @@ export default function ChatScreen({ navigation, route }: any) {
     }
     return () => clearInterval(interval);
   }, [isRecording]);
+
+  const fetchTags = async () => {
+    setLoadingTags(true);
+    try {
+      const headers = { 'X-Silent-Errors': 'true' };
+      const [allTagsRes, contactRes] = await Promise.all([
+        api.get('/v1/mobile/contacts/tags', headers),
+        api.get(`/v1/mobile/contacts/${dbContactId}`, headers)
+      ]);
+      setAvailableTags(allTagsRes || []);
+      setContactTags(contactRes.contact?.tags || []);
+    } catch (err: any) {
+      console.warn('Could not load tags', err);
+    } finally {
+      setLoadingTags(false);
+    }
+  };
 
   const loadTemplatesList = async (isSilent = false) => {
     setLoadingTemplates(true);
@@ -888,7 +916,7 @@ export default function ChatScreen({ navigation, route }: any) {
       const asset = result.assets[0];
       let fileName = asset.fileName || asset.uri.split('/').pop() || 'media';
       let mimeType = asset.mimeType;
-      
+
       // Guess mime and add extension if missing
       if (!mimeType) {
         if (asset.type === 'video') mimeType = 'video/mp4';
@@ -978,7 +1006,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     // Prepend locally for immediate UX
     const displayStr = selectedMedia ? (text || `📄 ${selectedMedia.name}`) : text;
-    const newMsg: ChatMessage = { kind: 'out', text: displayStr, time: 'now', status: 'sent' };
+    const newMsg: ChatMessage = { kind: 'out', text: displayStr, time: 'now', status: 'queued' };
     setMessages((m) => [...m, newMsg]);
     setDraft('');
     const mediaToUpload = selectedMedia;
@@ -1230,6 +1258,7 @@ export default function ChatScreen({ navigation, route }: any) {
               </Text>
             </View>
           </Pressable>
+          <IconButton icon={Tag} onPress={() => { setShowTagPicker(true); fetchTags(); }} />
           <IconButton icon={LayoutTemplate} onPress={openTemplateSelector} />
           <IconButton icon={MoreHorizontal} onPress={() => setShowOptions(true)} />
         </View>
@@ -1341,7 +1370,7 @@ export default function ChatScreen({ navigation, route }: any) {
                   if (recordingRef.current) {
                     try {
                       await recordingRef.current.stopAndUnloadAsync();
-                    } catch (e) {}
+                    } catch (e) { }
                     recordingRef.current = null;
                   }
                 }}
@@ -1365,21 +1394,21 @@ export default function ChatScreen({ navigation, route }: any) {
 
                   const duration = recordingSeconds || 1;
                   const timeStr = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
-                  
+
                   // Prepend locally
-                  setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent' }]);
-                  
+                  setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent', media_url: uri, media_type: 'audio' }]);
+
                   if (!uri) {
                     showDialog('Error', 'Failed to get recording URI.');
                     return;
                   }
-                  
+
                   try {
                     const formData = new FormData();
                     formData.append('file', {
                       uri,
-                      name: 'voice.m4a',
-                      type: 'audio/m4a',
+                      name: 'voice.mp4',
+                      type: 'audio/mp4',
                     } as any);
 
                     const uploadRes = await api.post('/v1/mobile/media/upload', formData);
@@ -1405,22 +1434,22 @@ export default function ChatScreen({ navigation, route }: any) {
           <View>
             {selectedMedia && (
               <View className="bg-surface dark:bg-d-surface px-3 py-2 border-t border-hairline dark:border-d-hairline flex-row items-center justify-between">
-                 <View className="flex-row items-center gap-3">
-                   <View className="w-12 h-12 bg-surface2 dark:bg-d-surface2 rounded items-center justify-center overflow-hidden">
-                     {selectedMedia.type === 'image' || selectedMedia.type === 'video' ? (
-                       <Image source={{ uri: selectedMedia.uri }} style={{ width: '100%', height: '100%' }} />
-                     ) : (
-                       <Text className="text-2xl">📄</Text>
-                     )}
-                   </View>
-                   <View>
-                     <Text className="text-ink dark:text-d-ink font-semibold text-[13px] max-w-[200px]" numberOfLines={1}>{selectedMedia.name}</Text>
-                     <Text className="text-muted dark:text-d-muted text-[11px] uppercase mt-0.5">{selectedMedia.type}</Text>
-                   </View>
-                 </View>
-                 <Pressable onPress={() => setSelectedMedia(null)} className="p-2">
-                   <Text className="text-danger dark:text-d-danger font-bold text-sm">Remove</Text>
-                 </Pressable>
+                <View className="flex-row items-center gap-3">
+                  <View className="w-12 h-12 bg-surface2 dark:bg-d-surface2 rounded items-center justify-center overflow-hidden">
+                    {selectedMedia.type === 'image' || selectedMedia.type === 'video' ? (
+                      <Image source={{ uri: selectedMedia.uri }} style={{ width: '100%', height: '100%' }} />
+                    ) : (
+                      <Text className="text-2xl">📄</Text>
+                    )}
+                  </View>
+                  <View>
+                    <Text className="text-ink dark:text-d-ink font-semibold text-[13px] max-w-[200px]" numberOfLines={1}>{selectedMedia.name}</Text>
+                    <Text className="text-muted dark:text-d-muted text-[11px] uppercase mt-0.5">{selectedMedia.type}</Text>
+                  </View>
+                </View>
+                <Pressable onPress={() => setSelectedMedia(null)} className="p-2">
+                  <Text className="text-danger dark:text-d-danger font-bold text-sm">Remove</Text>
+                </Pressable>
               </View>
             )}
             <Composer
@@ -1587,6 +1616,108 @@ export default function ChatScreen({ navigation, route }: any) {
               ))}
             </View>
           </Pressable>
+        </Modal>
+      )}
+
+      {/* Tag Picker Modal */}
+      {showTagPicker && (
+        <Modal transparent visible={showTagPicker} animationType="slide">
+          <View className="flex-1 justify-end bg-black/40">
+            <View className="bg-surface dark:bg-d-surface rounded-t-2xl max-h-[80%]" style={{ paddingBottom: insets.bottom || 20 }}>
+              <View className="flex-row items-center justify-between p-4 border-b border-hairline dark:border-d-hairline">
+                <Text className="text-base font-bold text-ink dark:text-d-ink">Manage Tags</Text>
+                <Pressable onPress={() => setShowTagPicker(false)} className="p-2">
+                  <Text className="text-accent dark:text-d-accent font-semibold">Close</Text>
+                </Pressable>
+              </View>
+
+              {loadingTags ? (
+                <View className="py-20 items-center justify-center">
+                  <ActivityIndicator size="small" color={tokens.accent} />
+                  <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading tags...</Text>
+                </View>
+              ) : (
+                <>
+                  {/* Create New Tag */}
+                  <View className="p-4 border-b border-hairline dark:border-d-hairline flex-row gap-2">
+                    <TextInput
+                      placeholder="New tag name..."
+                      placeholderTextColor={tokens.muted}
+                      value={newTagName}
+                      onChangeText={setNewTagName}
+                      className="flex-1 h-10 px-3 rounded-md bg-surface2 dark:bg-d-surface2 text-ink dark:text-d-ink"
+                    />
+                    <Pressable
+                      disabled={!newTagName.trim()}
+                      onPress={async () => {
+                        const name = newTagName.trim();
+                        if (!name) return;
+                        setLoadingTags(true);
+                        try {
+                          const res = await api.post('/v1/mobile/contacts/tags', { name, color: '#10B981' });
+                          if (res.success) {
+                            setAvailableTags([...availableTags, res.tag]);
+                            setNewTagName('');
+                            // Auto toggle it on for this contact
+                            await api.post(`/v1/mobile/contacts/${dbContactId}/tags/toggle`, { tag_id: res.tag.id });
+                            setContactTags([...contactTags, res.tag]);
+                          } else {
+                            showDialog('Error', res.message || 'Failed to create tag');
+                          }
+                        } catch (err: any) {
+                          showDialog('Error', err.message || 'Could not create tag');
+                        } finally {
+                          setLoadingTags(false);
+                        }
+                      }}
+                      className={`h-10 px-4 rounded-md justify-center items-center ${newTagName.trim() ? 'bg-accent' : 'bg-surface3 dark:bg-d-surface3'}`}
+                    >
+                      <Text className={newTagName.trim() ? 'text-white font-bold' : 'text-muted dark:text-d-muted'}>Create</Text>
+                    </Pressable>
+                  </View>
+
+                  <FlatList
+                    data={availableTags}
+                    keyExtractor={(item) => item.id.toString()}
+                    contentContainerStyle={{ padding: 16, gap: 10 }}
+                    ListEmptyComponent={
+                      <View className="py-12 items-center justify-center">
+                        <Text className="text-xs text-muted dark:text-d-muted">No tags available.</Text>
+                      </View>
+                    }
+                    renderItem={({ item }) => {
+                      const isSelected = contactTags.some((t) => t.id === item.id);
+                      return (
+                        <Pressable
+                          onPress={async () => {
+                            // Optimistic update
+                            if (isSelected) {
+                              setContactTags(contactTags.filter((t) => t.id !== item.id));
+                            } else {
+                              setContactTags([...contactTags, item]);
+                            }
+                            try {
+                              await api.post(`/v1/mobile/contacts/${dbContactId}/tags/toggle`, { tag_id: item.id });
+                            } catch (err: any) {
+                              fetchTags();
+                              showDialog('Error', 'Failed to toggle tag');
+                            }
+                          }}
+                          className="flex-row items-center justify-between p-3.5 rounded-lg border border-hairline dark:border-d-hairline bg-surface2 dark:bg-d-surface2 active:bg-surface3"
+                        >
+                          <View className="flex-row items-center gap-3">
+                            <View className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color || '#10B981' }} />
+                            <Text className="font-semibold text-[14px] text-ink dark:text-d-ink">{item.name}</Text>
+                          </View>
+                          {isSelected && <Text className="text-accent dark:text-d-accent font-bold">✓</Text>}
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </>
+              )}
+            </View>
+          </View>
         </Modal>
       )}
 

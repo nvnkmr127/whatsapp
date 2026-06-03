@@ -59,6 +59,10 @@ export default function OnboardingScreen({ navigation }: any) {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
+    setServerUrl(globalState.baseUrl);
+  }, [globalState.baseUrl]);
+
+  useEffect(() => {
     const checkSession = async () => {
       try {
         const hasSession = await store.loadSession();

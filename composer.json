@@ -13,7 +13,7 @@
         "ext-intl": "*",
         "barryvdh/laravel-dompdf": "^3.1",
         "giggsey/libphonenumber-for-php": "^9.0",
-        "kreait/laravel-firebase": "^7.1",
+        "google/auth": "^1.45",
         "laravel/framework": "^12.0",
         "laravel/jetstream": "^5.4",
         "laravel/reverb": "^1.6",
@@ -105,7 +105,7 @@
             "php-http/discovery": true
         },
         "platform": {
-            "php": "8.3.0"
+            "php": "8.2.12"
         }
     },
     "minimum-stability": "stable",

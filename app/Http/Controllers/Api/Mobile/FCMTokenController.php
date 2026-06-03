@@ -21,6 +21,8 @@ class FCMTokenController extends Controller
 
         $user = $request->user();
 
+        \Illuminate\Support\Facades\Log::info("FCM token registration request received for user {$user->id}: token=" . substr($request->token, 0, 15) . "... platform=" . $request->platform);
+
         // Update or Create
         $fcmToken = UserFcmToken::updateOrCreate(
             [

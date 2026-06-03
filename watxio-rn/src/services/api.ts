@@ -15,9 +15,10 @@ const getDevMachineIp = () => {
   return Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 };
 
-const defaultBaseUrl = `http://${getDevMachineIp()}:8000/api`;
+const defaultBaseUrl = `http://${getDevMachineIp()}:8001/api`;
 
 let apiBaseUrl: string = defaultBaseUrl;
+
 
 export const api = {
   onUnauthorized(callback: () => void) {
@@ -62,6 +63,12 @@ export const api = {
       'Accept': 'application/json',
       ...customHeaders,
     };
+
+    if (method === 'GET') {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+    }
 
     if (isSilent) {
       delete headers['X-Silent-Errors'];

@@ -25,6 +25,10 @@ export default function LoginScreen({ navigation }: any) {
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    setServerUrl(globalState.baseUrl);
+  }, [globalState.baseUrl]);
+
   const nav = navigation;
 
   // Dialog State

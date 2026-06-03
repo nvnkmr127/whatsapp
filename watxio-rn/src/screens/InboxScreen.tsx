@@ -107,7 +107,8 @@ export default function InboxScreen({ navigation }: any) {
           time: c.last_message ? c.last_message.pretty_time : '',
           unread: c.unread_count || 0,
           status: c.status === 'closed' ? 'delivered' : 'read',
-          tag: c.tags && c.tags[0] ? c.tags[0].name : 'Sales',
+          tag: c.tags && c.tags.length > 0 ? c.tags[0].name : undefined,
+          tagColor: c.tags && c.tags.length > 0 ? c.tags[0].color : undefined,
           online: c.is_within_24_hours || false,
           pinned: false,
           reply: c.last_message?.is_outbound ? 'me' : undefined,
@@ -623,14 +624,32 @@ function Row({ c, divider, onPress }: RowProps) {
       <Avatar name={c.name} size={44} dot={c.online ? tokens.ok : null} />
       <View className="flex-1 min-w-0">
         <View className="flex-row justify-between items-baseline">
-          <Text
-            numberOfLines={1}
-            className={`flex-1 text-[15px] ${
-              c.unread ? 'font-bold text-ink dark:text-d-ink' : 'font-semibold text-ink dark:text-d-ink'
-            }`}
-          >
-            {c.name}
-          </Text>
+          <View className="flex-1 flex-row items-center gap-1.5 mr-2 overflow-hidden">
+            <Text
+              numberOfLines={1}
+              className={`flex-shrink text-[15px] ${
+                c.unread ? 'font-bold text-ink dark:text-d-ink' : 'font-semibold text-ink dark:text-d-ink'
+              }`}
+            >
+              {c.name}
+            </Text>
+            {c.tag ? (
+              <View 
+                className="px-[5px] py-[2px] rounded border" 
+                style={{ 
+                  backgroundColor: c.tagColor ? `${c.tagColor}15` : tokens.surface2,
+                  borderColor: c.tagColor ? `${c.tagColor}30` : tokens.hairline
+                }}
+              >
+                <Text 
+                  className="text-[9px] font-bold uppercase tracking-wider"
+                  style={{ color: c.tagColor || tokens.muted }}
+                >
+                  {c.tag}
+                </Text>
+              </View>
+            ) : null}
+          </View>
           <Text
             className={`text-[11.5px] ml-2 ${
               c.unread ? 'text-accent dark:text-d-accent font-bold' : 'text-muted dark:text-d-muted font-medium'

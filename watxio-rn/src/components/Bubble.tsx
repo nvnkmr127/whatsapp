@@ -3,7 +3,8 @@
 
 import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
-import { Check, CheckCheck, Star, Play, FileText, Mic } from 'lucide-react-native';
+import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 import { useTokens } from '@/theme';
 import type { MessageStatus } from '@/types';
 
@@ -24,6 +25,51 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
   const { tokens } = useTokens();
   const isOut = kind === 'out';
   const baseR = variant === 'squared' ? Math.min(8, radius * 0.45) : radius;
+
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const soundRef = React.useRef<Audio.Sound | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  const handleAudioPress = async () => {
+    if (isPlaying) {
+      if (soundRef.current) {
+        await soundRef.current.pauseAsync();
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    try {
+      if (!soundRef.current && mediaUrl) {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: mediaUrl },
+          { shouldPlay: true }
+        );
+        soundRef.current = sound;
+        sound.setOnPlaybackStatusUpdate((status: any) => {
+          if (status.isLoaded) {
+            setIsPlaying(status.isPlaying);
+            if (status.didJustFinish) {
+              soundRef.current?.setPositionAsync(0);
+              setIsPlaying(false);
+            }
+          }
+        });
+      } else if (soundRef.current) {
+        await soundRef.current.playAsync();
+      }
+      setIsPlaying(true);
+    } catch (e) {
+      console.warn("Error playing audio", e);
+    }
+  };
 
   const corner = variant === 'tail'
     ? (isOut
@@ -62,9 +108,13 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
         </Pressable>
       )}
       {hasMedia && isAudio && (
-        <Pressable onPress={onMediaPress} className="flex-row items-center gap-3 px-3 py-3">
+        <Pressable onPress={handleAudioPress} className="flex-row items-center gap-3 px-3 py-3">
           <View className="w-9 h-9 rounded-full items-center justify-center" style={{ backgroundColor: tokens.accent + '30' }}>
-            <Mic size={18} color={tokens.accent} />
+            {isPlaying ? (
+              <Pause size={18} color={tokens.accent} fill={tokens.accent} />
+            ) : (
+              <Play size={18} color={tokens.accent} fill={tokens.accent} />
+            )}
           </View>
           <Text className="text-ink dark:text-d-ink text-sm font-medium">Voice message</Text>
         </Pressable>
@@ -96,9 +146,17 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
         {isStarred ? <Star size={10} color="#EAB308" fill="#EAB308" style={{ marginRight: 2 }} /> : null}
         {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium">{time}</Text> : null}
         {isOut && status ? (
-          status === 'read'
-            ? <CheckCheck size={13} color={tokens.accent} strokeWidth={2} />
-            : <Check size={13} color={tokens.muted} strokeWidth={2} />
+          status === 'read' ? (
+            <CheckCheck size={15} color="#34B7F1" strokeWidth={2} />
+          ) : status === 'delivered' ? (
+            <CheckCheck size={15} color={tokens.muted} strokeWidth={2} />
+          ) : status === 'sent' ? (
+            <Check size={15} color={tokens.muted} strokeWidth={2} />
+          ) : status === 'failed' ? (
+            <AlertCircle size={13} color={tokens.danger} strokeWidth={2} />
+          ) : (
+            <Clock size={12} color={tokens.muted} strokeWidth={2} />
+          )
         ) : null}
       </View>
     </View>

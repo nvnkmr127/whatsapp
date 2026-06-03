@@ -1,0 +1,24 @@
+Created At: 2026-05-30T08:59:18Z
+Completed At: 2026-05-30T08:59:18Z
+File Path: `file:///c:/Users/madhu/OneDrive/Desktop/watxio/test_key.php`
+Total Lines: 16
+Total Bytes: 405
+Showing lines 1 to 16
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: <?php
+2: $config = json_decode(file_get_contents('storage/app/firebase-admin-sdk.json'), true);
+3: $key = $config['private_key'];
+4: 
+5: echo "--- KEY START ---" . PHP_EOL;
+6: echo $key . PHP_EOL;
+7: echo "--- KEY END ---" . PHP_EOL;
+8: 
+9: $res = openssl_pkey_get_private($key);
+10: if ($res === false) {
+11:     echo "Failed to load key: " . openssl_error_string() . PHP_EOL;
+12: } else {
+13:     echo "Key loaded successfully!" . PHP_EOL;
+14: }
+15: 
+16: 
+The above content shows the entire, complete file contents of the requested file.

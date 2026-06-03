@@ -1,0 +1,23 @@
+Created At: 2026-05-30T09:00:00Z
+Completed At: 2026-05-30T09:00:00Z
+File Path: `file:///c:/Users/madhu/OneDrive/Desktop/watxio/test_openssl_cli.php`
+Total Lines: 15
+Total Bytes: 423
+Showing lines 1 to 15
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: <?php
+2: $config = json_decode(file_get_contents('storage/app/firebase-admin-sdk.json'), true);
+3: $key = $config['private_key'];
+4: file_put_contents('temp_key.pem', $key);
+5: 
+6: $output = [];
+7: $retval = 0;
+8: exec('C:\xampp\apache\bin\openssl.exe pkey -in temp_key.pem -text -noout 2>&1', $output, $retval);
+9: 
+10: echo "Retval: " . $retval . PHP_EOL;
+11: echo "Output:" . PHP_EOL;
+12: echo implode(PHP_EOL, $output) . PHP_EOL;
+13: 
+14: unlink('temp_key.pem');
+15: 
+The above content shows the entire, complete file contents of the requested file.

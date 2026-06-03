@@ -382,6 +382,89 @@ class WhatsAppService
     }
 
     /**
+     * Send interactive list message.
+     */
+    public function sendInteractiveList($to, $text, $buttonText, array $sections, $existingMessage = null)
+    {
+        $this->verifyReadyToSend();
+
+        $contact = $this->getOrCreateContact($to);
+
+        $policy = app(PolicyService::class);
+        if ($contact && ! $policy->canSendFreeMessage($contact)) {
+            Log::warning("Blocked interactive list message to {$to}. 24h Window Closed or Opt-out.");
+            throw new \Exception('Cannot send interactive list. 24-hour window is closed or User opted out. Please use a Template.');
+        }
+
+        if (! $this->team->canAccess('send_message')) {
+            $denial = $this->team->entitlement()->denialReason('send_message');
+            throw new \Exception($denial ?: 'Monthly message limit reached or subscription inactive.');
+        }
+
+        $conversationService = new \App\Services\ConversationService;
+        $conversation = $conversationService->ensureActiveConversation($contact);
+
+        $msg = $existingMessage;
+        if (! $msg) {
+            $msg = \App\Models\Message::create([
+                'team_id' => $this->team->id,
+                'contact_id' => $contact->id,
+                'conversation_id' => $conversation->id,
+                'type' => 'interactive',
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'content' => $text,
+                'metadata' => ['sections' => $sections, 'button_text' => $buttonText, 'is_bot' => $this->isBot],
+            ]);
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'list',
+                'body' => ['text' => $text],
+                'action' => [
+                    'button' => $buttonText,
+                    'sections' => $sections,
+                ],
+            ],
+        ];
+
+        try {
+            $response = $this->client->sendRequest('messages', $payload);
+
+            if ($response['success'] ?? false) {
+                $wamId = $response['data']['messages'][0]['id'] ?? null;
+                $conversationService->handleOutboundMessage($conversation, $this->isBot);
+                if (! $this->isBot) { app(\App\Services\SlaService::class)->recordFirstResponse($conversation); }
+
+                $msg->update([
+                    'status' => 'sent',
+                    'whatsapp_message_id' => $wamId,
+                    'sent_at' => now(),
+                ]);
+
+                \App\Events\MessageSent::dispatch($msg);
+            } else {
+                $msg->update([
+                    'status' => 'failed',
+                    'error_message' => json_encode($response['error'] ?? 'Unknown Error'),
+                ]);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            $msg->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Send a Flow via Interactive Message.
      */
     public function sendFlow($to, $flowId, $headline, $body, $cta, $mode = 'draft', $initialScreen = null, $data = [], $existingMessage = null)
