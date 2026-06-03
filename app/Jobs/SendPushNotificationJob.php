@@ -79,7 +79,7 @@ class SendPushNotificationJob implements ShouldQueue
             'contact_name' => $contact->name ?: $contact->phone_number,
         ];
 
-        $users = User::whereIn('id', $targetUserIds)->get();
+        $users = User::with('fcmTokens')->whereIn('id', $targetUserIds)->get();
 
         foreach ($users as $user) {
             $fcmService->sendToUser($user, $title, $body, $data);

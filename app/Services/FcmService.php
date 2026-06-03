@@ -56,7 +56,7 @@ class FcmService
         $tokens = $user->fcmTokens()->pluck('token')->toArray();
 
         if (empty($tokens)) {
-            return null;
+            return;
         }
 
         return $this->sendToTokens($tokens, $title, $body, $data);

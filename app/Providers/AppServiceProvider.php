@@ -172,10 +172,7 @@ class AppServiceProvider extends ServiceProvider
         );
 
         \Illuminate\Support\Facades\Event::listen(
-            [
-                \App\Events\MessageReceived::class,
-                \App\Events\CallOffered::class,
-            ],
+            \App\Events\CallOffered::class,
             \App\Listeners\SendPushNotificationListener::class
         );
 
