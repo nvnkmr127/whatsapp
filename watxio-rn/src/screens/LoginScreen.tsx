@@ -70,7 +70,9 @@ export default function LoginScreen({ navigation }: any) {
       const userTeams = response.teams || [];
       const activeTeam = userTeams[0] || null;
 
-      // Fetch numbers if available
+      // Fetch numbers if available.
+      // Use api directly (not store.set yet) to avoid triggering FCM
+      // registration before the full token/teamId state is committed.
       let teamNumbers: any[] = [];
       if (response.token && activeTeam) {
         api.setToken(response.token);
@@ -81,6 +83,11 @@ export default function LoginScreen({ navigation }: any) {
           console.warn('Failed to load team numbers during login', err);
         }
       }
+      // Reset to null so store.set below is the single point that sets the
+      // token — this ensures App.tsx's useEffect sees the transition null→token
+      // and triggers FCM registration exactly once.
+      api.setToken(null);
+      api.setTeamId(null);
 
       const activeNumberObj = teamNumbers[0] || null;
 

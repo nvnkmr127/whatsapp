@@ -123,6 +123,17 @@ async function persistState(data: GlobalState) {
 
 const listeners = new Set<() => void>();
 
+// Debounce persistState so rapid store.set() bursts (e.g. WS message floods)
+// only trigger one AsyncStorage write after activity settles.
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+function schedulePersist() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    persistState(state);
+  }, 1000);
+}
+
 export const store = {
   get: (): GlobalState => state,
   set: (updates: Partial<GlobalState>) => {
@@ -144,8 +155,8 @@ export const store = {
 
     listeners.forEach((l) => l());
 
-    // Asynchronously persist session
-    persistState(state);
+    // Debounced persist — avoids AsyncStorage jank on message bursts
+    schedulePersist();
   },
   subscribe: (listener: () => void) => {
     listeners.add(listener);

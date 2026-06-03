@@ -103,10 +103,20 @@ export async function registerForPushNotifications(): Promise<string | null> {
     console.log('[FCM DEBUG] Calling getDevicePushTokenAsync()...');
     const tokenData = await Notifications.getDevicePushTokenAsync();
     console.log('[FCM DEBUG] Token type:', tokenData.type);
-    console.log('[FCM DEBUG] Token (first 30 chars):', String(tokenData.data).substring(0, 30) + '...');
-    console.log('[FCM DEBUG] Full token:', tokenData.data); // full token for verification
+    console.log('[FCM DEBUG] Raw token data:', JSON.stringify(tokenData.data));
 
-    const fcmToken = tokenData.data as string;
+    // On Android tokenData.data is a string (FCM token).
+    // On iOS tokenData.data is an object { deviceToken: string }.
+    const fcmToken: string = typeof tokenData.data === 'string'
+      ? tokenData.data
+      : (tokenData.data as any)?.deviceToken ?? '';
+
+    if (!fcmToken) {
+      console.error('[FCM DEBUG] ❌ Could not extract token string from tokenData:', JSON.stringify(tokenData));
+      return null;
+    }
+
+    console.log('[FCM DEBUG] Token (first 30 chars):', fcmToken.substring(0, 30) + '...');
 
     // Register token with backend
     await sendTokenToBackend(fcmToken);
@@ -177,12 +187,21 @@ export function useNotificationNavigation(navRef: any) {
       }
     );
 
-    // Check if app was opened from a killed-state notification tap
+    // Check if app was opened from a killed-state notification tap.
+    // Retry with backoff until nav is ready — it may not be mounted yet.
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        const data = response.notification.request.content.data as NotificationPayload;
-        handleNotificationTap(data, navRef);
-      }
+      if (!response) return;
+      const data = response.notification.request.content.data as NotificationPayload;
+      let attempts = 0;
+      const tryNavigate = () => {
+        if (navRef?.isReady?.()) {
+          handleNotificationTap(data, navRef);
+        } else if (attempts < 10) {
+          attempts++;
+          setTimeout(tryNavigate, 300);
+        }
+      };
+      tryNavigate();
     });
 
     return () => {
@@ -200,9 +219,17 @@ function handleNotificationTap(data: NotificationPayload, navRef: any) {
     case 'new_message':
     case 'new_conversation':
       if (data.conversation_id) {
+        // Chat screen expects { conversation: Conversation } — fetch a minimal
+        // stub so the screen can load. It will hydrate from the API on mount.
         navRef.navigate('Chat', {
-          conversationId: Number(data.conversation_id),
-          contactName: data.contact_name ?? 'Chat',
+          conversation: {
+            id: Number(data.conversation_id),
+            contact_id: Number(data.contact_id ?? 0),
+            name: data.contact_name ?? 'Chat',
+            phone: '',
+            tags: [],
+            status: 'open',
+          },
         });
       }
       break;
