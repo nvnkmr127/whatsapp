@@ -106,12 +106,15 @@ class FcmService
                         'notification' => [
                             'channel_id' => $channelId,
                             'sound' => 'default',
-                            'notification_priority' => 'PRIORITY_HIGH',
+                            'default_sound' => true,
+                            'priority' => 'high',          // was 'notification_priority' — wrong key
+                            'visibility' => 'public',
                         ],
                     ],
                     'apns' => [
                         'headers' => [
                             'apns-priority' => '10',
+                            'apns-push-type' => 'alert',   // required for iOS 13+
                         ],
                         'payload' => [
                             'aps' => [
@@ -121,7 +124,8 @@ class FcmService
                                 ],
                                 'sound' => 'default',
                                 'badge' => 1,
-                                'content-available' => 1,
+                                'mutable-content' => 1,    // allows notification service extension
+                                // removed content-available — causes silent/background delivery on iOS
                             ],
                         ],
                     ],
@@ -133,6 +137,7 @@ class FcmService
 
                 if ($response->successful()) {
                     $successCount++;
+                    Log::info("FCM: delivered successfully to token ending ...".substr($token, -10));
                 } else {
                     $statusCode = $response->status();
                     $errorData = $response->json();
