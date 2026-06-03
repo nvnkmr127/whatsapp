@@ -27,10 +27,20 @@ function Root() {
 
   // Register for push notifications once the user is authenticated
   React.useEffect(() => {
+    console.log('[FCM DEBUG] App.tsx token effect fired. token present:', !!globalState.token);
     if (globalState.token) {
-      registerForPushNotifications().catch((e) =>
-        console.warn('[FCM] Registration error:', e)
-      );
+      console.log('[FCM DEBUG] Token found — starting push notification registration...');
+      registerForPushNotifications()
+        .then((token) => {
+          if (token) {
+            console.log('[FCM DEBUG] ✅ Registration complete. Token starts with:', token.substring(0, 25));
+          } else {
+            console.warn('[FCM DEBUG] ⚠️ Registration returned null — check permission or device token error above');
+          }
+        })
+        .catch((e) => console.error('[FCM DEBUG] ❌ Registration threw exception:', e));
+    } else {
+      console.log('[FCM DEBUG] No auth token yet — skipping push registration');
     }
   }, [globalState.token]);
 
