@@ -12,10 +12,19 @@ class FcmService
     /**
      * Get OAuth2 access token for FCM, cached for 50 minutes.
      */
+    protected function credentialsPath(): string
+    {
+        $fromEnv = env('FIREBASE_CREDENTIALS', env('GOOGLE_APPLICATION_CREDENTIALS'));
+        // Relative paths are resolved from the project base directory
+        return $fromEnv && !str_starts_with($fromEnv, '/')
+            ? base_path($fromEnv)
+            : ($fromEnv ?: storage_path('app/firebase/service-account.json'));
+    }
+
     protected function getAccessToken(): ?string
     {
         return cache()->remember('fcm_access_token', 3000, function () {
-            $credentialsPath = storage_path('app/firebase-admin-sdk.json');
+            $credentialsPath = $this->credentialsPath();
             if (!file_exists($credentialsPath)) {
                 Log::error("FCM credentials file not found at: {$credentialsPath}");
                 return null;
@@ -39,7 +48,7 @@ class FcmService
     protected function getProjectId(): ?string
     {
         return cache()->remember('fcm_project_id', 86400, function () {
-            $credentialsPath = storage_path('app/firebase-admin-sdk.json');
+            $credentialsPath = $this->credentialsPath();
             if (!file_exists($credentialsPath)) {
                 return null;
             }
