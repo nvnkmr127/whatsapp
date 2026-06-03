@@ -102,13 +102,13 @@ class FcmService
                     ],
                     'data' => array_map('strval', $data), // FCM data values must be strings
                     'android' => [
-                        'priority' => 'high',
+                        'priority' => 'high',              // message delivery priority — wakes device
                         'notification' => [
                             'channel_id' => $channelId,
                             'sound' => 'default',
                             'default_sound' => true,
-                            'priority' => 'high',          // was 'notification_priority' — wrong key
-                            'visibility' => 'public',
+                            'notification_priority' => 'PRIORITY_HIGH',  // display priority
+                            'visibility' => 'PUBLIC',
                         ],
                     ],
                     'apns' => [
