@@ -26,16 +26,20 @@ class SendPushNotificationJob implements ShouldQueue
 
     public function handle(FcmService $fcmService): void
     {
+        Log::debug("PushJob: started. messageId={$this->messageId} type={$this->type} conversationId={$this->conversationId}");
+
         $message = $this->messageId ? Message::with(['contact', 'conversation', 'team'])->find($this->messageId) : null;
-        $conversation = $this->conversationId 
+        $conversation = $this->conversationId
             ? \App\Models\Conversation::with(['contact', 'team'])->find($this->conversationId)
             : $message?->conversation;
 
         if (!$conversation) {
+            Log::warning("PushJob: aborted — conversation not found. messageId={$this->messageId}");
             return;
         }
 
         if ($message && $message->direction === 'outbound' && $this->type === 'new_message') {
+            Log::debug("PushJob: skipped — outbound message #{$this->messageId}");
             return;
         }
 
@@ -48,14 +52,16 @@ class SendPushNotificationJob implements ShouldQueue
         if ($assignedToId) {
             $targetUserIds[] = is_object($assignedToId) ? $assignedToId->id : (int) $assignedToId;
         } else {
-            // Notify all agents who receive tickets
             $targetUserIds = $team->users()
                 ->wherePivot('receives_tickets', true)
                 ->pluck('users.id')
                 ->toArray();
         }
 
+        Log::debug("PushJob: target user IDs resolved.", ['ids' => $targetUserIds, 'assigned_to' => $assignedToId]);
+
         if (empty($targetUserIds)) {
+            Log::warning("PushJob: aborted — no target users. conversationId={$conversation->id} team={$team?->id}");
             return;
         }
 
@@ -69,7 +75,7 @@ class SendPushNotificationJob implements ShouldQueue
             $title = "⚠️ SLA WARNING";
             $body = "Conversation with {$contact->name} is about to breach.";
         }
-        
+
         $data = [
             'type' => $this->type,
             'conversation_id' => (string) $conversation->id,
@@ -81,10 +87,15 @@ class SendPushNotificationJob implements ShouldQueue
 
         $users = User::with('fcmTokens')->whereIn('id', $targetUserIds)->get();
 
+        Log::debug("PushJob: sending to " . $users->count() . " users.", [
+            'user_ids' => $users->pluck('id'),
+            'token_counts' => $users->mapWithKeys(fn($u) => [$u->id => $u->fcmTokens->count()]),
+        ]);
+
         foreach ($users as $user) {
             $fcmService->sendToUser($user, $title, $body, $data);
         }
 
-        Log::info("Push notification sent for message #{$this->messageId} to " . count($users) . " users.");
+        Log::info("PushJob: done. message=#{$this->messageId} users={$users->count()}");
     }
 }

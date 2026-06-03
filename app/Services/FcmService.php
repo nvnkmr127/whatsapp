@@ -65,9 +65,11 @@ class FcmService
         $tokens = $user->fcmTokens()->pluck('token')->toArray();
 
         if (empty($tokens)) {
+            Log::debug("FCM: no tokens for user {$user->id} ({$user->email}) — skipping.");
             return;
         }
 
+        Log::debug("FCM: sending to user {$user->id} via " . count($tokens) . " token(s).");
         return $this->sendToTokens($tokens, $title, $body, $data);
     }
 
