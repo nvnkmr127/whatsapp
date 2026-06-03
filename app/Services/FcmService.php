@@ -138,9 +138,16 @@ class FcmService
 
                     Log::warning("FCM delivery failed for token: {$token}. HTTP Status: {$statusCode}. Error: {$errorMessage}");
 
-                    // Cleanup invalid tokens (404 / UNREGISTERED / NOT_FOUND)
-                    if ($statusCode === 404 || str_contains($errorMessage, 'Requested entity was not found') || ($errorData['error']['status'] ?? '') === 'NOT_FOUND') {
+                    // Cleanup invalid/mismatched tokens
+                    $errorStatus = $errorData['error']['status'] ?? '';
+                    $isInvalidToken = $statusCode === 404
+                        || $errorStatus === 'NOT_FOUND'
+                        || str_contains($errorMessage, 'Requested entity was not found')
+                        || str_contains($errorMessage, 'SenderId mismatch')
+                        || $errorStatus === 'INVALID_ARGUMENT';
+                    if ($isInvalidToken) {
                         \App\Models\UserFcmToken::where('token', $token)->delete();
+                        Log::info("FCM: Deleted invalid token {$token} (reason: {$errorMessage})");
                     }
 
                     $failures[] = [
