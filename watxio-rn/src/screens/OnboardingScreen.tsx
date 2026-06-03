@@ -237,7 +237,9 @@ export default function OnboardingScreen({ navigation }: any) {
         const userTeams = response.teams || [];
         const activeTeam = userTeams[0] || null;
 
-        // Fetch numbers if available
+        // Fetch numbers if available.
+        // Use api directly (pre-store) to avoid triggering FCM registration before
+        // the full session state is committed to store.
         let teamNumbers: any[] = [];
         if (response.token && activeTeam) {
           api.setToken(response.token);
@@ -248,6 +250,9 @@ export default function OnboardingScreen({ navigation }: any) {
             console.warn('Failed to load team numbers during login', err);
           }
         }
+        // Reset so store.set is the single atomic token transition (triggers FCM registration)
+        api.setToken(null);
+        api.setTeamId(null);
 
         const activeNumberObj = teamNumbers[0] || null;
 

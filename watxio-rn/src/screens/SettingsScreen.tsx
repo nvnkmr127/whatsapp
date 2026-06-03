@@ -378,8 +378,13 @@ export default function SettingsScreen({ navigation }: any) {
           )}
 
           {!searchQuery.trim() && (
-            <Text className="text-center text-[11px] text-muted dark:text-d-muted p-2">
+            <Text className="text-center text-[11px] text-muted dark:text-d-muted pb-1 px-2">
               Watxio Mobile · v3.4.1
+            </Text>
+          )}
+          {!searchQuery.trim() && (
+            <Text className="text-center text-[10px] text-muted dark:text-d-muted pb-4 px-2" selectable>
+              {`Server: ${globalState.baseUrl}`}
             </Text>
           )}
         </ScrollView>
