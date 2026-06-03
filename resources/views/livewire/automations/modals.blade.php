@@ -26,8 +26,15 @@
                     <span class="text-sm font-black text-wa-teal">{{ ucfirst(str_replace('_', ' ', $triggerType)) }}</span>
                 </div>
                 <div class="p-4 rounded-2xl border {{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) > 0 ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30' : 'bg-emerald-50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-800/30' }}">
-                    <span class="text-[10px] font-black uppercase tracking-widest block mb-1 {{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) > 0 ? 'text-rose-400' : 'text-emerald-400' }}">Errors</span>
-                    <span class="text-2xl font-black {{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) > 0 ? 'text-rose-600' : 'text-emerald-600' }}">{{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) }}</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest block mb-1 {{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) > 0 ? 'text-rose-400' : 'text-emerald-400' }}">Validation Status</span>
+                    @if(count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) > 0)
+                        <span class="text-lg font-black text-rose-600">{{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'error')) }} Errors</span>
+                    @else
+                        <div class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 mt-1">
+                            <svg class="w-5 h-5 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            <span class="text-xs font-black uppercase tracking-tight">Ready</span>
+                        </div>
+                    @endif
                 </div>
                 <div class="p-4 rounded-2xl border {{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'warning')) > 0 ? 'bg-amber-50 border-amber-100 dark:bg-amber-900/10' : 'bg-slate-50 border-slate-100 dark:bg-slate-800/30' }}">
                     <span class="text-[10px] font-black uppercase tracking-widest block mb-1 {{ count(array_filter($validationIssues, fn($i) => $i['level'] === 'warning')) > 0 ? 'text-amber-400' : 'text-slate-400' }}">Warnings</span>
@@ -40,12 +47,18 @@
                     <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Risk Assessment</h4>
                     <div class="space-y-2">
                         @foreach($this->risks as $risk)
-                            <div class="flex items-start gap-4 p-4 rounded-2xl border transition-all {{ $risk['level'] === 'high' ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30' : 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-800/30' }}">
-                                <div class="mt-0.5 p-2 rounded-xl {{ $risk['level'] === 'high' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white' }}">
+                            <div class="flex items-start gap-4 p-4 rounded-2xl border transition-all 
+                                {{ $risk['level'] === 'high' ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30' : 
+                                  ($risk['level'] === 'medium' ? 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-800/30' : 
+                                                                 'bg-slate-50 border-slate-100 dark:bg-slate-800/20 dark:border-slate-800') }}">
+                                <div class="mt-0.5 p-2 rounded-xl 
+                                    {{ $risk['level'] === 'high' ? 'bg-rose-500 text-white' : 
+                                      ($risk['level'] === 'medium' ? 'bg-amber-500 text-white' : 
+                                                                     'bg-slate-500 text-white') }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $risk['icon'] }}" /></svg>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="text-sm font-bold">{{ $risk['description'] }}</p>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ $risk['description'] }}</p>
                                 </div>
                             </div>
                         @endforeach
@@ -55,7 +68,10 @@
 
             <div class="space-y-2">
                 <label class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Notes</label>
-                <textarea wire:model.blur="publishNote" rows="3" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl text-sm" placeholder="What changed?"></textarea>
+                <textarea wire:model.blur="publishNote" rows="3" class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-2xl text-sm @error('publishNote') border-rose-500 ring-rose-500/20 @enderror" placeholder="What changed?"></textarea>
+                @error('publishNote')
+                    <p class="text-xs text-rose-500 font-bold px-1 mt-1">{{ $message }}</p>
+                @enderror
             </div>
         </div>
     </x-slot>
@@ -195,3 +211,78 @@
 <x-app-modal wire:model="showTemplatesModal" maxWidth="5xl" :closeable="false">
     <livewire:automations.flow-templates />
 </x-app-modal>
+
+{{-- Version History Details Modal --}}
+@if(isset($selectedLogVersion) && $selectedLogVersion)
+<x-dialog-modal wire:model.live="selectedLogVersion" maxWidth="2xl">
+    <x-slot name="title">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-slate-800 dark:text-white">Version v{{ $selectedLogVersion['version'] }} Details</h2>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Published by {{ $selectedLogVersion['published_by'] }} · {{ \Carbon\Carbon::parse($selectedLogVersion['published_at'])->diffForHumans() }}</p>
+            </div>
+        </div>
+    </x-slot>
+
+    <x-slot name="content">
+        <div class="space-y-6 py-2">
+            <!-- Notes -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Publish Notes</span>
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed italic">
+                    "{{ $selectedLogVersion['note'] ?: 'No description provided.' }}"
+                </p>
+            </div>
+
+            <!-- Configuration Summary -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase text-slate-500 tracking-widest px-1">Flow Details</h4>
+                @if(isset($selectedLogVersion['nodes']) && is_array($selectedLogVersion['nodes']))
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Steps</span>
+                            <span class="text-lg font-black text-slate-700 dark:text-white">{{ count($selectedLogVersion['nodes']) }} Nodes</span>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Paths</span>
+                            <span class="text-lg font-black text-slate-700 dark:text-white">{{ count($selectedLogVersion['edges'] ?? []) }} Edges</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">Steps List</span>
+                        @foreach($selectedLogVersion['nodes'] as $node)
+                            <div class="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-black uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500">{{ $node['type'] ?? 'step' }}</span>
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ data_get($node, 'data.label') ?: (data_get($node, 'data.text') ?: 'Unnamed Step') }}</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="p-4 bg-amber-50 border border-amber-100 dark:bg-amber-950/10 dark:border-amber-900/30 rounded-xl text-center">
+                        <p class="text-xs font-medium text-amber-600 dark:text-amber-400">Flow structure details are not available for this version.</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </x-slot>
+
+    <x-slot name="footer">
+        <div class="flex items-center justify-between w-full">
+            <button wire:click="$set('selectedLogVersion', null)" class="px-6 py-2.5 text-sm font-bold text-slate-500">Close</button>
+            @if(isset($selectedLogVersion['nodes']))
+                <button wire:click="rollbackToVersion({{ $selectedLogVersion['version'] }})" 
+                    class="px-6 py-2.5 bg-wa-teal hover:bg-wa-dark text-white rounded-xl font-black text-sm transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    Restore This Version
+                </button>
+            @endif
+        </div>
+    </x-slot>
+</x-dialog-modal>
+@endif

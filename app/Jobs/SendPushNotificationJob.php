@@ -44,8 +44,9 @@ class SendPushNotificationJob implements ShouldQueue
 
         // Determine targets
         $targetUserIds = [];
-        if ($conversation->assigned_to) {
-            $targetUserIds[] = $conversation->assigned_to;
+        $assignedToId = $conversation->getRawOriginal('assigned_to') ?: $conversation->assigned_to;
+        if ($assignedToId) {
+            $targetUserIds[] = is_object($assignedToId) ? $assignedToId->id : (int) $assignedToId;
         } else {
             // Notify all agents who receive tickets
             $targetUserIds = $team->users()

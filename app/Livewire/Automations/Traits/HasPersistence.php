@@ -103,10 +103,20 @@ trait HasPersistence
     {
         $this->logDebug('Confirming Publish', ['note' => $this->publishNote]);
 
+        $this->validate([
+            'publishNote' => 'required|string|min:3',
+        ], [
+            'publishNote.required' => 'Please describe what changed in this version.',
+            'publishNote.min' => 'Please provide a more descriptive note (at least 3 characters).',
+        ]);
+
         if ($this->automationId) {
             $automation = Automation::where('team_id', Auth::user()->currentTeam->id)->findOrFail($this->automationId);
-            $newVersion = ($automation->version ?? 0) + 1;
-            $this->version = $newVersion;
+            if ($automation->last_published_at === null) {
+                $this->version = 1;
+            } else {
+                $this->version = ($automation->version ?? 1) + 1;
+            }
         } else {
             $this->version = 1;
         }
@@ -118,6 +128,8 @@ trait HasPersistence
             'note' => $this->publishNote,
             'published_at' => now()->toDateTimeString(),
             'published_by' => Auth::user()->name,
+            'nodes' => array_values($this->nodes),
+            'edges' => array_values($this->edges),
         ];
 
         if (! is_array($this->publishLog)) {

@@ -44,12 +44,12 @@
                 </div>
                 <div class="space-y-4 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
                     @forelse($publishLog as $log)
-                        <div class="relative pl-12">
-                            <div class="absolute left-0 top-1 w-9 h-9 bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center z-10">
-                                <span class="text-[10px] font-black text-slate-500">v{{ $log['version'] }}</span>
+                        <div wire:click="viewVersion({{ $log['version'] }})" class="relative pl-12 cursor-pointer group select-none transition-all duration-200 hover:translate-x-1">
+                            <div class="absolute left-0 top-1 w-9 h-9 bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center z-10 group-hover:border-wa-teal transition-colors">
+                                <span class="text-[10px] font-black text-slate-500 group-hover:text-wa-teal transition-colors">v{{ $log['version'] }}</span>
                             </div>
                             <div class="flex flex-col">
-                                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-200">{{ $log['note'] ?: 'No description provided.' }}</span>
+                                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-wa-teal transition-colors">{{ $log['note'] ?: 'No description provided.' }}</span>
                                 <span class="text-[9px] text-slate-400 mt-1 uppercase font-black tracking-tighter">
                                     {{ \Carbon\Carbon::parse($log['published_at'])->diffForHumans() }} by {{ $log['published_by'] }}
                                 </span>

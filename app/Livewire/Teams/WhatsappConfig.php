@@ -685,6 +685,29 @@ class WhatsappConfig extends Component
                 $subscription = $this->checkWebhookSubscription($wabaId, $creds['token']);
             }
 
+            // Calculate Quality, Limits, Throttling and Failure metrics (requested for Run Diagnostics)
+            $healthMonitor = app(\App\Services\WhatsAppHealthMonitor::class);
+            $blockingIssues = $healthMonitor->getBlockingIssues($team);
+            $messagingHealth = $healthMonitor->checkMessagingHealth($team);
+
+            // Message statistics (last 24 hours)
+            $totalOutbound24h = DB::table('messages')
+                ->where('team_id', $team->id)
+                ->where('direction', 'outbound')
+                ->where('created_at', '>=', now()->subDay())
+                ->count();
+
+            $failedOutbound24h = DB::table('messages')
+                ->where('team_id', $team->id)
+                ->where('direction', 'outbound')
+                ->where('status', 'failed')
+                ->where('created_at', '>=', now()->subDay())
+                ->count();
+
+            $failureRate24h = $totalOutbound24h > 0 
+                ? round(($failedOutbound24h / $totalOutbound24h) * 100, 2) . '%' 
+                : '0%';
+
             $this->setupDiagnostics = [
                 'trace_id' => $this->setupTraceId,
                 'team_id' => $team->id,
@@ -705,6 +728,18 @@ class WhatsappConfig extends Component
                     'granular_scopes_count' => isset($tokenDebug['data']['granular_scopes']) ? count($tokenDebug['data']['granular_scopes']) : null,
                 ] : null,
                 'webhook_subscription' => $subscription,
+                'quality_and_delivery' => [
+                    'quality_rating' => $team->whatsapp_quality_rating ?: 'UNKNOWN',
+                    'messaging_limit_tier' => $team->whatsapp_messaging_limit ?: 'TIER_1K',
+                    'daily_limit' => $messagingHealth['daily_limit'] ?? 1000,
+                    'current_24h_usage' => $messagingHealth['current_usage'] ?? 0,
+                    'remaining_quota' => $messagingHealth['remaining'] ?? 1000,
+                    'is_throttled_or_limit_exceeded' => ($messagingHealth['current_usage'] ?? 0) >= ($messagingHealth['daily_limit'] ?? 1000),
+                    'blocking_issues' => $blockingIssues,
+                    'messages_sent_last_24h' => $totalOutbound24h,
+                    'messages_failed_last_24h' => $failedOutbound24h,
+                    'delivery_failure_rate_24h' => $failureRate24h,
+                ],
             ];
 
             $this->showSetupDiagnostics = true;

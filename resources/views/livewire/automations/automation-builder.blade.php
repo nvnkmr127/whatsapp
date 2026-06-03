@@ -75,8 +75,9 @@
                 <button type="button" wire:click.prevent="save" class="text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-wa-teal/30 transition shadow-sm">Save</button>
                 <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
                 <button type="button" wire:click.prevent="publish" class="text-xs font-black uppercase tracking-widest px-5 py-2 rounded-xl flex items-center gap-2 transition shadow-lg" :class="!$wire.isActivatable ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20' : 'bg-wa-teal hover:bg-wa-dark text-white shadow-wa-teal/20'">
-                    <span x-text="!$wire.isActivatable ? 'Fix Errors' : ($wire.automationId ? 'Deploy Update' : 'Go Live')"></span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+                    <span x-text="!$wire.isActivatable ? 'Fix Errors to Publish' : ($wire.automationId ? 'Deploy Update' : 'Go Live')"></span>
+                    <svg x-show="!$wire.isActivatable" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <svg x-show="$wire.isActivatable" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
                 </button>
             </div>
         </div>

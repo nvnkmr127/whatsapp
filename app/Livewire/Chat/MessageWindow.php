@@ -520,8 +520,9 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
-        // This is called after Livewire finishes uploading the blob
-        $file = $audioFile ?: $this->newAttachmentData; // Changed from newAttachment
+        // wire.upload('newAttachment', blob, callback) sets $this->newAttachment
+        // to a TemporaryUploadedFile — $audioFile is just the temp filename string.
+        $file = $this->newAttachment;
         if (! $this->conversation || ! $file) {
             return;
         }
@@ -553,9 +554,7 @@ class MessageWindow extends Component
             $message->id
         );
 
-        if ($this->newAttachmentData) { // Changed from newAttachment
-            $this->reset('newAttachmentData'); // Changed from newAttachment
-        }
+        $this->reset('newAttachment');
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
@@ -1164,8 +1163,17 @@ class MessageWindow extends Component
     #[\Livewire\Attributes\Renderless]
     public function sendMessageJson($body, $tempId)
     {
-        if (empty($body) || ! $this->conversation) {
-            return ['status' => 'error', 'message' => 'Invalid session'];
+        if (empty($body)) {
+            return ['status' => 'error', 'message' => 'Message body is empty'];
+        }
+
+        // Component state can be lost after long idle periods — reload before failing.
+        if (! $this->conversation && $this->conversationId) {
+            $this->loadConversation();
+        }
+
+        if (! $this->conversation) {
+            return ['status' => 'error', 'message' => 'Conversation not found. Please refresh the page.'];
         }
 
         // Removed strict collision check to allow rapid messaging by same agent.

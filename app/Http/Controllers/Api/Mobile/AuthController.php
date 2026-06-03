@@ -340,19 +340,13 @@ class AuthController extends Controller
 
     private function getWebsocketConfig()
     {
-        $default = config('broadcasting.default');
-        $conn = config("broadcasting.connections.{$default}");
-
-        if (!$conn) {
-            // Fallback to reverb if default is null or not found
-            $conn = config("broadcasting.connections.reverb") ?? config("broadcasting.connections.pusher");
-        }
-
+        // Return the PUBLIC client-facing Reverb/Pusher config, not the internal
+        // server-binding config (REVERB_SERVER_HOST/PORT are for the Reverb process).
         return [
-            'key' => $conn['key'] ?? env('REVERB_APP_KEY') ?? env('PUSHER_APP_KEY'),
-            'host' => $conn['options']['host'] ?? env('REVERB_SERVER_HOST') ?? env('PUSHER_HOST') ?? '127.0.0.1',
-            'port' => $conn['options']['port'] ?? env('REVERB_SERVER_PORT') ?? env('PUSHER_PORT') ?? 8080,
-            'scheme' => $conn['options']['scheme'] ?? env('REVERB_SERVER_SCHEME') ?? env('PUSHER_SCHEME') ?? 'http',
+            'key'    => env('REVERB_APP_KEY') ?? env('PUSHER_APP_KEY'),
+            'host'   => env('REVERB_HOST') ?? env('PUSHER_HOST') ?? '127.0.0.1',
+            'port'   => env('REVERB_PORT') ?? env('PUSHER_PORT') ?? 443,
+            'scheme' => env('REVERB_SCHEME') ?? env('PUSHER_SCHEME') ?? 'https',
         ];
     }
 }
