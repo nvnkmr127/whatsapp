@@ -401,7 +401,7 @@ export default function OnboardingScreen({ navigation }: any) {
           {/* Squirclish Logo Container */}
           <View className="w-18 h-18 rounded-[22px] items-center justify-center shadow-lg mt-10 mb-6 overflow-hidden bg-transparent">
             <Image
-              source={require('../assets/app logo.png')}
+              source={require('../assets/applogo.png')}
               style={{ width: 150, height: 72, borderRadius: 22 }}
               resizeMode="cover"
             />

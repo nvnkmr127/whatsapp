@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Modal, Pressable, Animated, ActivityIndicator } from 'react-native';
 import { Phone, PhoneOff, Mic, MicOff, Volume2 } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 import { useGlobalState } from '@/store';
 import { api } from '@/services/api';
 import { CallWebRTC } from '@/services/webrtc';
@@ -205,6 +206,23 @@ export function CallOverlayManager() {
     CallWebRTC.session().setMuted(next);
   }, [isMuted]);
 
+  const handleToggleSpeaker = useCallback(async () => {
+    const next = !isSpeaker;
+    setIsSpeaker(next);
+    try {
+      // Route audio to speakerphone or earpiece using expo-av
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        // On iOS: true = speakerphone, false = earpiece
+        // On Android this setting is respected by the system audio focus
+        staysActiveInBackground: true,
+      } as any);
+    } catch (e) {
+      console.warn('[Call] Failed to toggle speaker mode:', e);
+    }
+  }, [isSpeaker]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!activeCall) return null;
@@ -280,7 +298,7 @@ export function CallOverlayManager() {
               </Pressable>
 
               <Pressable
-                onPress={() => setIsSpeaker(!isSpeaker)}
+                onPress={handleToggleSpeaker}
                 className={`w-14 h-14 rounded-full items-center justify-center border ${
                   isSpeaker ? 'bg-white border-white' : 'bg-transparent border-white/20'
                 }`}

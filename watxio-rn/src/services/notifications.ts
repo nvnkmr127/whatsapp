@@ -63,7 +63,7 @@ export async function setupAndroidChannel() {
 
   // Log all existing channels for verification
   const allChannels = await Notifications.getNotificationChannelsAsync();
-  console.log('[FCM DEBUG] All notification channels on device:', JSON.stringify(allChannels?.map(c => ({ id: c.id, importance: c.importance, sound: c.sound }))));
+  console.log('[FCM DEBUG] All notification channels on device:', JSON.stringify(allChannels?.map((c: any) => ({ id: c.id, importance: c.importance, sound: c.sound }))));
 }
 
 // ── Permission + token registration ─────────────────────────────────────────
@@ -166,6 +166,7 @@ export async function unregisterPushNotifications(token?: string | null) {
 export interface NotificationPayload {
   type?: 'new_message' | 'new_conversation' | 'call_incoming' | string;
   conversation_id?: string;
+  contact_id?: string;
   contact_name?: string;
   call_id?: string;
 }
@@ -179,14 +180,14 @@ export function useNotificationNavigation(navRef: any) {
   useEffect(() => {
     // Foreground notification received (just logging — handler above shows it)
     notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
+      (notification: any) => {
         console.log('[FCM] Foreground notification:', notification.request.content.data);
       }
     );
 
     // User tapped a notification (works from background or killed state)
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
+      (response: any) => {
         const data = response.notification.request.content.data as NotificationPayload;
         handleNotificationTap(data, navRef);
       }
@@ -194,7 +195,7 @@ export function useNotificationNavigation(navRef: any) {
 
     // Check if app was opened from a killed-state notification tap.
     // Retry with backoff until nav is ready — it may not be mounted yet.
-    Notifications.getLastNotificationResponseAsync().then((response) => {
+    Notifications.getLastNotificationResponseAsync().then((response: any) => {
       if (!response) return;
       const data = response.notification.request.content.data as NotificationPayload;
       let attempts = 0;
@@ -231,9 +232,11 @@ function handleNotificationTap(data: NotificationPayload, navRef: any) {
             id: Number(data.conversation_id),
             contact_id: Number(data.contact_id ?? 0),
             name: data.contact_name ?? 'Chat',
+            last: '',
+            time: '',
+            unread: 0,
             phone: '',
-            tags: [],
-            status: 'open',
+            status: 'sent' as const,
           },
         });
       }

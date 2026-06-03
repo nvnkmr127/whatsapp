@@ -3,13 +3,12 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, Pressable, ScrollView, RefreshControl, FlatList, TextInput, ActivityIndicator
+  View, Text, Pressable, ScrollView, RefreshControl, FlatList, TextInput, ActivityIndicator, Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Search, SquarePen, ChevronDown, Pin, UserPlus } from 'lucide-react-native';
-import { Modal } from 'react-native';
 
 import { useTokens } from '@/theme';
 import type { Conversation, RootStackParamList } from '@/types';
