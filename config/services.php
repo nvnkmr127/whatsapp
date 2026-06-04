@@ -77,4 +77,9 @@ return [
         'default_provider' => env('AI_DEFAULT_PROVIDER', 'openai'),
     ],
 
+    'firebase' => [
+        'credentials' => env('FIREBASE_CREDENTIALS'),
+        'google_application_credentials' => env('GOOGLE_APPLICATION_CREDENTIALS'),
+    ],
+
 ];

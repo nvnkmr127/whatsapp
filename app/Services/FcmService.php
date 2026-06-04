@@ -14,7 +14,7 @@ class FcmService
      */
     protected function credentialsPath(): string
     {
-        $fromEnv = env('FIREBASE_CREDENTIALS', env('GOOGLE_APPLICATION_CREDENTIALS'));
+        $fromEnv = config('services.firebase.credentials') ?: config('services.firebase.google_application_credentials');
         // Relative paths are resolved from the project base directory
         return $fromEnv && !str_starts_with($fromEnv, '/')
             ? base_path($fromEnv)

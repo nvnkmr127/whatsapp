@@ -25,22 +25,25 @@ function Root() {
     setColorScheme(scheme);
   }, [scheme]);
 
-  // Register for push notifications once the user is authenticated
+  // Register for push notifications on session restore (app opened while already logged in).
+  // Fresh-login FCM registration is handled directly in LoginScreen after login succeeds.
+  const hasRegisteredRef = React.useRef(false);
   React.useEffect(() => {
-    console.log('[FCM DEBUG] App.tsx token effect fired. token present:', !!globalState.token);
-    if (globalState.token) {
-      console.log('[FCM DEBUG] Token found — starting push notification registration...');
+    if (globalState.token && !hasRegisteredRef.current) {
+      hasRegisteredRef.current = true;
+      console.log('[FCM DEBUG] App.tsx: session restore — registering push notifications...');
       registerForPushNotifications()
         .then((token) => {
           if (token) {
-            console.log('[FCM DEBUG] ✅ Registration complete. Token starts with:', token.substring(0, 25));
+            console.log('[FCM DEBUG] ✅ Session-restore registration complete.');
           } else {
-            console.warn('[FCM DEBUG] ⚠️ Registration returned null — check permission or device token error above');
+            console.warn('[FCM DEBUG] ⚠️ Session-restore registration returned null.');
           }
         })
-        .catch((e) => console.error('[FCM DEBUG] ❌ Registration threw exception:', e));
-    } else {
-      console.log('[FCM DEBUG] No auth token yet — skipping push registration');
+        .catch((e) => console.error('[FCM DEBUG] ❌ Session-restore registration threw:', e));
+    }
+    if (!globalState.token) {
+      hasRegisteredRef.current = false; // reset on logout so next login re-registers
     }
   }, [globalState.token]);
 

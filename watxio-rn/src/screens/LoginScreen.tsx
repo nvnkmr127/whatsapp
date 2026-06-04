@@ -13,6 +13,7 @@ import { PrimaryButton } from '@/components/Button';
 import { store, useGlobalState } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
+import { registerForPushNotifications } from '@/services/notifications';
 
 export default function LoginScreen({ navigation }: any) {
   const { tokens } = useTokens();
@@ -70,9 +71,7 @@ export default function LoginScreen({ navigation }: any) {
       const userTeams = response.teams || [];
       const activeTeam = userTeams[0] || null;
 
-      // Fetch numbers if available.
-      // Use api directly (not store.set yet) to avoid triggering FCM
-      // registration before the full token/teamId state is committed.
+      // Fetch numbers if available — keep token/teamId set in api directly.
       let teamNumbers: any[] = [];
       if (response.token && activeTeam) {
         api.setToken(response.token);
@@ -83,14 +82,11 @@ export default function LoginScreen({ navigation }: any) {
           console.warn('Failed to load team numbers during login', err);
         }
       }
-      // Reset to null so store.set below is the single point that sets the
-      // token — this ensures App.tsx's useEffect sees the transition null→token
-      // and triggers FCM registration exactly once.
-      api.setToken(null);
-      api.setTeamId(null);
 
       const activeNumberObj = teamNumbers[0] || null;
 
+      // Commit full session to store — api.setToken/setTeamId/setBaseUrl are
+      // synced inside store.set, so they stay consistent.
       store.set({
         token: response.token,
         user: response.user,
@@ -104,6 +100,12 @@ export default function LoginScreen({ navigation }: any) {
         numbers: teamNumbers,
         websocket: response.websocket,
       });
+
+      // Register FCM token immediately after login while api token/baseUrl are
+      // guaranteed to be set. Fire-and-forget — do not block navigation.
+      registerForPushNotifications().catch((e) =>
+        console.warn('[FCM] Registration failed after login:', e)
+      );
 
       setLoading(false);
       nav.replace('Main');
