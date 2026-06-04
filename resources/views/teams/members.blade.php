@@ -96,31 +96,34 @@
                                 </span>
                             </td>
                             <td class="px-8 py-6 text-right">
-                                <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="flex items-center justify-end gap-2">
                                     <!-- Manage Role -->
                                     @if (Gate::check('updateTeamMember', $team) && Laravel\Jetstream\Jetstream::hasRoles())
                                         <button wire:click="manageRole('{{ $user->id }}')" 
-                                            class="p-2 text-slate-400 hover:text-wa-teal transition-colors" title="Edit Role">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-lg border border-slate-200/50 dark:border-slate-700/50 transition-all hover:scale-[1.02] active:scale-95" title="Edit Role">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
+                                            Edit
                                         </button>
                                     @endif
 
                                     <!-- Leave / Remove -->
                                     @if ($this->user->id === $user->id)
                                         <button wire:click="$toggle('confirmingLeavingTeam')" 
-                                            class="p-2 text-slate-400 hover:text-rose-500 transition-colors" title="Leave Team">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-lg border border-slate-200/50 dark:border-slate-700/50 transition-all hover:scale-[1.02] active:scale-95" title="Leave Team">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                             </svg>
+                                            Leave
                                         </button>
                                     @elseif (Gate::check('removeTeamMember', $team))
                                         <button wire:click="confirmTeamMemberRemoval('{{ $user->id }}')" 
-                                            class="p-2 text-slate-400 hover:text-rose-500 transition-colors" title="Remove Member">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 rounded-lg border border-rose-200/50 dark:border-rose-900/30 transition-all hover:scale-[1.02] active:scale-95" title="Remove Member">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
+                                            Delete
                                         </button>
                                     @endif
                                 </div>
