@@ -1,0 +1,18 @@
+# Exclude dependencies since EAS Build will install them on the cloud server
+node_modules/
+
+# Exclude native build and cache directories
+android/
+ios/
+.expo/
+dist/
+web-build/
+
+# Exclude logs and temporary files
+*.log
+*.tsbuildinfo
+.DS_Store
+
+# Exclude local env overrides
+.env.local
+.env.*.local
