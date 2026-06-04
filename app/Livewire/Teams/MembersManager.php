@@ -74,7 +74,7 @@ class MembersManager extends TeamMemberManager
     {
         $this->team = $team ?: \Illuminate\Support\Facades\Auth::user()->currentTeam;
 
-        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+        if (! \Illuminate\Support\Facades\Gate::check('view', $this->team)) {
             abort(403);
         }
 
@@ -83,6 +83,10 @@ class MembersManager extends TeamMemberManager
 
     public function openAddMemberModal()
     {
+        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+            abort(403);
+        }
+
         $this->resetErrorBag();
         $this->isAddMemberModalOpen = true;
     }
@@ -100,6 +104,10 @@ class MembersManager extends TeamMemberManager
      */
     public function createUser(CreateUserAndAddToTeam $creator)
     {
+        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+            abort(403);
+        }
+
         $this->resetErrorBag();
 
         $creator->create(
@@ -123,6 +131,10 @@ class MembersManager extends TeamMemberManager
 
     public function addTeamMember()
     {
+        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+            abort(403);
+        }
+
         parent::addTeamMember();
         $this->closeAddMemberModal();
     }

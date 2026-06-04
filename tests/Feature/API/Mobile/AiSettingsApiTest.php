@@ -32,9 +32,9 @@ class AiSettingsApiTest extends TestCase
     {
         // Setup existing settings
         $teamId = $this->team->id;
-        Setting::create(['key' => "ai_provider_{$teamId}", 'value' => 'openai']);
-        Setting::create(['key' => "ai_openai_model_{$teamId}", 'value' => 'gpt-4o']);
-        Setting::create(['key' => "ai_confidence_threshold_{$teamId}", 'value' => '0.85']);
+        set_setting("ai_provider_{$teamId}", 'openai', 'ai_settings');
+        set_setting("ai_model_{$teamId}", 'gpt-4o', 'ai_settings');
+        set_setting("ai_confidence_threshold_{$teamId}", '0.85', 'ai_settings');
 
         $response = $this->getJson('/api/v1/mobile/ai/settings', [
             'X-Tenant-ID' => $this->team->id
@@ -74,15 +74,15 @@ class AiSettingsApiTest extends TestCase
         $this->team->refresh();
         $this->assertTrue((bool)$this->team->ai_auto_reply_enabled);
 
-        // Check if Settings table has records
+        // Check if Settings table has records using the helpers
         $teamId = $this->team->id;
-        $this->assertDatabaseHas('settings', ['key' => "ai_provider_{$teamId}", 'value' => 'gemini']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_openai_api_key_{$teamId}", 'value' => 'test-gemini-key']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_openai_model_{$teamId}", 'value' => 'gemini-1.5-flash']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_persona_{$teamId}", 'value' => 'You are a custom AI agent.']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_use_kb_{$teamId}", 'value' => '1']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_kb_strict_{$teamId}", 'value' => '1']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_confidence_threshold_{$teamId}", 'value' => '0.6']);
-        $this->assertDatabaseHas('settings', ['key' => "ai_operating_hours_only_{$teamId}", 'value' => '1']);
+        $this->assertEquals('gemini', get_setting("ai_provider_{$teamId}"));
+        $this->assertEquals('test-gemini-key', get_setting("ai_gemini_api_key_{$teamId}"));
+        $this->assertEquals('gemini-1.5-flash', get_setting("ai_model_{$teamId}"));
+        $this->assertEquals('You are a custom AI agent.', get_setting("ai_persona_{$teamId}"));
+        $this->assertEquals('1', get_setting("ai_use_kb_{$teamId}"));
+        $this->assertEquals('1', get_setting("ai_kb_strict_{$teamId}"));
+        $this->assertEquals('0.6', get_setting("ai_confidence_threshold_{$teamId}"));
+        $this->assertEquals('1', get_setting("ai_operating_hours_only_{$teamId}"));
     }
 }

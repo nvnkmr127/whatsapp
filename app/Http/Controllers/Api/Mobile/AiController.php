@@ -21,17 +21,18 @@ class AiController extends Controller
         if (!$team) return response()->json([]);
 
         $teamId = $team->id;
+        $provider = get_setting("ai_provider_{$teamId}", 'openai');
 
         $settings = [
             'enabled' => (bool) $team->ai_auto_reply_enabled,
-            'provider' => Setting::where('key', "ai_provider_{$teamId}")->value('value') ?? 'openai',
-            'api_key' => Setting::where('key', "ai_openai_api_key_{$teamId}")->value('value') ?? '',
-            'model' => Setting::where('key', "ai_openai_model_{$teamId}")->value('value') ?? 'gpt-4o',
-            'persona' => Setting::where('key', "ai_persona_{$teamId}")->value('value') ?? '',
-            'use_kb' => (bool) Setting::where('key', "ai_use_kb_{$teamId}")->value('value'),
-            'kb_strict' => (bool) Setting::where('key', "ai_kb_strict_{$teamId}")->value('value'),
-            'confidence_threshold' => (float) Setting::where('key', "ai_confidence_threshold_{$teamId}")->value('value') ?? 0.7,
-            'operating_hours_only' => (bool) Setting::where('key', "ai_operating_hours_only_{$teamId}")->value('value'),
+            'provider' => $provider,
+            'api_key' => get_setting("ai_{$provider}_api_key_{$teamId}") ?? '',
+            'model' => get_setting("ai_model_{$teamId}") ?? 'gpt-4o',
+            'persona' => get_setting("ai_persona_{$teamId}") ?? '',
+            'use_kb' => (bool) get_setting("ai_use_kb_{$teamId}"),
+            'kb_strict' => (bool) get_setting("ai_kb_strict_{$teamId}"),
+            'confidence_threshold' => (float) get_setting("ai_confidence_threshold_{$teamId}", 0.7),
+            'operating_hours_only' => (bool) get_setting("ai_operating_hours_only_{$teamId}"),
         ];
 
         return response()->json($settings);
@@ -52,11 +53,14 @@ class AiController extends Controller
             $team->update(['ai_auto_reply_enabled' => (bool) $request->enabled]);
         }
 
+        // Determine provider (from request first, then DB)
+        $provider = $request->input('provider') ?? get_setting("ai_provider_{$teamId}", 'openai');
+
         // 2. Update Detailed Settings
         $keys = [
             'provider' => "ai_provider_{$teamId}",
-            'api_key' => "ai_openai_api_key_{$teamId}",
-            'model' => "ai_openai_model_{$teamId}",
+            'api_key' => "ai_{$provider}_api_key_{$teamId}",
+            'model' => "ai_model_{$teamId}",
             'persona' => "ai_persona_{$teamId}",
             'use_kb' => "ai_use_kb_{$teamId}",
             'kb_strict' => "ai_kb_strict_{$teamId}",
@@ -66,10 +70,7 @@ class AiController extends Controller
 
         foreach ($keys as $reqKey => $settingKey) {
             if ($request->has($reqKey)) {
-                Setting::updateOrCreate(
-                    ['key' => $settingKey],
-                    ['value' => $request->input($reqKey)]
-                );
+                set_setting($settingKey, $request->input($reqKey), 'ai_settings');
             }
         }
 
@@ -110,7 +111,7 @@ class AiController extends Controller
             return "[{$role}]: " . ($msg->content ?? '(media)');
         })->join("\n");
 
-        $persona = Setting::where('key', "ai_persona_{$teamId}")->value('value')
+        $persona = get_setting("ai_persona_{$teamId}")
             ?? 'You are a helpful and professional customer service agent.';
 
         $prompt = "{$persona}\n\nConversation:\n{$transcript}\n\n"
