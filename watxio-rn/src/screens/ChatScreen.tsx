@@ -101,6 +101,9 @@ export default function ChatScreen({ navigation, route }: any) {
   // WebSocket Connection State
   const [wsConnected, setWsConnected] = useState(false);
 
+  // Tracks whether initial messages have loaded — vibration only fires after this
+  const initialLoadDoneRef = useRef(false);
+
   // Message Actions Context Menu & Forward States
   const [showMsgActions, setShowMsgActions] = useState(false);
   const [selectedMsg, setSelectedMsg] = useState<ChatMessage | null>(null);
@@ -275,7 +278,8 @@ export default function ChatScreen({ navigation, route }: any) {
         }
 
         // Haptic feedback (Vibration) on new inbound message in foreground
-        if (newLast && newLast.kind === 'in' && (!prevLast || prevLast.id !== newLast.id)) {
+        // Only vibrate after initial load so existing unread messages don't trigger it
+        if (initialLoadDoneRef.current && newLast && newLast.kind === 'in' && (!prevLast || prevLast.id !== newLast.id)) {
           try {
             Vibration.vibrate(500);
           } catch (e) {
@@ -309,6 +313,7 @@ export default function ChatScreen({ navigation, route }: any) {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+      initialLoadDoneRef.current = true;
     }
   };
 
@@ -415,6 +420,8 @@ export default function ChatScreen({ navigation, route }: any) {
         pollTimer = setTimeout(poll, delay);
       }
     };
+
+    initialLoadDoneRef.current = false;
 
     // ── Step 1: Load cache immediately (no spinner if cache exists) ──
     (async () => {
