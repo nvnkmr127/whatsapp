@@ -1,0 +1,14 @@
+# Exclude heavy dependencies and native build outputs from EAS upload
+watxio-rn/node_modules/
+watxio-rn/android/
+watxio-rn/ios/
+watxio-rn/.expo/
+watxio-rn/dist/
+
+# Exclude backend vendor and cache folders if EAS packages the whole repo
+vendor/
+node_modules/
+bootstrap/cache/
+storage/framework/
+storage/logs/
+database/database.sqlite
