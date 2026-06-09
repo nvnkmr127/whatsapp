@@ -72,9 +72,14 @@ class WhatsAppService
                 $value = json_encode($value);
             }
 
+            $textValue = (string) $value;
+            if ($textValue === '') {
+                $textValue = ' '; // Facebook API requires at least one character
+            }
+
             $parameters[] = [
                 'type' => 'text',
-                'text' => (string) $value,
+                'text' => $textValue,
             ];
         }
 
@@ -863,7 +868,11 @@ class WhatsAppService
             $hParams = [];
             foreach ($headerParams as $hp) {
                 if ($headerType === 'text') {
-                    $hParams[] = ['type' => 'text', 'text' => $hp];
+                    $hpText = (string) $hp;
+                    if ($hpText === '') {
+                        $hpText = ' ';
+                    }
+                    $hParams[] = ['type' => 'text', 'text' => $hpText];
                 } else {
                     $hParams[] = ['type' => $headerType, $headerType => ['link' => $hp]];
                 }

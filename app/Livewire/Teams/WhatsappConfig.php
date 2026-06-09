@@ -301,9 +301,9 @@ class WhatsappConfig extends Component
         }
 
         if ($this->is_whatsmark_connected) {
-            $this->loadBusinessProfile();
-            $this->refreshHealth();
-            $this->loadAvailablePhoneNumbers();
+            // $this->loadBusinessProfile();
+            // $this->refreshHealth();
+            // $this->loadAvailablePhoneNumbers();
 
             // [PROACTIVE VALIDATION] If last validation is stale (> 6 hours), run a fresh background check
             if ($this->tokenLastValidated && $this->tokenLastValidated->diffInHours(now()) >= 6) {
@@ -319,7 +319,7 @@ class WhatsappConfig extends Component
 
             // Auto-sync once if basic info is missing but we are connected
             if (! $this->wm_verified_name || $this->wm_quality_rating === 'UNKNOWN') {
-                $this->syncInfo();
+                // $this->syncInfo();
             }
 
             // [NEW] Self-Heal: Fetch Facebook Business ID if missing
@@ -328,11 +328,11 @@ class WhatsappConfig extends Component
                 $token = $this->wm_access_token ?: $team->whatsapp_access_token;
 
                 if ($token) {
-                    $fbId = $this->getFacebookBusinessId($team->whatsapp_business_account_id, $token);
-                    if ($fbId) {
-                        $team->update(['facebook_business_id' => $fbId]);
-                        Log::info("WhatsApp Config: Self-healed Facebook Business ID for Team {$team->id}");
-                    }
+                    // $fbId = $this->getFacebookBusinessId($team->whatsapp_business_account_id, $token);
+                    // if ($fbId) {
+                    //     $team->update(['facebook_business_id' => $fbId]);
+                    //     Log::info("WhatsApp Config: Self-healed Facebook Business ID for Team {$team->id}");
+                    // }
                 }
             }
         }
