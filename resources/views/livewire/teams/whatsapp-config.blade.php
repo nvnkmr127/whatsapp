@@ -262,7 +262,7 @@
                         </div>
                         <div class="flex gap-4">
                             @if($integrationState === 'suspended' || $tokenDaysUntilExpiry < 7)
-                                <button onclick="launchWhatsAppSignup()"
+                                <button onclick="launchWhatsAppSignup(this)"
                                     class="px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
                                     {{ $tokenDaysUntilExpiry < 7 ? 'REFRESH CONNECTION' : 'RE-AUTHENTICATE NOW' }}
                                 </button>
@@ -1405,7 +1405,7 @@
                     </p>
 
                     <div id="fb-login-container">
-                        <button onclick="launchWhatsAppSignup()" id="fb-login-btn" type="button"
+                        <button onclick="launchWhatsAppSignup(this)" id="fb-login-btn" type="button"
                             class="inline-flex items-center px-8 py-4 border border-transparent text-sm font-bold rounded-2xl shadow-xl text-white bg-wa-brand hover:bg-wa-brand/90 transition-all hover:scale-105 active:scale-95">
                             <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
                                 <path
@@ -1578,19 +1578,21 @@
                 fjs.parentNode.insertBefore(js, fjs);
             }(document, 'script', 'facebook-jssdk'));
 
-            window.launchWhatsAppSignup = function () {
+            window.launchWhatsAppSignup = function (btnElement) {
                 if (!checkHttps()) return;
 
-                const fbBtn = document.getElementById('fb-login-btn');
-                const originalHtml = fbBtn.innerHTML;
+                const fbBtn = btnElement || document.getElementById('fb-login-btn');
+                const originalHtml = fbBtn ? fbBtn.innerHTML : '';
 
                 if (!sdkInitialized || typeof FB === 'undefined') {
                     @this.dispatch('notify', { title: 'SDK Loading', message: 'Facebook SDK is still loading. Please wait a moment.', type: 'info' });
                     return;
                 }
 
-                fbBtn.disabled = true;
-                fbBtn.innerHTML = 'WORKING...';
+                if (fbBtn) {
+                    fbBtn.disabled = true;
+                    fbBtn.innerHTML = 'WORKING...';
+                }
 
                 FB.login(function (response) {
                     if (response.authResponse) {
@@ -1608,11 +1610,14 @@
 
                                     console.log('WhatsApp Onboarding: Exchange success', { wabaId, optionsCount: options.length });
 
+                                    @this.dispatch('notify', { title: 'Success', message: 'Onboarding exchange successful', type: 'success' });
                                     @this.handleEmbeddedSuccess(res.data.access_token, wabaId, options);
                                 } else {
                                     @this.dispatch('notify', { title: 'Onboarding Error', message: res.data.message, type: 'error' });
-                                    fbBtn.disabled = false;
-                                    fbBtn.innerHTML = originalHtml;
+                                    if (fbBtn) {
+                                        fbBtn.disabled = false;
+                                        fbBtn.innerHTML = originalHtml;
+                                    }
                                 }
                             })
                             .catch(function (error) {
