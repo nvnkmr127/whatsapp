@@ -304,6 +304,9 @@ class WhatsappConfig extends Component
             // $this->loadBusinessProfile();
             // $this->refreshHealth();
             // $this->loadAvailablePhoneNumbers();
+            
+            // Temporary fix to avoid undefined array key errors in blade view
+            $this->setupProgress = $this->getSetupProgress();
 
             // [PROACTIVE VALIDATION] If last validation is stale (> 6 hours), run a fresh background check
             if ($this->tokenLastValidated && $this->tokenLastValidated->diffInHours(now()) >= 6) {
