@@ -136,7 +136,6 @@ class OutboundPreflightService
     private function isMetaRateLimited(Team $team): bool
     {
         // For example, if the WABA is restricted or quality is RED.
-        // Returning false for now as this usually relies on webhook syncs.
-        return $team->whatsapp_status === 'RESTRICTED';
+        return $team->isWhatsAppSuspended();
     }
 }
