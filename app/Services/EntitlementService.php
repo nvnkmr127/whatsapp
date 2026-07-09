@@ -377,9 +377,12 @@ class EntitlementService
         // 3. Plan limit
         $plan = $this->resolvePlan($team);
         if ($plan) {
-            $val = $plan->{$key};
-
-            return $val !== null ? (int) $val : 0;
+            try {
+                $val = $plan->{$key};
+                return $val !== null ? (int) $val : 0;
+            } catch (\Illuminate\Database\Eloquent\MissingAttributeException $e) {
+                return 0;
+            }
         }
 
         return 0;
