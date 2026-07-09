@@ -57,7 +57,7 @@
                 <div class="relative aspect-square bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-8 group-hover:bg-slate-100 dark:group-hover:bg-slate-800/50 transition-colors">
                     <div class="relative">
                         <div class="absolute -inset-4 bg-wa-teal/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <img src="{{ route('qr.image', $widget->slug) }}?t={{ time() }}" alt="QR Code" class="w-48 h-48 relative z-10 rounded-2xl shadow-2xl border-4 border-white dark:border-slate-800">
+                        <img src="{{ route('qr.image', $widget->slug) }}?t={{ time() }}" alt="QR Code" class="w-48 h-48 relative z-10 rounded-2xl shadow-2xl border-4 border-white dark:border-slate-800 animate-float">
                     </div>
                 </div>
 

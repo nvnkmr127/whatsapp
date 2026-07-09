@@ -105,14 +105,14 @@
                                             x-transition:enter-end="opacity-100 translate-y-0"
                                             class="mt-1 ml-4 pl-4 border-l border-zinc-800 space-y-1">
                                             @foreach($link['children'] as $child)
-                                                <a href="{{ route($child['route']) }}"
+                                                <a wire:navigate href="{{ route($child['route']) }}"
                                                     class="block px-4 py-2 text-[12px] font-bold tracking-wide transition-colors duration-200 {{ request()->routeIs($child['route']) ? 'text-orange-400 font-black' : 'text-zinc-500 hover:text-white' }}">
                                                     {{ $child['label'] }}
                                                 </a>
                                             @endforeach
                                         </div>
                                     @else
-                                        <a href="{{ route($link['route']) }}"
+                                        <a wire:navigate href="{{ route($link['route']) }}"
                                             class="group flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-200 {{ $isActive ? 'bg-zinc-800/80 text-white shadow-lg border border-orange-500/20 border-l-2 border-l-orange-500' : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent' }}">
 
                                             <svg class="mr-4 h-5 w-5 transition-transform duration-200 {{ $isActive ? 'text-orange-500' : 'text-zinc-500 group-hover:text-zinc-300 group-hover:scale-110' }}"
@@ -142,7 +142,7 @@
                     <div class="space-y-1 p-2 bg-rose-500/5 border border-rose-500/10 rounded-2xl">
                         @foreach($adminLinks as $link)
                             @php $isActive = request()->routeIs($link['route']); @endphp
-                            <a href="{{ route($link['route']) }}"
+                            <a wire:navigate href="{{ route($link['route']) }}"
                                 class="group relative flex items-center px-4 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-200 {{ $isActive ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'text-rose-400/60 hover:text-rose-400 hover:bg-rose-500/10' }}">
                                 <svg class="mr-3 h-4 w-4 transition-transform duration-200 {{ $isActive ? '' : 'group-hover:scale-110' }}"
                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,13 +200,13 @@
                 class="absolute bottom-full left-0 right-0 mb-3 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-[60]">
                 
                 <div class="p-1 space-y-1">
-                    <a href="{{ route('profile.show') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <a wire:navigate href="{{ route('profile.show') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         Profile Settings
                     </a>
                     
                     @can('manage-settings')
-                    <a href="{{ route('settings.hub') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <a wire:navigate href="{{ route('settings.hub') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
                         Settings Hub
                     </a>

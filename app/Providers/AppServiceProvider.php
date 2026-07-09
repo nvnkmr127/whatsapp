@@ -13,16 +13,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // ── Entitlement stack – singletons so in-request cache is shared ──
-        $this->app->singleton(\App\Services\OfferSettingsService::class);
-        $this->app->singleton(\App\Services\OfferEligibilityService::class);
-        $this->app->singleton(\App\Services\EntitlementService::class);
-        $this->app->singleton(\App\Services\TrialOverrideService::class);
-        $this->app->singleton(\App\Services\OutboundPreflightService::class);
-        $this->app->singleton(\App\Core\WhatsApp\WhatsAppClient::class);
+        // ── Entitlement stack – scoped so in-request cache doesn't leak in Octane ──
+        $this->app->scoped(\App\Services\OfferSettingsService::class);
+        $this->app->scoped(\App\Services\OfferEligibilityService::class);
+        $this->app->scoped(\App\Services\EntitlementService::class);
+        $this->app->scoped(\App\Services\TrialOverrideService::class);
+        $this->app->scoped(\App\Services\OutboundPreflightService::class);
+        $this->app->scoped(\App\Core\WhatsApp\WhatsAppClient::class);
 
         // ── Email Provisioning Manager ──
-        $this->app->singleton(\App\Services\Email\EmailProviderManager::class, function ($app) {
+        $this->app->scoped(\App\Services\Email\EmailProviderManager::class, function ($app) {
             $drivers = [
                 'smtp' => new \App\Services\Email\Drivers\SmtpDriver($app->make(\App\Services\Email\SmtpHealthService::class)),
             ];
@@ -49,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── Performance: Strict Mode ────────────────────────────────────
+        \Illuminate\Database\Eloquent\Model::shouldBeStrict(! $this->app->isProduction());
+
         // ── Safe Broadcasters (Pusher & Reverb) ─────────────────────────
         \Illuminate\Support\Facades\Broadcast::extend('reverb', function ($app, array $config) {
             $client = new \GuzzleHttp\Client(array_merge(

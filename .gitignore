@@ -97,3 +97,7 @@ composer.lock
 v2/
 
 .claude/
+
+**/caddy
+frankenphp
+frankenphp-worker.php

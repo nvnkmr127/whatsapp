@@ -91,7 +91,7 @@
             <x-layouts.header :header="$header ?? null" />
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto">
+            <main class="flex-1 overflow-x-hidden overflow-y-auto animate-fade-in">
                 <!-- Subscription Banner -->
                 @include('components.subscription-banner')
 
