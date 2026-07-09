@@ -71,7 +71,7 @@ class ConversationController extends Controller
             }
 
             $conversations = $query->with([
-                'contact:id,name,phone_number,is_bot_paused',
+                'contact:id,name,phone_number,is_bot_paused,company_id',
                 'lastMessage',
                 'assignee:id,name',
                 'contact.tags',

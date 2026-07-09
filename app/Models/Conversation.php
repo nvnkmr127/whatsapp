@@ -18,6 +18,10 @@ class Conversation extends Model
         'sla_status', 'sla_policy_id', 'metadata',
     ];
 
+    protected $attributes = [
+        'metadata' => '[]',
+    ];
+
     protected $casts = [
         'last_message_at' => 'datetime',
         'sla_due_at' => 'datetime',

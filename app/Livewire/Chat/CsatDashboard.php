@@ -35,7 +35,7 @@ class CsatDashboard extends Component
     public function recentRatings()
     {
         return CsatRating::where('team_id', $this->team->id)
-            ->with(['contact:id,name,phone_number', 'agent:id,name', 'conversation:id'])
+            ->with(['contact:id,name,phone_number,company_id', 'agent:id,name', 'conversation:id,metadata'])
             ->latest()
             ->limit(50)
             ->get();

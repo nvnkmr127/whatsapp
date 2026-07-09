@@ -334,7 +334,7 @@ class MessageController extends Controller
 
         $messages = Message::where('team_id', $team->id)
             ->where('is_starred', true)
-            ->with(['contact:id,name,phone_number', 'conversation:id'])
+            ->with(['contact:id,name,phone_number,company_id', 'conversation:id,metadata'])
             ->orderBy('created_at', 'desc')
             ->paginate(min((int) $request->input('per_page', 20), 100));
 

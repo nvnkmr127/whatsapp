@@ -204,6 +204,9 @@ class Contact extends Model
 
     public function getCompanyAttribute()
     {
+        if (! $this->relationLoaded('companyRelation')) {
+            return null;
+        }
         return $this->companyRelation?->name;
     }
 }
