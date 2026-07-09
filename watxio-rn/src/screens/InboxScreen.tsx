@@ -90,7 +90,8 @@ export default function InboxScreen({ navigation }: any) {
       if (filter === 'Open') apiFilter = 'open';
       if (filter === 'Bots') apiFilter = 'bots';
 
-      const response = await api.get(`/v1/mobile/conversations?filter=${apiFilter}&query=${searchQuery}&page=${pageNum}`);
+      const headers = isSilent ? { 'X-Silent-Errors': 'true' } : undefined;
+      const response = await api.get(`/v1/mobile/conversations?filter=${apiFilter}&query=${searchQuery}&page=${pageNum}`, headers);
       const rawData = response.data || [];
       const currentPage = response.current_page || 1;
       const totalPages = response.last_page || 1;
@@ -163,7 +164,9 @@ export default function InboxScreen({ navigation }: any) {
         });
       }
     } catch (err: any) {
-      console.error('Fetch conversations failed:', err);
+      if (!isSilent) {
+        console.warn('Fetch conversations failed:', err);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

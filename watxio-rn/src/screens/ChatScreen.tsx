@@ -173,15 +173,18 @@ export default function ChatScreen({ navigation, route }: any) {
     if (isBackground) setIsRefreshing(true);
     try {
       // Fire both requests at the same time instead of waiting one-by-one
+      // Fire both requests at the same time, but catch errors on details so we can still load messages
       const [details, msgsData] = await Promise.all([
-        api.get(`/v1/mobile/conversations/${conversationId}`),
+        api.get(`/v1/mobile/conversations/${conversationId}`, { 'X-Silent-Errors': 'true' }).catch(err => {
+          return null;
+        }),
         api.get(`/v1/mobile/conversations/${conversationId}/messages`),
       ]);
 
-      const newIsWithin24 = details.is_within_24_hours;
-      const newIsAi = details.is_ai_enabled;
-      const newSession = details.session_expires_at;
-      const newDbId = details.contact?.id ?? dbContactId;
+      const newIsWithin24 = details ? details.is_within_24_hours : isWithin24Hours;
+      const newIsAi = details ? details.is_ai_enabled : isAiEnabled;
+      const newSession = details ? details.session_expires_at : sessionExpiresAt;
+      const newDbId = (details && details.contact?.id) ? details.contact.id : dbContactId;
 
       setIsWithin24Hours(newIsWithin24);
       setIsAiEnabled(newIsAi);
@@ -608,7 +611,7 @@ export default function ChatScreen({ navigation, route }: any) {
   // Real-time WebSocket Messaging listener (Reverb / Pusher)
   useEffect(() => {
     const socketConfig = globalState.websocket;
-    if (!socketConfig) return;
+    if (!socketConfig || !socketConfig.key) return;
 
     let ws: WebSocket | null = null;
     let active = true;
@@ -617,10 +620,24 @@ export default function ChatScreen({ navigation, route }: any) {
     // Backend now sends the public-facing Reverb config directly.
     // Convert http/https scheme to ws/wss for the WebSocket URL.
     const wsScheme = socketConfig.scheme === 'https' ? 'wss' : 'ws';
+    let wsHost = socketConfig.host;
+    
+    // If running on an emulator and the config says localhost, use the actual API base url hostname (e.g. 10.0.2.2)
+    if (wsHost === '127.0.0.1' || wsHost === 'localhost') {
+      try {
+        if (globalState.baseUrl) {
+          const apiHost = globalState.baseUrl.replace(/^https?:\/\//, '').split(':')[0].split('/')[0];
+          wsHost = apiHost || wsHost;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     const portSuffix = socketConfig.port && socketConfig.port !== 443 && socketConfig.port !== 80
       ? `:${socketConfig.port}`
       : '';
-    const wsUrl = `${wsScheme}://${socketConfig.host}${portSuffix}/app/${socketConfig.key}?protocol=7&client=js&version=8.4.0-rc2&flash=false`;
+    const wsUrl = `${wsScheme}://${wsHost}${portSuffix}/app/${socketConfig.key}?protocol=7&client=js&version=8.4.0-rc2&flash=false`;
 
     const channelName = `presence-conversation.${conversationId}`;
 

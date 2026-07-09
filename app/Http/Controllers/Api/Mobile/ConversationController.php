@@ -196,7 +196,7 @@ class ConversationController extends Controller
             'assigned_to' => $conversation->assigned_to,
             'metadata' => $conversation->metadata,
             'is_within_24_hours' => $conversation->isWithin24Hours(),
-            'is_ai_enabled' => !($conversation->contact->is_bot_paused ?? false),
+            'is_ai_enabled' => !($conversation->contact?->is_bot_paused ?? false),
             // ISO8601 expiry timestamp for mobile live countdown timer.
             // null means the 24h window is closed (no inbound message in last 24h).
             'session_expires_at' => $sessionExpiresAt,
