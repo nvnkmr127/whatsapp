@@ -380,7 +380,9 @@ export default function ChatScreen({ navigation, route }: any) {
     } catch (err: any) {
       console.warn('Failed to load earlier messages:', err);
     } finally {
-      setLoadingEarlier(false);
+      setTimeout(() => {
+        setLoadingEarlier(false);
+      }, 500);
     }
   };
 
@@ -1290,6 +1292,11 @@ export default function ChatScreen({ navigation, route }: any) {
               ref={scroller}
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 }}
               maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+              onContentSizeChange={() => {
+                if (!loadingEarlier) {
+                  scroller.current?.scrollToEnd({ animated: false });
+                }
+              }}
             >
               {nextCursor && (
                 <Pressable

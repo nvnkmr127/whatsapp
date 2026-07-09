@@ -17,7 +17,7 @@ class MessageController extends Controller
     {
         $this->authorizeConversation($request->user(), $conversation);
 
-        $messages = Message::where('contact_id', $conversation->contact_id)
+        $messages = Message::where('conversation_id', $conversation->id)
             ->with('replyTo:id,content')
             ->latest('id')
             ->cursorPaginate(min((int) $request->input('per_page', 40), 100));
