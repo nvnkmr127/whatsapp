@@ -26,6 +26,7 @@ class SendPushNotificationJob implements ShouldQueue
 
     public function handle(FcmService $fcmService): void
     {
+        Log::info("[DEBUG-PUSH] STEP 2: SendPushNotificationJob execution started by queue worker. messageId={$this->messageId} type={$this->type} conversationId={$this->conversationId}");
         Log::info("[PushJob] ▶ Started. messageId={$this->messageId} type={$this->type} conversationId={$this->conversationId}");
 
         $message = $this->messageId ? Message::with(['contact', 'conversation', 'team'])->find($this->messageId) : null;

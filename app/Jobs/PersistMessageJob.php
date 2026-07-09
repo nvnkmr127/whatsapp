@@ -227,7 +227,9 @@ class PersistMessageJob implements ShouldQueue
             // Broadcast Real-time Event & Push Notification
             try {
                 \App\Events\MessageReceived::dispatch($message);
+                Log::info("[DEBUG-PUSH] STEP 1: PersistMessageJob about to dispatch SendPushNotificationJob for Message ID: {$message->id}");
                 SendPushNotificationJob::dispatch($message->id);
+                Log::info("[DEBUG-PUSH] STEP 1-DONE: PersistMessageJob successfully dispatched SendPushNotificationJob.");
                 Log::info("PersistMessageJob: MessageReceived event and PushJob dispatched for Message ID: {$message->id}");
             } catch (\Exception $e) {
                 Log::error('PersistMessageJob: Failed to dispatch MessageReceived event: '.$e->getMessage());
