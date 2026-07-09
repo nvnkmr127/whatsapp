@@ -82,11 +82,11 @@ class TemplatePicker extends Component
 
     public function getFilteredTemplatesProperty()
     {
-        if (! Auth::check() || ! Auth::user()->currentTeam) {
+        if (! Auth::check() || ! Auth::user()->current_team_id) {
             return collect();
         }
 
-        return WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+        return WhatsappTemplate::where('team_id', Auth::user()->current_team_id)
             ->where('status', 'APPROVED')
             ->when($this->templateSearch, function ($query) {
                 $query->where('name', 'like', '%'.$this->templateSearch.'%');
