@@ -19,7 +19,7 @@ class Message extends Model
         'direction', 'type', 'content', 'metadata', 'status',
         'media_id', 'media_url', 'media_type', 'caption',
         'error_message', 'last_error', 'retry_count', 'next_retry_at',
-        'is_starred', 'sent_at', 'delivered_at', 'read_at',
+        'is_starred', 'sent_at', 'delivered_at', 'read_at', 'updated_at',
     ];
 
     protected $casts = [
