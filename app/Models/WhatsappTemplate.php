@@ -15,7 +15,7 @@ class WhatsappTemplate extends Model
         'components', 'validation_results', 'variable_config',
         'readiness_score', 'is_paused', 'is_paused_by_meta', 'is_mobile_draft',
         'total_sent', 'total_read', 'last_synced_at', 'last_status_sync_at',
-        'namespace', 'header_type', 'footer_text',
+        'namespace', 'header_type', 'footer_text', 'quality_rating',
     ];
 
     protected $casts = [
