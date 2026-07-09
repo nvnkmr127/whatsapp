@@ -81,8 +81,6 @@ class Contact extends Model
 
     protected $appends = ['company'];
 
-    protected $with = ['companyRelation'];
-
     /**
      * Check if contact has valid consent for marketing.
      */
@@ -206,6 +204,9 @@ class Contact extends Model
 
     public function getCompanyAttribute()
     {
+        if (! $this->relationLoaded('companyRelation')) {
+            return null;
+        }
         return $this->companyRelation?->name;
     }
 }
