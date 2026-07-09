@@ -22,6 +22,7 @@ class EmailLog extends Model
         'sent_at',
         'delivered_at',
         'failed_at',
+        'opened_at',
     ];
 
     protected $casts = [

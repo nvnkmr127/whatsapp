@@ -61,7 +61,7 @@ class Contact extends Model
         'assigned_to', 'category_id', 'version',
         'avatar_url', 'company_id', 'notes_count',
         'bot_paused_reason', 'last_seen_agent_id', 'job_title', 'engagement_score',
-        'is_within_24h_window',
+        'is_within_24h_window', 'lifecycle_state',
     ];
 
     protected $attributes = [
