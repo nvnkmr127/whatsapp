@@ -27,6 +27,13 @@ class Team extends JetstreamTeam
     }
 
     /**
+     * The relations to eager load on every query.
+     *
+     * @var array
+     */
+    protected $with = ['wallet'];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

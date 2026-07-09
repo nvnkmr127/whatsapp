@@ -81,6 +81,8 @@ class Contact extends Model
 
     protected $appends = ['company'];
 
+    protected $with = ['companyRelation'];
+
     /**
      * Check if contact has valid consent for marketing.
      */
