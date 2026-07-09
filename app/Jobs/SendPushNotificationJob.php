@@ -21,7 +21,7 @@ class SendPushNotificationJob implements ShouldQueue
         public string $type = 'new_message',
         public ?int $conversationId = null
     ) {
-        $this->onQueue('notifications');
+        $this->onQueue('push_notifications');
     }
 
     public function handle(FcmService $fcmService): void
