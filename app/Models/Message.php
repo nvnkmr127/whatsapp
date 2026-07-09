@@ -38,6 +38,11 @@ class Message extends Model
         return $this->created_at->format('H:i');
     }
 
+    public function getReplyToMessageIdAttribute()
+    {
+        return $this->metadata['reply_to_message_id'] ?? null;
+    }
+
     public function getFullMediaUrlAttribute()
     {
         if (!$this->media_url) {
