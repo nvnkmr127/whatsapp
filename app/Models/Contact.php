@@ -60,7 +60,7 @@ class Contact extends Model
         'is_bot_paused', 'bot_paused_at', 'bot_paused_until', 'has_pending_reply',
         'assigned_to', 'category_id', 'version',
         'avatar_url', 'company_id', 'notes_count',
-        'bot_paused_reason', 'last_seen_agent_id', 'job_title',
+        'bot_paused_reason', 'last_seen_agent_id', 'job_title', 'engagement_score',
     ];
 
     protected $attributes = [
