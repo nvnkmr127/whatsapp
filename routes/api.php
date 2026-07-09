@@ -29,6 +29,9 @@ Route::prefix('v1/mobile/auth')->middleware('mobile_logger')->group(function () 
 });
 
 Route::group(['middleware' => ['auth:sanctum', 'tenant', 'throttle:api', \App\Http\Middleware\BlockTrialFieldsViaApi::class], 'prefix' => 'v1'], function () {
+    // MCP (Model Context Protocol) — per-tenant AI agent endpoint
+    Route::post('/mcp', [\App\Http\Controllers\Api\McpController::class, 'handle']);
+
     // Contacts
     Route::get('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'index']);
     Route::post('/contacts', [\App\Http\Controllers\Api\ExternalContactController::class, 'store']);

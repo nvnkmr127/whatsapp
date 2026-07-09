@@ -158,6 +158,23 @@
             </div>
             <p class="text-sm text-slate-500 font-medium">Complete API reference and examples</p>
         </a>
+
+        <a href="{{ route('developer.mcp') }}"
+            class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-purple-500 transition-all">
+            <div class="flex items-center gap-4 mb-4">
+                <div
+                    class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl text-purple-600 group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.673.337a6 6 0 01-3.86.517l-2.388-.477a2 2 0 00-1.022.547l-1.162 1.162a2 2 0 00-.547 1.022l-.477 2.387a6 6 0 00.517 3.86l.337.673a6 6 0 01.517 3.86l-.477 2.388a2 2 0 00.547 1.022l1.162 1.162a2 2 0 001.022-.547l2.387-.477a6 6 0 003.86-.517l.673-.337a6 6 0 013.86-.517l2.388.477a2 2 0 001.022-.547l1.162-1.162a2 2 0 00.547-1.022l.477-2.387a6 6 0 00-.517-3.86l-.337-.673a6 6 0 01-.517-3.86l.477-2.388a2 2 0 00-.547-1.022l-1.162-1.162z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">AI Agent MCP Server
+                </h3>
+            </div>
+            <p class="text-sm text-slate-500 font-medium">Connect Claude to your workspace natively</p>
+        </a>
+
         <div
             class="group bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-50 dark:border-slate-800 hover:border-wa-teal dark:hover:border-wa-teal transition-all">
             <div class="flex items-center justify-between gap-4 mb-4">
