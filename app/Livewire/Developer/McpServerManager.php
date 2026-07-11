@@ -22,7 +22,7 @@ class McpServerManager extends Component
     public function generateConfigTemplate()
     {
         // We look for a token that might be used for MCP, or just use a placeholder
-        $token = auth()->user()->currentTeam->apiTokens()->where('name', 'Claude Desktop MCP')->first();
+        $token = auth()->user()->tokens()->where('name', 'Claude Desktop MCP')->first();
         $tokenPlaceholder = $token ? 'YOUR_API_TOKEN_HERE (See API Tokens tab)' : 'YOUR_API_TOKEN_HERE';
 
         $config = [

@@ -146,7 +146,7 @@ class WhatsAppSendGuardrails
     public function canSend(Team $team): bool
     {
         // Check quality rating
-        if ($team->wm_quality_rating === 'RED') {
+        if ($team->whatsapp_quality_rating === 'RED') {
             return false;
         }
 
@@ -174,7 +174,7 @@ class WhatsAppSendGuardrails
     {
         $issues = [];
 
-        if ($team->wm_quality_rating === 'RED') {
+        if ($team->whatsapp_quality_rating === 'RED') {
             $issues[] = 'Quality rating is RED';
         }
 
