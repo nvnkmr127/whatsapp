@@ -17,6 +17,7 @@ class Plan extends Model
         'automation_run_limit',
         'contact_limit',
         'ai_conversation_limit',
+        'max_call_minutes_per_month',
         'max_backups_per_team',
         'max_storage_mb',
         'cooldown_hours_between_backups',

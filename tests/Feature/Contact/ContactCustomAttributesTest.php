@@ -98,7 +98,7 @@ class ContactCustomAttributesTest extends TestCase
             'email' => 'jane.smith@example.com',
         ]);
 
-        $contact->refresh();
+        $contact->refresh()->load('companyRelation');
         $this->assertNotNull($contact->company_id);
         $this->assertEquals('Globex Corp', $contact->company);
     }

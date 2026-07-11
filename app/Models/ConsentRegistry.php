@@ -60,6 +60,8 @@ class ConsentRegistry extends Model
         'user_agent',
         'expires_at',
         'recorded_at',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [

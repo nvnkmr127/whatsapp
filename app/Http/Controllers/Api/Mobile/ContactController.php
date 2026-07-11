@@ -90,12 +90,26 @@ class ContactController extends Controller
             ], 409);
         }
 
+        $customAttributes = $request->input('custom_attributes', []);
+        $email = $validated['email'] ?? ($customAttributes['email'] ?? null);
+        $companyId = null;
+
+        if (isset($customAttributes['company']) && $customAttributes['company'] !== '') {
+            $company = \App\Models\Company::firstOrCreate(
+                ['team_id' => $team->id, 'name' => $customAttributes['company']]
+            );
+            $companyId = $company->id;
+        }
+
+        unset($customAttributes['email'], $customAttributes['company']);
+
         $contact = Contact::create([
             'team_id' => $team->id,
             'phone_number' => $validated['phone_number'],
             'name' => $validated['name'] ?? $validated['phone_number'],
-            'email' => $validated['email'] ?? null,
-            'custom_attributes' => $request->input('custom_attributes', []),
+            'email' => $email,
+            'company_id' => $companyId,
+            'custom_attributes' => $customAttributes,
             'opt_in_status' => $validated['opt_in_status'] ?? 'opted_in',
         ]);
 
@@ -103,7 +117,7 @@ class ContactController extends Controller
 
         return response()->json([
             'success' => true,
-            'contact' => $contact,
+            'contact' => $contact->load('companyRelation'),
             'conversation' => [
                 'id' => $conversation->id,
                 'contact_id' => $conversation->contact_id,
@@ -172,21 +186,34 @@ class ContactController extends Controller
             'opt_in_status' => 'nullable|string|in:opted_in,opted_out,pending',
         ]);
 
-        $updateData = $request->only('name', 'custom_attributes', 'opt_in_status', 'email');
-
+        $updateData = $request->only('name', 'opt_in_status');
+        $customAttrs = $request->input('custom_attributes', $contact->custom_attributes ?? []);
+        
         if ($request->has('custom_attributes.email')) {
             $updateData['email'] = $request->input('custom_attributes.email');
         } elseif ($request->has('email')) {
-            $customAttrs = $request->input('custom_attributes', $contact->custom_attributes ?? []);
-            $customAttrs['email'] = $request->input('email');
-            $updateData['custom_attributes'] = $customAttrs;
+            $updateData['email'] = $request->input('email');
         }
+
+        if (array_key_exists('company', $customAttrs)) {
+            if (empty($customAttrs['company'])) {
+                $updateData['company_id'] = null;
+            } else {
+                $company = \App\Models\Company::firstOrCreate(
+                    ['team_id' => $contact->team_id, 'name' => $customAttrs['company']]
+                );
+                $updateData['company_id'] = $company->id;
+            }
+        }
+
+        unset($customAttrs['email'], $customAttrs['company']);
+        $updateData['custom_attributes'] = $customAttrs;
 
         $contact->update($updateData);
 
         return response()->json([
             'success' => true,
-            'contact' => $contact->load('tags'),
+            'contact' => $contact->load('tags', 'companyRelation'),
         ]);
     }
 

@@ -51,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
     {
         // ── Performance: Strict Mode ────────────────────────────────────
         \Illuminate\Database\Eloquent\Model::shouldBeStrict(! $this->app->isProduction());
+        
+        if ($this->app->environment('testing')) {
+            \Illuminate\Database\Eloquent\Model::preventAccessingMissingAttributes(false);
+        }
 
         // ── Safe Broadcasters (Pusher & Reverb) ─────────────────────────
         \Illuminate\Support\Facades\Broadcast::extend('reverb', function ($app, array $config) {
