@@ -199,7 +199,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Send WhatsApp template
         $whatsappService = new WhatsAppService($template->team);
 
-        if ($template->team->webhookSource?->is_sandbox || ($this->payload->source && $this->payload->source->is_sandbox)) {
+        if ($template->team->is_sandbox_mode || ($this->payload->source && $this->payload->source->is_sandbox)) {
             Log::info('Webhook triggered template send (SANDBOX - SKIP API)', [
                 'phone' => $phoneNumber,
                 'template' => $template->name,
@@ -288,7 +288,7 @@ class ProcessMappedWebhookJob implements ShouldQueue
         // Use OTPService for secure storage and sending
         $otpService = new \App\Services\OTPService;
 
-        if ($template->team->webhookSource?->is_sandbox || ($this->payload->source && $this->payload->source->is_sandbox)) {
+        if ($template->team->is_sandbox_mode || ($this->payload->source && $this->payload->source->is_sandbox)) {
             Log::info('Webhook triggered OTP send (SANDBOX - SKIP API)', [
                 'phone' => $phoneNumber,
                 'template' => $template->name,
