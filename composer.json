@@ -12,7 +12,6 @@
         "php": "^8.2",
         "ext-intl": "*",
         "barryvdh/laravel-dompdf": "^3.1",
-        "giggsey/libphonenumber-for-php": "^9.0",
         "google/auth": "^1.45",
         "laravel/framework": "^12.0",
         "laravel/jetstream": "^5.4",
