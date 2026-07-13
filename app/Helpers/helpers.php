@@ -104,7 +104,7 @@ if (! function_exists('audit')) {
 if (! function_exists('money')) {
     function money($amount, $currency = 'USD')
     {
-        return '$'.number_format((float) $amount, 2);
+        return Illuminate\Support\Number::currency((float) $amount, $currency);
     }
 }
 

@@ -2,7 +2,7 @@
 
 namespace App\Listeners;
 
-use App\Events\Contracts\DomainEventContract;
+use App\Events\Base\DomainEvent;
 use App\Models\SystemEvent;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -46,7 +46,7 @@ class PersistDomainEvents implements ShouldQueue
         }
 
         // Only handle DomainEvents
-        if (! ($eventObj instanceof DomainEventContract)) {
+        if (! ($eventObj instanceof DomainEvent)) {
             return;
         }
 
@@ -74,7 +74,7 @@ class PersistDomainEvents implements ShouldQueue
         ]);
     }
 
-    protected function shouldPersist(DomainEventContract $event): bool
+    protected function shouldPersist(DomainEvent $event): bool
     {
         $category = $event->category();
 

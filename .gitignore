@@ -101,3 +101,6 @@ v2/
 **/caddy
 frankenphp
 frankenphp-worker.php
+website/.next/
+.expo/
+.gemini/
