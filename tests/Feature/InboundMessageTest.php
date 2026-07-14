@@ -178,4 +178,62 @@ class InboundMessageTest extends TestCase
         $contact->refresh();
         $this->assertEquals('John Doe', $contact->name);
     }
+
+    public function test_custom_opt_out_keyword_opts_out_and_sends_confirmation()
+    {
+        $team = Team::factory()->create([
+            'whatsapp_phone_number_id' => '123456789',
+            'whatsapp_business_account_id' => '987654321',
+            'opt_out_keywords' => ['Unsubscribe'],
+            'opt_out_message' => 'You have been unsubscribed.',
+            'opt_out_message_enabled' => true,
+        ]);
+
+        Event::fake([\App\Events\MessageReceived::class]);
+        \Illuminate\Support\Facades\Queue::fake([\App\Jobs\SendMessageJob::class]);
+
+        $payload = [
+            'provider_id' => 'wamid.test.'.uniqid(),
+            'to_phone_id' => '123456789',
+            'waba_id' => '987654321',
+            'from_phone' => '15550000001',
+            'contact_name' => 'Opt Out User',
+            'timestamp' => time(),
+            'type' => 'text',
+            'content' => ['type' => 'text', 'text' => ['body' => 'unsubscribe']], // case-insensitive match
+        ];
+
+        (new PersistMessageJob($payload))->handle();
+
+        $this->assertEquals('opted_out', Contact::first()->opt_in_status);
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendMessageJob::class);
+    }
+
+    public function test_default_stop_keyword_still_works_without_confirmation()
+    {
+        $team = Team::factory()->create([
+            'whatsapp_phone_number_id' => '123456789',
+            'whatsapp_business_account_id' => '987654321',
+            'opt_out_message_enabled' => false,
+        ]);
+
+        Event::fake([\App\Events\MessageReceived::class]);
+        \Illuminate\Support\Facades\Queue::fake([\App\Jobs\SendMessageJob::class]);
+
+        $payload = [
+            'provider_id' => 'wamid.test.'.uniqid(),
+            'to_phone_id' => '123456789',
+            'waba_id' => '987654321',
+            'from_phone' => '15550000002',
+            'contact_name' => 'Stop User',
+            'timestamp' => time(),
+            'type' => 'text',
+            'content' => ['type' => 'text', 'text' => ['body' => 'STOP']],
+        ];
+
+        (new PersistMessageJob($payload))->handle();
+
+        $this->assertEquals('opted_out', Contact::first()->opt_in_status);
+        \Illuminate\Support\Facades\Queue::assertNotPushed(\App\Jobs\SendMessageJob::class);
+    }
 }

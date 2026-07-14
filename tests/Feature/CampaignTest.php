@@ -16,7 +16,7 @@ class CampaignTest extends TestCase
         $team = \App\Models\Team::factory()->create([
             'whatsapp_access_token' => 'test-token',
             'whatsapp_phone_number_id' => '123',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
         $contact1 = \App\Models\Contact::factory()->create(['team_id' => $team->id, 'opt_in_status' => 'opted_in']);
@@ -84,7 +84,7 @@ class CampaignTest extends TestCase
         $team = \App\Models\Team::factory()->create([
             'whatsapp_access_token' => 'test-token',
             'whatsapp_phone_number_id' => '123',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
         $tag = \App\Models\ContactTag::create(['team_id' => $team->id, 'name' => 'VIP']);

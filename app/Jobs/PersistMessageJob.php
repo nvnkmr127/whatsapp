@@ -112,12 +112,25 @@ class PersistMessageJob implements ShouldQueue
 
             // 2. Keyword Management
             $content = $this->extractContent($data['content']);
-            $cleanContent = strtoupper(trim($content));
+            $cleanContent = trim($content);
+            $upperContent = strtoupper($cleanContent);
 
-            if ($cleanContent === 'STOP') {
-                (new \App\Services\ConsentService)->optOut($contact);
-            } elseif ($cleanContent === 'START') {
-                (new \App\Services\ConsentService)->optIn($contact, 'START_KEYWORD');
+            $optOutKeywords = array_map('strtoupper', $team->opt_out_keywords ?? []);
+            if (!in_array('STOP', $optOutKeywords)) $optOutKeywords[] = 'STOP';
+
+            $optInKeywords = array_map('strtoupper', $team->opt_in_keywords ?? []);
+            if (!in_array('START', $optInKeywords)) $optInKeywords[] = 'START';
+
+            if (in_array($upperContent, $optOutKeywords)) {
+                $optedOut = (new \App\Services\ConsentService)->optOut($contact);
+                if ($optedOut && $team->opt_out_message_enabled && !empty($team->opt_out_message)) {
+                    \App\Jobs\SendMessageJob::dispatch($team->id, $contact->phone_number, 'text', $team->opt_out_message);
+                }
+            } elseif (in_array($upperContent, $optInKeywords)) {
+                $optedIn = (new \App\Services\ConsentService)->optIn($contact, 'START_KEYWORD');
+                if ($optedIn && $team->opt_in_message_enabled && !empty($team->opt_in_message)) {
+                    \App\Jobs\SendMessageJob::dispatch($team->id, $contact->phone_number, 'text', $team->opt_in_message);
+                }
             }
 
             // 3. Conversation Management

@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -24,6 +26,11 @@ return new class extends Migration
         foreach ($map as $from => $to) {
             DB::table('teams')->where('whatsapp_setup_state', $from)->update(['whatsapp_setup_state' => $to]);
         }
+
+        // New teams must default to a value the IntegrationState enum can cast
+        Schema::table('teams', function (Blueprint $table) {
+            $table->string('whatsapp_setup_state')->default('disconnected')->change();
+        });
     }
 
     public function down(): void

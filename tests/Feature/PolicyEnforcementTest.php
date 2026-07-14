@@ -21,7 +21,7 @@ class PolicyEnforcementTest extends TestCase
             'user_id' => $user->id,
             'whatsapp_phone_number_id' => '123',
             'whatsapp_access_token' => 'abc',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
         $user->switchTeam($team);
@@ -50,7 +50,7 @@ class PolicyEnforcementTest extends TestCase
             'user_id' => $user->id,
             'whatsapp_phone_number_id' => '123',
             'whatsapp_access_token' => 'abc',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
         $user->switchTeam($team);

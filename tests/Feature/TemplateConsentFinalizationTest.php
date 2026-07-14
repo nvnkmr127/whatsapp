@@ -22,7 +22,7 @@ class TemplateConsentFinalizationTest extends TestCase
         $team = Team::factory()->create([
             'whatsapp_access_token' => 'mock_token',
             'whatsapp_phone_number_id' => '123',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
 
