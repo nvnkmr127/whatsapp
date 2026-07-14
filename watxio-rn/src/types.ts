@@ -32,6 +32,8 @@ export interface ChatMessage {
   media_url?: string | null;
   media_type?: string | null;
   metadata?: any;
+  reply_to_content?: string | null;
+  reply_to_id?: number | null;
 }
 
 export interface ContactProfile {

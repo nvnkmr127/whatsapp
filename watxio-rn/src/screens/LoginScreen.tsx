@@ -108,7 +108,7 @@ export default function LoginScreen({ navigation }: any) {
       );
 
       setLoading(false);
-      nav.replace('Main');
+      nav.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (err: any) {
       setLoading(false);
       showDialog('Login Failed', err.message || 'Invalid email or password.');
@@ -121,7 +121,7 @@ export default function LoginScreen({ navigation }: any) {
     setTimeout(() => {
       setLoading(false);
       showDialog('QR Pair Success', 'Paired successfully with your active browser session.', [
-        { text: 'Continue', onPress: () => nav.replace('Main') }
+        { text: 'Continue', onPress: () => nav.reset({ index: 0, routes: [{ name: 'Main' }] }) }
       ]);
     }, 1200);
   };

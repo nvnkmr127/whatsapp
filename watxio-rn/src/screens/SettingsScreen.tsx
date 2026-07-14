@@ -116,12 +116,15 @@ export default function SettingsScreen({ navigation }: any) {
         numbers: [],
         activeTeamId: null,
       });
+      // Force remove from AsyncStorage immediately to prevent race conditions with Onboarding/Login screens auto-logging in
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.removeItem('@watxio_session');
+      
       setLoading(false);
       nav.reset({
         index: 0,
-        routes: [{ name: 'Onboarding' }],
+        routes: [{ name: 'Login' }],
       });
-      setLoading(false);
     }
   };
 

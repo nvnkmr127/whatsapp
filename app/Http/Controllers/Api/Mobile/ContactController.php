@@ -60,6 +60,7 @@ class ContactController extends Controller
             'custom_attributes.email' => 'nullable|email|max:255',
             'custom_attributes.company' => 'nullable|string|max:255',
             'opt_in_status' => 'nullable|string|in:opted_in,opted_out,pending',
+            'conversation_id' => 'nullable|integer',
         ]);
 
         // Check if a contact with this phone number already exists in this team
@@ -68,6 +69,12 @@ class ContactController extends Controller
             ->first();
 
         if ($existing) {
+            if (!empty($validated['conversation_id'])) {
+                $conversation = \App\Models\Conversation::where('team_id', $team->id)->find($validated['conversation_id']);
+                if ($conversation && !$conversation->contact_id) {
+                    $conversation->update(['contact_id' => $existing->id]);
+                }
+            }
             $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($existing);
             $lastMsg = $conversation->lastMessage;
 
@@ -99,7 +106,16 @@ class ContactController extends Controller
             'opt_in_status' => $validated['opt_in_status'] ?? 'opted_in',
         ]);
 
-        $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($contact);
+        if (!empty($validated['conversation_id'])) {
+            $conversation = \App\Models\Conversation::where('team_id', $team->id)->find($validated['conversation_id']);
+            if ($conversation) {
+                $conversation->update(['contact_id' => $contact->id]);
+            } else {
+                $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($contact);
+            }
+        } else {
+            $conversation = app(\App\Services\ConversationService::class)->ensureActiveConversation($contact);
+        }
 
         return response()->json([
             'success' => true,

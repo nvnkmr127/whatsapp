@@ -20,7 +20,7 @@ export default function ContactScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
   const insets = useSafeAreaInsets();
   const nav = navigation;
-  const { conversationId, contactId } = route.params;
+  const { conversationId, contactId, contactName: contactNameParam, contactPhone: contactPhoneParam } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [contactData, setContactData] = useState<any>(null);
@@ -28,7 +28,7 @@ export default function ContactScreen({ navigation, route }: any) {
   const [callHistory, setCallHistory] = useState<any[]>([]);
 
   // Local editable states
-  const [contactName, setContactName] = useState('');
+  const [contactName, setContactName] = useState(contactNameParam || '');
   const [contactEmail, setContactEmail] = useState('');
   const [contactCompany, setContactCompany] = useState('');
   
@@ -52,7 +52,7 @@ export default function ContactScreen({ navigation, route }: any) {
     setLoadingTags(true);
     try {
       const res = await api.get('/v1/mobile/contacts/tags');
-      setAvailableTags(res || []);
+      setAvailableTags(Array.isArray(res) ? res : (res?.data || []));
     } catch (err) {
       console.warn('Failed to load team tags:', err);
     } finally {
@@ -79,9 +79,11 @@ export default function ContactScreen({ navigation, route }: any) {
       });
       if (res.success && res.tag) {
         // Automatically associate the new tag to this contact
-        await api.post(`/v1/mobile/contacts/${contactId}/tags/toggle`, {
-          tag_id: res.tag.id,
-        });
+        if (contactId) {
+          await api.post(`/v1/mobile/contacts/${contactId}/tags/toggle`, {
+            tag_id: res.tag.id,
+          });
+        }
         
         setNewTagName('');
         // Refresh lists
@@ -96,6 +98,10 @@ export default function ContactScreen({ navigation, route }: any) {
   };
 
   const handleToggleTag = async (tagId: number) => {
+    if (!contactId) {
+      showDialog('Save Contact', 'Please save this contact first before assigning tags.');
+      return;
+    }
     try {
       const res = await api.post(`/v1/mobile/contacts/${contactId}/tags/toggle`, {
         tag_id: tagId,
@@ -104,7 +110,7 @@ export default function ContactScreen({ navigation, route }: any) {
         fetchContactDetails();
       }
     } catch (err: any) {
-      showDialog('Error Toggling Tag', err.message || 'Could not toggle tag.');
+      showDialog('Error', err.message || 'Could not toggle tag.');
     }
   };
 
@@ -132,26 +138,37 @@ export default function ContactScreen({ navigation, route }: any) {
   const fetchContactDetails = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/v1/mobile/contacts/${contactId}`);
-      const data = response.contact || {};
-      setContactData(data);
-      setContactName(data.name || '');
+      if (contactId) {
+        const response = await api.get(`/v1/mobile/contacts/${contactId}`);
+        const data = response.contact || {};
+        setContactData(data);
+        setContactName(data.name || contactNameParam || '');
 
-      // Parse custom attributes/schema
-      const customAttrs = data.custom_attributes || {};
-      setContactEmail(customAttrs.email || data.email || '');
-      setContactCompany(customAttrs.company || data.company || '');
+        // Parse custom attributes/schema
+        const customAttrs = data.custom_attributes || {};
+        setContactEmail(customAttrs.email || data.email || '');
+        setContactCompany(customAttrs.company || data.company || '');
+
+        // Fetch call history
+        try {
+          const callsRes = await api.get(`/v1/calls/contacts/${contactId}/history`);
+          setCallHistory(Array.isArray(callsRes) ? callsRes : (callsRes?.data || []));
+        } catch (callsErr) {
+          console.warn('Failed to load call history:', callsErr);
+        }
+      } else {
+        // Fallback for unsaved contacts
+        setContactData({
+          name: contactNameParam || 'Unknown Contact',
+          phone_number: contactPhoneParam || '',
+        });
+        setContactName(contactNameParam || 'Unknown Contact');
+      }
 
       // Fetch notes
-      const notesResponse = await api.get(`/v1/mobile/conversations/${conversationId}/notes`);
-      setNotesList(notesResponse || []);
-
-      // Fetch call history
-      try {
-        const callsRes = await api.get(`/v1/calls/contacts/${contactId}/history`);
-        setCallHistory(callsRes.data || callsRes || []);
-      } catch (callsErr) {
-        console.warn('Failed to load call history:', callsErr);
+      if (conversationId) {
+        const notesResponse = await api.get(`/v1/mobile/conversations/${conversationId}/notes`);
+        setNotesList(Array.isArray(notesResponse) ? notesResponse : (notesResponse?.data || []));
       }
     } catch (err: any) {
       console.warn('Failed to load contact data:', err);
@@ -159,7 +176,7 @@ export default function ContactScreen({ navigation, route }: any) {
     } finally {
       setLoading(false);
     }
-  }, [contactId, conversationId]);
+  }, [contactId, conversationId, contactNameParam, contactPhoneParam]);
 
   useEffect(() => {
     fetchContactDetails();
@@ -277,8 +294,13 @@ export default function ContactScreen({ navigation, route }: any) {
 
   const name = contactData?.name || 'Unknown Contact';
   const phone = contactData?.phone_number || 'No Phone Number';
-  const tags = contactData?.tags || [];
-  const events = contactData?.contactEvents || [];
+  
+  // Strictly enforce arrays to prevent .some() or .map() crashes on paginated/malformed data
+  const rawTags = contactData?.tags;
+  const tags = Array.isArray(rawTags) ? rawTags : (rawTags?.data || []);
+  
+  const rawEvents = contactData?.contactEvents;
+  const events = Array.isArray(rawEvents) ? rawEvents : (rawEvents?.data || []);
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg" style={{ paddingTop: insets.top }}>
@@ -334,7 +356,7 @@ export default function ContactScreen({ navigation, route }: any) {
             onPress={() => setShowTagsModal(true)} 
             className="flex-row gap-1.5 flex-wrap justify-center mt-2 px-3 py-1 bg-surface dark:bg-d-surface rounded-full border border-hairline dark:border-d-hairline active:opacity-80 max-w-[90%]"
           >
-            {tags.map((tag: any) => (
+            {Array.isArray(tags) && tags.map((tag: any) => (
               <View
                 key={tag.id}
                 style={{ 
@@ -352,7 +374,7 @@ export default function ContactScreen({ navigation, route }: any) {
                 </Text>
               </View>
             ))}
-            {tags.length === 0 ? (
+            {(!tags || tags.length === 0) ? (
               <Text className="text-[11px] text-muted dark:text-d-muted font-semibold px-1.5">
                 + Add tags
               </Text>
@@ -453,16 +475,8 @@ export default function ContactScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        <SectionLabel
-          action={isEditingInfo ? "Save" : "Edit"}
-          onActionPress={() => {
-            if (isEditingInfo) {
-              handleUpdateContact();
-            } else {
-              setIsEditingInfo(true);
-            }
-          }}
-        >
+        {/* Editable info fields */}
+        <SectionLabel action={isEditingInfo ? "Save" : "Edit"} onActionPress={() => isEditingInfo ? handleUpdateContact() : setIsEditingInfo(true)}>
           Customer info
         </SectionLabel>
         <View className="px-[18px]">
@@ -488,7 +502,7 @@ export default function ContactScreen({ navigation, route }: any) {
                       className="text-[13.5px] text-ink dark:text-d-ink font-medium p-0"
                     />
                   ) : (
-                    <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{r.v || 'Not specified'}</Text>
+                    <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{String(r.v || 'Not specified')}</Text>
                   )}
                 </View>
               </View>
@@ -496,48 +510,48 @@ export default function ContactScreen({ navigation, route }: any) {
           </Card>
         </View>
 
-        <SectionLabel action="+ Add" onActionPress={() => setIsAddingNote(true)}>Notes</SectionLabel>
+        <SectionLabel>Internal Notes</SectionLabel>
         <View className="px-[18px]">
-          {isAddingNote && (
-            <View className="bg-surface dark:bg-d-surface rounded-lg p-3.5 mb-3 gap-2 border border-hairline dark:border-d-hairline">
+          {isAddingNote ? (
+            <View className="bg-surface dark:bg-d-surface rounded-lg p-3 mb-4 border border-accent dark:border-d-accent">
               <TextInput
                 value={newNote}
                 onChangeText={setNewNote}
                 placeholder="Type your note here..."
                 placeholderTextColor={tokens.muted}
-                className="text-ink dark:text-d-ink text-sm bg-surface2 dark:bg-d-surface2 p-2.5 rounded-md min-h-[60px]"
+                className="text-ink dark:text-d-ink text-[13.5px] leading-5 p-0 m-0 min-h-[60px]"
                 multiline
                 autoFocus
+                textAlignVertical="top"
               />
-              <View className="flex-row justify-end gap-2">
-                <Pressable
-                  onPress={() => {
-                    setIsAddingNote(false);
-                    setNewNote('');
-                  }}
-                  className="px-3 py-1.5 rounded-md bg-surface2 dark:bg-d-surface2 active:opacity-80"
-                >
+              <View className="flex-row justify-end mt-3 gap-2">
+                <Pressable onPress={() => { setIsAddingNote(false); setNewNote(''); }} className="px-4 py-2 rounded-full">
                   <Text className="text-muted dark:text-d-muted text-xs font-semibold">Cancel</Text>
                 </Pressable>
-                <Pressable
-                  onPress={handleAddNote}
-                  className="px-3 py-1.5 rounded-md bg-accent dark:bg-d-accent active:opacity-85"
-                >
-                  <Text className="text-accent-ink dark:text-d-accent-ink text-xs font-semibold">Save</Text>
+                <Pressable onPress={handleAddNote} className="px-4 py-2 rounded-full bg-accent dark:bg-d-accent">
+                  <Text className="text-white text-xs font-semibold">Save Note</Text>
                 </Pressable>
               </View>
             </View>
+          ) : (
+            <Pressable 
+              onPress={() => setIsAddingNote(true)} 
+              className="flex-row items-center justify-center gap-2 py-3 rounded-lg bg-surface dark:bg-d-surface border border-hairline dark:border-d-hairline mb-4 active:opacity-75"
+            >
+              <FilePen size={14} color={tokens.accent} />
+              <Text className="text-accent dark:text-d-accent text-xs font-semibold">Add Internal Note</Text>
+            </Pressable>
           )}
 
-          {notesList.map((n) => (
-            <View key={n.id} className="p-4 rounded-lg bg-surface dark:bg-d-surface mb-2">
-              <Text className="text-ink2 dark:text-d-ink2 text-[13.5px] leading-5">{n.content}</Text>
+          {Array.isArray(notesList) && notesList.filter(Boolean).map((n, i) => (
+            <View key={n?.id || `note-${i}`} className="p-4 rounded-lg bg-surface dark:bg-d-surface mb-2">
+              <Text className="text-ink2 dark:text-d-ink2 text-[13.5px] leading-5">{String(n?.content || '')}</Text>
               <Text className="text-[11px] text-muted dark:text-d-muted mt-2">
-                {n.user?.name || 'Agent'} · {new Date(n.created_at).toLocaleDateString()}
+                {String(n?.user?.name || 'Agent')} · {n?.created_at ? new Date(n.created_at).toLocaleDateString() : 'Unknown Date'}
               </Text>
             </View>
           ))}
-          {notesList.length === 0 && (
+          {(!notesList || notesList.length === 0) && (
             <View className="p-4 rounded-lg bg-surface dark:bg-d-surface items-center justify-center">
               <Text className="text-[13px] text-muted dark:text-d-muted italic">No internal notes logged.</Text>
             </View>
@@ -546,9 +560,9 @@ export default function ContactScreen({ navigation, route }: any) {
 
         <SectionLabel>Call History</SectionLabel>
         <View className="px-[18px]">
-          {callHistory.map((c: any) => {
-            const isMissed = c.status === 'missed' || c.status === 'rejected';
-            const isOutbound = c.direction === 'outbound';
+          {Array.isArray(callHistory) && callHistory.filter(Boolean).map((c: any, i) => {
+            const isMissed = c?.status === 'missed' || c?.status === 'rejected';
+            const isOutbound = c?.direction === 'outbound';
             
             let iconColor = tokens.ink2;
             if (isMissed) {
@@ -560,22 +574,22 @@ export default function ContactScreen({ navigation, route }: any) {
             }
 
             return (
-              <View key={c.id} className="flex-row gap-3 py-3 border-b border-hairline dark:border-d-hairline last:border-0">
+              <View key={c?.id || `call-${i}`} className="flex-row gap-3 py-3 border-b border-hairline dark:border-d-hairline last:border-0">
                 <View className="w-7 h-7 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
                   <Phone size={13} color={iconColor} strokeWidth={1.8} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium capitalize">
-                    {c.direction} Call · {c.status}
+                    {String(c?.direction || 'Unknown')} Call · {String(c?.status || 'Unknown')}
                   </Text>
                   <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
-                    {c.duration_seconds ? `${c.duration_seconds}s duration` : 'No answer'} · {new Date(c.created_at || c.initiated_at).toLocaleDateString()} {new Date(c.created_at || c.initiated_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    {c?.duration_seconds ? `${c.duration_seconds}s duration` : 'No answer'} · {(c?.created_at || c?.initiated_at) ? new Date(c.created_at || c.initiated_at).toLocaleDateString() : 'Unknown Date'}
                   </Text>
                 </View>
               </View>
             );
           })}
-          {callHistory.length === 0 && (
+          {(!callHistory || callHistory.length === 0) && (
             <View className="p-4 rounded-lg bg-surface dark:bg-d-surface items-center justify-center">
               <Text className="text-[13px] text-muted dark:text-d-muted italic">No call history recorded.</Text>
             </View>
@@ -584,22 +598,23 @@ export default function ContactScreen({ navigation, route }: any) {
 
         <SectionLabel>Activity Events</SectionLabel>
         <View className="px-[18px]">
-          {events.map((h: any, i: number) => {
+          {Array.isArray(events) && events.filter(Boolean).map((h: any, i: number) => {
+            const eventTypeStr = String(h?.event_type || 'Interaction').replace(/_/g, ' ');
             return (
-              <View key={i} className="flex-row gap-3 py-3">
+              <View key={h?.id || `event-${i}`} className="flex-row gap-3 py-3">
                 <View className="w-7 h-7 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
                   <MessageSquare size={13} color={tokens.ink2} strokeWidth={1.8} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{h.event_type?.replace(/_/g, ' ') || 'Interaction'}</Text>
+                  <Text className="text-[13.5px] text-ink dark:text-d-ink font-medium">{eventTypeStr}</Text>
                   <Text className="text-[11.5px] text-muted dark:text-d-muted mt-0.5">
-                    {h.metadata?.message || 'Contact triggered backend interaction.'} · {new Date(h.created_at).toLocaleDateString()}
+                    {String(h?.metadata?.message || 'Contact triggered backend interaction.')} · {h?.created_at ? new Date(h.created_at).toLocaleDateString() : 'Unknown Date'}
                   </Text>
                 </View>
               </View>
             );
           })}
-          {events.length === 0 && (
+          {(!events || events.length === 0) && (
             <View className="py-4 items-center justify-center">
               <Text className="text-xs text-muted dark:text-d-muted">No recent activity events recorded.</Text>
             </View>

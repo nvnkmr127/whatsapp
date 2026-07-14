@@ -35,7 +35,7 @@ class Message extends Model
 
     public function getPrettyTimeAttribute()
     {
-        return $this->created_at->format('H:i');
+        return $this->created_at ? $this->created_at->format('H:i') : null;
     }
 
     public function getReplyToMessageIdAttribute()

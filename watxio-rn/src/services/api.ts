@@ -17,7 +17,7 @@ const getDevMachineIp = () => {
 
 const defaultBaseUrl = `https://flow.watxio.com/api`;
 
-let apiBaseUrl: string = defaultBaseUrl;
+let apiBaseUrl: string = 'http://10.0.2.2:8000/api';
 
 
 export const api = {

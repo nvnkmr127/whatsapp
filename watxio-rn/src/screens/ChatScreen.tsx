@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, KeyboardAvoidingView, Platform, Animated, Pressable, Keyboard, BackHandler,
+  View, Text, ScrollView, Platform, Animated, Pressable, Keyboard, BackHandler,
   Modal, FlatList, ActivityIndicator, Image, Vibration, TextInput
 } from 'react-native';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronLeft, Phone, MoreHorizontal, BellOff, LayoutTemplate, Tag } from 'lucide-react-native';
+import { ChevronLeft, Phone, MoreHorizontal, BellOff, LayoutTemplate, Tag, Reply, Clock } from 'lucide-react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -37,13 +40,14 @@ export default function ChatScreen({ navigation, route }: any) {
   const [globalState] = useGlobalState();
   const conversation = route.params.conversation;
   const conversationId = conversation.id;
-  const contact = conversation;
+  const [contact, setContact] = useState(conversation);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [loading, setLoading] = useState(true);      // first paint spinner
   const [isRefreshing, setIsRefreshing] = useState(false); // silent bg refresh indicator
@@ -111,24 +115,17 @@ export default function ChatScreen({ navigation, route }: any) {
   const [forwardingMsg, setForwardingMsg] = useState<ChatMessage | null>(null);
   const [activeConversations, setActiveConversations] = useState<Conversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
-  const [androidKbHeight, setAndroidKbHeight] = useState(0);
+
+  const { height } = useReanimatedKeyboardAnimation();
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      paddingBottom: Math.max(insets.bottom, Math.abs(height.value))
+    };
+  }, [insets.bottom]);
 
   useEffect(() => {
-    if (Platform.OS === 'ios') return;
-    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
-      setAndroidKbHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setAndroidKbHeight(0);
-    });
-
     // Load templates in background silently so they are ready for message rendering
     loadTemplatesList(true);
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
   }, []);
 
   // Dialog State
@@ -149,6 +146,7 @@ export default function ChatScreen({ navigation, route }: any) {
   };
 
   const scroller = useRef<ScrollView>(null);
+  const rowRefs = useRef<Map<number, any>>(new Map());
   // Track previous message count to avoid scrolling on polls with no new messages
   const prevMsgCountRef = useRef<number>(0);
 
@@ -190,6 +188,11 @@ export default function ChatScreen({ navigation, route }: any) {
       setIsAiEnabled(newIsAi);
       setSessionExpiresAt(newSession);
       setDbContactId(newDbId);
+      
+      if (details && details.contact?.name) {
+        setContact((prev: any) => ({ ...prev, name: details.contact.name }));
+      }
+      
       setServerDown(false); // server is back
 
       const nextUrl = msgsData.next_page_url || null;
@@ -226,6 +229,8 @@ export default function ChatScreen({ navigation, route }: any) {
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
           metadata: m.metadata || null,
+          reply_to_content: m.reply_to_content || null,
+          reply_to_id: m.reply_to_message_id || null,
         });
       });
 
@@ -357,6 +362,9 @@ export default function ChatScreen({ navigation, route }: any) {
           isStarred: !!m.is_starred,
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
+          metadata: m.metadata || null,
+          reply_to_content: m.reply_to_content || null,
+          reply_to_id: m.reply_to_message_id || null,
         });
       });
 
@@ -1084,6 +1092,11 @@ export default function ChatScreen({ navigation, route }: any) {
       if (mediaUrl) {
         payload.media_url = mediaUrl;
       }
+      if (replyingTo && replyingTo.id) {
+        payload.reply_to_message_id = replyingTo.id;
+      }
+
+      setReplyingTo(null);
 
       await api.post(`/v1/mobile/conversations/${conversationId}/messages`, payload);
       fetchConversationDetailsRef.current(true).catch((e) =>
@@ -1241,9 +1254,11 @@ export default function ChatScreen({ navigation, route }: any) {
           name: saveContactName.trim(),
           email: saveContactEmail.trim() || undefined,
           notes: saveContactNotes.trim() || undefined,
+          conversation_id: conversationId,
         });
         if (res?.data?.id) setDbContactId(res.data.id);
       }
+      setContact((prev: any) => ({ ...prev, name: saveContactName.trim() }));
       setShowSaveContact(false);
       showDialog('Saved', 'Contact saved successfully.');
     } catch (e: any) {
@@ -1255,9 +1270,9 @@ export default function ChatScreen({ navigation, route }: any) {
 
   return (
     <View className="flex-1 bg-bg dark:bg-d-bg">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <Reanimated.View
         className="flex-1"
+        style={animatedStyle}
       >
         {/* Header */}
         <View
@@ -1266,7 +1281,7 @@ export default function ChatScreen({ navigation, route }: any) {
         >
           <IconButton icon={ChevronLeft} onPress={handleBack} />
           <Pressable
-            onPress={() => nav.navigate('Contact', { conversationId, contactId: dbContactId })}
+            onPress={() => nav.navigate('Contact', { conversationId, contactId: dbContactId, contactName: contact.name, contactPhone: contact.phone })}
             className="flex-1 flex-row items-center gap-[10px] min-w-0"
           >
             <Avatar name={contact.name} size={36} dot={contact.online ? tokens.ok : null} />
@@ -1307,6 +1322,7 @@ export default function ChatScreen({ navigation, route }: any) {
             )}
             <ScrollView
               ref={scroller}
+              keyboardDismissMode="interactive"
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 }}
               maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
               onContentSizeChange={() => {
@@ -1357,27 +1373,52 @@ export default function ChatScreen({ navigation, route }: any) {
                 }
 
                 return (
-                  <Pressable
+                  <Swipeable
                     key={stableKey}
-                    onLongPress={() => handleMessageLongPress(m)}
-                    className="active:opacity-85"
+                    ref={(ref) => {
+                      if (ref && m.id) {
+                        rowRefs.current.set(m.id, ref);
+                      }
+                    }}
+                    renderLeftActions={() => (
+                      <View className="justify-center pl-4 pr-2">
+                        <View className="w-8 h-8 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
+                          <Reply size={18} color={tokens.ink} />
+                        </View>
+                      </View>
+                    )}
+                    onSwipeableWillOpen={() => {
+                      setReplyingTo(m);
+                      if (m.id) {
+                        rowRefs.current.get(m.id)?.close();
+                      }
+                    }}
+                    friction={2}
+                    leftThreshold={40}
                   >
-                    <Bubble
-                      kind={m.kind}
-                      time={m.time}
-                      status={m.status}
-                      variant="tail"
-                      isStarred={m.isStarred}
-                      mediaUrl={m.media_url}
-                      mediaType={m.media_type}
-                      onMediaPress={m.media_url && m.media_type ? () => setMediaViewer({
-                        uri: m.media_url!,
-                        type: m.media_type as any,
-                      }) : undefined}
+                    <Pressable
+                      onLongPress={() => handleMessageLongPress(m)}
+                      className="active:opacity-85"
                     >
-                      {displayText}
-                    </Bubble>
-                  </Pressable>
+                      <Bubble
+                        kind={m.kind}
+                        time={m.time}
+                        status={m.status}
+                        variant="tail"
+                        isStarred={m.isStarred}
+                        mediaUrl={m.media_url}
+                        mediaType={m.media_type}
+                        metadata={m.metadata}
+                        replyToContent={m.reply_to_content}
+                        onMediaPress={m.media_url && m.media_type ? () => setMediaViewer({
+                          uri: m.media_url!,
+                          type: m.media_type as any,
+                        }) : undefined}
+                      >
+                        {displayText}
+                      </Bubble>
+                    </Pressable>
+                  </Swipeable>
                 );
               })}
               {typing ? <TypingDots /> : null}
@@ -1385,110 +1426,50 @@ export default function ChatScreen({ navigation, route }: any) {
           </View>
         )}
 
-        {isRecording ? (
-          <View className="bg-surface dark:bg-d-surface px-3 py-2.5 flex-row items-center justify-between border-t border-hairline dark:border-d-hairline">
-            <View className="flex-row items-center gap-2">
-              <View className="w-2.5 h-2.5 rounded-full bg-danger dark:bg-d-danger animate-pulse" />
-              <Text className="text-danger dark:text-d-danger font-semibold text-sm">🎙️ Recording...</Text>
-              <Text className="text-ink dark:text-d-ink text-sm font-mono ml-2">
-                {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
-              </Text>
-            </View>
-            <View className="flex-row gap-2">
-              <Pressable
-                onPress={async () => {
-                  setIsRecording(false);
-                  if (recordingRef.current) {
-                    try {
-                      await recordingRef.current.stopAndUnloadAsync();
-                    } catch (e) { }
-                    recordingRef.current = null;
-                  }
-                }}
-                className="px-3.5 py-1.5 rounded-full bg-surface2 dark:bg-d-surface2 active:opacity-75"
-              >
-                <Text className="text-muted dark:text-d-muted text-xs font-bold">Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={async () => {
-                  setIsRecording(false);
-                  let uri: string | null = null;
-                  if (recordingRef.current) {
-                    try {
-                      await recordingRef.current.stopAndUnloadAsync();
-                      uri = recordingRef.current.getURI();
-                    } catch (e) {
-                      console.warn('Failed to stop recording:', e);
-                    }
-                    recordingRef.current = null;
-                  }
-
-                  const duration = recordingSeconds || 1;
-                  const timeStr = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
-
-                  // Prepend locally
-                  setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent', media_url: uri, media_type: 'audio' }]);
-
-                  if (!uri) {
-                    showDialog('Error', 'Failed to get recording URI.');
-                    return;
-                  }
-
-                  try {
-                    const formData = new FormData();
-                    formData.append('file', {
-                      uri,
-                      name: 'voice.mp4',
-                      type: 'audio/mp4',
-                    } as any);
-
-                    const uploadRes = await api.post('/v1/mobile/media/upload', formData);
-
-                    await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
-                      type: 'audio',
-                      media_url: uploadRes.url,
-                      content: `Voice message (${timeStr})`,
-                    });
-                    fetchConversationDetails();
-                  } catch (err: any) {
-                    console.warn('Voice upload api block:', err);
-                    showDialog('Failed to Send Voice Note', err.message || 'Upload failed.');
-                  }
-                }}
-                className="px-3.5 py-1.5 rounded-full bg-accent dark:bg-d-accent active:opacity-85"
-              >
-                <Text className="text-accent-ink dark:text-d-accent-ink text-xs font-bold">Stop & Send</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <View>
-            {selectedMedia && (
-              <View className="bg-surface dark:bg-d-surface px-3 py-2 border-t border-hairline dark:border-d-hairline flex-row items-center justify-between">
-                <View className="flex-row items-center gap-3">
-                  <View className="w-12 h-12 bg-surface2 dark:bg-d-surface2 rounded items-center justify-center overflow-hidden">
-                    {selectedMedia.type === 'image' || selectedMedia.type === 'video' ? (
-                      <Image source={{ uri: selectedMedia.uri }} style={{ width: '100%', height: '100%' }} />
-                    ) : (
-                      <Text className="text-2xl">📄</Text>
-                    )}
-                  </View>
-                  <View>
-                    <Text className="text-ink dark:text-d-ink font-semibold text-[13px] max-w-[200px]" numberOfLines={1}>{selectedMedia.name}</Text>
-                    <Text className="text-muted dark:text-d-muted text-[11px] uppercase mt-0.5">{selectedMedia.type}</Text>
-                  </View>
+        <View>
+          {selectedMedia && !isRecording && (
+            <View className="bg-surface dark:bg-d-surface px-3 py-2 border-t border-hairline dark:border-d-hairline flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3">
+                <View className="w-12 h-12 bg-surface2 dark:bg-d-surface2 rounded items-center justify-center overflow-hidden">
+                  {selectedMedia.type === 'image' || selectedMedia.type === 'video' ? (
+                    <Image source={{ uri: selectedMedia.uri }} style={{ width: '100%', height: '100%' }} />
+                  ) : (
+                    <Text className="text-2xl">📄</Text>
+                  )}
                 </View>
-                <Pressable onPress={() => setSelectedMedia(null)} className="p-2">
-                  <Text className="text-danger dark:text-d-danger font-bold text-sm">Remove</Text>
-                </Pressable>
+                <View>
+                  <Text className="text-ink dark:text-d-ink font-semibold text-[13px] max-w-[200px]" numberOfLines={1}>{selectedMedia.name}</Text>
+                  <Text className="text-muted dark:text-d-muted text-[11px] uppercase mt-0.5">{selectedMedia.type}</Text>
+                </View>
               </View>
-            )}
+              <Pressable onPress={() => setSelectedMedia(null)} className="p-2">
+                <Text className="text-danger dark:text-d-danger font-bold text-sm">Remove</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {replyingTo && !isRecording && (
+            <View className="bg-surface2 dark:bg-d-surface2 mx-2 mt-2 mb-1 rounded-t-lg border-l-4 border-l-accent flex-row items-center justify-between px-3 py-2">
+              <View className="flex-1 mr-2">
+                <Text className="text-accent dark:text-d-accent font-semibold text-xs mb-0.5">Replying to message</Text>
+                <Text className="text-ink dark:text-d-ink text-xs" numberOfLines={2}>{replyingTo.text || 'Media Message'}</Text>
+              </View>
+              <Pressable onPress={() => setReplyingTo(null)} className="p-1">
+                <Text className="text-danger dark:text-d-danger font-bold text-xs">✕</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {isWithin24Hours ? (
             <Composer
               value={draft}
               onChange={setDraft}
               onSend={send}
               onAttach={() => setShowAttachmentMenu(true)}
-              onVoice={async () => {
+              hasMedia={!!selectedMedia}
+              isRecording={isRecording}
+              recordingSeconds={recordingSeconds}
+              onStartRecording={async () => {
                 try {
                   const permission = await Audio.requestPermissionsAsync();
                   if (permission.status === 'granted') {
@@ -1510,12 +1491,82 @@ export default function ChatScreen({ navigation, route }: any) {
                   showDialog('Error', 'Could not start recording audio.');
                 }
               }}
-              hasMedia={!!selectedMedia}
+              onCancelRecording={async () => {
+                setIsRecording(false);
+                if (recordingRef.current) {
+                  try {
+                    await recordingRef.current.stopAndUnloadAsync();
+                  } catch (e) { }
+                  recordingRef.current = null;
+                }
+              }}
+              onSendRecording={async () => {
+                setIsRecording(false);
+                let uri: string | null = null;
+                if (recordingRef.current) {
+                  try {
+                    await recordingRef.current.stopAndUnloadAsync();
+                    uri = recordingRef.current.getURI();
+                  } catch (e) {
+                    console.warn('Failed to stop recording:', e);
+                  }
+                  recordingRef.current = null;
+                }
+
+                const duration = recordingSeconds || 1;
+                const timeStr = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
+
+                // Prepend locally
+                setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent', media_url: uri, media_type: 'audio' }]);
+
+                if (!uri) {
+                  showDialog('Error', 'Failed to get recording URI.');
+                  return;
+                }
+
+                try {
+                  const formData = new FormData();
+                  formData.append('file', {
+                    uri,
+                    name: 'voice.mp4',
+                    type: 'audio/mp4',
+                  } as any);
+
+                  const uploadRes = await api.post('/v1/mobile/media/upload', formData);
+
+                  await api.post(`/v1/mobile/conversations/${conversationId}/messages`, {
+                    type: 'audio',
+                    media_url: uploadRes.url,
+                    content: `Voice message (${timeStr})`,
+                  });
+                  fetchConversationDetails();
+                } catch (err: any) {
+                  console.warn('Voice upload api block:', err);
+                  showDialog('Failed to Send Voice Note', err.message || 'Upload failed.');
+                }
+              }}
             />
-          </View>
-        )}
-        <View className="bg-surface dark:bg-d-surface" style={{ height: Platform.OS === 'android' && androidKbHeight > 0 ? androidKbHeight + 20 : insets.bottom }} />
-      </KeyboardAvoidingView>
+          ) : (
+            <View className="bg-[#FDF9ED] dark:bg-[#2A2416] px-4 py-3 items-center justify-between flex-row border-t border-hairline dark:border-d-hairline">
+              <View className="flex-row items-center flex-1 pr-2">
+                <View className="w-[38px] h-[38px] rounded-full bg-[#FDF0D5] dark:bg-[#40331A] items-center justify-center mr-3">
+                  <Clock size={18} color="#D97706" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[#0f172a] dark:text-[#f8fafc] font-bold text-[13px] mb-[2px]">TIME LIMIT REACHED</Text>
+                  <Text className="text-[#475569] dark:text-[#94a3b8] text-[12px]">Wait is over. You can only send templates right now.</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={openTemplateSelector}
+                className="bg-accent dark:bg-d-accent px-4 py-[10px] rounded active:opacity-85 flex-row items-center justify-center"
+              >
+                <Text className="text-accent-ink dark:text-d-accent-ink font-bold text-xs">+ START CONVERSATION</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Reanimated.View>
 
       {/* Simulated Calling Overlay */}
       {isCalling && (
@@ -1815,6 +1866,36 @@ export default function ChatScreen({ navigation, route }: any) {
             setSelectedMsg(null);
           }} className="flex-1 bg-black/40 justify-end">
             <View className="bg-surface dark:bg-d-surface rounded-t-2xl p-4 gap-2" style={{ paddingBottom: insets.bottom + 16 }}>
+              <View className="flex-row justify-between items-center px-1 pb-4 pt-2">
+                {['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
+                  <Pressable
+                    key={emoji}
+                    onPress={async () => {
+                      setShowMsgActions(false);
+                      const msg = selectedMsg;
+                      if (!msg || !msg.id) return;
+                      // Optimistic UI update
+                      setMessages((prevMsgs) => prevMsgs.map((m) => {
+                        if (m.id === msg.id) {
+                          const meta = m.metadata || {};
+                          return { ...m, metadata: { ...meta, reaction: emoji } };
+                        }
+                        return m;
+                      }));
+                      try {
+                        await api.post(`/v1/mobile/messages/${msg.id}/react`, { emoji });
+                      } catch (err: any) {
+                        showDialog('Reaction Failed', err.message || 'Could not send reaction.');
+                      } finally {
+                        setSelectedMsg(null);
+                      }
+                    }}
+                    className="p-2.5 bg-surface2 dark:bg-d-surface2 rounded-full active:opacity-70 border border-hairline dark:border-d-hairline"
+                  >
+                    <Text style={{ fontSize: 24, lineHeight: 28 }}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
               <View className="items-center pb-2 border-b border-hairline dark:border-d-hairline">
                 <Text className="text-xs text-muted dark:text-d-muted font-bold uppercase tracking-wider">Message Actions</Text>
               </View>

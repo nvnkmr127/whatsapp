@@ -67,7 +67,7 @@ export default function OnboardingScreen({ navigation }: any) {
       try {
         const hasSession = await store.loadSession();
         if (hasSession) {
-          navigation.replace('Main');
+          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
         } else {
           setCheckingSession(false);
         }
@@ -202,7 +202,7 @@ export default function OnboardingScreen({ navigation }: any) {
 
       setLoading(false);
       showDialog('Pairing Successful', `Authenticated as ${response.user.name} for ${activeTeam ? activeTeam.name : 'Watxio'}.`, [
-        { text: 'Continue', onPress: () => navigation.replace('Main') }
+        { text: 'Continue', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Main' }] }) }
       ]);
     } catch (err: any) {
       setLoading(false);
@@ -271,7 +271,7 @@ export default function OnboardingScreen({ navigation }: any) {
         });
 
         setLoading(false);
-        navigation.replace('Main');
+        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
       } catch (err: any) {
         setLoading(false);
         showDialog('Login Failed', err.message || 'Invalid email or password.');
@@ -361,7 +361,7 @@ export default function OnboardingScreen({ navigation }: any) {
           });
 
           setLoading(false);
-          navigation.replace('Main');
+          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
         } catch (err: any) {
           setLoading(false);
           showDialog('Verification Failed', err.message || 'Invalid or expired OTP code.');

@@ -136,10 +136,16 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return fcmToken;
   } catch (e: any) {
     console.error('[FCM DEBUG] ❌ Failed to get device push token:', e?.message ?? e);
-    Alert.alert(
-      'Push Notification Error',
-      `Failed to generate device token.\n\nError: ${e?.message ?? JSON.stringify(e)}\n\nFix: Register SHA-1 fingerprint 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25 in Firebase Console for app com.watxio.app`,
-    );
+    const errorMessage = e?.message || JSON.stringify(e);
+    
+    // Ignore transient SERVICE_NOT_AVAILABLE errors as push notifications 
+    // often still work due to previous successful token registrations.
+    if (!errorMessage.includes('SERVICE_NOT_AVAILABLE')) {
+      Alert.alert(
+        'Push Notification Error',
+        `Failed to generate device token.\n\nError: ${errorMessage}`,
+      );
+    }
     return null;
   }
 }

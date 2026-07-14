@@ -204,6 +204,38 @@ class MessageController extends Controller
         $conversation = $message->conversation;
         $this->authorizeConversation($request->user(), $conversation);
 
+        \Log::info('Reaction requested', ['message_id' => $message->id, 'emoji' => $request->emoji, 'whatsapp_message_id' => $message->whatsapp_message_id]);
+
+        if ($message->whatsapp_message_id) {
+            $waService = app(\App\Services\WhatsAppService::class);
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $conversation->contact->phone_number,
+                'type' => 'reaction',
+                'reaction' => [
+                    'message_id' => $message->whatsapp_message_id,
+                    'emoji' => $request->emoji,
+                ],
+            ];
+            
+            try {
+                \Log::info('Sending reaction to WhatsApp', ['payload' => $payload]);
+                $response = $waService->sendRaw($conversation->team, $payload);
+                \Log::info('WhatsApp reaction response', ['response' => $response]);
+                
+                if (isset($response['error'])) {
+                    \Log::error('Failed to send WhatsApp reaction', ['error' => $response['error'], 'message_id' => $message->id]);
+                    return response()->json(['success' => false, 'error' => 'Failed to send reaction to WhatsApp.'], 500);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Exception sending WhatsApp reaction', ['error' => $e->getMessage(), 'message_id' => $message->id]);
+                return response()->json(['success' => false, 'error' => 'Failed to send reaction to WhatsApp.'], 500);
+            }
+        } else {
+            \Log::warning('Cannot send reaction to WhatsApp: missing whatsapp_message_id', ['message_id' => $message->id]);
+        }
+
         $metadata = $message->metadata ?? [];
         $metadata['reaction'] = $request->emoji;
         $message->update(['metadata' => $metadata]);
