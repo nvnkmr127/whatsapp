@@ -13,6 +13,7 @@ class TenantBackup extends Model
     protected $fillable = [
         'team_id',
         'type',
+        'name',
         'filename',
         'path',
         'disk',

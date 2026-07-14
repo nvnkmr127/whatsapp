@@ -39,6 +39,22 @@ class OutboundPreflightService
      * @param  int|float  $currentUsage  Current usage count to evaluate against the limit
      * @param  float  $cost  Cost of the action to check against the wallet
      */
+    /**
+     * Same as authorize(), but throws instead of returning a denial array.
+     */
+    public function authorizeOrFail(
+        Team $team,
+        string $feature,
+        ?string $limitKey = null,
+        float $currentUsage = 0,
+        float $cost = 0.00
+    ): void {
+        $preflight = $this->authorize($team, $feature, $limitKey, $currentUsage, $cost);
+        if (! $preflight['allowed']) {
+            throw new \Exception("[{$preflight['code']}] {$preflight['reason']}");
+        }
+    }
+
     public function authorize(
         Team $team,
         string $feature,

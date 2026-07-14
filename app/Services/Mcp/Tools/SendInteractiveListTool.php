@@ -48,6 +48,8 @@ class SendInteractiveListTool implements McpTool
 
     public function handle(array $input, Team $team): array
     {
+        app(\App\Services\OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
+
         $response = app(WhatsAppService::class)->setTeam($team)
             ->sendInteractiveList($input['to'], $input['text'], $input['button_text'], $input['sections']);
 

@@ -55,6 +55,8 @@ class SendContactCardTool implements McpTool
 
     public function handle(array $input, Team $team): array
     {
+        app(\App\Services\OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
+
         $response = app(WhatsAppService::class)->setTeam($team)
             ->sendContact($input['to'], $input['contact']);
 

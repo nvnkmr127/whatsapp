@@ -35,10 +35,7 @@ class SendTemplateTool implements McpTool
 
     public function handle(array $input, Team $team): array
     {
-        $preflight = app(OutboundPreflightService::class)->authorize($team, 'send_message', 'message_limit');
-        if (! $preflight['allowed']) {
-            throw new \Exception("[{$preflight['code']}] {$preflight['reason']}");
-        }
+        app(OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
 
         $response = app(WhatsAppService::class)->setTeam($team)->sendTemplate(
             $input['to'],

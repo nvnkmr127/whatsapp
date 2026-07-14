@@ -20,7 +20,7 @@ class QualityProtectionValidator
     public function validate(Team $team, int $recipientCount): ValidationResult
     {
         $result = new ValidationResult;
-        $rating = $team->wm_quality_rating ?? 'UNKNOWN';
+        $rating = $team->whatsapp_quality_rating ?? 'UNKNOWN';
 
         // Block if RED
         if ($rating === 'RED') {

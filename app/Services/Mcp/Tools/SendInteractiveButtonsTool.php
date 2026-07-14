@@ -31,6 +31,8 @@ class SendInteractiveButtonsTool implements McpTool
 
     public function handle(array $input, Team $team): array
     {
+        app(\App\Services\OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
+
         if (count($input['buttons']) > 3) {
             throw new \Exception('WhatsApp allows a maximum of 3 interactive buttons.');
         }

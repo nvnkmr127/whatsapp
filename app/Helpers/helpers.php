@@ -57,43 +57,6 @@ if (! function_exists('set_setting')) {
     }
 }
 
-if (! function_exists('t')) {
-    function t($key)
-    {
-        return __($key);
-    }
-}
-
-if (! function_exists('checkPermission')) {
-    function checkPermission($permission)
-    {
-        $permissions = is_array($permission) ? $permission : [$permission];
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        foreach ($permissions as $perm) {
-            if ($user->can($perm)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-}
-
-if (! function_exists('whatsapp_log')) {
-    function whatsapp_log($message, $level = 'info', $context = [], $exception = null)
-    {
-        if ($exception) {
-            $context['exception'] = $exception->getMessage();
-            $context['trace'] = $exception->getTraceAsString();
-        }
-        \Illuminate\Support\Facades\Log::channel('daily')->log($level, 'WA API: '.$message, $context);
-    }
-}
 if (! function_exists('audit')) {
     function audit(string $event, $userId = null, $identifier = null, ?string $provider = null, array $metadata = [])
     {
@@ -104,17 +67,6 @@ if (! function_exists('audit')) {
 if (! function_exists('money')) {
     function money($amount, $currency = 'USD')
     {
-        return '$'.number_format((float) $amount, 2);
-    }
-}
-
-if (! function_exists('flash_message')) {
-    /**
-     * Flash a message to the session for toast notifications.
-     * types: success, error, warning, info
-     */
-    function flash_message($message, $type = 'success')
-    {
-        session()->flash($type, $message);
+        return Illuminate\Support\Number::currency((float) $amount, $currency);
     }
 }

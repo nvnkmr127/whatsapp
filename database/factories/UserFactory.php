@@ -36,6 +36,12 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'profile_photo_path' => null,
             'current_team_id' => null,
+            'is_super_admin' => false,
+            'phone' => null,
+            'company_name' => null,
+            'address' => null,
+            'marketing_opt_in' => false,
+            'has_claimed_offer' => false,
         ];
     }
 

@@ -90,11 +90,24 @@ class WhatsAppEventRouter
                     continue;
                 }
 
-                $event = \App\Factories\EventFactory::makeInboundMessage($fullPayload);
-                \App\Jobs\PersistMessageJob::dispatch($event['payload'], \App\Services\TraceContext::getTraceId())
+                $value = $fullPayload['entry'][0]['changes'][0]['value'];
+                $message = $value['messages'][0];
+                $payload = [
+                    'provider_id' => $message['id'],
+                    'from_phone' => $message['from'],
+                    'referral' => $message['referral'] ?? null,
+                    'to_phone_id' => $value['metadata']['phone_number_id'],
+                    'waba_id' => $fullPayload['entry'][0]['id'] ?? null,
+                    'contact_name' => $value['contacts'][0]['profile']['name'] ?? null,
+                    'message_type' => $message['type'],
+                    'content' => $message,
+                    'raw_payload' => $value,
+                ];
+
+                \App\Jobs\PersistMessageJob::dispatch($payload, \App\Services\TraceContext::getTraceId())
                     ->onQueue('messages');
 
-                $this->eventBus->publish('whatsapp_events', 'message.inbound', $event['payload'], $this->teamId);
+                $this->eventBus->publish('whatsapp_events', 'message.inbound', $payload, $this->teamId);
             } finally {
                 // Lock released by timeout or GC
             }

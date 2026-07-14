@@ -2,16 +2,25 @@
 
 namespace App\Events\Base;
 
-use App\Events\Contracts\DomainEventContract;
 use App\Exceptions\InvalidDomainEventException;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
-abstract class DomainEvent implements DomainEventContract
+abstract class DomainEvent
 {
     use Dispatchable, SerializesModels;
+
+    /**
+     * Get data validation rules.
+     */
+    abstract public function rules(): array;
+
+    /**
+     * Get the source module name.
+     */
+    abstract public function source(): string;
 
     public $eventId;
 

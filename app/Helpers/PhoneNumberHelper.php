@@ -96,7 +96,6 @@ class PhoneNumberHelper
         }
 
         // For national format, remove country code
-        // This is a simple implementation - consider using libphonenumber for production
         if ($format === 'national') {
             $defaultCode = config('app.default_country_code', '+91');
             if (str_starts_with($normalized, $defaultCode)) {

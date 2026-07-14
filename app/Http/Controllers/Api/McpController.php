@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * MCP (Model Context Protocol) — Streamable HTTP transport
- * Spec: https://modelcontextprotocol.io/specification/2025-03-26/basic/transports
+ * Spec: https://modelcontextprotocol.io/specification/2024-11-05/basic/transports
  *
  * Auth: Bearer token via existing auth:sanctum + tenant middleware.
  * Each tenant's MCP endpoint is the same URL; the token determines the tenant.
@@ -28,7 +28,7 @@ class McpController extends Controller
 
     public function __construct(private McpToolRegistry $registry) {}
 
-    public function handle(Request $request): JsonResponse
+    public function handle(Request $request): JsonResponse|\Illuminate\Http\Response
     {
         // Validate JSON-RPC 2.0 envelope
         if ($request->input('jsonrpc') !== '2.0') {
@@ -42,9 +42,15 @@ class McpController extends Controller
 
         Log::debug('MCP request', ['method' => $method, 'team_id' => $team->id]);
 
+        // Notifications (no id, e.g. notifications/initialized) MUST NOT get a response body
+        if (str_starts_with((string) $method, 'notifications/')) {
+            return response()->noContent(202);
+        }
+
         try {
             $result = match ($method) {
-                'initialize'  => $this->initialize($params),
+                'initialize'  => $this->initialize(),
+                'ping'        => new \stdClass,
                 'tools/list'  => $this->toolsList(),
                 'tools/call'  => $this->toolsCall($params, $team),
                 default       => throw new \InvalidArgumentException("Method not found: {$method}", -32601),
@@ -63,7 +69,7 @@ class McpController extends Controller
 
     // ── Handlers ────────────────────────────────────────────────────────────
 
-    private function initialize(array $params): array
+    private function initialize(): array
     {
         return [
             'protocolVersion' => self::PROTOCOL_VERSION,
@@ -91,7 +97,7 @@ class McpController extends Controller
             throw new \InvalidArgumentException('tools/call requires params.name');
         }
 
-        // ponytail: resolve() throws InvalidArgumentException for unknown tool names
+        // resolve() throws InvalidArgumentException for unknown tool names
         $tool    = $this->registry->resolve($name);
         $content = $tool->handle($input, $team);
 
@@ -100,7 +106,8 @@ class McpController extends Controller
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private function error(?int $id, int $code, string $message): JsonResponse
+    // $id is string|int|null per JSON-RPC 2.0 — GPT/OpenAI SDKs send string ids
+    private function error(string|int|null $id, int $code, string $message): JsonResponse
     {
         return response()->json([
             'jsonrpc' => '2.0',

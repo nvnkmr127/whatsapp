@@ -35,10 +35,7 @@ class SendMediaTool implements McpTool
             throw new \Exception("Invalid media type '{$input['type']}'. Must be one of: ".implode(', ', self::ALLOWED_TYPES));
         }
 
-        $preflight = app(OutboundPreflightService::class)->authorize($team, 'send_message', 'message_limit');
-        if (! $preflight['allowed']) {
-            throw new \Exception("[{$preflight['code']}] {$preflight['reason']}");
-        }
+        app(OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
 
         $response = app(WhatsAppService::class)->setTeam($team)->sendMedia(
             $input['to'],

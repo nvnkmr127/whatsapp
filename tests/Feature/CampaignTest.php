@@ -31,10 +31,10 @@ class CampaignTest extends TestCase
             ['monthly_price' => 50, 'features' => ['campaigns' => true], 'message_limit' => 10000, 'max_call_minutes_per_month' => 1000]
         );
 
-        $team->update([
+        $team->forceFill([
             'subscription_plan' => 'test_pro',
             'subscription_status' => 'active',
-        ]);
+        ])->save();
 
         // Give explicit override for message_limit in DB
         \App\Models\BillingOverride::updateOrCreate(
@@ -101,10 +101,15 @@ class CampaignTest extends TestCase
             'balance' => 100.00,
         ]);
 
-        $team->update([
+        \App\Models\Plan::updateOrCreate(
+            ['name' => 'pro'],
+            ['monthly_price' => 50, 'features' => ['campaigns' => true], 'message_limit' => 10000, 'max_call_minutes_per_month' => 1000]
+        );
+
+        $team->forceFill([
             'subscription_plan' => 'pro',
             'subscription_status' => 'active',
-        ]);
+        ])->save();
 
         \App\Models\BillingOverride::create([
             'team_id' => $team->id,

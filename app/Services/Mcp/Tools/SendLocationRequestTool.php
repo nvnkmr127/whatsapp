@@ -26,6 +26,8 @@ class SendLocationRequestTool implements McpTool
 
     public function handle(array $input, Team $team): array
     {
+        app(\App\Services\OutboundPreflightService::class)->authorizeOrFail($team, 'send_message', 'message_limit');
+
         $response = app(WhatsAppService::class)->setTeam($team)
             ->sendLocationRequest($input['to'], $input['text']);
 

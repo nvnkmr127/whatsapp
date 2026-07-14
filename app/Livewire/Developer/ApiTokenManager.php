@@ -39,9 +39,8 @@ class ApiTokenManager extends Component
         $token = auth()->user()->createToken($this->name, $this->permissions, $expiry);
 
         // Update the extra metadata (IP Whitelist)
-        $token->accessToken->update([
-            'ip_whitelist' => $this->ipWhitelist ? json_encode(array_map('trim', explode(',', $this->ipWhitelist))) : null,
-        ]);
+        $token->accessToken->ip_whitelist = $this->ipWhitelist ? json_encode(array_map('trim', explode(',', $this->ipWhitelist))) : null;
+        $token->accessToken->save();
 
         $this->plainTextToken = $token->plainTextToken;
         $this->showTokenModal = true;

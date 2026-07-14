@@ -14,10 +14,14 @@ class TeamSecurityTest extends TestCase
     {
         $team = Team::factory()->create();
 
-        // Attempt to update sensitive fields via mass assignment
-        $team->update([
-            'subscription_status' => 'active',
-        ]);
+        try {
+            $team->update([
+                'subscription_status' => 'active',
+            ]);
+        } catch (\Illuminate\Database\Eloquent\MassAssignmentException $e) {
+            $this->assertTrue(true);
+            return;
+        }
 
         // Refresh from DB
         $team->refresh();

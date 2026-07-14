@@ -63,7 +63,7 @@ class CheckSetupHealth extends Command
 
             Log::critical('Setup suspended', [
                 'team_id' => $team->id,
-                'quality_rating' => $team->wm_quality_rating,
+                'quality_rating' => $team->whatsapp_quality_rating,
             ]);
         }
 

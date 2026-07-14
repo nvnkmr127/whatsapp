@@ -50,6 +50,6 @@ trait HasFlashMessages
      */
     public function flash($message, $type = 'success')
     {
-        flash_message($message, $type);
+        session()->flash($type, $message);
     }
 }
