@@ -24,6 +24,8 @@ class Product extends Model
         'manage_stock',
         'sync_state',
         'sync_errors',
+        'last_sync_error',
+        'sync_attempts',
         'is_active',
         'locked_fields',
         'last_external_update_at',
