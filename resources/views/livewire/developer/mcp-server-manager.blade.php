@@ -51,7 +51,7 @@
                             <span class="text-xs px-2 py-0.5 rounded-full bg-[#D97757]/10 text-[#C4633F] dark:text-[#E8956F] font-medium">Simplest</span>
                         </div>
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                            Claude (web &amp; desktop connectors), the OpenAI API, and most agent frameworks connect straight to a URL. Add this server URL:
+                            Claude.ai connectors, the OpenAI API, and most agent frameworks connect straight to a URL. Add this server URL:
                         </p>
                         <div class="relative mt-4">
                             <pre class="text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700 rounded-xl px-4 py-3 pr-20 overflow-x-auto text-slate-800 dark:text-slate-200">{{ url('/api/v1/mcp') }}</pre>
@@ -59,7 +59,10 @@
                                 class="absolute top-2 right-2 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Copy</button>
                         </div>
                         <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                            Then set this HTTP header, using your token from step 1:
+                            <span class="font-medium text-slate-800 dark:text-slate-200">Claude.ai:</span> add it as a custom connector and leave the OAuth fields blank — you'll be asked to sign in and approve access. No token needed (skip step 1).
+                        </p>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                            <span class="font-medium text-slate-800 dark:text-slate-200">Everything else:</span> send your token from step 1 as a header:
                         </p>
                         <pre class="mt-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700 rounded-xl px-4 py-3 overflow-x-auto text-slate-800 dark:text-slate-200">Authorization: Bearer &lt;your token&gt;</pre>
                     </div>

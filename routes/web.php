@@ -12,6 +12,16 @@ Route::get('/', function () {
 
 Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
 
+// OAuth 2.1 authorization server for MCP clients (Claude.ai / ChatGPT connectors)
+Route::get('/.well-known/oauth-authorization-server', [\App\Http\Controllers\Auth\OAuthServerController::class, 'authorizationServerMetadata']);
+Route::get('/.well-known/oauth-protected-resource', [\App\Http\Controllers\Auth\OAuthServerController::class, 'protectedResourceMetadata']);
+Route::post('/oauth/register', [\App\Http\Controllers\Auth\OAuthServerController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/oauth/token', [\App\Http\Controllers\Auth\OAuthServerController::class, 'token'])->middleware('throttle:20,1');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/oauth/authorize', [\App\Http\Controllers\Auth\OAuthServerController::class, 'showConsent'])->name('oauth.authorize');
+    Route::post('/oauth/approve', [\App\Http\Controllers\Auth\OAuthServerController::class, 'approve'])->name('oauth.approve');
+});
+
 // Passwordless Auth Routes
 Route::prefix('auth')->name('auth.')->group(function () {
     Route::post('/otp/request', [\App\Http\Controllers\Auth\PasswordlessAuthController::class, 'requestOtp'])

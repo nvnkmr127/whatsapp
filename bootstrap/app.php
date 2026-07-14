@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckReferral::class,
         ]);
 
+        // OAuth endpoints are called by external MCP clients, not browsers
+        $middleware->validateCsrfTokens(except: [
+            'oauth/register',
+            'oauth/token',
+        ]);
+
         $middleware->alias([
             'tenant' => \App\Http\Middleware\EnsureTenantContext::class,
             'plan_feature' => \App\Http\Middleware\CheckPlanFeature::class,
