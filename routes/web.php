@@ -43,8 +43,8 @@ Route::prefix('auth')->name('auth.')->group(function () {
 
 // Lead Capture QR Routes (Public)
 Route::get('/qr/{slug}', [LeadCaptureWidgetController::class, 'show'])->name('qr.show');
-Route::get('/qr/{slug}/image', [LeadCaptureWidgetController::class, 'qr'])->name('qr.image');
-Route::post('/qr/{slug}/lead', [LeadCaptureWidgetController::class, 'lead'])->name('qr.lead');
+Route::get('/qr/{slug}/image', [LeadCaptureWidgetController::class, 'qrImage'])->name('qr.image');
+Route::post('/qr/{slug}/lead', [LeadCaptureWidgetController::class, 'lead'])->name('qr.lead')->middleware('throttle:30,1');
 Route::get('/growth-tools/config/{slug}', [LeadCaptureWidgetController::class, 'config'])->name('qr.config');
 Route::get('/growth-tools/click/{slug}', [LeadCaptureWidgetController::class, 'trackClick'])->name('qr.click');
 
@@ -68,13 +68,9 @@ Route::middleware([
     Route::get('/webhook-workflows/{workflowId}/report', \App\Livewire\Webhooks\WebhookReport::class)->name('webhooks.report');
 
     // WhatsApp Config (Admins Only)
-    Route::get('/whatsapp/setup', function () {
-        return view('teams.whatsapp-config');
-    })->name('teams.whatsapp_config')->middleware('can:manage-settings');
+    Route::get('/whatsapp/setup', \App\Livewire\Teams\WhatsappConfig::class)->name('teams.whatsapp_config')->middleware('can:manage-settings');
 
-    Route::get('/whatsapp/inbox', function () {
-        return view('teams.inbox-settings');
-    })->name('teams.inbox_settings')->middleware('can:manage-settings');
+    Route::get('/whatsapp/inbox', \App\Livewire\Teams\InboxSettings::class)->name('teams.inbox_settings')->middleware('can:manage-settings');
 
     Route::get('/whatsapp/opt-in', \App\Livewire\Teams\OptInManagement::class)->name('teams.whatsapp_opt_in')->middleware('can:manage-settings');
 

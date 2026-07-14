@@ -23,10 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckReferral::class,
         ]);
 
-        // OAuth endpoints are called by external MCP clients, not browsers
+        // Endpoints posted to by external clients (MCP OAuth, embedded lead widgets)
         $middleware->validateCsrfTokens(except: [
             'oauth/register',
             'oauth/token',
+            'qr/*/lead',
         ]);
 
         $middleware->alias([

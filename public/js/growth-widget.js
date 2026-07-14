@@ -96,6 +96,7 @@
                     <form action="${config.lead_url}" method="POST">
                         ${config.collect_name ? `<input type="text" name="name" placeholder="${config.placeholder_name || 'Full Name'}" required class="wt-input">` : ''}
                         ${config.collect_email ? `<input type="email" name="email" placeholder="${config.placeholder_email || 'Email Address'}" required class="wt-input">` : ''}
+                        ${config.collect_phone ? `<input type="tel" name="phone" placeholder="${config.placeholder_phone || 'WhatsApp Number'}" required class="wt-input">` : ''}
                         <button type="submit" class="wt-submit">${config.text}</button>
                     </form>
                 </div>

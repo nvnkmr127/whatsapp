@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Jobs\SendCampaignMessageJob;
 use App\Models\Campaign;
-use App\Services\EventBusService;
 use App\Services\RateLimitService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -26,16 +25,15 @@ class ConsumeBroadcastEvents extends Command
      */
     protected $description = 'Consume broadcast events from Redis Stream and dispatch jobs';
 
-    protected $eventBus;
-
     protected $rateLimitService;
 
     protected $stream = 'whatsapp_broadcasts';
 
-    public function __construct(EventBusService $eventBus, RateLimitService $rateLimitService)
+    protected ?string $traceId = null;
+
+    public function __construct(RateLimitService $rateLimitService)
     {
         parent::__construct();
-        $this->eventBus = $eventBus;
         $this->rateLimitService = $rateLimitService;
     }
 
@@ -49,6 +47,7 @@ class ConsumeBroadcastEvents extends Command
         $count = (int) $this->option('count');
         $maxSeconds = (int) $this->option('seconds');
         $startTime = microtime(true);
+        $this->traceId = (string) \Illuminate\Support\Str::uuid();
 
         $this->info("Starting Broadcast Consumer: Group [{$group}], Consumer [{$consumer}]");
 
@@ -168,41 +167,37 @@ class ConsumeBroadcastEvents extends Command
         try {
             switch ($eventType) {
                 case 'message.queued':
-                    $this->processCampaignMessage($id, $payload, $group);
+                    $this->processCampaignMessage($id, $payload);
                     break;
 
                 case 'message.inbound':
                     Log::debug('BroadcastConsumer: Processing Inbound Message Event', ['event_id' => $id]);
-                    // Dispatch Job to persist inbound message
                     \App\Jobs\PersistMessageJob::dispatch($payload)->onQueue('messages');
                     $this->info("Dispatched PersistMessageJob for Event {$id}");
-                    $this->eventBus->ack($this->stream, $group, [$id]);
+                    $this->markDone($id);
                     break;
 
                 case 'message.status':
-                    // Dispatch Job to update message status and campaign stats
                     \App\Jobs\UpdateMessageStatusJob::dispatch($payload)->onQueue('messages');
                     $this->info("Dispatched UpdateMessageStatusJob for Event {$id}");
-                    $this->eventBus->ack($this->stream, $group, [$id]);
+                    $this->markDone($id);
                     break;
 
                 default:
-                    $this->warn("Unknown event type {$eventType} for event {$id}. Acking to clear.");
-                    $this->eventBus->ack($this->stream, $group, [$id]);
+                    $this->warn("Unknown event type {$eventType} for event {$id}. Marking done to clear.");
+                    $this->markDone($id);
                     break;
             }
         } catch (\Exception $e) {
+            // Mark failed so it is visible and not retried forever
             $this->error("Failed to process event {$id}: ".$e->getMessage());
-            // Optionally release lock instead of acking if we want retry,
-            // but for now we rely on the loop's error handling to retry naturally if it crashes,
-            // or better, if it's a logic error, we shouldn't infinite loop.
-            // We'll leave it in 'processing' state (locked) to be retried or fixed manually?
-            // Actually, safe bet for now is to LOG and maybe move to failed_events table later.
-            // For this implementation, we will NOT ack, so it stays 'processing'.
+            \Illuminate\Support\Facades\DB::table('broadcast_events')
+                ->where('id', $id)
+                ->update(['status' => 'failed', 'updated_at' => now()]);
         }
     }
 
-    protected function processCampaignMessage(string $id, array $payload, string $group)
+    protected function processCampaignMessage(string $id, array $payload)
     {
         $campaignId = $payload['campaign_id'] ?? null;
         $contactId = $payload['contact_id'] ?? null;
@@ -211,14 +206,29 @@ class ConsumeBroadcastEvents extends Command
 
         if (! $campaignId || ! $contactId || ! $phoneNumber) {
             $this->warn("Malformed campaign event {$id}, skipping.");
-            $this->eventBus->ack($this->stream, $group, [$id]);
+            $this->markDone($id);
+
+            return;
+        }
+
+        // --- CAMPAIGN STATUS CHECK: don't send for cancelled/failed campaigns ---
+        $campaignStatus = Cache::remember(
+            "campaign_status:{$campaignId}",
+            30,
+            fn () => Campaign::find($campaignId)?->status
+        );
+        if (! $campaignStatus || in_array($campaignStatus, ['cancelled', 'failed'], true)) {
+            $this->info("Campaign {$campaignId} is {$campaignStatus}, discarding event {$id}.");
+            $this->markDone($id);
 
             return;
         }
 
         // --- PAUSE CHECK (Tenant Level) ---
         if ($this->rateLimitService->isPaused((int) $teamId)) {
-            return; // Leave in PEL to retry later when unpaused
+            $this->release($id); // retry when unpaused
+
+            return;
         }
 
         // --- RATE LIMIT CHECK (Provider Level) ---
@@ -226,6 +236,7 @@ class ConsumeBroadcastEvents extends Command
             usleep(200000); // 200ms backoff
             if (! $this->rateLimitService->canSend((int) $teamId, $phoneNumber)) {
                 $this->warn("Rate limit reached for provider/number {$phoneNumber}, backing off event {$id}");
+                $this->release($id);
 
                 return;
             }
@@ -234,11 +245,7 @@ class ConsumeBroadcastEvents extends Command
         // --- CAMPAIGN THROTTLE CHECK (Send Rate) ---
         $sendRate = $payload['meta']['send_rate'] ?? null;
         if (! $this->rateLimitService->canSendCampaign((int) $campaignId, $sendRate)) {
-            // Keep in DB (pending) to retry later
-            // We need to revert the status from 'processing' to 'pending'
-            \Illuminate\Support\Facades\DB::table('broadcast_events')
-                ->where('id', $id)
-                ->update(['status' => 'pending', 'updated_at' => now()]);
+            $this->release($id);
 
             return;
         }
@@ -247,7 +254,7 @@ class ConsumeBroadcastEvents extends Command
         $lockKey = "broadcast_event_processed:{$id}";
         if (! Cache::add($lockKey, true, 3600)) {
             $this->info("Event {$id} already processed, skipping.");
-            $this->eventBus->ack($this->stream, $group, [$id]);
+            $this->markDone($id);
 
             return;
         }
@@ -256,11 +263,27 @@ class ConsumeBroadcastEvents extends Command
             $snapshotId = $payload['snapshot_id'] ?? null;
             SendCampaignMessageJob::dispatch($campaignId, $contactId, $this->traceId, $snapshotId)->onQueue('broadcasts');
             $this->info("Dispatched Job for Campaign {$campaignId}, Contact {$contactId} (Event: {$id}, Snapshot: {$snapshotId})");
-            $this->eventBus->ack($this->stream, $group, [$id]);
+            $this->markDone($id);
         } catch (\Exception $e) {
             $this->error("Failed to process event {$id}: ".$e->getMessage());
             Cache::forget($lockKey);
-            throw $e; // Rethrow to be caught by main loop
+            throw $e; // Rethrow to be caught by processEvent
         }
+    }
+
+    /** Mark an event fully handled. */
+    protected function markDone(string $id): void
+    {
+        \Illuminate\Support\Facades\DB::table('broadcast_events')
+            ->where('id', $id)
+            ->update(['status' => 'processed', 'updated_at' => now()]);
+    }
+
+    /** Put an event back in the pending pool to retry later. */
+    protected function release(string $id): void
+    {
+        \Illuminate\Support\Facades\DB::table('broadcast_events')
+            ->where('id', $id)
+            ->update(['status' => 'pending', 'updated_at' => now()]);
     }
 }

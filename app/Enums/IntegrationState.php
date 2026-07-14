@@ -4,7 +4,6 @@ namespace App\Enums;
 
 enum IntegrationState: string
 {
-    // Primary States (Lowercase Values)
     case DISCONNECTED = 'disconnected';
     case AUTHENTICATED = 'authenticated';
     case PROVISIONED = 'provisioned';
@@ -12,81 +11,47 @@ enum IntegrationState: string
     case READY_WARNING = 'ready_warning';
     case SUSPENDED = 'suspended';
     case RESTRICTED = 'restricted';
-    case DEGRADED = 'DEGRADED'; // Note: Unified as uppercase in DB
-    case DEGRADED_LOWER = 'degraded'; // Support lowercase variant
-    case CONNECTED = 'connected'; // Added to fix runtime error in resetCircuitBreaker
-
-    // Backward Compatibility / Legacy Mappings (Redirect to primary cases if possible)
-    case ACTIVE = 'ACTIVE'; // Unified with READY in labels/colors
-    case NOT_CONFIGURED = 'NOT_CONFIGURED';
-    case DISCONNECTED_UPPER = 'DISCONNECTED';
-    case SUSPENDED_UPPER = 'SUSPENDED';
-
-    // Transient / Operational States
-    case AUTHENTICATING = 'AUTHENTICATING';
-    case TOKEN_EXCHANGE = 'TOKEN_EXCHANGE';
-    case VALIDATING_CREDENTIALS = 'VALIDATING_CREDENTIALS';
-    case FETCHING_ACCOUNT_INFO = 'FETCHING_ACCOUNT_INFO';
-    case PHONE_SELECTION = 'PHONE_SELECTION';
-    case PHONE_VALIDATION = 'PHONE_VALIDATION';
-    case PHONE_REGISTRATION = 'PHONE_REGISTRATION';
-    case SYNCING_TEMPLATES = 'SYNCING_TEMPLATES';
-    case VERIFYING_SETUP = 'VERIFYING_SETUP';
-    case TOKEN_EXPIRED = 'TOKEN_EXPIRED';
-    case AUTH_FAILED = 'AUTH_FAILED';
-    case TOKEN_EXCHANGE_FAILED = 'TOKEN_EXCHANGE_FAILED';
-    case INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
-    case ACCOUNT_FETCH_FAILED = 'ACCOUNT_FETCH_FAILED';
-    case NO_PHONES_AVAILABLE = 'NO_PHONES_AVAILABLE';
-    case PHONE_MISMATCH = 'PHONE_MISMATCH';
-    case REGISTRATION_FAILED = 'REGISTRATION_FAILED';
-    case SYNC_FAILED = 'SYNC_FAILED';
-    case PARTIAL_SETUP = 'PARTIAL_SETUP';
-    case PHONE_RESTRICTED = 'PHONE_RESTRICTED';
-    case REFRESHING_TOKEN = 'REFRESHING_TOKEN';
+    case DEGRADED = 'degraded';
+    case TOKEN_EXPIRED = 'token_expired';
 
     public function label(): string
     {
         return match ($this) {
-            self::DISCONNECTED, self::DISCONNECTED_UPPER => 'Disconnected',
+            self::DISCONNECTED => 'Disconnected',
             self::AUTHENTICATED => 'Authenticated',
             self::PROVISIONED => 'Provisioned',
-            self::READY, self::ACTIVE, self::CONNECTED => 'Ready',
+            self::READY => 'Ready',
             self::READY_WARNING => 'Ready (Action Required)',
-            self::SUSPENDED, self::SUSPENDED_UPPER => 'Suspended (Action Required)',
+            self::SUSPENDED => 'Suspended (Action Required)',
             self::RESTRICTED => 'Restricted (Policy Violation)',
-            self::NOT_CONFIGURED => 'Not Connected',
-            self::DEGRADED, self::DEGRADED_LOWER => 'Degraded',
-            default => 'Provisioning...',
+            self::DEGRADED => 'Degraded',
+            self::TOKEN_EXPIRED => 'Token Expired',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::DISCONNECTED, self::DISCONNECTED_UPPER, self::NOT_CONFIGURED => 'slate',
-            self::AUTHENTICATED => 'amber',
+            self::DISCONNECTED => 'slate',
+            self::AUTHENTICATED, self::READY_WARNING, self::DEGRADED, self::TOKEN_EXPIRED => 'amber',
             self::PROVISIONED => 'blue',
-            self::READY, self::ACTIVE, self::CONNECTED => 'green',
-            self::READY_WARNING => 'amber',
-            self::SUSPENDED, self::SUSPENDED_UPPER, self::RESTRICTED => 'rose',
-            self::DEGRADED, self::DEGRADED_LOWER => 'amber',
-            default => 'blue',
+            self::READY => 'green',
+            self::SUSPENDED, self::RESTRICTED => 'rose',
         };
     }
 
     public function isReady(): bool
     {
-        return in_array($this, [self::READY, self::ACTIVE, self::CONNECTED]);
+        return $this === self::READY;
     }
 
     public function isFailure(): bool
     {
-        return in_array($this, [self::SUSPENDED, self::SUSPENDED_UPPER, self::RESTRICTED, self::AUTH_FAILED]);
+        return in_array($this, [self::SUSPENDED, self::RESTRICTED]);
     }
 
     public function isDegraded(): bool
     {
-        return in_array($this, [self::DEGRADED, self::DEGRADED_LOWER, self::READY_WARNING]);
+        return in_array($this, [self::DEGRADED, self::READY_WARNING]);
     }
 }

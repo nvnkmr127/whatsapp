@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Campaigns;
 
-use App\Jobs\ProcessCampaignJob;
 use App\Models\Campaign;
 use App\Models\Contact;
 use App\Models\ContactTag;
@@ -394,22 +393,11 @@ class Wizard extends Component
             $finalHeaderMedia = $this->headerMediaUrl;
         }
 
-        // Prepare variables
         $finalVars = array_values($this->templateVars);
-
-        // If there's a header media, it usually goes as the first variable in some implementations,
-        // but let's check how the backend expects it.
-        // Based on previous code: if (!empty($this->headerMediaUrl)) { array_unshift($finalVars, $this->headerMediaUrl); }
-        if ($finalHeaderMedia) {
-            // In some cases, we might want to store the media path separately in the DB
-            // but for current ProcessCampaignJob logic, we'll stick to prepending.
-            // array_unshift($finalVars, $finalHeaderMedia);
-        }
 
         $campaignData = [
             'team_id' => \Illuminate\Support\Facades\Auth::user()->currentTeam->id,
             'name' => $this->name,
-            'campaign_name' => $this->name,
             'campaign_type' => $this->campaignType,
             'drip_trigger_type' => $this->dripTriggerType,
             'drip_send_to_existing' => (bool) $this->dripSendToExisting,

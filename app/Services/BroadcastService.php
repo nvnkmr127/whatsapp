@@ -91,9 +91,10 @@ class BroadcastService
 
     public function cancel(Campaign $campaign)
     {
-        // In an event-driven system, we might place a "cancellation" flag in Redis
-        // that consumers check before processing an event from this campaign.
         $campaign->update(['status' => 'cancelled']);
+
+        // Consumer + send jobs check status; bust the consumer's 30s status cache
+        \Illuminate\Support\Facades\Cache::forget("campaign_status:{$campaign->id}");
         Log::info("Campaign {$campaign->id} marked as cancelled.");
 
         return true;

@@ -67,8 +67,7 @@ class CampaignTest extends TestCase
             ['campaign_id' => $campaign->id, 'contact_id' => $contact2->id, 'variant' => 'A', 'phone' => $contact2->phone_number],
         ]);
 
-        $job = new \App\Jobs\ProcessCampaignJob($campaign->id);
-        app()->call([$job, 'handle']);
+        app(\App\Services\BroadcastService::class)->launch($campaign);
 
         $campaign->refresh();
         // Depending on logic, status might be completed because it finished dispatching
@@ -134,8 +133,7 @@ class CampaignTest extends TestCase
             ['campaign_id' => $campaign->id, 'contact_id' => $c2->id, 'variant' => 'A', 'phone' => $c2->phone_number],
         ]);
 
-        $job = new \App\Jobs\ProcessCampaignJob($campaign->id);
-        app()->call([$job, 'handle']);
+        app(\App\Services\BroadcastService::class)->launch($campaign);
 
         $campaign->refresh();
         $this->assertEquals(2, $campaign->total_contacts);

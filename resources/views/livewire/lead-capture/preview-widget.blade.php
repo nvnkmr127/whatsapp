@@ -42,6 +42,10 @@
                 <div
                     style="height:35px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; display:flex; align-items:center; px-3; font-size:11px; color:#cbd5e1; padding-left:12px;">
             {{ $placeholder_email ?: 'Email Address' }}</div> @endif
+            @if($collect_phone)
+                <div
+                    style="height:35px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; display:flex; align-items:center; px-3; font-size:11px; color:#cbd5e1; padding-left:12px;">
+            {{ $placeholder_phone ?: 'WhatsApp Number' }}</div> @endif
 
             <!-- CTA Button -->
             <div

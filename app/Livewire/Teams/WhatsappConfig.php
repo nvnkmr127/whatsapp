@@ -1158,7 +1158,7 @@ class WhatsappConfig extends Component
         $freshTeam = $team->fresh();
         $state     = $freshTeam->whatsapp_setup_state?->value ?? 'unknown';
 
-        if (in_array($state, ['ready', 'ready_warning', 'ACTIVE', 'connected'])) {
+        if (in_array($state, ['ready', 'ready_warning'])) {
             $this->dispatch('notify', title: '✅ Ready', message: 'Webhook verified. Integration is now READY.', type: 'success');
         } else {
             $this->dispatch('notify', title: 'State Updated', message: "Integration updated to: {$state}.", type: 'info');
@@ -1214,7 +1214,7 @@ class WhatsappConfig extends Component
         $freshTeam = $team->fresh();
         $state     = $freshTeam->whatsapp_setup_state?->value ?? 'unknown';
 
-        if (in_array($state, ['ready', 'ready_warning', 'ACTIVE', 'connected'])) {
+        if (in_array($state, ['ready', 'ready_warning'])) {
             $this->dispatch('notify', title: '✅ Integration Ready', message: 'Webhook verified (or confirmed auto-subscribed by Meta). Integration is now READY.', type: 'success');
         } else {
             $this->dispatch('notify', title: 'State Updated', message: "Integration state updated to: {$state}. If still not READY, check your token validity.", type: 'info');
@@ -1647,6 +1647,6 @@ class WhatsappConfig extends Component
 
     public function render()
     {
-        return view('livewire.teams.whatsapp-config');
+        return view('livewire.teams.whatsapp-config')->layout('layouts.app');
     }
 }

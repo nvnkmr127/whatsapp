@@ -65,10 +65,15 @@
                     <div class="flex justify-between items-start mb-6">
                         <div>
                             <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ $widget->name }}</h3>
-                            <div class="mt-1 flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-wa-teal animate-pulse"></span>
-                                <span class="text-[10px] font-black text-wa-teal uppercase tracking-widest">Active Widget</span>
-                            </div>
+                            <button wire:click="toggleActive({{ $widget->id }})" class="mt-1 flex items-center gap-2" title="{{ $widget->is_active ? 'Click to pause' : 'Click to activate' }}">
+                                @if($widget->is_active)
+                                    <span class="w-2 h-2 rounded-full bg-wa-teal animate-pulse"></span>
+                                    <span class="text-[10px] font-black text-wa-teal uppercase tracking-widest">Active</span>
+                                @else
+                                    <span class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Paused</span>
+                                @endif
+                            </button>
                         </div>
                         <div class="flex items-center gap-2">
                              <button wire:click="openCodeModal({{ $widget->id }})" class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-wa-teal rounded-xl transition-colors" title="Get Installation Snippet">
@@ -186,6 +191,13 @@
                                             <div class="w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:bg-wa-teal transition-colors"></div>
                                         </label>
                                     </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Collect Phone</label>
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="collect_phone" class="sr-only peer">
+                                            <div class="w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:bg-wa-teal transition-colors"></div>
+                                        </label>
+                                    </div>
                                 </div>
                                 @if($collect_name)
                                 <div>
@@ -197,6 +209,12 @@
                                 <div>
                                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Email Field Placeholder</label>
                                     <input type="text" wire:model.live="placeholder_email" placeholder="Email Address" class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl focus:ring-2 focus:ring-wa-teal transition-all text-slate-900 dark:text-white font-bold">
+                                </div>
+                                @endif
+                                @if($collect_phone)
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Phone Field Placeholder</label>
+                                    <input type="text" wire:model.live="placeholder_phone" placeholder="WhatsApp Number" class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl focus:ring-2 focus:ring-wa-teal transition-all text-slate-900 dark:text-white font-bold">
                                 </div>
                                 @endif
                                 <div>

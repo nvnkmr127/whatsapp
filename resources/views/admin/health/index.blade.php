@@ -203,7 +203,7 @@
                                         <td class="px-8 py-6 text-center">
                                             @php
                                                 $stateVal = $team->whatsapp_setup_state->value ?? $team->whatsapp_setup_state;
-                                                $stateColor = $stateVal === 'ready' || $stateVal === 'ACTIVE' ? 'text-wa-green' : ($stateVal === 'ready_warning' ? 'text-amber-500' : 'text-rose-500');
+                                                $stateColor = $stateVal === 'ready' ? 'text-wa-green' : ($stateVal === 'ready_warning' ? 'text-amber-500' : 'text-rose-500');
                                             @endphp
                                             <span class="px-3 py-1.5 {{ $stateColor }} text-[9px] font-black uppercase border border-current rounded-lg">
                                                 {{ is_object($team->whatsapp_setup_state) && method_exists($team->whatsapp_setup_state, 'label') ? $team->whatsapp_setup_state->label() : str_replace('_', ' ', $team->whatsapp_setup_state) }}

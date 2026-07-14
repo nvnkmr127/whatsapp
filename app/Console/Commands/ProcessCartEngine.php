@@ -30,11 +30,11 @@ class ProcessCartEngine extends Command
     {
         $this->info('Starting Cart Engine Processing...');
 
-        // 1. Mark Expired Carts as Abandoned
+        // 1. Mark Expired Carts as Abandoned (active + expires_at in the past)
+        // chunkById: rows leave the filtered set as we update them
         $abandoned = 0;
-        Cart::active()
-            ->where('expires_at', '<', now())
-            ->chunk(200, function ($carts) use (&$abandoned): void {
+        Cart::abandoned()
+            ->chunkById(200, function ($carts) use (&$abandoned): void {
                 foreach ($carts as $cart) {
                     $cart->update(['status' => 'abandoned']);
                     $abandoned++;
@@ -53,7 +53,9 @@ class ProcessCartEngine extends Command
                     ->where('status', 'abandoned')
                     ->whereNull('reminder_sent_at')
                     ->where('expires_at', '<=', now()->subMinutes((int) $reminderDelay))
-                    ->chunk(100, function ($carts): void {
+                    // ponytail: 7-day cutoff so first scheduled run can't blast reminders for stale carts
+                    ->where('expires_at', '>=', now()->subDays(7))
+                    ->chunkById(100, function ($carts): void {
                         foreach ($carts as $cart) {
                             $this->sendReminder($cart);
 

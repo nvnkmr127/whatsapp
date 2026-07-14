@@ -14,8 +14,13 @@ Schedule::command('whatsapp:calculate-health-scores')->everyThirtyMinutes();
 // WhatsApp Monitoring
 Schedule::command('whatsapp:validate-tokens')->daily()->at('02:00');
 Schedule::command('whatsapp:monitor-phones')->everySixHours();
-Schedule::command('whatsapp:detect-stuck-setups --fix')->hourly();
 Schedule::command('whatsapp:check-setup-health')->everySixHours();
+
+// Launch due scheduled campaigns (PrepareCampaignJob leaves them in 'scheduled')
+Schedule::command('campaign:process')->everyMinute()->withoutOverlapping();
+
+// Abandoned cart engine: expiry, reminders, cart_abandoned automation trigger
+Schedule::command('commerce:process-carts')->everyFifteenMinutes()->withoutOverlapping();
 
 // Existing schedules
 Schedule::command('whatsapp:sync-templates')->daily()->at('03:00');
