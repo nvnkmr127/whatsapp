@@ -20,8 +20,6 @@ class GeminiProvider implements AIProviderInterface
     public function chat(array $messages, array $options = []): array
     {
         $model = $options['model'] ?? 'gemini-1.5-pro';
-        $temperature = $options['temperature'] ?? 0.7;
-        $maxTokens = $options['max_tokens'] ?? 8192;
 
         $contents = [];
         foreach ($messages as $message) {
@@ -32,12 +30,19 @@ class GeminiProvider implements AIProviderInterface
             ];
         }
 
+        $generationConfig = [
+            'temperature' => $options['temperature'] ?? 0.7,
+            'maxOutputTokens' => $options['max_tokens'] ?? 8192,
+        ];
+
+        // Map the OpenAI-style json_object option to Gemini's native equivalent
+        if (($options['response_format']['type'] ?? null) === 'json_object') {
+            $generationConfig['responseMimeType'] = 'application/json';
+        }
+
         $payload = [
             'contents' => $contents,
-            'generationConfig' => [
-                'temperature' => $temperature,
-                'maxOutputTokens' => $maxTokens,
-            ],
+            'generationConfig' => $generationConfig,
         ];
 
         try {
@@ -49,11 +54,9 @@ class GeminiProvider implements AIProviderInterface
                 throw new \Exception('Gemini API request failed: '.($response->json('error.message') ?? 'Unknown error'));
             }
 
-            $content = $response->json('candidates.0.content.parts.0.text');
-
             return [
                 'success' => true,
-                'content' => $content,
+                'content' => $response->json('candidates.0.content.parts.0.text'),
                 'model' => $model,
                 'usage' => $response->json('usageMetadata'),
                 'raw_response' => $response->json(),
@@ -66,64 +69,6 @@ class GeminiProvider implements AIProviderInterface
                 'error' => $e->getMessage(),
             ];
         }
-    }
-
-    public function streamChat(array $messages, array $options = []): iterable
-    {
-        $result = $this->chat($messages, $options);
-        yield $result['content'] ?? '';
-    }
-
-    public function embed(string|array $text, array $options = []): array
-    {
-        try {
-            $model = $options['model'] ?? 'text-embedding-004';
-            $response = Http::timeout(20)
-                ->post("{$this->baseUrl}/models/{$model}:embedContent?key={$this->apiKey}", [
-                    'model' => "models/{$model}",
-                    'content' => [
-                        'parts' => [['text' => is_array($text) ? implode("\n", $text) : $text]],
-                    ],
-                ]);
-
-            if ($response->failed()) {
-                return [];
-            }
-
-            return $response->json('embedding.values') ?? [];
-        } catch (\Exception $e) {
-            Log::error('Gemini Embed Error: '.$e->getMessage());
-
-            return [];
-        }
-    }
-
-    public function summarize(string $content, array $options = []): string
-    {
-        $messages = [
-            ['role' => 'user', 'content' => "Summarize this: {$content}"],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
-
-        return $response['content'] ?? '';
-    }
-
-    public function classify(string $content, array $categories, array $options = []): string
-    {
-        $categoriesStr = implode(', ', $categories);
-        $messages = [
-            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
-
-        return trim($response['content'] ?? '');
-    }
-
-    public function transcribe(string $filePath, array $options = []): string
-    {
-        return ''; // Not supported by Gemini in this implementation
     }
 
     public function testConnection(string $apiKey): bool

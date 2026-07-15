@@ -36,23 +36,6 @@ use Illuminate\Support\Str;
  */
 class BillingService
 {
-    public function getUsagePercentage(Team $team)
-    {
-        $limit = $team->getPlanLimit('message_limit', 1000);
-
-        if ($limit == 0) {
-            return 0;
-        } // Unlimited
-
-        $usage = \App\Models\Message::where('team_id', $team->id)
-            ->where('direction', 'outbound')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
-
-        return ($usage / $limit) * 100;
-    }
-
     /**
      * Check if team has exceeded plan limits.
      */
@@ -348,21 +331,6 @@ class BillingService
     }
 
     /**
-     * Log a billing-related action for audit purposes.
-     */
-    public function logBillingEvent(Team $team, string $action, string $description, array $properties = [])
-    {
-        \App\Models\ActivityLog::create([
-            'team_id' => $team->id,
-            'user_id' => auth()->id(),
-            'action' => "billing.{$action}",
-            'description' => $description,
-            'properties' => $properties,
-            'ip_address' => request()->ip(),
-        ]);
-    }
-
-    /**
      * Create a manual override for a team's billing constraints.
      * Restricted to Super Admins.
      */
@@ -529,62 +497,6 @@ class BillingService
             'minutes_limit' => $limit,
             'minutes_remaining' => round($remaining, 2),
             'percent_used' => round($percentUsed, 2),
-        ];
-    }
-
-    /**
-     * Add call usage to detailed usage stats.
-     */
-    public function getDetailedUsageStatsWithCalls(Team $team): array
-    {
-        $stats = $this->getDetailedUsageStats($team);
-
-        // Add call usage stats
-        $callLimits = $this->checkCallLimits($team);
-
-        if ($callLimits['has_limit']) {
-            $stats['call_minutes'] = [
-                'usage' => $callLimits['minutes_used'],
-                'limit' => $callLimits['minutes_limit'],
-                'label' => 'Call Minutes',
-                'type' => 'monthly',
-            ];
-        }
-
-        return $stats;
-    }
-
-    /**
-     * Generate invoice line items for calls.
-     */
-    public function getCallInvoiceItems(Team $team, Carbon $startDate, Carbon $endDate): array
-    {
-        $calls = \App\Models\WhatsAppCall::where('team_id', $team->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->get();
-
-        if ($calls->isEmpty()) {
-            return [];
-        }
-
-        $totalMinutes = round($calls->sum('duration_seconds') / 60, 2);
-        $totalCost = $calls->sum('cost_amount');
-        $pricePerMinute = config('whatsapp.calling.price_per_minute', 0.005);
-
-        return [
-            [
-                'description' => 'WhatsApp Voice Calls',
-                'quantity' => $totalMinutes,
-                'unit' => 'minutes',
-                'unit_price' => $pricePerMinute,
-                'amount' => $totalCost,
-                'details' => [
-                    'total_calls' => $calls->count(),
-                    'inbound' => $calls->where('direction', 'inbound')->count(),
-                    'outbound' => $calls->where('direction', 'outbound')->count(),
-                ],
-            ],
         ];
     }
 

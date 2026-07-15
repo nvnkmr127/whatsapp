@@ -19,18 +19,14 @@ class OpenAIProvider implements AIProviderInterface
 
     public function chat(array $messages, array $options = []): array
     {
-        $model = $options['model'] ?? 'gpt-4o';
-        $temperature = $options['temperature'] ?? 0.7;
-        $responseFormat = $options['response_format'] ?? null;
-
         $payload = [
-            'model' => $model,
+            'model' => $options['model'] ?? 'gpt-4o',
             'messages' => $messages,
-            'temperature' => $temperature,
+            'temperature' => $options['temperature'] ?? 0.7,
         ];
 
-        if ($responseFormat) {
-            $payload['response_format'] = $responseFormat;
+        if (isset($options['response_format'])) {
+            $payload['response_format'] = $options['response_format'];
         }
 
         if (isset($options['max_tokens'])) {
@@ -64,63 +60,14 @@ class OpenAIProvider implements AIProviderInterface
         }
     }
 
-    public function streamChat(array $messages, array $options = []): iterable
-    {
-        $result = $this->chat($messages, $options);
-        yield $result['content'] ?? '';
-    }
-
-    public function embed(string|array $text, array $options = []): array
-    {
-        try {
-            $response = Http::withToken($this->apiKey)
-                ->timeout(20)
-                ->post("{$this->baseUrl}/embeddings", [
-                    'model' => $options['model'] ?? 'text-embedding-3-small',
-                    'input' => $text,
-                ]);
-
-            if ($response->failed()) {
-                return [];
-            }
-
-            return $response->json('data.0.embedding') ?? [];
-        } catch (\Exception $e) {
-            Log::error('OpenAI Embed Error: '.$e->getMessage());
-
-            return [];
-        }
-    }
-
-    public function summarize(string $content, array $options = []): string
-    {
-        $messages = [
-            ['role' => 'system', 'content' => 'Summarize this text concisely.'],
-            ['role' => 'user', 'content' => $content],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
-
-        return $response['content'] ?? '';
-    }
-
-    public function classify(string $content, array $categories, array $options = []): string
-    {
-        $categoriesStr = implode(', ', $categories);
-        $messages = [
-            ['role' => 'system', 'content' => "Classify into: {$categoriesStr}. Return only category name."],
-            ['role' => 'user', 'content' => $content],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
-
-        return trim($response['content'] ?? '');
-    }
-
+    /**
+     * Whisper transcription — OpenAI-only capability, not part of AIProviderInterface.
+     */
     public function transcribe(string $filePath, array $options = []): string
     {
         if (! file_exists($filePath)) {
             Log::error("Whisper transcription failed: File not found at {$filePath}");
+
             return '';
         }
 
@@ -136,12 +83,14 @@ class OpenAIProvider implements AIProviderInterface
 
             if ($response->failed()) {
                 Log::error('OpenAI Whisper Failed: '.$response->body());
+
                 return '';
             }
 
             return $response->json('text') ?? '';
         } catch (\Exception $e) {
             Log::error('OpenAI Whisper Error: '.$e->getMessage());
+
             return '';
         }
     }
@@ -152,7 +101,7 @@ class OpenAIProvider implements AIProviderInterface
             $response = Http::withToken($apiKey)
                 ->timeout(10)
                 ->post("{$this->baseUrl}/chat/completions", [
-                    'model' => 'gpt-3.5-turbo',
+                    'model' => 'gpt-4o-mini',
                     'messages' => [['role' => 'user', 'content' => 'Hello']],
                     'max_tokens' => 5,
                 ]);
