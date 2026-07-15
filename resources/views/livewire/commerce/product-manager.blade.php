@@ -140,8 +140,9 @@
                             <div>
                                 <span
                                     class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Price</span>
-                                <span class="text-xl font-black text-slate-900 dark:text-wa-light">{{ $product->currency }}
-                                    {{ number_format($product->price, 2) }}</span>
+                                <span class="text-xl font-black text-slate-900 dark:text-wa-light">
+                                    {{ strtoupper($product->currency) === 'USD' ? '$' : (strtoupper($product->currency) === 'EUR' ? '€' : (strtoupper($product->currency) === 'GBP' ? '£' : (strtoupper($product->currency) === 'INR' ? '₹' : $product->currency))) }}{{ number_format($product->price, 2) }}
+                                </span>
                                 @if($product->manage_stock)
                                     <div class="mt-1 flex items-center gap-1.5">
                                         <div
