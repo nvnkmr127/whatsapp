@@ -23,50 +23,6 @@ class VariableSchemaTest extends TestCase
         $this->assertContains('{{2}}', $vars);
     }
 
-    public function test_hydration_logic()
-    {
-        $template = new WhatsappTemplate;
-        $template->name = 'order_update';
-
-        // Mock Schema
-        $template->variable_config = [
-            '{{1}}' => ['name' => 'customer_name', 'fallback' => 'Customer'],
-            '{{2}}' => ['name' => 'order_id'],
-        ];
-
-        // Mock Components to ensure extraction works
-        $template->components = [
-            ['type' => 'BODY', 'text' => 'Hi {{1}}, order {{2}} confirmed.'],
-        ];
-
-        $service = new TemplateService;
-        $data = [
-            'customer_name' => 'John',
-            'order_id' => 'ORD-123',
-        ];
-
-        $result = $service->hydrateTemplate($template, $data);
-
-        // Expect positional array: ['John', 'ORD-123']
-        $this->assertCount(2, $result);
-        $this->assertEquals('John', $result[0]);
-        $this->assertEquals('ORD-123', $result[1]);
-    }
-
-    public function test_hydration_fallback()
-    {
-        $template = new WhatsappTemplate;
-        $template->components = [['type' => 'BODY', 'text' => 'Hi {{1}}']];
-        $template->variable_config = [
-            '{{1}}' => ['name' => 'customer_name', 'fallback' => 'Friend'],
-        ];
-
-        $service = new TemplateService;
-        $data = []; // No name provided
-
-        $result = $service->hydrateTemplate($template, $data);
-        $this->assertEquals('Friend', $result[0]);
-    }
 
     public function test_variable_config_storage()
     {

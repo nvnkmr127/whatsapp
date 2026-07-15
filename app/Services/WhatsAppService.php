@@ -12,8 +12,6 @@ class WhatsAppService
 
     protected $messaging;
 
-    protected $templates;
-
     protected $calls;
 
     protected $team;
@@ -24,7 +22,6 @@ class WhatsAppService
     {
         $this->client = app(\App\Core\WhatsApp\WhatsAppClient::class);
         $this->messaging = new \App\Services\WhatsApp\MessagingService($this->client);
-        $this->templates = new \App\Services\WhatsApp\TemplateService($this->client, app(\App\Core\WhatsApp\CredentialResolver::class));
         $this->calls = new \App\Services\WhatsApp\CallService($this->client);
 
         if ($team) {
@@ -42,7 +39,6 @@ class WhatsAppService
 
         // Propagate to sub-services
         $this->messaging->setTeam($team);
-        $this->templates->setTeam($team);
         $this->calls->setTeam($team);
 
         if (! $team->whatsapp_access_token || ! $team->whatsapp_phone_number_id) {

@@ -196,43 +196,12 @@ class TemplateList extends Component
         $this->detectVariables();
     }
 
-    public function syncTemplates(\App\Services\WhatsAppService $whatsapp)
+    public function syncTemplates(\App\Services\TemplateService $service)
     {
         $this->syncing = true;
         try {
-            $whatsapp->setTeam(auth()->user()->currentTeam);
-            $response = $whatsapp->getTemplates();
-
-            if ($response['success']) {
-                $syncedNames = [];
-                foreach ($response['data'] as $remote) {
-                    WhatsappTemplate::updateOrCreate(
-                        [
-                            'team_id' => auth()->user()->currentTeam->id,
-                            'name' => $remote['name'],
-                            'language' => $remote['language'],
-                        ],
-                        [
-                            'category' => $remote['category'],
-                            'status' => $remote['status'],
-                            'whatsapp_template_id' => $remote['id'] ?? null,
-                            'components' => $remote['components'] ?? [],
-                            'quality_rating' => $remote['quality_rating'] ?? 'UNKNOWN',
-                            'is_paused_by_meta' => $remote['is_paused_by_meta'] ?? false,
-                        ]
-                    );
-                    $syncedNames[] = $remote['name'];
-                }
-
-                // Prune deleted templates
-                WhatsappTemplate::where('team_id', auth()->user()->currentTeam->id)
-                    ->whereNotIn('name', $syncedNames)
-                    ->delete();
-
-                $this->dispatch('notify', message: 'Templates synced and pruned successfully!', type: 'success');
-            } else {
-                $this->dispatch('notify', message: 'Sync failed: '.json_encode($response['error']), type: 'error');
-            }
+            $service->syncTemplates(auth()->user()->currentTeam);
+            $this->dispatch('notify', message: 'Templates synced and pruned successfully!', type: 'success');
         } catch (\Exception $e) {
             $this->dispatch('notify', message: 'Error: '.$e->getMessage(), type: 'error');
         }
@@ -752,6 +721,6 @@ class TemplateList extends Component
         return view('livewire.templates.template-list', [
             'templates' => $templates,
             'stats' => $stats,
-        ]);
+        ])->layout('layouts.app');
     }
 }

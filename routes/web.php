@@ -178,9 +178,7 @@ Route::middleware([
 
     Route::get('/campaigns/{campaign}/live', \App\Livewire\Campaigns\Dashboard::class)->name('campaigns.live')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
-    Route::get('/templates', function () {
-        return view('templates.index');
-    })->name('templates.index')->middleware(['can:manage-templates', 'plan_feature:templates']);
+    Route::get('/templates', \App\Livewire\Templates\TemplateList::class)->name('templates.index')->middleware(['can:manage-templates', 'plan_feature:templates']);
 
     // Compliance Modules
     Route::get('/compliance', \App\Livewire\Compliance\ComplianceManager::class)->name('compliance.index')->middleware('can:manage-settings');
