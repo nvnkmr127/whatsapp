@@ -87,7 +87,7 @@ class AiCommerceService
             ->applyShoppableScope(Product::where('team_id', $teamId), $team)
             ->with('category:id,name')
             ->take(30)
-            ->get(['id', 'category_id', 'name', 'price', 'currency', 'description', 'image_url', 'availability', 'stock_quantity', 'manage_stock', 'color']);
+            ->get(['id', 'category_id', 'name', 'price', 'currency', 'description', 'image_url', 'availability', 'stock_quantity', 'manage_stock']);
 
         // Give the model everything it needs to answer cost/currency/variation/stock
         // questions accurately, instead of just name+price.
@@ -102,9 +102,6 @@ class AiCommerceService
             ];
             if ($p->category) {
                 $item['category'] = $p->category->name;
-            }
-            if (! empty($p->color)) {
-                $item['color'] = $p->color;
             }
             if ($p->manage_stock) {
                 $item['stock'] = (int) $p->stock_quantity;
@@ -248,7 +245,7 @@ PROMPT;
 
             // Image + Caption — show price with currency, and colour/variation if set
             $currency = $product->currency ?: $storeCurrency;
-            $variation = ! empty($product->color) ? "\nVariant: {$product->color}" : '';
+            $variation = '';
             $caption = "*{$product->name}*\nPrice: {$currency} {$product->price}{$variation}\n\n{$product->description}";
 
             if ($product->image_url) {
