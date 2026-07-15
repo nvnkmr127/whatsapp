@@ -34,6 +34,7 @@ class OpenAIProvider implements AIProviderInterface
         }
 
         try {
+            Log::info('OpenAI Payload: ', $payload);
             $response = Http::withToken($this->apiKey)
                 ->timeout(30)
                 ->post("{$this->baseUrl}/chat/completions", $payload);
