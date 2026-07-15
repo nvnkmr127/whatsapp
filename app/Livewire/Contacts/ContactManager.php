@@ -180,7 +180,7 @@ class ContactManager extends Component
             $this->info("No contacts found matching '{$this->search}'");
         }
 
-        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'));
+        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'))->layout('layouts.app');
     }
 
     public function create()
@@ -215,20 +215,6 @@ class ContactManager extends Component
         $this->timeline = $service->getTimeline($contact);
         $this->mediaVault = $service->getMediaVault($contact);
         $this->heatmap = $service->getInteractionHeatmap($contact);
-    }
-
-    public function getConversationRoute($contactId)
-    {
-        $contact = Contact::find($contactId);
-        if (! $contact) {
-            return route('chat');
-        }
-
-        $conversationId = $contact->conversations->first()?->id;
-
-        return $conversationId
-            ? route('chat', ['activeConversationId' => $conversationId])
-            : route('chat');
     }
 
     public function closeViewModal()
@@ -360,11 +346,6 @@ class ContactManager extends Component
         $this->resetInputFields();
     }
 
-    public function openModal()
-    {
-        $this->isModalOpen = true;
-    }
-
     public function closeModal()
     {
         $this->isModalOpen = false;
@@ -424,12 +405,6 @@ class ContactManager extends Component
     {
         \App\Models\ContactField::where('team_id', Auth::user()->currentTeam->id)->where('id', $id)->delete();
         session()->flash('field_message', 'Custom Field deleted.');
-    }
-
-    public function closeFieldModal()
-    {
-        $this->isFieldModalOpen = false;
-        $this->resetFieldInput();
     }
 
     // Merge Management
@@ -619,11 +594,6 @@ class ContactManager extends Component
     }
 
     // Alias for the old method name if any other component called it
-    public function importContacts()
-    {
-        $this->import();
-    }
-
     public function export()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');

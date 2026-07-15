@@ -165,9 +165,7 @@ Route::middleware([
     Route::post('/api/v1/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
 
     // Unified CRM (Managers, Admins)
-    Route::get('/contacts', function () {
-        return view('contacts.index');
-    })->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
+    Route::get('/contacts', \App\Livewire\Contacts\ContactManager::class)->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 
     // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
     Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
