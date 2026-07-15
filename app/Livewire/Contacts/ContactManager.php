@@ -176,10 +176,6 @@ class ContactManager extends Component
                 ->get();
         });
 
-        if ($this->search && $contacts->isEmpty()) {
-            $this->info("No contacts found matching '{$this->search}'");
-        }
-
         return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'))->layout('layouts.app');
     }
 
@@ -344,6 +340,11 @@ class ContactManager extends Component
         }
         $this->isDeleteModalOpen = false;
         $this->resetInputFields();
+    }
+
+    public function openModal()
+    {
+        $this->isModalOpen = true;
     }
 
     public function closeModal()

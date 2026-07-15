@@ -1,7 +1,11 @@
 <!-- Alpine Logic (Extracted) -->
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('flowBuilder', (nodes, edges, debugLogs, validationIssues, stepMetadata, isDirty) => ({
+    // Register on alpine:init for hard loads, and immediately when Alpine is
+    // already booted (reaching this page via wire:navigate — alpine:init has
+    // already fired and won't fire again). Without the second path, flowBuilder
+    // is never registered on SPA navigation and the whole canvas breaks.
+    window.__registerFlowBuilder = function () {
+        window.Alpine.data('flowBuilder', (nodes, edges, debugLogs, validationIssues, stepMetadata, isDirty) => ({
             nodes: nodes,
             edges: edges,
             scale: 1,
@@ -321,7 +325,12 @@
                 }
                 if (e.key === 'f' || e.key === 'F') this.zoomToFit();
             }
-        }))
-    });
+        }));
+    };
 
+    if (window.Alpine) {
+        window.__registerFlowBuilder();
+    } else {
+        document.addEventListener('alpine:init', window.__registerFlowBuilder);
+    }
 </script>
