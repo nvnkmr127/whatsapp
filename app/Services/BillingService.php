@@ -8,6 +8,7 @@ use App\Models\TeamWallet;
 use App\Models\WhatsAppConversation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * BillingService
@@ -342,7 +343,7 @@ class BillingService
             'amount' => $amount,
             'type' => 'deposit',
             'description' => $note,
-            'invoice_number' => 'INV-'.strtoupper(uniqid()),
+            'invoice_number' => 'INV-'.Str::ulid(),
         ]);
     }
 
