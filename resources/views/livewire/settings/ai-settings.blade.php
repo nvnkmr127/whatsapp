@@ -162,6 +162,7 @@
                                 <option value="{{ $id }}">{{ $label }}</option>
                             @endforeach
                         </select>
+                        <x-input-error for="ai_model" class="mt-2" />
                     </div>
 
                     <div class="col-span-full pt-6 border-t border-slate-50 dark:border-slate-800">

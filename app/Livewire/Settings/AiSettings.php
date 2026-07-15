@@ -88,6 +88,10 @@ class AiSettings extends Component
 
         $this->updateAvailableModels();
         $this->ai_model = get_setting("ai_model_$teamId");
+        
+        if (empty($this->ai_model) && !empty($this->available_models)) {
+            $this->ai_model = array_key_first($this->available_models);
+        }
 
         $this->ai_fallback_provider = get_setting("ai_fallback_provider_$teamId", 'openai');
         $this->ai_fallback_model = get_setting("ai_fallback_model_$teamId");
