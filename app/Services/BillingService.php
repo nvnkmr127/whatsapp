@@ -331,6 +331,21 @@ class BillingService
     }
 
     /**
+     * Log a billing-related action for audit purposes.
+     */
+    public function logBillingEvent(Team $team, string $action, string $description, array $properties = [])
+    {
+        \App\Models\ActivityLog::create([
+            'team_id' => $team->id,
+            'user_id' => auth()->id(),
+            'action' => "billing.{$action}",
+            'description' => $description,
+            'properties' => $properties,
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
+    /**
      * Create a manual override for a team's billing constraints.
      * Restricted to Super Admins.
      */

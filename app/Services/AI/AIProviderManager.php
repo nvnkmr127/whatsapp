@@ -18,6 +18,16 @@ class AIProviderManager
         'deepseek' => DeepSeekProvider::class,
     ];
 
+    public static function getAvailableProviders(): array
+    {
+        return [
+            'openai' => 'OpenAI',
+            'anthropic' => 'Anthropic',
+            'gemini' => 'Gemini',
+            'deepseek' => 'DeepSeek',
+        ];
+    }
+
     public static function getProvider(?Team $team = null, ?string $providerName = null): ?AIProviderInterface
     {
         if ($team) {

@@ -169,16 +169,6 @@ class WebhookSourceManager extends Component
         }
     }
 
-    public function goToStep($step)
-    {
-        if ($step >= 1 && $step <= 4) {
-            $this->currentStep = $step;
-            if ($this->currentStep === 3) {
-                $this->loadMappingContext();
-            }
-        }
-    }
-
     public function startCapture()
     {
         if (! $this->editingId) {
@@ -286,28 +276,6 @@ class WebhookSourceManager extends Component
         $this->auth_config['secret'] = bin2hex(random_bytes(32));
     }
 
-    public function addMappingField()
-    {
-        if (! isset($this->field_mappings[$this->selectedEventType])) {
-            $this->field_mappings[$this->selectedEventType] = [];
-        }
-
-        $this->field_mappings[$this->selectedEventType][''] = '';
-    }
-
-    public function removeMappingField($eventType, $internalField)
-    {
-        unset($this->field_mappings[$eventType][$internalField]);
-    }
-
-    public function updateFieldMapping($eventType, $oldKey, $newKey, $value)
-    {
-        if ($oldKey !== $newKey) {
-            unset($this->field_mappings[$eventType][$oldKey]);
-        }
-        $this->field_mappings[$eventType][$newKey] = $value;
-    }
-
     public function setActionType($type)
     {
         $this->actionType = $type;
@@ -323,18 +291,6 @@ class WebhookSourceManager extends Component
     {
         unset($this->filtering_rules_ui[$index]);
         $this->filtering_rules_ui = array_values($this->filtering_rules_ui);
-    }
-
-    /**
-     * Map incoming field to template parameter
-     */
-    public function mapFieldToParameter($parameterPosition, $fieldPath)
-    {
-        if (! isset($this->templateParameters)) {
-            $this->templateParameters = [];
-        }
-
-        $this->templateParameters[$parameterPosition] = $fieldPath;
     }
 
     /**
@@ -600,22 +556,6 @@ class WebhookSourceManager extends Component
         $this->authorize('update', $source);
 
         $source->update(['is_active' => ! $source->is_active]);
-    }
-
-    public function openTestModal($id)
-    {
-        $this->testingSourceId = $id;
-        $this->showTestModal = true;
-        $this->testResult = null;
-
-        // Load sample payload based on platform
-        $team = auth()->user()->currentTeam;
-        $query = WebhookSource::query();
-        if ($team) {
-            $query->where('team_id', $team->id);
-        }
-        $source = $query->findOrFail($id);
-        $this->testPayload = $this->getSamplePayload($source->platform);
     }
 
     public function testWebhook()
