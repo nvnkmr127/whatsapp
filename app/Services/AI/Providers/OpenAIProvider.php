@@ -117,13 +117,11 @@ class OpenAIProvider implements AIProviderInterface
     public function getAvailableModels(): array
     {
         return [
-            'gpt-5.4-pro' => 'GPT-5.4 Pro (Maximum Intelligence)',
-            'gpt-5.4' => 'GPT-5.4 (Balanced High-Performance)',
-            'gpt-5.4-thinking' => 'GPT-5.4 Thinking (Deep Reasoning)',
-            'gpt-5.4-mini' => 'GPT-5.4 Mini (Fast/Efficient)',
-            'gpt-5.4-nano' => 'GPT-5.4 Nano (Ultra-Fast/Mobile)',
-            'o1' => 'o1 (Classic Reasoning)',
-            'gpt-4o' => 'GPT-4o (Legacy Pro)',
+            'gpt-4o' => 'GPT-4o (Most Capable)',
+            'gpt-4o-mini' => 'GPT-4o Mini (Fast & Efficient)',
+            'o1-preview' => 'o1 Preview (Reasoning)',
+            'o1-mini' => 'o1 Mini (Fast Reasoning)',
+            'gpt-4-turbo' => 'GPT-4 Turbo',
         ];
     }
 
