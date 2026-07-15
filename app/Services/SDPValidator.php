@@ -291,16 +291,6 @@ class SDPValidator
     }
 
     /**
-     * Validate SDP type (offer or answer)
-     *
-     * @param  string  $type  The SDP type
-     */
-    public static function validateType(string $type): bool
-    {
-        return in_array($type, ['offer', 'answer']);
-    }
-
-    /**
      * Get a human-readable validation summary
      *
      * @param  array  $validation  Validation result from validate()
