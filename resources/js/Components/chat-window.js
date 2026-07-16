@@ -155,12 +155,12 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
     async handleSubmit() {
         if (this._submitting) return;
-        if (this.msgBody.trim() === '' && !wire.newAttachment) return;
+        if (this.msgBody.trim() === '' && !wire.newAttachmentData) return;
 
         this._submitting = true;
         try {
             if (this.isNoteMode) {
-                wire.set('messageBody', this.msgBody);
+                wire.set('msgBody', this.msgBody);
                 try {
                     await wire.saveInternalNote();
                 } catch (e) {
@@ -172,8 +172,8 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 return;
             }
 
-            if (wire.newAttachment) {
-                wire.set('messageBody', this.msgBody);
+            if (wire.newAttachmentData) {
+                wire.set('msgBody', this.msgBody);
                 try {
                     await wire.sendMessage();
                 } catch (e) {

@@ -183,6 +183,60 @@ class MessageWindow extends Component
         $this->msgBody = $text;
     }
 
+    /**
+     * Send the picked media attachment (image/video/audio/document).
+     * The file was persisted by the MediaUpload sub-component, which handed us
+     * its stored public-disk path in newAttachmentData.
+     */
+    public function sendMessage()
+    {
+        if (! $this->conversation || empty($this->newAttachmentData['path'])) {
+            return;
+        }
+
+        $mime = $this->newAttachmentData['mime_type'] ?? 'application/octet-stream';
+        $type = $this->getMediaType($mime);
+        $caption = $this->msgBody ?: null;
+
+        $message = \App\Models\Message::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'type' => $type,
+            'content' => $caption,
+            'caption' => $caption,
+            'media_url' => $this->newAttachmentData['path'],
+            'media_type' => $mime,
+            'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name],
+        ]);
+
+        // Message-based dispatch resolves the public URL via $message->full_media_url.
+        \App\Jobs\SendMessageJob::dispatch($message);
+
+        $this->msgBody = '';
+        $this->newAttachmentData = null;
+        $this->dispatch('clearMediaUpload');
+        $this->loadConversation();
+        $this->dispatch('messageSent');
+    }
+
+    private function getMediaType(string $mime): string
+    {
+        if (str_starts_with($mime, 'image/')) {
+            return 'image';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            return 'video';
+        }
+        if (str_starts_with($mime, 'audio/')) {
+            return 'audio';
+        }
+
+        return 'document';
+    }
+
     public function closeTemplateModals()
     {
         $this->showTemplatePreviewModal = false;
@@ -383,7 +437,10 @@ class MessageWindow extends Component
             return;
         }
 
-        $path = $file->store('voice-notes', 'public');
+        // Store with an explicit .ogg extension. A blob upload has no filename, so
+        // store() would save it extensionless and the server would serve it as
+        // application/octet-stream — WhatsApp rejects that as a voice note.
+        $path = $file->storeAs('voice-notes', \Illuminate\Support\Str::random(40).'.ogg', 'public');
 
         $message = \App\Models\Message::create([
             'team_id' => Auth::user()->currentTeam->id,
