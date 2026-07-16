@@ -13,8 +13,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    @php
+        $systemAppName = get_setting('system_app_name', config('app.name', 'Laravel'));
+        $faviconUrl = get_setting('system_favicon') ? Storage::url(get_setting('system_favicon')) : asset('favicon.ico');
+    @endphp
+
+    <link rel="icon" type="image/x-icon" href="{{ $faviconUrl }}">
+    <link rel="shortcut icon" href="{{ $faviconUrl }}">
+
     <title>
-        {{ isset($title) ? $title . ' - ' : '' }}{{ auth()->check() && auth()->user()->currentTeam ? auth()->user()->currentTeam->name : ($appName ?? config('app.name', 'Laravel')) }}
+        {{ isset($title) ? $title . ' - ' : '' }}{{ auth()->check() && auth()->user()->currentTeam ? auth()->user()->currentTeam->name : ($appName ?? $systemAppName) }}
     </title>
 
     <!-- Fonts -->

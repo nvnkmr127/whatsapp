@@ -54,6 +54,46 @@
                         @error('logo') <span class="text-rose-500 text-xs font-bold uppercase mt-2 block">{{ $message }}</span> @enderror
                     </div>
 
+                    <!-- Favicon Upload -->
+                    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden p-8 text-center group">
+                        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Favicon</h3>
+                        
+                        <div class="relative w-20 h-20 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden group-hover:border-wa-teal/50 transition-colors">
+                            @if ($favicon)
+                                <img src="{{ $favicon->temporaryUrl() }}" class="w-full h-full object-contain">
+                            @elseif ($currentFaviconPath)
+                                <img src="{{ Storage::url($currentFaviconPath) }}" class="w-full h-full object-contain">
+                            @else
+                                <div class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-1">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <span class="text-[8px] font-bold uppercase tracking-wider">None</span>
+                                </div>
+                            @endif
+
+                            <div wire:loading wire:target="favicon" class="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <label class="cursor-pointer">
+                                <span class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/10 text-wa-teal dark:text-indigo-400 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    Upload Favicon
+                                </span>
+                                <input type="file" wire:model="favicon" class="hidden" accept=".ico,.png,.jpg,.jpeg,.svg">
+                            </label>
+
+                            @if ($currentFaviconPath && !$favicon)
+                                <button type="button" wire:click="removeFavicon" class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-slate-50 dark:bg-slate-800 text-rose-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-all">
+                                    Remove Favicon
+                                </button>
+                            @endif
+                        </div>
+                        
+                        @error('favicon') <span class="text-rose-500 text-xs font-bold uppercase mt-2 block">{{ $message }}</span> @enderror
+                    </div>
+
                     <!-- Appearance -->
                     <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-50 dark:border-slate-800 overflow-hidden p-8">
                         <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Appearance</h3>
@@ -239,6 +279,12 @@
                             <div>
                                 <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2 mb-6">Workspace Configuration</h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2 md:col-span-2">
+                                        <label class="text-xs font-black uppercase tracking-widest text-slate-500">Global Application Name</label>
+                                        <input type="text" wire:model="appName" placeholder="System Global Name"
+                                            class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-black placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
+                                    </div>
+                                    
                                     <div class="space-y-2 md:col-span-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">Official Workspace Name</label>
                                         <input type="text" wire:model="teamName"
