@@ -115,7 +115,7 @@ class WhatsappConfig extends Component
     public function sendTestMessage()
     {
         $this->validate([
-            'wm_test_message' => 'required', // A phone number or 'ME'
+            'wm_test_message' => 'required|string', // Recipient phone number with country code
         ]);
 
         $team = \Illuminate\Support\Facades\Auth::user()->currentTeam;
@@ -263,9 +263,17 @@ class WhatsappConfig extends Component
         }
 
         if ($this->is_whatsmark_connected) {
-            // Heavy Meta API calls (profile/health/phone sync) are deferred to their
-            // manual "Sync" / "Refresh" buttons to keep page load fast.
-            $this->setupProgress = $this->getSetupProgress();
+            // Runs async via wire:init (after the skeleton paints), so these Meta
+            // calls don't block initial render. They populate the System Health
+            // widget, Business Profile, Setup Progress and the governance alert
+            // with real data instead of the default zeros/false-alarms.
+            try {
+                $this->loadBusinessProfile();
+                $this->refreshHealth(); // also recomputes setupProgress
+            } catch (\Throwable $e) {
+                Log::warning("WhatsApp Config: Deferred health/profile load failed for Team {$team->id}: ".$e->getMessage());
+                $this->setupProgress = $this->getSetupProgress();
+            }
 
             // [PROACTIVE VALIDATION] If last validation is stale (> 6 hours), run a fresh background check
             if ($this->tokenLastValidated && $this->tokenLastValidated->diffInHours(now()) >= 6) {
@@ -354,6 +362,20 @@ class WhatsappConfig extends Component
             $this->wm_business_verification_status = $team->whatsapp_business_verification_status ?? 'unknown';
             $this->tokenLastValidated = $team->whatsapp_token_last_validated;
             $this->lastWebhookReceivedAt = $team->last_webhook_received_at;
+
+            // Derive token validity from persisted expiry so the governance alert is
+            // correct on first paint (before the async refreshHealth() runs, and if it fails).
+            // Defaults are safe: a present token with no expiry is treated as long-lived.
+            if ($team->whatsapp_access_token) {
+                $expiresAt = $team->whatsapp_token_expires_at;
+                if ($expiresAt) {
+                    $this->tokenDaysUntilExpiry = (int) floor(($expiresAt->timestamp - now()->timestamp) / 86400);
+                    $this->token_valid = $expiresAt->isFuture();
+                } else {
+                    $this->tokenDaysUntilExpiry = 999; // permanent / long-lived token
+                    $this->token_valid = true;
+                }
+            }
 
             // Derive state from model to avoid mismatch
             $state = $team->whatsapp_setup_state;
@@ -1015,17 +1037,28 @@ class WhatsappConfig extends Component
 
         try {
             // Save directly to the Team model — this is where loadSettings() reads from.
-            // The set_setting() helper writes to a global settings table (not team-scoped),
-            // so it is NOT used for outbound_webhook_url loading. Only the Team column matters.
             $team->forceFill([
                 'outbound_webhook_url' => $this->outbound_webhook_url ?: null,
             ])->save();
+
+            // Mirror into the real delivery pipeline so events are actually forwarded.
+            // WebhookService::dispatch() only fans out to WebhookSubscription rows, so the
+            // Team column alone forwarded nothing. Empty `events` = subscribe to all events.
+            $marker = 'Setup Page Forwarder';
+            if ($this->outbound_webhook_url) {
+                \App\Models\WebhookSubscription::updateOrCreate(
+                    ['team_id' => $team->id, 'name' => $marker],
+                    ['url' => $this->outbound_webhook_url, 'events' => [], 'is_active' => true],
+                );
+            } else {
+                \App\Models\WebhookSubscription::where('team_id', $team->id)->where('name', $marker)->delete();
+            }
 
             // Update the local Livewire state to reflect the saved value
             $this->outbound_webhook_url = $team->fresh()->outbound_webhook_url;
             $this->is_webhook_connected = ! empty($this->outbound_webhook_url);
 
-            $this->dispatch('notify', title: 'Webhook Saved', message: 'Outbound webhook URL updated successfully.', type: 'success');
+            $this->dispatch('notify', title: 'Webhook Saved', message: 'Outbound webhook URL updated. Events will now be forwarded here.', type: 'success');
         } catch (\Exception $e) {
             Log::error("Failed to update outbound webhook for team {$team->id}: ".$e->getMessage());
             $this->dispatch('notify', title: 'Error', message: 'Failed to save webhook URL: '.$e->getMessage(), type: 'error');
@@ -1372,8 +1405,6 @@ class WhatsappConfig extends Component
                 $this->profile_vertical = $profile['vertical'] ?? '';
                 $this->profile_websites = $profile['websites'] ?? [];
                 $this->profile_picture_url = $profile['profile_picture_url'] ?? '';
-
-                $this->dispatch('notify', message: 'Business profile data fetched from WhatsApp!', type: 'success');
             } elseif (isset($response['error'])) {
                 \Illuminate\Support\Facades\Log::error('WhatsApp Profile API Error: '.json_encode($response['error']));
             }
@@ -1399,6 +1430,8 @@ class WhatsappConfig extends Component
 
     public function editProfile()
     {
+        // Fetch current values from Meta so the edit form isn't blank.
+        $this->loadBusinessProfile();
         $this->is_editing_profile = true;
     }
 
