@@ -88,6 +88,19 @@ class AppServiceProvider extends ServiceProvider
             Model::preventAccessingMissingAttributes(false);
         }
 
+        // ── System WhatsApp: DB settings override env defaults ──────────
+        // Admins set these on /settings/system; env (WHATSAPP_SYSTEM_*) is the fallback.
+        try {
+            foreach (['system_waba_id', 'system_phone_number_id', 'system_access_token'] as $key) {
+                $value = get_setting($key);
+                if (! empty($value)) {
+                    config(["whatsapp.$key" => $value]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Settings table not ready (e.g. during migration) — env defaults stand.
+        }
+
         // ── Safe Broadcasters (Pusher & Reverb) ─────────────────────────
         Broadcast::extend('reverb', function ($app, array $config) {
             $client = new Client(array_merge(

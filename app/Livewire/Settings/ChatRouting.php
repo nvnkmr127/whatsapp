@@ -96,17 +96,8 @@ class ChatRouting extends Component
             'statusRules.*.status_in' => ['required', 'string', 'in:'.implode(',', $this->availableStatuses)],
             'statusRules.*.after_days' => ['required', 'integer', 'min:1', 'max:365'],
             'statusRules.*.status_to' => ['required', 'string', 'in:'.implode(',', $this->availableStatuses)],
-
-            // Custom Rules Validation
-            'stickyEnabled' => ['boolean'],
-            'customRules.*.priority' => ['required', 'integer'],
-            'customRules.*.conditions' => ['array'],
-            'customRules.*.assign_to.type' => ['required', 'string', 'in:user,role'],
-            // specific validation depends on type, keep it simple for now
         ];
     }
-
-    // ... mount ...
 
     public function openSimulateModal()
     {
@@ -314,21 +305,6 @@ class ChatRouting extends Component
     public function getRecommendedStatus($role)
     {
         return $role === 'agent';
-    }
-
-    /**
-     * Get the eligibility description for a given role.
-     *
-     * @param  string|null  $role
-     * @return string
-     */
-    public function getRoleEligibilityNote($role)
-    {
-        return match ($role) {
-            'agent' => 'Recommended for chat',
-            'admin', 'manager' => 'Optional for chat',
-            default => 'Not recommended',
-        };
     }
 
     /**

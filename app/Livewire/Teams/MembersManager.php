@@ -41,12 +41,39 @@ class MembersManager extends TeamMemberManager
         $this->calculateActiveTickets($userId);
     }
 
+    /**
+     * Confirm leaving the team — warn about the current user's active tickets first.
+     */
+    public function confirmLeaving()
+    {
+        $this->calculateActiveTickets($this->user->id);
+        $this->confirmingLeavingTeam = true;
+    }
+
+    /**
+     * Re-send a pending team invitation email.
+     */
+    public function resendTeamInvitation($invitationId)
+    {
+        if (! \Illuminate\Support\Facades\Gate::check('addTeamMember', $this->team)) {
+            abort(403);
+        }
+
+        $invitation = $this->team->teamInvitations()->findOrFail($invitationId);
+
+        \Illuminate\Support\Facades\Mail::to($invitation->email)
+            ->send(new \Laravel\Jetstream\Mail\TeamInvitation($invitation));
+
+        session()->flash('message', __('Invitation resent to :email.', ['email' => $invitation->email]));
+    }
+
     protected function calculateActiveTickets($userId)
     {
-        // Active tickets are those not resolved or closed
+        // Contacts assigned to this user that still have an active conversation.
+        // (Ticket status lives on Conversation, not Contact.)
         $this->activeTicketCount = Contact::where('team_id', $this->team->id)
             ->where('assigned_to', $userId)
-            ->whereNotIn('status', ['resolved', 'closed'])
+            ->whereHas('activeConversation')
             ->count();
     }
 

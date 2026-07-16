@@ -110,7 +110,7 @@
 
                                     <!-- Leave / Remove -->
                                     @if ($this->user->id === $user->id)
-                                        <button wire:click="$toggle('confirmingLeavingTeam')" 
+                                        <button wire:click="confirmLeaving"
                                             class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-lg border border-slate-200/50 dark:border-slate-700/50 transition-all hover:scale-[1.02] active:scale-95" title="Leave Team">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -151,6 +151,7 @@
                      <thead>
                         <tr class="border-b border-slate-50 dark:border-slate-800/50">
                             <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Email</th>
+                            <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
                             <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
                             <th class="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
                         </tr>
@@ -162,14 +163,26 @@
                                     <div class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $invitation->email }}</div>
                                 </td>
                                 <td class="px-8 py-6">
+                                    @php $invRole = $invitation->role ? Laravel\Jetstream\Jetstream::findRole($invitation->role) : null; @endphp
+                                    <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-wider rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                                        {{ $invRole ? $invRole->name : '—' }}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-6">
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
                                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                         Pending
                                     </span>
                                 </td>
                                 <td class="px-8 py-6 text-right">
+                                    @if (Gate::check('addTeamMember', $team))
+                                        <button wire:click="resendTeamInvitation({{ $invitation->id }})"
+                                            class="text-xs font-bold text-wa-teal hover:opacity-80 uppercase tracking-wider mr-4">
+                                            Resend
+                                        </button>
+                                    @endif
                                     @if (Gate::check('removeTeamMember', $team))
-                                        <button wire:click="cancelTeamInvitation({{ $invitation->id }})" 
+                                        <button wire:click="cancelTeamInvitation({{ $invitation->id }})"
                                             class="text-xs font-bold text-rose-500 hover:text-rose-600 uppercase tracking-wider">
                                             Cancel
                                         </button>
@@ -401,6 +414,20 @@
         </x-slot>
 
         <x-slot name="content">
+            @if($activeTicketCount > 0)
+                <div class="mb-4 rounded-xl bg-rose-50 border border-rose-200 dark:bg-rose-900/20 dark:border-rose-800 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-rose-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3 text-sm text-rose-700 dark:text-rose-300">
+                            <p>You have <strong>{{ $activeTicketCount }}</strong> active conversations. Leaving will unassign them.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
             {{ __('Are you sure you would like to leave this team?') }}
         </x-slot>
 

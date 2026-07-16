@@ -123,4 +123,65 @@ class DiagnosticsAndWebhookRetryTest extends TestCase
         $this->assertArrayHasKey('messages_failed_last_24h', $qd);
         $this->assertArrayHasKey('delivery_failure_rate_24h', $qd);
     }
+
+    /** Page mounts and lazy-loads for a connected team without error. */
+    public function test_page_mounts_and_loads_for_connected_team()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(WhatsappConfig::class)
+            ->assertSet('is_whatsmark_connected', true)
+            ->call('loadData')
+            ->assertSet('readyToLoad', true)
+            ->assertHasNoErrors();
+    }
+
+    /** Behavior toggles + timezone actually persist to the team (calling disabled = no Meta call). */
+    public function test_behavior_settings_persist_to_team()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(WhatsappConfig::class)
+            ->set('timezone', 'Asia/Kolkata')
+            ->set('callingEnabled', false)
+            ->set('callButtonVisible', true)
+            ->set('callbackPermissionEnabled', true)
+            ->call('updateBehaviorSettings')
+            ->assertHasNoErrors();
+
+        $team = $this->team->fresh();
+        $this->assertSame('Asia/Kolkata', $team->timezone);
+        $this->assertSame('disabled', $team->whatsapp_settings['calling']['status']);
+        $this->assertSame('show', $team->whatsapp_settings['calling']['call_icon_visibility']);
+        $this->assertSame('enabled', $team->whatsapp_settings['calling']['callback_permission_status']);
+    }
+
+    /** Outbound webhook input persists to the Team column and round-trips on reload. */
+    public function test_outbound_webhook_persists()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(WhatsappConfig::class)
+            ->set('outbound_webhook_url', 'https://example.com/hook')
+            ->call('updateOutboundWebhook')
+            ->assertHasNoErrors()
+            ->assertSet('is_webhook_connected', true);
+
+        $this->assertSame('https://example.com/hook', $this->team->fresh()->outbound_webhook_url);
+    }
+
+    /** Regression: notify events carry message/type (positional dispatch showed no toast). */
+    public function test_disconnect_dispatches_named_notify_and_clears_connection()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(WhatsappConfig::class)
+            ->set('disconnectConfirmation', 'DISCONNECT')
+            ->call('disconnect')
+            ->assertDispatched('notify', fn ($event, $params) => array_key_exists('message', $params) && array_key_exists('type', $params));
+
+        $team = $this->team->fresh();
+        $this->assertFalse((bool) $team->whatsapp_connected);
+        $this->assertNull($team->whatsapp_access_token);
+    }
 }

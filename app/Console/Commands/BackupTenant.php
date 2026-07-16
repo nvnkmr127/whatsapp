@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\ProcessTenantBackupJob;
 use App\Models\Team;
+use App\Services\BackupService;
 use Illuminate\Console\Command;
 
 class BackupTenant extends Command
@@ -25,7 +25,7 @@ class BackupTenant extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(BackupService $backupService)
     {
         $id = $this->argument('id');
         $team = Team::find($id);
@@ -38,7 +38,13 @@ class BackupTenant extends Command
 
         $this->info("Queuing backup for Team: {$team->name} (ID: {$team->id})...");
 
-        ProcessTenantBackupJob::dispatch($team);
+        try {
+            $backupService->backupTenant($team);
+        } catch (\Exception $e) {
+            $this->error('Backup failed: '.$e->getMessage());
+
+            return 1;
+        }
 
         $this->info('Backup job has been dispatched to the queue.');
 

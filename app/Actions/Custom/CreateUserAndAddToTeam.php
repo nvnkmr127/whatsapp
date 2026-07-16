@@ -26,7 +26,12 @@ class CreateUserAndAddToTeam
             'role' => Jetstream::hasRoles()
                 ? ['required', 'string', new Role]
                 : null,
-        ])->validateWithBag('createUser');
+        ])->after(function ($validator) use ($team) {
+            // Same plan gate as Invite/Add — otherwise "Create New User" bypasses the agent limit.
+            if (! $team->canAccess('add_agent')) {
+                $validator->errors()->add('email', __('This team has reached its agent limit for the current plan.'));
+            }
+        })->validateWithBag('createUser');
 
         DB::transaction(function () use ($team, $input) {
             $user = User::create([

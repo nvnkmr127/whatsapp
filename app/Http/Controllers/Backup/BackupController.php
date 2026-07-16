@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Backup;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
 use App\Models\Integration;
 use App\Models\TenantBackup;
 use App\Services\BackupService;
@@ -68,7 +67,7 @@ class BackupController extends Controller
         try {
             $this->backupService->backupTenant($team);
 
-            $this->auditLog($team->id, 'backup.created', 'Manual backup triggered.');
+            $this->logAudit($team->id, 'backup.created', 'Manual backup triggered.');
 
             return redirect()
                 ->back()
@@ -144,7 +143,7 @@ class BackupController extends Controller
         );
 
         // 6. Audit log: record WHO requested a download and WHEN
-        $this->auditLog($team->id, 'backup.download_url_issued', "Download URL issued for backup: {$backup->filename}", [
+        $this->logAudit($team->id, 'backup.download_url_issued', "Download URL issued for backup: {$backup->filename}", [
             'backup_id' => $backup->id,
             'filename' => $backup->filename,
             'expires_at' => now()->addMinutes(5)->toIso8601String(),
@@ -154,29 +153,4 @@ class BackupController extends Controller
         return redirect($signedUrl);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Internal Helpers
-    // ─────────────────────────────────────────────────────────────────────
-
-    private function auditLog(int $teamId, string $action, string $description, array $properties = []): void
-    {
-        try {
-            ActivityLog::create([
-                'team_id' => $teamId,
-                'user_id' => auth()->id(),
-                'action' => $action,
-                'description' => $description,
-                'ip_address' => request()->ip(),
-                'properties' => array_merge($properties, [
-                    'user_agent' => request()->userAgent(),
-                ]),
-            ]);
-        } catch (Exception $e) {
-            // Audit failures must never block the main operation, but must be logged.
-            \Log::error('Backup audit log failed: '.$e->getMessage(), [
-                'team_id' => $teamId,
-                'action' => $action,
-            ]);
-        }
-    }
 }

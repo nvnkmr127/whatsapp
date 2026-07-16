@@ -75,4 +75,15 @@ class MembersManagerTest extends TestCase
             ->call('addTeamMember')
             ->assertStatus(403);
     }
+
+    public function test_confirm_leaving_computes_active_tickets_without_error(): void
+    {
+        $this->actingAs($user = User::factory()->withPersonalTeam()->create());
+
+        // Guards the calculateActiveTickets query against the schema (no contacts.status column).
+        Livewire::test(MembersManager::class, ['team' => $user->currentTeam])
+            ->call('confirmLeaving')
+            ->assertSet('confirmingLeavingTeam', true)
+            ->assertSet('activeTicketCount', 0);
+    }
 }

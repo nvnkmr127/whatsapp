@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Backup;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
 use App\Models\TenantBackup;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -62,7 +60,7 @@ class SecureDownloadController extends Controller
         $currentTeamId = $user->currentTeam?->id;
 
         if ($currentTeamId !== $backup->team_id && ! $user->is_super_admin) {
-            $this->auditLog(
+            $this->logAudit(
                 $backup->team_id,
                 'backup.download_rejected',
                 "Signed download rejected: session team mismatch for backup {$backup->filename}",
@@ -84,7 +82,7 @@ class SecureDownloadController extends Controller
         }
 
         // 4. Audit log the actual download (separate from URL issuance)
-        $this->auditLog($backup->team_id, 'backup.downloaded', "Backup file downloaded: {$backup->filename}", [
+        $this->logAudit($backup->team_id, 'backup.downloaded', "Backup file downloaded: {$backup->filename}", [
             'backup_id' => $backup->id,
             'filename' => $backup->filename,
             'size' => $backup->size,
@@ -109,27 +107,5 @@ class SecureDownloadController extends Controller
             'Pragma' => 'no-cache',
             'X-Content-Type-Options' => 'nosniff',
         ]);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Internal Helpers
-    // ─────────────────────────────────────────────────────────────────────
-
-    private function auditLog(int $teamId, string $action, string $description, array $properties = []): void
-    {
-        try {
-            ActivityLog::create([
-                'team_id' => $teamId,
-                'user_id' => auth()->id(),
-                'action' => $action,
-                'description' => $description,
-                'ip_address' => request()->ip(),
-                'properties' => array_merge($properties, [
-                    'user_agent' => request()->userAgent(),
-                ]),
-            ]);
-        } catch (Exception $e) {
-            \Log::error('Backup download audit log failed: '.$e->getMessage());
-        }
     }
 }

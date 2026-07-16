@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Backup;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
 use App\Models\TenantBackup;
 use App\Services\BackupService;
 use Exception;
@@ -59,7 +58,7 @@ class RestoreController extends Controller
         }
 
         // 5. Audit log: record that a restore was INITIATED before we begin
-        $this->auditLog(
+        $this->logAudit(
             $team->id,
             'backup.restore_initiated',
             "Tenant restore initiated from backup: {$backup->filename}",
@@ -74,7 +73,7 @@ class RestoreController extends Controller
             $this->backupService->restoreTenant($team, $backup);
 
             // 6. Audit log: success
-            $this->auditLog(
+            $this->logAudit(
                 $team->id,
                 'backup.restore_completed',
                 "Tenant restore completed from backup: {$backup->filename}",
@@ -86,7 +85,7 @@ class RestoreController extends Controller
             return redirect()->back()->with('success', 'Restoration successful! Your data has been restored.');
         } catch (Exception $e) {
             // 7. Audit log: failure
-            $this->auditLog(
+            $this->logAudit(
                 $team->id,
                 'backup.restore_failed',
                 "Tenant restore FAILED from backup: {$backup->filename}",
@@ -121,7 +120,7 @@ class RestoreController extends Controller
         $tempPath = $file->storeAs('backup-temp', 'manual_restore_'.time().'.'.$file->extension());
         $fullPath = storage_path('app/'.$tempPath);
 
-        $this->auditLog(
+        $this->logAudit(
             $team->id,
             'backup.manual_restore_attempted',
             "Manual file restore attempted: {$file->getClientOriginalName()}",
@@ -134,7 +133,7 @@ class RestoreController extends Controller
         try {
             $this->backupService->restoreManual($team, $fullPath);
 
-            $this->auditLog(
+            $this->logAudit(
                 $team->id,
                 'backup.manual_restore_completed',
                 "Manual file restore completed: {$file->getClientOriginalName()}",
@@ -145,7 +144,7 @@ class RestoreController extends Controller
 
             return redirect()->back()->with('success', 'Manual restoration successful!');
         } catch (Exception $e) {
-            $this->auditLog(
+            $this->logAudit(
                 $team->id,
                 'backup.manual_restore_failed',
                 "Manual file restore FAILED: {$file->getClientOriginalName()}",
@@ -158,25 +157,4 @@ class RestoreController extends Controller
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Internal Helpers
-    // ─────────────────────────────────────────────────────────────────────
-
-    private function auditLog(int $teamId, string $action, string $description, array $properties = []): void
-    {
-        try {
-            ActivityLog::create([
-                'team_id' => $teamId,
-                'user_id' => auth()->id(),
-                'action' => $action,
-                'description' => $description,
-                'ip_address' => request()->ip(),
-                'properties' => array_merge($properties, [
-                    'user_agent' => request()->userAgent(),
-                ]),
-            ]);
-        } catch (Exception $e) {
-            \Log::error('Restore audit log failed: '.$e->getMessage());
-        }
-    }
 }

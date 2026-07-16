@@ -89,24 +89,6 @@ class SystemSettings extends Component
         'Pacific/Auckland' => 'Auckland',
     ];
 
-    protected function rules()
-    {
-        return [
-            'teamName' => ['required', 'string', 'max:255'],
-            'timezone' => ['required', 'string', 'in:'.implode(',', array_keys($this->timezones))],
-            'logo' => ['nullable', 'image', 'max:2048'], // 2MB max
-            // Use array syntax to prevent pipe delimiter collision in regex
-            'primaryColor' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
-            'currencySymbol' => ['required', 'string', 'max:10'],
-            'dateFormat' => ['required', 'string', 'in:Y-m-d,d/m/Y,m/d/Y,d-m-Y'],
-            'paginationLimit' => ['required', 'integer', 'min:5', 'max:100'],
-            'supportEmail' => ['nullable', 'email'],
-            'maintenanceMode' => ['boolean'],
-            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US,UK,DE,SA,SG,NG,ES'],
-            'language' => ['required', 'string', 'max:5'],
-        ];
-    }
-
     public function updatedSelectedCountry($value)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
