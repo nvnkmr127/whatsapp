@@ -56,7 +56,7 @@ const getDevMachineIp = () => {
   return Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 };
 
-const defaultBaseUrl = `https://flow.watxio.com/api`;
+const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
 
 const state: GlobalState = {
   token: null,
@@ -197,7 +197,7 @@ export const store = {
 
           store.set({
             token: data.token,
-            baseUrl: data.baseUrl || state.baseUrl,
+            baseUrl: __DEV__ ? defaultBaseUrl : (data.baseUrl || state.baseUrl),
             activeTeamId: data.activeTeamId !== undefined ? data.activeTeamId : state.activeTeamId,
             waNumber: data.waNumber || state.waNumber,
             businessName: data.businessName || state.businessName,

@@ -15,9 +15,9 @@ const getDevMachineIp = () => {
   return Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 };
 
-const defaultBaseUrl = `https://flow.watxio.com/api`;
+const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
 
-let apiBaseUrl: string = 'http://10.0.2.2:8000/api';
+let apiBaseUrl: string = defaultBaseUrl;
 
 
 export const api = {
