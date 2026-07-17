@@ -24,6 +24,7 @@ import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { MediaViewer } from '@/components/MediaViewer';
+import { ReplyPreview } from '@/components/ReplyPreview';
 import { api } from '@/services/api';
 import { CallWebRTC } from '@/services/webrtc';
 import { useGlobalState } from '@/store';
@@ -147,6 +148,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
   const scroller = useRef<ScrollView>(null);
   const rowRefs = useRef<Map<number, any>>(new Map());
+  const messageLayouts = useRef<Map<number, number>>(new Map());
   // Track previous message count to avoid scrolling on polls with no new messages
   const prevMsgCountRef = useRef<number>(0);
 
@@ -1034,7 +1036,14 @@ export default function ChatScreen({ navigation, route }: any) {
 
     // Prepend locally for immediate UX
     const displayStr = selectedMedia ? (text || `📄 ${selectedMedia.name}`) : text;
-    const newMsg: ChatMessage = { kind: 'out', text: displayStr, time: 'now', status: 'queued' };
+    const newMsg: ChatMessage = { 
+      kind: 'out', 
+      text: displayStr, 
+      time: 'now', 
+      status: 'queued',
+      reply_to_content: replyingTo ? (replyingTo.text || 'Media Message') : null,
+      reply_to_id: replyingTo ? replyingTo.id : null,
+    };
     setMessages((m) => [...m, newMsg]);
     setDraft('');
     const mediaToUpload = selectedMedia;
@@ -1373,14 +1382,19 @@ export default function ChatScreen({ navigation, route }: any) {
                 }
 
                 return (
-                  <Swipeable
-                    key={stableKey}
-                    ref={(ref) => {
-                      if (ref && m.id) {
-                        rowRefs.current.set(m.id, ref);
-                      }
+                  <View 
+                    key={stableKey} 
+                    onLayout={(e) => {
+                      if (m.id) messageLayouts.current.set(m.id, e.nativeEvent.layout.y);
                     }}
-                    renderLeftActions={() => (
+                  >
+                    <Swipeable
+                      ref={(ref) => {
+                        if (ref && m.id) {
+                          rowRefs.current.set(m.id, ref);
+                        }
+                      }}
+                      renderLeftActions={() => (
                       <View className="justify-center pl-4 pr-2">
                         <View className="w-8 h-8 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
                           <Reply size={18} color={tokens.ink} />
@@ -1409,7 +1423,19 @@ export default function ChatScreen({ navigation, route }: any) {
                         mediaUrl={m.media_url}
                         mediaType={m.media_type}
                         metadata={m.metadata}
-                        replyToContent={m.reply_to_content}
+                        replyTo={
+                          m.reply_to_id 
+                            ? messages.find(msg => msg.id === m.reply_to_id) || { kind: 'in', text: m.reply_to_content } as ChatMessage
+                            : (m.reply_to_content ? { kind: 'in', text: m.reply_to_content } as ChatMessage : null)
+                        }
+                        onReplyPress={() => {
+                          if (m.reply_to_id) {
+                            const yOffset = messageLayouts.current.get(m.reply_to_id);
+                            if (yOffset !== undefined) {
+                              scroller.current?.scrollTo({ y: yOffset - 50, animated: true });
+                            }
+                          }
+                        }}
                         onMediaPress={m.media_url && m.media_type ? () => setMediaViewer({
                           uri: m.media_url!,
                           type: m.media_type as any,
@@ -1419,6 +1445,7 @@ export default function ChatScreen({ navigation, route }: any) {
                       </Bubble>
                     </Pressable>
                   </Swipeable>
+                </View>
                 );
               })}
               {typing ? <TypingDots /> : null}
@@ -1449,15 +1476,10 @@ export default function ChatScreen({ navigation, route }: any) {
           )}
 
           {replyingTo && !isRecording && (
-            <View className="bg-surface2 dark:bg-d-surface2 mx-2 mt-2 mb-1 rounded-t-lg border-l-4 border-l-accent flex-row items-center justify-between px-3 py-2">
-              <View className="flex-1 mr-2">
-                <Text className="text-accent dark:text-d-accent font-semibold text-xs mb-0.5">Replying to message</Text>
-                <Text className="text-ink dark:text-d-ink text-xs" numberOfLines={2}>{replyingTo.text || 'Media Message'}</Text>
-              </View>
-              <Pressable onPress={() => setReplyingTo(null)} className="p-1">
-                <Text className="text-danger dark:text-d-danger font-bold text-xs">✕</Text>
-              </Pressable>
-            </View>
+            <ReplyPreview 
+              message={replyingTo} 
+              onCancel={() => setReplyingTo(null)} 
+            />
           )}
 
           {isWithin24Hours ? (

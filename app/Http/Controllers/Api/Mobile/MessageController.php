@@ -101,6 +101,7 @@ class MessageController extends Controller
             'media_url' => $request->input('media_url'),
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
+            'reply_to_message_id' => $request->input('reply_to_message_id'),
         ]);
 
         \Log::info('[MOBILE_API_MESSAGE_STORE] Message created and queued', [

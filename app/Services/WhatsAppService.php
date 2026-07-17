@@ -189,7 +189,14 @@ class WhatsAppService
         ]);
 
         try {
-            $response = $this->messaging->sendText($to, $message); // Delegate to specialized service
+            $replyToWamId = null;
+            if (!empty($msg->metadata['reply_to_message_id'])) {
+                $repliedMsg = \App\Models\Message::find($msg->metadata['reply_to_message_id']);
+                if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
+                    $replyToWamId = $repliedMsg->whatsapp_message_id;
+                }
+            }
+            $response = $this->messaging->sendText($to, $message, $replyToWamId); // Delegate to specialized service
 
             if ($response['success'] ?? false) {
                 $wamId = $response['data']['messages'][0]['id'] ?? null;
@@ -268,6 +275,13 @@ class WhatsAppService
             'type' => $type,
             $type => $mediaObject,
         ];
+
+        if (!empty($msg->metadata['reply_to_message_id'])) {
+            $repliedMsg = \App\Models\Message::find($msg->metadata['reply_to_message_id']);
+            if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
+                $payload['context'] = ['message_id' => $repliedMsg->whatsapp_message_id];
+            }
+        }
 
         try {
             $response = $this->client->sendRequest('messages', $payload);

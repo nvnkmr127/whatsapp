@@ -6,7 +6,8 @@ import { View, Text, Image, Pressable } from 'react-native';
 import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useTokens } from '@/theme';
-import type { MessageStatus } from '@/types';
+import { ReplyPreview } from './ReplyPreview';
+import type { MessageStatus, ChatMessage } from '@/types';
 
 interface Props {
   kind: 'in' | 'out';
@@ -19,11 +20,12 @@ interface Props {
   mediaUrl?: string | null;
   mediaType?: string | null;
   metadata?: any;
-  replyToContent?: string | null;
+  replyTo?: ChatMessage | null;
+  onReplyPress?: () => void;
   onMediaPress?: () => void;
 }
 
-export function Bubble({ kind, children, time, status, variant = 'tail', radius = 18, isStarred, mediaUrl, mediaType, metadata, replyToContent, onMediaPress }: Props) {
+export function Bubble({ kind, children, time, status, variant = 'tail', radius = 18, isStarred, mediaUrl, mediaType, metadata, replyTo, onReplyPress, onMediaPress }: Props) {
   const { tokens } = useTokens();
   const isOut = kind === 'out';
   const baseR = variant === 'squared' ? Math.min(8, radius * 0.45) : radius;
@@ -107,13 +109,8 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
         style={corner}
       >
         {/* Reply Context */}
-        {replyToContent ? (
-          <View className="m-1.5 p-2 bg-black/5 dark:bg-white/10 rounded border-l-4 border-l-accent dark:border-l-d-accent">
-            <Text className="text-accent dark:text-d-accent text-xs font-semibold mb-0.5">Replied Message</Text>
-            <Text className="text-ink/80 dark:text-d-ink/80 text-xs" numberOfLines={3}>
-              {replyToContent}
-            </Text>
-          </View>
+        {replyTo ? (
+          <ReplyPreview message={replyTo} inBubble={true} onPress={onReplyPress} />
         ) : null}
 
         {/* Media preview */}

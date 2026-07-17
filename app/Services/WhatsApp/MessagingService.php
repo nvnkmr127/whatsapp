@@ -28,15 +28,21 @@ class MessagingService
     /**
      * Send a text message.
      */
-    public function sendText(string $to, string $text): array
+    public function sendText(string $to, string $text, ?string $replyToWamId = null): array
     {
-        return $this->client->sendRequest('messages', [
+        $payload = [
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
             'to' => $to,
             'type' => 'text',
             'text' => ['body' => $text],
-        ]);
+        ];
+
+        if ($replyToWamId) {
+            $payload['context'] = ['message_id' => $replyToWamId];
+        }
+
+        return $this->client->sendRequest('messages', $payload);
     }
 
     /**

@@ -38,9 +38,13 @@ class Message extends Model
         return $this->created_at ? $this->created_at->format('H:i') : null;
     }
 
-    public function getReplyToMessageIdAttribute()
+    public function getReplyToMessageIdAttribute($value)
     {
-        return $this->metadata['reply_to_message_id'] ?? null;
+        if ($value) {
+            return $value;
+        }
+        $meta = $this->metadata;
+        return is_array($meta) ? ($meta['reply_to_message_id'] ?? null) : null;
     }
 
     public function getFullMediaUrlAttribute()
