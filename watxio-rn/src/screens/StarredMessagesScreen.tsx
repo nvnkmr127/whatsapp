@@ -9,6 +9,7 @@ import { ChevronLeft, ArrowUpRight, ArrowDownLeft, Star, ChevronRight } from 'lu
 import { useTokens } from '@/theme';
 import { IconButton } from '@/components/Button';
 import { Avatar } from '@/components/Avatar';
+import { StarredListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
 
@@ -218,9 +219,8 @@ export default function StarredMessagesScreen() {
         }}
         ListEmptyComponent={
           loading ? (
-            <View className="py-20 items-center justify-center">
-              <ActivityIndicator size="small" color={tokens.accent} />
-              <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading starred messages...</Text>
+            <View className="flex-1 mt-4">
+              <StarredListSkeleton count={6} />
             </View>
           ) : (
             <View className="py-20 items-center justify-center px-6">

@@ -13,6 +13,7 @@ import { SectionLabel } from '@/components/SectionLabel';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
 import { Avatar } from '@/components/Avatar';
+import { CallsListSkeleton } from '@/components/ListItemSkeleton';
 
 export default function CallsScreen() {
   const { tokens } = useTokens();
@@ -282,9 +283,8 @@ export default function CallsScreen() {
         }}
         ListEmptyComponent={
           loading ? (
-            <View className="py-20 items-center justify-center">
-              <ActivityIndicator size="small" color={tokens.accent} />
-              <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading logs...</Text>
+            <View className="flex-1 mt-4">
+              <CallsListSkeleton count={6} />
             </View>
           ) : (
             <View className="py-20 items-center justify-center">

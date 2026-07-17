@@ -35,8 +35,8 @@ export function ReplyPreview({ message, onPress, onCancel, inBubble = false }: R
   }
 
   const containerClass = inBubble
-    ? "m-1 p-1 bg-black/5 dark:bg-white/10 rounded overflow-hidden flex-row border-l-4"
-    : "bg-surface2 dark:bg-d-surface2 mx-2 mt-2 mb-1 rounded-t-lg border-l-4 flex-row items-center justify-between px-3 py-2";
+    ? "mx-1 mt-1 mb-1 p-[4px] bg-black/5 dark:bg-white/10 rounded-lg overflow-hidden flex-row border-l-[3.5px]"
+    : "bg-surface2 dark:bg-d-surface2 mx-2 mt-2 mb-1 rounded-t-lg border-l-[3.5px] flex-row items-center justify-between px-3 py-2";
   
   const borderColor = isOut ? tokens.accent : '#34B7F1';
 
@@ -47,7 +47,7 @@ export function ReplyPreview({ message, onPress, onCancel, inBubble = false }: R
       style={{ borderLeftColor: borderColor }}
       disabled={!onPress}
     >
-      <View className={`flex-1 ${inBubble ? 'pl-1 py-0.5' : 'mr-2'}`}>
+      <View className={`${inBubble ? 'pl-1.5 pr-3 pb-1 min-w-[100px]' : 'flex-1 mr-2'}`}>
         {inBubble ? null : (
            <View className="flex-row items-center justify-between">
              <Text className="text-accent dark:text-d-accent font-semibold text-xs mb-0.5" style={{ color: nameColor }}>
@@ -62,7 +62,7 @@ export function ReplyPreview({ message, onPress, onCancel, inBubble = false }: R
         )}
         
         {inBubble && (
-          <Text className="font-semibold text-[13px] mb-0.5" style={{ color: nameColor }}>
+          <Text className="font-semibold text-[12.5px] leading-[16px] mb-0.5" style={{ color: nameColor }}>
             {senderName}
           </Text>
         )}
@@ -72,7 +72,7 @@ export function ReplyPreview({ message, onPress, onCancel, inBubble = false }: R
           {hasMedia && isVideo && <Video size={12} color={tokens.muted} />}
           {hasMedia && isAudio && <Mic size={12} color={tokens.muted} />}
           {hasMedia && isDoc && <FileText size={12} color={tokens.muted} />}
-          <Text className="text-ink/80 dark:text-d-ink/80 text-[12px]" numberOfLines={inBubble ? 3 : 1}>
+          <Text className={`${inBubble ? 'text-ink/60 dark:text-d-ink/60 text-[12.5px] leading-[16px]' : 'text-ink/80 dark:text-d-ink/80 text-[12px]'}`} numberOfLines={inBubble ? 3 : 1}>
             {previewText}
           </Text>
         </View>
@@ -82,7 +82,7 @@ export function ReplyPreview({ message, onPress, onCancel, inBubble = false }: R
         <View className={inBubble ? 'ml-1' : ''}>
           <Image 
             source={{ uri: message.media_url }} 
-            style={{ width: inBubble ? 45 : 45, height: inBubble ? 45 : 45, borderRadius: 4 }} 
+            style={{ width: inBubble ? 42 : 45, height: inBubble ? 42 : 45, borderRadius: 4 }} 
             resizeMode="cover" 
           />
         </View>

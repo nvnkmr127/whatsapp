@@ -10,6 +10,7 @@ import { useTokens } from '@/theme';
 import { IconButton } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
 
@@ -61,9 +62,8 @@ export default function CampaignDetailScreen() {
 
   if (loading && !campaign) {
     return (
-      <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
-        <ActivityIndicator size="large" color={tokens.accent} />
-        <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading details...</Text>
+      <View className="flex-1 bg-bg dark:bg-d-bg mt-4">
+        <ListSkeleton count={6} />
       </View>
     );
   }

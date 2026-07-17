@@ -186,8 +186,9 @@ class WhatsAppService
 
         try {
             $replyToWamId = null;
-            if (!empty($msg->metadata['reply_to_message_id'])) {
-                $repliedMsg = \App\Models\Message::find($msg->metadata['reply_to_message_id']);
+            $replyId = $msg->reply_to_message_id;
+            if (!empty($replyId)) {
+                $repliedMsg = \App\Models\Message::find($replyId);
                 if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
                     $replyToWamId = $repliedMsg->whatsapp_message_id;
                 }
@@ -272,8 +273,9 @@ class WhatsAppService
             $type => $mediaObject,
         ];
 
-        if (!empty($msg->metadata['reply_to_message_id'])) {
-            $repliedMsg = \App\Models\Message::find($msg->metadata['reply_to_message_id']);
+        $replyId = $msg->reply_to_message_id;
+        if (!empty($replyId)) {
+            $repliedMsg = \App\Models\Message::find($replyId);
             if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
                 $payload['context'] = ['message_id' => $repliedMsg->whatsapp_message_id];
             }

@@ -23,6 +23,7 @@ import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { ChatSkeleton } from '@/components/ChatSkeleton';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ReplyPreview } from '@/components/ReplyPreview';
 import { api } from '@/services/api';
@@ -1316,10 +1317,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
         {/* Loading messages indicator */}
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="small" color={tokens.accent} />
-            <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading chat history...</Text>
-          </View>
+          <ChatSkeleton />
         ) : (
           /* Messages List */
           <View className="flex-1">

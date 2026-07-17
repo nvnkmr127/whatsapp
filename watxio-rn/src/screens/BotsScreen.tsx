@@ -12,6 +12,7 @@ import { Card } from '@/components/Card';
 import { Toggle } from '@/components/Toggle';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
+import { BotsListSkeleton } from '@/components/ListItemSkeleton';
 
 export default function BotsScreen() {
   const { tokens } = useTokens();
@@ -279,10 +280,7 @@ export default function BotsScreen() {
 
       {/* List */}
       {loading && bots.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
-          <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading bots...</Text>
-        </View>
+        <BotsListSkeleton count={4} />
       ) : (
         <FlatList
           data={filteredBots}

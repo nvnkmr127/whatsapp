@@ -10,6 +10,7 @@ import { useTokens } from '@/theme';
 import { Chip } from '@/components/Chip';
 import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { Spark } from '@/components/Spark';
 import { IconButton } from '@/components/Button';
 import { CustomDialog } from '@/components/Dialog';
@@ -172,8 +173,8 @@ export default function AnalyticsScreen({ navigation }: any) {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
+        <View className="flex-1 mt-4">
+          <ListSkeleton count={6} />
         </View>
       ) : (
         <ScrollView

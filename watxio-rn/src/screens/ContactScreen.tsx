@@ -14,6 +14,8 @@ import { IconButton } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
 import { CustomDialog } from '@/components/Dialog';
+import { Toggle } from '@/components/Toggle';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 
 export default function ContactScreen({ navigation, route }: any) {
@@ -285,9 +287,8 @@ export default function ContactScreen({ navigation, route }: any) {
 
   if (loading && !contactData) {
     return (
-      <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
-        <ActivityIndicator size="large" color={tokens.accent} />
-        <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading contact card...</Text>
+      <View className="flex-1 bg-bg dark:bg-d-bg mt-4">
+        <ListSkeleton count={6} />
       </View>
     );
   }

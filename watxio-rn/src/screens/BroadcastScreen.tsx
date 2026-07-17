@@ -12,6 +12,7 @@ import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
 import { PrimaryButton, IconButton } from '@/components/Button';
 import type { Template } from '@/types';
+import { ListSkeleton, CampaignsListSkeleton } from '@/components/ListItemSkeleton';
 import { CustomDialog } from '@/components/Dialog';
 import { api } from '@/services/api';
 
@@ -230,10 +231,7 @@ export default function BroadcastScreen({ navigation }: any) {
 
       {mode === 'list' ? (
         loading && campaignsList.length === 0 ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={tokens.accent} />
-            <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading campaigns...</Text>
-          </View>
+          <CampaignsListSkeleton count={4} />
         ) : (
           <FlatList
             data={campaignsList}
@@ -318,9 +316,8 @@ export default function BroadcastScreen({ navigation }: any) {
         /* Create campaign form mode */
         <View className="flex-1">
           {loading ? (
-            <View className="flex-1 bg-bg dark:bg-d-bg items-center justify-center">
-              <ActivityIndicator size="large" color={tokens.accent} />
-              <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading broadcast parameters...</Text>
+            <View className="flex-1 mt-4">
+              <ListSkeleton count={6} />
             </View>
           ) : (
             <>

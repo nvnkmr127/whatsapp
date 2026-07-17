@@ -13,8 +13,10 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useTokens } from '@/theme';
 import { SectionLabel } from '@/components/SectionLabel';
 import { Toggle } from '@/components/Toggle';
+import { Spark } from '@/components/Spark';
 import { IconButton } from '@/components/Button';
 import { CustomDialog } from '@/components/Dialog';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 import { AUTOMATIONS } from '@/data';
 
@@ -228,8 +230,8 @@ export default function AutomationsScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
+        <View className="flex-1 mt-4">
+          <ListSkeleton count={6} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 100 }}>

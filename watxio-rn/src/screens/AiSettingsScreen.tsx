@@ -11,6 +11,7 @@ import { IconButton } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Toggle } from '@/components/Toggle';
 import { SectionLabel } from '@/components/SectionLabel';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
 
@@ -122,9 +123,8 @@ export default function AiSettingsScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
-          <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading settings...</Text>
+        <View className="flex-1 mt-4">
+          <ListSkeleton count={6} />
         </View>
       ) : (
         <>

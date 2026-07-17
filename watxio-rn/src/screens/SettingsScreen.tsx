@@ -15,6 +15,7 @@ import { useTokens, type Tokens } from '@/theme';
 import { Avatar } from '@/components/Avatar';
 import { Card } from '@/components/Card';
 import { SectionLabel } from '@/components/SectionLabel';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 import { IconButton } from '@/components/Button';
 import { useGlobalState, store } from '@/store';
 import { CustomDialog } from '@/components/Dialog';
@@ -280,8 +281,8 @@ export default function SettingsScreen({ navigation }: any) {
       </View>
 
       {loading && !globalState.user ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
+        <View className="flex-1 mt-4">
+          <ListSkeleton count={6} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 32 }}>

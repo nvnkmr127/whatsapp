@@ -3,7 +3,8 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, Pressable, ScrollView, RefreshControl, FlatList, TextInput, ActivityIndicator, Modal
+  View, Text, Pressable, ScrollView, RefreshControl, FlatList, TextInput, Modal,
+  ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import { api } from '@/services/api';
 import { cacheInbox, loadCachedInbox } from '@/services/chatCache';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { ListSkeleton } from '@/components/ListItemSkeleton';
 
 type FilterKey = 'All' | 'Unread' | 'Open' | 'Mine' | 'Bots';
 const FILTERS: FilterKey[] = ['All', 'Unread', 'Open', 'Mine', 'Bots'];
@@ -136,7 +138,7 @@ export default function InboxScreen({ navigation }: any) {
 
       // Cache the first page of conversations for offline use
       if (pageNum === 1 && !append) {
-        cacheInbox(mapped).catch(() => {});
+        cacheInbox(mapped).catch(() => { });
       }
 
       if (response.counts) {
@@ -318,7 +320,7 @@ export default function InboxScreen({ navigation }: any) {
     try {
       // 1. Tell backend to switch team
       await api.post('/v1/mobile/auth/switch-team', { team_id: teamId });
-      
+
       // 2. Set active team headers
       api.setTeamId(teamId);
 
@@ -352,7 +354,7 @@ export default function InboxScreen({ navigation }: any) {
       onPress: () => handleSwitchTeam(team.id, team.name),
     }));
 
-    buttons.push({ text: 'Cancel', style: 'cancel', onPress: async () => {} });
+    buttons.push({ text: 'Cancel', style: 'cancel', onPress: async () => { } });
 
     showDialog('Switch Active Workspace', 'Choose a WhatsApp Business team to display:', buttons);
   };
@@ -446,9 +448,7 @@ export default function InboxScreen({ navigation }: any) {
 
       {/* Loading Indicator */}
       {loading && !refreshing ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
-        </View>
+        <ListSkeleton count={8} />
       ) : (
         /* List */
         <FlatList
@@ -611,9 +611,8 @@ function Row({ c, divider, onPress }: RowProps) {
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center gap-3 py-[11px] px-[18px] active:bg-surface2 dark:active:bg-d-surface2 relative ${
-        divider ? 'border-b border-hairline dark:border-d-hairline' : ''
-      }`}
+      className={`flex-row items-center gap-3 py-[11px] px-[18px] active:bg-surface2 dark:active:bg-d-surface2 relative ${divider ? 'border-b border-hairline dark:border-d-hairline' : ''
+        }`}
     >
       {/* Pin badge indicator */}
       {c.pinned ? (
@@ -628,21 +627,20 @@ function Row({ c, divider, onPress }: RowProps) {
           <View className="flex-1 flex-row items-center gap-1.5 mr-2 overflow-hidden">
             <Text
               numberOfLines={1}
-              className={`flex-shrink text-[15px] ${
-                c.unread ? 'font-bold text-ink dark:text-d-ink' : 'font-semibold text-ink dark:text-d-ink'
-              }`}
+              className={`flex-shrink text-[15px] ${c.unread ? 'font-bold text-ink dark:text-d-ink' : 'font-semibold text-ink dark:text-d-ink'
+                }`}
             >
               {c.name}
             </Text>
             {c.tag ? (
-              <View 
-                className="px-[5px] py-[2px] rounded border" 
-                style={{ 
+              <View
+                className="px-[5px] py-[2px] rounded border"
+                style={{
                   backgroundColor: c.tagColor ? `${c.tagColor}15` : tokens.surface2,
                   borderColor: c.tagColor ? `${c.tagColor}30` : tokens.hairline
                 }}
               >
-                <Text 
+                <Text
                   className="text-[9px] font-bold uppercase tracking-wider"
                   style={{ color: c.tagColor || tokens.muted }}
                 >
@@ -652,9 +650,8 @@ function Row({ c, divider, onPress }: RowProps) {
             ) : null}
           </View>
           <Text
-            className={`text-[11.5px] ml-2 ${
-              c.unread ? 'text-accent dark:text-d-accent font-bold' : 'text-muted dark:text-d-muted font-medium'
-            }`}
+            className={`text-[11.5px] ml-2 ${c.unread ? 'text-accent dark:text-d-accent font-bold' : 'text-muted dark:text-d-muted font-medium'
+              }`}
           >
             {c.time}
           </Text>
@@ -665,9 +662,8 @@ function Row({ c, divider, onPress }: RowProps) {
           ) : null}
           <Text
             numberOfLines={1}
-            className={`flex-1 text-[13px] ${
-              c.unread ? 'text-ink2 dark:text-d-ink2 font-medium' : 'text-muted dark:text-d-muted font-normal'
-            }`}
+            className={`flex-1 text-[13px] ${c.unread ? 'text-ink2 dark:text-d-ink2 font-medium' : 'text-muted dark:text-d-muted font-normal'
+              }`}
           >
             {c.last}
           </Text>

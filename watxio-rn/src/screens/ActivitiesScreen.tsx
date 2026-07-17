@@ -11,6 +11,7 @@ import { IconButton } from '@/components/Button';
 import { Avatar } from '@/components/Avatar';
 import { api } from '@/services/api';
 import { CustomDialog } from '@/components/Dialog';
+import { ActivitiesListSkeleton } from '@/components/ListItemSkeleton';
 
 export default function ActivitiesScreen() {
   const { tokens } = useTokens();
@@ -107,10 +108,7 @@ export default function ActivitiesScreen() {
 
       {/* List */}
       {loading && activities.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
-          <Text className="text-xs text-muted dark:text-d-muted mt-2">Loading logs...</Text>
-        </View>
+        <ActivitiesListSkeleton count={8} />
       ) : (
         <FlatList
           data={activities}

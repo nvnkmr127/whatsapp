@@ -11,6 +11,7 @@ import { useTokens, Tokens } from '@/theme';
 import type { Template, RootStackParamList } from '@/types';
 import { Chip } from '@/components/Chip';
 import { CustomDialog } from '@/components/Dialog';
+import { TemplatesListSkeleton } from '@/components/ListItemSkeleton';
 import { api } from '@/services/api';
 
 type TabKey = 'All' | 'Approved' | 'Pending' | 'Rejected';
@@ -277,9 +278,7 @@ export default function TemplatesScreen({ navigation }: any) {
 
       {/* List */}
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.accent} />
-        </View>
+        <TemplatesListSkeleton count={4} />
       ) : (
         <FlatList
           className="flex-1"
