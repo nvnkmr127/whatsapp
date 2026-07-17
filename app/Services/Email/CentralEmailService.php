@@ -40,8 +40,8 @@ class CentralEmailService
         try {
             $mailable = new DynamicSystemMail($subject, $html, $text, $headers);
 
-            // Dispatch via failover engine using the specified use case
-            \App\Jobs\Email\SendSystemEmailJob::dispatch($to, $useCase, $mailable, null);
+            // Queues SendEmailJob, which handles routing and SMTP failover
+            $this->dispatcher->send($to, $useCase, $mailable);
 
         } catch (\Exception $e) {
             Log::error('CentralEmailService: Failed to queue raw system email', [

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\PhoneNumberHelper;
 use App\Models\LeadCaptureWidget;
 use BaconQrCode\Renderer\Color\Rgb;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -28,11 +29,6 @@ class LeadCaptureWidgetController extends Controller
     /**
      * Return QR code SVG.
      */
-    public function qr($slug)
-    {
-        return $this->qrImage($slug);
-    }
-
     public function qrImage($slug)
     {
         $widget = LeadCaptureWidget::where('slug', $slug)->firstOrFail();
@@ -42,8 +38,8 @@ class LeadCaptureWidgetController extends Controller
 
         $renderer = new ImageRenderer(
             new RendererStyle(300, 1, null, null, Fill::uniformColor(
-                new Rgb($bgColor['r'], $bgColor['g'], $bgColor['b']),
-                new Rgb($color['r'], $color['g'], $color['b'])
+                new Rgb($bgColor[0], $bgColor[1], $bgColor[2]),
+                new Rgb($color[0], $color[1], $color[2])
             )),
             new SvgImageBackEnd
         );
@@ -54,20 +50,15 @@ class LeadCaptureWidgetController extends Controller
         return response($qrCode)->header('Content-Type', 'image/svg+xml');
     }
 
-    private function hexToRgb($hex)
+    /** @return array{0: int, 1: int, 2: int} [r, g, b] */
+    private function hexToRgb($hex): array
     {
-        $hex = str_replace('#', '', $hex);
-        if (strlen($hex) == 3) {
-            $r = hexdec(substr($hex, 0, 1).substr($hex, 0, 1));
-            $g = hexdec(substr($hex, 1, 1).substr($hex, 1, 1));
-            $b = hexdec(substr($hex, 2, 1).substr($hex, 2, 1));
-        } else {
-            $r = hexdec(substr($hex, 0, 2));
-            $g = hexdec(substr($hex, 2, 2));
-            $b = hexdec(substr($hex, 4, 2));
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
 
-        return ['r' => $r, 'g' => $g, 'b' => $b];
+        return sscanf($hex, '%02x%02x%02x');
     }
 
     /**
@@ -76,25 +67,25 @@ class LeadCaptureWidgetController extends Controller
     public function lead(Request $request, $slug)
     {
         $widget = LeadCaptureWidget::where('slug', $slug)->firstOrFail();
-        $team = $widget->team;
 
-        $name = $request->input('name');
-        $email = $request->input('email');
-        $phone = $request->input('phone');
+        // Best effort: a valid phone gives us a real contact now; without one,
+        // the [ref:slug] tracker in the wa.me message identifies them when they text.
+        try {
+            $phone = PhoneNumberHelper::normalize((string) $request->input('phone'));
 
-        if ($name || $email || $phone) {
-            // Create or update contact
-            $contact = \App\Models\Contact::updateOrCreate(
-                ['team_id' => $team->id, 'phone' => $phone ?: 'unknown'],
+            \App\Models\Contact::updateOrCreate(
+                ['team_id' => $widget->team_id, 'phone_number' => $phone],
                 [
-                    'name' => $name ?: 'Lead from '.$widget->name,
-                    'email' => $email,
+                    'name' => $request->input('name') ?: 'Lead from '.$widget->name,
+                    'email' => $request->input('email'),
                     'lead_source_id' => \App\Models\LeadSource::firstOrCreate(
-                        ['team_id' => $team->id, 'name' => 'Growth: '.$widget->name],
+                        ['team_id' => $widget->team_id, 'name' => 'Growth: '.$widget->name],
                         ['type' => 'custom']
                     )->id,
                 ]
             );
+        } catch (\InvalidArgumentException) {
+            // No usable phone number — skip contact creation
         }
 
         $widget->increment('conversion_count');
@@ -103,7 +94,7 @@ class LeadCaptureWidgetController extends Controller
     }
 
     /**
-     * Get widget configuration as JSON.
+     * Get widget configuration as JSON. CORS handled by config/cors.php.
      */
     public function config($slug)
     {
@@ -117,6 +108,7 @@ class LeadCaptureWidgetController extends Controller
             'color' => $widget->widget_color,
             'collect_name' => (bool) $widget->collect_name,
             'collect_email' => (bool) $widget->collect_email,
+            'collect_phone' => (bool) $widget->collect_phone,
             'brand_name' => $widget->brand_name,
             'brand_subtitle' => $widget->brand_subtitle,
             'brand_logo' => $widget->brand_logo_url,
@@ -124,6 +116,7 @@ class LeadCaptureWidgetController extends Controller
             'footer_text' => $widget->footer_text,
             'placeholder_name' => $widget->placeholder_name,
             'placeholder_email' => $widget->placeholder_email,
+            'placeholder_phone' => $widget->placeholder_phone,
             'position' => $widget->position,
             'bottom_margin' => $widget->bottom_margin,
             'side_margin' => $widget->side_margin,
@@ -138,7 +131,7 @@ class LeadCaptureWidgetController extends Controller
             'wa_url' => $widget->wa_me_link,
             'lead_url' => route('qr.lead', $widget->slug),
             'click_url' => route('qr.click', $widget->slug),
-        ])->header('Access-Control-Allow-Origin', '*');
+        ]);
     }
 
     public function trackClick($slug)
@@ -148,6 +141,6 @@ class LeadCaptureWidgetController extends Controller
             $widget->increment('click_count');
         }
 
-        return response()->json(['status' => 'success'])->header('Access-Control-Allow-Origin', '*');
+        return response()->json(['status' => 'success']);
     }
 }

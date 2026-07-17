@@ -70,7 +70,7 @@ class AssignmentService
         $config = $team->chat_assignment_config ?? [];
 
         // 1. Sticky Assignment
-        if ($this->shouldStickyAssign($contact, $config)) {
+        if (! empty($config['sticky_enabled'])) {
             $previousAgent = $this->getPreviousAgent($contact);
             if ($previousAgent && $this->isAgentAvailable($previousAgent)) {
                 return ['agent' => $previousAgent, 'reason' => 'Sticky Assignment (Previous Owner)', 'rule_id' => 'sticky'];
@@ -94,14 +94,6 @@ class AssignmentService
         }
 
         return ['agent' => null, 'reason' => 'No eligible agent found', 'rule_id' => null];
-    }
-
-    /**
-     * Check if sticky assignment is enabled and applicable.
-     */
-    protected function shouldStickyAssign(Contact $contact, array $config): bool
-    {
-        return ! empty($config['sticky_enabled']);
     }
 
     /**

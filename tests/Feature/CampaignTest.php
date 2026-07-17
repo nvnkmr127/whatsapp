@@ -16,7 +16,7 @@ class CampaignTest extends TestCase
         $team = \App\Models\Team::factory()->create([
             'whatsapp_access_token' => 'test-token',
             'whatsapp_phone_number_id' => '123',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
         $contact1 = \App\Models\Contact::factory()->create(['team_id' => $team->id, 'opt_in_status' => 'opted_in']);
@@ -67,8 +67,7 @@ class CampaignTest extends TestCase
             ['campaign_id' => $campaign->id, 'contact_id' => $contact2->id, 'variant' => 'A', 'phone' => $contact2->phone_number],
         ]);
 
-        $job = new \App\Jobs\ProcessCampaignJob($campaign->id);
-        app()->call([$job, 'handle']);
+        app(\App\Services\BroadcastService::class)->launch($campaign);
 
         $campaign->refresh();
         // Depending on logic, status might be completed because it finished dispatching
@@ -85,7 +84,7 @@ class CampaignTest extends TestCase
         $team = \App\Models\Team::factory()->create([
             'whatsapp_access_token' => 'test-token',
             'whatsapp_phone_number_id' => '123',
-            'whatsapp_setup_state' => \App\Enums\IntegrationState::ACTIVE,
+            'whatsapp_setup_state' => \App\Enums\IntegrationState::READY,
             'whatsapp_connected' => true,
         ]);
         $tag = \App\Models\ContactTag::create(['team_id' => $team->id, 'name' => 'VIP']);
@@ -134,8 +133,7 @@ class CampaignTest extends TestCase
             ['campaign_id' => $campaign->id, 'contact_id' => $c2->id, 'variant' => 'A', 'phone' => $c2->phone_number],
         ]);
 
-        $job = new \App\Jobs\ProcessCampaignJob($campaign->id);
-        app()->call([$job, 'handle']);
+        app(\App\Services\BroadcastService::class)->launch($campaign);
 
         $campaign->refresh();
         $this->assertEquals(2, $campaign->total_contacts);

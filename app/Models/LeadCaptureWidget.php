@@ -19,6 +19,7 @@ class LeadCaptureWidget extends Model
         'widget_color',
         'collect_name',
         'collect_email',
+        'collect_phone',
         'brand_name',
         'brand_subtitle',
         'brand_logo_url',
@@ -26,6 +27,7 @@ class LeadCaptureWidget extends Model
         'footer_text',
         'placeholder_name',
         'placeholder_email',
+        'placeholder_phone',
         'qr_color',
         'qr_bg_color',
         'position',
@@ -48,6 +50,7 @@ class LeadCaptureWidget extends Model
     protected $casts = [
         'collect_name' => 'boolean',
         'collect_email' => 'boolean',
+        'collect_phone' => 'boolean',
         'open_by_default' => 'boolean',
         'show_on_mobile' => 'boolean',
         'show_on_desktop' => 'boolean',
@@ -70,10 +73,5 @@ class LeadCaptureWidget extends Model
         $message .= " [ref:{$this->slug}]";
 
         return "https://wa.me/{$phone}?text=".urlencode($message);
-    }
-
-    public function getQrCodeUrlAttribute()
-    {
-        return route('qr.show', $this->slug);
     }
 }

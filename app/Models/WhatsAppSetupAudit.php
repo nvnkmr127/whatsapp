@@ -35,6 +35,6 @@ class WhatsAppSetupAudit extends Model
 
     public static function generateReferenceId(): string
     {
-        return 'WA-'.strtoupper(substr(uniqid(), -8));
+        return 'WA-'.strtoupper(\Illuminate\Support\Str::random(8));
     }
 }

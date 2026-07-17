@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\CallPermission;
 use App\Models\Contact;
+use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Team;
 use Illuminate\Support\Facades\Log;
 
@@ -160,7 +162,7 @@ class CallPermissionService
     protected function hasActiveConversation(Contact $contact, Team $team): bool
     {
         // Check for recent messages (within 24 hours)
-        $recentMessage = \App\Models\Message::where('contact_id', $contact->id)
+        $recentMessage = Message::where('contact_id', $contact->id)
             ->where('team_id', $team->id)
             ->where('created_at', '>=', now()->subDay())
             ->exists();
@@ -170,7 +172,7 @@ class CallPermissionService
         }
 
         // Check for active conversation
-        $activeConversation = \App\Models\Conversation::where('contact_id', $contact->id)
+        $activeConversation = Conversation::where('contact_id', $contact->id)
             ->where('team_id', $team->id)
             ->where('status', 'open')
             ->exists();
@@ -227,21 +229,5 @@ class CallPermissionService
             'permission_id' => $permission->id,
             'total_calls' => $permission->calls_made_count,
         ]);
-    }
-
-    /**
-     * Check and expire old permissions
-     */
-    public function expireOldPermissions(): int
-    {
-        $expired = CallPermission::where('permission_status', 'granted')
-            ->where('permission_expires_at', '<=', now())
-            ->get();
-
-        foreach ($expired as $permission) {
-            $permission->markAsExpired();
-        }
-
-        return $expired->count();
     }
 }

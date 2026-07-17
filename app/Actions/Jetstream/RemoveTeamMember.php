@@ -21,6 +21,12 @@ class RemoveTeamMember implements RemovesTeamMembers
 
         $this->ensureUserDoesNotOwnTeam($teamMember, $team);
 
+        // Unassign every contact still pointing at the departing member —
+        // otherwise assigned_to dangles against a user no longer on the team.
+        \App\Models\Contact::where('team_id', $team->id)
+            ->where('assigned_to', $teamMember->id)
+            ->update(['assigned_to' => null]);
+
         $team->removeUser($teamMember);
 
         TeamMemberRemoved::dispatch($team, $teamMember);

@@ -41,11 +41,12 @@ class OptInManagement extends Component
 
     public function addOptInKeyword()
     {
-        if (trim($this->newOptInKeyword) === '') {
+        $keyword = trim($this->newOptInKeyword);
+        if ($keyword === '') {
             return;
         }
-        if (! in_array($this->newOptInKeyword, $this->optInKeywords)) {
-            $this->optInKeywords[] = trim($this->newOptInKeyword);
+        if (! in_array($keyword, $this->optInKeywords)) {
+            $this->optInKeywords[] = $keyword;
         }
         $this->newOptInKeyword = '';
     }
@@ -58,11 +59,12 @@ class OptInManagement extends Component
 
     public function addOptOutKeyword()
     {
-        if (trim($this->newOptOutKeyword) === '') {
+        $keyword = trim($this->newOptOutKeyword);
+        if ($keyword === '') {
             return;
         }
-        if (! in_array($this->newOptOutKeyword, $this->optOutKeywords)) {
-            $this->optOutKeywords[] = trim($this->newOptOutKeyword);
+        if (! in_array($keyword, $this->optOutKeywords)) {
+            $this->optOutKeywords[] = $keyword;
         }
         $this->newOptOutKeyword = '';
     }

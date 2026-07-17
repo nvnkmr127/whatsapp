@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Enums\IntegrationState;
+use App\Events\MessageStatusUpdated;
 use App\Models\Message;
 use App\Models\Team;
+use App\Services\TraceContext;
 use App\Services\WhatsAppService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SendMessageJob
 {
@@ -54,7 +57,7 @@ class SendMessageJob
             $this->teamId = $message->team_id;
             $this->phone = $message->contact->phone_number;
             $this->type = $message->type;
-            
+
             if ($message->type === 'template') {
                 $this->templateName = $message->metadata['template_name'] ?? $message->metadata['template_id'] ?? null;
                 $this->content = $message->metadata['variables'] ?? [];
@@ -63,7 +66,7 @@ class SendMessageJob
             } else {
                 $this->content = $message->content;
             }
-            
+
             $this->language = $message->metadata['language'] ?? 'en_US';
             $this->headerParams = $message->metadata['header_params'] ?? [];
             $this->footerParams = $message->metadata['footer_params'] ?? [];
@@ -88,9 +91,9 @@ class SendMessageJob
     {
         // 1. Restore Trace Context
         if ($this->traceId) {
-            \App\Services\TraceContext::set($this->traceId);
+            TraceContext::set($this->traceId);
         } else {
-            \App\Services\TraceContext::ensureTraceId();
+            TraceContext::ensureTraceId();
         }
 
         $team = Team::find($this->teamId);
@@ -107,7 +110,7 @@ class SendMessageJob
             if ($this->messageId) {
                 Message::where('id', $this->messageId)->update([
                     'status' => 'sent',
-                    'whatsapp_message_id' => 'sandbox_'.\Illuminate\Support\Str::random(10),
+                    'whatsapp_message_id' => 'sandbox_'.Str::random(10),
                 ]);
             }
 
@@ -243,7 +246,7 @@ class SendMessageJob
         ]);
 
         try {
-            \App\Events\MessageStatusUpdated::dispatch($message);
+            MessageStatusUpdated::dispatch($message);
         } catch (\Exception $e) {
             Log::error('Failed to update message status after job failure: '.$e->getMessage(), [
                 'message_id' => $this->messageId,

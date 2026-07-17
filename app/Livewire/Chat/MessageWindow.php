@@ -16,17 +16,11 @@ class MessageWindow extends Component
 
     public $conversationId;
 
-    public $messageBody = '';
-
     public $newAttachment;
 
     public $selectedTemplateId;
 
-    public $showEmojiPicker = false;
-
     public $conversation;
-
-    public $activeAgents = [];
 
     public $availableCategories = [];
 
@@ -47,25 +41,8 @@ class MessageWindow extends Component
         'aiSuggestionSelected' => 'handleAiSuggestionSelected',
     ];
 
-    // Template Modal State (Removed, now handled by sub-components)
-    // public $templateMediaUrl = '';
-    // public $showTemplateListModal = false;
-    // public $showTemplatePreviewModal = false;
-    // public $templateSearch = '';
-    // public $selectedTemplate;
-    // public $templateVariables = [];
-    // public $templatePreviewText = '';
-
-    // New properties for transfer modal and refactored media/message
-    public $activeAgentIds = [];
-
     public $showTransferModal = false;
 
-    public $transferSearch = '';
-
-    public $activeAgentsFull = [];
-
-    // Media and Templates (Now handled by sub-components)
     public $newAttachmentData = null;
 
     public $msgBody = '';
@@ -83,34 +60,6 @@ class MessageWindow extends Component
     public $lightboxOpen = false;
 
     public $lightboxImage = '';
-
-    public function getListeners()
-    {
-        if (Auth::check() && Auth::user()->currentTeam) {
-            $teamId = Auth::user()->currentTeam->id;
-
-            return [
-                "echo-presence:conversation.{$this->conversationId},.MessageReceived" => 'handleIncomingMessage',
-                "echo-presence:conversation.{$this->conversationId},.MessageStatusUpdated" => 'handleStatusUpdate',
-                "echo-presence:conversation.{$this->conversationId},client-typing" => 'handleClientTyping',
-                "echo-presence:conversation.{$this->conversationId},here" => 'handlePresence',
-                "echo-presence:conversation.{$this->conversationId},joining" => 'handlePresenceJoin',
-                "echo-presence:conversation.{$this->conversationId},leaving" => 'handlePresenceLeave',
-                'templateSelected' => 'handleTemplateSelected',
-                'mediaUploaded' => 'handleMediaUploaded',
-                'mediaDeleted' => 'handleMediaDeleted',
-                'aiSuggestionSelected' => 'handleAiSuggestionSelected',
-            ];
-        }
-
-        return [];
-    }
-
-    #[\Livewire\Attributes\Renderless]
-    public function handleStatusUpdate($event)
-    {
-        // Handled via Echo listeners in Alpine store usually
-    }
 
     public $chatMessages = []; // Dedicated property
 
@@ -181,26 +130,12 @@ class MessageWindow extends Component
         }
     }
 
-    public function handleTeamWideMessage($event)
-    {
-        // Only reload if the message belongs to THIS conversation
-        if ($this->conversation && $event['message']['conversation_id'] == $this->conversation->id) {
-            $this->handleIncomingMessage($event);
-        }
-        // Otherwise ignore to save processing
-    }
-
     public function loadMore()
     {
         $this->messageCount += 50;
         $this->loadConversation();
         $this->dispatch('chat-scroll-to-id', ['id' => $this->chatMessages->first()->id]);
     }
-
-    // public function updatedNewAttachment() // Removed
-    // {
-    //     $this->validate(['newAttachment' => 'max:16384']); // 16MB max
-    // }
 
     public function handleTemplateSelected($payload)
     {
@@ -246,6 +181,60 @@ class MessageWindow extends Component
     public function handleAiSuggestionSelected($text)
     {
         $this->msgBody = $text;
+    }
+
+    /**
+     * Send the picked media attachment (image/video/audio/document).
+     * The file was persisted by the MediaUpload sub-component, which handed us
+     * its stored public-disk path in newAttachmentData.
+     */
+    public function sendMessage()
+    {
+        if (! $this->conversation || empty($this->newAttachmentData['path'])) {
+            return;
+        }
+
+        $mime = $this->newAttachmentData['mime_type'] ?? 'application/octet-stream';
+        $type = $this->getMediaType($mime);
+        $caption = $this->msgBody ?: null;
+
+        $message = \App\Models\Message::create([
+            'team_id' => Auth::user()->currentTeam->id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'type' => $type,
+            'content' => $caption,
+            'caption' => $caption,
+            'media_url' => $this->newAttachmentData['path'],
+            'media_type' => $mime,
+            'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name],
+        ]);
+
+        // Message-based dispatch resolves the public URL via $message->full_media_url.
+        \App\Jobs\SendMessageJob::dispatch($message);
+
+        $this->msgBody = '';
+        $this->newAttachmentData = null;
+        $this->dispatch('clearMediaUpload');
+        $this->loadConversation();
+        $this->dispatch('messageSent');
+    }
+
+    private function getMediaType(string $mime): string
+    {
+        if (str_starts_with($mime, 'image/')) {
+            return 'image';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            return 'video';
+        }
+        if (str_starts_with($mime, 'audio/')) {
+            return 'audio';
+        }
+
+        return 'document';
     }
 
     public function closeTemplateModals()
@@ -363,96 +352,35 @@ class MessageWindow extends Component
             $text = str_replace(e($placeholder), $replacement, $text);
         }
 
-        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
-        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
-        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
-
-        return $text;
+        return $this->waMarkdown($text);
     }
 
-    public function sendMessage()
+    /**
+     * Render WhatsApp markdown (bold/italic/strikethrough) to HTML.
+     */
+    private function waMarkdown(string $text): string
     {
-        $this->validate([
-            'msgBody' => 'nullable|required_without:newAttachmentData|string',
-            'newAttachmentData' => 'nullable|array', // Validate as array from sub-component
-        ]);
+        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
 
-        if (! $this->conversation) {
-            return;
-        }
+        return preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
+    }
 
-        // 1. Pre-persist for immediate UI feedback (Optimistic Update)
-        $msgData = [
+    /**
+     * Create an internal_note message on the current conversation.
+     */
+    private function logInternalNote(string $content, array $meta = []): \App\Models\Message
+    {
+        return \App\Models\Message::create([
             'team_id' => Auth::user()->currentTeam->id,
             'contact_id' => $this->conversation->contact_id,
             'conversation_id' => $this->conversation->id,
             'direction' => 'outbound',
-            'status' => 'queued',
-            'metadata' => [
-                'agent_id' => Auth::id(),
-                'agent_name' => Auth::user()->name,
-            ],
-        ];
-
-        $attachments = null;
-        if ($this->newAttachmentData) {
-            // Since the real upload happened in the sub-component,
-            // the sub-component should have stored it properly if we wanted to use it here.
-            // Actually, MediaUpload component currently only sends back the temp url.
-            // We need the ACTUAL file object or a path.
-            // Let's assume for now, the MediaUpload component SHOULD have used FileUpload trait
-            // and we share it? No, components don't share file objects easily.
-            // FIX: We'll make MessageWindow handle the ACTUAL send if it gets a temp path.
-            // But wait, it's easier to let the sub-component handle the upload and we just get the path.
-            $path = $this->newAttachmentData['path']; // Assuming path is provided by sub-component
-            $url = Storage::disk('public')->url($path);
-            $type = $this->getMediaType($this->newAttachmentData['mime_type']);
-
-            $msgData['type'] = $type;
-            $msgData['content'] = $this->msgBody; // Caption
-            $msgData['media_url'] = $path; // Store relative in DB
-            $msgData['media_type'] = $type;
-            $msgData['caption'] = $this->msgBody;
-        } else {
-            $msgData['type'] = 'text';
-            $msgData['content'] = $this->msgBody;
-            $url = $this->msgBody;
-        }
-
-        $message = \App\Models\Message::create($msgData);
-
-        // 2. Dispatch Async Job
-        \App\Jobs\SendMessageJob::dispatch(
-            Auth::user()->currentTeam->id,
-            $this->conversation->contact->phone_number,
-            $msgData['type'],
-            $url, // Use full URL or text body
-            null, // templateName
-            'en_US',
-            $message->id
-        );
-
-        // 3. Update UI
-        $this->msgBody = '';
-        $this->newAttachmentData = null;
-        $this->dispatch('clearMediaUpload'); // New signal to reset sub-component
-        $this->loadConversation();
-        $this->dispatch('messageSent');
-    }
-
-    private function getMediaType($mime)
-    {
-        if (str_starts_with($mime, 'image/')) {
-            return 'image';
-        }
-        if (str_starts_with($mime, 'video/')) {
-            return 'video';
-        }
-        if (str_starts_with($mime, 'audio/')) {
-            return 'audio';
-        }
-
-        return 'document';
+            'status' => 'sent',
+            'type' => 'internal_note',
+            'content' => $content,
+            'metadata' => $meta,
+        ]);
     }
 
     public function saveInternalNote()
@@ -465,16 +393,7 @@ class MessageWindow extends Component
             return;
         }
 
-        $message = \App\Models\Message::create([
-            'team_id' => Auth::user()->currentTeam->id,
-            'contact_id' => $this->conversation->contact_id,
-            'conversation_id' => $this->conversation->id,
-            'direction' => 'outbound',
-            'status' => 'sent',
-            'type' => 'internal_note',
-            'content' => $this->msgBody,
-            'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name],
-        ]);
+        $this->logInternalNote($this->msgBody, ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name]);
 
         $this->reset('msgBody');
         $this->loadConversation();
@@ -497,16 +416,7 @@ class MessageWindow extends Component
         ]);
 
         // Log transfer as internal note
-        \App\Models\Message::create([
-            'team_id' => Auth::user()->currentTeam->id,
-            'contact_id' => $this->conversation->contact_id,
-            'conversation_id' => $this->conversation->id,
-            'direction' => 'outbound',
-            'status' => 'sent',
-            'type' => 'internal_note',
-            'content' => "Conversation transferred to {$agent->name}.",
-            'metadata' => ['type' => 'transfer', 'transferred_by' => Auth::user()->name],
-        ]);
+        $this->logInternalNote("Conversation transferred to {$agent->name}.", ['type' => 'transfer', 'transferred_by' => Auth::user()->name]);
 
         $agent->notify(new \App\Notifications\ConversationAssignedNotification($this->conversation, Auth::user()));
         \App\Events\ConversationAssigned::dispatch($this->conversation, $agent, Auth::user());
@@ -527,7 +437,10 @@ class MessageWindow extends Component
             return;
         }
 
-        $path = $file->store('voice-notes', 'public');
+        // Store with an explicit .ogg extension. A blob upload has no filename, so
+        // store() would save it extensionless and the server would serve it as
+        // application/octet-stream — WhatsApp rejects that as a voice note.
+        $path = $file->storeAs('voice-notes', \Illuminate\Support\Str::random(40).'.ogg', 'public');
 
         $message = \App\Models\Message::create([
             'team_id' => Auth::user()->currentTeam->id,
@@ -591,16 +504,7 @@ class MessageWindow extends Component
             ]);
 
             // Create internal note
-            \App\Models\Message::create([
-                'team_id' => Auth::user()->currentTeam->id,
-                'contact_id' => $this->conversation->contact_id,
-                'conversation_id' => $this->conversation->id,
-                'direction' => 'outbound',
-                'status' => 'sent',
-                'type' => 'internal_note',
-                'content' => 'Conversation reopened by '.Auth::user()->name,
-                'metadata' => ['type' => 'reopen', 'reopened_by' => Auth::user()->name],
-            ]);
+            $this->logInternalNote('Conversation reopened by '.Auth::user()->name, ['type' => 'reopen', 'reopened_by' => Auth::user()->name]);
 
             $this->dispatch('notify', [
                 'type' => 'success',
@@ -625,16 +529,7 @@ class MessageWindow extends Component
             ]);
 
             // Create internal note
-            \App\Models\Message::create([
-                'team_id' => Auth::user()->currentTeam->id,
-                'contact_id' => $this->conversation->contact_id,
-                'conversation_id' => $this->conversation->id,
-                'direction' => 'outbound',
-                'status' => 'sent',
-                'type' => 'internal_note',
-                'content' => 'Conversation marked as spam by '.Auth::user()->name,
-                'metadata' => ['type' => 'spam', 'marked_by' => Auth::user()->name],
-            ]);
+            $this->logInternalNote('Conversation marked as spam by '.Auth::user()->name, ['type' => 'spam', 'marked_by' => Auth::user()->name]);
 
             $this->dispatch('notify', [
                 'type' => 'warning',
@@ -659,16 +554,7 @@ class MessageWindow extends Component
             ]);
 
             // Create internal note
-            \App\Models\Message::create([
-                'team_id' => Auth::user()->currentTeam->id,
-                'contact_id' => $this->conversation->contact_id,
-                'conversation_id' => $this->conversation->id,
-                'direction' => 'outbound',
-                'status' => 'sent',
-                'type' => 'internal_note',
-                'content' => 'Contact blocked by '.Auth::user()->name,
-                'metadata' => ['type' => 'block', 'blocked_by' => Auth::user()->name],
-            ]);
+            $this->logInternalNote('Contact blocked by '.Auth::user()->name, ['type' => 'block', 'blocked_by' => Auth::user()->name]);
 
             $this->dispatch('notify', [
                 'type' => 'error',
@@ -739,38 +625,6 @@ class MessageWindow extends Component
                 'message' => 'Call note updated.',
             ]);
         }
-    }
-
-    #[\Livewire\Attributes\Renderless]
-    public function handleIncomingMessage($event)
-    {
-        // Handled via Alpine Store
-    }
-
-    public function handlePresence($users)
-    {
-        $this->activeAgents = $users;
-    }
-
-    public function handlePresenceJoin($user)
-    {
-        if (! collect($this->activeAgents)->contains('id', $user['id'])) {
-            $this->activeAgents[] = $user;
-        }
-    }
-
-    public function handlePresenceLeave($user)
-    {
-        $this->activeAgents = collect($this->activeAgents)
-            ->filter(fn ($u) => $u['id'] != $user['id'])
-            ->values()
-            ->all();
-    }
-
-    #[\Livewire\Attributes\Renderless]
-    public function handleClientTyping($event)
-    {
-        // Handled via JS listener mainly
     }
 
     public function toggleBot()
@@ -897,123 +751,9 @@ class MessageWindow extends Component
             ->get();
     }
 
-    // public function openTemplateList() // Removed
-    // {
-    //     $this->showInteractiveButtonsModal = false;
-    //     $this->showTemplateListModal = true;
-    // }
-
-    // public function selectTemplate($templateId) // Removed
-    // {
-    //     $this->selectedTemplate = \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)->find($templateId);
-
-    //     if ($this->selectedTemplate) {
-    //         $this->templateVariables = [];
-    //         $this->parseTemplateVariables();
-    //         $this->showTemplateListModal = false;
-    //         $this->showTemplatePreviewModal = true;
-    //     }
-    // }
-
-    // public function parseTemplateVariables() // Removed
-    // {
-    //     if (!$this->selectedTemplate)
-    //         return;
-
-    //     // Find body component
-    //     $components = $this->selectedTemplate->components ?? [];
-    //     $bodyText = '';
-
-    //     foreach ($components as $component) {
-    //         if (($component['type'] ?? '') === 'BODY') {
-    //             $bodyText = $component['text'] ?? '';
-    //             break;
-    //         }
-    //     }
-
-    //     $this->templatePreviewText = $bodyText;
-
-    //     // Extract {{1}}, {{2}} etc
-    //     preg_match_all('/{{(\d+)}}/', $bodyText, $matches);
-
-    //     if (!empty($matches[1])) {
-    //         foreach ($matches[1] as $num) {
-    //             // Initialize with empty or previous value
-    //             $this->templateVariables[$num] = '';
-    //         }
-    //     }
-    // }
-
-    /**
-     * Removed in favor of TemplatePicker component
-     */
-    /*
-    public function getFilteredTemplatesProperty()
-    {
-        ...
-    }
-    */
-    // public function getHasMediaHeaderProperty() // Removed
-    // {
-    //     if (!$this->selectedTemplate)
-    //         return false;
-    //     $header = $this->getTemplateComponent('HEADER');
-    //     return $header && in_array($header['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT']);
-    // }
-
-    // public function getTemplateComponent($type) // Removed
-    // {
-    //     if (!$this->selectedTemplate)
-    //         return null;
-    //     return collect($this->selectedTemplate->components)->firstWhere('type', $type);
-    // }
-
-    // public function getLivePreviewTextProperty() // Removed
-    // {
-    //     if (!$this->selectedTemplate)
-    //         return '';
-
-    //     $body = $this->getTemplateComponent('BODY');
-    //     $text = $body['text'] ?? '';
-
-    //     // 1. Escape HTML
-    //     $text = e($text);
-
-    //     // 2. Wrap variables in spans BEFORE markdown (to avoid markdown inside variables)
-    //     $text = preg_replace('/{{(\d+)}}/', '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{$1}}</span>', $text);
-
-    //     // 3. Replace variables with actual values (preserving spans)
-    //     if (!empty($this->templateVariables)) {
-    //         foreach ($this->templateVariables as $key => $value) {
-    //             if ($value !== '') {
-    //                 $search = '<span class="bg-slate-200 dark:bg-slate-600 px-1 rounded mx-0.5 shadow-sm border border-slate-300 dark:border-slate-500 font-mono text-[10px]">{{' . $key . '}}</span>';
-    //                 $replacement = '<span class="bg-wa-teal/10 text-wa-teal px-1.5 py-0.5 rounded-md mx-0.5 shadow-sm border border-wa-teal/20 font-bold text-[11px]">' . e($value) . '</span>';
-    //                 $text = str_replace($search, $replacement, $text);
-    //             }
-    //         }
-    //     }
-
-    //     // 4. WhatsApp Markdown
-    //     $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
-    //     $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
-    //     $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
-
-    //     return $text;
-    // }
-
     public function getPreviewButtonBodyProperty()
     {
-        $text = $this->buttonBody ?: 'Message text...';
-
-        // 1. Escape HTML
-        $text = e($text);
-
-        // 2. WhatsApp Markdown
-        $text = preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', $text);
-        $text = preg_replace('/_(.*?)_/', '<em>$1</em>', $text);
-        $text = preg_replace('/~(.*?)~/', '<del>$1</del>', $text);
-
-        return $text;
+        return $this->waMarkdown(e($this->buttonBody ?: 'Message text...'));
     }
 
     // Deprecated or simplified direct send (kept for compatibility if needed, but UI will use modal now)

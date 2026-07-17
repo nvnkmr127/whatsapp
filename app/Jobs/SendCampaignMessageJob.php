@@ -83,6 +83,11 @@ class SendCampaignMessageJob implements ShouldQueue
             return;
         }
 
+        // --- CANCELLED / FAILED: drop permanently ---
+        if (in_array($campaign->status, ['cancelled', 'failed'], true)) {
+            return;
+        }
+
         // --- IDEMPOTENCY CHECK ---
         $lockKey = "campaign_send_lock:{$this->campaignId}:{$this->contactId}";
         if (! Cache::add($lockKey, true, 60)) {

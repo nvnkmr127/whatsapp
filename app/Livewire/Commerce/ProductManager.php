@@ -214,6 +214,7 @@ class ProductManager extends Component
     public function render()
     {
         $products = Product::where('team_id', Auth::user()->currentTeam->id)
+            ->with('category')
             ->where(function ($q) {
                 $q->where('name', 'like', '%'.$this->search.'%')
                     ->orWhere('retailer_id', 'like', '%'.$this->search.'%');

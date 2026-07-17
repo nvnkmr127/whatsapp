@@ -96,7 +96,7 @@ class Crm extends Component
             'total_users' => User::count(),
             'new_today' => User::whereDate('created_at', now()->today())->count(),
             'new_this_week' => User::where('created_at', '>=', now()->startOfWeek())->count(),
-            'active_setups' => Team::where('whatsapp_setup_state', 'ready')->orWhere('whatsapp_setup_state', 'ACTIVE')->count(),
+            'active_setups' => Team::where('whatsapp_setup_state', 'ready')->count(),
             'trial_users' => Team::where('subscription_status', 'trial')->count(),
         ];
 

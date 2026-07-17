@@ -84,23 +84,4 @@ class SubscriptionService
 
         return true;
     }
-
-    /**
-     * Cleanup / Enforcement after grace period.
-     * Usually run via a scheduled job.
-     */
-    public function enforceLimits(Team $team)
-    {
-        if ($team->subscription_grace_ends_at && $team->subscription_grace_ends_at->isPast()) {
-            // Hard enforce: No grace period left.
-            // 1. We don't remove agents automatically (destructive),
-            // but we block their login/usage via middleware if they are over-limit.
-
-            // 2. Clear the grace period flag
-            $team->subscription_grace_ends_at = null;
-            $team->save();
-
-            Log::info("Grace period ended for Team {$team->id}. Hard limits enforced.");
-        }
-    }
 }

@@ -176,11 +176,7 @@ class ContactManager extends Component
                 ->get();
         });
 
-        if ($this->search && $contacts->isEmpty()) {
-            $this->info("No contacts found matching '{$this->search}'");
-        }
-
-        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'));
+        return view('livewire.contacts.contact-manager', compact('contacts', 'tags', 'customFields', 'categories'))->layout('layouts.app');
     }
 
     public function create()
@@ -215,20 +211,6 @@ class ContactManager extends Component
         $this->timeline = $service->getTimeline($contact);
         $this->mediaVault = $service->getMediaVault($contact);
         $this->heatmap = $service->getInteractionHeatmap($contact);
-    }
-
-    public function getConversationRoute($contactId)
-    {
-        $contact = Contact::find($contactId);
-        if (! $contact) {
-            return route('chat');
-        }
-
-        $conversationId = $contact->conversations->first()?->id;
-
-        return $conversationId
-            ? route('chat', ['activeConversationId' => $conversationId])
-            : route('chat');
     }
 
     public function closeViewModal()
@@ -426,12 +408,6 @@ class ContactManager extends Component
         session()->flash('field_message', 'Custom Field deleted.');
     }
 
-    public function closeFieldModal()
-    {
-        $this->isFieldModalOpen = false;
-        $this->resetFieldInput();
-    }
-
     // Merge Management
     public function openMergeModal($sourceId)
     {
@@ -619,11 +595,6 @@ class ContactManager extends Component
     }
 
     // Alias for the old method name if any other component called it
-    public function importContacts()
-    {
-        $this->import();
-    }
-
     public function export()
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-contacts');

@@ -19,15 +19,17 @@ class DeepSeekProvider implements AIProviderInterface
 
     public function chat(array $messages, array $options = []): array
     {
-        $model = $options['model'] ?? 'deepseek-chat';
-        $temperature = $options['temperature'] ?? 0.7;
-
         $payload = [
-            'model' => $model,
+            'model' => $options['model'] ?? 'deepseek-chat',
             'messages' => $messages,
-            'temperature' => $temperature,
+            'temperature' => $options['temperature'] ?? 0.7,
             'stream' => false,
         ];
+
+        // DeepSeek is OpenAI-compatible, including response_format
+        if (isset($options['response_format'])) {
+            $payload['response_format'] = $options['response_format'];
+        }
 
         if (isset($options['max_tokens'])) {
             $payload['max_tokens'] = $options['max_tokens'];
@@ -58,52 +60,6 @@ class DeepSeekProvider implements AIProviderInterface
                 'error' => $e->getMessage(),
             ];
         }
-    }
-
-    public function streamChat(array $messages, array $options = []): iterable
-    {
-        // Placeholder for streaming - in a real app this would use a streaming HTTP client
-        // DeepSeek supports streaming at the same endpoint with 'stream' => true
-        $result = $this->chat($messages, $options);
-        yield $result['content'] ?? '';
-    }
-
-    public function embed(string|array $text, array $options = []): array
-    {
-        // DeepSeek does not currently provide an embeddings endpoint
-        Log::warning('DeepSeek does not support embeddings. Returning empty vector.');
-
-        return [];
-    }
-
-    public function summarize(string $content, array $options = []): string
-    {
-        $messages = [
-            ['role' => 'system', 'content' => 'You are a helpful assistant that summarizes text concisely.'],
-            ['role' => 'user', 'content' => "Please summarize the following text:\n\n{$content}"],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
-
-        return $response['content'] ?? '';
-    }
-
-    public function classify(string $content, array $categories, array $options = []): string
-    {
-        $categoriesStr = implode(', ', $categories);
-        $messages = [
-            ['role' => 'system', 'content' => "You are a classifier. Classify the input into one of these categories: {$categoriesStr}. Return only the category name."],
-            ['role' => 'user', 'content' => $content],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
-
-        return trim($response['content'] ?? '');
-    }
-
-    public function transcribe(string $filePath, array $options = []): string
-    {
-        throw new \RuntimeException('DeepSeek does not support audio transcription. Configure OpenAI or another provider for this feature.');
     }
 
     public function testConnection(string $apiKey): bool

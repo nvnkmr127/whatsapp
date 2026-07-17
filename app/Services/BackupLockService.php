@@ -51,12 +51,11 @@ use Illuminate\Support\Facades\Log;
  *   - Uses Cache default driver (database) — no Redis required
  *
  * Layer 2: TENANT MAINTENANCE MODE FLAG
- *   - Written to `settings` table as "team_{id}_under_maintenance"
+ *   - Single cache key "team_under_maintenance_{id}" with a 2-hour TTL
  *   - Signals all jobs and middleware to PAUSE or SKIP for this team
  *   - Checked by: ProcessWebhookJob, PrepareCampaignJob, ExecuteAutomationNodeJob
  *   - Cleared after operation completes or fails (finally block)
- *   - TTL: automatically expires after 2 hours via a separate cache key
- *     to prevent stuck maintenance mode if the process dies mid-operation
+ *   - TTL auto-expires to prevent stuck maintenance mode if the process dies
  *
  * IMPORTANT: Maintenance mode does NOT drop or reject webhooks.
  * Incoming webhook payloads are still STORED. Processing is delayed
@@ -70,9 +69,6 @@ class BackupLockService
 
     /** Cache lock TTL for restore operations (seconds) */
     private const RESTORE_LOCK_TTL = 3600; // 60 minutes
-
-    /** Setting key prefix for per-team maintenance flag */
-    private const MAINTENANCE_KEY_PREFIX = 'team_under_maintenance_';
 
     /** Safety expiry for maintenance mode (auto-clears to prevent being stuck) */
     private const MAINTENANCE_AUTO_EXPIRY_SECONDS = 7200; // 2 hours
@@ -155,17 +151,7 @@ class BackupLockService
      */
     public function isUnderMaintenance(int $teamId): bool
     {
-        // Check the auto-expiry safety cache key first (fastest path)
-        $safetyKey = $this->maintenanceSafetyKey($teamId);
-        if (! Cache::has($safetyKey)) {
-            // Auto-expiry key is gone — maintenance mode must have expired or never set.
-            // Clean up the setting to stay consistent.
-            $this->clearMaintenanceSetting($teamId);
-
-            return false;
-        }
-
-        return (bool) get_setting($this->maintenanceSettingKey($teamId), false);
+        return Cache::has($this->maintenanceKey($teamId));
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -181,16 +167,8 @@ class BackupLockService
 
     private function enableMaintenanceMode(Team $team, string $reason): void
     {
-        $settingKey = $this->maintenanceSettingKey($team->id);
-        $safetyKey = $this->maintenanceSafetyKey($team->id);
-
-        // 1. Write to settings table (durable, survives process crash)
-        set_setting($settingKey, '1', 'backup');
-
-        // 2. Write auto-expiry safety key to cache (auto-clears in 2 hours).
-        //    This prevents the maintenance flag from being permanently stuck
-        //    if the PHP process dies before release() is called.
-        Cache::put($safetyKey, $reason, self::MAINTENANCE_AUTO_EXPIRY_SECONDS);
+        // Single cache key with TTL — auto-clears if the process dies before release().
+        Cache::put($this->maintenanceKey($team->id), $reason, self::MAINTENANCE_AUTO_EXPIRY_SECONDS);
 
         Log::info("[BackupLock] Tenant maintenance mode ENABLED for Team {$team->id}", [
             'reason' => $reason,
@@ -200,24 +178,9 @@ class BackupLockService
 
     private function disableMaintenanceMode(Team $team): void
     {
-        $this->clearMaintenanceSetting($team->id);
+        Cache::forget($this->maintenanceKey($team->id));
 
         Log::info("[BackupLock] Tenant maintenance mode DISABLED for Team {$team->id}");
-    }
-
-    private function clearMaintenanceSetting(int $teamId): void
-    {
-        try {
-            $settingKey = $this->maintenanceSettingKey($teamId);
-            $safetyKey = $this->maintenanceSafetyKey($teamId);
-
-            set_setting($settingKey, '0', 'backup');
-            Cache::forget($safetyKey);
-            // Also clear the setting cache to ensure next read is fresh
-            Cache::forget('setting_'.$settingKey);
-        } catch (Exception $e) {
-            Log::error("[BackupLock] Failed to clear maintenance setting for Team {$teamId}: ".$e->getMessage());
-        }
     }
 
     /**
@@ -249,14 +212,9 @@ class BackupLockService
         }
     }
 
-    private function maintenanceSettingKey(int $teamId): string
+    private function maintenanceKey(int $teamId): string
     {
-        return self::MAINTENANCE_KEY_PREFIX.$teamId;
-    }
-
-    private function maintenanceSafetyKey(int $teamId): string
-    {
-        return 'backup_maintenance_safety_'.$teamId;
+        return 'team_under_maintenance_'.$teamId;
     }
 }
 

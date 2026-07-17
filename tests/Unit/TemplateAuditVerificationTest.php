@@ -38,7 +38,7 @@ class TemplateAuditVerificationTest extends TestCase
         ]);
 
         $service = new TemplateService;
-        $this->assertTrue($service->validateVariables($template, ['token123']));
+        $this->assertEquals(['{{1}}'], array_values($service->extractAllPlaceholders($template)));
     }
 
     /**

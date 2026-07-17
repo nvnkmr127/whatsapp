@@ -100,10 +100,9 @@ class OrderManager extends Component
             'status' => $this->newStatus,
         ]);
 
-        // Trigger WhatsApp Notification if enabled
+        // Trigger WhatsApp Notification if enabled (listener is queued)
         if ($this->viewingOrder->team->hasFeature('commerce_notifications')) {
-            // Dispatch job to handle notification asynchronously
-            \App\Jobs\SendOrderLifecycleNotification::dispatch($this->viewingOrder);
+            event(new \App\Events\OrderStatusUpdated($this->viewingOrder, $this->viewingOrder->status, []));
         }
 
         $this->viewingOrder = $this->viewingOrder->fresh();

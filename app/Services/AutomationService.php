@@ -1078,9 +1078,7 @@ class AutomationService
 
             case 'handover':
                 $this->handoff->pause($run->contact, 'handoff_node');
-                if (class_exists(AssignmentService::class)) {
-                    (new AssignmentService)->assign($run->contact);
-                }
+                (new AssignmentService)->assign($run->contact);
                 $run->update(['status' => 'completed']);
 
                 return 'pause'; // Terminates naturally
@@ -1296,9 +1294,7 @@ class AutomationService
                     $conversation->update(['assigned_to' => $agentId]);
                     Log::info("AutomationRun #{$run->id}: Assigned contact {$contact->id} to agent {$agentId}");
                 } else {
-                    if (class_exists(AssignmentService::class)) {
-                        app(AssignmentService::class)->assign($contact);
-                    }
+                    app(AssignmentService::class)->assign($contact);
                 }
 
                 return 'continue';

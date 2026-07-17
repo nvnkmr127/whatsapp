@@ -45,13 +45,11 @@ class Campaign extends Model
     protected static function booted()
     {
         static::saving(function ($campaign) {
-            // Fix field name mapping
+            // Legacy duplicate column: campaign_name mirrors name until the column is dropped
             if (empty($campaign->name) && ! empty($campaign->campaign_name)) {
                 $campaign->name = $campaign->campaign_name;
             }
-            if (empty($campaign->campaign_name) && ! empty($campaign->name)) {
-                $campaign->campaign_name = $campaign->name;
-            }
+            $campaign->campaign_name = $campaign->name;
 
             // --- CAMPAIGN LIFECYCLE GUARDS (UC-SAFE-08) ---
             if (! $campaign->isDirty('status')) {

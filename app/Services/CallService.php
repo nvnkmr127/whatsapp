@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\PhoneNumberHelper;
 use App\Models\Contact;
 use App\Models\Team;
 use App\Models\User;
@@ -38,14 +39,14 @@ class CallService
     public function initiateCall(string $phoneNumber, array $options = [], ?string $sdp = null): array
     {
         // Find or create contact
-        $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
-        $contact = \App\Models\Contact::where('team_id', $this->team->id)
+        $normalizedPhone = PhoneNumberHelper::normalize($phoneNumber);
+        $contact = Contact::where('team_id', $this->team->id)
             ->where('phone_number', $normalizedPhone)
             ->first();
 
         if (! $contact) {
             // Check without normalization if not found
-            $contact = \App\Models\Contact::where('team_id', $this->team->id)
+            $contact = Contact::where('team_id', $this->team->id)
                 ->where('phone_number', $phoneNumber)
                 ->first();
 
@@ -220,24 +221,6 @@ class CallService
     }
 
     /**
-     * Calculate estimated cost for a call duration.
-     */
-    public function estimateCallCost(int $durationSeconds): float
-    {
-        if ($durationSeconds <= 0) {
-            return 0;
-        }
-
-        // Round up to nearest minute
-        $minutes = ceil($durationSeconds / 60);
-
-        // Get pricing from config
-        $pricePerMinute = config('whatsapp.calling.price_per_minute', 0.005);
-
-        return $minutes * $pricePerMinute;
-    }
-
-    /**
      * Get active calls for the team.
      */
     public function getActiveCalls(): array
@@ -318,15 +301,5 @@ class CallService
             'agent_id' => $agentId,
             'call_id' => $call->call_id,
         ]);
-    }
-
-    /**
-     * Route a call to an appropriate agent.
-     */
-    public function routeCall(Contact $contact): array
-    {
-        $routingService = new CallRoutingService($this->team);
-
-        return $routingService->findAgent($contact);
     }
 }

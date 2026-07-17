@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\WhatsAppSetupState;
+use App\Enums\IntegrationState;
 use App\Models\Team;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -30,22 +30,17 @@ class CheckSetupHealth extends Command
     {
         $this->info('Checking WhatsApp setup health...');
 
-        $issues = [
-            'degraded' => 0,
-            'suspended' => 0,
-            'failed_retries' => 0,
-            'token_expiring' => 0,
-        ];
-
-        // Check for degraded setups
-        $degradedTeams = Team::where('whatsapp_setup_state', WhatsAppSetupState::DEGRADED->value)->get();
-        $issues['degraded'] = $degradedTeams->count();
+        // Degraded setups
+        $degradedTeams = Team::whereIn('whatsapp_setup_state', [
+            IntegrationState::DEGRADED->value,
+            IntegrationState::READY_WARNING->value,
+        ])->get();
 
         foreach ($degradedTeams as $team) {
             $duration = $team->whatsapp_setup_completed_at?->diffInHours(now()) ?? 0;
 
             if ($duration > 24) {
-                $this->warn("Team {$team->id}: In DEGRADED state for {$duration} hours");
+                $this->warn("Team {$team->id}: degraded for {$duration} hours");
 
                 Log::warning('Setup degraded for extended period', [
                     'team_id' => $team->id,
@@ -54,12 +49,14 @@ class CheckSetupHealth extends Command
             }
         }
 
-        // Check for suspended setups
-        $suspendedTeams = Team::where('whatsapp_setup_state', WhatsAppSetupState::SUSPENDED->value)->get();
-        $issues['suspended'] = $suspendedTeams->count();
+        // Suspended / restricted setups
+        $suspendedTeams = Team::whereIn('whatsapp_setup_state', [
+            IntegrationState::SUSPENDED->value,
+            IntegrationState::RESTRICTED->value,
+        ])->get();
 
         foreach ($suspendedTeams as $team) {
-            $this->error("Team {$team->id}: SUSPENDED");
+            $this->error("Team {$team->id}: {$team->whatsapp_setup_state->value}");
 
             Log::critical('Setup suspended', [
                 'team_id' => $team->id,
@@ -67,50 +64,31 @@ class CheckSetupHealth extends Command
             ]);
         }
 
-        // Check for failed retries
-        $failedRetries = Team::where('whatsapp_setup_retry_count', '>=', 3)
-            ->where('whatsapp_setup_in_progress', true)
-            ->get();
-        $issues['failed_retries'] = $failedRetries->count();
-
-        foreach ($failedRetries as $team) {
-            $this->warn("Team {$team->id}: {$team->whatsapp_setup_retry_count} failed retries");
-
-            Log::warning('Multiple setup retry failures', [
-                'team_id' => $team->id,
-                'retry_count' => $team->whatsapp_setup_retry_count,
-                'state' => $team->whatsapp_setup_state,
-            ]);
-        }
-
-        // Check for expiring tokens in active setups
-        $expiringTokens = Team::where('whatsapp_setup_state', WhatsAppSetupState::ACTIVE->value)
+        // Expiring tokens in active setups
+        $expiringTokens = Team::whereIn('whatsapp_setup_state', [
+            IntegrationState::READY->value,
+            IntegrationState::READY_WARNING->value,
+        ])
             ->whereNotNull('whatsapp_token_expires_at')
             ->where('whatsapp_token_expires_at', '<', now()->addDays(7))
             ->get();
-        $issues['token_expiring'] = $expiringTokens->count();
 
         foreach ($expiringTokens as $team) {
             $daysRemaining = $team->whatsapp_token_expires_at->diffInDays(now());
             $this->warn("Team {$team->id}: Token expires in {$daysRemaining} days");
         }
 
-        // Summary
+        $issues = [
+            'Degraded' => $degradedTeams->count(),
+            'Suspended/Restricted' => $suspendedTeams->count(),
+            'Tokens Expiring (<7 days)' => $expiringTokens->count(),
+        ];
+
         $this->info("\nHealth Check Summary:");
-        $this->table(
-            ['Issue', 'Count'],
-            [
-                ['Degraded', $issues['degraded']],
-                ['Suspended', $issues['suspended']],
-                ['Failed Retries (3+)', $issues['failed_retries']],
-                ['Tokens Expiring (<7 days)', $issues['token_expiring']],
-            ]
-        );
+        $this->table(['Issue', 'Count'], collect($issues)->map(fn ($c, $k) => [$k, $c])->values()->all());
 
-        $totalIssues = array_sum($issues);
-
-        if ($totalIssues > 0) {
-            $this->warn("\nTotal issues found: {$totalIssues}");
+        if (array_sum($issues) > 0) {
+            $this->warn("\nTotal issues found: ".array_sum($issues));
 
             return Command::FAILURE;
         }

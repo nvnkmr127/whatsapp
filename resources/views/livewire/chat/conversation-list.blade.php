@@ -131,7 +131,7 @@
                 $isSlaWarning = $conversation->sla_due_at && $conversation->sla_due_at->diffInMinutes(now()) < $slaWarningMinutes && !$isSlaBreached && $conversation->status !== 'closed';
                 $tags = $conversation->metadata['tags'] ?? [];
             @endphp
-            <div wire:click="selectConversation({{ $conversation->id }}); mobilePane = 'messages'"
+            <div wire:click="selectConversation({{ $conversation->id }})"
                 wire:key="{{ $conversation->id }}"
                 class="group flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent 
                         {{ $isActive ? 'bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 border-slate-100 dark:border-slate-700 relative z-10 scale-[1.02]' : 'hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-slate-100 dark:hover:border-slate-800' }}

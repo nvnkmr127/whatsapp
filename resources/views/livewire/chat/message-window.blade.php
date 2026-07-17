@@ -488,16 +488,16 @@
 
                 <button type="submit" :disabled="$store.chat.isLockedForMe()"
                     class="h-14 w-14 flex items-center justify-center text-white rounded-[1.5rem] transition-all group"
-                    :class="msgBody.trim() || $wire.newAttachment ? 'bg-wa-teal shadow-wa-teal/20' : 'bg-slate-900 shadow-slate-900/10 hover:scale-105 active:scale-95'"
+                    :class="msgBody.trim() || $wire.newAttachmentData ? 'bg-wa-teal shadow-wa-teal/20' : 'bg-slate-900 shadow-slate-900/10 hover:scale-105 active:scale-95'"
                     wire:loading.attr="disabled">
-                    <template x-if="msgBody.trim() || $wire.newAttachment || isNoteMode">
+                    <template x-if="msgBody.trim() || $wire.newAttachmentData || isNoteMode">
                         <svg class="w-5 h-5 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                 d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                     </template>
-                    <template x-if="!msgBody.trim() && !$wire.newAttachment && !isNoteMode">
+                    <template x-if="!msgBody.trim() && !$wire.newAttachmentData && !isNoteMode">
                         <svg @click.prevent="startRecording()" class="w-5 h-5" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

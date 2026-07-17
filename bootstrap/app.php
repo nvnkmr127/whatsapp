@@ -23,6 +23,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckReferral::class,
         ]);
 
+        // Endpoints posted to by external clients (MCP OAuth, embedded lead widgets)
+        $middleware->validateCsrfTokens(except: [
+            'oauth/register',
+            'oauth/token',
+            'qr/*/lead',
+        ]);
+
         $middleware->alias([
             'tenant' => \App\Http\Middleware\EnsureTenantContext::class,
             'plan_feature' => \App\Http\Middleware\CheckPlanFeature::class,

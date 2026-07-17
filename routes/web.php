@@ -12,6 +12,16 @@ Route::get('/', function () {
 
 Route::get('/unsubscribe/marketing', [\App\Http\Controllers\MarketingUnsubscribeController::class, 'unsubscribe'])->name('marketing.unsubscribe');
 
+// OAuth 2.1 authorization server for MCP clients (Claude.ai / ChatGPT connectors)
+Route::get('/.well-known/oauth-authorization-server', [\App\Http\Controllers\Auth\OAuthServerController::class, 'authorizationServerMetadata']);
+Route::get('/.well-known/oauth-protected-resource', [\App\Http\Controllers\Auth\OAuthServerController::class, 'protectedResourceMetadata']);
+Route::post('/oauth/register', [\App\Http\Controllers\Auth\OAuthServerController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/oauth/token', [\App\Http\Controllers\Auth\OAuthServerController::class, 'token'])->middleware('throttle:20,1');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/oauth/authorize', [\App\Http\Controllers\Auth\OAuthServerController::class, 'showConsent'])->name('oauth.authorize');
+    Route::post('/oauth/approve', [\App\Http\Controllers\Auth\OAuthServerController::class, 'approve'])->name('oauth.approve');
+});
+
 // Passwordless Auth Routes
 Route::prefix('auth')->name('auth.')->group(function () {
     Route::post('/otp/request', [\App\Http\Controllers\Auth\PasswordlessAuthController::class, 'requestOtp'])
@@ -33,8 +43,8 @@ Route::prefix('auth')->name('auth.')->group(function () {
 
 // Lead Capture QR Routes (Public)
 Route::get('/qr/{slug}', [LeadCaptureWidgetController::class, 'show'])->name('qr.show');
-Route::get('/qr/{slug}/image', [LeadCaptureWidgetController::class, 'qr'])->name('qr.image');
-Route::post('/qr/{slug}/lead', [LeadCaptureWidgetController::class, 'lead'])->name('qr.lead');
+Route::get('/qr/{slug}/image', [LeadCaptureWidgetController::class, 'qrImage'])->name('qr.image');
+Route::post('/qr/{slug}/lead', [LeadCaptureWidgetController::class, 'lead'])->name('qr.lead')->middleware('throttle:30,1');
 Route::get('/growth-tools/config/{slug}', [LeadCaptureWidgetController::class, 'config'])->name('qr.config');
 Route::get('/growth-tools/click/{slug}', [LeadCaptureWidgetController::class, 'trackClick'])->name('qr.click');
 
@@ -58,13 +68,9 @@ Route::middleware([
     Route::get('/webhook-workflows/{workflowId}/report', \App\Livewire\Webhooks\WebhookReport::class)->name('webhooks.report');
 
     // WhatsApp Config (Admins Only)
-    Route::get('/whatsapp/setup', function () {
-        return view('teams.whatsapp-config');
-    })->name('teams.whatsapp_config')->middleware('can:manage-settings');
+    Route::get('/whatsapp/setup', \App\Livewire\Teams\WhatsappConfig::class)->name('teams.whatsapp_config')->middleware('can:manage-settings');
 
-    Route::get('/whatsapp/inbox', function () {
-        return view('teams.inbox-settings');
-    })->name('teams.inbox_settings')->middleware('can:manage-settings');
+    Route::get('/whatsapp/inbox', \App\Livewire\Teams\InboxSettings::class)->name('teams.inbox_settings')->middleware('can:manage-settings');
 
     Route::get('/whatsapp/opt-in', \App\Livewire\Teams\OptInManagement::class)->name('teams.whatsapp_opt_in')->middleware('can:manage-settings');
 
@@ -159,9 +165,7 @@ Route::middleware([
     Route::post('/api/v1/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
 
     // Unified CRM (Managers, Admins)
-    Route::get('/contacts', function () {
-        return view('contacts.index');
-    })->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
+    Route::get('/contacts', \App\Livewire\Contacts\ContactManager::class)->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 
     // Marketing & Funnels (Managers, Admins) - Requires 'campaigns' feature
     Route::get('/campaigns', \App\Livewire\Campaigns\CampaignList::class)->name('campaigns.index')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
@@ -172,9 +176,7 @@ Route::middleware([
 
     Route::get('/campaigns/{campaign}/live', \App\Livewire\Campaigns\Dashboard::class)->name('campaigns.live')->middleware(['can:manage-campaigns', 'plan_feature:campaigns']);
 
-    Route::get('/templates', function () {
-        return view('templates.index');
-    })->name('templates.index')->middleware(['can:manage-templates', 'plan_feature:templates']);
+    Route::get('/templates', \App\Livewire\Templates\TemplateList::class)->name('templates.index')->middleware(['can:manage-templates', 'plan_feature:templates']);
 
     // Compliance Modules
     Route::get('/compliance', \App\Livewire\Compliance\ComplianceManager::class)->name('compliance.index')->middleware('can:manage-settings');

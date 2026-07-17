@@ -232,6 +232,6 @@ class InboxSettings extends Component
             return view('livewire.teams.inbox-settings')->layout('layouts.app');
         }
 
-        return view('livewire.teams.inbox-settings');
+        return view('livewire.teams.inbox-settings')->layout('layouts.app');
     }
 }

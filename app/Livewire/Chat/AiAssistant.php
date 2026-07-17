@@ -53,7 +53,6 @@ class AiAssistant extends Component
             }
 
             $response = AIProviderManager::chat(Auth::user()->currentTeam, $promptMessages, [
-                'model' => 'gpt-4o-mini',
                 'max_tokens' => 300,
             ]);
 

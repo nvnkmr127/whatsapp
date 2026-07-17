@@ -12,8 +12,6 @@ class WhatsAppService
 
     protected $messaging;
 
-    protected $templates;
-
     protected $calls;
 
     protected $team;
@@ -24,7 +22,6 @@ class WhatsAppService
     {
         $this->client = app(\App\Core\WhatsApp\WhatsAppClient::class);
         $this->messaging = new \App\Services\WhatsApp\MessagingService($this->client);
-        $this->templates = new \App\Services\WhatsApp\TemplateService($this->client, app(\App\Core\WhatsApp\CredentialResolver::class));
         $this->calls = new \App\Services\WhatsApp\CallService($this->client);
 
         if ($team) {
@@ -42,7 +39,6 @@ class WhatsAppService
 
         // Propagate to sub-services
         $this->messaging->setTeam($team);
-        $this->templates->setTeam($team);
         $this->calls->setTeam($team);
 
         if (! $team->whatsapp_access_token || ! $team->whatsapp_phone_number_id) {
@@ -1603,44 +1599,6 @@ class WhatsAppService
     }
 
     /**
-     * Send a template message with a native "voice_call" button
-     * This creates the "Call Button Deep Link" experience directly in chat
-     *
-     * @param  string  $templateName  Name of template with a PHONE_NUMBER button
-     */
-    public function sendCallButtonMessage(int $contactId, string $templateName = 'call_us_now')
-    {
-        $contact = \App\Models\Contact::findOrFail($contactId);
-
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'to' => $contact->phone,
-            'type' => 'template',
-            'template' => [
-                'name' => $templateName,
-                'language' => ['code' => 'en'],
-                'components' => [
-                    // Note: Button component for PHONE_NUMBER type often doesn't need params
-                    // unless the number is dynamic. If static in approved template, no component needed.
-                    // If you need to override the number:
-                    /*
-                   [
-                       'type' => 'button',
-                       'sub_type' => 'url', // or quick_reply, but phone_number is different
-                       'index' => 0,
-                       'parameters' => [
-                           ['type' => 'text', 'text' => $this->team->whatsapp_phone_display]
-                       ]
-                   ]
-                   */
-                ],
-            ],
-        ];
-
-        return $this->client->sendRequest('messages', $payload);
-    }
-
-    /**
      * Initiate an outbound WhatsApp call with permission validation
      *
      * @param  string  $to  Phone number to call
@@ -2109,56 +2067,6 @@ class WhatsAppService
             return $response;
         } catch (\Exception $e) {
             Log::error('Failed to end call', [
-                'team_id' => $this->team->id,
-                'call_id' => $callId,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Get the status of a WhatsApp call.
-     *
-     * @param  string  $callId  WhatsApp call identifier
-     * @return array Call status information
-     */
-    public function getCallStatus(string $callId)
-    {
-        $call = \App\Models\WhatsAppCall::where('call_id', $callId)
-            ->where('team_id', $this->team->id)
-            ->firstOrFail();
-
-        try {
-            // Note: WhatsApp Cloud API v21.0 does not currently support direct polling for call status via /calls/{id}.
-            // Real-time status updates are delivered via webhooks.
-            /*
-            $response = $this->client->sendRequest("calls/{$callId}", [], 'get');
-
-            if ($response['success'] ?? false) {
-                // Update local call record with latest status from WhatsApp
-                $remoteStatus = $response['data']['status'] ?? null;
-                if ($remoteStatus && $remoteStatus !== $call->status) {
-                    $call->update(['status' => $remoteStatus]);
-                }
-            }
-            */
-
-            return [
-                'success' => true,
-                'data' => [
-                    'call_id' => $call->call_id,
-                    'status' => $call->status,
-                    'direction' => $call->direction,
-                    'duration_seconds' => $call->duration_seconds,
-                    'cost_amount' => $call->cost_amount,
-                    'initiated_at' => $call->initiated_at,
-                    'answered_at' => $call->answered_at,
-                    'ended_at' => $call->ended_at,
-                ],
-            ];
-        } catch (\Exception $e) {
-            Log::error('Failed to get call status', [
                 'team_id' => $this->team->id,
                 'call_id' => $callId,
                 'error' => $e->getMessage(),

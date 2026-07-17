@@ -29,8 +29,19 @@ class AiCommerceListener implements ShouldQueue
     {
         $message = $event->message;
 
-        // Only process inbound text messages for AI commerce
-        if ($message->direction !== 'inbound' || $message->type !== 'text') {
+        if ($message->direction !== 'inbound') {
+            return;
+        }
+
+        // Text arrives as content; voice notes arrive as the Whisper transcription
+        // (stored in metadata once DownloadMediaJob finishes). Anything else is ignored.
+        $text = match ($message->type) {
+            'text' => $message->content,
+            'audio' => $message->metadata['transcription'] ?? null,
+            default => null,
+        };
+
+        if (empty($text)) {
             return;
         }
 
@@ -39,7 +50,7 @@ class AiCommerceListener implements ShouldQueue
 
         // AI Commerce Service already checks if the assistant is enabled for the team
         try {
-            $handled = $this->aiCommerceService->handle($contact, $message->content);
+            $handled = $this->aiCommerceService->handle($contact, $text);
 
             if ($handled) {
                 Log::info("AiCommerceListener: AI Assistant handled message for contact {$contact->id} in team {$team->id}");

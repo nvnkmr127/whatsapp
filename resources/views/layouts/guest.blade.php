@@ -6,7 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $appName ?? config('app.name', 'Laravel') }}</title>
+    @php
+        $systemAppName = get_setting('system_app_name', config('app.name', 'Laravel'));
+        $faviconUrl = get_setting('system_favicon') ? Storage::url(get_setting('system_favicon')) : asset('favicon.ico');
+    @endphp
+
+    <link rel="icon" type="image/x-icon" href="{{ $faviconUrl }}">
+    <link rel="shortcut icon" href="{{ $faviconUrl }}">
+
+    <title>{{ $appName ?? $systemAppName }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

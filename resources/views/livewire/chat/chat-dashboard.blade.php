@@ -62,16 +62,12 @@
 
     <script>
         document.addEventListener('livewire:initialized', () => {
+            // On mobile, show the message pane whenever a conversation is selected
+            // (row click, deep link, or programmatic). The dashboard's Alpine root
+            // listens for toggle-mobile-pane and flips mobilePane.
             @this.on('conversationSelected', () => {
                 if (window.innerWidth < 1024) {
-                    // Use Alpine to switch pane on mobile
-                    const el = document.querySelector('[x-data]');
-                    if (el && el.__x) {
-                        el.__x.$data.mobilePane = 'messages';
-                    } else {
-                        // Fallback dispatch
-                        window.dispatchEvent(new CustomEvent('toggle-mobile-pane', { detail: 'messages' }));
-                    }
+                    window.dispatchEvent(new CustomEvent('toggle-mobile-pane', { detail: 'messages' }));
                 }
             });
         });

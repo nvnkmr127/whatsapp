@@ -33,19 +33,6 @@ class TenantBackup extends Model
     ];
 
     /**
-     * Get the team that owns the backup.
-     */
-
-    /**
-     * Model A: Tenant connects their own Drive.
-     * Identified by having a remote_account_id (tenant-specific).
-     */
-    public function isModelA(): bool
-    {
-        return ! empty($this->remote_account_id);
-    }
-
-    /**
      * Model B: Platform has central Drive.
      * Identified by having no remote_account_id AND being stored on a cloud disk.
      */

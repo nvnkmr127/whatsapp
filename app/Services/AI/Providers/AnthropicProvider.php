@@ -14,6 +14,8 @@ class AnthropicProvider implements AIProviderInterface
 
     protected string $apiVersion = '2023-06-01';
 
+    protected const DEFAULT_MODEL = 'claude-opus-4-8';
+
     public function __construct(string $apiKey)
     {
         $this->apiKey = $apiKey;
@@ -21,8 +23,7 @@ class AnthropicProvider implements AIProviderInterface
 
     public function chat(array $messages, array $options = []): array
     {
-        $model = $options['model'] ?? 'claude-3-5-sonnet-20241022';
-        $temperature = $options['temperature'] ?? 0.7;
+        $model = $options['model'] ?? self::DEFAULT_MODEL;
         $maxTokens = $options['max_tokens'] ?? 4096;
 
         $systemMessage = '';
@@ -43,7 +44,6 @@ class AnthropicProvider implements AIProviderInterface
             'model' => $model,
             'messages' => $formattedMessages,
             'max_tokens' => $maxTokens,
-            'temperature' => $temperature,
         ];
 
         if ($systemMessage) {
@@ -56,7 +56,7 @@ class AnthropicProvider implements AIProviderInterface
                 'anthropic-version' => $this->apiVersion,
                 'Content-Type' => 'application/json',
             ])
-                ->timeout(30)
+                ->timeout(120)
                 ->post("{$this->baseUrl}/messages", $payload);
 
             if ($response->failed()) {
@@ -64,11 +64,9 @@ class AnthropicProvider implements AIProviderInterface
                 throw new \Exception('Anthropic API request failed: '.($response->json('error.message') ?? 'Unknown error'));
             }
 
-            $content = $response->json('content.0.text');
-
             return [
                 'success' => true,
-                'content' => $content,
+                'content' => $response->json('content.0.text'),
                 'model' => $response->json('model'),
                 'usage' => $response->json('usage'),
                 'raw_response' => $response->json(),
@@ -83,47 +81,6 @@ class AnthropicProvider implements AIProviderInterface
         }
     }
 
-    public function streamChat(array $messages, array $options = []): iterable
-    {
-        $result = $this->chat($messages, $options);
-        yield $result['content'] ?? '';
-    }
-
-    public function embed(string|array $text, array $options = []): array
-    {
-        Log::warning('Anthropic does not support embeddings.');
-
-        return [];
-    }
-
-    public function summarize(string $content, array $options = []): string
-    {
-        $messages = [
-            ['role' => 'user', 'content' => "Summarize this: {$content}"],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0.3]));
-
-        return $response['content'] ?? '';
-    }
-
-    public function classify(string $content, array $categories, array $options = []): string
-    {
-        $categoriesStr = implode(', ', $categories);
-        $messages = [
-            ['role' => 'user', 'content' => "Classify into {$categoriesStr}. Return only the label: {$content}"],
-        ];
-
-        $response = $this->chat($messages, array_merge($options, ['temperature' => 0]));
-
-        return trim($response['content'] ?? '');
-    }
-
-    public function transcribe(string $filePath, array $options = []): string
-    {
-        return ''; // Not supported by Anthropic
-    }
-
     public function testConnection(string $apiKey): bool
     {
         try {
@@ -134,7 +91,7 @@ class AnthropicProvider implements AIProviderInterface
             ])
                 ->timeout(10)
                 ->post("{$this->baseUrl}/messages", [
-                    'model' => 'claude-3-5-sonnet-20241022',
+                    'model' => 'claude-haiku-4-5',
                     'messages' => [['role' => 'user', 'content' => 'Hello']],
                     'max_tokens' => 10,
                 ]);
@@ -150,9 +107,9 @@ class AnthropicProvider implements AIProviderInterface
     public function getAvailableModels(): array
     {
         return [
-            'claude-4-6-opus' => 'Claude 4.6 Opus (Best Coding/Agentic)',
-            'claude-4-6-sonnet' => 'Claude 4.6 Sonnet (Highly Intelligent)',
-            'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Legacy)',
+            'claude-opus-4-8' => 'Claude Opus 4.8 (Most Capable)',
+            'claude-sonnet-5' => 'Claude Sonnet 5 (Fast & Intelligent)',
+            'claude-haiku-4-5' => 'Claude Haiku 4.5 (Fastest/Cheapest)',
         ];
     }
 

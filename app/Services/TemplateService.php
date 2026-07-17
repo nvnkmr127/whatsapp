@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Team;
 use App\Models\WhatsappTemplate;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class TemplateService
 {
@@ -20,12 +19,9 @@ class TemplateService
     }
 
     /**
-     * Sync Templates from Meta for a Team using its WABA ID.
-     */
-    /**
-     * Sync Templates from Meta for a Team using its WABA ID.
-     * Handles pagination to fetch ALL templates.
-     * Returns array of synced template names.
+     * Sync templates from Meta for a team: fetch all pages, upsert locally,
+     * persist readiness scores, and prune templates deleted on Meta's side.
+     * Returns the synced template names.
      */
     public function syncTemplates(Team $team): array
     {
@@ -52,83 +48,50 @@ class TemplateService
             }
 
             $data = $response->json();
-            $templates = $data['data'] ?? [];
-            $allRemoteTemplates = array_merge($allRemoteTemplates, $templates);
+            $allRemoteTemplates = array_merge($allRemoteTemplates, $data['data'] ?? []);
 
             $nextUrl = $data['paging']['next'] ?? null;
 
-            // Rate Limit Guard: Sleep 1s between pages.
-            // Meta Limit is usually high but burst can trigger 429.
-            // Safe to add small delay for background job.
+            // Rate limit guard between pages
             if ($nextUrl) {
                 sleep(1);
             }
-
         } while ($nextUrl);
 
         $syncedNames = [];
         $validator = new \App\Validators\TemplateValidator;
 
         foreach ($allRemoteTemplates as $remote) {
-            $template = $this->updateOrCreateTemplate($team, $remote);
+            $template = WhatsappTemplate::updateOrCreate(
+                [
+                    'team_id' => $team->id,
+                    'name' => $remote['name'],
+                    'language' => $remote['language'],
+                ],
+                [
+                    'whatsapp_template_id' => $remote['id'] ?? null,
+                    'category' => $remote['category'],
+                    'status' => $remote['status'],
+                    'components' => $remote['components'] ?? [],
+                    'quality_rating' => $remote['quality_rating'] ?? 'UNKNOWN',
+                    'is_paused_by_meta' => $remote['is_paused_by_meta'] ?? false,
+                ]
+            );
 
-            // Calculate and Save Health Score (Readiness)
-            // This allows the UI to just read the column instead of re-calculating on every render!
-            $valResult = $validator->validate($template);
-
-            // We update the readiness_score and validation_results columns based on scan
-            // We do this via direct update to avoid triggering infinite save loops if any events exist
-            $template->updateQuietly([
-                'readiness_score' => $valResult->isValid() ? 100 : 50, // Simplified score logic, specific score is inside validate() but not returned unless we change method signature or read from object if passed by ref.
-                // Wait, validate() returns ValidationResult object. It doesn't modify template unless we told it to?
-                // Looking at TemplateValidator::validate code...
-                // It does `$template->update(...)` at the end!
-                // So calling $validator->validate($template) ALREADY effectively saves the score!
-                // Let's verify that.
-            ]);
+            // validate() persists the computed readiness_score itself
+            $validator->validate($template);
 
             $syncedNames[] = $template->name;
         }
 
-        return array_unique($syncedNames);
-    }
-
-    protected function updateOrCreateTemplate(Team $team, array $remote)
-    {
-        return WhatsappTemplate::updateOrCreate(
-            [
-                'team_id' => $team->id,
-                'name' => $remote['name'],
-                'language' => $remote['language'],
-            ],
-            [
-                'whatsapp_template_id' => $remote['id'],
-                'category' => $remote['category'],
-                'status' => $remote['status'],
-                'components' => $remote['components'], // Json cast handles array
-            ]
-        );
-    }
-
-    /**
-     * Validate that provided variables match the template placeholders.
-     * Prevents "Parameter count mismatch" errors from Meta.
-     */
-    public function validateVariables(WhatsappTemplate $template, array $variables): bool
-    {
-        $expectedCount = $this->countPlaceholders($template);
-        $providedCount = count($variables);
-
-        if ($providedCount !== $expectedCount) {
-            Log::warning("Template Validation Failed: {$template->name}", [
-                'expected' => $expectedCount,
-                'provided' => $providedCount,
-            ]);
-
-            return false;
+        // Prune templates deleted on Meta's side
+        if (! empty($syncedNames)) {
+            WhatsappTemplate::where('team_id', $team->id)
+                ->whereNotIn('name', $syncedNames)
+                ->delete();
         }
 
-        return true;
+        return array_unique($syncedNames);
     }
 
     /**
@@ -145,71 +108,7 @@ class TemplateService
     }
 
     /**
-     * Map named data (e.g. ['name' => 'John']) to positional variables (e.g. {{1}})
-     * using the template's variable_config schema.
-     */
-    public function hydrateTemplate(WhatsappTemplate $template, array $namedData): array
-    {
-        $schema = $template->variable_config ?? [];
-        $positionalData = [];
-        $maxIndex = 0;
-
-        // Determine max index used in template
-        // We need to scan extraction again to be sure, or trust schema keys
-        // Let's scan components to get all placeholders in order
-        $allPlaceholders = $this->extractAllPlaceholders($template);
-
-        foreach ($allPlaceholders as $placeholder) {
-            // Extract index from {{n}}
-            $index = (int) filter_var($placeholder, FILTER_SANITIZE_NUMBER_INT);
-            $maxIndex = max($maxIndex, $index);
-
-            // 1. Look up config
-            $config = $schema[$placeholder] ?? null;
-
-            if (! $config) {
-                // Fallback: If no config, try to use the index as key?
-                // Or just expect the user provided raw positional array?
-                // For now, if no config, we can't map name -> value.
-                // We will assume the value is null unless provided by index in namedData?
-                // No, namedData assumes keys are names.
-                $value = $namedData[$index] ?? null; // Allow mixed usage?
-            } else {
-                $varName = $config['name'] ?? '';
-                $value = $namedData[$varName] ?? $config['fallback'] ?? null;
-            }
-
-            if ($value === null) {
-                // Strict mode could throw exception here
-                $varName = $config['name'] ?? 'unknown';
-                Log::warning("Missing value for variable {$placeholder} ({$varName}) in template {$template->name}");
-                $value = '{{'.$index.'}}'; // Keep placeholder? or empty? standard is empty string often, or validation fail.
-                // Whatsapp API will fail if we send {{n}} literal usually.
-            }
-
-            // Map to 0-indexed array for API (body_text params array)
-            // Note: Cloud API expects parameters list in order.
-            // If body has {{1}} and {{3}}, we need list [v1, v2, v3] where v2 is unused?
-            // Actually standard regex is {{1}}, {{2}} sequential.
-            // If strict validation passes, gaps shouldn't exist.
-            $positionalData[$index - 1] = (string) $value;
-        }
-
-        // Fill gaps if any (though strict validation prevents this)
-        // param array must be dense
-        for ($i = 0; $i < $maxIndex; $i++) {
-            if (! isset($positionalData[$i])) {
-                $positionalData[$i] = ''; // Empty string for unused/skipped vars
-            }
-        }
-
-        ksort($positionalData);
-
-        return array_values($positionalData);
-    }
-
-    /**
-     * Helper to get all placeholders from all components
+     * Get all placeholders from all components (text, dynamic button URLs).
      */
     public function extractAllPlaceholders(WhatsappTemplate $template): array
     {
@@ -219,16 +118,13 @@ class TemplateService
         if (is_iterable($components)) {
             foreach ($components as $component) {
                 if (isset($component['text'])) {
-                    $found = $this->extractVariables($component['text']);
-                    $placeholders = array_merge($placeholders, $found);
+                    $placeholders = array_merge($placeholders, $this->extractVariables($component['text']));
                 }
 
-                // Button dynamic URLs
                 if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
                     foreach ($component['buttons'] as $button) {
                         if (($button['type'] ?? '') === 'URL' && isset($button['url'])) {
-                            $found = $this->extractVariables($button['url']);
-                            $placeholders = array_merge($placeholders, $found);
+                            $placeholders = array_merge($placeholders, $this->extractVariables($button['url']));
                         }
                     }
                 }
@@ -239,97 +135,21 @@ class TemplateService
     }
 
     /**
-     * Count {{1}}, {{2}} in BODY, HEADER, and dynamic BUTTONS.
-     */
-    protected function countPlaceholders(WhatsappTemplate $template): int
-    {
-        $count = 0;
-        $components = $template->components ?? [];
-
-        // Use new extraction logic for consistency
-        $all = $this->extractAllPlaceholders($template);
-
-        $components = $template->components;
-
-        if (is_iterable($components)) {
-            foreach ($components as $component) {
-                // Text based placeholders in HEADER and BODY
-                if (in_array($component['type'], ['BODY', 'HEADER']) && isset($component['text'])) {
-                    if (preg_match_all('/\{\{(\d+)\}\}/', $component['text'], $matches)) {
-                        $count += count($matches[0]);
-                    }
-                }
-
-                // Media based placeholders in HEADER
-                if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                    $count++;
-                }
-
-                // Dynamic URL placeholders in BUTTONS
-                if ($component['type'] === 'BUTTONS' && isset($component['buttons'])) {
-                    foreach ($component['buttons'] as $button) {
-                        if (($button['type'] ?? '') === 'URL' && isset($button['url']) && str_contains($button['url'], '{{1}}')) {
-                            $count++;
-                        }
-                    }
-                }
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * Sanitize variables to ensure they meet Meta's constraints.
-     * - Truncates to 1024 chars.
-     * - Converts nulls to empty strings.
-     * - Fixes encoding issues.
+     * Sanitize variables to meet Meta's constraints:
+     * nulls to empty strings, arrays flattened, truncated to 1024 chars.
      */
     public function sanitizeVariables(array $variables): array
     {
         return array_map(function ($var) {
-            // 1. Handle Nulls
             if (is_null($var)) {
                 return '';
             }
 
-            // 2. Handle Arrays (Prevent "Array to string conversion")
             if (is_array($var)) {
-                // If it's an array, we try to take the first element if it's a string,
-                // or just json_encode it if we must preserve it.
-                // Usually, this happens when a user maps a JSON field to a variable.
-                if (isset($var[0]) && count($var) === 1 && is_string($var[0])) {
-                    $var = $var[0];
-                } else {
-                    $var = json_encode($var);
-                }
+                $var = (isset($var[0]) && count($var) === 1 && is_string($var[0])) ? $var[0] : json_encode($var);
             }
 
-            // 3. Ensure String
-            $val = (string) $var;
-
-            // 4. Truncate (Meta limit is loose, but 1024 is safe)
-            if (strlen($val) > 1024) {
-                $val = substr($val, 0, 1024);
-            }
-
-            return $val;
+            return substr((string) $var, 0, 1024);
         }, $variables);
-    }
-
-    /**
-     * Validate that a variable used in a URL button is actually safe.
-     * E.g. No spaces, valid chars.
-     */
-    public function validateUrlVariable(string $variable): bool
-    {
-        // Simple check: Should not contain spaces or newlines
-        if (preg_match('/\s/', $variable)) {
-            return false;
-        }
-
-        // Should probably be URL encoded, but if users pass "foo/bar" it might be valid for path extension.
-        // We mainly want to block "foo bar" which breaks the link structure.
-        return true;
     }
 }

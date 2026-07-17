@@ -226,9 +226,6 @@ class BackupService
                 }
             }
 
-            // Step 3: Verification
-            $this->verifyBackup($backupRecord, $localFilePath);
-
             // Cleanup local temp file
             if (file_exists($localFilePath)) {
                 unlink($localFilePath);
@@ -240,19 +237,6 @@ class BackupService
                 'error_message' => 'Upload failed: '.$e->getMessage(),
             ]);
             throw $e;
-        }
-    }
-
-    /**
-     * Step 3: Verify Integrity.
-     */
-    protected function verifyBackup(TenantBackup $backupRecord, string $localFilePath)
-    {
-        // Simple verification: check if record has checksum and size
-        if ($backupRecord->checksum && $backupRecord->size > 0) {
-            $backupRecord->update(['status' => 'completed']);
-        } else {
-            $backupRecord->update(['status' => 'failed', 'error_message' => 'Integrity verification failed.']);
         }
     }
 
@@ -656,14 +640,7 @@ class BackupService
             $this->backupTenant($team);
 
             // 1. Mime Type Check
-            $finfo = new \finfo(FILEINFO_MIME_TYPE);
-            $mime = $finfo->file($filePath);
-            if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php'])) {
-                if (file_exists($filePath)) {
-                    unlink($filePath);
-                }
-                throw new \App\Exceptions\Backup\RestoreException("MALWARE RISK: The uploaded file has an invalid or malicious mime type ({$mime}).");
-            }
+            $this->rejectDangerousMime($filePath);
 
             try {
                 DB::beginTransaction();
@@ -793,46 +770,6 @@ class BackupService
         }
     }
 
-    /**
-     * Restore the entire system from a global backup.
-     */
-    public function restoreGlobal(TenantBackup $backup)
-    {
-        if ($backup->type !== 'global') {
-            throw new Exception('Cannot perform global restore from a tenant backup.');
-        }
-
-        // 1. Global Snapshot
-        $this->backupGlobal();
-
-        try {
-            $encryptedPath = $this->prepareBackupFile($backup);
-            $zipPath = str_replace('.enc', '', $encryptedPath);
-            $this->decryptFile($encryptedPath, $zipPath, null);
-
-            $zip = new ZipArchive;
-            if ($zip->open($zipPath) !== true) {
-                throw new Exception('Could not open backup ZIP.');
-            }
-
-            $sql = $zip->getFromName('full_database.sql');
-            if ($sql) {
-                // WARNING: Highly destructive. Drops and re-creates or wipes tables.
-                $this->executeSql($sql);
-            }
-
-            $zip->close();
-            unlink($zipPath);
-            if (file_exists($encryptedPath)) {
-                unlink($encryptedPath);
-            }
-
-            return true;
-        } catch (Exception $e) {
-            throw $e;
-        }
-    }
-
     protected function prepareBackupFile(TenantBackup $backup)
     {
         $filename = $backup->filename;
@@ -858,13 +795,7 @@ class BackupService
         }
 
         // 1. Mime Type Check
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mime = $finfo->file($tempDest);
-        // Encrypted files are usually octet-stream, but we definitely want to reject plain .sql or .php
-        if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php'])) {
-            unlink($tempDest);
-            throw new Exception("MALWARE RISK: The backup file has an invalid or malicious mime type ({$mime}).");
-        }
+        $this->rejectDangerousMime($tempDest);
 
         // 2. Integrity Check (Checksum)
         $actualChecksum = hash_file('sha256', $tempDest);
@@ -954,27 +885,6 @@ class BackupService
     // ─────────────────────────────────────────────────────────────────────────
     // Security & Logic Helpers
     // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Notify all team admins when the Drive integration breaks.
-     */
-    protected function notifyAdminsOfDriveFailure(Team $team, string $error): void
-    {
-        // Owner always gets notified
-        $recipients = collect([$team->owner]);
-
-        // Plus any user with 'admin' role in this team
-        $admins = $team->users()
-            ->wherePivot('role', 'admin')
-            ->get();
-
-        $recipients = $recipients->concat($admins)->unique('id')->filter();
-
-        \Illuminate\Support\Facades\Notification::send(
-            $recipients,
-            new \App\Notifications\GoogleDriveTokenRevoked($team, $error)
-        );
-    }
 
     /**
      * Step 5 — Rebuild database indexes for the tenant's data.
@@ -1067,6 +977,21 @@ class BackupService
             DB::statement('PRAGMA foreign_keys = ON;');
         } else {
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        }
+    }
+
+    /**
+     * Reject files whose mime type indicates a raw SQL/PHP payload (malware risk).
+     * Deletes the offending file before throwing.
+     */
+    protected function rejectDangerousMime(string $path): void
+    {
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($path);
+        if (in_array($mime, ['text/x-sql', 'text/x-php', 'application/x-httpd-php'])) {
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            throw new \App\Exceptions\Backup\RestoreException("MALWARE RISK: File has an invalid or malicious mime type ({$mime}).");
         }
     }
 

@@ -135,11 +135,12 @@ trait WhatsApp
             return ['status' => false, 'message' => 'No contextual team found.'];
         }
 
-        $service = app(\App\Services\WhatsApp\TemplateService::class)->setTeam($team);
-        if ($this->skipAppSecretProof) {
-            $service->setSkipAppSecretProof(true);
+        try {
+            $names = app(\App\Services\TemplateService::class)->syncTemplates($team);
+            $res = ['success' => true, 'count' => count($names)];
+        } catch (\Exception $e) {
+            $res = ['success' => false, 'error' => $e->getMessage()];
         }
-        $res = $service->syncTemplates();
 
         $phoneNumbers = [];
         if ($res['success']) {

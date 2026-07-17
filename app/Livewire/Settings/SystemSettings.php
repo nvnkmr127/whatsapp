@@ -22,6 +22,12 @@ class SystemSettings extends Component
 
     public $currentLogoPath;
 
+    public $favicon;
+
+    public $currentFaviconPath;
+
+    public $appName;
+
     // Smart Country Settings
     public $selectedCountry;
 
@@ -89,24 +95,6 @@ class SystemSettings extends Component
         'Pacific/Auckland' => 'Auckland',
     ];
 
-    protected function rules()
-    {
-        return [
-            'teamName' => ['required', 'string', 'max:255'],
-            'timezone' => ['required', 'string', 'in:'.implode(',', array_keys($this->timezones))],
-            'logo' => ['nullable', 'image', 'max:2048'], // 2MB max
-            // Use array syntax to prevent pipe delimiter collision in regex
-            'primaryColor' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
-            'currencySymbol' => ['required', 'string', 'max:10'],
-            'dateFormat' => ['required', 'string', 'in:Y-m-d,d/m/Y,m/d/Y,d-m-Y'],
-            'paginationLimit' => ['required', 'integer', 'min:5', 'max:100'],
-            'supportEmail' => ['nullable', 'email'],
-            'maintenanceMode' => ['boolean'],
-            'selectedCountry' => ['nullable', 'string', 'in:IN,AE,AU,IQ,US,UK,DE,SA,SG,NG,ES'],
-            'language' => ['required', 'string', 'max:5'],
-        ];
-    }
-
     public function updatedSelectedCountry($value)
     {
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
@@ -158,6 +146,8 @@ class SystemSettings extends Component
         // Load Global Settings
         $settings = \App\Models\Setting::all()->pluck('value', 'key');
 
+        $this->appName = $settings['system_app_name'] ?? config('app.name');
+        $this->currentFaviconPath = $settings['system_favicon'] ?? null;
         $this->primaryColor = $settings['brand_primary_color'] ?? '#4F46E5';
         $this->currencySymbol = $settings['currency_symbol'] ?? '$';
         $this->dateFormat = $settings['date_format'] ?? 'Y-m-d';
@@ -183,8 +173,10 @@ class SystemSettings extends Component
 
         $this->validate([
             'teamName' => ['required', 'string', 'max:255'],
+            'appName' => ['required', 'string', 'max:255'],
             'timezone' => ['required', 'string', 'in:'.implode(',', array_keys($this->timezones))],
             'logo' => ['nullable', 'image', 'max:2048'],
+            'favicon' => ['nullable', 'image', 'mimes:ico,png,jpg,jpeg,svg', 'max:1024'],
             'primaryColor' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
             'currencySymbol' => ['required', 'string', 'max:10'],
             'dateFormat' => ['required', 'string', 'in:Y-m-d,d/m/Y,m/d/Y,d-m-Y'],
@@ -218,8 +210,19 @@ class SystemSettings extends Component
             $this->currentLogoPath = $team->logo_path;
         }
 
+        // Handle favicon upload (global)
+        if ($this->favicon) {
+            if ($this->currentFaviconPath) {
+                Storage::disk('public')->delete($this->currentFaviconPath);
+            }
+            $faviconPath = $this->favicon->store('system-favicons', 'public');
+            $this->currentFaviconPath = $faviconPath;
+        }
+
         // Save Global Settings
         $settings = [
+            'system_app_name' => $this->appName,
+            'system_favicon' => $this->currentFaviconPath,
             'brand_primary_color' => $this->primaryColor,
             'currency_symbol' => $this->currencySymbol,
             'date_format' => $this->dateFormat,
@@ -262,6 +265,19 @@ class SystemSettings extends Component
 
             $this->currentLogoPath = null;
             session()->flash('message', 'Logo removed successfully.');
+        }
+    }
+
+    public function removeFavicon()
+    {
+        \Illuminate\Support\Facades\Gate::authorize('manage-settings');
+
+        if ($this->currentFaviconPath) {
+            Storage::disk('public')->delete($this->currentFaviconPath);
+            $this->currentFaviconPath = null;
+            set_setting('system_favicon', null, 'system');
+            
+            session()->flash('message', 'Favicon removed successfully.');
         }
     }
 

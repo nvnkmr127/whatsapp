@@ -3,6 +3,11 @@
 namespace App\Services\Email;
 
 use App\Enums\EmailUseCase;
+use App\Jobs\SendEmailJob;
+use App\Mail\DynamicSystemMail;
+use App\Models\EmailLog;
+use App\Models\EmailTemplate;
+use App\Models\User;
 use App\Services\Email\Contracts\EmailPayload;
 use App\Services\Email\Contracts\EmailResult;
 use Exception;
@@ -11,12 +16,8 @@ use Illuminate\Support\Facades\Log;
 
 class EmailDispatcher
 {
-    public function __construct(
-        protected EmailProviderManager $manager
-    ) {}
-
     /**
-     * Send an email using the multi-driver architecture.
+     * Queue an email for delivery via SendEmailJob (Resend or tenant SMTP failover).
      */
     public function send($to, EmailUseCase $useCase, Mailable $mailable, ?int $templateId = null): void
     {
@@ -24,33 +25,25 @@ class EmailDispatcher
         $subject = 'System Email';
         $html = '';
         $text = null;
+        $headers = [];
 
         try {
             $html = (string) $mailable->render();
 
-            $reflection = new \ReflectionClass($mailable);
-            if ($reflection->hasProperty('subject')) {
-                $prop = $reflection->getProperty('subject');
-                $prop->setAccessible(true);
-                $subject = $prop->getValue($mailable) ?: 'System Email';
-            }
-
-            // Text content handling if available
-            if (property_exists($mailable, 'textContent') && ! empty($mailable->textContent)) {
-                $text = $mailable->textContent;
-            }
-
-            // Extract headers if available (Laravel 10+ headers() method or custom property)
-            $headers = [];
-            if (method_exists($mailable, 'headers')) {
-                $mailableHeaders = $mailable->headers();
-                if (property_exists($mailableHeaders, 'text')) {
-                    $headers = $mailableHeaders->text;
-                }
-            } elseif (property_exists($mailable, 'headersArray')) {
+            if ($mailable instanceof DynamicSystemMail) {
+                $subject = $mailable->subjectString ?: 'System Email';
+                $text = $mailable->textContent ?: null;
                 $headers = $mailable->headersArray;
+            } else {
+                $subject = $mailable->subject
+                    ?: (method_exists($mailable, 'envelope') ? $mailable->envelope()->subject : null)
+                    ?: 'System Email';
+
+                if (method_exists($mailable, 'headers')) {
+                    $headers = $mailable->headers()->text ?? [];
+                }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning('EmailDispatcher Content Extraction: '.$e->getMessage());
         }
 
@@ -69,7 +62,7 @@ class EmailDispatcher
         );
 
         // 3. Dispatch Job (Asynchronous delivery for production stability)
-        \App\Jobs\SendEmailJob::dispatch($payload);
+        SendEmailJob::dispatch($payload);
 
         // 4. Initial Log (Log that it's queued)
         $this->logInitialEntry($normalizedTo, $useCase, $subject, $templateId);
@@ -81,15 +74,15 @@ class EmailDispatcher
     protected function logInitialEntry($to, $useCase, $subject, ?int $templateId): void
     {
         try {
-            \App\Models\EmailLog::create([
+            EmailLog::create([
                 'recipient' => is_array($to) ? json_encode($to) : (string) $to,
                 'use_case' => $useCase,
                 'template_id' => $templateId,
                 'subject' => substr($subject, 0, 255),
                 'status' => 'queued',
             ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to write initial EmailLog: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Failed to write initial EmailLog: '.$e->getMessage());
         }
     }
 
@@ -98,7 +91,7 @@ class EmailDispatcher
      */
     public function dispatchByTemplate(string $to, string $templateSlug, array $data = []): void
     {
-        $template = \App\Models\EmailTemplate::where('slug', $templateSlug)->first();
+        $template = EmailTemplate::where('slug', $templateSlug)->first();
         if (! $template) {
             throw new Exception("Email template with slug '$templateSlug' not found.");
         }
@@ -141,7 +134,7 @@ class EmailDispatcher
             $text = strtr($text, $replace);
         }
 
-        $mailable = new \App\Mail\DynamicSystemMail($subject, $html, $text);
+        $mailable = new DynamicSystemMail($subject, $html, $text);
 
         $this->send($to, $template->type, $mailable, $template->id);
     }
@@ -149,7 +142,7 @@ class EmailDispatcher
     /**
      * Store result in EmailLog.
      */
-    public function logResult($to, $useCase, \App\Services\Email\Contracts\EmailResult $result, string $subject, ?int $templateId): void
+    public function logResult($to, $useCase, EmailResult $result, string $subject, ?int $templateId): void
     {
         try {
             // Ensure recipient is a string and not too long for the DB
@@ -180,8 +173,8 @@ class EmailDispatcher
                 $data['failure_type'] = 'provider_error';
             }
 
-            \App\Models\EmailLog::create($data);
-        } catch (\Exception $e) {
+            EmailLog::create($data);
+        } catch (Exception $e) {
             Log::error('Failed to write EmailLog via EmailDispatcher: '.$e->getMessage());
         }
     }
@@ -195,14 +188,14 @@ class EmailDispatcher
             return $to;
         }
 
-        if ($to instanceof \App\Models\User) {
+        if ($to instanceof User) {
             return $to->email;
         }
 
         if (is_array($to)) {
             // Handle ['email@example.com' => 'Name'] or ['email@example.com'] or [UserModel]
             return collect($to)->map(function ($value, $key) {
-                if ($value instanceof \App\Models\User) {
+                if ($value instanceof User) {
                     return $value->email;
                 }
                 // If key is an email-like string and value is name, return key

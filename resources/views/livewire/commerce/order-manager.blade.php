@@ -318,9 +318,9 @@
 
         <x-slot name="footer">
             <div class="flex justify-between w-full">
-                <button wire:click="deleteOrder({{ $viewingOrder->id }})" wire:confirm="Are you sure you want to delete this order? This cannot be undone."
+                <button wire:click="deleteOrder({{ $viewingOrder->id ?? 'null' }})" wire:confirm="Are you sure you want to delete this order? This cannot be undone."
                     class="px-6 py-3 text-rose-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-rose-50 transition-all">
-                    Terminte Order
+                    Terminate Order
                 </button>
                 <button wire:click="$set('showDetailsModal', false)"
                     class="px-6 py-3 bg-slate-50 dark:bg-slate-800 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-100 transition-all">
