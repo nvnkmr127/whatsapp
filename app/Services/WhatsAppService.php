@@ -51,7 +51,7 @@ class WhatsAppService
     /**
      * Send a raw payload to the WhatsApp API (e.g. for CSAT, specialized messages).
      */
-    public function sendRaw(\App\Models\Team $team, array $payload, string $endpoint = 'messages')
+    public function sendRaw(Team $team, array $payload, string $endpoint = 'messages')
     {
         $this->setTeam($team);
         return $this->client->sendRequest($endpoint, $payload, 'post');

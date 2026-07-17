@@ -9,6 +9,12 @@ use Laravel\Jetstream\Events\TeamUpdated;
 use Laravel\Jetstream\Team as JetstreamTeam;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property int $id
+ * @property string|null $whatsapp_phone_number_id
+ * @property string|null $whatsapp_business_account_id
+ * @property string|null $whatsapp_phone_display
+ */
 class Team extends JetstreamTeam
 {
     /** @use HasFactory<\Database\Factories\TeamFactory> */

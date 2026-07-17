@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ */
 class CallPermission extends Model
 {
     use \App\Traits\HasTeam;
@@ -134,7 +137,7 @@ class CallPermission extends Model
      */
     public function trackRequest(): void
     {
-        $now = now();
+        $now = \Illuminate\Support\Carbon::now();
 
         // Reset 24h counter if window has passed
         if (! $this->first_request_in_24h || $this->first_request_in_24h->diffInHours($now) >= 24) {
