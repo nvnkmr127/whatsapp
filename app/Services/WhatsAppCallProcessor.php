@@ -9,6 +9,8 @@ use App\Events\CallMissed;
 use App\Events\CallOffered;
 use App\Events\CallRejected;
 use App\Events\CallRinging;
+use App\Helpers\PhoneNumberHelper;
+use App\Jobs\MonitorCallTimeoutJob;
 use App\Models\Contact;
 use App\Models\Team;
 use App\Models\WhatsAppCall;
@@ -127,13 +129,14 @@ class WhatsAppCallProcessor
 
         if ($eventNormalized === 'connect' || $eventNormalized === 'connected') {
             $this->handleConnect($call, $callData);
-        } elseif ($eventNormalized === 'answered') {
+        } elseif ($eventNormalized === 'answered' || $eventNormalized === 'accepted') {
             $this->handleAnswered($call, $callData);
         } elseif ($eventNormalized === 'terminate') {
             $this->handleTerminate($call, $callData);
         } elseif ($statusNormalized) {
-            // Fallback for status-only updates if any
-            if ($statusNormalized === 'answered' || $statusNormalized === 'in_progress') {
+            // Fallback for status-only updates. Meta's status value is "accepted";
+            // "answered"/"in_progress" kept for backward compatibility.
+            if (in_array($statusNormalized, ['accepted', 'answered', 'in_progress'], true)) {
                 $this->handleAnswered($call, $callData);
             } else {
                 $this->handleStatusUpdate($call, $status, $callData);
@@ -144,7 +147,7 @@ class WhatsAppCallProcessor
     protected function handleConnect(WhatsAppCall $call, array $callData)
     {
         try {
-            \Illuminate\Support\Facades\Log::channel('whatsapp')->info("Handling Connect: {$call->call_id}");
+            Log::channel('whatsapp')->info("Handling Connect: {$call->call_id}");
         } catch (\Exception $e) {
             // Silently fail
         }
@@ -160,7 +163,7 @@ class WhatsAppCallProcessor
         $sdpType = strtolower($callData['session']['sdp_type'] ?? $callData['session_data']['sdp_type'] ?? '');
 
         if ($sdp && $sdpType === 'offer') {
-            $sanitizedSdp = \App\Services\SDPValidator::sanitize($sdp);
+            $sanitizedSdp = SDPValidator::sanitize($sdp);
 
             $call->update([
                 'status' => 'ringing',
@@ -188,7 +191,7 @@ class WhatsAppCallProcessor
     protected function handleAnswered(WhatsAppCall $call, array $callData)
     {
         try {
-            \Illuminate\Support\Facades\Log::channel('whatsapp')->info("Handling Call Answered: {$call->call_id}");
+            Log::channel('whatsapp')->info("Handling Call Answered: {$call->call_id}");
         } catch (\Exception $e) {
             // Silently fail
         }
@@ -219,7 +222,7 @@ class WhatsAppCallProcessor
         $status = strtolower($callData['status'] ?? 'completed');
 
         try {
-            \Illuminate\Support\Facades\Log::channel('whatsapp')->info("Handling Terminate [{$status}]: {$call->call_id}");
+            Log::channel('whatsapp')->info("Handling Terminate [{$status}]: {$call->call_id}");
         } catch (\Exception $e) {
             // Silently fail
         }
@@ -278,7 +281,7 @@ class WhatsAppCallProcessor
     {
         try {
             // Normalize phone number to prevent duplicates
-            $normalizedPhone = \App\Helpers\PhoneNumberHelper::normalize($phoneNumber);
+            $normalizedPhone = PhoneNumberHelper::normalize($phoneNumber);
 
             // Find or create contact
             $contact = Contact::where('team_id', $team->id)
@@ -303,6 +306,12 @@ class WhatsAppCallProcessor
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
             ]);
+
+            // Implicit call-back permission: a user calling the business opens a
+            // callback window (per Meta). Mirror it in our permission ledger.
+            $permissionService = new CallPermissionService;
+            $permission = $permissionService->trackPermissionRequest($contact, $team, $team->whatsapp_phone_number_id);
+            $permissionService->grantPermission($permission);
 
             // Route call to an agent if not already assigned
             if (! $call->agent_id) {
@@ -331,7 +340,7 @@ class WhatsAppCallProcessor
                 }
 
                 // Dispatch timeout monitor delayed by configured timeout
-                \App\Jobs\MonitorCallTimeoutJob::dispatch($call->id)
+                MonitorCallTimeoutJob::dispatch($call->id)
                     ->delay(now()->addSeconds($team->getCallRoutingConfig()['ring_timeout_seconds'] ?? config('whatsapp.calling.ring_timeout_seconds', 30)));
             }
         } catch (\Exception $e) {

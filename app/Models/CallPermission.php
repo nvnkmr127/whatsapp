@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\HasTeam;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  */
 class CallPermission extends Model
 {
-    use \App\Traits\HasTeam;
     use HasFactory;
+    use HasTeam;
 
     protected $fillable = [
         'team_id',
@@ -99,19 +101,30 @@ class CallPermission extends Model
     }
 
     /**
-     * Grant permission and set 72-hour expiration window
+     * Meta's temporary call permission window: 7 calendar days (168 hours).
      */
-    public function grantPermission(): void
+    public const DEFAULT_WINDOW_HOURS = 168;
+
+    /**
+     * Grant permission. Honors Meta's own expiration when provided
+     * (call_permission_reply webhook), otherwise falls back to Meta's
+     * default 7-day (168h) window used for implicit/legacy grants.
+     */
+    public function grantPermission(?Carbon $expiresAt = null, bool $isPermanent = false): void
     {
         $this->update([
             'permission_status' => 'granted',
             'permission_granted_at' => now(),
-            'permission_expires_at' => now()->addHours(72),
+            // ponytail: "permanent" modeled as a far-future expiry so the existing
+            // window scopes/checks keep working without a nullable-means-forever branch.
+            'permission_expires_at' => $isPermanent
+                ? now()->addYears(10)
+                : ($expiresAt ?? now()->addHours(self::DEFAULT_WINDOW_HOURS)),
         ]);
     }
 
     /**
-     * Check if permission is within the 72-hour calling window
+     * Check if permission is within the granted calling window
      */
     public function isWithinCallingWindow(): bool
     {
@@ -137,7 +150,7 @@ class CallPermission extends Model
      */
     public function trackRequest(): void
     {
-        $now = \Illuminate\Support\Carbon::now();
+        $now = Carbon::now();
 
         // Reset 24h counter if window has passed
         if (! $this->first_request_in_24h || $this->first_request_in_24h->diffInHours($now) >= 24) {

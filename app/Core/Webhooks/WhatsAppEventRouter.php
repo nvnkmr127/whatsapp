@@ -2,10 +2,25 @@
 
 namespace App\Core\Webhooks;
 
+use App\Enums\IntegrationState;
+use App\Events\CallRestrictionApplied;
+use App\Events\WhatsAppAccountRisk;
+use App\Events\WhatsAppAccountUpdated;
+use App\Helpers\PhoneNumberHelper;
+use App\Jobs\PersistMessageJob;
+use App\Jobs\UpdateMessageStatusJob;
+use App\Models\CallPermission;
+use App\Models\CallSettings;
+use App\Models\Contact;
+use App\Models\Message;
 use App\Models\Team;
 use App\Models\WhatsappTemplate;
+use App\Services\CallPermissionService;
+use App\Services\CsatService;
 use App\Services\EventBusService;
+use App\Services\TraceContext;
 use App\Services\WhatsAppCallProcessor;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppEventRouter
@@ -77,7 +92,7 @@ class WhatsAppEventRouter
             }
 
             $lockKey = "webhook_lock:{$wamid}";
-            $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 10);
+            $lock = Cache::lock($lockKey, 10);
 
             if (! $lock->get()) {
                 Log::info("Router: Parallel execution detected for {$wamid}. Skipping.");
@@ -86,7 +101,7 @@ class WhatsAppEventRouter
             }
 
             try {
-                if (\App\Models\Message::where('whatsapp_message_id', $wamid)->exists()) {
+                if (Message::where('whatsapp_message_id', $wamid)->exists()) {
                     continue;
                 }
 
@@ -104,7 +119,7 @@ class WhatsAppEventRouter
                     'raw_payload' => $value,
                 ];
 
-                \App\Jobs\PersistMessageJob::dispatch($payload, \App\Services\TraceContext::getTraceId())
+                PersistMessageJob::dispatch($payload, TraceContext::getTraceId())
                     ->onQueue('messages');
 
                 $this->eventBus->publish('whatsapp_events', 'message.inbound', $payload, $this->teamId);
@@ -127,26 +142,26 @@ class WhatsAppEventRouter
             // [STAFF-HARDENING] Circuit Breaker Logic
             if ($statusData['status'] === 'failed' && $this->teamId) {
                 $errorKey = "whatsapp_consecutive_errors:{$this->teamId}";
-                $errors = \Illuminate\Support\Facades\Cache::increment($errorKey);
-                
+                $errors = Cache::increment($errorKey);
+
                 if ($errors === 1) {
-                    \Illuminate\Support\Facades\Cache::put($errorKey, 1, 600); // 10 min window
+                    Cache::put($errorKey, 1, 600); // 10 min window
                 }
 
                 if ($errors >= 10) {
                     Log::critical("Circuit Breaker Tripped for Team {$this->teamId} due to 10+ consecutive delivery failures.");
                     $team = Team::find($this->teamId);
-                    if ($team && $team->whatsapp_setup_state !== \App\Enums\IntegrationState::RESTRICTED) {
-                        $team->update(['whatsapp_setup_state' => \App\Enums\IntegrationState::RESTRICTED]);
-                        \App\Events\WhatsAppAccountRisk::dispatch('CIRCUIT_BREAKER', ['errors' => $errors], $this->teamId);
+                    if ($team && $team->whatsapp_setup_state !== IntegrationState::RESTRICTED) {
+                        $team->update(['whatsapp_setup_state' => IntegrationState::RESTRICTED]);
+                        WhatsAppAccountRisk::dispatch('CIRCUIT_BREAKER', ['errors' => $errors], $this->teamId);
                     }
                 }
             } elseif ($statusData['status'] === 'delivered' && $this->teamId) {
                 // Self-healing: Reset error count on success
-                \Illuminate\Support\Facades\Cache::forget("whatsapp_consecutive_errors:{$this->teamId}");
+                Cache::forget("whatsapp_consecutive_errors:{$this->teamId}");
             }
 
-            \App\Jobs\UpdateMessageStatusJob::dispatch($payload, \App\Services\TraceContext::getTraceId())
+            UpdateMessageStatusJob::dispatch($payload, TraceContext::getTraceId())
                 ->onQueue('messages');
 
             $this->eventBus->publish('whatsapp_events', 'message.status', $payload, $this->teamId);
@@ -185,7 +200,7 @@ class WhatsAppEventRouter
 
         if (in_array($status, ['FLAGGED', 'RESTRICTED']) || $quality === 'RED') {
             Log::critical("CRITICAL: WhatsApp Account Risk! Status: {$status}.");
-            \App\Events\WhatsAppAccountRisk::dispatch('QUALITY_UPDATE', $change, $this->teamId);
+            WhatsAppAccountRisk::dispatch('QUALITY_UPDATE', $change, $this->teamId);
         }
     }
 
@@ -218,12 +233,12 @@ class WhatsAppEventRouter
             $this->applyEnforcementActions($team, $this->phoneId, $change);
         }
 
-        \App\Events\WhatsAppAccountUpdated::dispatch($change);
+        WhatsAppAccountUpdated::dispatch($change);
     }
 
     protected function updateLocalCallSettings(Team $team, string $phoneId, array $change): void
     {
-        $settings = \App\Models\CallSettings::where('team_id', $team->id)
+        $settings = CallSettings::where('team_id', $team->id)
             ->where('phone_number_id', $phoneId)
             ->first();
 
@@ -247,7 +262,7 @@ class WhatsAppEventRouter
 
     protected function applyEnforcementActions(Team $team, string $phoneId, array $change): void
     {
-        $settings = \App\Models\CallSettings::where('team_id', $team->id)
+        $settings = CallSettings::where('team_id', $team->id)
             ->where('phone_number_id', $phoneId)
             ->first();
 
@@ -257,7 +272,7 @@ class WhatsAppEventRouter
 
             if (in_array($action, ['CALLING_RESTRICTED', 'CALLING_DISABLED'])) {
                 $settings->applyRestriction($reason);
-                \App\Events\CallRestrictionApplied::dispatch($team, $settings, $reason);
+                CallRestrictionApplied::dispatch($team, $settings, $reason);
             }
         }
     }
@@ -268,9 +283,17 @@ class WhatsAppEventRouter
             return;
         }
 
+        // 0. Meta native call permission reply (accept/reject the business's
+        //    permission request). Carries Meta's own expiration_timestamp.
+        if (($messageData['interactive']['type'] ?? '') === 'call_permission_reply') {
+            $this->handleCallPermissionReply($messageData);
+
+            return;
+        }
+
         $buttonReply = $messageData['interactive']['button_reply'] ?? null;
-        $listReply   = $messageData['interactive']['list_reply'] ?? null;
-        
+        $listReply = $messageData['interactive']['list_reply'] ?? null;
+
         $selectionId = ($buttonReply['id'] ?? null) ?: ($listReply['id'] ?? null);
 
         if (! $selectionId) {
@@ -281,15 +304,16 @@ class WhatsAppEventRouter
         if (str_starts_with($selectionId, 'csat_')) {
             $from = $messageData['from'] ?? null;
             if ($from) {
-                $contact = \App\Models\Contact::where('team_id', $this->teamId)
-                    ->where('phone_number', \App\Helpers\PhoneNumberHelper::normalize($from))
+                $contact = Contact::where('team_id', $this->teamId)
+                    ->where('phone_number', PhoneNumberHelper::normalize($from))
                     ->first();
 
                 if ($contact) {
-                    app(\App\Services\CsatService::class)->recordFromWebhook($selectionId, $contact->id);
+                    app(CsatService::class)->recordFromWebhook($selectionId, $contact->id);
                     Log::info("[Router] CSAT rating recorded for Contact #{$contact->id} via Selection ID: {$selectionId}");
                 }
             }
+
             return;
         }
 
@@ -299,11 +323,61 @@ class WhatsAppEventRouter
         if (($payload['action'] ?? '') === 'grant_call_permission') {
             $permissionId = $payload['permission_id'] ?? null;
             if ($permissionId) {
-                $permission = \App\Models\CallPermission::find($permissionId);
+                $permission = CallPermission::find($permissionId);
                 if ($permission && $permission->permission_status === 'requested') {
-                    (new \App\Services\CallPermissionService)->grantPermission($permission);
+                    (new CallPermissionService)->grantPermission($permission);
                 }
             }
+        }
+    }
+
+    /**
+     * Handle Meta's native call_permission_reply webhook: record the user's
+     * accept/reject and store Meta's own expiration window rather than assuming
+     * a fixed window. Shape (per Meta Calling API reference):
+     *   interactive.call_permission_reply = { response, is_permanent, expiration_timestamp, response_source }
+     */
+    protected function handleCallPermissionReply(array $messageData): void
+    {
+        $reply = $messageData['interactive']['call_permission_reply'] ?? [];
+        $from = $messageData['from'] ?? null;
+        if (! $from) {
+            return;
+        }
+
+        $contact = Contact::where('team_id', $this->teamId)
+            ->where('phone_number', PhoneNumberHelper::normalize($from))
+            ->first();
+        if (! $contact) {
+            return;
+        }
+
+        $permission = CallPermission::where('team_id', $this->teamId)
+            ->where('contact_id', $contact->id)
+            ->latest()
+            ->first();
+        if (! $permission) {
+            return;
+        }
+
+        if (($reply['response'] ?? null) === 'accept') {
+            $isPermanent = (bool) ($reply['is_permanent'] ?? false);
+            // now()->setTimestamp keeps the app timezone so Eloquent's datetime
+            // cast round-trips the same absolute instant (createFromTimestamp
+            // returns UTC-tagged and drifts by the app offset on save/read).
+            $expiresAt = isset($reply['expiration_timestamp'])
+                ? now()->setTimestamp((int) $reply['expiration_timestamp'])
+                : null;
+
+            (new CallPermissionService)->grantPermission($permission, $expiresAt, $isPermanent);
+
+            Log::info("[Router] Call permission accepted for Contact #{$contact->id}", [
+                'permanent' => $isPermanent,
+                'expires_at' => $expiresAt,
+            ]);
+        } else {
+            $permission->revoke();
+            Log::info("[Router] Call permission rejected for Contact #{$contact->id}");
         }
     }
 }

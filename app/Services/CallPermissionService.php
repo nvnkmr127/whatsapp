@@ -7,14 +7,16 @@ use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Team;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class CallPermissionService
 {
     /**
-     * Geographic restrictions for business-initiated calls
+     * Countries where Meta restricts business-initiated calls.
+     * Per Meta Calling API docs: US, Canada, Egypt, Vietnam, Nigeria.
      */
-    protected const RESTRICTED_COUNTRIES = ['US', 'CA', 'TR', 'EG', 'VN'];
+    protected const RESTRICTED_COUNTRIES = ['US', 'CA', 'EG', 'VN', 'NG'];
 
     /**
      * Minimum messaging tier required for outbound calling
@@ -125,7 +127,7 @@ class CallPermissionService
     }
 
     /**
-     * Validate calling window (72 hours)
+     * Validate calling window (Meta temporary permission: 7 days / 168h)
      */
     public function validateCallingWindow(CallPermission $permission): bool
     {
@@ -147,7 +149,7 @@ class CallPermissionService
      */
     public function validateGeographicRestrictions(Contact $contact): bool
     {
-        $countryCode = $this->extractCountryCode($contact->phone);
+        $countryCode = $this->extractCountryCode($contact->phone_number ?? '');
 
         if (! $countryCode) {
             return true; // Allow if country code cannot be determined
@@ -188,12 +190,13 @@ class CallPermissionService
         // Remove + and spaces
         $phone = str_replace(['+', ' ', '-'], '', $phone);
 
-        // Common country code mappings
+        // Dialing codes for the restricted markets. Check longer codes first so
+        // e.g. Nigeria (234) isn't shadowed by a shorter prefix.
         $countryCodeMap = [
-            '1' => 'US', // US/CA (both restricted)
-            '90' => 'TR', // Turkey
-            '20' => 'EG', // Egypt
-            '84' => 'VN', // Vietnam
+            '234' => 'NG', // Nigeria
+            '20' => 'EG',  // Egypt
+            '84' => 'VN',  // Vietnam
+            '1' => 'US',   // US/Canada (both restricted)
         ];
 
         foreach ($countryCodeMap as $code => $country) {
@@ -206,15 +209,18 @@ class CallPermissionService
     }
 
     /**
-     * Grant permission (called when user accepts)
+     * Grant permission (called when user accepts).
+     * Pass Meta's expiration_timestamp / is_permanent from the
+     * call_permission_reply webhook when available.
      */
-    public function grantPermission(CallPermission $permission): void
+    public function grantPermission(CallPermission $permission, ?Carbon $expiresAt = null, bool $isPermanent = false): void
     {
-        $permission->grantPermission();
+        $permission->grantPermission($expiresAt, $isPermanent);
 
         Log::info('Call permission granted', [
             'permission_id' => $permission->id,
             'expires_at' => $permission->permission_expires_at,
+            'permanent' => $isPermanent,
         ]);
     }
 

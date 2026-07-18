@@ -2,14 +2,25 @@
 
 namespace App\Jobs;
 
+use App\Events\MessageReceived;
+use App\Helpers\PhoneNumberHelper;
+use App\Models\Contact;
+use App\Models\Conversation;
+use App\Models\LeadCaptureWidget;
+use App\Models\LeadSource;
 use App\Models\Message;
 use App\Models\Team;
-use App\Jobs\SendPushNotificationJob;
+use App\Services\ConsentService;
+use App\Services\ContactService;
+use App\Services\ConversationService;
+use App\Services\SlaService;
+use App\Services\TraceContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PersistMessageJob implements ShouldQueue
@@ -40,9 +51,9 @@ class PersistMessageJob implements ShouldQueue
     {
         // 1. Restore Trace Context
         if ($this->traceId) {
-            \App\Services\TraceContext::set($this->traceId);
+            TraceContext::set($this->traceId);
         } else {
-            \App\Services\TraceContext::ensureTraceId();
+            TraceContext::ensureTraceId();
         }
 
         $data = $this->eventPayload;
@@ -72,7 +83,7 @@ class PersistMessageJob implements ShouldQueue
             return;
         }
 
-        $lock = \Illuminate\Support\Facades\Cache::lock("persist_message_{$data['provider_id']}", 10);
+        $lock = Cache::lock("persist_message_{$data['provider_id']}", 10);
         try {
             if (! $lock->get()) {
                 Log::info('PersistMessageJob: Lock already held for message: '.$data['provider_id']);
@@ -88,10 +99,10 @@ class PersistMessageJob implements ShouldQueue
             }
 
             // 1. Contact Management (thread-safe)
-            $phone = \App\Helpers\PhoneNumberHelper::normalize($data['from_phone']);
+            $phone = PhoneNumberHelper::normalize($data['from_phone']);
             $name = $data['contact_name'] ?? null;
 
-            $contactService = new \App\Services\ContactService;
+            $contactService = new ContactService;
             $contact = $contactService->createOrUpdate([
                 'team_id' => $team->id,
                 'phone_number' => $phone,
@@ -105,7 +116,7 @@ class PersistMessageJob implements ShouldQueue
             // Log the update attempt for debugging
             Log::info("PersistMessageJob: Updating contact {$contact->id} timestamp to {$messageTimestamp}");
 
-            \App\Models\Contact::where('id', $contact->id)->update([
+            Contact::where('id', $contact->id)->update([
                 'last_interaction_at' => $messageTimestamp,
                 'last_customer_message_at' => $messageTimestamp,
             ]);
@@ -116,30 +127,34 @@ class PersistMessageJob implements ShouldQueue
             $upperContent = strtoupper($cleanContent);
 
             $optOutKeywords = array_map('strtoupper', $team->opt_out_keywords ?? []);
-            if (!in_array('STOP', $optOutKeywords)) $optOutKeywords[] = 'STOP';
+            if (! in_array('STOP', $optOutKeywords)) {
+                $optOutKeywords[] = 'STOP';
+            }
 
             $optInKeywords = array_map('strtoupper', $team->opt_in_keywords ?? []);
-            if (!in_array('START', $optInKeywords)) $optInKeywords[] = 'START';
+            if (! in_array('START', $optInKeywords)) {
+                $optInKeywords[] = 'START';
+            }
 
             if (in_array($upperContent, $optOutKeywords)) {
-                $optedOut = (new \App\Services\ConsentService)->optOut($contact);
-                if ($optedOut && $team->opt_out_message_enabled && !empty($team->opt_out_message)) {
-                    \App\Jobs\SendMessageJob::dispatch($team->id, $contact->phone_number, 'text', $team->opt_out_message);
+                $optedOut = (new ConsentService)->optOut($contact);
+                if ($optedOut && $team->opt_out_message_enabled && ! empty($team->opt_out_message)) {
+                    SendMessageJob::dispatch($team->id, $contact->phone_number, 'text', $team->opt_out_message);
                 }
             } elseif (in_array($upperContent, $optInKeywords)) {
-                $optedIn = (new \App\Services\ConsentService)->optIn($contact, 'START_KEYWORD');
-                if ($optedIn && $team->opt_in_message_enabled && !empty($team->opt_in_message)) {
-                    \App\Jobs\SendMessageJob::dispatch($team->id, $contact->phone_number, 'text', $team->opt_in_message);
+                $optedIn = (new ConsentService)->optIn($contact, 'START_KEYWORD');
+                if ($optedIn && $team->opt_in_message_enabled && ! empty($team->opt_in_message)) {
+                    SendMessageJob::dispatch($team->id, $contact->phone_number, 'text', $team->opt_in_message);
                 }
             }
 
             // 3. Conversation Management
-            $conversationService = new \App\Services\ConversationService;
-            $wasNew = ! \App\Models\Conversation::where('contact_id', $contact->id)->where('status', 'open')->exists();
+            $conversationService = new ConversationService;
+            $wasNew = ! Conversation::where('contact_id', $contact->id)->where('status', 'open')->exists();
             $conversation = $conversationService->ensureActiveConversation($contact);
-            
+
             if ($wasNew || ! $conversation->sla_policy_id) {
-                app(\App\Services\SlaService::class)->assignPolicy($conversation);
+                app(SlaService::class)->assignPolicy($conversation);
             }
 
             $conversationService->handleIncomingMessage($conversation);
@@ -176,7 +191,7 @@ class PersistMessageJob implements ShouldQueue
             // B. Temporal Attribution Fallback (Redis/Cache Pointer)
             if (! $attributedCampaignId) {
                 $phone = $data['from_phone']; // Standardize phone for lookup
-                $attributedCampaignId = \Illuminate\Support\Facades\Cache::get("last_campaign:contact:{$phone}");
+                $attributedCampaignId = Cache::get("last_campaign:contact:{$phone}");
 
                 if ($attributedCampaignId) {
                     Log::info("PersistMessageJob: Temporal attribution via Cache/Redis for Campaign: {$attributedCampaignId}");
@@ -186,12 +201,12 @@ class PersistMessageJob implements ShouldQueue
             // 5.b QR Code Lead Capture Tracking
             if ($content && preg_match('/\[ref:([a-zA-Z0-9-]+)\]/', $content, $matches)) {
                 $slug = $matches[1];
-                $widget = \App\Models\LeadCaptureWidget::where('slug', $slug)->first();
+                $widget = LeadCaptureWidget::where('slug', $slug)->first();
                 if ($widget) {
                     $widget->increment('conversion_count');
 
                     // Track as Lead Source if available
-                    $leadSource = \App\Models\LeadSource::firstOrCreate(
+                    $leadSource = LeadSource::firstOrCreate(
                         ['team_id' => $team->id, 'name' => 'QR: '.$widget->name],
                         ['type' => 'custom']
                     );
@@ -239,10 +254,10 @@ class PersistMessageJob implements ShouldQueue
 
             // Broadcast Real-time Event & Push Notification
             try {
-                \App\Events\MessageReceived::dispatch($message);
+                MessageReceived::dispatch($message);
                 Log::info("[DEBUG-PUSH] STEP 1: PersistMessageJob about to dispatch SendPushNotificationJob for Message ID: {$message->id}");
                 SendPushNotificationJob::dispatch($message->id);
-                Log::info("[DEBUG-PUSH] STEP 1-DONE: PersistMessageJob successfully dispatched SendPushNotificationJob.");
+                Log::info('[DEBUG-PUSH] STEP 1-DONE: PersistMessageJob successfully dispatched SendPushNotificationJob.');
                 Log::info("PersistMessageJob: MessageReceived event and PushJob dispatched for Message ID: {$message->id}");
             } catch (\Exception $e) {
                 Log::error('PersistMessageJob: Failed to dispatch MessageReceived event: '.$e->getMessage());
@@ -295,7 +310,12 @@ class PersistMessageJob implements ShouldQueue
         $type = $interactive['type'] ?? 'unknown';
 
         // Specific handling for Call Permission Grants
-        if ($type === 'call_permission_reply' || ($interactive['button_reply']['id'] ?? '') === 'grant_call_permission') {
+        if ($type === 'call_permission_reply') {
+            return ($interactive['call_permission_reply']['response'] ?? null) === 'accept'
+                ? '✅ Call Permission Granted'
+                : '🚫 Call Permission Declined';
+        }
+        if (($interactive['button_reply']['id'] ?? '') === 'grant_call_permission') {
             return '✅ Call Permission Granted';
         }
 

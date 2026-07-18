@@ -15,7 +15,9 @@ class InitiateCallRequest extends FormRequest
     {
         return [
             'phone_number' => 'required|string|regex:/^\+?[0-9]{10,15}$/',
-            'sdp' => 'sometimes|string',
+            // Business-initiated calls run over Graph API + WebRTC (SIP is disabled
+            // for this app), so Meta requires an RFC 8866 SDP offer at connect time.
+            'sdp' => 'required|string',
             'options' => 'sometimes|array',
             'options.force_new_conversation' => 'sometimes|boolean',
             'options.metadata' => 'sometimes|array',
@@ -26,6 +28,7 @@ class InitiateCallRequest extends FormRequest
     {
         return [
             'phone_number.regex' => 'The phone number format is invalid. Please use E.164 format (e.g., +1234567890).',
+            'sdp.required' => 'An SDP offer is required to place a call.',
         ];
     }
 
