@@ -91,7 +91,7 @@ class CallHistory extends Component
         }
 
         $query = WhatsAppCall::where('team_id', $team->id)
-            ->with(['contact:id,name,phone_number']);
+            ->with(['contact:id,name,phone_number', 'qualityMetric']);
 
         // Apply filters
         if (! empty($this->filters['direction'])) {
