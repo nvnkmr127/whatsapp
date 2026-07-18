@@ -12,8 +12,6 @@ class WhatsAppService
 
     protected $messaging;
 
-    protected $calls;
-
     protected $team;
 
     public $isBot = false;
@@ -22,7 +20,6 @@ class WhatsAppService
     {
         $this->client = app(\App\Core\WhatsApp\WhatsAppClient::class);
         $this->messaging = new \App\Services\WhatsApp\MessagingService($this->client);
-        $this->calls = new \App\Services\WhatsApp\CallService($this->client);
 
         if ($team) {
             $this->setTeam($team);
@@ -39,7 +36,6 @@ class WhatsAppService
 
         // Propagate to sub-services
         $this->messaging->setTeam($team);
-        $this->calls->setTeam($team);
 
         if (! $team->whatsapp_access_token || ! $team->whatsapp_phone_number_id) {
             Log::warning("WhatsApp credentials not configured for team: {$team->name}.");

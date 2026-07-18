@@ -129,6 +129,21 @@
                 </div>
             </template>
 
+            <!-- Media placeholder: inbound-only, shown while DownloadMediaJob hasn't
+                 populated media_url yet, so a received photo/video is visible instead
+                 of an empty bubble. Outbound media always has media_url at send time.
+                 ponytail: a permanently-failed download shows this spinner forever;
+                 add a 'failed' state when messages gain a media_status column. -->
+            <template x-if="!message.is_outbound && !message.media_url && ['image','video','audio','document','sticker'].includes(message.type)">
+                <div class="mb-3 flex items-center gap-2 p-3 rounded-lg bg-black/5 dark:bg-black/20 text-slate-500 dark:text-slate-400 text-xs italic">
+                    <svg aria-hidden="true" class="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span x-text="message.type.charAt(0).toUpperCase() + message.type.slice(1) + ' — downloading…'"></span>
+                </div>
+            </template>
+
             <!-- Text -->
             <template x-if="message.content && message.content !== '[Image]'">
                 <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content">
