@@ -970,7 +970,7 @@ class MessageWindow extends Component
                     'metadata' => $msg->metadata,
                     'reply_to_message_id' => $msg->reply_to_message_id,
                     'reply_to_message' => $msg->replyTo ? [
-                        'content' => $msg->replyTo->content,
+                        'content' => $msg->replyTo->content ?: ucfirst($msg->replyTo->type),
                         'is_outbound' => $msg->replyTo->direction === 'outbound',
                     ] : null,
                 ];

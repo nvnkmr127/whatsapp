@@ -70,7 +70,7 @@ class MessageReceived implements ShouldBroadcastNow
                 'metadata' => $this->message->metadata,
                 'reply_to_message_id' => $this->message->reply_to_message_id,
                 'reply_to_message' => $this->message->replyTo ? [
-                    'content' => $this->message->replyTo->content,
+                    'content' => $this->message->replyTo->content ?: ucfirst($this->message->replyTo->type),
                     'is_outbound' => $this->message->replyTo->direction === 'outbound',
                 ] : null,
             ],

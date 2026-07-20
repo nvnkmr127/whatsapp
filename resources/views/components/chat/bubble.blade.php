@@ -58,9 +58,9 @@
                 <div class="mb-2 w-full">
                     <div class="bg-black/5 dark:bg-white/10 rounded-lg overflow-hidden flex cursor-pointer hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
                          @click="$dispatch('chat-scroll-to-id', { id: message.reply_to_message_id })">
-                        <div class="w-1 bg-[#d95a2b] shrink-0"></div>
+                        <div class="w-1 shrink-0" :class="message.reply_to_message.is_outbound ? 'bg-wa-teal' : 'bg-[#d95a2b]'"></div>
                         <div class="flex-1 p-2">
-                            <p class="text-[11px] font-bold text-[#d95a2b] mb-0.5 truncate" x-text="message.reply_to_message.is_outbound ? 'You' : 'Contact'"></p>
+                            <p class="text-[11px] font-bold mb-0.5 truncate" :class="message.reply_to_message.is_outbound ? 'text-wa-teal' : 'text-[#d95a2b]'" x-text="message.reply_to_message.is_outbound ? 'You' : 'Contact'"></p>
                             <p class="text-[11px] text-slate-700 dark:text-slate-300 truncate opacity-80" x-text="message.reply_to_message.content"></p>
                         </div>
                     </div>
