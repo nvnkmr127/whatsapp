@@ -204,7 +204,8 @@ export default function ChatScreen({ navigation, route }: any) {
         return isBackground && current ? current : parsedCursor;
       });
 
-      const rawMsgs = msgsData.data || [];
+      const rawData = msgsData.data || [];
+      const rawMsgs = Array.isArray(rawData) ? rawData : Object.values(rawData);
       // Sort chronological (oldest first)
       const sorted = [...rawMsgs].reverse();
 
@@ -336,7 +337,8 @@ export default function ChatScreen({ navigation, route }: any) {
     setLoadingEarlier(true);
     try {
       const response = await api.get(`/v1/mobile/conversations/${conversationId}/messages?cursor=${nextCursor}`, { 'X-Silent-Errors': 'true' });
-      const rawMsgs = response.data || [];
+      const rawData = response.data || [];
+      const rawMsgs = Array.isArray(rawData) ? rawData : Object.values(rawData);
       const nextUrl = response.next_page_url || null;
       setNextCursor(getCursorFromUrl(nextUrl));
 

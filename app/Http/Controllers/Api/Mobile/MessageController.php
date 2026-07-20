@@ -35,7 +35,7 @@ class MessageController extends Controller
                 $data['media_url'] = $msg->full_media_url;
             }
             return $data;
-        })->toArray();
+        })->values()->toArray();
 
         // Mark messages as read if retrieved via mobile app
         $conversation->messages()

@@ -60,6 +60,15 @@ class MessageWindow extends Component
     public $lightboxOpen = false;
 
     public $lightboxImage = '';
+    
+    // Reply State
+    public $replyToMessageId = null;
+
+    // Forward State
+    public $showForwardModal = false;
+    public $forwardingMessageId = null;
+    public $forwardSelectedConversations = [];
+    public $forwardRecentConversations = [];
 
     public $chatMessages = []; // Dedicated property
 
@@ -207,15 +216,17 @@ class MessageWindow extends Component
             'type' => $type,
             'content' => $caption,
             'caption' => $caption,
-            'media_url' => $this->newAttachmentData['path'],
+            'media_url' => $this->newAttachmentData['path'] ?? null,
             'media_type' => $mime,
             'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name],
+            'reply_to_message_id' => $this->replyToMessageId,
         ]);
 
         // Message-based dispatch resolves the public URL via $message->full_media_url.
         \App\Jobs\SendMessageJob::dispatch($message);
 
         $this->msgBody = '';
+        $this->replyToMessageId = null;
         $this->newAttachmentData = null;
         $this->dispatch('clearMediaUpload');
         $this->loadConversation();
@@ -605,6 +616,54 @@ class MessageWindow extends Component
         }, $filename);
     }
 
+    public function openForwardModal($messageId)
+    {
+        $this->forwardingMessageId = $messageId;
+        $this->forwardSelectedConversations = [];
+        $this->forwardRecentConversations = \App\Models\Conversation::with('contact')
+            ->where('team_id', Auth::user()->currentTeam->id)
+            ->orderBy('updated_at', 'desc')
+            ->limit(20)
+            ->get();
+        $this->showForwardModal = true;
+    }
+
+    public function forwardMessage()
+    {
+        if (!$this->forwardingMessageId || empty($this->forwardSelectedConversations)) {
+            return;
+        }
+
+        $sourceMessage = \App\Models\Message::find($this->forwardingMessageId);
+        if (!$sourceMessage) return;
+
+        foreach ($this->forwardSelectedConversations as $convId) {
+            $conv = \App\Models\Conversation::find($convId);
+            if (!$conv) continue;
+
+            $message = \App\Models\Message::create([
+                'team_id' => Auth::user()->currentTeam->id,
+                'contact_id' => $conv->contact_id,
+                'conversation_id' => $conv->id,
+                'direction' => 'outbound',
+                'status' => 'queued',
+                'type' => $sourceMessage->type,
+                'content' => $sourceMessage->content,
+                'caption' => $sourceMessage->caption,
+                'media_url' => $sourceMessage->media_url,
+                'media_type' => $sourceMessage->media_type,
+                'metadata' => ['agent_id' => Auth::id(), 'agent_name' => Auth::user()->name, 'is_forwarded' => true],
+            ]);
+
+            \App\Jobs\SendMessageJob::dispatch($message);
+        }
+
+        $this->showForwardModal = false;
+        $this->forwardingMessageId = null;
+        $this->forwardSelectedConversations = [];
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Message forwarded']);
+    }
+
     public function saveCallNote($messageId, $note)
     {
         $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
@@ -867,7 +926,7 @@ class MessageWindow extends Component
         }
 
         $messages = $this->conversation->messages()
-            ->with(['attributedCampaign'])
+            ->with(['attributedCampaign', 'replyTo'])
             ->orderBy('created_at', 'desc')
             ->skip($offset)
             ->take($limit)
@@ -890,6 +949,10 @@ class MessageWindow extends Component
                     'is_outbound' => $msg->direction === 'outbound',
                     'attributed_campaign_name' => $msg->attributedCampaign?->name,
                     'metadata' => $msg->metadata,
+                    'reply_to_message' => $msg->replyTo ? [
+                        'content' => $msg->replyTo->content,
+                        'is_outbound' => $msg->replyTo->direction === 'outbound',
+                    ] : null,
                 ];
             })
             ->reverse() // Return chronological for the list
@@ -937,9 +1000,16 @@ class MessageWindow extends Component
             'status' => 'queued',
             'type' => 'text',
             'content' => $body,
+            'metadata' => [
+                'agent_id' => Auth::id(), 
+                'agent_name' => Auth::user()->name,
+                'reply_to_message_id' => $this->replyToMessageId,
+            ],
+            'reply_to_message_id' => $this->replyToMessageId,
         ];
 
         $message = \App\Models\Message::create($msgData);
+        $this->replyToMessageId = null;
 
         // Update conversation last_message_at immediately for the guard to work for others
         $this->conversation->update(['last_message_at' => now()]);

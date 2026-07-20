@@ -440,7 +440,9 @@
                 </div>
             </div>
 
-            <form @submit.prevent="handleSubmit" class="flex-1 flex items-center gap-2 relative">
+            <form @submit.prevent="handleSubmit().then(() => { replyingTo = null; })" class="flex-1 flex items-center gap-2 relative"
+                x-data="{ replyingTo: null }" 
+                @reply-to-message.window="replyingTo = $event.detail; $wire.set('replyToMessageId', $event.detail.id)">
                 <button @click="$dispatch('triggerMediaUpload')"
                     class="p-3 bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all hover:scale-110 active:scale-95 shadow-sm border border-slate-100/50 dark:border-slate-800/50">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,6 +453,22 @@
 
                 <!-- Input Field -->
                 <div class="flex-1 relative group">
+                    <template x-if="replyingTo">
+                        <div class="absolute bottom-full left-0 mb-3 w-full z-10">
+                            <div class="bg-slate-50 dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex mx-2">
+                                <div class="w-1.5 bg-[#d95a2b] shrink-0"></div>
+                                <div class="flex-1 p-2.5 flex justify-between items-center">
+                                    <div class="overflow-hidden">
+                                        <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5" x-text="replyingTo.is_outbound ? 'You' : '{{ addslashes($conversation->contact->name ?? $conversation->contact->phone_number) }}'"></p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate" x-text="replyingTo.content"></p>
+                                    </div>
+                                    <button type="button" @click="replyingTo = null; $wire.set('replyToMessageId', null)" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                     <template x-if="isNoteMode">
                         <div
                             class="absolute -top-6 left-6 px-3 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-400 text-nano font-black uppercase tracking-widest rounded-t-lg border-t border-x border-amber-200 dark:border-amber-800">
@@ -689,6 +707,41 @@
                 class="max-h-[90vh] max-w-[95vw] object-contain shadow-2xl rounded-lg">
         </div>
     </x-app-modal>
+
+    <!-- Forward Message Modal -->
+    <x-app-modal wire:model="showForwardModal" maxWidth="md">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+            <h2 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{{ __('Forward Message') }}</h2>
+            <p class="text-xs text-slate-500">{{ __('Select conversations to forward to') }}</p>
+        </div>
+        <div class="p-6 max-h-[50vh] overflow-y-auto">
+            @if(count($forwardRecentConversations) > 0)
+                <div class="space-y-2">
+                    @foreach($forwardRecentConversations as $conv)
+                        <label class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                            <input type="checkbox" wire:model="forwardSelectedConversations" value="{{ $conv->id }}" class="w-5 h-5 rounded border-slate-300 text-wa-teal focus:ring-wa-teal dark:border-slate-600 dark:bg-slate-900 bg-white">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{{ $conv->contact->name ?? $conv->contact->phone_number }}</p>
+                                <p class="text-xs text-slate-500 truncate">{{ $conv->contact->phone_number }}</p>
+                            </div>
+                        </label>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8">
+                    <p class="text-sm text-slate-500">{{ __('No recent conversations found.') }}</p>
+                </div>
+            @endif
+        </div>
+        <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 flex justify-end gap-3 rounded-b-[2.5rem]">
+            <x-app-button variant="ghost" wire:click="$set('showForwardModal', false)">{{ __('Cancel') }}</x-app-button>
+            <x-app-button variant="primary" wire:click="forwardMessage">
+                <span>{{ __('Forward') }}</span>
+                <svg class="w-3.5 h-3.5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </x-app-button>
+        </div>
+    </x-app-modal>
+
 
 
 </div>

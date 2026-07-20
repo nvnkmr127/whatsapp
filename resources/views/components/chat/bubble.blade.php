@@ -1,21 +1,55 @@
-<div :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 message-appear relative group/msg']">
-
-    <!-- Reaction Picker (Hover) -->
-    <div class="absolute -top-8 z-30 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-slate-700 rounded-full px-2 py-1"
-        :class="message.is_outbound ? 'right-0' : 'left-0'">
-        <template x-for="emoji in ['👍', '❤️', '😂', '😮', '😢', '🙏']">
-            <button @click="$wire.addReaction(message.id, emoji)"
-                class="hover:scale-125 transition-transform p-1 text-sm" x-text="emoji"></button>
-        </template>
-    </div>
+<div x-data="{ showMenu: false }" :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 message-appear relative group/msg']">
 
     <div class="max-w-[85%] sm:max-w-[70%] group relative">
         <div :class="[ 
-            'relative p-3 px-4 transition-all hover:scale-[1.01] shadow-sm',
+            'relative p-3 px-4 transition-all shadow-sm',
             message.is_outbound 
                 ? 'bg-wa-teal text-white rounded-2xl rounded-tr-sm shadow-xl shadow-wa-teal/10' 
                 : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-700'
         ]">
+            
+            <!-- Chevron Button -->
+            <button @click="showMenu = !showMenu; if(showMenu) $event.stopPropagation();" 
+                    class="absolute top-1 right-1 p-0.5 rounded-full bg-black/10 dark:bg-white/20 text-white opacity-0 group-hover/msg:opacity-100 transition-opacity z-20 backdrop-blur-sm"
+                    :class="message.is_outbound ? 'text-white bg-black/10 hover:bg-black/20' : 'text-slate-500 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600'">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div x-show="showMenu" @click.away="showMenu = false" x-cloak x-transition
+                 class="absolute top-6 z-50 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700"
+                 :class="message.is_outbound ? 'right-0' : 'left-0'">
+                 
+                <!-- Floating Emojis -->
+                <div class="absolute -top-12 left-0 right-0 flex justify-center">
+                    <div class="flex items-center gap-1.5 bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 rounded-full px-3 py-1.5">
+                        <template x-for="emoji in ['👍', '❤️', '😂', '😮', '😢', '🙏']">
+                            <button @click="$wire.addReaction(message.id, emoji); showMenu = false"
+                                class="hover:scale-125 transition-transform text-lg leading-none p-1" x-text="emoji"></button>
+                        </template>
+                        <button class="hover:scale-125 transition-transform text-slate-500 dark:text-slate-400 ml-1 p-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Menu Items -->
+                <div class="py-2 flex flex-col relative z-10 bg-white dark:bg-slate-800 rounded-2xl">
+                    <button @click="$dispatch('reply-to-message', message); showMenu = false" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 w-full text-left">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                        Reply
+                    </button>
+                    <button @click="navigator.clipboard.writeText(message.content || ''); window.dispatchEvent(new CustomEvent('notify', { detail: { type: 'success', message: 'Copied to clipboard' } })); showMenu = false" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 w-full text-left">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        Copy
+                    </button>
+                    <button @click="$wire.openForwardModal(message.id); showMenu = false" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 w-full text-left">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        Forward
+                    </button>
+                </div>
+            </div>
+
             <!-- Attribution Badge -->
             <template x-if="message.attributed_campaign_name">
                 <div
@@ -27,6 +61,20 @@
                     <span class="text-[9px] font-black text-wa-teal uppercase tracking-widest">
                         Reply to: <span x-text="message.attributed_campaign_name"></span>
                     </span>
+                </div>
+            </template>
+
+            <!-- Quoted Message -->
+            <template x-if="message.reply_to_message">
+                <div class="mb-2 w-full">
+                    <div class="bg-black/5 dark:bg-white/10 rounded-lg overflow-hidden flex cursor-pointer hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                         @click="$dispatch('chat-scroll-to-id', { id: message.reply_to_message_id })">
+                        <div class="w-1 bg-[#d95a2b] shrink-0"></div>
+                        <div class="flex-1 p-2">
+                            <p class="text-[11px] font-bold text-[#d95a2b] mb-0.5 truncate" x-text="message.reply_to_message.is_outbound ? 'You' : 'Contact'"></p>
+                            <p class="text-[11px] text-slate-700 dark:text-slate-300 truncate opacity-80" x-text="message.reply_to_message.content"></p>
+                        </div>
+                    </div>
                 </div>
             </template>
 
