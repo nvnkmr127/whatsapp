@@ -776,7 +776,10 @@ class MessageWindow extends Component
         if ($message->whatsapp_message_id) {
             try {
                 $whatsapp = new \App\Services\WhatsAppService($this->conversation->team_id);
-                $whatsapp->sendReaction($this->conversation->contact->phone_number, $message->whatsapp_message_id, $emojiToSend);
+                $response = $whatsapp->sendReaction($this->conversation->contact->phone_number, $message->whatsapp_message_id, $emojiToSend);
+                if (isset($response['error'])) {
+                    \Illuminate\Support\Facades\Log::error('WhatsApp API Reaction Error: ' . json_encode($response['error']));
+                }
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Failed to send reaction to WhatsApp: ' . $e->getMessage());
             }
@@ -963,6 +966,7 @@ class MessageWindow extends Component
                     'is_outbound' => $msg->direction === 'outbound',
                     'attributed_campaign_name' => $msg->attributedCampaign?->name,
                     'metadata' => $msg->metadata,
+                    'reply_to_message_id' => $msg->reply_to_message_id,
                     'reply_to_message' => $msg->replyTo ? [
                         'content' => $msg->replyTo->content,
                         'is_outbound' => $msg->replyTo->direction === 'outbound',

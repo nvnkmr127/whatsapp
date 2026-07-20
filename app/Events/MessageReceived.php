@@ -67,6 +67,12 @@ class MessageReceived implements ShouldBroadcastNow
                 'attributed_campaign_name' => $this->message->attributedCampaign?->name,
                 'conversation_id' => $this->message->conversation_id,
                 'team_id' => $this->message->team_id,
+                'metadata' => $this->message->metadata,
+                'reply_to_message_id' => $this->message->reply_to_message_id,
+                'reply_to_message' => $this->message->replyTo ? [
+                    'content' => $this->message->replyTo->content,
+                    'is_outbound' => $this->message->replyTo->direction === 'outbound',
+                ] : null,
             ],
             'timestamp' => now()->timestamp,
             'sequence_id' => $this->message->id,

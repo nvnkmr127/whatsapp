@@ -72,6 +72,7 @@ export default {
                 let msg = this.messages.find(m => m.id === e.message.id);
                 if (msg) {
                     msg.status = e.message.status;
+                    msg.metadata = e.message.metadata;
                 } else {
                     this.syncLatest();
                 }
@@ -96,7 +97,10 @@ export default {
             teamChannel.listen('.MessageStatusUpdated', (e) => {
                 if (e.message) {
                     let msg = this.messages.find(m => m.id === e.message.id);
-                    if (msg) msg.status = e.message.status;
+                    if (msg) {
+                        msg.status = e.message.status;
+                        msg.metadata = e.message.metadata;
+                    }
                 }
             });
             this._teamChannelSubscribed = this.teamId;
