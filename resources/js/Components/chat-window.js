@@ -247,5 +247,16 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         }
         clearInterval(this.recInterval);
         this.recInterval = null;
+    },
+
+    scrollToMessage(id) {
+        const el = document.getElementById('message-' + id);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('bg-wa-teal/20');
+            setTimeout(() => {
+                el.classList.remove('bg-wa-teal/20');
+            }, 2000);
+        }
     }
 });

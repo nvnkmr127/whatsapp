@@ -1,6 +1,8 @@
-<div x-data="{ showMenu: false }" :class="['flex', message.is_outbound ? 'justify-end' : 'justify-start', 'mb-6 message-appear relative group/msg']">
+<div x-data="{ showMenu: false, showEmoji: false }" :id="'message-' + message.id" :class="['flex items-center gap-2', message.is_outbound ? 'flex-row-reverse justify-start' : 'justify-start', 'mb-6 message-appear relative group/msg transition-colors duration-500 rounded-xl']">
 
-    <div class="max-w-[85%] sm:max-w-[70%] group relative">
+    <div class="max-w-[85%] sm:max-w-[70%] group relative flex items-center gap-2" :class="message.is_outbound ? 'flex-row-reverse' : 'flex-row'">
+        
+        <!-- Chat Bubble inner -->
         <div :class="[ 
             'relative p-3 px-4 transition-all shadow-sm',
             message.is_outbound 
@@ -20,19 +22,6 @@
                  class="absolute top-6 z-50 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700"
                  :class="message.is_outbound ? 'right-0' : 'left-0'">
                  
-                <!-- Floating Emojis -->
-                <div class="absolute -top-12 left-0 right-0 flex justify-center">
-                    <div class="flex items-center gap-1.5 bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 rounded-full px-3 py-1.5">
-                        <template x-for="emoji in ['👍', '❤️', '😂', '😮', '😢', '🙏']">
-                            <button @click="$wire.addReaction(message.id, emoji); showMenu = false"
-                                class="hover:scale-125 transition-transform text-lg leading-none p-1" x-text="emoji"></button>
-                        </template>
-                        <button class="hover:scale-125 transition-transform text-slate-500 dark:text-slate-400 ml-1 p-1">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Menu Items -->
                 <div class="py-2 flex flex-col relative z-10 bg-white dark:bg-slate-800 rounded-2xl">
                     <button @click="$dispatch('reply-to-message', message); showMenu = false" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 w-full text-left">
@@ -255,14 +244,32 @@
         <!-- Active Reactions -->
         <template
             x-if="message.metadata && message.metadata.reactions && Object.keys(message.metadata.reactions).length > 0">
-            <div class="absolute -bottom-3 flex flex-wrap gap-0.5" :class="message.is_outbound ? 'right-2' : 'left-2'">
+            <div class="absolute -bottom-3 flex flex-wrap gap-1 z-10 right-2">
                 <template x-for="(emoji, agentId) in message.metadata.reactions">
-                    <div class="bg-white dark:bg-slate-700 shadow-md border border-slate-100 dark:border-slate-600 rounded-full px-1.5 py-0.5 text-[10px] transform hover:scale-110 transition-transform cursor-pointer"
+                    <div class="bg-white dark:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-600 rounded-full w-7 h-7 flex items-center justify-center text-sm transform hover:scale-110 transition-transform cursor-pointer"
                         :title="'Agent ' + agentId">
                         <span x-text="emoji"></span>
                     </div>
                 </template>
             </div>
         </template>
+    </div>
+
+    <!-- Action Buttons (Hover) beside the bubble -->
+    <div class="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 z-10">
+        <div class="relative">
+            <button @click="showEmoji = !showEmoji" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </button>
+            <!-- Floating Emojis -->
+            <div x-show="showEmoji" @click.away="showEmoji = false" x-cloak x-transition
+                 class="absolute top-8 flex items-center gap-1.5 bg-white dark:bg-slate-800 shadow-lg border border-slate-100 dark:border-slate-700 rounded-full px-3 py-1.5"
+                 :class="message.is_outbound ? 'right-0' : 'left-0'">
+                <template x-for="emoji in ['👍', '❤️', '😂', '😮', '😢', '🙏']">
+                    <button @click="$wire.addReaction(message.id, emoji); showEmoji = false"
+                        class="hover:scale-125 transition-transform text-lg leading-none p-1" x-text="emoji"></button>
+                </template>
+            </div>
+        </div>
     </div>
 </div>

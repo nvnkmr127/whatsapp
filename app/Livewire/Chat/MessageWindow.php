@@ -744,7 +744,8 @@ class MessageWindow extends Component
 
         $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
             ->find($messageId);
-        if (! $message) {
+
+        if (! $message || $message->conversation_id !== $this->conversationId) {
             return;
         }
 
@@ -760,8 +761,11 @@ class MessageWindow extends Component
 
         // Toggle or Add
         $myId = Auth::id();
+        $emojiToSend = $emoji;
+
         if (($reactions[$myId] ?? null) === $emoji) {
             unset($reactions[$myId]);
+            $emojiToSend = ''; // Empty string removes reaction in WA API
         } else {
             $reactions[$myId] = $emoji;
         }
@@ -769,8 +773,18 @@ class MessageWindow extends Component
         $metadata['reactions'] = $reactions;
         $message->update(['metadata' => $metadata]);
 
+        if ($message->whatsapp_message_id) {
+            try {
+                $whatsapp = new \App\Services\WhatsAppService($this->conversation->team_id);
+                $whatsapp->sendReaction($this->conversation->contact->phone_number, $message->whatsapp_message_id, $emojiToSend);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send reaction to WhatsApp: ' . $e->getMessage());
+            }
+        }
+
         // Broadcast update
         \App\Events\MessageStatusUpdated::dispatch($message);
+        $this->dispatch('message-reacted');
     }
 
     public function getQuickRepliesProperty()
@@ -1035,6 +1049,7 @@ class MessageWindow extends Component
             'pretty_time' => $message->created_at->format('H:i'),
         ];
     }
+
 
     public function render()
     {

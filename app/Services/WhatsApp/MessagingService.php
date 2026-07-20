@@ -92,4 +92,20 @@ class MessagingService
 
         return $this->client->sendRequest('messages', $payload);
     }
+
+    public function sendReaction(string $to, string $messageId, string $emoji): array
+    {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'reaction',
+            'reaction' => [
+                'message_id' => $messageId,
+                'emoji' => $emoji,
+            ],
+        ];
+
+        return $this->client->sendRequest('messages', $payload);
+    }
 }

@@ -207,6 +207,18 @@ class WhatsAppService
             throw $e;
         }
     }
+    public function sendReaction($to, $messageId, $emoji)
+    {
+        $this->verifyReadyToSend();
+
+        try {
+            $response = $this->messaging->sendReaction($to, $messageId, $emoji);
+            return $response;
+        } catch (\Exception $e) {
+            Log::error('Failed to send WhatsApp reaction: ' . $e->getMessage());
+            throw $e;
+        }
+    }
 
     /**
      * Send a media message (Image, Video, Audio, Document).

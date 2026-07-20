@@ -10,7 +10,8 @@
         $wire.entangle('lightboxOpen'),
         $wire.entangle('lightboxImage'),
         @js($this->quickReplies)
-    )">
+    )"
+    @chat-scroll-to-id.window="scrollToMessage($event.detail.id)">
 
     <!-- Chat Header -->
     <div
