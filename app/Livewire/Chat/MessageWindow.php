@@ -775,8 +775,10 @@ class MessageWindow extends Component
 
         if ($message->whatsapp_message_id) {
             try {
-                $whatsapp = new \App\Services\WhatsAppService($this->conversation->team_id);
+                $whatsapp = new \App\Services\WhatsAppService(\Illuminate\Support\Facades\Auth::user()->currentTeam);
                 $response = $whatsapp->sendReaction($this->conversation->contact->phone_number, $message->whatsapp_message_id, $emojiToSend);
+                \Illuminate\Support\Facades\Log::info('Reaction API Response: ' . json_encode($response));
+                
                 if (isset($response['error'])) {
                     \Illuminate\Support\Facades\Log::error('WhatsApp API Reaction Error: ' . json_encode($response['error']));
                 }
