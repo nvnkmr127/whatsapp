@@ -178,13 +178,18 @@ class PersistMessageJob implements ShouldQueue
             $attributedCampaignId = null;
             $msgData = $data['content'];
 
+            $replyToMessageId = null;
+
             // A. Direct Attribution (WhatsApp Reply Context)
             if (isset($msgData['context']['id'])) {
                 $originalMessageId = $msgData['context']['id'];
                 $originalMessage = Message::where('whatsapp_message_id', $originalMessageId)->first();
-                if ($originalMessage && $originalMessage->campaign_id) {
-                    $attributedCampaignId = $originalMessage->campaign_id;
-                    Log::info("PersistMessageJob: Direct attribution via Context ID for Campaign: {$attributedCampaignId}");
+                if ($originalMessage) {
+                    $replyToMessageId = $originalMessage->id;
+                    if ($originalMessage->campaign_id) {
+                        $attributedCampaignId = $originalMessage->campaign_id;
+                        Log::info("PersistMessageJob: Direct attribution via Context ID for Campaign: {$attributedCampaignId}");
+                    }
                 }
             }
 
@@ -239,6 +244,7 @@ class PersistMessageJob implements ShouldQueue
                 'media_type' => $mediaType,
                 'caption' => $caption,
                 'attributed_campaign_id' => $attributedCampaignId,
+                'reply_to_message_id' => $replyToMessageId,
             ]);
 
             // 6. Fan-out for Side Effects
