@@ -22,8 +22,10 @@ class MessageController extends Controller
             ->latest('id')
             ->cursorPaginate(min((int) $request->input('per_page', 40), 100));
 
-        // Transform to include reply context
-        $messages->getCollection()->transform(function($msg) {
+        // Preserve the original paginator for cursor generation, and only transform the data array
+        $paginatorArray = $messages->toArray();
+        
+        $paginatorArray['data'] = collect($messages->items())->map(function($msg) {
             $data = $msg->toArray();
             if ($msg->replyTo) {
                 $data['reply_to_content'] = $msg->replyTo->content;
@@ -33,7 +35,7 @@ class MessageController extends Controller
                 $data['media_url'] = $msg->full_media_url;
             }
             return $data;
-        });
+        })->toArray();
 
         // Mark messages as read if retrieved via mobile app
         $conversation->messages()
@@ -41,7 +43,7 @@ class MessageController extends Controller
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
-        return response()->json($messages);
+        return response()->json($paginatorArray);
     }
 
     /**

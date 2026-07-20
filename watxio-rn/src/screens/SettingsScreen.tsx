@@ -104,11 +104,12 @@ export default function SettingsScreen({ navigation }: any) {
 
   const handleSignOut = async () => {
     setLoading(true);
-    try {
-      await api.post('/v1/mobile/auth/logout');
-    } catch (err) {
+    // Fire and forget logout API call so user isn't blocked by slow network
+    api.post('/v1/mobile/auth/logout').catch(err => {
       console.warn('Logout endpoint mismatch or already unauthenticated:', err);
-    } finally {
+    });
+
+    try {
       // Clear token and memory storage
       store.set({
         token: null,
@@ -122,10 +123,13 @@ export default function SettingsScreen({ navigation }: any) {
       await AsyncStorage.removeItem('@watxio_session');
       
       setLoading(false);
-      nav.reset({
+      nav.getParent()?.reset({
         index: 0,
-        routes: [{ name: 'Login' }],
+        routes: [{ name: 'Onboarding' }],
       });
+    } catch (err) {
+      console.error('Failed to clear local storage during sign out:', err);
+      setLoading(false);
     }
   };
 

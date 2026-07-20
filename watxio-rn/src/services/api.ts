@@ -12,7 +12,7 @@ const getDevMachineIp = () => {
       return match[1];
     }
   }
-  return Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+  return Platform.OS === 'android' ? '10.111.185.147' : 'localhost';
 };
 
 const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
@@ -97,11 +97,16 @@ export const api = {
       }
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    config.signal = controller.signal;
+
     try {
-      if (!isSilent) {
+      if (__DEV__ && !isSilent) {
         console.log(`[API REQUEST] ${method} ${url}`, { headers, body });
       }
       const response = await fetch(url, config);
+      clearTimeout(timeoutId);
 
       let data: any = null;
       const text = await response.text();
@@ -113,7 +118,7 @@ export const api = {
         }
       }
 
-      if (!isSilent) {
+      if (__DEV__ && !isSilent) {
         console.log(`[API RESPONSE] ${response.status} ${url}`, data);
       }
 
@@ -134,7 +139,7 @@ export const api = {
 
       return data as T;
     } catch (error: any) {
-      if (!isSilent) {
+      if (__DEV__ && !isSilent) {
         console.error(`[API ERROR] ${method} ${url}`, error);
       }
       throw error;

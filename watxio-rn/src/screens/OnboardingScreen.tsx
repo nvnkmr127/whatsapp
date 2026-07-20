@@ -130,8 +130,8 @@ export default function OnboardingScreen({ navigation }: any) {
           // Auto-replace localhost/127.0.0.1 with Android emulator host IP if needed
           if (Platform.OS === 'android') {
             targetBaseUrl = targetBaseUrl
-              .replace('localhost', '10.0.2.2')
-              .replace('127.0.0.1', '10.0.2.2');
+              .replace('localhost', '10.111.185.147')
+              .replace('127.0.0.1', '10.111.185.147');
           }
 
           if (targetBaseUrl.endsWith('/v1')) {
@@ -162,8 +162,8 @@ export default function OnboardingScreen({ navigation }: any) {
       // Auto-replace localhost/127.0.0.1 with Android emulator host IP if needed
       if (Platform.OS === 'android') {
         targetBaseUrl = targetBaseUrl
-          .replace('localhost', '10.0.2.2')
-          .replace('127.0.0.1', '10.0.2.2');
+          .replace('localhost', '10.111.185.147')
+          .replace('127.0.0.1', '10.111.185.147');
       }
 
       if (targetBaseUrl.endsWith('/v1')) {

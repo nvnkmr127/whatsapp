@@ -179,7 +179,7 @@ export default function ChatScreen({ navigation, route }: any) {
         api.get(`/v1/mobile/conversations/${conversationId}`, { 'X-Silent-Errors': 'true' }).catch(err => {
           return null;
         }),
-        api.get(`/v1/mobile/conversations/${conversationId}/messages`),
+        api.get(`/v1/mobile/conversations/${conversationId}/messages`, { 'X-Silent-Errors': 'true' }),
       ]);
 
       const newIsWithin24 = details ? details.is_within_24_hours : isWithin24Hours;
@@ -335,7 +335,7 @@ export default function ChatScreen({ navigation, route }: any) {
     if (!nextCursor || loadingEarlier) return;
     setLoadingEarlier(true);
     try {
-      const response = await api.get(`/v1/mobile/conversations/${conversationId}/messages?cursor=${nextCursor}`);
+      const response = await api.get(`/v1/mobile/conversations/${conversationId}/messages?cursor=${nextCursor}`, { 'X-Silent-Errors': 'true' });
       const rawMsgs = response.data || [];
       const nextUrl = response.next_page_url || null;
       setNextCursor(getCursorFromUrl(nextUrl));
@@ -633,7 +633,7 @@ export default function ChatScreen({ navigation, route }: any) {
     const wsScheme = socketConfig.scheme === 'https' ? 'wss' : 'ws';
     let wsHost = socketConfig.host;
     
-    // If running on an emulator and the config says localhost, use the actual API base url hostname (e.g. 10.0.2.2)
+    // If running on an emulator and the config says localhost, use the actual API base url hostname (e.g. 10.111.185.147)
     if (wsHost === '127.0.0.1' || wsHost === 'localhost') {
       try {
         if (globalState.baseUrl) {
@@ -1331,7 +1331,7 @@ export default function ChatScreen({ navigation, route }: any) {
               ref={scroller}
               keyboardDismissMode="interactive"
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 }}
-              maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+              maintainVisibleContentPosition={Platform.OS === 'ios' ? { minIndexForVisible: 1 } : undefined}
               onContentSizeChange={() => {
                 if (!loadingEarlier) {
                   scroller.current?.scrollToEnd({ animated: false });
