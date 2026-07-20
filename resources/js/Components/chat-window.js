@@ -50,6 +50,18 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 this.msgBody = e.detail.body;
                 if (this.$refs.messageInput) this.$refs.messageInput.focus();
             },
+            scrollToId: (e) => {
+                const id = e.detail.id;
+                const el = document.getElementById('message-' + id);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight exactly like WhatsApp Web
+                    el.classList.add('bg-wa-teal/20', 'dark:bg-wa-teal/30', '-mx-4', 'px-4');
+                    setTimeout(() => {
+                        el.classList.remove('bg-wa-teal/20', 'dark:bg-wa-teal/30', '-mx-4', 'px-4');
+                    }, 1500);
+                }
+            },
         };
 
         window.addEventListener('dragover', this._boundHandlers.dragover);
@@ -58,6 +70,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         window.addEventListener('chat-scroll-bottom', this._boundHandlers.scrollBottom);
         window.addEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
         window.addEventListener('update-message-body', this._boundHandlers.updateBody);
+        window.addEventListener('chat-scroll-to-id', this._boundHandlers.scrollToId);
 
         this.viewportHeight = this.$el.clientHeight;
 
@@ -76,6 +89,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             window.removeEventListener('chat-scroll-bottom', this._boundHandlers.scrollBottom);
             window.removeEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
             window.removeEventListener('update-message-body', this._boundHandlers.updateBody);
+            window.removeEventListener('chat-scroll-to-id', this._boundHandlers.scrollToId);
             this._boundHandlers = null;
         }
         if (this.recInterval) clearInterval(this.recInterval);

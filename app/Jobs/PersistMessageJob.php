@@ -121,6 +121,42 @@ class PersistMessageJob implements ShouldQueue
                 'last_customer_message_at' => $messageTimestamp,
             ]);
 
+            // 1.5 Handle Reactions
+            if (($data['content']['type'] ?? '') === 'reaction') {
+                $reactionData = $data['content']['reaction'] ?? [];
+                $targetMessageId = $reactionData['message_id'] ?? null;
+                $emoji = $reactionData['emoji'] ?? '';
+
+                if ($targetMessageId) {
+                    $targetMessage = Message::where('whatsapp_message_id', $targetMessageId)->first();
+                    if ($targetMessage) {
+                        $meta = $targetMessage->metadata;
+                        if (!is_array($meta)) {
+                            $meta = [];
+                        }
+                        
+                        $reactions = $meta['reactions'] ?? [];
+                        if (!is_array($reactions)) {
+                            $reactions = [];
+                        }
+                        
+                        if ($emoji === '') {
+                            unset($reactions[$contact->id]);
+                        } else {
+                            $reactions[$contact->id] = $emoji;
+                        }
+                        
+                        $meta['reactions'] = $reactions;
+                        $targetMessage->update(['metadata' => $meta]);
+                        
+                        \App\Events\MessageStatusUpdated::dispatch($targetMessage);
+                    }
+                }
+                
+                // Return early so we don't process it as a new message bubble
+                return;
+            }
+
             // 2. Keyword Management
             $content = $this->extractContent($data['content']);
             $cleanContent = trim($content);
