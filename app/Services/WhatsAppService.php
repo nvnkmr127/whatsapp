@@ -187,6 +187,8 @@ class WhatsAppService
                 $repliedMsg = \App\Models\Message::find($replyId);
                 if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
                     $replyToWamId = $repliedMsg->whatsapp_message_id;
+                } else {
+                    Log::warning("Reply context dropped: quoted message #{$replyId} has no whatsapp_message_id (direction=" . ($repliedMsg->direction ?? 'missing') . "). Sending as plain text.");
                 }
             }
             $response = $this->messaging->sendText($to, $message, $replyToWamId); // Delegate to specialized service
@@ -286,6 +288,8 @@ class WhatsAppService
             $repliedMsg = \App\Models\Message::find($replyId);
             if ($repliedMsg && !empty($repliedMsg->whatsapp_message_id)) {
                 $payload['context'] = ['message_id' => $repliedMsg->whatsapp_message_id];
+            } else {
+                Log::warning("Reply context dropped: quoted message #{$replyId} has no whatsapp_message_id (direction=" . ($repliedMsg->direction ?? 'missing') . "). Sending media as plain.");
             }
         }
 
