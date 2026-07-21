@@ -58,6 +58,18 @@ export default {
 
     async sendMessage(body) {
         const tempId = 'temp_' + Date.now();
+        const replyToId = this.wire ? this.wire.get('replyToMessageId') : null;
+        let replyObj = null;
+        if (replyToId) {
+            const original = this.messages.find(m => m.id === replyToId);
+            if (original) {
+                replyObj = {
+                    content: original.content || (original.type ? original.type.charAt(0).toUpperCase() + original.type.slice(1) : ''),
+                    is_outbound: original.is_outbound
+                };
+            }
+        }
+
         const optimisticMsg = {
             id: tempId,
             direction: 'outbound',
@@ -67,7 +79,9 @@ export default {
             created_at: Math.floor(Date.now() / 1000),
             pretty_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             is_outbound: true,
-            media_url: null
+            media_url: null,
+            reply_to_message_id: replyToId,
+            reply_to_message: replyObj
         };
 
         this.messages.push(optimisticMsg);
