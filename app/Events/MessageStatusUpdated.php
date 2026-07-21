@@ -52,6 +52,7 @@ class MessageStatusUpdated implements ShouldBroadcastNow
             'message' => [
                 'id' => $this->message->id,
                 'status' => $this->message->status,
+                'metadata' => $this->message->metadata,
             ],
             'whatsapp_message_id' => $this->message->whatsapp_message_id,
             'status' => $this->message->status,
