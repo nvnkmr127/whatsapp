@@ -58,7 +58,8 @@ export default {
 
     async sendMessage(body) {
         const tempId = 'temp_' + Date.now();
-        const replyToId = this.wire ? this.wire.get('replyToMessageId') : null;
+        const wire = this._wire || this.wire;
+        const replyToId = wire ? wire.replyToMessageId : null;
         let replyObj = null;
         if (replyToId) {
             const original = this.messages.find(m => m.id === replyToId);
