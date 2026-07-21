@@ -219,18 +219,24 @@ class PersistMessageJob implements ShouldQueue
             $replyToMessageId = null;
 
             // A. Direct Attribution (WhatsApp Reply Context)
+            Log::info("PersistMessageJob [Step 1]: Checking for reply context. Message ID: " . ($data['provider_id'] ?? 'unknown'));
             if (isset($msgData['context']['id'])) {
                 $originalMessageId = $msgData['context']['id'];
+                Log::info("PersistMessageJob [Step 2]: Found context.id -> {$originalMessageId}");
                 $originalMessage = Message::where('whatsapp_message_id', $originalMessageId)->first();
-                Log::info("PersistMessageJob Reply Debug: Original WAMID {$originalMessageId}. Found: " . ($originalMessage ? 'YES' : 'NO'));
+                Log::info("PersistMessageJob [Step 3]: Querying DB for whatsapp_message_id = {$originalMessageId}. Found: " . ($originalMessage ? 'YES (ID: ' . $originalMessage->id . ')' : 'NO'));
                 if ($originalMessage) {
                     $replyToMessageId = $originalMessage->id;
+                    Log::info("PersistMessageJob [Step 4]: Assigned replyToMessageId = {$replyToMessageId}");
                     if ($originalMessage->campaign_id) {
                         $attributedCampaignId = $originalMessage->campaign_id;
-                        Log::info("PersistMessageJob: Direct attribution via Context ID for Campaign: {$attributedCampaignId}");
                     }
                 }
+            } else {
+                Log::info("PersistMessageJob [Step 2]: No context.id found in payload for Message ID: " . ($data['provider_id'] ?? 'unknown'));
+                Log::info("PersistMessageJob [Step 2a]: Full msgData: " . json_encode($msgData));
             }
+
 
             // B. Temporal Attribution Fallback (Redis/Cache Pointer)
             if (! $attributedCampaignId) {
@@ -383,3 +389,4 @@ class PersistMessageJob implements ShouldQueue
         ]);
     }
 }
+
