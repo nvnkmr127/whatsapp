@@ -27,8 +27,14 @@ class MessageController extends Controller
         
         $paginatorArray['data'] = collect($messages->items())->map(function($msg) {
             $data = $msg->toArray();
+            $data['is_outbound'] = $msg->direction === 'outbound';
             if ($msg->replyTo) {
-                $data['reply_to_content'] = $msg->replyTo->content;
+                $data['reply_to_content'] = $msg->replyTo->content ?: ucfirst($msg->replyTo->type);
+                $data['reply_to_is_outbound'] = $msg->replyTo->direction === 'outbound';
+                $data['reply_to_message'] = [
+                    'content' => $data['reply_to_content'],
+                    'is_outbound' => $data['reply_to_is_outbound']
+                ];
             }
             // Ensure full URL for media
             if ($msg->media_url) {
@@ -115,9 +121,27 @@ class MessageController extends Controller
         // Dispatch Job asynchronously (do not block the HTTP response)
         \App\Jobs\SendMessageJob::dispatch($message);
 
+        // Load relationships
+        $message->load(['contact', 'replyTo']);
+        
+        $data = $message->toArray();
+        $data['is_outbound'] = $message->direction === 'outbound';
+        
+        if ($message->replyTo) {
+            $data['reply_to_content'] = $message->replyTo->content ?: ucfirst($message->replyTo->type);
+            $data['reply_to_is_outbound'] = $message->replyTo->direction === 'outbound';
+            $data['reply_to_message'] = [
+                'content' => $data['reply_to_content'],
+                'is_outbound' => $data['reply_to_is_outbound']
+            ];
+        }
+        if ($message->media_url) {
+            $data['media_url'] = $message->full_media_url;
+        }
+
         return response()->json([
             'success' => true,
-            'message' => $message->load('contact'),
+            'message' => $data,
         ]);
     }
 
