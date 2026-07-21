@@ -60,7 +60,7 @@
                          @click="$dispatch('chat-scroll-to-id', { id: message.reply_to_message_id })">
                         <div class="w-1 shrink-0" :class="message.reply_to_message.is_outbound ? 'bg-wa-teal' : 'bg-[#d95a2b]'"></div>
                         <div class="flex-1 p-2">
-                            <p class="text-[11px] font-bold mb-0.5 truncate" :class="message.reply_to_message.is_outbound ? 'text-wa-teal' : 'text-[#d95a2b]'" x-text="message.reply_to_message.is_outbound ? 'You' : 'Contact'"></p>
+                            <p class="text-[11px] font-bold mb-0.5 truncate" :class="message.reply_to_message.is_outbound ? 'text-wa-teal' : 'text-[#d95a2b]'" x-text="message.reply_to_message.is_outbound ? 'You' : (contact?.name || 'Contact')"></p>
                             <p class="text-[11px] text-slate-700 dark:text-slate-300 truncate opacity-80" x-text="message.reply_to_message.content"></p>
                         </div>
                     </div>

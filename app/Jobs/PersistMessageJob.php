@@ -57,6 +57,7 @@ class PersistMessageJob implements ShouldQueue
         }
 
         $data = $this->eventPayload;
+        Log::info('PersistMessageJob payload: ' . json_encode($data));
         Log::info('PersistMessageJob: Starting for Message ID: '.($data['provider_id'] ?? 'unknown'));
 
         // extract vital IDs

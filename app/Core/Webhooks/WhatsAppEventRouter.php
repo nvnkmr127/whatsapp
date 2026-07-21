@@ -106,7 +106,7 @@ class WhatsAppEventRouter
                 }
 
                 $value = $fullPayload['entry'][0]['changes'][0]['value'];
-                $message = $value['messages'][0];
+                $message = $messageData;
                 $payload = [
                     'provider_id' => $message['id'],
                     'from_phone' => $message['from'],

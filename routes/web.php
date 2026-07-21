@@ -278,3 +278,4 @@ if (app()->environment(['local', 'testing']) && file_exists(__DIR__.'/local.php'
     require __DIR__.'/local.php';
 }
 
+Route::get('/debug-last-msg', function() { $msg = \App\Models\Message::orderBy('id', 'desc')->take(5)->get(); return $msg; });
