@@ -372,7 +372,7 @@
 
             <!-- Messages Loop -->
             <template x-for="(message, index) in visibleMessages" :key="message.id">
-                <x-chat.bubble />
+                <x-chat.bubble :contactName="$conversation?->contact?->name ?? 'Contact'" />
             </template>
 
             <!-- Typing Indicators -->

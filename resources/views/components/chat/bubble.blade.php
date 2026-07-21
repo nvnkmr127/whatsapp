@@ -1,3 +1,4 @@
+@props(['contactName' => 'Contact'])
 <div x-data="{ showMenu: false, showEmoji: false }" :id="'message-' + message.id" :class="['flex items-center gap-2', message.is_outbound ? 'flex-row-reverse justify-start' : 'justify-start', 'mb-6 message-appear relative group/msg transition-colors duration-500 rounded-xl']">
 
     <div class="max-w-[85%] sm:max-w-[70%] group relative flex items-center gap-2" :class="message.is_outbound ? 'flex-row-reverse' : 'flex-row'">
@@ -60,7 +61,7 @@
                          @click="$dispatch('chat-scroll-to-id', { id: message.reply_to_message_id })">
                         <div class="w-1 shrink-0" :class="message.reply_to_message.is_outbound ? 'bg-wa-teal' : 'bg-[#d95a2b]'"></div>
                         <div class="flex-1 p-2">
-                            <p class="text-[11px] font-bold mb-0.5 truncate" :class="message.reply_to_message.is_outbound ? 'text-wa-teal' : 'text-[#d95a2b]'" x-text="message.reply_to_message.is_outbound ? 'You' : (contact?.name || 'Contact')"></p>
+                            <p class="text-[11px] font-bold mb-0.5 truncate" :class="message.reply_to_message.is_outbound ? 'text-wa-teal' : 'text-[#d95a2b]'" x-text="message.reply_to_message.is_outbound ? 'You' : '{{ addslashes($contactName) }}'"></p>
                             <p class="text-[11px] text-slate-700 dark:text-slate-300 truncate opacity-80" x-text="message.reply_to_message.content"></p>
                         </div>
                     </div>
