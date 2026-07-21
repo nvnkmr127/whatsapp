@@ -274,6 +274,9 @@ class PersistMessageJob implements ShouldQueue
             if (isset($data['referral'])) {
                 $meta['referral'] = $data['referral'];
             }
+            if ($replyToMessageId) {
+                $meta['reply_to_message_id'] = $replyToMessageId;
+            }
 
             $message = Message::create([
                 'team_id' => $team->id,
@@ -289,7 +292,6 @@ class PersistMessageJob implements ShouldQueue
                 'media_type' => $mediaType,
                 'caption' => $caption,
                 'attributed_campaign_id' => $attributedCampaignId,
-                'reply_to_message_id' => $replyToMessageId,
             ]);
 
             // 6. Fan-out for Side Effects
