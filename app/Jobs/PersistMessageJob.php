@@ -129,6 +129,7 @@ class PersistMessageJob implements ShouldQueue
 
                 if ($targetMessageId) {
                     $targetMessage = Message::where('whatsapp_message_id', $targetMessageId)->first();
+                    Log::info("PersistMessageJob Reaction Debug: Target WAMID {$targetMessageId}. Found: " . ($targetMessage ? 'YES' : 'NO'));
                     if ($targetMessage) {
                         $meta = $targetMessage->metadata;
                         if (!is_array($meta)) {
@@ -220,6 +221,7 @@ class PersistMessageJob implements ShouldQueue
             if (isset($msgData['context']['id'])) {
                 $originalMessageId = $msgData['context']['id'];
                 $originalMessage = Message::where('whatsapp_message_id', $originalMessageId)->first();
+                Log::info("PersistMessageJob Reply Debug: Original WAMID {$originalMessageId}. Found: " . ($originalMessage ? 'YES' : 'NO'));
                 if ($originalMessage) {
                     $replyToMessageId = $originalMessage->id;
                     if ($originalMessage->campaign_id) {
