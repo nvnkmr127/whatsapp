@@ -18,7 +18,7 @@ class MessageController extends Controller
         $this->authorizeConversation($request->user(), $conversation);
 
         $messages = Message::where('conversation_id', $conversation->id)
-            ->with('replyTo:id,content')
+            ->with('replyTo:id,content,direction,type')
             ->latest('id')
             ->cursorPaginate(min((int) $request->input('per_page', 40), 100));
 
@@ -109,7 +109,6 @@ class MessageController extends Controller
             'media_url' => $request->input('media_url'),
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
-            'reply_to_message_id' => $request->input('reply_to_message_id'),
         ]);
 
         \Log::info('[MOBILE_API_MESSAGE_STORE] Message created and queued', [

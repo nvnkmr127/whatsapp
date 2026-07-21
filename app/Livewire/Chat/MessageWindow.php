@@ -1025,7 +1025,6 @@ class MessageWindow extends Component
                 'agent_name' => Auth::user()->name,
                 'reply_to_message_id' => $this->replyToMessageId,
             ],
-            'reply_to_message_id' => $this->replyToMessageId,
         ];
 
         $message = \App\Models\Message::create($msgData);
