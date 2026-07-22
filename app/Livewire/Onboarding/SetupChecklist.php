@@ -43,35 +43,46 @@ class SetupChecklist extends Component
         $this->steps = [
             [
                 'id' => 'connect_account',
-                'title' => 'Connect WhatsApp',
-                'description' => 'Link your WhatsApp Business account.',
+                'title' => 'Sign in with Facebook',
+                'description' => 'One click. We only ask for WhatsApp permissions.',
                 'completed' => ! empty($team->whatsapp_access_token),
                 'link' => route('teams.whatsapp_config'),
                 'icon' => 'wa',
             ],
             [
                 'id' => 'waba_id',
-                'title' => 'Detect AI Account',
-                'description' => 'Find your Business Account ID.',
+                'title' => 'Pick your business',
+                'description' => 'Choose which WhatsApp Business Account to use.',
                 'completed' => ! empty($team->whatsapp_business_account_id),
                 'link' => route('teams.whatsapp_config'),
                 'icon' => 'waba',
             ],
             [
                 'id' => 'phone_number',
-                'title' => 'Verify Number',
-                'description' => 'Register your phone identity.',
+                'title' => 'Pick your number',
+                'description' => 'Select the number your customers will message.',
                 'completed' => ! empty($team->whatsapp_phone_number_id),
                 'link' => route('teams.whatsapp_config'),
                 'icon' => 'phone',
             ],
             [
                 'id' => 'active_status',
-                'title' => 'Ready for Launch',
-                'description' => 'Account is verified and active.',
+                'title' => 'Connection live',
+                'description' => 'Your number is connected and receiving messages.',
                 'completed' => $team->whatsapp_connected || $team->isWhatsAppActive(),
                 'link' => route('teams.whatsapp_config'),
                 'icon' => 'rocket',
+            ],
+            [
+                'id' => 'first_message',
+                'title' => 'Send a test',
+                'description' => 'Prove it works — message yourself from the button below.',
+                // No extra column needed: the first outbound message IS the signal.
+                'completed' => \App\Models\Message::where('team_id', $team->id)
+                    ->where('direction', 'outbound')
+                    ->exists(),
+                'link' => route('teams.whatsapp_config'),
+                'icon' => 'send',
             ],
         ];
 
@@ -212,7 +223,7 @@ class SetupChecklist extends Component
                 return;
             }
 
-            if (! $user->phone_number) {
+            if (! $user->phone) {
                 session()->flash('checklist_error', 'Your profile is missing a phone number. Please add one in your settings first.');
                 $this->isSendingTest = false;
 
@@ -220,11 +231,11 @@ class SetupChecklist extends Component
             }
 
             $service = new \App\Services\WhatsAppService($team);
-            $message = 'Hello from Antigravity! 🚀 Your WhatsApp Business API integration is officially alive. (Test ID: '.uniqid().')';
+            $message = 'Hello from '.config('app.name').'! 🚀 Your WhatsApp Business API integration is officially alive. (Test ID: '.uniqid().')';
 
-            $service->sendText($user->phone_number, $message);
+            $service->sendText($user->phone, $message);
 
-            session()->flash('checklist_message', 'Test message sent successfully to '.$user->phone_number.'! Check your WhatsApp.');
+            session()->flash('checklist_message', 'Test message sent successfully to '.$user->phone.'! Check your WhatsApp.');
         } catch (\Exception $e) {
             session()->flash('checklist_error', 'Test failed: '.$e->getMessage());
         }

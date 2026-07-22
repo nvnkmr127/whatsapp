@@ -32,6 +32,8 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
+            'company' => ['nullable', 'string', 'max:255'],
             'password' => $this->passwordRules(),
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature()
                 ? ['accepted', 'required']
@@ -61,6 +63,8 @@ class CreateNewUser implements CreatesNewUsers
             $user = User::create([
                 'name' => $input['name'],
                 'email' => $input['email'],
+                'phone' => ($input['phone'] ?? null) ?: null,
+                'company_name' => ($input['company'] ?? null) ?: null,
                 'password' => Hash::make($input['password']),
                 'utm_source' => $input['utm_source'] ?? null,
                 'utm_medium' => $input['utm_medium'] ?? null,
@@ -90,7 +94,8 @@ class CreateNewUser implements CreatesNewUsers
     {
         $team = Team::forceCreate([
             'user_id' => $user->id,
-            'name' => explode(' ', $user->name, 2)[0]."'s Team",
+            // Prefer the company they gave us at signup so onboarding doesn't ask again.
+            'name' => $user->company_name ?: explode(' ', $user->name, 2)[0]."'s Team",
             'personal_team' => true,
             'subscription_status' => 'trial',
             'trial_ends_at' => now()->addMonths(

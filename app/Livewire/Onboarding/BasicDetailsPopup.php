@@ -44,8 +44,7 @@ class BasicDetailsPopup extends Component
         if (! $user->isSuperAdmin() && (empty($user->company_name) || ($team && str_ends_with($team->name, "'s Team")))) {
             $this->isOpen = true;
             \Illuminate\Support\Facades\Log::debug('BasicDetailsPopup opening: company missing or default team name', [
-                'company' => $user->company_name,
-                'team_name' => $team?->name,
+                'user_id' => $user->id,
             ]);
         }
 
@@ -64,10 +63,6 @@ class BasicDetailsPopup extends Component
     {
         try {
             \Illuminate\Support\Facades\Log::info('BasicDetailsPopup::save started', [
-                'phone' => $this->phone,
-                'company' => $this->company_name,
-                'email' => $this->email,
-                'address' => $this->address,
                 'user_id' => Auth::id(),
             ]);
 
@@ -99,7 +94,7 @@ class BasicDetailsPopup extends Component
                     'name' => $this->company_name ?: (explode(' ', $user->name, 2)[0]."'s Team"),
                     'personal_team' => true,
                     'subscription_status' => 'trial',
-                    'trial_ends_at' => now()->addMonths(6),
+                    'trial_ends_at' => now()->addMonths((int) get_setting('offer_trial_months', 6)),
                 ]);
                 $user->ownedTeams()->save($team);
                 $user->forceFill(['current_team_id' => $team->id])->save();

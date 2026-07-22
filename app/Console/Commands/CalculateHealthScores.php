@@ -2,9 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\CreateHealthSnapshotJob;
 use App\Models\Team;
-use App\Services\WhatsAppHealthMonitor;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class CalculateHealthScores extends Command
 {
@@ -20,53 +21,36 @@ class CalculateHealthScores extends Command
      *
      * @var string
      */
-    protected $description = 'Calculate and store WhatsApp health scores for all teams';
+    protected $description = 'Queue WhatsApp health snapshot jobs for all connected teams';
 
     /**
      * Execute the console command.
+     *
+     * Dispatches one job per team rather than snapshotting inline: each snapshot
+     * makes several Meta API calls, so a sequential loop meant one slow team
+     * delayed everyone behind it and one failure was lost with no retry.
      */
-    public function handle(WhatsAppHealthMonitor $monitor)
+    public function handle(): int
     {
-        $this->info('Calculating WhatsApp health scores...');
-
-        $teamsProcessed = 0;
-        $healthyCount = 0;
-        $warningCount = 0;
-        $criticalCount = 0;
+        $queued = 0;
 
         Team::whereNotNull('whatsapp_access_token')
-            ->chunk(100, function ($teams) use ($monitor, &$teamsProcessed, &$healthyCount, &$warningCount, &$criticalCount) {
+            ->chunkById(100, function ($teams) use (&$queued): void {
                 foreach ($teams as $team) {
-                    try {
-                        // Create health snapshot
-                        $snapshot = $monitor->createSnapshot($team);
+                    // Stagger dispatch so we trickle into Meta instead of firing
+                    // every team at once and tripping app-level rate limits.
+                    // ponytail: flat 2s stagger capped at 10 min; if team count
+                    // outgrows that, spread proportionally over the run interval.
+                    CreateHealthSnapshotJob::dispatch($team)
+                        ->delay(now()->addSeconds(min($queued * 2, 600)));
 
-                        // Count by status
-                        match ($snapshot->health_status) {
-                            'healthy' => $healthyCount++,
-                            'warning' => $warningCount++,
-                            'critical' => $criticalCount++,
-                        };
-
-                        $teamsProcessed++;
-
-                    } catch (\Exception $e) {
-                        $this->error("Failed to calculate health for team {$team->id}: {$e->getMessage()}");
-                    }
+                    $queued++;
                 }
             });
 
-        $this->info("\nHealth Score Summary:");
-        $this->table(
-            ['Status', 'Count'],
-            [
-                ['🟢 Healthy', $healthyCount],
-                ['🟡 Warning', $warningCount],
-                ['🔴 Critical', $criticalCount],
-                ['Total', $teamsProcessed],
-            ]
-        );
+        $this->info("Queued {$queued} health snapshot job(s).");
+        Log::info('Health snapshot run dispatched', ['teams' => $queued]);
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }

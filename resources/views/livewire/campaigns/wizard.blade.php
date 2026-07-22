@@ -370,6 +370,51 @@
                     </div>
                 </div>
 
+                {{-- Deliverability preflight: shown before the send button, not after. --}}
+                @php $pf = $this->preflight; @endphp
+
+                @if (! empty($pf['blocking']))
+                    <div class="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/50 rounded-[2rem] p-6 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="h-9 w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-sm font-black flex-shrink-0">!</div>
+                            <div>
+                                <p class="text-xs font-black text-rose-800 dark:text-rose-300 uppercase tracking-widest">WhatsApp is not ready to send</p>
+                                <ul class="mt-2 space-y-1">
+                                    @foreach ($pf['blocking'] as $issue)
+                                        <li class="text-[11px] font-bold text-rose-700 dark:text-rose-400">• {{ $issue }}</li>
+                                    @endforeach
+                                </ul>
+                                <a href="{{ route('health.deliverability') }}"
+                                    class="inline-block mt-3 text-[10px] font-black text-rose-700 dark:text-rose-300 uppercase tracking-widest underline">
+                                    Open deliverability
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                @if (! empty($pf['warnings']))
+                    <div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-[2rem] p-6 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="h-9 w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-black flex-shrink-0">!</div>
+                            <div>
+                                <p class="text-xs font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest">Worth checking before you send</p>
+                                <ul class="mt-2 space-y-1">
+                                    @foreach ($pf['warnings'] as $warning)
+                                        <li class="text-[11px] font-bold text-amber-700 dark:text-amber-400">• {{ $warning }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                @error('launch')
+                    <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-6">
+                        <p class="text-[11px] font-black text-rose-700 uppercase tracking-widest">{{ $message }}</p>
+                    </div>
+                @enderror
+
                 <div class="bg-purple-50 dark:bg-purple-900/10 rounded-[2.5rem] p-10 border border-purple-100 dark:border-purple-800/50 flex flex-col md:flex-row items-center justify-between gap-8">
                     <div class="flex items-center gap-6">
                         <div class="w-16 h-16 rounded-3xl bg-purple-500 flex items-center justify-center text-white shadow-xl shadow-purple-500/20">

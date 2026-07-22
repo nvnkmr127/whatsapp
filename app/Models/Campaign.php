@@ -18,6 +18,10 @@ class Campaign extends Model
         'scheduled_at', 'started_at', 'completed_at',
         'retry_config', 'is_ab_test', 'split_ratio', 'send_rate', 'steps',
         'error_message', 'last_snapshot_id', 'snapshot_id',
+        // Set by the wizard on every launch; without this the header media
+        // reference is silently discarded in production and launching throws
+        // outside it (Model::shouldBeStrict).
+        'filename',
         'variant', 'drip_tracking', 'drip_trigger_type', 'drip_send_to_existing',
     ];
 

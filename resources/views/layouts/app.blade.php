@@ -77,6 +77,11 @@
     <livewire:chat.chat-beacon />
     @livewire('onboarding.basic-details-popup')
 
+    {{-- Auto-run the product tour once, only for teams that haven't activated WhatsApp yet. --}}
+    @if (auth()->check() && ! auth()->user()->isSuperAdmin() && ! auth()->user()->currentTeam?->whatsapp_connected)
+        <div id="tour-autostart" class="hidden"></div>
+    @endif
+
     @include('components.impersonation-banner')
     <x-banner />
     <x-toast-notifications />

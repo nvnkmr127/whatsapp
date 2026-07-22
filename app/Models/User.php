@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +11,7 @@ use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Jetstream\HasTeams;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
 
@@ -30,10 +31,22 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        // OAuth/OTP controllers create users with this already set. It was being
+        // silently discarded; harmless while nothing enforced verification, but
+        // now that User implements MustVerifyEmail it would lock those users out.
+        'email_verified_at',
         'phone',
         'company_name',
         'address',
         'password',
+        // Signup attribution — collected by the register form, so they must be
+        // fillable or User::create() silently drops them (and throws under
+        // Model::shouldBeStrict() outside production).
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'utm_term',
         'marketing_opt_in',
         'unsubscribed_at',
         'unsubscribe_token',

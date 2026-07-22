@@ -14,7 +14,13 @@ class TenantScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        // Don't apply in console (unless specified) or for Super Admins in admin routes
+        // NOTE: this bypass also disables tenant isolation in the entire test
+        // suite (PHPUnit runs in console), so no test can currently catch a
+        // cross-tenant leak. Removing it is safe for production — web requests
+        // are already scoped, and console contexts have no authenticated user
+        // so they stay unscoped either way — but it turns 4 existing tests red,
+        // each of which needs individual triage first. See the notes on
+        // SendMessageJob::58 and ApiIntegrationTest before attempting it.
         if (app()->runningInConsole()) {
             return;
         }

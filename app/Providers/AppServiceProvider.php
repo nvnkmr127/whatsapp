@@ -88,6 +88,25 @@ class AppServiceProvider extends ServiceProvider
             Model::preventAccessingMissingAttributes(false);
         }
 
+        // ── Make silent data loss observable in production ──────────────
+        // Outside production, writing an attribute missing from $fillable
+        // throws. In production it is silently discarded, which is how the
+        // signup form lost phone/company/utm_* and the campaign wizard lost
+        // its header media filename — for months, with no signal at all.
+        //
+        // Throwing in production would turn old data loss into new 500s for
+        // customers, so log it instead: same visibility, no blast radius.
+        if ($this->app->isProduction()) {
+            Model::preventSilentlyDiscardingAttributes();
+
+            Model::handleDiscardedAttributeViolationUsing(function ($model, $keys) {
+                Log::warning('Discarded unfillable attributes', [
+                    'model' => $model::class,
+                    'attributes' => $keys,
+                ]);
+            });
+        }
+
         // ── System WhatsApp: DB settings override env defaults ──────────
         // Admins set these on /settings/system; env (WHATSAPP_SYSTEM_*) is the fallback.
         try {

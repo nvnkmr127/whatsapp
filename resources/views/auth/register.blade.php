@@ -40,9 +40,10 @@
 
                 <!-- Main Heading -->
                 <div class="mb-12">
+                    @php $trialMonths = (int) get_setting('offer_trial_months', 6); @endphp
                     <h1 class="text-5xl font-black text-white mb-4 leading-tight">
                         Start Your<br />
-                        <span class="text-wa-light">14-Day Free Trial</span>
+                        <span class="text-wa-light">{{ $trialMonths }}-Month Free Trial</span>
                     </h1>
                     <p class="text-xl text-white/80 font-medium">
                         No credit card required • Full access to all features
@@ -111,10 +112,9 @@
             <!-- Footer -->
             <div class="relative z-10">
                 <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                    <p class="text-white/90 text-sm font-medium italic">
-                        "This platform transformed how we engage with customers. Response times dropped by 80%!"
+                    <p class="text-white/90 text-sm font-medium">
+                        Official WhatsApp Business Platform. Connect your number in minutes — no developer required.
                     </p>
-                    <p class="text-white/70 text-xs font-bold mt-2">— Sarah Chen, Marketing Director</p>
                 </div>
             </div>
         </div>
@@ -138,8 +138,8 @@
                     <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                         Create <span class="text-wa-teal">Account</span>
                     </h1>
-                    <p class="mt-2 text-slate-500 dark:text-slate-400 font-medium">14-day free trial • No credit card
-                        required</p>
+                    <p class="mt-2 text-slate-500 dark:text-slate-400 font-medium">{{ (int) get_setting('offer_trial_months', 6) }}-month
+                        free trial • No credit card required</p>
                 </div>
 
                 <!-- Main Card -->

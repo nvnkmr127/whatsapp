@@ -63,6 +63,8 @@ Route::middleware([
 
     Route::get('/growth-tools', \App\Livewire\LeadCapture\WidgetManager::class)->name('growth-tools')->middleware(['can:manage-campaigns']);
 
+    Route::get('/deliverability', \App\Livewire\Health\DeliverabilityCenter::class)->name('health.deliverability');
+
     // Webhooks - See developer section for webhook management routes
     Route::get('/webhooks/logs', \App\Livewire\Webhooks\WebhookLogs::class)->name('webhooks.logs')->middleware(['can:manage-settings', 'plan_feature:webhooks']);
     Route::get('/webhook-workflows/{workflowId}/report', \App\Livewire\Webhooks\WebhookReport::class)->name('webhooks.report');

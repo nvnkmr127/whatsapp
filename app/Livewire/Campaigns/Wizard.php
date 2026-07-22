@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\Contact;
 use App\Models\ContactTag;
 use App\Models\WhatsappTemplate;
+use App\Services\Health\DeliverabilityPreflight;
 use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -378,6 +379,24 @@ class Wizard extends Component
 
         $this->validate($rules);
 
+        // BroadcastService refuses to launch while there are blocking health
+        // issues. For an immediate send that refusal is certain, so stop here
+        // rather than flashing "Launched Successfully" and leaving the campaign
+        // stuck in 'scheduled' while the scheduler retries it every minute.
+        //
+        // Scheduled-for-later campaigns are deliberately NOT blocked: health is
+        // re-checked at send time and today's expired token says nothing about
+        // next Tuesday.
+        if ($this->scheduleMode === 'now') {
+            $blocking = $this->preflight()['blocking'];
+
+            if (! empty($blocking)) {
+                $this->addError('launch', 'Cannot send now: '.implode(' ', $blocking));
+
+                return null;
+            }
+        }
+
         if ($this->scheduleMode === 'now') {
             $this->scheduled_at = now();
         }
@@ -460,6 +479,20 @@ class Wizard extends Component
         $this->flash('Campaign Launched Successfully!', 'success');
 
         return redirect()->route('campaigns.index');
+    }
+
+    /**
+     * Deliverability check surfaced on the Review step.
+     *
+     * @return array{blocking: array, warnings: array, daily_limit: int|null, remaining: int|null, quality_rating: string|null}
+     */
+    #[Computed]
+    public function preflight()
+    {
+        return app(DeliverabilityPreflight::class)->check(
+            \Illuminate\Support\Facades\Auth::user()->currentTeam,
+            (int) $this->audienceCount
+        );
     }
 
     #[Computed]

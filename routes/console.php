@@ -10,6 +10,7 @@ Artisan::command('inspire', function () {
 
 // WhatsApp Health Monitoring
 Schedule::command('whatsapp:calculate-health-scores')->everyThirtyMinutes();
+Schedule::command('whatsapp:prune-health-snapshots')->weeklyOn(0, '03:00');
 
 // WhatsApp Monitoring
 Schedule::command('whatsapp:validate-tokens')->daily()->at('02:00');
