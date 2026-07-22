@@ -15,7 +15,13 @@ class ConversationFactory extends Factory
     {
         return [
             'team_id' => \App\Models\Team::factory(),
-            'contact_id' => \App\Models\Contact::factory(),
+            // Inherit the conversation's team rather than spinning up a second
+            // one: a conversation whose contact belongs to a different tenant is
+            // not a state the app can produce, and building fixtures that way
+            // made every tenant-scoped query in tests behave unrealistically.
+            'contact_id' => fn (array $attributes) => \App\Models\Contact::factory()->create([
+                'team_id' => $attributes['team_id'],
+            ])->id,
             'status' => 'open',
             'last_message_at' => now(),
         ];

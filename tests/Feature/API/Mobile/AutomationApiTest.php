@@ -92,7 +92,10 @@ class AutomationApiTest extends TestCase
             'X-Tenant-ID' => $this->team->id
         ]);
 
-        $response->assertStatus(403);
+        // 404, not 403: TenantScope hides the other team's automation entirely,
+        // so route-model binding fails before the policy is ever consulted.
+        // That is the stronger answer — 403 would confirm the record exists.
+        $response->assertStatus(404);
     }
 
     public function test_can_create_custom_automation()

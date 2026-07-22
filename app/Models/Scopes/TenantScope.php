@@ -14,17 +14,14 @@ class TenantScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        // NOTE: this bypass also disables tenant isolation in the entire test
-        // suite (PHPUnit runs in console), so no test can currently catch a
-        // cross-tenant leak. Removing it is safe for production — web requests
-        // are already scoped, and console contexts have no authenticated user
-        // so they stay unscoped either way — but it turns 4 existing tests red,
-        // each of which needs individual triage first. See the notes on
-        // SendMessageJob::58 and ApiIntegrationTest before attempting it.
-        if (app()->runningInConsole()) {
-            return;
-        }
-
+        // The scope keys off the authenticated user, so console contexts that
+        // legitimately span tenants (queue workers, scheduled commands) are
+        // already unscoped simply by having no authenticated user.
+        //
+        // There used to be an explicit runningInConsole() bypass here. It was
+        // redundant for those contexts and actively harmful in tests, where
+        // actingAs() DOES authenticate: it silently disabled tenant isolation
+        // across the whole suite, so no test could catch a cross-tenant leak.
         $user = Auth::user();
 
         if ($user && $user->current_team_id) {
