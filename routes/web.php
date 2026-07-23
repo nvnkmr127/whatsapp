@@ -169,6 +169,56 @@ Route::middleware([
     // Web Push Notifications
     Route::post('/web-fcm-token', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
 
+    Route::get('/firebase-messaging-sw.js', function () {
+        $config = [
+            'apiKey' => config('services.firebase.web.api_key'),
+            'authDomain' => config('services.firebase.web.auth_domain'),
+            'projectId' => config('services.firebase.web.project_id'),
+            'storageBucket' => config('services.firebase.web.storage_bucket'),
+            'messagingSenderId' => config('services.firebase.web.messaging_sender_id'),
+            'appId' => config('services.firebase.web.app_id')
+        ];
+        
+        $js = "
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+
+firebase.initializeApp(" . json_encode($config) . ");
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(function(payload) {
+    console.log('[firebase-messaging-sw.js] Received background message ', payload);
+    
+    // Attempt to notify any open clients (e.g. minimized tabs) to play the sound
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clients) {
+        if (clients && clients.length) {
+            clients.forEach(function(client) {
+                client.postMessage({ type: 'play_sound' });
+            });
+        }
+    });
+
+    // If payload contains notification object, Firebase SDK displays it automatically.
+    // However, if we want to customize it (like adding a tag or forcing display),
+    // we must handle it. If Firebase handles it, it might not play the default OS sound.
+    if (payload.notification) {
+        return; // Let Firebase handle it automatically
+    }
+
+    const notificationTitle = payload.data?.title || 'New Message';
+    const notificationOptions = {
+        body: payload.data?.body || '',
+        icon: '/favicon.ico',
+        data: payload.data,
+        silent: false // ensure OS default sound plays if no custom sound can be played
+    };
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});
+";
+        return response($js, 200)->header('Content-Type', 'application/javascript');
+    });
+
     // Unified CRM (Managers, Admins)
     Route::get('/contacts', \App\Livewire\Contacts\ContactManager::class)->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 

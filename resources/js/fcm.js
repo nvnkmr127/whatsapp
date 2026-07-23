@@ -17,10 +17,8 @@ export function initializeFCM() {
             if (permission === 'granted') {
                 console.log('Notification permission granted.');
                 
-                // Pass config to the service worker registration
-                const configQuery = new URLSearchParams(window.FIREBASE_CONFIG).toString();
-                
-                navigator.serviceWorker.register(`/firebase-messaging-sw.js?${configQuery}`)
+                // Register service worker (config is now injected dynamically via Laravel route)
+                navigator.serviceWorker.register('/firebase-messaging-sw.js')
                 .then((registration) => {
                     getToken(messaging, { 
                         vapidKey: window.VAPID_KEY,
@@ -40,6 +38,18 @@ export function initializeFCM() {
             }
         });
 
+        // Listen for messages from the service worker (e.g., to play sound when minimized)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'play_sound') {
+                    try {
+                        const audio = new Audio('/sounds/notification.mp3');
+                        audio.play().catch(e => console.log('Audio play prevented by browser policy:', e));
+                    } catch (err) {}
+                }
+            });
+        }
+
         onMessage(messaging, (payload) => {
             console.log('Message received in foreground. ', payload);
             
@@ -50,6 +60,19 @@ export function initializeFCM() {
                 audio.play().catch(e => console.log('Audio play prevented by browser policy:', e));
             } catch (err) {
                 console.error('Failed to play notification sound', err);
+            }
+
+            // Show OS notification for foreground messages as well
+            if (Notification.permission === 'granted') {
+                // If we are looking at the chat, we might not want to show it, but as a generic fallback we will show it.
+                // The user specifically wants it when looking at other contacts.
+                const notificationTitle = payload.notification?.title || payload.data?.title || 'New Message';
+                const notificationOptions = {
+                    body: payload.notification?.body || payload.data?.body || '',
+                    icon: '/favicon.ico',
+                    data: payload.data
+                };
+                new Notification(notificationTitle, notificationOptions);
             }
         });
     } catch (error) {
