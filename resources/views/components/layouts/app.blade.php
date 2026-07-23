@@ -25,6 +25,24 @@
         {{ isset($title) ? $title . ' - ' : '' }}{{ auth()->check() && auth()->user()->currentTeam ? auth()->user()->currentTeam->name : ($appName ?? $systemAppName) }}
     </title>
 
+    <script>
+        window.user = {{ Js::from([
+            'id' => auth()->id(),
+            'name' => auth()->user()?->name,
+            'team_id' => auth()->user()?->current_team_id,
+        ]) }};
+        
+        window.FIREBASE_CONFIG = {
+            apiKey: "{{ config('services.firebase.web.api_key') }}",
+            authDomain: "{{ config('services.firebase.web.auth_domain') }}",
+            projectId: "{{ config('services.firebase.web.project_id') }}",
+            storageBucket: "{{ config('services.firebase.web.storage_bucket') }}",
+            messagingSenderId: "{{ config('services.firebase.web.messaging_sender_id') }}",
+            appId: "{{ config('services.firebase.web.app_id') }}"
+        };
+        window.VAPID_KEY = "{{ config('services.firebase.web.vapid_key') }}";
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

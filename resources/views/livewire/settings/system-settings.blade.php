@@ -20,11 +20,11 @@
                         
                         <div class="relative w-40 h-40 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden group-hover:border-wa-teal/50 transition-colors">
                             @if ($logo)
-                                <img src="{{ $logo->temporaryUrl() }}" class="w-full h-full object-cover">
+                                <img wire:key="preview-logo" src="{{ $logo->temporaryUrl() }}" class="w-full h-full object-cover">
                             @elseif ($currentLogoPath)
-                                <img src="{{ Storage::disk('r2')->url($currentLogoPath) }}" class="w-full h-full object-cover">
+                                <img wire:key="current-logo" src="{{ Storage::disk('r2')->url($currentLogoPath) }}" class="w-full h-full object-cover">
                             @else
-                                <div class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-2">
+                                <div wire:key="no-logo" class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-2">
                                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     <span class="text-[10px] font-bold uppercase tracking-wider">No Logo</span>
                                 </div>
@@ -60,11 +60,11 @@
                         
                         <div class="relative w-20 h-20 mx-auto mb-6 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden group-hover:border-wa-teal/50 transition-colors">
                             @if ($favicon)
-                                <img src="{{ $favicon->temporaryUrl() }}" class="w-full h-full object-contain">
+                                <img wire:key="preview-favicon" src="{{ $favicon->temporaryUrl() }}" class="w-full h-full object-contain">
                             @elseif ($currentFaviconPath)
-                                <img src="{{ Storage::disk('r2')->url($currentFaviconPath) }}" class="w-full h-full object-contain">
+                                <img wire:key="current-favicon" src="{{ Storage::disk('r2')->url($currentFaviconPath) }}" class="w-full h-full object-contain">
                             @else
-                                <div class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-1">
+                                <div wire:key="no-favicon" class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-1">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     <span class="text-[8px] font-bold uppercase tracking-wider">None</span>
                                 </div>
@@ -265,7 +265,7 @@
 
                                     <div class="space-y-2">
                                         <label class="text-xs font-black uppercase tracking-widest text-slate-500">System Access Token</label>
-                                        <input type="password" wire:model="systemAccessToken" placeholder="EAAB..."
+                                        <input type="password" wire:model="systemAccessToken" placeholder="EAAB..." autocomplete="off"
                                             class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white font-mono font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-wa-teal/20 transition-all">
                                     </div>
                                 </div>
