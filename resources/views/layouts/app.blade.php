@@ -247,16 +247,18 @@
         });
 
         // Handle generic fetch errors
-        const originalFetch = window.fetch;
-        window.fetch = function() {
-            return originalFetch.apply(this, arguments).catch(err => {
-                if (!window.navigator.onLine) return Promise.reject(err);
-                window.dispatchEvent(new CustomEvent('notify', { 
-                    detail: { message: 'Network request failed. Please check your connection.', type: 'error' } 
-                }));
-                return Promise.reject(err);
-            });
-        };
+        if (!window.originalFetch) {
+            window.originalFetch = window.fetch;
+            window.fetch = function() {
+                return window.originalFetch.apply(this, arguments).catch(err => {
+                    if (!window.navigator.onLine) return Promise.reject(err);
+                    window.dispatchEvent(new CustomEvent('notify', { 
+                        detail: { message: 'Network request failed. Please check your connection.', type: 'error' } 
+                    }));
+                    return Promise.reject(err);
+                });
+            };
+        }
     </script>
 </body>
 
