@@ -23,10 +23,15 @@ class MediaService
      */
     public function downloadAndStore(string $mediaId, Team $team): ?string
     {
+        // Every `return null` below is a distinct failure. They are logged with a
+        // `step` so the log alone identifies which one hit — DownloadMediaJob only
+        // sees "no path returned".
+        $log = ['media_id' => $mediaId, 'team_id' => $team->id];
+
         $accessToken = $team->whatsapp_access_token;
 
         if (! $accessToken) {
-            Log::error("Media download failed: No access token for Team {$team->id}");
+            Log::error('Media download failed', $log + ['step' => 'no_access_token']);
 
             return null;
         }
@@ -35,7 +40,11 @@ class MediaService
         $response = Http::withToken($accessToken)->get("{$this->baseUrl}/{$mediaId}");
 
         if ($response->failed()) {
-            Log::error("Failed to get media URL for ID {$mediaId}", $response->json());
+            Log::error('Media download failed', $log + [
+                'step' => 'lookup_failed',
+                'status' => $response->status(),
+                'body' => Str::limit($response->body(), 500),
+            ]);
 
             return null;
         }
@@ -44,14 +53,25 @@ class MediaService
         $mimeType = $response->json()['mime_type'] ?? 'application/octet-stream';
 
         if (! $mediaUrl) {
+            Log::error('Media download failed', $log + [
+                'step' => 'lookup_returned_no_url',
+                'body' => Str::limit($response->body(), 500),
+            ]);
+
             return null;
         }
 
         // 2. Download Binary
+        // Meta's media URLs are short-lived — if the queue is backed up, this is
+        // where a delayed job dies.
         $binaryResponse = Http::withToken($accessToken)->get($mediaUrl);
 
         if ($binaryResponse->failed()) {
-            Log::error("Failed to download media binary from {$mediaUrl}");
+            Log::error('Media download failed', $log + [
+                'step' => 'binary_download_failed',
+                'status' => $binaryResponse->status(),
+                'body' => Str::limit($binaryResponse->body(), 500),
+            ]);
 
             return null;
         }
@@ -61,20 +81,38 @@ class MediaService
         $filename = Str::random(40).'.'.$extension;
         $path = "whatsapp/{$team->id}/{$filename}";
 
-        // 4. Ensure Directory Exists (Default disk)
+        // 4. Store. No makeDirectory(): object stores (S3/R2) have no directories,
+        // and the local driver creates them on write anyway — it was two wasted
+        // round-trips that could themselves throw.
         $disk = config('filesystems.default', 'public');
-        $directory = dirname($path);
-        if (!Storage::disk($disk)->exists($directory)) {
-            Storage::disk($disk)->makeDirectory($directory);
-        }
 
-        // 5. Store with explicit public visibility and check for success
-        $stored = Storage::disk($disk)->put($path, $binaryResponse->body(), 'public');
+        try {
+            // Visibility is left to the disk config. Forcing 'public' here sends an
+            // ACL that R2 does not implement, which fails the write on that driver.
+            $stored = Storage::disk($disk)->put($path, $binaryResponse->body());
+        } catch (\Throwable $e) {
+            Log::error('Media download failed', $log + [
+                'step' => 'disk_write_threw',
+                'disk' => $disk,
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
 
-        if (!$stored) {
-            Log::error("Media download failed: Could not write to disk at {$path}");
             return null;
         }
+
+        if (! $stored) {
+            Log::error('Media download failed', $log + [
+                'step' => 'disk_write_returned_false',
+                'disk' => $disk,
+                'path' => $path,
+                'bytes' => strlen($binaryResponse->body()),
+            ]);
+
+            return null;
+        }
+
+        Log::info('Media stored', $log + ['disk' => $disk, 'path' => $path, 'bytes' => strlen($binaryResponse->body())]);
 
         // Return public URL or relative path?
         // Returning relative path is safer, can wrap with Storage::url() in UI.

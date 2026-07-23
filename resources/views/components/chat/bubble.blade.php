@@ -170,15 +170,27 @@
             <!-- Media placeholder: inbound-only, shown while DownloadMediaJob hasn't
                  populated media_url yet, so a received photo/video is visible instead
                  of an empty bubble. Outbound media always has media_url at send time.
-                 ponytail: a permanently-failed download shows this spinner forever;
-                 add a 'failed' state when messages gain a media_status column. -->
+                 Once the job exhausts its retries it sets metadata.media_failed, so
+                 this stops claiming a download is still in progress. -->
             <template x-if="!message.is_outbound && !message.media_url && ['image','video','audio','document','sticker'].includes(message.type)">
-                <div class="mb-3 flex items-center gap-2 p-3 rounded-lg bg-black/5 dark:bg-black/20 text-slate-500 dark:text-slate-400 text-xs italic">
-                    <svg aria-hidden="true" class="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    <span x-text="message.type.charAt(0).toUpperCase() + message.type.slice(1) + ' — downloading…'"></span>
+                <div class="mb-3 flex items-center gap-2 p-3 rounded-lg text-xs italic"
+                    :class="message.metadata?.media_failed
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                        : 'bg-black/5 dark:bg-black/20 text-slate-500 dark:text-slate-400'">
+                    <template x-if="!message.metadata?.media_failed">
+                        <svg aria-hidden="true" class="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </template>
+                    <template x-if="message.metadata?.media_failed">
+                        <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                    </template>
+                    <span x-text="message.type.charAt(0).toUpperCase() + message.type.slice(1)
+                        + (message.metadata?.media_failed ? ' — couldn\'t be downloaded' : ' — downloading…')"></span>
                 </div>
             </template>
 
