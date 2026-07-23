@@ -166,6 +166,9 @@ Route::middleware([
     Route::post('/api/v1/conversations/{id}/heartbeat', [\App\Http\Controllers\Api\ConversationLockController::class, 'heartbeat']);
     Route::post('/api/v1/conversations/{id}/takeover', [\App\Http\Controllers\Api\ConversationLockController::class, 'takeover']);
 
+    // Web Push Notifications
+    Route::post('/web-fcm-token', [\App\Http\Controllers\Api\Mobile\FCMTokenController::class, 'store']);
+
     // Unified CRM (Managers, Admins)
     Route::get('/contacts', \App\Livewire\Contacts\ContactManager::class)->name('contacts.index')->middleware(['can:manage-contacts', 'plan_feature:contacts']);
 

@@ -23,6 +23,16 @@
             'name' => auth()->user()?->name,
             'team_id' => auth()->user()?->current_team_id,
         ]) }};
+        
+        window.FIREBASE_CONFIG = {
+            apiKey: "{{ config('services.firebase.web.api_key') }}",
+            authDomain: "{{ config('services.firebase.web.auth_domain') }}",
+            projectId: "{{ config('services.firebase.web.project_id') }}",
+            storageBucket: "{{ config('services.firebase.web.storage_bucket') }}",
+            messagingSenderId: "{{ config('services.firebase.web.messaging_sender_id') }}",
+            appId: "{{ config('services.firebase.web.app_id') }}"
+        };
+        window.VAPID_KEY = "{{ config('services.firebase.web.vapid_key') }}";
     </script>
 
     <!-- Fonts -->
