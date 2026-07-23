@@ -84,6 +84,12 @@ class Conversation extends Model
 
     public function getHasActiveCallAttribute()
     {
+        // List views preload this with ->withExists(); without it this accessor
+        // fires one query per row every time the inbox re-renders.
+        if (array_key_exists('has_active_call', $this->attributes)) {
+            return (bool) $this->attributes['has_active_call'];
+        }
+
         return $this->calls()->whereIn('status', ['initiated', 'ringing', 'in_progress'])->exists();
     }
 

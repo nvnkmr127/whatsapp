@@ -1,4 +1,4 @@
-export default (wire, conversationId, teamId, userId, showTransferModal, showInteractiveButtonsModal, isNoteMode, lightboxOpen, lightboxImage, quickReplies) => ({
+export default (wire, conversationId, teamId, userId, showTransferModal, showInteractiveButtonsModal, isNoteMode, lightboxOpen, lightboxImage, quickReplies, initialMessages = null) => ({
     itemHeight: 72,
     buffer: 15,
     viewportHeight: 0,
@@ -22,10 +22,51 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     recInterval: null,
     _submitting: false,
     _boundHandlers: null,
+    hasAttachment: false,
+    attachmentName: '',
+    attachmentPreview: null,
+
+    get canSend() {
+        return !!(this.msgBody.trim() || this.hasAttachment);
+    },
+
+    // Local state flips instantly so the send button appears while the upload is
+    // still in flight; $wire.newAttachmentData only lands a roundtrip later.
+    onFilePicked(file) {
+        if (!file) return;
+        if (file.size > 16 * 1024 * 1024) {
+            this.$refs.fileInput.value = '';
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'File too large (max 16 MB)', type: 'error' } }));
+            return;
+        }
+        this.hasAttachment = true;
+        this.attachmentName = file.name || 'attachment';
+        this.attachmentPreview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    },
+
+    clearAttachment(serverToo = true) {
+        if (this.attachmentPreview) URL.revokeObjectURL(this.attachmentPreview);
+        this.hasAttachment = false;
+        this.attachmentName = '';
+        this.attachmentPreview = null;
+        if (this.$refs.fileInput) this.$refs.fileInput.value = '';
+        if (serverToo) wire.deleteAttachment();
+    },
+
+    // The upload finishes on its own roundtrip; sendMessage() bails out if the
+    // path isn't there yet, so wait for it rather than silently dropping the send.
+    async waitForUpload(timeoutMs = 60000) {
+        const deadline = Date.now() + timeoutMs;
+        while (!wire.newAttachmentData && Date.now() < deadline) {
+            if (wire.uploadError) return false;
+            await new Promise(r => setTimeout(r, 150));
+        }
+        return !!wire.newAttachmentData;
+    },
 
     init() {
         this.$store.chat.setMyUser(userId);
-        this.$store.chat.init(wire, conversationId, teamId);
+        this.$store.chat.init(wire, conversationId, teamId, initialMessages);
 
         // Store bound handler references so we can remove them on destroy
         this._boundHandlers = {
@@ -36,12 +77,8 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 this.$store.chat.isDragging = false;
                 if (e.dataTransfer?.files?.length > 0) {
                     const file = e.dataTransfer.files[0];
-                    const maxBytes = 16 * 1024 * 1024; // 16 MB
-                    if (file.size > maxBytes) {
-                        window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'File too large (max 16 MB)', type: 'error' } }));
-                        return;
-                    }
-                    wire.upload('newAttachment', file);
+                    this.onFilePicked(file);
+                    if (this.hasAttachment) wire.upload('newAttachment', file);
                 }
             },
             scrollBottom: () => this.scrollToBottom(),
@@ -169,7 +206,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
     async handleSubmit() {
         if (this._submitting) return;
-        if (this.msgBody.trim() === '' && !wire.newAttachmentData) return;
+        if (!this.canSend && !this.isNoteMode) return;
 
         this._submitting = true;
         try {
@@ -186,7 +223,11 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 return;
             }
 
-            if (wire.newAttachmentData) {
+            if (this.hasAttachment) {
+                if (!await this.waitForUpload()) {
+                    window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Attachment upload failed. Please try again.', type: 'error' } }));
+                    return;
+                }
                 wire.set('msgBody', this.msgBody);
                 try {
                     await wire.sendMessage();
@@ -195,6 +236,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                     return;
                 }
                 this.msgBody = '';
+                this.clearAttachment(false);
                 return;
             }
 
@@ -234,7 +276,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             stream.getTracks().forEach(track => track.stop());
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/ogg; codecs=opus' });
             if (this.shouldSendRecording) {
-                wire.upload('newAttachment', audioBlob, (uploadedFilename) => {
+                wire.upload('voiceNote', audioBlob, (uploadedFilename) => {
                     wire.sendVoiceNote(uploadedFilename);
                 });
             }

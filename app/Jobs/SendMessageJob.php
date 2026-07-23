@@ -16,6 +16,18 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
+/**
+ * Deliberately NOT `implements ShouldQueue` — sends run inline, synchronously,
+ * at all 11 dispatch sites. Every other job in app/Jobs does implement it, and
+ * this one still calls $this->onQueue('messages') in its constructor (dead code
+ * while it runs inline), so the omission reads like an oversight. It isn't:
+ * adding the interface makes outbound WhatsApp messages depend on the
+ * whatsapp-queue-messages workers actually running, and stops them dead if
+ * they aren't. Don't add it without confirming those workers are live.
+ *
+ * Tests assert dispatch with Bus::fake(), not Queue::fake(), because a
+ * synchronous job never reaches the queue.
+ */
 class SendMessageJob
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;

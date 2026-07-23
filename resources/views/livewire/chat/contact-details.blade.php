@@ -307,7 +307,7 @@
             @elseif($activeTab === 'timeline')
                 <div class="p-6">
                     <div class="space-y-6">
-                        @forelse($timeline as $item)
+                        @forelse($this->timeline as $item)
                             <div class="relative pl-8 pb-6 border-l border-slate-100 dark:border-slate-800 last:pb-0" wire:key="{{ $item['id'] }}">
                                 <div class="absolute left-[-5.5px] top-0 w-3 h-3 rounded-full bg-white dark:bg-slate-950 border-2 border-wa-teal shadow-sm"></div>
                                 <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 shadow-sm">
@@ -328,7 +328,7 @@
 
             @elseif($activeTab === 'files')
                 <div class="p-6 grid grid-cols-2 gap-3">
-                    @forelse($mediaVault as $file)
+                    @forelse($this->mediaVault as $file)
                         <div class="group relative aspect-square rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                             @if(in_array($file['media_type'] ?? 'image', ['image', 'video']))
                                 <img src="{{ $file['media_url'] }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all">

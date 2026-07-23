@@ -5,7 +5,7 @@ export default {
     hasMore: true,
     wire: null,
 
-    initMessages(wire, conversationId, teamId) {
+    initMessages(wire, conversationId, teamId, initialMessages = null) {
         Object.defineProperty(this, '_wire', {
             value: wire,
             writable: true,
@@ -25,9 +25,15 @@ export default {
             this._hasMsgListeners = true;
         }
 
-        setTimeout(() => {
-            this.loadMessages(true);
-        }, 100);
+        // The first page rides along in the initial render — no extra roundtrip.
+        if (Array.isArray(initialMessages)) {
+            this.messages = initialMessages; // already chronological from loadMessagesJson()
+            this.hasMore = initialMessages.length >= 50;
+            window.dispatchEvent(new CustomEvent('chat-initial-loaded'));
+            return;
+        }
+
+        this.loadMessages(true);
     },
 
     async loadMessages(isInitial = false) {

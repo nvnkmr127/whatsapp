@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Chat\MediaUpload;
 use App\Livewire\Chat\MessageWindow;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -18,20 +17,24 @@ class ChatMediaSendTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Picking a file persists it to the public disk and hands back a real path. */
-    public function test_media_upload_persists_file_and_emits_path(): void
+    /** Picking a file persists it and exposes the path the send button reacts to. */
+    public function test_media_upload_persists_file_and_sets_attachment_data(): void
     {
-        Storage::fake('public');
+        $disk = config('filesystems.default');
+        Storage::fake($disk);
         $team = Team::factory()->create();
         $user = User::factory()->create(['current_team_id' => $team->id]);
+        $conversation = Conversation::factory()->create(['team_id' => $team->id]);
         $this->actingAs($user);
 
-        Livewire::test(MediaUpload::class, ['conversationId' => 1])
+        Livewire::test(MessageWindow::class, ['conversationId' => $conversation->id])
             ->set('newAttachment', UploadedFile::fake()->image('photo.jpg'))
             ->assertHasNoErrors()
-            ->assertDispatched('mediaUploaded', fn ($event, $params) => ! empty($params[0]['path']));
+            ->assertSet('uploadError', null)
+            ->assertSet('newAttachmentData.name', 'photo.jpg')
+            ->tap(fn ($c) => $this->assertNotEmpty($c->get('newAttachmentData')['path']));
 
-        $this->assertNotEmpty(Storage::disk('public')->files('chat-media'), 'file must be stored');
+        $this->assertNotEmpty(Storage::disk($disk)->files('chat-media'), 'file must be stored');
     }
 
     /** Sending the picked media builds a correct outbound media message (type/url/caption) and hands it to the send job. */

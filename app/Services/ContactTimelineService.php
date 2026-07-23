@@ -131,11 +131,14 @@ class ContactTimelineService
     /**
      * Get media items for a contact.
      */
-    public function getMediaVault(Contact $contact): Collection
+    public function getMediaVault(Contact $contact, int $limit = 60): Collection
     {
+        // Was unbounded — a chatty contact dragged every file they ever sent into
+        // the payload. The grid shows a page's worth; the rest was never seen.
         return $contact->messages()
             ->whereNotNull('media_url')
             ->orderByDesc('created_at')
+            ->take($limit)
             ->get(['id', 'type', 'media_url', 'media_type', 'caption', 'created_at']);
     }
 

@@ -17,7 +17,9 @@ class MediaHandlingTest extends TestCase
 
     public function test_incoming_image_webhook_downloads_and_links_media()
     {
-        Storage::fake('public');
+        // MediaService writes to the configured disk, not hardcoded 'public'.
+        $disk = config('filesystems.default');
+        Storage::fake($disk);
         Http::fake([
             'graph.facebook.com/*/12345' => Http::response(['url' => 'http://media.url/file', 'mime_type' => 'image/jpeg'], 200),
             'http://media.url/file' => Http::response('fake-image-content', 200),
@@ -79,6 +81,6 @@ class MediaHandlingTest extends TestCase
         $this->assertNotNull($message->media_url);
 
         // Verify file exists
-        Storage::disk('public')->assertExists($message->media_url);
+        Storage::disk($disk)->assertExists($message->media_url);
     }
 }

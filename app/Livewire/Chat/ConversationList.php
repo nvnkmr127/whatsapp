@@ -9,6 +9,9 @@ use Livewire\Component;
 
 class ConversationList extends Component
 {
+    /** Below this, searching message bodies scans everything to match everything. */
+    private const MESSAGE_SEARCH_MIN_LENGTH = 3;
+
     #[Modelable]
     public $activeConversationId;
 
@@ -32,8 +35,9 @@ class ConversationList extends Component
     public function getListeners()
     {
         if (Auth::check() && Auth::user()->currentTeam) {
+            // MessageReceived is handled by the inboxLive Alpine component instead —
+            // a raw echo listener here rebuilt the whole inbox once per message.
             return [
-                'echo-private:teams.'.Auth::user()->currentTeam->id.',.MessageReceived' => '$refresh',
                 'chat-messages-read' => '$refresh',
                 'refresh-tags' => '$refresh',
             ];
@@ -109,6 +113,11 @@ class ConversationList extends Component
                     $query->where('direction', 'inbound')->whereNull('read_at');
                 },
             ])
+            ->withExists([
+                'calls as has_active_call' => function ($query) {
+                    $query->whereIn('status', ['initiated', 'ringing', 'in_progress']);
+                },
+            ])
             ->where('team_id', Auth::user()->currentTeam->id)
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
@@ -116,10 +125,16 @@ class ConversationList extends Component
                         $sub->where('name', 'like', '%'.$this->search.'%')
                             ->orWhere('phone_number', 'like', '%'.$this->search.'%')
                             ->orWhere('custom_attributes', 'like', '%'.$this->search.'%');
-                    })
-                        ->orWhereHas('messages', function ($sub) {
-                            $sub->where('content', 'like', '%'.$this->search.'%');
+                    });
+
+                    // One or two characters match almost everything, so searching
+                    // bodies for them costs a scan to return noise. The floor also
+                    // matches InnoDB's default innodb_ft_min_token_size of 3.
+                    if (mb_strlen($this->search) >= self::MESSAGE_SEARCH_MIN_LENGTH) {
+                        $q->orWhereHas('messages', function ($sub) {
+                            $this->applyContentSearch($sub);
                         });
+                    }
                 });
             })
             ->when($this->filterReadStatus !== 'all', function ($query) {
@@ -153,6 +168,61 @@ class ConversationList extends Component
             ->orderByDesc('last_message_at')
             ->take($this->perPage)
             ->get();
+    }
+
+    /**
+     * Match message bodies against the FULLTEXT index where the driver has one,
+     * and fall back to LIKE where it doesn't (SQLite in tests).
+     */
+    private function applyContentSearch($query): void
+    {
+        $term = $this->usesFullTextSearch() ? $this->booleanModeTerm($this->search) : '';
+
+        if ($term === '') {
+            $query->where('content', 'like', '%'.$this->search.'%');
+
+            return;
+        }
+
+        $query->whereFullText('content', $term, ['mode' => 'boolean']);
+    }
+
+    private function usesFullTextSearch(): bool
+    {
+        // Postgres would need a different index and expression; the app runs MySQL,
+        // so anything else takes the LIKE path rather than an untested one.
+        return in_array(\Illuminate\Support\Facades\DB::connection()->getDriverName(), ['mysql', 'mariadb'], true);
+    }
+
+    /**
+     * Keep only letters/digits/underscore, which is roughly how InnoDB tokenises
+     * text — and conveniently means no boolean-mode operator (+ - > < ( ) ~ * " @)
+     * can survive to invert a match or break the query. Each surviving word
+     * becomes +word*:
+     *
+     *   *  trailing wildcard, so partial words still hit the way LIKE '%term%' did
+     *   +  required, because boolean mode ORs terms by default — without it,
+     *      typing more words would widen the result set instead of narrowing it
+     *
+     * Words below innodb_ft_min_token_size are dropped rather than required: they
+     * are not in the index at all, so "+re*" from "re-order" could never match.
+     *
+     * Returns '' when nothing usable survives, which sends the caller back to LIKE.
+     */
+    private function booleanModeTerm(string $search): string
+    {
+        preg_match_all('/[\p{L}\p{N}_]+/u', $search, $matches);
+
+        $words = array_filter(
+            $matches[0],
+            fn ($word) => mb_strlen($word) >= self::MESSAGE_SEARCH_MIN_LENGTH
+        );
+
+        if (empty($words)) {
+            return '';
+        }
+
+        return implode(' ', array_map(fn ($word) => '+'.$word.'*', $words));
     }
 
     public function getStatsProperty()

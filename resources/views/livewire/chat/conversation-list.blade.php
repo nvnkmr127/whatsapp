@@ -1,4 +1,5 @@
-<div class="flex flex-col h-full bg-transparent">
+<div class="flex flex-col h-full bg-transparent"
+    x-data="inboxLive('{{ auth()->user()?->currentTeam?->id }}')">
     <!-- Header -->
     <!-- Header -->
     <div class="px-6 py-6 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
@@ -52,6 +53,12 @@
                 </svg>
             </button>
         </div>
+
+        @if(mb_strlen($search) > 0 && mb_strlen($search) < 3)
+            <p class="px-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                {{ __('Searching names and numbers — type 3 characters to include message text') }}
+            </p>
+        @endif
 
         <!-- Filter Panel -->
         <div x-show="showFilters" x-collapse

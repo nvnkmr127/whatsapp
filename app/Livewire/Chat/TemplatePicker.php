@@ -98,7 +98,9 @@ class TemplatePicker extends Component
     public function render()
     {
         return view('livewire.chat.template-picker', [
-            'templates' => $this->filtered_templates,
+            // The list lives inside a modal that is closed on almost every render,
+            // and openTemplateList() re-renders, so loading it eagerly buys nothing.
+            'templates' => $this->showTemplateListModal ? $this->filtered_templates : collect(),
         ]);
     }
 }

@@ -11,6 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Guarded because the column already exists on databases that predate this
+        // migration — without it the whole migration queue aborts here.
+        if (Schema::hasColumn('conversations', 'metadata')) {
+            return;
+        }
+
         Schema::table('conversations', function (Blueprint $table) {
             $table->json('metadata')->nullable()->after('close_reason');
         });

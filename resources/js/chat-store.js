@@ -6,8 +6,8 @@ document.addEventListener('livewire:init', () => {
         ...messagesStore,
         ...presenceStore,
 
-        init(wire, conversationId, teamId) {
-            this.initMessages(wire, conversationId, teamId);
+        init(wire, conversationId, teamId, initialMessages) {
+            this.initMessages(wire, conversationId, teamId, initialMessages);
             this.initPresence(conversationId, teamId);
             
             // Shared metadata

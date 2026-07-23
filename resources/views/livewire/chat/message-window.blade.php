@@ -9,7 +9,8 @@
         $wire.entangle('isNoteMode'),
         $wire.entangle('lightboxOpen'),
         $wire.entangle('lightboxImage'),
-        @js($this->quickReplies)
+        @js($this->quickReplies),
+        @js($initialMessages)
     )"
     @chat-scroll-to-id.window="scrollToMessage($event.detail.id)">
 
@@ -354,11 +355,11 @@
             :style="'padding-top: ' + renderConfig.top + 'px; padding-bottom: ' + renderConfig.bottom + 'px'">
 
             <!-- Load More -->
-            <div class="flex justify-center mb-6">
-                <button wire:click="loadMore" wire:loading.attr="disabled"
+            <div class="flex justify-center mb-6" x-show="$store.chat.hasMore" x-cloak>
+                <button type="button" @click="$store.chat.loadMessages()" :disabled="$store.chat.loading"
                     class="px-5 py-2 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-sm text-slate-500 dark:text-slate-400 text-tiny font-black uppercase tracking-widest rounded-full border border-slate-200 dark:border-slate-700 transition-all hover:scale-105 active:scale-95 disabled:opacity-50">
-                    <span wire:loading.remove wire:target="loadMore">{{ __('Load Previous Messages') }}</span>
-                    <span wire:loading wire:target="loadMore" class="flex items-center gap-2">
+                    <span x-show="!$store.chat.loading">{{ __('Load Previous Messages') }}</span>
+                    <span x-show="$store.chat.loading" class="flex items-center gap-2">
                         <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         {{ __('Loading...') }}
                     </span>
@@ -395,8 +396,52 @@
     </div>
 
     @if($isSessionOpen)
-        <!-- New Media Upload Component -->
-        <livewire:chat.media-upload :conversationId="$conversationId" />
+        <!-- Attachment Preview (file is picked / uploading) -->
+        <div x-show="hasAttachment" x-cloak
+            class="px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between sticky bottom-0 z-30">
+            <div class="flex items-center gap-4">
+                <div class="h-14 w-14 rounded-2xl bg-white dark:bg-slate-800 p-1 shadow-lg shadow-wa-teal/5 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden">
+                    <template x-if="attachmentPreview">
+                        <img :src="attachmentPreview" class="h-full w-full rounded-xl object-cover">
+                    </template>
+                    <template x-if="!attachmentPreview">
+                        <svg class="h-6 w-6 text-wa-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </template>
+                </div>
+                <div>
+                    <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight truncate max-w-[200px]"
+                        x-text="attachmentName"></h4>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                        x-text="$wire.newAttachmentData ? 'Ready to send' : 'Uploading…'"></span>
+                </div>
+            </div>
+
+            <button type="button" @click="clearAttachment()"
+                class="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 transition-all hover:scale-110 active:scale-95 border border-rose-100/50">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Upload Error -->
+        <x-app-modal wire:model="uploadError" maxWidth="sm">
+            <div class="p-6 text-center">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 mb-6">
+                    <svg class="h-8 w-8 text-rose-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-black text-slate-900 mb-2 uppercase tracking-tight">{{ __('Upload Error') }}</h3>
+                <p class="text-sm text-slate-500 mb-6 font-bold">{{ $uploadError }}</p>
+                <x-app-button variant="primary" @click="$wire.uploadError = null" class="w-full">
+                    {{ __('Dismiss') }}
+                </x-app-button>
+            </div>
+        </x-app-modal>
 
         <!-- Input Area -->
         <div
@@ -444,7 +489,11 @@
             <form @submit.prevent="handleSubmit().then(() => { replyingTo = null; })" class="flex-1 flex items-center gap-2 relative"
                 x-data="{ replyingTo: null }" 
                 @reply-to-message.window="replyingTo = $event.detail; $wire.set('replyToMessageId', $event.detail.id)">
-                <button @click="$dispatch('triggerMediaUpload')"
+                <input type="file" wire:model="newAttachment" class="hidden" x-ref="fileInput"
+                    @change="onFilePicked($event.target.files[0])"
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+
+                <button type="button" @click="$refs.fileInput.click()"
                     class="p-3 bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-wa-teal hover:bg-wa-teal/5 rounded-xl transition-all hover:scale-110 active:scale-95 shadow-sm border border-slate-100/50 dark:border-slate-800/50">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -476,7 +525,7 @@
                             {{ __('PRIVATE NOTE') }}
                         </div>
                     </template>
-                    <textarea x-model="msgBody" @keydown.enter.prevent="handleSubmit" x-ref="messageInput"
+                    <textarea x-model="msgBody" @keydown.enter="if (!$event.shiftKey && !showQR) { $event.preventDefault(); handleSubmit(); }" x-ref="messageInput"
                         @focus="$store.chat.requestLock()" @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
                         @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
                         placeholder="{{ __('Type a message (or / for templates)...') }}" rows="1"
@@ -507,16 +556,16 @@
 
                 <button type="submit" :disabled="$store.chat.isLockedForMe()"
                     class="h-14 w-14 flex items-center justify-center text-white rounded-[1.5rem] transition-all group"
-                    :class="msgBody.trim() || $wire.newAttachmentData ? 'bg-wa-teal shadow-wa-teal/20' : 'bg-slate-900 shadow-slate-900/10 hover:scale-105 active:scale-95'"
-                    wire:loading.attr="disabled">
-                    <template x-if="msgBody.trim() || $wire.newAttachmentData || isNoteMode">
+                    :class="canSend ? 'bg-wa-teal shadow-wa-teal/20' : 'bg-slate-900 shadow-slate-900/10 hover:scale-105 active:scale-95'">
+                    <template x-if="canSend || isNoteMode">
                         <svg class="w-5 h-5 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"
+                            :class="_submitting && 'animate-pulse'"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                 d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                     </template>
-                    <template x-if="!msgBody.trim() && !$wire.newAttachmentData && !isNoteMode">
+                    <template x-if="!canSend && !isNoteMode">
                         <svg @click.prevent="startRecording()" class="w-5 h-5" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

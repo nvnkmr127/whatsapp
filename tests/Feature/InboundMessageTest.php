@@ -190,7 +190,9 @@ class InboundMessageTest extends TestCase
         ]);
 
         Event::fake([\App\Events\MessageReceived::class]);
-        \Illuminate\Support\Facades\Queue::fake([\App\Jobs\SendMessageJob::class]);
+        // Bus, not Queue: SendMessageJob is not ShouldQueue, so it runs inline and
+        // never reaches the queue. Queue::fake() would never see it.
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendMessageJob::class]);
 
         $payload = [
             'provider_id' => 'wamid.test.'.uniqid(),
@@ -206,7 +208,7 @@ class InboundMessageTest extends TestCase
         (new PersistMessageJob($payload))->handle();
 
         $this->assertEquals('opted_out', Contact::first()->opt_in_status);
-        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendMessageJob::class);
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\SendMessageJob::class);
     }
 
     public function test_default_stop_keyword_still_works_without_confirmation()
@@ -218,7 +220,9 @@ class InboundMessageTest extends TestCase
         ]);
 
         Event::fake([\App\Events\MessageReceived::class]);
-        \Illuminate\Support\Facades\Queue::fake([\App\Jobs\SendMessageJob::class]);
+        // Was Queue::fake + assertNotPushed, which passed vacuously: an inline job
+        // never reaches the queue, so the assertion could not fail.
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendMessageJob::class]);
 
         $payload = [
             'provider_id' => 'wamid.test.'.uniqid(),
@@ -234,6 +238,6 @@ class InboundMessageTest extends TestCase
         (new PersistMessageJob($payload))->handle();
 
         $this->assertEquals('opted_out', Contact::first()->opt_in_status);
-        \Illuminate\Support\Facades\Queue::assertNotPushed(\App\Jobs\SendMessageJob::class);
+        \Illuminate\Support\Facades\Bus::assertNotDispatched(\App\Jobs\SendMessageJob::class);
     }
 }

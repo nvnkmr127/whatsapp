@@ -18,6 +18,10 @@ class MessageWindow extends Component
 
     public $newAttachment;
 
+    public $voiceNote;
+
+    public $uploadError = null;
+
     public $selectedTemplateId;
 
     public $conversation;
@@ -36,8 +40,6 @@ class MessageWindow extends Component
     protected $listeners = [
         'refresh-tags' => 'loadConversation',
         'templateSelected' => 'handleTemplateSelected',
-        'mediaUploaded' => 'handleMediaUploaded',
-        'mediaDeleted' => 'handleMediaDeleted',
         'aiSuggestionSelected' => 'handleAiSuggestionSelected',
     ];
 
@@ -70,14 +72,20 @@ class MessageWindow extends Component
     public $forwardSelectedConversations = [];
     public $forwardRecentConversations = [];
 
-    public $messageCount = 50;
-
     public $lastMessageId = null;
+
+    /**
+     * First page of bubbles, embedded straight into the initial render so opening a
+     * chat costs one roundtrip instead of render + a follow-up loadMessagesJson().
+     * Deliberately NOT a public property — it would ride along in every payload.
+     */
+    protected $initialMessages = null;
 
     public function mount($conversationId)
     {
         $this->conversationId = $conversationId;
         $this->loadConversation();
+        $this->initialMessages = $this->loadMessagesJson(0, 50);
 
         $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
             ->whereIn('target_module', ['chat', 'all'])
@@ -89,58 +97,47 @@ class MessageWindow extends Component
     {
         $this->conversation = Conversation::with(['contact'])->where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
 
-        if ($this->conversation) {
-            // Load messages with pagination to prevent memory exhaustion
-            $chatMessages = $this->conversation->messages()
-                ->orderBy('created_at', 'desc')
-                ->take($this->messageCount)
-                ->get()
-                ->reverse();
-
-            if (count($chatMessages) > 0) {
-                $latestId = $chatMessages->last()->id;
-
-                // Sync UI state
-                if ($this->lastMessageId && $latestId > $this->lastMessageId) {
-                    $this->dispatch('play-sound');
-                    $this->dispatch('chat-scroll-bottom');
-                }
-
-                $this->lastMessageId = $latestId;
-            }
-
-            // Mark as read locally and sync to WhatsApp asynchronously
-            $unreadMessages = $this->conversation->messages()
-                ->where('direction', 'inbound')
-                ->whereNull('read_at')
-                ->get();
-
-            if ($unreadMessages->isNotEmpty()) {
-                $this->conversation->messages()
-                    ->whereIn('id', $unreadMessages->pluck('id'))
-                    ->update(['read_at' => now()]);
-
-                if (Auth::user()->currentTeam->read_receipts_enabled) {
-                    $msgIds = $unreadMessages->pluck('whatsapp_message_id')->filter()->toArray();
-                    if (!empty($msgIds)) {
-                        \App\Jobs\MarkAsReadJob::dispatch(Auth::user()->currentTeam->id, $msgIds);
-                    }
-                }
-                $this->dispatch('chat-messages-read');
-            }
-
-            return $chatMessages;
+        if (! $this->conversation) {
+            return;
         }
-        return collect();
+
+        // The bubbles come from the Alpine store via loadMessagesJson(), so only the
+        // newest id is needed here. Hydrating 50 Message models on every action
+        // (send, react, tag, transfer…) was pure waste.
+        $latestId = $this->conversation->messages()->max('id');
+
+        if ($latestId) {
+            if ($this->lastMessageId && $latestId > $this->lastMessageId) {
+                $this->dispatch('play-sound');
+                $this->dispatch('chat-scroll-bottom');
+            }
+            $this->lastMessageId = $latestId;
+        }
+
+        $this->markAsRead();
     }
 
-    public function loadMore()
+    /** Mark inbound messages read locally and sync the receipts to WhatsApp async. */
+    protected function markAsRead(): void
     {
-        $this->messageCount += 50;
-        $chatMessages = $this->loadConversation();
-        if ($chatMessages->count() > 0) {
-            $this->dispatch('chat-scroll-to-id', ['id' => $chatMessages->first()->id]);
+        $unread = $this->conversation->messages()
+            ->where('direction', 'inbound')
+            ->whereNull('read_at');
+
+        // Must be read before the UPDATE clears the rows from the filter.
+        $waIds = Auth::user()->currentTeam->read_receipts_enabled
+            ? (clone $unread)->whereNotNull('whatsapp_message_id')->pluck('whatsapp_message_id')->all()
+            : [];
+
+        if ($unread->update(['read_at' => now()]) === 0) {
+            return;
         }
+
+        if (! empty($waIds)) {
+            \App\Jobs\MarkAsReadJob::dispatch(Auth::user()->currentTeam->id, $waIds);
+        }
+
+        $this->dispatch('chat-messages-read');
     }
 
     public function handleTemplateSelected($payload)
@@ -174,14 +171,35 @@ class MessageWindow extends Component
         }
     }
 
-    public function handleMediaUploaded($payload)
+    /**
+     * Fired by the composer file input AND by drag-and-drop (both upload to
+     * `newAttachment`). The Livewire temporary URL expires and is not reachable
+     * by Meta, so the media MUST be persisted before sending.
+     */
+    public function updatedNewAttachment()
     {
-        $this->newAttachmentData = $payload;
-    }
-
-    public function handleMediaDeleted()
-    {
+        $this->uploadError = null;
         $this->newAttachmentData = null;
+
+        if (! $this->newAttachment) {
+            return;
+        }
+
+        try {
+            $this->validate(['newAttachment' => 'max:16384']); // 16MB
+
+            $this->newAttachmentData = [
+                'name' => $this->newAttachment->getClientOriginalName(),
+                'mime_type' => $this->newAttachment->getMimeType(),
+                'size' => $this->newAttachment->getSize(),
+                // Same disk full_media_url resolves against, or SendMessageJob
+                // hands Meta a URL that 404s.
+                'path' => $this->newAttachment->store('chat-media', config('filesystems.default')),
+            ];
+        } catch (\Exception $e) {
+            $this->uploadError = 'File upload failed: '.$e->getMessage();
+            $this->reset('newAttachment');
+        }
     }
 
     public function handleAiSuggestionSelected($text)
@@ -191,8 +209,8 @@ class MessageWindow extends Component
 
     /**
      * Send the picked media attachment (image/video/audio/document).
-     * The file was persisted by the MediaUpload sub-component, which handed us
-     * its stored public-disk path in newAttachmentData.
+     * The file was persisted by updatedNewAttachment(), which left
+     * its stored path in newAttachmentData.
      */
     public function sendMessage()
     {
@@ -225,7 +243,8 @@ class MessageWindow extends Component
         $this->msgBody = '';
         $this->replyToMessageId = null;
         $this->newAttachmentData = null;
-        $this->dispatch('clearMediaUpload');
+        // The Message row owns the file now — clear the picker without deleting it.
+        $this->reset('newAttachment');
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
@@ -438,17 +457,20 @@ class MessageWindow extends Component
 
     public function sendVoiceNote($audioFile)
     {
-        // wire.upload('newAttachment', blob, callback) sets $this->newAttachment
-        // to a TemporaryUploadedFile — $audioFile is just the temp filename string.
-        $file = $this->newAttachment;
+        // wire.upload('voiceNote', blob, callback) sets $this->voiceNote to a
+        // TemporaryUploadedFile — $audioFile is just the temp filename string.
+        // Kept off `newAttachment` so the composer's upload hook doesn't fire.
+        $file = $this->voiceNote;
         if (! $this->conversation || ! $file) {
             return;
         }
 
+        $disk = config('filesystems.default');
+
         // Store with an explicit .ogg extension. A blob upload has no filename, so
         // store() would save it extensionless and the server would serve it as
         // application/octet-stream — WhatsApp rejects that as a voice note.
-        $path = $file->storeAs('voice-notes', \Illuminate\Support\Str::random(40).'.ogg', 'public');
+        $path = $file->storeAs('voice-notes', \Illuminate\Support\Str::random(40).'.ogg', $disk);
 
         $message = \App\Models\Message::create([
             'team_id' => Auth::user()->currentTeam->id,
@@ -469,13 +491,13 @@ class MessageWindow extends Component
             Auth::user()->currentTeam->id,
             $this->conversation->contact->phone_number,
             'audio',
-            Storage::disk('public')->url($path),
+            Storage::disk($disk)->url($path),
             null,
             'en_US',
             $message->id
         );
 
-        $this->reset('newAttachment');
+        $this->reset('voiceNote');
         $this->loadConversation();
         $this->dispatch('messageSent');
     }
@@ -705,8 +727,12 @@ class MessageWindow extends Component
 
     public function deleteAttachment()
     {
-        $this->newAttachmentData = null; // Changed from newAttachment
-        $this->dispatch('clearMediaUpload'); // Signal to sub-component
+        // Cancelled before sending — remove the orphaned file.
+        if (! empty($this->newAttachmentData['path'])) {
+            Storage::disk(config('filesystems.default'))->delete($this->newAttachmentData['path']);
+        }
+        $this->newAttachmentData = null;
+        $this->reset('newAttachment');
     }
 
     public function toggleCategory($categoryId)
@@ -789,24 +815,30 @@ class MessageWindow extends Component
         $this->dispatch('message-reacted');
     }
 
+    // Both re-run on every roundtrip (send, react, tag…) but change rarely.
+    // ponytail: 60s TTL, swap for cache invalidation on save if staleness bites.
     public function getQuickRepliesProperty()
     {
-        return \App\Models\CannedMessage::where('team_id', Auth::user()->currentTeam->id)
+        $teamId = Auth::user()->currentTeam->id;
+
+        return cache()->remember("chat_quick_replies_{$teamId}", 60, fn () => \App\Models\CannedMessage::where('team_id', $teamId)
             ->latest()
-            ->get()
-            ->map(function ($msg) {
-                return [
-                    'code' => $msg->shortcut,
-                    'text' => $msg->content,
-                ];
-            });
+            ->get(['shortcut', 'content'])
+            ->map(fn ($msg) => ['code' => $msg->shortcut, 'text' => $msg->content])
+            ->all());
     }
 
     public function getAgentsProperty()
     {
-        return Auth::user()->currentTeam->users()
-            ->where('users.id', '!=', Auth::id())
-            ->get();
+        $teamId = Auth::user()->currentTeam->id;
+
+        return cache()->remember(
+            "chat_agents_{$teamId}_".Auth::id(),
+            60,
+            fn () => Auth::user()->currentTeam->users()
+                ->where('users.id', '!=', Auth::id())
+                ->get(['users.id', 'users.name', 'users.email'])
+        );
     }
 
     public function getIsSessionOpenProperty()
@@ -817,13 +849,6 @@ class MessageWindow extends Component
         $lastMsg = $this->conversation->contact->last_customer_message_at;
 
         return $lastMsg && $lastMsg->gt(now()->subHours(24));
-    }
-
-    public function getTemplatesProperty()
-    {
-        return \App\Models\WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
-            ->where('status', 'APPROVED')
-            ->get();
     }
 
     public function getPreviewButtonBodyProperty()
@@ -1057,9 +1082,9 @@ class MessageWindow extends Component
     {
         return view('livewire.chat.message-window', [
             'isSessionOpen' => $this->isSessionOpen,
-            'templates' => $this->isSessionOpen ? [] : $this->templates,
             'quickReplies' => $this->quickReplies,
             'agents' => $this->agents,
+            'initialMessages' => $this->initialMessages, // null on re-renders; Alpine only reads it once
         ]);
     }
 }

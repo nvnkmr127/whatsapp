@@ -17,12 +17,6 @@ class ContactDetails extends Component
 
     public $contact;
 
-    public $timeline = [];
-
-    public $mediaVault = [];
-
-    public $heatmap = [];
-
     public $activeTab = 'profile'; // Default tab
 
     public $newNoteBody = '';
@@ -43,36 +37,36 @@ class ContactDetails extends Component
         $this->loadData();
     }
 
-    public function loadData(?ContactTimelineService $timelineService = null)
+    public function loadData()
     {
-        // For Livewire lifecycle compatibility, we fall back to app() if not passed during first run
-        $timelineService = $timelineService ?? app(ContactTimelineService::class);
-
         $this->conversation = Conversation::with([
             'contact.tags',
-            'contact.attributedMessages.attributedCampaign',
             'notes.user',
             'assignee',
         ])->find($this->conversationId);
 
-        if ($this->conversation) {
-            $this->contact = $this->conversation->contact;
-            if ($this->contact) {
-                $this->timeline = $timelineService->getTimeline($this->contact, ! Auth::user()?->is_super_admin);
-                $this->mediaVault = $timelineService->getMediaVault($this->contact);
-                // Heatmap is no longer needed in the simplified chat sidebar
-                $this->heatmap = [];
-            } else {
-                $this->timeline = [];
-                $this->mediaVault = [];
-                $this->heatmap = [];
-            }
-        } else {
-            $this->contact = null;
-            $this->timeline = [];
-            $this->mediaVault = [];
-            $this->heatmap = [];
-        }
+        $this->contact = $this->conversation?->contact;
+
+        // Both tabs are behind a click — recompute them next render if they're shown.
+        unset($this->timeline, $this->mediaVault);
+    }
+
+    /** 8 queries, rendered only on the Timeline tab. */
+    #[Computed]
+    public function timeline()
+    {
+        return $this->contact
+            ? app(ContactTimelineService::class)->getTimeline($this->contact, ! Auth::user()?->is_super_admin)
+            : collect();
+    }
+
+    /** Rendered only on the Files tab. */
+    #[Computed]
+    public function mediaVault()
+    {
+        return $this->contact
+            ? app(ContactTimelineService::class)->getMediaVault($this->contact)
+            : collect();
     }
 
     public function startEdit()

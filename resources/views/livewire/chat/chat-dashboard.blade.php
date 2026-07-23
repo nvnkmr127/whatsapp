@@ -28,8 +28,9 @@
                 </div>
             </div>
 
-            <livewire:chat.message-window :conversation-id="$activeConversationId" :key="'window-' . $activeConversationId"
-                lazy />
+            {{-- Not lazy: it renders in the same roundtrip that selects the conversation,
+                 and the first page of messages is already embedded in that render. --}}
+            <livewire:chat.message-window :conversation-id="$activeConversationId" :key="'window-' . $activeConversationId" />
         @else
             <div
                 class="flex-1 flex items-center justify-center flex-col text-slate-400 dark:text-slate-600 p-8 text-center bg-dots-pattern">
@@ -56,7 +57,10 @@
             x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-x-0"
             x-transition:leave-end="opacity-0 translate-x-full"
             class="hidden xl:flex w-72 border-l border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col overflow-y-auto z-10">
-            <livewire:chat.contact-details :conversation-id="$activeConversationId" :key="'details-' . $activeConversationId" />
+            {{-- Lazy on purpose: secondary info, and it's hidden below xl anyway.
+                 Keeps the sidebar's queries off the chat-open critical path. --}}
+            <livewire:chat.contact-details :conversation-id="$activeConversationId" :key="'details-' . $activeConversationId"
+                lazy />
         </div>
     @endif
 
