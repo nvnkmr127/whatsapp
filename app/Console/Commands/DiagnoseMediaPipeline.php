@@ -4,8 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\Message;
 use App\Models\Team;
+use App\Services\MediaService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Inbound media arrives as a media_id; DownloadMediaJob fetches it from Meta and
@@ -14,7 +17,9 @@ use Illuminate\Support\Facades\Storage;
  */
 class DiagnoseMediaPipeline extends Command
 {
-    protected $signature = 'media:diagnose {--team= : Team id (defaults to the first team)}';
+    protected $signature = 'media:diagnose
+        {--team= : Team id (defaults to the first team)}
+        {--media-id= : Run the real two-step download against this media id and compare request shapes}';
 
     protected $description = 'Check the inbound media pipeline: disk config, writability, public URL reachability, and stuck messages';
 
@@ -39,6 +44,10 @@ class DiagnoseMediaPipeline extends Command
         $ok = $this->checkAccessToken($team) && $ok;
         $ok = $this->checkDiskWritable($disk) && $ok;
         $ok = $this->checkPublicUrl($disk) && $ok;
+
+        if ($this->option('media-id')) {
+            $ok = $this->probeLiveDownload($team, $this->option('media-id')) && $ok;
+        }
 
         $this->reportStuckMessages($team);
 
@@ -113,6 +122,70 @@ class DiagnoseMediaPipeline extends Command
         $this->line("<info>✓</info> public url: {$url}");
 
         return true;
+    }
+
+    /**
+     * Reproduces DownloadMediaJob's two HTTP calls against a real media id, then
+     * retries the binary fetch under different request shapes. A 500 from the CDN
+     * that clears with one header change is a client problem, not Meta being down.
+     */
+    private function probeLiveDownload(Team $team, string $mediaId): bool
+    {
+        $this->newLine();
+        $this->info("Live download probe · media_id={$mediaId}");
+
+        $base = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
+
+        $lookup = Http::withToken($team->whatsapp_access_token)->get("{$base}/{$mediaId}");
+
+        if ($lookup->failed()) {
+            $this->error("  ✗ step 1 lookup: HTTP {$lookup->status()} — ".Str::limit($lookup->body(), 300));
+            $this->line('    The media id is wrong, expired (media is kept ~30 days), or the token lacks access.');
+
+            return false;
+        }
+
+        $url = $lookup->json('url');
+        $this->line("  <info>✓</info> step 1 lookup: HTTP 200 · {$lookup->json('mime_type')} · ".($lookup->json('file_size') ?? '?').' bytes');
+
+        if (! $url) {
+            $this->error('  ✗ step 1 returned no url');
+
+            return false;
+        }
+
+        $this->line('    host: '.parse_url($url, PHP_URL_HOST));
+
+        $shapes = [
+            'token + User-Agent (what the code now sends)' => ['User-Agent' => MediaService::USER_AGENT],
+            'token only (the old request that 500d)' => [],
+            'token + curl User-Agent' => ['User-Agent' => 'curl/8.4.0'],
+        ];
+
+        $anyWorked = false;
+
+        foreach ($shapes as $label => $headers) {
+            try {
+                $res = Http::withToken($team->whatsapp_access_token)->withHeaders($headers)->timeout(60)->get($url);
+                $size = strlen($res->body());
+
+                if ($res->successful()) {
+                    $anyWorked = true;
+                    $this->line("  <info>✓</info> {$label}: HTTP {$res->status()} · {$size} bytes");
+                } else {
+                    $this->line("  <fg=red>✗</> {$label}: HTTP {$res->status()} · ".Str::limit($res->body(), 120));
+                }
+            } catch (\Throwable $e) {
+                $this->line("  <fg=red>✗</> {$label}: threw — ".Str::limit($e->getMessage(), 120));
+            }
+        }
+
+        $this->newLine();
+        $this->line($anyWorked
+            ? '  At least one shape works — the download is fixable from our side.'
+            : '  <comment>No shape worked. The URL may have expired (they are short-lived: re-run with a fresh media id), or Meta is genuinely erroring.</comment>');
+
+        return $anyWorked;
     }
 
     private function reportStuckMessages(Team $team): void

@@ -10,6 +10,9 @@ use Illuminate\Support\Str;
 
 class MediaService
 {
+    /** Meta's CDN rejects unrecognised clients; keep this browser-shaped. */
+    public const USER_AGENT = 'Mozilla/5.0 (compatible; WhatsAppBusinessAPI/1.0)';
+
     protected $baseUrl;
 
     public function __construct()
@@ -64,13 +67,26 @@ class MediaService
         // 2. Download Binary
         // Meta's media URLs are short-lived — if the queue is backed up, this is
         // where a delayed job dies.
-        $binaryResponse = Http::withToken($accessToken)->get($mediaUrl);
+        //
+        // The User-Agent is required, not cosmetic: Meta's lookaside CDN answers
+        // 500 Internal Server Error to clients it doesn't recognise, and Guzzle's
+        // default "GuzzleHttp/7" is one of them. See `php artisan media:diagnose
+        // --media-id=<id>`, which probes this exact difference.
+        $binaryResponse = Http::withToken($accessToken)
+            ->withHeaders(['User-Agent' => self::USER_AGENT])
+            ->timeout(60)
+            ->get($mediaUrl);
 
         if ($binaryResponse->failed()) {
             Log::error('Media download failed', $log + [
                 'step' => 'binary_download_failed',
                 'status' => $binaryResponse->status(),
                 'body' => Str::limit($binaryResponse->body(), 500),
+                'host' => parse_url($mediaUrl, PHP_URL_HOST),
+                'response_headers' => array_map(
+                    fn ($v) => is_array($v) ? implode(', ', $v) : $v,
+                    array_intersect_key($binaryResponse->headers(), array_flip(['Content-Type', 'WWW-Authenticate', 'x-fb-debug', 'x-fb-rev']))
+                ),
             ]);
 
             return null;
