@@ -102,7 +102,7 @@
                     <div class="p-2 bg-white/10 rounded-xl border border-white/20 shadow-inner backdrop-blur-md">
                          <!-- Dynamic Logo Loading -->
                          @if(\App\Models\Team::first()?->logo_path)
-                            <img src="{{ \Illuminate\Support\Facades\Storage::url(\App\Models\Team::first()->logo_path) }}" 
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('r2')->url(\App\Models\Team::first()->logo_path) }}" 
                                  alt="Logo" class="w-8 h-8 object-contain">
                         @else
                             <x-application-mark class="w-8 h-8 text-white" />

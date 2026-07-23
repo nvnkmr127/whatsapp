@@ -15,7 +15,7 @@
 
     @php
         $systemAppName = get_setting('system_app_name', config('app.name', 'Laravel'));
-        $faviconUrl = get_setting('system_favicon') ? Storage::url(get_setting('system_favicon')) : asset('favicon.ico');
+        $faviconUrl = get_setting('system_favicon') ? Storage::disk('r2')->url(get_setting('system_favicon')) : asset('favicon.ico');
     @endphp
 
     <link rel="icon" type="image/x-icon" href="{{ $faviconUrl }}">

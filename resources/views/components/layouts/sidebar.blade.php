@@ -33,7 +33,7 @@
                 <div class="absolute -inset-2 bg-gradient-to-tr from-orange-500/40 to-orange-400/40 rounded-2xl blur-lg opacity-20 group-hover:opacity-60 transition duration-500"></div>
                 <div class="relative flex items-center justify-center w-14 h-14 bg-zinc-950 border border-zinc-800/60 rounded-2xl shadow-2xl ring-1 ring-white/5 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
                     @if(Auth::user()->currentTeam && Auth::user()->currentTeam->logo_path)
-                        <img src="{{ \Illuminate\Support\Facades\Storage::url(Auth::user()->currentTeam->logo_path) }}" class="w-full h-full object-cover">
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('r2')->url(Auth::user()->currentTeam->logo_path) }}" class="w-full h-full object-cover">
                     @else
                         <div class="w-8 h-8 flex items-center justify-center bg-orange-500/10 rounded-lg">
                             <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

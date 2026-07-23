@@ -196,9 +196,9 @@ class SystemSettings extends Component
             // Handle logo upload
             if ($this->logo) {
                 if ($team->logo_path) {
-                    Storage::disk('public')->delete($team->logo_path);
+                    Storage::disk('r2')->delete($team->logo_path);
                 }
-                $path = $this->logo->store('team-logos', 'public');
+                $path = $this->logo->store('team-logos', 'r2');
                 $team->logo_path = $path;
             }
 
@@ -213,9 +213,9 @@ class SystemSettings extends Component
         // Handle favicon upload (global)
         if ($this->favicon) {
             if ($this->currentFaviconPath) {
-                Storage::disk('public')->delete($this->currentFaviconPath);
+                Storage::disk('r2')->delete($this->currentFaviconPath);
             }
-            $faviconPath = $this->favicon->store('system-favicons', 'public');
+            $faviconPath = $this->favicon->store('system-favicons', 'r2');
             $this->currentFaviconPath = $faviconPath;
         }
 
@@ -259,7 +259,7 @@ class SystemSettings extends Component
         $team = Auth::user()->currentTeam;
 
         if ($team && $team->logo_path) {
-            Storage::disk('public')->delete($team->logo_path);
+            Storage::disk('r2')->delete($team->logo_path);
             $team->logo_path = null;
             $team->save();
 
@@ -273,7 +273,7 @@ class SystemSettings extends Component
         \Illuminate\Support\Facades\Gate::authorize('manage-settings');
 
         if ($this->currentFaviconPath) {
-            Storage::disk('public')->delete($this->currentFaviconPath);
+            Storage::disk('r2')->delete($this->currentFaviconPath);
             $this->currentFaviconPath = null;
             set_setting('system_favicon', null, 'system');
             
