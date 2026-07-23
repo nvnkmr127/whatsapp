@@ -57,7 +57,8 @@ class Message extends Model
             return $this->media_url;
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->media_url);
+        $disk = config('filesystems.default', 'public');
+        return \Illuminate\Support\Facades\Storage::disk($disk)->url($this->media_url);
     }
 
     public function contact()

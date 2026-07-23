@@ -61,14 +61,15 @@ class MediaService
         $filename = Str::random(40).'.'.$extension;
         $path = "whatsapp/{$team->id}/{$filename}";
 
-        // 4. Ensure Directory Exists (Public disk)
+        // 4. Ensure Directory Exists (Default disk)
+        $disk = config('filesystems.default', 'public');
         $directory = dirname($path);
-        if (!Storage::disk('public')->exists($directory)) {
-            Storage::disk('public')->makeDirectory($directory);
+        if (!Storage::disk($disk)->exists($directory)) {
+            Storage::disk($disk)->makeDirectory($directory);
         }
 
         // 5. Store with explicit public visibility and check for success
-        $stored = Storage::disk('public')->put($path, $binaryResponse->body(), 'public');
+        $stored = Storage::disk($disk)->put($path, $binaryResponse->body(), 'public');
 
         if (!$stored) {
             Log::error("Media download failed: Could not write to disk at {$path}");

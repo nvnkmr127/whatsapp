@@ -70,8 +70,6 @@ class MessageWindow extends Component
     public $forwardSelectedConversations = [];
     public $forwardRecentConversations = [];
 
-    public $chatMessages = []; // Dedicated property
-
     public $messageCount = 50;
 
     public $lastMessageId = null;
@@ -85,10 +83,6 @@ class MessageWindow extends Component
             ->whereIn('target_module', ['chat', 'all'])
             ->where('is_active', true)
             ->get();
-
-        if (count($this->chatMessages) > 0) {
-            $this->lastMessageId = $this->chatMessages->last()->id;
-        }
     }
 
     public function loadConversation()
@@ -97,14 +91,14 @@ class MessageWindow extends Component
 
         if ($this->conversation) {
             // Load messages with pagination to prevent memory exhaustion
-            $this->chatMessages = $this->conversation->messages()
+            $chatMessages = $this->conversation->messages()
                 ->orderBy('created_at', 'desc')
                 ->take($this->messageCount)
                 ->get()
                 ->reverse();
 
-            if (count($this->chatMessages) > 0) {
-                $latestId = $this->chatMessages->last()->id;
+            if (count($chatMessages) > 0) {
+                $latestId = $chatMessages->last()->id;
 
                 // Sync UI state
                 if ($this->lastMessageId && $latestId > $this->lastMessageId) {
@@ -134,16 +128,19 @@ class MessageWindow extends Component
                 }
                 $this->dispatch('chat-messages-read');
             }
-        } else {
-            $this->chatMessages = [];
+
+            return $chatMessages;
         }
+        return collect();
     }
 
     public function loadMore()
     {
         $this->messageCount += 50;
-        $this->loadConversation();
-        $this->dispatch('chat-scroll-to-id', ['id' => $this->chatMessages->first()->id]);
+        $chatMessages = $this->loadConversation();
+        if ($chatMessages->count() > 0) {
+            $this->dispatch('chat-scroll-to-id', ['id' => $chatMessages->first()->id]);
+        }
     }
 
     public function handleTemplateSelected($payload)
@@ -961,7 +958,7 @@ class MessageWindow extends Component
                     'status' => $msg->status,
                     'created_at' => $msg->created_at->timestamp, // Unix for easier JS sort
                     'pretty_time' => $msg->created_at->format('H:i'),
-                    'media_url' => $msg->media_url ? (str_starts_with($msg->media_url, 'http') ? $msg->media_url : \Illuminate\Support\Facades\Storage::disk('public')->url($msg->media_url)) : null,
+                    'media_url' => $msg->media_url ? (str_starts_with($msg->media_url, 'http') ? $msg->media_url : \Illuminate\Support\Facades\Storage::disk(config('filesystems.default', 'public'))->url($msg->media_url)) : null,
                     'media_type' => $msg->media_type,
                     'caption' => $msg->caption,
                     'error_message' => $msg->error_message, // For failed status
