@@ -22,7 +22,7 @@
                             @if ($logo)
                                 <img src="{{ $logo->temporaryUrl() }}" class="w-full h-full object-cover">
                             @elseif ($currentLogoPath)
-                                <img src="{{ Storage::url($currentLogoPath) }}" class="w-full h-full object-cover">
+                                <img src="{{ Storage::disk('r2')->url($currentLogoPath) }}" class="w-full h-full object-cover">
                             @else
                                 <div class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-2">
                                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -62,7 +62,7 @@
                             @if ($favicon)
                                 <img src="{{ $favicon->temporaryUrl() }}" class="w-full h-full object-contain">
                             @elseif ($currentFaviconPath)
-                                <img src="{{ Storage::url($currentFaviconPath) }}" class="w-full h-full object-contain">
+                                <img src="{{ Storage::disk('r2')->url($currentFaviconPath) }}" class="w-full h-full object-contain">
                             @else
                                 <div class="text-slate-300 dark:text-slate-600 flex flex-col items-center gap-1">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

@@ -405,8 +405,12 @@ class BackupService
     protected function addTenantFilesToZip(Team $team, ZipArchive $zip)
     {
         // Add team-specific files (e.g., logo)
-        if ($team->logo_path && Storage::disk('public')->exists($team->logo_path)) {
-            $zip->addFile(Storage::disk('public')->path($team->logo_path), 'storage/public/'.$team->logo_path);
+        if ($team->logo_path) {
+            if (Storage::disk('public')->exists($team->logo_path)) {
+                $zip->addFile(Storage::disk('public')->path($team->logo_path), 'storage/public/'.$team->logo_path);
+            } elseif (Storage::disk('r2')->exists($team->logo_path)) {
+                $zip->addFromString('storage/r2/'.$team->logo_path, Storage::disk('r2')->get($team->logo_path));
+            }
         }
 
         // Logic to add other team-specific assets if they existed in specific folders
@@ -706,18 +710,22 @@ class BackupService
             $this->executeSql($sql);
         }
 
-        // 4. Restore Assets — extract storage/public/** entries from the ZIP
-        $assetPrefix = 'storage/public/';
+        // 4. Restore Assets — extract storage/public/** and storage/r2/** entries from the ZIP
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
-            if (str_starts_with($name, $assetPrefix)) {
-                $relativePath = substr($name, strlen($assetPrefix));
-                if ($relativePath === '') {
-                    continue;
-                }
+            if (str_starts_with($name, 'storage/public/')) {
+                $relativePath = substr($name, strlen('storage/public/'));
+                if ($relativePath === '') continue;
                 $contents = $zip->getFromIndex($i);
                 if ($contents !== false) {
                     \Illuminate\Support\Facades\Storage::disk('public')->put($relativePath, $contents);
+                }
+            } elseif (str_starts_with($name, 'storage/r2/')) {
+                $relativePath = substr($name, strlen('storage/r2/'));
+                if ($relativePath === '') continue;
+                $contents = $zip->getFromIndex($i);
+                if ($contents !== false) {
+                    \Illuminate\Support\Facades\Storage::disk('r2')->put($relativePath, $contents);
                 }
             }
         }

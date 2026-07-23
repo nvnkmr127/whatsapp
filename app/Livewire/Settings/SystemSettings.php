@@ -198,7 +198,8 @@ class SystemSettings extends Component
                 if ($team->logo_path) {
                     Storage::disk('r2')->delete($team->logo_path);
                 }
-                $path = $this->logo->store('team-logos', 'r2');
+                $path = 'team-logos/' . $this->logo->hashName();
+                Storage::disk('r2')->put($path, $this->logo->get());
                 $team->logo_path = $path;
             }
 
@@ -215,7 +216,8 @@ class SystemSettings extends Component
             if ($this->currentFaviconPath) {
                 Storage::disk('r2')->delete($this->currentFaviconPath);
             }
-            $faviconPath = $this->favicon->store('system-favicons', 'r2');
+            $faviconPath = 'system-favicons/' . $this->favicon->hashName();
+            Storage::disk('r2')->put($faviconPath, $this->favicon->get());
             $this->currentFaviconPath = $faviconPath;
         }
 
