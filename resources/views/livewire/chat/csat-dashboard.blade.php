@@ -1,4 +1,4 @@
-<div class="p-6">
+<div class="p-6" wire:poll.30s>
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">CSAT Analytics</h1>
         <div class="flex items-center space-x-4">

@@ -241,6 +241,10 @@ class MessageWindow extends Component
         // Message-based dispatch resolves the public URL via $message->full_media_url.
         \App\Jobs\SendMessageJob::dispatch($message);
 
+        if ($this->conversation?->contact) {
+            app(\App\Services\BotHandoffService::class)->handleAgentActivity($this->conversation->contact);
+        }
+
         $this->msgBody = '';
         $this->replyToMessageId = null;
         $this->newAttachmentData = null;
@@ -855,6 +859,40 @@ class MessageWindow extends Component
     public function getIsOptedOutProperty()
     {
         return $this->conversation?->contact?->opt_in_status === 'opted_out';
+    }
+
+    public function downloadTranscript()
+    {
+        if (! $this->conversation) {
+            return;
+        }
+
+        $contactName = $this->conversation->contact?->name ?: 'Contact';
+        $contactPhone = $this->conversation->contact?->phone_number ?: '';
+        $messages = $this->conversation->messages()
+            ->with(['user'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $lines = [];
+        $lines[] = "=== CHAT TRANSCRIPT ===";
+        $lines[] = "Contact: {$contactName} ({$contactPhone})";
+        $lines[] = "Exported: ".now()->format('Y-m-d H:i:s');
+        $lines[] = "----------------------------------------\n";
+
+        foreach ($messages as $msg) {
+            $sender = $msg->direction === 'inbound' ? $contactName : ($msg->user?->name ?: 'Agent');
+            $time = $msg->created_at ? $msg->created_at->format('Y-m-d H:i:s') : '';
+            $content = trim($msg->content ?: '['.strtoupper($msg->type ?? 'media').']');
+            $lines[] = "[{$time}] {$sender}: {$content}";
+        }
+
+        $transcript = implode("\n", $lines);
+        $filename = "transcript_conv_{$this->conversationId}.txt";
+
+        return response()->streamDownload(fn () => print($transcript), $filename, [
+            'Content-Type' => 'text/plain',
+        ]);
     }
 
     public function getPreviewButtonBodyProperty()

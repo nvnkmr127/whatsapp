@@ -254,6 +254,21 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         this.showEmoji = false;
     },
 
+    applyFormat(wrapper) {
+        const input = this.$refs.messageInput;
+        if (!input) return;
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
+        const val = this.msgBody || '';
+        const selected = val.substring(start, end) || 'text';
+        const replacement = `${wrapper}${selected}${wrapper}`;
+        this.msgBody = val.substring(0, start) + replacement + val.substring(end);
+        this.$nextTick(() => {
+            input.focus();
+            input.setSelectionRange(start + wrapper.length, start + wrapper.length + selected.length);
+        });
+    },
+
     async handleSubmit() {
         if (this._submitting) return;
         if (!this.canSend && !this.isNoteMode) return;

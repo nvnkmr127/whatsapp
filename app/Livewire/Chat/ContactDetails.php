@@ -97,10 +97,16 @@ class ContactDetails extends Component
             return;
         }
 
+        $custom = $this->contact->custom_attributes ?? [];
+        if (! is_array($custom)) {
+            $custom = [];
+        }
+        $custom['notes'] = trim($this->editNotes) ?: null;
+
         $this->contact->update([
             'name'  => trim($this->editName),
             'email' => trim($this->editEmail) ?: null,
-            'notes' => trim($this->editNotes) ?: null,
+            'custom_attributes' => $custom,
         ]);
 
         $this->editing = false;

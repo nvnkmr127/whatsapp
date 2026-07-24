@@ -92,7 +92,7 @@ class SlaDashboard extends Component
 
     public function editPolicy(int $id): void
     {
-        $policy = SlaPolicy::findOrFail($id);
+        $policy = SlaPolicy::where('team_id', $this->team->id)->findOrFail($id);
         $this->editingPolicyId  = $policy->id;
         $this->policyName       = $policy->name;
         $this->firstResponseMin = $policy->first_response_minutes;
