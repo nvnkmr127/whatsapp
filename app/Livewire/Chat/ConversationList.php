@@ -23,12 +23,49 @@ class ConversationList extends Component
 
     public $filterBlocked = 'all'; // all, yes, no
 
+    public $filterStarred = false;
+
+    public $filterAssignment = 'all'; // all, mine, unassigned
+
     public $perPage = 25;
 
     public $availableCategories = [];
 
     // Bulk Selection State
     public array $selectedConversationIds = [];
+
+    public function bulkExport()
+    {
+        if (empty($this->selectedConversationIds) || ! Auth::check() || ! Auth::user()->currentTeam) {
+            return;
+        }
+
+        $conversations = Conversation::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('id', $this->selectedConversationIds)
+            ->with(['contact', 'messages.user'])
+            ->get();
+
+        $output = [];
+        foreach ($conversations as $conv) {
+            $contactName = $conv->contact?->name ?: 'Contact';
+            $contactPhone = $conv->contact?->phone_number ?: '';
+            $output[] = "=== CHAT TRANSCRIPT: {$contactName} ({$contactPhone}) ===";
+            foreach ($conv->messages->sortBy('created_at') as $msg) {
+                $sender = $msg->direction === 'inbound' ? $contactName : ($msg->user?->name ?: 'Agent');
+                $time = $msg->created_at ? $msg->created_at->format('Y-m-d H:i:s') : '';
+                $content = trim($msg->content ?: '['.strtoupper($msg->type ?? 'media').']');
+                $output[] = "[{$time}] {$sender}: {$content}";
+            }
+            $output[] = "\n----------------------------------------\n";
+        }
+
+        $filename = 'bulk_transcripts_'.now()->format('Ymd_His').'.txt';
+        $content = implode("\n", $output);
+
+        return response()->streamDownload(fn () => print($content), $filename, [
+            'Content-Type' => 'text/plain',
+        ]);
+    }
 
     public function bulkMarkAsRead()
     {
@@ -230,6 +267,18 @@ class ConversationList extends Component
                     $query->where('status', 'blocked');
                 } else {
                     $query->where('status', '!=', 'blocked');
+                }
+            })
+            ->when($this->filterStarred, function ($query) {
+                $query->whereHas('messages', function ($sub) {
+                    $sub->where('is_starred', true);
+                });
+            })
+            ->when($this->filterAssignment !== 'all', function ($query) {
+                if ($this->filterAssignment === 'mine') {
+                    $query->where('assigned_to', Auth::id());
+                } elseif ($this->filterAssignment === 'unassigned') {
+                    $query->whereNull('assigned_to');
                 }
             })
             ->orderByDesc('last_message_at');

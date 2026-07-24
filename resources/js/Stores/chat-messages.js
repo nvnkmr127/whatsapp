@@ -1,3 +1,4 @@
+export default {
     drafts: {},
 
     saveDraft(conversationId, text) {
@@ -167,9 +168,38 @@
         this.messages.sort((a, b) => a.created_at - b.created_at);
         window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
 
-        // Play sound if it's an inbound message or if it's from another agent
+        // Play sound and update tab title if tab is hidden
         if (msg.direction === 'inbound' || (msg.is_outbound && msg.agent_id !== this.myUserId)) {
             this.playNotificationSound();
+            this.updateTabTitleOnMessage();
+        }
+    },
+
+    _originalTitle: null,
+    unreadTitleCount: 0,
+    _visibilityTrackerInitialized: false,
+
+    initVisibilityTracker() {
+        if (this._visibilityTrackerInitialized) return;
+        this._visibilityTrackerInitialized = true;
+        if (typeof document !== 'undefined') {
+            this._originalTitle = document.title;
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    this.unreadTitleCount = 0;
+                    if (this._originalTitle) {
+                        document.title = this._originalTitle;
+                    }
+                }
+            });
+        }
+    },
+
+    updateTabTitleOnMessage() {
+        this.initVisibilityTracker();
+        if (typeof document !== 'undefined' && document.hidden) {
+            this.unreadTitleCount++;
+            document.title = `(${this.unreadTitleCount}) New Message - Chat`;
         }
     },
 

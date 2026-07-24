@@ -28,6 +28,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
     isNearBottom: true,
     unreadBelowCount: 0,
+    showShortcutsModal: false,
 
     get canSend() {
         return !!(this.msgBody.trim() || this.hasAttachment);
@@ -129,8 +130,13 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 } else if (e.altKey && (e.key === 'm' || e.key === 'M')) {
                     e.preventDefault();
                     this.isNoteMode = false;
+                } else if ((e.key === '?' && e.shiftKey) || ((e.ctrlKey || e.metaKey) && e.key === '/')) {
+                    e.preventDefault();
+                    this.showShortcutsModal = !this.showShortcutsModal;
                 } else if (e.key === 'Escape') {
-                    if (this.lightboxOpen) {
+                    if (this.showShortcutsModal) {
+                        this.showShortcutsModal = false;
+                    } else if (this.lightboxOpen) {
                         this.lightboxOpen = false;
                     } else if (this.showQR) {
                         this.showQR = false;

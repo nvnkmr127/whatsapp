@@ -895,6 +895,25 @@ class MessageWindow extends Component
         ]);
     }
 
+    public function toggleStarMessage($messageId)
+    {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
+            return;
+        }
+
+        $message = \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+            ->where('conversation_id', $this->conversationId)
+            ->find($messageId);
+
+        if ($message) {
+            $message->update(['is_starred' => ! $message->is_starred]);
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => $message->is_starred ? 'Message starred' : 'Message unstarred',
+            ]);
+        }
+    }
+
     public function getPreviewButtonBodyProperty()
     {
         return $this->waMarkdown(e($this->buttonBody ?: 'Message text...'));

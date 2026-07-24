@@ -836,6 +836,52 @@
         </div>
     </x-app-modal>
 
-
-
+    <!-- Keyboard Shortcuts Modal -->
+    <div x-show="showShortcutsModal" @click.away="showShortcutsModal = false" x-cloak x-transition
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-md p-6 overflow-hidden">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-wa-teal/10 text-wa-teal rounded-xl">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                    </div>
+                    <h3 class="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">{{ __('Keyboard Shortcuts') }}</h3>
+                </div>
+                <button type="button" @click="showShortcutsModal = false" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="py-4 space-y-3">
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ __('Send Message / Note') }}</span>
+                    <kbd class="px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded text-nano font-mono shadow-sm">Ctrl + Enter</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ __('Switch to Internal Note Mode') }}</span>
+                    <kbd class="px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded text-nano font-mono shadow-sm">Alt + N</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ __('Switch to Customer Message Mode') }}</span>
+                    <kbd class="px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded text-nano font-mono shadow-sm">Alt + M</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ __('Quick Replies Picker') }}</span>
+                    <kbd class="px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded text-nano font-mono shadow-sm">/</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ __('Toggle Shortcuts Help') }}</span>
+                    <kbd class="px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded text-nano font-mono shadow-sm">Shift + ?</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ __('Close Popups / Cancel Reply') }}</span>
+                    <kbd class="px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded text-nano font-mono shadow-sm">Esc</kbd>
+                </div>
+            </div>
+            <div class="pt-2 text-center">
+                <button type="button" @click="showShortcutsModal = false" class="px-6 py-2.5 bg-wa-teal text-white text-tiny font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all">
+                    {{ __('Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

@@ -31,10 +31,27 @@
     </div>
 
     <!-- Frequency Scanner (Search) -->
-    <div class="px-6 py-4 space-y-3" x-data="{ showFilters: false }">
+    <div class="px-6 py-4 space-y-3" x-data="{ showFilters: false }"
+        @keydown.window="if (($event.ctrlKey || $event.metaKey) && $event.key === 'k') { $event.preventDefault(); $refs.searchInput?.focus(); }">
+        <!-- Assignment Filter Pills -->
+        <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
+            <button type="button" wire:click="$set('filterAssignment', 'all')"
+                class="flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'all' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                {{ __('All') }}
+            </button>
+            <button type="button" wire:click="$set('filterAssignment', 'mine')"
+                class="flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'mine' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                {{ __('Mine') }}
+            </button>
+            <button type="button" wire:click="$set('filterAssignment', 'unassigned')"
+                class="flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all {{ $filterAssignment === 'unassigned' ? 'bg-white dark:bg-slate-800 text-wa-teal shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                {{ __('Unassigned') }}
+            </button>
+        </div>
+
         <div class="flex gap-2">
             <div class="relative group flex-1">
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Search...') }}"
+                <input type="text" x-ref="searchInput" wire:model.live.debounce.300ms="search" placeholder="{{ __('Search... (Ctrl+K)') }}"
                     class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-wa-teal/20 placeholder:text-slate-400 transition-all shadow-sm">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-slate-400 group-focus-within:text-wa-teal transition-colors" fill="none"
@@ -44,6 +61,11 @@
                     </svg>
                 </div>
             </div>
+            <button type="button" wire:click="$toggle('filterStarred')"
+                class="p-3 rounded-xl transition-all shadow-sm hover:shadow-md border font-bold text-xs flex items-center gap-1 {{ $filterStarred ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border-transparent' }}"
+                title="{{ __('Toggle Starred Messages Filter') }}">
+                <svg class="w-5 h-5 {{ $filterStarred ? 'fill-white' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+            </button>
             <button @click="showFilters = !showFilters"
                 :class="showFilters ? 'bg-wa-teal text-white shadow-wa-teal/20' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-wa-teal'"
                 class="p-3 rounded-xl shadow-sm transition-all hover:shadow-md">
@@ -265,6 +287,9 @@
                 {{ count($selectedConversationIds) }} {{ __('selected') }}
             </span>
             <div class="flex items-center gap-1">
+                <button wire:click="bulkExport" class="px-2.5 py-1.5 bg-wa-teal/20 hover:bg-wa-teal/40 text-wa-teal font-black text-micro uppercase rounded-lg transition-colors" title="{{ __('Export Selected Transcripts') }}">
+                    {{ __('Export') }}
+                </button>
                 <button wire:click="bulkMarkAsRead" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-micro font-black uppercase rounded-lg transition-colors" title="{{ __('Mark Read') }}">
                     {{ __('Read') }}
                 </button>
