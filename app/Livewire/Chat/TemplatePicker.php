@@ -31,25 +31,43 @@ class TemplatePicker extends Component
 
     public function selectTemplate($id)
     {
-        $this->selectedTemplateId = $id;
-        $template = WhatsappTemplate::find($id);
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
+            return;
+        }
+
+        $template = WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
+            ->find($id);
 
         if (! $template) {
             return;
         }
 
+        $this->selectedTemplateId = $template->id;
         $this->templateVariables = [];
-        foreach ($template->components ?? [] as $component) {
-            if ($component['type'] === 'BODY') {
-                preg_match_all('/{{(\d+)}}/', $component['text'], $matches);
-                if (! empty($matches[1])) {
-                    foreach ($matches[1] as $index) {
-                        $this->templateVariables[$index] = '';
+
+        $components = $template->components ?? [];
+        if (is_string($components)) {
+            $components = json_decode($components, true) ?: [];
+        }
+
+        if (is_array($components)) {
+            foreach ($components as $component) {
+                if (! is_array($component)) {
+                    continue;
+                }
+
+                $type = strtoupper($component['type'] ?? '');
+                if ($type === 'BODY' && ! empty($component['text'])) {
+                    preg_match_all('/{{(\d+)}}/', (string) $component['text'], $matches);
+                    if (! empty($matches[1])) {
+                        foreach ($matches[1] as $index) {
+                            $this->templateVariables[(string) $index] = '';
+                        }
                     }
                 }
-            }
-            if ($component['type'] === 'HEADER' && in_array($component['format'] ?? '', ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
-                $this->templateVariables['header_media_url'] = '';
+                if ($type === 'HEADER' && in_array(strtoupper($component['format'] ?? ''), ['IMAGE', 'VIDEO', 'DOCUMENT'])) {
+                    $this->templateVariables['header_media_url'] = '';
+                }
             }
         }
 
@@ -82,11 +100,11 @@ class TemplatePicker extends Component
 
     public function getFilteredTemplatesProperty()
     {
-        if (! Auth::check() || ! Auth::user()->current_team_id) {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
             return collect();
         }
 
-        return WhatsappTemplate::where('team_id', Auth::user()->current_team_id)
+        return WhatsappTemplate::where('team_id', Auth::user()->currentTeam->id)
             ->where('status', 'APPROVED')
             ->when($this->templateSearch, function ($query) {
                 $query->where('name', 'like', '%'.$this->templateSearch.'%');

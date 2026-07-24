@@ -158,10 +158,8 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
         this.viewportHeight = this.$el.clientHeight;
 
-        this.$watch('$store.chat.messages', (val, old) => {
-            if (old.length === 0 && val.length > 0) {
-                this.$nextTick(() => this.scrollToBottom());
-            }
+        this.$watch('$store.chat.messages', () => {
+            this.scrollToBottom();
         });
     },
 
@@ -184,9 +182,24 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     scrollToBottom() {
         this.unreadBelowCount = 0;
         this.isNearBottom = true;
-        if (this.$refs.chatContainer) {
-            this.$refs.chatContainer.scrollTop = this.$refs.chatContainer.scrollHeight;
-        }
+        const doScroll = () => {
+            const el = this.$refs.chatContainer || this.$el;
+            if (el) {
+                el.scrollTop = el.scrollHeight;
+            }
+        };
+        doScroll();
+        this.$nextTick(() => {
+            doScroll();
+            if (typeof requestAnimationFrame !== 'undefined') {
+                requestAnimationFrame(() => {
+                    doScroll();
+                    setTimeout(doScroll, 50);
+                    setTimeout(doScroll, 150);
+                    setTimeout(doScroll, 300);
+                });
+            }
+        });
     },
 
     handleScroll(e) {
