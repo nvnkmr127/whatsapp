@@ -95,41 +95,33 @@ class EmbeddedChat extends Component
         ]);
 
         if (! $this->conversation) {
-            // Create conversation on the fly? Or wait for inbound?
-            // Usually outbound to a contact starts a conversation.
-            // We need to fetch the contact to get the phone number.
             $contact = Contact::find($this->contactId);
             if (! $contact) {
                 return;
             }
-
-            // We need a 'Team' context.
-            // Implied from contact->team_id.
-            // We'll hydrate a minimal team object for the service if needed.
-            // Actually WhatsAppService -> setTeam() expects a Team model.
-            $team = $contact->team;
-        } else {
-            $contact = $this->conversation->contact;
-            $team = $this->conversation->team;
-        }
-
-        $waService = new WhatsAppService;
-        $waService->setTeam($team);
-
-        try {
-            $response = $waService->sendText(
-                $contact->phone_number,
-                $this->messageBody
+            $conversation = Conversation::firstOrCreate(
+                ['team_id' => $contact->team_id, 'contact_id' => $contact->id],
+                ['status' => 'open', 'last_message_at' => now()]
             );
-
-            if ($response['success'] ?? false) {
-                $this->reset(['messageBody']);
-                $this->loadConversation(); // Reload or Optimistic append
-                $this->dispatch('scroll-bottom');
-            }
-        } catch (\Exception $e) {
-            session()->flash('error', $e->getMessage());
+            $this->conversation = $conversation;
         }
+
+        $message = \App\Models\Message::create([
+            'team_id' => $this->conversation->team_id,
+            'contact_id' => $this->conversation->contact_id,
+            'conversation_id' => $this->conversation->id,
+            'direction' => 'outbound',
+            'status' => 'queued',
+            'type' => 'text',
+            'content' => $this->messageBody,
+            'metadata' => ['source' => 'embedded_chat'],
+        ]);
+
+        \App\Jobs\SendMessageJob::dispatch($message);
+
+        $this->reset(['messageBody']);
+        $this->loadConversation();
+        $this->dispatch('scroll-bottom');
     }
 
     public function getListeners()

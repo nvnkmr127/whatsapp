@@ -27,8 +27,59 @@ class ConversationList extends Component
 
     public $availableCategories = [];
 
-    // Thresholds
-    public $slaWarningMinutes = 60;
+    // Bulk Selection State
+    public array $selectedConversationIds = [];
+
+    public function bulkMarkAsRead()
+    {
+        if (empty($this->selectedConversationIds) || ! Auth::check() || ! Auth::user()->currentTeam) {
+            return;
+        }
+
+        \App\Models\Message::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('conversation_id', $this->selectedConversationIds)
+            ->where('direction', 'inbound')
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        $this->selectedConversationIds = [];
+        $this->dispatch('chat-messages-read');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Selected conversations marked as read']);
+    }
+
+    public function bulkClose()
+    {
+        if (empty($this->selectedConversationIds) || ! Auth::check() || ! Auth::user()->currentTeam) {
+            return;
+        }
+
+        Conversation::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('id', $this->selectedConversationIds)
+            ->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+                'close_reason' => 'bulk_action',
+            ]);
+
+        $this->selectedConversationIds = [];
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Selected conversations closed']);
+    }
+
+    public function bulkAssign($agentId)
+    {
+        if (empty($this->selectedConversationIds) || ! Auth::check() || ! Auth::user()->currentTeam) {
+            return;
+        }
+
+        Conversation::where('team_id', Auth::user()->currentTeam->id)
+            ->whereIn('id', $this->selectedConversationIds)
+            ->update([
+                'assigned_to' => $agentId ?: null,
+            ]);
+
+        $this->selectedConversationIds = [];
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Selected conversations reassigned']);
+    }
 
     public $pendingWarningLimit = 5;
 
@@ -40,6 +91,7 @@ class ConversationList extends Component
             return [
                 'chat-messages-read' => '$refresh',
                 'refresh-tags' => '$refresh',
+                'contact-updated' => '$refresh',
             ];
         }
 

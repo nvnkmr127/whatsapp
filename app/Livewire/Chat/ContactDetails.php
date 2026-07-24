@@ -105,7 +105,24 @@ class ContactDetails extends Component
 
         $this->editing = false;
         $this->loadData();
+        $this->dispatch('contact-updated');
         session()->flash('contact_saved', true);
+    }
+
+    public function downloadVCard()
+    {
+        if (! $this->contact) {
+            return;
+        }
+
+        $name = $this->contact->name ?: 'Contact';
+        $phone = $this->contact->phone_number;
+        $email = $this->contact->email ?: '';
+        $vcard = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:{$name}\r\nTEL;TYPE=CELL:{$phone}\r\nEMAIL:{$email}\r\nEND:VCARD";
+
+        return response()->streamDownload(fn () => print($vcard), "contact_{$this->contact->id}.vcf", [
+            'Content-Type' => 'text/vcard',
+        ]);
     }
 
     public function assignToSelf()
@@ -153,6 +170,7 @@ class ContactDetails extends Component
         }
 
         $this->loadData();
+        $this->dispatch('contact-updated');
     }
 
     public function toggleConversationTag($categoryId)

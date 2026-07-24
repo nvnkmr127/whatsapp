@@ -39,6 +39,7 @@ class MessageWindow extends Component
 
     protected $listeners = [
         'refresh-tags' => 'loadConversation',
+        'contact-updated' => 'loadConversation',
         'templateSelected' => 'handleTemplateSelected',
         'aiSuggestionSelected' => 'handleAiSuggestionSelected',
     ];

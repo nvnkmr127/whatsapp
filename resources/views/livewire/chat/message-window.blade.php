@@ -360,6 +360,16 @@
         </span>
     </div>
 
+    <!-- Floating Unread Jump Button -->
+    <div x-show="unreadBelowCount > 0 && !isNearBottom" x-cloak x-transition
+        class="absolute bottom-24 left-1/2 -translate-x-1/2 z-30">
+        <button type="button" @click="scrollToBottom()"
+            class="px-4 py-2 bg-wa-teal text-white text-xs font-black uppercase tracking-widest rounded-full shadow-xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+            <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+            <span>{{ __('New Messages') }} (<span x-text="unreadBelowCount"></span>)</span>
+        </button>
+    </div>
+
     <!-- Chat Area -->
     <div class="flex-1 overflow-y-auto custom-scrollbar relative" x-ref="chatContainer" @scroll.passive="handleScroll">
 

@@ -26,6 +26,9 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     attachmentName: '',
     attachmentPreview: null,
 
+    isNearBottom: true,
+    unreadBelowCount: 0,
+
     get canSend() {
         return !!(this.msgBody.trim() || this.hasAttachment);
     },
@@ -92,7 +95,13 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                     if (this.hasAttachment) wire.upload('newAttachment', file);
                 }
             },
-            scrollBottom: () => this.scrollToBottom(),
+            scrollBottom: () => {
+                if (this.isNearBottom) {
+                    this.scrollToBottom();
+                } else {
+                    this.unreadBelowCount++;
+                }
+            },
             initialLoaded: () => this.scrollToBottom(),
             updateBody: (e) => {
                 this.msgBody = e.detail.body;
@@ -167,13 +176,21 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     },
 
     scrollToBottom() {
+        this.unreadBelowCount = 0;
+        this.isNearBottom = true;
         if (this.$refs.chatContainer) {
             this.$refs.chatContainer.scrollTop = this.$refs.chatContainer.scrollHeight;
         }
     },
 
     handleScroll(e) {
-        this.scrollTop = e.target.scrollTop;
+        const el = e.target;
+        this.scrollTop = el.scrollTop;
+        this.isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+        if (this.isNearBottom) {
+            this.unreadBelowCount = 0;
+        }
+
         if (this.scrollTop < 100 && this.$store.chat.messages.length > 0 && !this.$store.chat.loading) {
             const oldHeight = this.$el.scrollHeight;
             const oldTop = this.$el.scrollTop;
@@ -216,7 +233,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
     checkQR() {
         const val = this.msgBody || '';
-        const match = val.match(/\/(.*)$/);
+        const match = val.match(/(?:^|\s)\/([^\s]*)$/);
         if (match) {
             this.showQR = true;
             this.qrFilter = match[1].toLowerCase();
@@ -227,7 +244,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
     selectQR(text) {
         const val = this.msgBody || '';
-        this.msgBody = val.replace(/\/(.*)$/, text);
+        this.msgBody = val.replace(/(?:^|\s)\/([^\s]*)$/, ' ' + text);
         this.showQR = false;
         if (this.$refs.messageInput) this.$refs.messageInput.focus();
     },

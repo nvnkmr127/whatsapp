@@ -43,9 +43,10 @@ class ChatBeacon extends Component
 
         $teamId = Auth::user()->currentTeam->id;
 
-        $this->unreadCount = \App\Models\Message::where('team_id', $teamId)
-            ->where('direction', 'inbound')
-            ->whereNull('read_at')
+        $this->unreadCount = \App\Models\Message::where('messages.team_id', $teamId)
+            ->join('conversations', 'conversations.id', '=', 'messages.conversation_id')
+            ->where('messages.direction', 'inbound')
+            ->whereNull('messages.read_at')
             ->count();
 
         $this->latestMessage = \App\Models\Message::where('team_id', $teamId)

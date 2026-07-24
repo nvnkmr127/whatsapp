@@ -258,4 +258,23 @@
             </div>
         @endif
     </div>
+
+    @if(count($selectedConversationIds) > 0)
+        <div class="p-3 bg-slate-900 text-white rounded-2xl mx-4 mb-4 shadow-xl flex items-center justify-between gap-2 z-30">
+            <span class="text-xs font-bold text-slate-300 ml-2">
+                {{ count($selectedConversationIds) }} {{ __('selected') }}
+            </span>
+            <div class="flex items-center gap-1">
+                <button wire:click="bulkMarkAsRead" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-micro font-black uppercase rounded-lg transition-colors" title="{{ __('Mark Read') }}">
+                    {{ __('Read') }}
+                </button>
+                <button wire:click="bulkClose" class="px-2.5 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white text-micro font-black uppercase rounded-lg transition-colors" title="{{ __('Close') }}">
+                    {{ __('Close') }}
+                </button>
+                <button wire:click="$set('selectedConversationIds', [])" class="p-1.5 text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+        </div>
+    @endif
 </div>
