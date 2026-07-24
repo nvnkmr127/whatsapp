@@ -27,9 +27,12 @@ class ConversationList extends Component
 
     public $filterAssignment = 'all'; // all, mine, unassigned
 
+    public $filterTagId = '';
+
     public $perPage = 25;
 
     public $availableCategories = [];
+    public $availableTags = [];
 
     // Bulk Selection State
     public array $selectedConversationIds = [];
@@ -142,6 +145,7 @@ class ConversationList extends Component
                 ->whereIn('target_module', ['chat', 'all'])
                 ->where('is_active', true)
                 ->get();
+            $this->availableTags = \App\Models\ConversationTag::where('team_id', Auth::user()->currentTeam->id)->get();
         }
     }
 
@@ -169,6 +173,8 @@ class ConversationList extends Component
         $this->filterReadStatus = 'all';
         $this->filterOptIn = 'all';
         $this->filterBlocked = 'all';
+        $this->filterAssignment = 'all';
+        $this->filterTagId = '';
         $this->search = '';
         $this->perPage = 25;
     }
@@ -211,7 +217,7 @@ class ConversationList extends Component
         }
 
         $query = Conversation::query()
-            ->with(['contact', 'lastMessage', 'assignee'])
+            ->with(['contact', 'lastMessage', 'assignee', 'tags'])
             ->withCount([
                 'messages as unread_count' => function ($query) {
                     $query->where('direction', 'inbound')->whereNull('read_at');
@@ -281,13 +287,16 @@ class ConversationList extends Component
                     $query->whereNull('assigned_to');
                 }
             })
+            ->when($this->filterTagId, function ($query) {
+                $query->whereHas('tags', fn ($q) => $q->where('conversation_tags.id', $this->filterTagId));
+            })
             ->orderByDesc('last_message_at');
 
         $conversations = $query->take($this->perPage)->get();
 
         if ($this->activeConversationId && ! $conversations->contains('id', (int) $this->activeConversationId)) {
             $activeConv = Conversation::query()
-                ->with(['contact', 'lastMessage', 'assignee'])
+                ->with(['contact', 'lastMessage', 'assignee', 'tags'])
                 ->withCount([
                     'messages as unread_count' => function ($q) {
                         $q->where('direction', 'inbound')->whereNull('read_at');
@@ -401,6 +410,7 @@ class ConversationList extends Component
             'conversations' => $this->conversations,
             'stats' => $this->stats,
             'availableCategories' => $this->availableCategories,
+            'availableTags' => $this->availableTags,
         ]);
     }
 }

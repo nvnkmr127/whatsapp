@@ -118,6 +118,18 @@
                         <option value="yes">{{ __('Blocked') }}</option>
                     </select>
                 </div>
+
+                <!-- Tag -->
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ __('Tag') }}</label>
+                    <select wire:model.live="filterTagId"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-wa-teal/20 py-2">
+                        <option value="">{{ __('All Tags') }}</option>
+                        @foreach($availableTags as $tag)
+                            <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
             <button wire:click="resetFilters"
@@ -165,7 +177,7 @@
                 $status = data_get($convItem, 'status');
                 $isSlaBreached = $slaDueCarbon && $slaDueCarbon->isPast() && $status !== 'closed';
                 $isSlaWarning = $slaDueCarbon && $slaDueCarbon->diffInMinutes(now()) < $slaWarningMinutes && !$isSlaBreached && $status !== 'closed';
-                $tags = data_get($convItem, 'metadata.tags', []);
+                $tags = data_get($convItem, 'tags', []);
                 $hasActiveCall = data_get($convItem, 'has_active_call') || data_get($convItem, 'hasActiveCall');
                 $unreadCount = data_get($convItem, 'unread_count', 0);
                 $lastMsgAt = data_get($convItem, 'last_message_at');
@@ -234,16 +246,12 @@
                     <p class="text-tiny font-bold text-slate-500 dark:text-slate-400 truncate pr-4 leading-relaxed group-hover:text-slate-600 transition-colors">
                     {{ $lastMsgContent ? Str::limit($lastMsgContent, 35) : __('Photo/Video') }}
                     </p>
-                    @if(!empty($tags))
+                    @if(count($tags) > 0)
                         <div class="flex flex-wrap gap-1 mt-1">
-                            @foreach($tags as $tagId)
-                                @php $category = collect($availableCategories)->firstWhere('id', $tagId); @endphp
-                                @if($category)
-                                    <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider"
-                                        style="background-color: {{ $category->color }}20; color: {{ $category->color }}">
-                                        {{ $category->name }}
-                                    </span>
-                                @endif
+                            @foreach($tags as $tag)
+                                <span class="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider {{ $tag->color_code }}">
+                                    {{ $tag->name }}
+                                </span>
                             @endforeach
                         </div>
                     @endif

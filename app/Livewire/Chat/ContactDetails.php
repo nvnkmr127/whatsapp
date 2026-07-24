@@ -17,6 +17,8 @@ class ContactDetails extends Component
 
     public $contact;
 
+    public $availableTags = [];
+
     public $activeTab = 'profile'; // Default tab
 
     public $newNoteBody = '';
@@ -41,9 +43,12 @@ class ContactDetails extends Component
     {
         $this->conversation = Conversation::with([
             'contact.tags',
+            'tags',
             'notes.user',
             'assignee',
         ])->find($this->conversationId);
+
+        $this->availableTags = \App\Models\ConversationTag::where('team_id', Auth::user()->currentTeam->id)->get();
 
         $this->contact = $this->conversation?->contact;
 
@@ -147,6 +152,24 @@ class ContactDetails extends Component
         }
     }
 
+    public function attachTag($tagId)
+    {
+        if ($this->conversation) {
+            $this->conversation->tags()->syncWithoutDetaching([$tagId]);
+            $this->loadData();
+            $this->dispatch('contact-updated');
+        }
+    }
+
+    public function detachTag($tagId)
+    {
+        if ($this->conversation) {
+            $this->conversation->tags()->detach($tagId);
+            $this->loadData();
+            $this->dispatch('contact-updated');
+        }
+    }
+
     public function addNote()
     {
         $this->validate(['newNoteBody' => 'required|string|max:1000']);
@@ -179,53 +202,30 @@ class ContactDetails extends Component
         $this->dispatch('contact-updated');
     }
 
-    public function toggleConversationTag($categoryId)
+    public function toggleConversationTag($tagId)
     {
         if (! $this->conversation) {
             return;
         }
 
-        $this->conversation->refresh();
-        $metadata = $this->conversation->metadata;
-        if (! is_array($metadata)) {
-            $metadata = [];
-        }
-        $tags = $metadata['tags'] ?? [];
-
-        if (in_array($categoryId, $tags)) {
-            $tags = array_values(array_filter($tags, fn ($id) => $id != $categoryId));
-        } else {
-            $tags[] = (int) $categoryId;
-        }
-
-        $metadata['tags'] = $tags;
-        $this->conversation->update(['metadata' => $metadata]);
+        $this->conversation->tags()->toggle([$tagId]);
 
         $this->dispatch('refresh-tags');
+        $this->dispatch('contact-updated');
         $this->loadData();
     }
 
     #[Computed]
-    public function availableTags()
+    public function unassignedTags()
     {
-        $conversationTags = $this->conversation?->metadata['tags'] ?? [];
-
-        return Category::where('team_id', auth()->user()->currentTeam->id)
-            ->whereIn('target_module', ['chat', 'all'])
-            ->where('is_active', true)
-            ->whereNotIn('id', $conversationTags)
-            ->get();
+        $activeIds = $this->conversation?->tags->pluck('id')->toArray() ?? [];
+        return $this->availableTags->reject(fn($tag) => in_array($tag->id, $activeIds));
     }
 
     #[Computed]
     public function activeTags()
     {
-        $tagIds = $this->conversation?->metadata['tags'] ?? [];
-        if (empty($tagIds)) {
-            return collect();
-        }
-
-        return Category::whereIn('id', $tagIds)->get();
+        return $this->conversation?->tags ?? collect();
     }
 
     public function render()

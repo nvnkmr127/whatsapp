@@ -168,12 +168,12 @@
                             {{ __('Conversation Tags') }}
                         </h5>
                             <div class="flex flex-wrap gap-2">
-                                @forelse($this->activeTags as $category)
+                                @forelse($this->activeTags as $tag)
                                     <span
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider group"
-                                        style="background-color: {{ $category->color }}20; color: {{ $category->color }}; border: 1px solid {{ $category->color }}40;">
-                                        <span>{{ $category->name }}</span>
-                                        <button wire:click="toggleConversationTag({{ $category->id }})"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider group {{ $tag->color_code }}"
+                                        >
+                                        <span>{{ $tag->name }}</span>
+                                        <button wire:click="toggleConversationTag({{ $tag->id }})"
                                             class="opacity-60 hover:opacity-100 transition-opacity">
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd"
@@ -191,17 +191,16 @@
                             </div>
                             
                             <!-- Tag Picker -->
-                            @if(!$this->availableTags->isEmpty())
+                            @if(!$this->unassignedTags->isEmpty())
                                 <div class="mt-3" x-data="{ open: false }">
                                     <button @click="open = !open" class="text-[9px] font-black text-wa-teal uppercase tracking-widest hover:underline flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
                                         {{ __('Add Conversation Tag') }}
                                     </button>
                                     <div x-show="open" @click.away="open = false" class="mt-2 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 flex flex-wrap gap-1.5">
-                                        @foreach($this->availableTags as $tag)
+                                        @foreach($this->unassignedTags as $tag)
                                             <button wire:click="toggleConversationTag({{ $tag->id }})" 
-                                                class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all hover:scale-105"
-                                                style="background-color: {{ $tag->color }}10; color: {{ $tag->color }}; border: 1px solid {{ $tag->color }}30;">
+                                                class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all hover:scale-105 {{ $tag->color_code }}">
                                                 {{ $tag->name }}
                                             </button>
                                         @endforeach

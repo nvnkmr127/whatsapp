@@ -115,4 +115,9 @@ class Conversation extends Model
 
         return $lastInbound->created_at->addHours(24)->isFuture();
     }
+
+    public function tags()
+    {
+        return $this->belongsToMany(ConversationTag::class, 'conversation_tag_pivot');
+    }
 }
