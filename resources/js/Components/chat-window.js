@@ -68,6 +68,17 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         this.$store.chat.setMyUser(userId);
         this.$store.chat.init(wire, conversationId, teamId, initialMessages);
 
+        // Restore draft for this conversation
+        const existingDraft = this.$store.chat.getDraft(conversationId);
+        if (existingDraft) {
+            this.msgBody = existingDraft;
+        }
+
+        this.$watch('msgBody', (val) => {
+            this.$store.chat.saveDraft(conversationId, val);
+            this.checkQR();
+        });
+
         // Store bound handler references so we can remove them on destroy
         this._boundHandlers = {
             dragover: (e) => { e.preventDefault(); this.$store.chat.isDragging = true; },
@@ -99,6 +110,26 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                     }, 1500);
                 }
             },
+            keydown: (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    this.handleSubmit();
+                } else if (e.altKey && (e.key === 'n' || e.key === 'N')) {
+                    e.preventDefault();
+                    this.isNoteMode = true;
+                } else if (e.altKey && (e.key === 'm' || e.key === 'M')) {
+                    e.preventDefault();
+                    this.isNoteMode = false;
+                } else if (e.key === 'Escape') {
+                    if (this.lightboxOpen) {
+                        this.lightboxOpen = false;
+                    } else if (this.showQR) {
+                        this.showQR = false;
+                    } else if (wire.replyToMessageId) {
+                        wire.set('replyToMessageId', null);
+                    }
+                }
+            },
         };
 
         window.addEventListener('dragover', this._boundHandlers.dragover);
@@ -108,6 +139,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         window.addEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
         window.addEventListener('update-message-body', this._boundHandlers.updateBody);
         window.addEventListener('chat-scroll-to-id', this._boundHandlers.scrollToId);
+        window.addEventListener('keydown', this._boundHandlers.keydown);
 
         this.viewportHeight = this.$el.clientHeight;
 
@@ -127,6 +159,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             window.removeEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
             window.removeEventListener('update-message-body', this._boundHandlers.updateBody);
             window.removeEventListener('chat-scroll-to-id', this._boundHandlers.scrollToId);
+            window.removeEventListener('keydown', this._boundHandlers.keydown);
             this._boundHandlers = null;
         }
         if (this.recInterval) clearInterval(this.recInterval);

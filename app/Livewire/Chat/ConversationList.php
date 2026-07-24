@@ -94,6 +94,21 @@ class ConversationList extends Component
         $this->perPage = 25;
     }
 
+    public function updatedFilterReadStatus()
+    {
+        $this->perPage = 25;
+    }
+
+    public function updatedFilterOptIn()
+    {
+        $this->perPage = 25;
+    }
+
+    public function updatedFilterBlocked()
+    {
+        $this->perPage = 25;
+    }
+
     public function selectConversation($id)
     {
         $this->activeConversationId = $id;
@@ -106,7 +121,7 @@ class ConversationList extends Component
             return collect();
         }
 
-        return Conversation::query()
+        $query = Conversation::query()
             ->with(['contact', 'lastMessage', 'assignee'])
             ->withCount([
                 'messages as unread_count' => function ($query) {
@@ -165,9 +180,32 @@ class ConversationList extends Component
                     $query->where('status', '!=', 'blocked');
                 }
             })
-            ->orderByDesc('last_message_at')
-            ->take($this->perPage)
-            ->get();
+            ->orderByDesc('last_message_at');
+
+        $conversations = $query->take($this->perPage)->get();
+
+        if ($this->activeConversationId && ! $conversations->contains('id', (int) $this->activeConversationId)) {
+            $activeConv = Conversation::query()
+                ->with(['contact', 'lastMessage', 'assignee'])
+                ->withCount([
+                    'messages as unread_count' => function ($q) {
+                        $q->where('direction', 'inbound')->whereNull('read_at');
+                    },
+                ])
+                ->withExists([
+                    'calls as has_active_call' => function ($q) {
+                        $q->whereIn('status', ['initiated', 'ringing', 'in_progress']);
+                    },
+                ])
+                ->where('team_id', Auth::user()->currentTeam->id)
+                ->find($this->activeConversationId);
+
+            if ($activeConv) {
+                $conversations->prepend($activeConv);
+            }
+        }
+
+        return $conversations;
     }
 
     /**

@@ -851,6 +851,11 @@ class MessageWindow extends Component
         return $lastMsg && $lastMsg->gt(now()->subHours(24));
     }
 
+    public function getIsOptedOutProperty()
+    {
+        return $this->conversation?->contact?->opt_in_status === 'opted_out';
+    }
+
     public function getPreviewButtonBodyProperty()
     {
         return $this->waMarkdown(e($this->buttonBody ?: 'Message text...'));

@@ -1,9 +1,17 @@
-export default {
-    messages: [],
-    conversationId: null,
-    loading: false,
-    hasMore: true,
-    wire: null,
+    drafts: {},
+
+    saveDraft(conversationId, text) {
+        if (!conversationId) return;
+        if (text && text.trim()) {
+            this.drafts[conversationId] = text;
+        } else {
+            delete this.drafts[conversationId];
+        }
+    },
+
+    getDraft(conversationId) {
+        return this.drafts[conversationId] || '';
+    },
 
     initMessages(wire, conversationId, teamId, initialMessages = null) {
         Object.defineProperty(this, '_wire', {
@@ -39,11 +47,14 @@ export default {
     async loadMessages(isInitial = false) {
         const wire = this._wire || this.wire;
         if (!wire || this.loading || (!this.hasMore && !isInitial)) return;
+        const currentConvId = this.conversationId;
         this.loading = true;
 
         try {
             const offset = isInitial ? 0 : this.messages.length;
             const newBatch = await wire.call('loadMessagesJson', offset, 50);
+
+            if (this.conversationId !== currentConvId) return;
 
             if (newBatch.length < 50) {
                 this.hasMore = false;
@@ -77,6 +88,9 @@ export default {
             }
         }
 
+        const now = new Date();
+        const prettyTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
         const optimisticMsg = {
             id: tempId,
             direction: 'outbound',
@@ -84,13 +98,14 @@ export default {
             type: 'text',
             status: 'sending',
             created_at: Math.floor(Date.now() / 1000),
-            pretty_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            pretty_time: prettyTime,
             is_outbound: true,
             media_url: null,
             reply_to_message_id: replyToId,
             reply_to_message: replyObj
         };
 
+        this.saveDraft(this.conversationId, '');
         this.messages.push(optimisticMsg);
         window.dispatchEvent(new CustomEvent('chat-scroll-bottom'));
 
@@ -158,9 +173,16 @@ export default {
         }
     },
 
+    soundMuted: localStorage.getItem('chat_sound_muted') === 'true',
+
+    toggleSoundMute() {
+        this.soundMuted = !this.soundMuted;
+        localStorage.setItem('chat_sound_muted', this.soundMuted ? 'true' : 'false');
+    },
+
     _audioPlaying: false,
     playNotificationSound() {
-        if (this._audioPlaying) return;
+        if (this.soundMuted || this._audioPlaying) return;
         this._audioPlaying = true;
         const audio = new Audio('/sounds/notification.mp3');
         audio.onended = () => { this._audioPlaying = false; };
@@ -196,9 +218,12 @@ export default {
     async syncLatest() {
         const wire = this._wire || this.wire;
         if (!wire || !this.conversationId) return;
+        const currentConvId = this.conversationId;
 
         try {
             const latestBatch = await wire.call('loadMessagesJson', 0, 20);
+
+            if (this.conversationId !== currentConvId) return;
 
             let addedCount = 0;
             latestBatch.forEach(newMsg => {

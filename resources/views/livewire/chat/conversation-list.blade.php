@@ -130,16 +130,28 @@
                 background: rgb(20 184 166 / 0.5);
             }
         </style>
-        @forelse($conversations as $conversation)
+        @forelse($conversations as $convItem)
             @php
-                $initials = substr($conversation->contact->name ?? '?', 0, 1);
-                $isActive = $activeConversationId == $conversation->id;
-                $isSlaBreached = $conversation->sla_due_at && $conversation->sla_due_at->isPast() && $conversation->status !== 'closed';
-                $isSlaWarning = $conversation->sla_due_at && $conversation->sla_due_at->diffInMinutes(now()) < $slaWarningMinutes && !$isSlaBreached && $conversation->status !== 'closed';
-                $tags = $conversation->metadata['tags'] ?? [];
+                $convId = data_get($convItem, 'id');
+                $contactName = data_get($convItem, 'contact.name');
+                $contactPhone = data_get($convItem, 'contact.phone_number');
+                $displayName = $contactName ?: ($contactPhone ?: 'Unknown');
+                $initials = substr($displayName, 0, 1);
+                $isActive = $activeConversationId == $convId;
+                $slaDue = data_get($convItem, 'sla_due_at');
+                $slaDueCarbon = $slaDue ? ($slaDue instanceof \Carbon\Carbon ? $slaDue : \Carbon\Carbon::parse($slaDue)) : null;
+                $status = data_get($convItem, 'status');
+                $isSlaBreached = $slaDueCarbon && $slaDueCarbon->isPast() && $status !== 'closed';
+                $isSlaWarning = $slaDueCarbon && $slaDueCarbon->diffInMinutes(now()) < $slaWarningMinutes && !$isSlaBreached && $status !== 'closed';
+                $tags = data_get($convItem, 'metadata.tags', []);
+                $hasActiveCall = data_get($convItem, 'has_active_call') || data_get($convItem, 'hasActiveCall');
+                $unreadCount = data_get($convItem, 'unread_count', 0);
+                $lastMsgAt = data_get($convItem, 'last_message_at');
+                $lastMsgContent = data_get($convItem, 'lastMessage.content') ?: data_get($convItem, 'last_message.content');
+                $assignee = data_get($convItem, 'assignee') || data_get($convItem, 'assigned_to');
             @endphp
-            <div wire:click="selectConversation({{ $conversation->id }})"
-                wire:key="{{ $conversation->id }}"
+            <div wire:click="selectConversation({{ $convId }})"
+                wire:key="{{ $convId }}"
                 class="group flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent 
                         {{ $isActive ? 'bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 border-slate-100 dark:border-slate-700 relative z-10 scale-[1.02]' : 'hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-slate-100 dark:hover:border-slate-800' }}
                         {{ $isSlaBreached ? 'ring-2 ring-rose-500/50 bg-rose-50/10' : ($isSlaWarning ? 'ring-2 ring-amber-500/30 bg-amber-50/5' : '') }}">
@@ -147,18 +159,18 @@
                 <!-- Avatar Status -->
                 <div class="flex-shrink-0 mr-4 relative">
                     <div class="relative">
-                        @if($conversation->hasActiveCall)
+                        @if($hasActiveCall)
                             <div class="absolute -inset-1.5 bg-emerald-500/30 rounded-full animate-ping"></div>
                         @endif
-                        <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $conversation->contact->name ?? 'Unknown' }}"
-                            alt="{{ $conversation->contact->name ?? 'Unknown' }}"
+                        <img src="https://api.dicebear.com/9.x/micah/svg?seed={{ $displayName }}"
+                            alt="{{ $displayName }}"
                             class="relative h-12 w-12 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shadow-sm transition-transform duration-300 group-hover:scale-105"
                             loading="lazy">
                     </div>
-                    @if($conversation->unread_count > 0)
+                    @if($unreadCount > 0)
                         <div
                             class="absolute -top-1 -right-1 h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full bg-wa-teal border-2 border-white dark:border-slate-800 shadow-sm animate-pulse">
-                            <span class="text-[9px] font-black text-white leading-none">{{ $conversation->unread_count }}</span>
+                            <span class="text-[9px] font-black text-white leading-none">{{ $unreadCount }}</span>
                         </div>
                     @endif
                 </div>
@@ -168,15 +180,15 @@
                     <div class="flex justify-between items-center mb-1">
                         <h3
                             class="text-xs font-black {{ $isActive ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400' }} truncate tracking-tight uppercase group-hover:text-wa-teal transition-colors">
-                            {{ $conversation->contact->name ?? $conversation->contact->phone_number }}
+                            {{ $displayName }}
                         </h3>
                         <div class="flex flex-col items-end">
                             <span class="text-[9px] font-mono font-bold text-slate-400">
-                                {{ $this->formatTime($conversation->last_message_at) }}
+                                {{ $this->formatTime($lastMsgAt ? ($lastMsgAt instanceof \Carbon\Carbon ? $lastMsgAt : \Carbon\Carbon::parse($lastMsgAt)) : null) }}
                             </span>
-                            @if($conversation->sla_due_at && $conversation->status !== 'closed')
+                            @if($slaDueCarbon && $status !== 'closed')
                                 <div x-data="{ 
-                                    dueAt: '{{ $conversation->sla_due_at->toIso8601String() }}',
+                                    dueAt: '{{ $slaDueCarbon->toIso8601String() }}',
                                     countdown: '',
                                     update() {
                                         let diff = new Date(this.dueAt) - new Date();
@@ -185,7 +197,11 @@
                                         let m = Math.floor((diff % 3600000) / 60000);
                                         this.countdown = (h > 0 ? h + 'h ' : '') + m + 'm';
                                     },
-                                    init() { this.update(); setInterval(() => this.update(), 60000); }
+                                    init() { 
+                                        this.update(); 
+                                        let timer = setInterval(() => this.update(), 60000); 
+                                        this.$cleanup(() => clearInterval(timer));
+                                    }
                                 }" class="mt-0.5">
                                     <span :class="countdown === 'BREACH' ? 'text-rose-500' : 'text-amber-500'" 
                                           class="text-[8px] font-black uppercase tracking-tighter" x-text="countdown"></span>
@@ -194,7 +210,7 @@
                         </div>
                     </div>
                     <p class="text-tiny font-bold text-slate-500 dark:text-slate-400 truncate pr-4 leading-relaxed group-hover:text-slate-600 transition-colors">
-                    {{ $conversation->lastMessage ? Str::limit($conversation->lastMessage->content ?? __('Photo/Video'), 35) : __('Loading...') }}
+                    {{ $lastMsgContent ? Str::limit($lastMsgContent, 35) : __('Photo/Video') }}
                     </p>
                     @if(!empty($tags))
                         <div class="flex flex-wrap gap-1 mt-1">
@@ -212,12 +228,12 @@
                 </div>
 
                 <!-- Indicators -->
-                @if($conversation->assignee || $conversation->status === 'closed')
+                @if($assignee || $status === 'closed')
                     <div class="ml-2 flex flex-col items-end gap-1">
-                        @if($conversation->assignee)
+                        @if($assignee)
                             <div class="w-1.5 h-1.5 rounded-full bg-indigo-500" title="Assigned"></div>
                         @endif
-                        @if($conversation->status === 'closed')
+                        @if($status === 'closed')
                             <div class="w-1.5 h-1.5 rounded-full bg-slate-300" title="Closed"></div>
                         @endif
                     </div>

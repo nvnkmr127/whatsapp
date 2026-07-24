@@ -36,7 +36,12 @@ class AiAssistant extends Component
         $this->suggestions = [];
 
         try {
-            $conversation = Conversation::find($this->conversationId);
+            $conversation = Conversation::where('team_id', Auth::user()->currentTeam->id)->find($this->conversationId);
+            if (! $conversation) {
+                $this->suggestions = ["Conversation not found."];
+                $this->isGenerating = false;
+                return;
+            }
             $messages = $conversation->messages()
                 ->orderBy('created_at', 'desc')
                 ->take(10)

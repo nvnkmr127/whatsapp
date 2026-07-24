@@ -65,6 +65,18 @@
         </div>
 
         <div class="flex items-center gap-1 sm:gap-3">
+            <!-- Sound Mute Toggle -->
+            <button type="button" @click="$store.chat.toggleSoundMute()" 
+                class="p-2 text-slate-400 hover:text-wa-teal rounded-xl transition-all"
+                :title="$store.chat.soundMuted ? '{{ __('Unmute Sounds') }}' : '{{ __('Mute Sounds') }}'">
+                <template x-if="!$store.chat.soundMuted">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                </template>
+                <template x-if="$store.chat.soundMuted">
+                    <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                </template>
+            </button>
+
             <!-- Tags/Categories Dropdown -->
             <div class="relative" x-data="{ showTags: false }">
                 <x-app-button variant="secondary" @click="showTags = !showTags" class="hidden sm:flex items-center gap-2" title="{{ __('Manage Tags') }}">
@@ -485,6 +497,20 @@
                     </button>
                 </div>
             </div>
+
+            @if($this->isOptedOut)
+                <div class="bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 p-3 mx-4 mb-2 rounded-r-xl flex items-center justify-between z-20">
+                    <div class="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                        <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>{{ __('Contact has opted out. Send an approved template to initiate communication.') }}</span>
+                    </div>
+                    <x-app-button variant="secondary" size="xs" wire:click="$dispatch('openTemplatePicker')">
+                        {{ __('Select Template') }}
+                    </x-app-button>
+                </div>
+            @endif
 
             <form @submit.prevent="handleSubmit().then(() => { replyingTo = null; })" class="flex-1 flex items-center gap-2 relative"
                 x-data="{ replyingTo: null }" 

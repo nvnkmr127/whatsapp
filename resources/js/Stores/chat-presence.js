@@ -12,14 +12,23 @@ export default {
     _teamChannelSubscribed: null,
 
     initPresence(conversationId, teamId) {
+        if (this._typingTimers) {
+            Object.values(this._typingTimers).forEach(t => clearTimeout(t));
+        }
+        if (this._echoTimer) {
+            clearTimeout(this._echoTimer);
+        }
+        this.stopHeartbeat();
+
         this.conversationId = conversationId;
         this.teamId = teamId;
         this.typingUsers = [];
         this.isTyping = false;
         this.isCustomerTyping = false;
+        this.lockedBy = null;
         this._typingTimers = {};
 
-        setTimeout(() => {
+        this._echoTimer = setTimeout(() => {
             this.initEcho();
         }, 100);
     },
