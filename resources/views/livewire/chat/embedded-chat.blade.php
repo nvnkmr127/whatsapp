@@ -13,7 +13,7 @@
                 window.Echo.join('conversation.' + this.currentConversationId)
                     .whisper('typing', {
                         id: 'customer',
-                        name: '{{ addslashes($conversation?->contact?->name ?? 'Customer') }}'
+                        name: {{ \Illuminate\Support\Js::from($conversation?->contact?->name ?? 'Customer') }}
                     });
             }
         }

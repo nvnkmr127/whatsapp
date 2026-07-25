@@ -34,7 +34,13 @@ class SendScheduledReports extends Command
                 $csvData .= "{$txn->created_at},{$txn->type},{$txn->amount}\n";
             }
 
-            // TODO: Mail::to($report->user)->send(new ReportEmail($csvData));
+            if ($report->user && $report->user->email) {
+                Mail::to($report->user->email)->send(new \App\Mail\DynamicSystemMail(
+                    'Scheduled Analytics Report',
+                    '<pre>'.e($csvData).'</pre>',
+                    $csvData
+                ));
+            }
             Log::info("Sent Weekly Report to {$report->user_id}");
 
             $report->update(['last_sent_at' => now()]);

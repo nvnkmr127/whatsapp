@@ -97,14 +97,21 @@ class ConversationService
         }
 
         // Create New
-        Log::info("Creates new conversation for contact {$contact->id}");
+        $assignedUser = null;
+        if (! $contact->assigned_to) {
+            try {
+                $assignedUser = app(\App\Services\AssignmentService::class)->assign($contact);
+            } catch (\Exception $e) {
+                Log::warning("Auto-assignment skipped for contact {$contact->id}: " . $e->getMessage());
+            }
+        }
 
         $conversation = Conversation::create([
             'team_id' => $contact->team_id,
             'contact_id' => $contact->id,
+            'assigned_to' => $assignedUser?->id ?? $contact->assigned_to,
             'status' => 'new',
             'last_message_at' => now(),
-            // 'assigned_to' could be auto-assigned implicitly via routing logic later
         ]);
 
         try {
@@ -162,6 +169,12 @@ class ConversationService
             \App\Events\ConversationClosed::dispatch($conversation);
         } catch (\Exception $e) {
             Log::warning("ConversationClosed broadcast failed for conversation {$conversation->id}, but it was closed successfully: ".$e->getMessage());
+        }
+
+        try {
+            app(\App\Services\CsatService::class)->sendSurvey($conversation);
+        } catch (\Exception $e) {
+            Log::warning("CSAT survey dispatch skipped for conversation {$conversation->id}: " . $e->getMessage());
         }
     }
 }

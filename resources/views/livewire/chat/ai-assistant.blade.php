@@ -23,8 +23,8 @@
                </div>
             @else
                <div class="space-y-3">
-                  @foreach($this->suggestions as $suggestion)
-                    <button wire:click="selectSuggestion('{{ addslashes($suggestion) }}')"
+                  @foreach($this->suggestions as $index => $suggestion)
+                    <button wire:click="selectSuggestionByIndex({{ $loop->index }})"
                         class="w-full p-4 text-left bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 transition-all duration-200 group">
                         <p class="text-xs font-bold text-slate-700 dark:text-slate-300 group-hover:text-indigo-700 leading-relaxed">{{ $suggestion }}</p>
                         <div class="mt-3 flex justify-end">

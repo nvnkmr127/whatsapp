@@ -283,6 +283,7 @@ class PersistMessageJob implements ShouldQueue
                 'contact_id' => $contact->id,
                 'conversation_id' => $conversation->id,
                 'whatsapp_message_id' => $data['provider_id'],
+                'reply_to_message_id' => $replyToMessageId,
                 'direction' => 'inbound',
                 'type' => $msgData['type'],
                 'content' => $content,
@@ -312,6 +313,10 @@ class PersistMessageJob implements ShouldQueue
                 SendPushNotificationJob::dispatch($message->id);
                 Log::info('[DEBUG-PUSH] STEP 1-DONE: PersistMessageJob successfully dispatched SendPushNotificationJob.');
                 Log::info("PersistMessageJob: MessageReceived event and PushJob dispatched for Message ID: {$message->id}");
+
+                if (!$contact->is_bot_paused && !empty($content)) {
+                    ProcessAiAssistantJob::dispatch($message->id);
+                }
             } catch (\Exception $e) {
                 Log::error('PersistMessageJob: Failed to dispatch MessageReceived event: '.$e->getMessage());
                 // Do not fail the job, as persistence was successful

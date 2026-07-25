@@ -545,7 +545,7 @@
                                 <div class="w-1.5 bg-[#d95a2b] shrink-0"></div>
                                 <div class="flex-1 p-2.5 flex justify-between items-center">
                                     <div class="overflow-hidden">
-                                        <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5" x-text="replyingTo.is_outbound ? 'You' : '{{ addslashes($conversation->contact->name ?? $conversation->contact->phone_number) }}'"></p>
+                                        <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
                                         <p class="text-xs text-slate-500 dark:text-slate-400 truncate" x-text="replyingTo.content"></p>
                                     </div>
                                     <button type="button" @click="replyingTo = null; $wire.set('replyToMessageId', null)" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
@@ -571,7 +571,7 @@
 
                     <textarea x-model="msgBody" @keydown.enter="if (!$event.shiftKey && !showQR) { $event.preventDefault(); handleSubmit(); }" x-ref="messageInput"
                         @focus="$store.chat.requestLock()" @blur="setTimeout(() => $store.chat.releaseLock(), 500)"
-                        @keyup="checkQR(); $store.chat.whisperTyping('{{ addslashes(auth()->user()->name ?? 'Agent') }}'); $store.chat.requestLock()"
+                        @keyup="checkQR(); $store.chat.whisperTyping({{ \Illuminate\Support\Js::from(auth()->user()->name ?? 'Agent') }}); $store.chat.requestLock()"
                         placeholder="{{ __('Type a message (or / for templates)...') }}" rows="1"
                         :disabled="$store.chat.isLockedForMe()" :class="[
                                                         $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',

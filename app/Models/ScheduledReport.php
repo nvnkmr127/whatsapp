@@ -21,4 +21,9 @@ class ScheduledReport extends Model
         'is_active' => 'boolean',
         'last_sent_at' => 'datetime',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

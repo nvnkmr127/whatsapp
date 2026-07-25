@@ -285,17 +285,17 @@
                                             <td class="px-8 py-6 text-right">
                                                 <div
                                                     class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button @click="showWorkspaceDetails = true; selectedTeam = { 
-                                                            name: '{{ addslashes($team->name) }}',
-                                                            ownerName: '{{ addslashes($team->owner->name) }}',
-                                                            ownerEmail: '{{ addslashes($team->owner->email) }}',
-                                                            ownerPhone: '{{ addslashes($team->owner->phone ?? 'N/A') }}',
-                                                            ownerPhoto: '{{ $team->owner->profile_photo_url }}',
-                                                            plan: '{{ ucfirst($team->subscription_plan ?? 'Basic') }}',
-                                                            status: '{{ ucfirst($team->subscription_status) }}',
-                                                            createdAt: '{{ $team->created_at->format('M d, Y') }}',
-                                                            address: '{{ addslashes($team->billing_address ?? 'Not Provided') }}'
-                                                        }"
+                                                    <button @click="showWorkspaceDetails = true; selectedTeam = {{ \Illuminate\Support\Js::from([
+                                                            'name' => $team->name,
+                                                            'ownerName' => $team->owner->name,
+                                                            'ownerEmail' => $team->owner->email,
+                                                            'ownerPhone' => $team->owner->phone ?? 'N/A',
+                                                            'ownerPhoto' => $team->owner->profile_photo_url,
+                                                            'plan' => ucfirst($team->subscription_plan ?? 'Basic'),
+                                                            'status' => ucfirst($team->subscription_status),
+                                                            'createdAt' => $team->created_at->format('M d, Y'),
+                                                            'address' => $team->billing_address ?? 'Not Provided',
+                                                        ]) }}"
                                                         class="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
                                                         title="View Details">
                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

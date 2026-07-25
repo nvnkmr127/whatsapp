@@ -83,6 +83,13 @@ class AiAssistant extends Component
         $this->showAiModal = false;
     }
 
+    public function selectSuggestionByIndex($index)
+    {
+        if (isset($this->suggestions[$index])) {
+            $this->selectSuggestion($this->suggestions[$index]);
+        }
+    }
+
     public function render()
     {
         return view('livewire.chat.ai-assistant');
