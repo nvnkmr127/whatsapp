@@ -6,8 +6,7 @@
     class="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-4"
     @play-sound.window="document.getElementById('global-notification-sound').play().catch(e => console.log('Autoplay blocked'))">
 
-    <audio id="global-notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"
-        preload="auto"></audio>
+    <audio id="global-notification-sound" src="/sounds/chat-beacon.mp3" preload="metadata"></audio>
 
 
     <!-- Floating Inbox Panel (Slide-In) -->

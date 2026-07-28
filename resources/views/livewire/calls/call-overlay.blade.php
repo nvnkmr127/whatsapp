@@ -513,9 +513,7 @@
     </div>
 
     <!-- Hidden Audio Assets -->
-    <audio id="call-ringing-sound" loop preload="auto">
-        <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="call-ringing-sound" src="/sounds/call-ringing.mp3" loop preload="metadata"></audio>
     <audio id="remote-audio" autoplay></audio>
 
 </div>

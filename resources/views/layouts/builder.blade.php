@@ -9,8 +9,7 @@
     <title>{{ config('app.name', 'Laravel') }} - Builder</title>
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
