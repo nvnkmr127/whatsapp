@@ -14,8 +14,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @php
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('r2');
         $systemAppName = get_setting('system_app_name', config('app.name', 'Laravel'));
-        $faviconUrl = get_setting('system_favicon') ? Storage::disk('r2')->url(get_setting('system_favicon')) : asset('favicon.ico');
+        $faviconUrl = get_setting('system_favicon') ? $disk->url(get_setting('system_favicon')) : asset('favicon.ico');
     @endphp
 
     <link rel="icon" type="image/x-icon" href="{{ $faviconUrl }}">
