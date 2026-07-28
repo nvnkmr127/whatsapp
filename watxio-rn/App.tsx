@@ -14,6 +14,7 @@ import AppNavigator from '@/navigation/AppNavigator';
 import { useTokens, ThemeProvider } from '@/theme';
 import { useColorScheme as useNWColorScheme } from 'nativewind';
 import { CallOverlayManager } from '@/components/CallOverlayManager';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useGlobalState } from '@/store';
 import { registerForPushNotifications } from '@/services/notifications';
 
@@ -59,14 +60,16 @@ function Root() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <KeyboardProvider>
-            <Root />
-          </KeyboardProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SafeAreaProvider>
+            <KeyboardProvider>
+              <Root />
+            </KeyboardProvider>
+          </SafeAreaProvider>
+        </GestureHandlerRootView>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

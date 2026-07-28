@@ -212,32 +212,34 @@ export default function LoginScreen({ navigation }: any) {
           <Text className="text-ink dark:text-d-ink text-sm font-medium">Scan QR from web app</Text>
         </Pressable>
 
-        {/* Collapsible Server Config Settings */}
-        <View className="w-full mt-6 border-t border-hairline dark:border-d-hairline pt-4">
-          <Pressable
-            onPress={() => setShowServerConfig(!showServerConfig)}
-            className="flex-row items-center justify-between py-1"
-          >
-            <View className="flex-row items-center gap-2">
-              <Server size={14} color={tokens.muted} />
-              <Text className="text-xs font-semibold text-muted dark:text-d-muted">Server URL Configuration</Text>
-            </View>
-            <ChevronDown size={14} color={tokens.muted} style={{ transform: [{ rotate: showServerConfig ? '180deg' : '0deg' }] }} />
-          </Pressable>
+        {/* Collapsible Server Config Settings (Dev Only) */}
+        {__DEV__ && (
+          <View className="w-full mt-6 border-t border-hairline dark:border-d-hairline pt-4">
+            <Pressable
+              onPress={() => setShowServerConfig(!showServerConfig)}
+              className="flex-row items-center justify-between py-1"
+            >
+              <View className="flex-row items-center gap-2">
+                <Server size={14} color={tokens.muted} />
+                <Text className="text-xs font-semibold text-muted dark:text-d-muted">Server URL Configuration</Text>
+              </View>
+              <ChevronDown size={14} color={tokens.muted} style={{ transform: [{ rotate: showServerConfig ? '180deg' : '0deg' }] }} />
+            </Pressable>
 
-          {showServerConfig && (
-            <View className="mt-2.5 bg-surface dark:bg-d-surface p-3.5 rounded-lg gap-2 border border-hairline dark:border-d-hairline">
-              <TextInput
-                value={serverUrl}
-                onChangeText={setServerUrl}
-                placeholder="e.g. http://localhost:8000/api"
-                placeholderTextColor={tokens.faint}
-                className="bg-surface2 dark:bg-d-surface2 p-2 text-xs rounded text-ink dark:text-d-ink font-mono"
-                autoCapitalize="none"
-              />
-            </View>
-          )}
-        </View>
+            {showServerConfig && (
+              <View className="mt-2.5 bg-surface dark:bg-d-surface p-3.5 rounded-lg gap-2 border border-hairline dark:border-d-hairline">
+                <TextInput
+                  value={serverUrl}
+                  onChangeText={setServerUrl}
+                  placeholder="e.g. http://localhost:8000/api"
+                  placeholderTextColor={tokens.faint}
+                  className="bg-surface2 dark:bg-d-surface2 p-2 text-xs rounded text-ink dark:text-d-ink font-mono"
+                  autoCapitalize="none"
+                />
+              </View>
+            )}
+          </View>
+        )}
 
         <View className="flex-1" />
 

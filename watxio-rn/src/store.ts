@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Platform, NativeModules } from 'react-native';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from './services/api';
 import { navigationRef } from './navigation/navigationRef';
@@ -46,14 +47,23 @@ export interface GlobalState {
 }
 
 const getDevMachineIp = () => {
+  const hostUri = Constants.expoConfig?.hostUri || Constants.hostUri;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return ip;
+    }
+  }
+
   const scriptURL = NativeModules.SourceCode?.scriptURL;
   if (scriptURL) {
     const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
-    if (match && match[1]) {
+    if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
       return match[1];
     }
   }
-  return Platform.OS === 'android' ? '10.111.185.147' : 'localhost';
+
+  return '192.168.31.52';
 };
 
 const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
@@ -83,28 +93,28 @@ let unauthorizedTimer: ReturnType<typeof setTimeout> | null = null;
 let unauthorizedCount = 0;
 api.onUnauthorized(() => {
   unauthorizedCount++;
-  if (unauthorizedTimer) clearTimeout(unauthorizedTimer);
-  unauthorizedTimer = setTimeout(() => {
-    unauthorizedTimer = null;
-    if (unauthorizedCount >= 2) {
-      // Confirmed unauthorised — clear session and redirect
+  if (!unauthorizedTimer) {
+    unauthorizedTimer = setTimeout(() => {
+      unauthorizedTimer = null;
+      const count = unauthorizedCount;
       unauthorizedCount = 0;
-      store.set({
-        token: null,
-        user: null,
-        teams: [],
-        numbers: [],
-        activeTeamId: null,
-      });
-      if (navigationRef.isReady()) {
-        navigationRef.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
+      if (count >= 2) {
+        console.warn(`[Auth] Confirmed 401 Unauthenticated (${count} occurrences) — clearing expired session.`);
+        store.set({
+          token: null,
+          user: null,
+          teams: [],
+          numbers: [],
+          activeTeamId: null,
+        });
+        if (navigationRef.isReady()) {
+          navigationRef.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
+        }
+      } else {
+        console.warn('[Auth] Single 401 received — treating as transient.');
       }
-    } else {
-      // Single 401 — likely transient. Reset counter but don't wipe session.
-      console.warn('[Auth] Single 401 received — treating as transient, not logging out.');
-      unauthorizedCount = 0;
-    }
-  }, 5000);
+    }, 1500);
+  }
 });
 
 const STORAGE_KEY = '@watxio_session';
@@ -151,7 +161,7 @@ function schedulePersist() {
 export const store = {
   get: (): GlobalState => state,
   set: (updates: Partial<GlobalState>) => {
-    if (updates.token === null) {
+    if (!__DEV__ || updates.token === null) {
       updates.baseUrl = defaultBaseUrl;
     }
     Object.assign(state, updates);
@@ -195,9 +205,18 @@ export const store = {
             data.websocket = undefined;
           }
 
+          let activeBaseUrl = defaultBaseUrl;
+          if (__DEV__) {
+            activeBaseUrl = data.baseUrl || defaultBaseUrl;
+            if (activeBaseUrl.includes('flow.watxio.com') || activeBaseUrl.includes('10.111.185.147') || activeBaseUrl.includes('10.0.2.2')) {
+              console.warn('[Session] Overriding stale cached URL with dev default:', defaultBaseUrl);
+              activeBaseUrl = defaultBaseUrl;
+            }
+          }
+
           store.set({
             token: data.token,
-            baseUrl: data.baseUrl || defaultBaseUrl,
+            baseUrl: activeBaseUrl,
             activeTeamId: data.activeTeamId !== undefined ? data.activeTeamId : state.activeTeamId,
             waNumber: data.waNumber || state.waNumber,
             businessName: data.businessName || state.businessName,

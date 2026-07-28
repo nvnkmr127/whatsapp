@@ -1,18 +1,28 @@
 import { Platform, NativeModules } from 'react-native';
+import Constants from 'expo-constants';
 
 let apiToken: string | null = null;
 let apiTeamId: number | null = null;
 let unauthorizedCallback: (() => void) | null = null;
 
 const getDevMachineIp = () => {
+  const hostUri = Constants.expoConfig?.hostUri || Constants.hostUri;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return ip;
+    }
+  }
+
   const scriptURL = NativeModules.SourceCode?.scriptURL;
   if (scriptURL) {
     const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
-    if (match && match[1]) {
+    if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
       return match[1];
     }
   }
-  return Platform.OS === 'android' ? '10.111.185.147' : 'localhost';
+
+  return '192.168.31.52';
 };
 
 const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
@@ -30,9 +40,11 @@ export const api = {
   },
 
   setBaseUrl(url: string) {
-    if (url) {
+    if (__DEV__ && url) {
       // Remove trailing slash if present
       apiBaseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+    } else if (!__DEV__) {
+      apiBaseUrl = defaultBaseUrl;
     }
   },
 
@@ -106,7 +118,6 @@ export const api = {
         console.log(`[API REQUEST] ${method} ${url}`, { headers, body });
       }
       const response = await fetch(url, config);
-      clearTimeout(timeoutId);
 
       let data: any = null;
       const text = await response.text();
@@ -139,10 +150,17 @@ export const api = {
 
       return data as T;
     } catch (error: any) {
+      const isAbort = error?.name === 'AbortError' || error?.message === 'Aborted';
+      const normalizedError = isAbort
+        ? { status: undefined, message: 'Request timed out after 15s', isTimeout: true, name: 'TimeoutError' }
+        : error;
+
       if (__DEV__ && !isSilent) {
-        console.error(`[API ERROR] ${method} ${url}`, error);
+        console.error(`[API ERROR] ${method} ${url}`, normalizedError);
       }
-      throw error;
+      throw normalizedError;
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 

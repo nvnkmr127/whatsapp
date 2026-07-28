@@ -1,8 +1,8 @@
 <div x-cloak :class="sidebarOpen ? 'block' : 'hidden'" @click="sidebarOpen = false"
-    class="fixed inset-0 z-50 transition-opacity bg-zinc-950/90 backdrop-blur-sm lg:hidden"></div>
+    class="fixed inset-0 z-50 transition-opacity bg-zinc-950/90 backdrop-blur-sm md:hidden"></div>
 
 <div x-cloak :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-    class="w-72 flex-shrink-0 transition-transform duration-300 ease-out fixed inset-y-0 left-0 z-50 lg:static lg:translate-x-0 bg-zinc-950 text-zinc-100 border-r border-zinc-800 flex flex-col shadow-2xl lg:shadow-none"
+    class="w-72 flex-shrink-0 transition-transform duration-300 ease-out fixed inset-y-0 left-0 z-50 md:static md:translate-x-0 bg-zinc-950 text-zinc-100 border-r border-zinc-800 flex flex-col shadow-2xl md:shadow-none"
     x-data="{ 
         expandedGroups: [],
         toggleGroup(group) {

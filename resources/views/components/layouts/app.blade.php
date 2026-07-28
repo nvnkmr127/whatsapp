@@ -69,9 +69,7 @@
 
     <div x-data="{ sidebarOpen: false }" class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        @if(!isset($fullscreen) || !$fullscreen)
-            <x-layouts.sidebar />
-        @endif
+        <x-layouts.sidebar />
 
         <!-- Content Area -->
         <div class="flex flex-col flex-1 overflow-hidden bg-slate-50 dark:bg-slate-950">

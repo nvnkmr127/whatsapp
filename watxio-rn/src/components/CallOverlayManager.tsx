@@ -91,8 +91,10 @@ export function CallOverlayManager() {
           setActiveCall(null);
           activeCallRef.current = null;
         }
-      } catch (error) {
-        console.debug('[Call Polling Error]', error);
+      } catch (error: any) {
+        if (__DEV__ && error?.name !== 'TimeoutError' && error?.name !== 'AbortError' && error?.message !== 'Aborted') {
+          console.debug('[Call Polling Error]', error);
+        }
       }
     };
 

@@ -22,7 +22,7 @@
 
     <div class="flex items-center gap-6 flex-1">
         <button @click="sidebarOpen = true"
-            class="p-2 -ml-2 text-zinc-500 hover:text-orange-500 focus:outline-none lg:hidden transition-all duration-300 hover:scale-110 active:scale-90">
+            class="p-2 -ml-2 text-zinc-500 hover:text-orange-500 focus:outline-none md:hidden transition-all duration-300 hover:scale-110 active:scale-90">
             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
             </svg>
@@ -30,7 +30,7 @@
 
         <!-- Page Heading -->
         <div
-            class="hidden lg:flex items-center gap-4 min-w-fit pr-4 border-r border-black/[0.08] dark:border-zinc-800/60">
+            class="hidden md:flex items-center gap-4 min-w-fit pr-4 border-r border-black/[0.08] dark:border-zinc-800/60">
             <h1 class="text-[15px] font-black text-slate-800 dark:text-zinc-50 uppercase tracking-[0.15em] leading-none">
                 {{ $header ?? __('Dashboard') }}
             </h1>
