@@ -4,6 +4,7 @@ namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Modelable;
 use Livewire\Component;
 
@@ -30,9 +31,6 @@ class ConversationList extends Component
     public $filterTagId = '';
 
     public $perPage = 25;
-
-    public $availableCategories = [];
-    public $availableTags = [];
 
     // Bulk Selection State
     public array $selectedConversationIds = [];
@@ -140,13 +138,6 @@ class ConversationList extends Component
 
     public function mount()
     {
-        if (Auth::check() && Auth::user()->currentTeam) {
-            $this->availableCategories = \App\Models\Category::where('team_id', Auth::user()->currentTeam->id)
-                ->whereIn('target_module', ['chat', 'all'])
-                ->where('is_active', true)
-                ->get();
-            $this->availableTags = \App\Models\ConversationTag::where('team_id', Auth::user()->currentTeam->id)->get();
-        }
     }
 
     public function formatTime($time)
@@ -404,12 +395,23 @@ class ConversationList extends Component
         });
     }
 
+    #[Computed(cache: true, seconds: 60)]
+    public function availableTags()
+    {
+        if (! Auth::check() || ! Auth::user()->currentTeam) {
+            return collect();
+        }
+
+        return \App\Models\ConversationTag::where('team_id', Auth::user()->currentTeam->id)
+            ->select('id', 'name')
+            ->get();
+    }
+
     public function render()
     {
         return view('livewire.chat.conversation-list', [
             'conversations' => $this->conversations,
             'stats' => $this->stats,
-            'availableCategories' => $this->availableCategories,
             'availableTags' => $this->availableTags,
         ]);
     }

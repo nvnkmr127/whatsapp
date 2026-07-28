@@ -40,8 +40,6 @@ class ChatDashboard extends Component
 
     public function render()
     {
-        $this->validateActiveConversation();
-
         return view('livewire.chat.chat-dashboard')->layout('components.layouts.app'); // Ensure it uses the main app layout
     }
 }
