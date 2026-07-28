@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Team;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -1162,11 +1163,19 @@ class WhatsAppService
     /**
      * Get Business Profile.
      */
-    public function getBusinessProfile()
+    public function getBusinessProfile(bool $force = false)
     {
-        return $this->client->sendRequest('whatsapp_business_profile', [
-            'fields' => 'about,address,description,email,profile_picture_url,websites,vertical',
-        ], 'get');
+        $key = "wa_business_profile_{$this->team->id}";
+
+        if ($force) {
+            Cache::forget($key);
+        }
+
+        return Cache::remember($key, 900, function () {
+            return $this->client->sendRequest('whatsapp_business_profile', [
+                'fields' => 'about,address,description,email,profile_picture_url,websites,vertical',
+            ], 'get');
+        });
     }
 
     /**
@@ -1174,6 +1183,8 @@ class WhatsAppService
      */
     public function updateBusinessProfile(array $data)
     {
+        Cache::forget("wa_business_profile_{$this->team->id}");
+
         $payload = [
             'messaging_product' => 'whatsapp',
         ] + $data;

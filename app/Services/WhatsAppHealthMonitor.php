@@ -7,6 +7,7 @@ use App\Models\QualityRatingHistory;
 use App\Models\Team;
 use App\Models\WhatsAppHealthAlert;
 use App\Models\WhatsAppHealthSnapshot;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,44 +16,50 @@ class WhatsAppHealthMonitor
     /**
      * Check complete health of a team's WhatsApp account
      */
-    public function checkHealth(Team $team): array
+    public function checkHealth(Team $team, bool $force = false): array
     {
-        // 1. Sync Integration State (Lifecycle Management) first to get fresh limits/quality from Meta
-        try {
-            $engine = app(\App\Services\WhatsAppVerificationEngine::class)->setTeam($team);
-            $engine->verify(); // This updates $team->whatsapp_setup_state, quality, and limits
-            $team->refresh(); // Refresh in-memory model to use new limits in health checks
-        } catch (\Exception $e) {
-            Log::error('Error syncing integration state in HealthMonitor: '.$e->getMessage());
+        $key = "whatsapp_team_health_{$team->id}";
+
+        if ($force) {
+            Cache::forget($key);
         }
 
-        // 2. Run detailed dimension checks with fresh data
-        $tokenHealth = $this->checkTokenHealth($team);
-        $phoneHealth = $this->checkPhoneHealth($team);
-        $qualityHealth = $this->checkQualityHealth($team);
-        $messagingHealth = $this->checkMessagingHealth($team);
+        return Cache::remember($key, 900, function () use ($team) {
+            // 1. Sync Integration State (Lifecycle Management) first to get fresh limits/quality from Meta
+            try {
+                $engine = app(\App\Services\WhatsAppVerificationEngine::class)->setTeam($team);
+                $engine->verify(); // This updates $team->whatsapp_setup_state, quality, and limits
+                $team->refresh(); // Refresh in-memory model to use new limits in health checks
+            } catch (\Exception $e) {
+                Log::error('Error syncing integration state in HealthMonitor: '.$e->getMessage());
+            }
 
-        $overallScore = $this->calculateOverallScore([
-            'token' => $tokenHealth['score'],
-            'phone' => $phoneHealth['score'],
-            'quality' => $qualityHealth['score'],
-            'messaging' => $messagingHealth['score'],
-        ]);
+            // 2. Run detailed dimension checks with fresh data
+            $tokenHealth = $this->checkTokenHealth($team);
+            $phoneHealth = $this->checkPhoneHealth($team);
+            $qualityHealth = $this->checkQualityHealth($team);
+            $messagingHealth = $this->checkMessagingHealth($team);
 
-        $status = $this->getHealthStatus($overallScore);
+            $overallScore = $this->calculateOverallScore([
+                'token' => $tokenHealth['score'],
+                'phone' => $phoneHealth['score'],
+                'quality' => $qualityHealth['score'],
+                'messaging' => $messagingHealth['score'],
+            ]);
 
-        $results = [
-            'overall_score' => $overallScore,
-            'status' => $status,
-            'token' => $tokenHealth,
-            'phone' => $phoneHealth,
-            'quality' => $qualityHealth,
-            'messaging' => $messagingHealth,
-            'alerts' => $this->getActiveAlerts($team),
-            'checked_at' => now(),
-        ];
+            $status = $this->getHealthStatus($overallScore);
 
-        return $results;
+            return [
+                'overall_score' => $overallScore,
+                'status' => $status,
+                'token' => $tokenHealth,
+                'phone' => $phoneHealth,
+                'quality' => $qualityHealth,
+                'messaging' => $messagingHealth,
+                'alerts' => $this->getActiveAlerts($team),
+                'checked_at' => now(),
+            ];
+        });
     }
 
     /**
@@ -477,7 +484,7 @@ class WhatsAppHealthMonitor
      */
     public function createSnapshot(Team $team): WhatsAppHealthSnapshot
     {
-        $health = $this->checkHealth($team);
+        $health = $this->checkHealth($team, true);
 
         return WhatsAppHealthSnapshot::create([
             'team_id' => $team->id,

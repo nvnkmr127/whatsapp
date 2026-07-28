@@ -268,8 +268,8 @@ class WhatsappConfig extends Component
             // widget, Business Profile, Setup Progress and the governance alert
             // with real data instead of the default zeros/false-alarms.
             try {
-                $this->loadBusinessProfile();
-                $this->refreshHealth(); // also recomputes setupProgress
+                $this->loadBusinessProfile(false);
+                $this->refreshHealth(false); // also recomputes setupProgress
             } catch (\Throwable $e) {
                 Log::warning("WhatsApp Config: Deferred health/profile load failed for Team {$team->id}: ".$e->getMessage());
                 $this->setupProgress = $this->getSetupProgress();
@@ -1256,7 +1256,7 @@ class WhatsappConfig extends Component
         }
     }
 
-    public function refreshHealth()
+    public function refreshHealth(bool $force = true)
     {
         if (! $this->is_whatsmark_connected) {
             return;
@@ -1264,7 +1264,7 @@ class WhatsappConfig extends Component
 
         $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
         $monitor = app(\App\Services\WhatsAppHealthMonitor::class);
-        $health = $monitor->checkHealth($team);
+        $health = $monitor->checkHealth($team, $force);
 
         // After checkHealth, the team model has been refreshed with data from Meta
         $this->wm_messaging_limit = $team->whatsapp_messaging_limit ?: 'TIER_1K';
@@ -1384,7 +1384,7 @@ class WhatsappConfig extends Component
         }
     }
 
-    public function loadBusinessProfile()
+    public function loadBusinessProfile(bool $force = true)
     {
         try {
             $team = \Illuminate\Support\Facades\Auth::user()->currentTeam->fresh();
@@ -1394,7 +1394,7 @@ class WhatsappConfig extends Component
 
             $service = app(\App\Services\WhatsAppService::class);
             $service->setTeam($team);
-            $response = $service->getBusinessProfile();
+            $response = $service->getBusinessProfile($force);
 
             if (isset($response['data']['data'][0])) {
                 $profile = $response['data']['data'][0];
