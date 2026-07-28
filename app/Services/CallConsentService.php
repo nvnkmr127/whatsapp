@@ -349,7 +349,7 @@ class CallConsentService
             'within_window' => $withinWindow,
             'details' => [
                 'last_inbound_message_at' => $lastInboundMessage->created_at,
-                'hours_since_last_message' => now()->diffInHours($lastInboundMessage->created_at),
+                'hours_since_last_message' => round(now()->diffInHours($lastInboundMessage->created_at), 1),
                 'hours_remaining' => $hoursRemaining,
                 'window_closes_at' => $lastInboundMessage->created_at->addHours(24),
             ],

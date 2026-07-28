@@ -315,38 +315,40 @@ class CallEligibilityService
      */
     protected function checkAgentAvailability(): array
     {
-        // Get online agents (using call_status and is_call_enabled from pivot)
-        $availableAgents = $this->team->users()
-            ->wherePivot('is_call_enabled', true)
-            ->wherePivot('call_status', 'available')
-            ->count();
+        return Cache::remember("agent_availability_{$this->team->id}", 60, function () {
+            // Get online agents (using call_status and is_call_enabled from pivot)
+            $availableAgents = $this->team->users()
+                ->wherePivot('is_call_enabled', true)
+                ->wherePivot('call_status', 'available')
+                ->count();
 
-        $onlineAgents = $this->team->users()
-            ->wherePivot('is_call_enabled', true)
-            ->count();
+            $onlineAgents = $this->team->users()
+                ->wherePivot('is_call_enabled', true)
+                ->count();
 
-        if ($availableAgents === 0) {
+            if ($availableAgents === 0) {
+                return [
+                    'passed' => false,
+                    'block_code' => $onlineAgents > 0 ? 'ALL_AGENTS_BUSY' : 'NO_AGENTS_AVAILABLE',
+                    'can_retry_at' => now()->addMinutes(5),
+                    'details' => [
+                        'available_agents' => 0,
+                        'online_agents' => $onlineAgents,
+                        'reason' => $onlineAgents > 0 ? 'All agents are currently busy' : 'No agents are online',
+                    ],
+                ];
+            }
+
             return [
-                'passed' => false,
-                'block_code' => $onlineAgents > 0 ? 'ALL_AGENTS_BUSY' : 'NO_AGENTS_AVAILABLE',
-                'can_retry_at' => now()->addMinutes(5),
+                'passed' => true,
+                'block_code' => null,
                 'details' => [
-                    'available_agents' => 0,
+                    'available_agents' => $availableAgents,
                     'online_agents' => $onlineAgents,
-                    'reason' => $onlineAgents > 0 ? 'All agents are currently busy' : 'No agents are online',
+                    'queue_size' => 0,
                 ],
             ];
-        }
-
-        return [
-            'passed' => true,
-            'block_code' => null,
-            'details' => [
-                'available_agents' => $availableAgents,
-                'online_agents' => $onlineAgents,
-                'queue_size' => 0,
-            ],
-        ];
+        });
     }
 
     /**

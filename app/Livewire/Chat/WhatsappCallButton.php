@@ -4,6 +4,7 @@ namespace App\Livewire\Chat;
 
 use App\Models\Contact;
 use App\Services\CallEligibilityService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
@@ -20,16 +21,22 @@ class WhatsappCallButton extends Component
         $this->contact = $contact;
     }
 
-    public function checkEligibility()
+    public function checkEligibility(bool $force = false)
     {
         $this->isLoading = true;
 
+        if ($force) {
+            Cache::forget("call_eligibility_{$this->contact->id}");
+        }
+
         try {
-            $service = new CallEligibilityService(auth()->user()->currentTeam);
-            // Defaulting trigger to 'user_initiated' for manual clicks
-            $this->eligibility = $service->checkEligibility($this->contact, 'user_initiated', [
-                'trigger_source' => 'in_app_action',
-            ], true);
+            $this->eligibility = Cache::remember("call_eligibility_{$this->contact->id}", 60, function () {
+                $service = new CallEligibilityService(auth()->user()->currentTeam);
+
+                return $service->checkEligibility($this->contact, 'user_initiated', [
+                    'trigger_source' => 'in_app_action',
+                ], true);
+            });
         } catch (\Exception $e) {
             Log::error('Call eligibility check failed: '.$e->getMessage(), [
                 'exception' => $e,
@@ -48,7 +55,7 @@ class WhatsappCallButton extends Component
     public function initiateCall()
     {
         if (! $this->eligibility || ! $this->eligibility['eligible']) {
-            $this->checkEligibility();
+            $this->checkEligibility(true);
             if (! $this->eligibility['eligible']) {
                 $this->dispatch('notify', [
                     'type' => 'error',
