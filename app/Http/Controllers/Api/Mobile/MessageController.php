@@ -18,14 +18,14 @@ class MessageController extends Controller
         $this->authorizeConversation($request->user(), $conversation);
 
         $messages = Message::where('conversation_id', $conversation->id)
-            ->with('replyTo')
+            ->with(['replyTo', 'team'])
             ->latest('id')
             ->cursorPaginate(min((int) $request->input('per_page', 40), 100));
 
         // Preserve the original paginator for cursor generation, and only transform the data array
         $paginatorArray = $messages->toArray();
         
-        $paginatorArray['data'] = collect($messages->items())->map(function($msg) {
+        $paginatorArray['data'] = collect($messages->items())->map(function($msg) use ($conversation, $request) {
             $data = $msg->toArray();
             $data['is_outbound'] = $msg->direction === 'outbound';
             if ($msg->relationLoaded('replyTo') && $msg->replyTo) {
@@ -44,11 +44,12 @@ class MessageController extends Controller
                 ];
             }
             unset($data['reply_to']);
+            $team = $msg->relationLoaded('team') ? $msg->team : ($conversation->team ?? $request->user()?->currentTeam);
             // Auto-download missing media on demand if media_id exists but media_url was not yet downloaded
-            if (empty($msg->media_url) && !empty($msg->media_id) && $msg->team) {
+            if (empty($msg->media_url) && !empty($msg->media_id) && $team) {
                 try {
                     $mediaService = new \App\Services\MediaService();
-                    $path = $mediaService->downloadAndStore($msg->media_id, $msg->team);
+                    $path = $mediaService->downloadAndStore($msg->media_id, $team);
                     if ($path) {
                         $msg->update(['media_url' => $path]);
                         $msg->refresh();

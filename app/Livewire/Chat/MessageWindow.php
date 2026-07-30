@@ -1030,7 +1030,7 @@ class MessageWindow extends Component
         }
 
         $messages = $this->conversation->messages()
-            ->with(['attributedCampaign', 'replyTo'])
+            ->with(['attributedCampaign', 'replyTo', 'team'])
             ->orderBy('created_at', 'desc')
             ->skip($offset)
             ->take($limit)
@@ -1038,11 +1038,12 @@ class MessageWindow extends Component
 
         return $messages
             ->map(function ($msg) {
+                $team = $msg->relationLoaded('team') ? $msg->team : ($this->conversation?->team ?? \Illuminate\Support\Facades\Auth::user()?->currentTeam);
                 // Auto-download missing media on demand if media_id exists but media_url was not yet downloaded
-                if (empty($msg->media_url) && !empty($msg->media_id) && $msg->team) {
+                if (empty($msg->media_url) && !empty($msg->media_id) && $team) {
                     try {
                         $mediaService = new \App\Services\MediaService();
-                        $path = $mediaService->downloadAndStore($msg->media_id, $msg->team);
+                        $path = $mediaService->downloadAndStore($msg->media_id, $team);
                         if ($path) {
                             $msg->update(['media_url' => $path]);
                             $msg->refresh();
