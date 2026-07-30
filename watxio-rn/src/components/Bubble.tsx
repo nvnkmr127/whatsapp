@@ -170,7 +170,7 @@ export function Bubble({
     : (duration > 0 ? formatTime(duration) : '0:15');
 
   return (
-    <View className={`max-w-[82%] ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
+    <View className={`max-w-[85%] ${replyTo ? 'min-w-[190px]' : ''} ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
       <View
         className={`overflow-hidden ${isOut ? 'bg-bubble-out dark:bg-d-bubble-out' : 'bg-bubble-in dark:bg-d-bubble-in'}`}
         style={corner}

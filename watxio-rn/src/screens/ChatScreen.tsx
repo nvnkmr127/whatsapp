@@ -154,6 +154,8 @@ export default function ChatScreen({ navigation, route }: any) {
   const messageLayouts = useRef<Map<number, number>>(new Map());
   // Track previous message count to avoid scrolling on polls with no new messages
   const prevMsgCountRef = useRef<number>(0);
+  const isUserNavigatingReplyRef = useRef<boolean>(false);
+  const hasInitialScrolledRef = useRef<boolean>(false);
 
   // Always-fresh ref to fetchConversationDetails so the polling effect never
   // captures a stale closure (e.g. stale isOnline value).
@@ -779,7 +781,7 @@ export default function ChatScreen({ navigation, route }: any) {
     const isNewMessageAdded = lastMsg && prevLastMsg && (lastMsg.id !== prevLastMsg.id || lastMsg.text !== prevLastMsg.text || lastMsg.time !== prevLastMsg.time);
     const typingStarted = typing && !prevTypingRef.current;
 
-    if (isInitialLoad || isNewMessageAdded || typingStarted) {
+    if ((isInitialLoad || isNewMessageAdded || typingStarted) && !isUserNavigatingReplyRef.current) {
       const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: false }), 80);
       prevLastMsgRef.current = lastMsg;
       prevTypingRef.current = typing;
@@ -1065,6 +1067,9 @@ export default function ChatScreen({ navigation, route }: any) {
       );
       return;
     }
+
+    // Reset reply navigation state so screen auto scrolls to sent message
+    isUserNavigatingReplyRef.current = false;
 
     // Prepend locally for immediate UX
     const displayStr = selectedMedia ? (text || `📄 ${selectedMedia.name}`) : text;
@@ -1367,7 +1372,8 @@ export default function ChatScreen({ navigation, route }: any) {
               contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 6 }}
               maintainVisibleContentPosition={Platform.OS === 'ios' ? { minIndexForVisible: 1 } : undefined}
               onContentSizeChange={() => {
-                if (!loadingEarlier) {
+                if (!hasInitialScrolledRef.current && !loadingEarlier) {
+                  hasInitialScrolledRef.current = true;
                   scroller.current?.scrollToEnd({ animated: false });
                 }
               }}
@@ -1480,11 +1486,12 @@ export default function ChatScreen({ navigation, route }: any) {
                             const targetMsg = messages.find(msg => String(msg.id) === String(m.reply_to_id));
                             const targetId = targetMsg?.id || m.reply_to_id;
                             if (targetId) {
+                              isUserNavigatingReplyRef.current = true;
                               setHighlightedMsgId(targetId);
-                              setTimeout(() => setHighlightedMsgId(null), 1500);
+                              setTimeout(() => setHighlightedMsgId(null), 2500);
                               const yOffset = messageLayouts.current.get(Number(targetId)) ?? messageLayouts.current.get(targetId as any);
                               if (yOffset !== undefined) {
-                                scroller.current?.scrollTo({ y: Math.max(0, yOffset - 50), animated: true });
+                                scroller.current?.scrollTo({ y: Math.max(0, yOffset - 60), animated: true });
                               }
                             }
                           }

@@ -42,62 +42,94 @@ export function ReplyPreview({ message, contactName, onPress, onCancel, inBubble
     previewText = 'Message';
   }
 
-  const containerClass = inBubble
-    ? "mx-1 mt-1 mb-1 p-1.5 bg-black/5 dark:bg-white/10 rounded-lg overflow-hidden flex-row border-l-[4px]"
-    : "bg-surface2 dark:bg-d-surface2 mx-2 mt-2 mb-1 rounded-lg border-l-[4px] flex-row items-center justify-between px-3 py-2 border-hairline dark:border-d-hairline";
-  
-  const borderColor = nameColor;
+  if (inBubble) {
+    return (
+      <Pressable 
+        onPress={onPress} 
+        className="mx-1.5 mt-1.5 mb-1 rounded-lg overflow-hidden flex-row items-stretch bg-black/5 dark:bg-white/10"
+        disabled={!onPress}
+      >
+        {/* Dedicated Left Accent Bar (avoids RN Android borderLeftWidth + borderRadius drawing glitch) */}
+        <View style={{ width: 4, backgroundColor: nameColor }} />
 
-  return (
-    <Pressable 
-      onPress={onPress} 
-      className={containerClass}
-      style={{ borderLeftColor: borderColor }}
-      disabled={!onPress}
-    >
-      <View className={`${inBubble ? 'pl-1 pr-2 pb-0.5 min-w-[120px] flex-1' : 'flex-1 mr-2'}`}>
-        {!inBubble && (
-          <View className="flex-row items-center justify-between mb-0.5">
-            <Text className="font-bold text-[12.5px] leading-4" style={{ color: nameColor }}>
-              Replying to {displayName}
-            </Text>
-            {onCancel && (
-              <Pressable onPress={onCancel} className="p-1 -mr-1" hitSlop={12}>
-                <X size={15} color={tokens.muted} />
-              </Pressable>
-            )}
-          </View>
-        )}
-        
-        {inBubble && (
-          <Text className="font-bold text-[12.5px] leading-[16px] mb-0.5" style={{ color: nameColor }}>
+        {/* Content Section */}
+        <View className="flex-1 px-2.5 py-1.5 justify-center min-w-[120px]">
+          <Text className="font-bold text-[12.5px] leading-[16px] mb-0.5" style={{ color: nameColor }} numberOfLines={1}>
             {displayName}
           </Text>
-        )}
 
-        <View className="flex-row items-center gap-1.5 mt-0.5">
-          {hasMedia && isImage && <Camera size={13} color={tokens.muted} />}
-          {hasMedia && isVideo && <Video size={13} color={tokens.muted} />}
-          {hasMedia && isAudio && <Mic size={13} color={tokens.muted} />}
-          {hasMedia && isDoc && <FileText size={13} color={tokens.muted} />}
-          <Text 
-            className={`${inBubble ? 'text-ink/70 dark:text-d-ink/70 text-[12px] leading-[16px]' : 'text-ink/80 dark:text-d-ink/80 text-[12.5px]'}`} 
-            numberOfLines={inBubble ? 2 : 1}
-          >
-            {previewText}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            {hasMedia && isImage && <Camera size={13} color={tokens.muted} />}
+            {hasMedia && isVideo && <Video size={13} color={tokens.muted} />}
+            {hasMedia && isAudio && <Mic size={13} color={tokens.muted} />}
+            {hasMedia && isDoc && <FileText size={13} color={tokens.muted} />}
+            <Text 
+              className="text-ink/80 dark:text-d-ink/80 text-[12px] leading-[16px] flex-1" 
+              numberOfLines={2}
+            >
+              {previewText}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      {hasMedia && (isImage || isVideo) && resolvedMediaUrl && (
-        <View className={inBubble ? 'ml-1.5' : 'ml-2'}>
+        {/* Optional Right Thumbnail */}
+        {hasMedia && (isImage || isVideo) && resolvedMediaUrl && (
+          <View className="p-1 justify-center">
+            <Image 
+              source={{ uri: resolvedMediaUrl }} 
+              style={{ width: 42, height: 42, borderRadius: 6 }} 
+              resizeMode="cover" 
+            />
+          </View>
+        )}
+      </Pressable>
+    );
+  }
+
+  // Outside bubble (Composer reply banner above input bar)
+  return (
+    <View 
+      className="bg-surface2 dark:bg-d-surface2 mx-2 mt-2 mb-1 rounded-lg overflow-hidden flex-row items-stretch border border-hairline dark:border-d-hairline"
+    >
+      {/* Dedicated Left Accent Bar */}
+      <View style={{ width: 4, backgroundColor: nameColor }} />
+
+      <View className="flex-1 px-3 py-2 flex-row items-center justify-between">
+        <View className="flex-1 mr-2">
+          <View className="flex-row items-center justify-between mb-0.5">
+            <Text className="font-bold text-[12.5px] leading-4" style={{ color: nameColor }} numberOfLines={1}>
+              Replying to {displayName}
+            </Text>
+          </View>
+
+          <View className="flex-row items-center gap-1.5">
+            {hasMedia && isImage && <Camera size={13} color={tokens.muted} />}
+            {hasMedia && isVideo && <Video size={13} color={tokens.muted} />}
+            {hasMedia && isAudio && <Mic size={13} color={tokens.muted} />}
+            {hasMedia && isDoc && <FileText size={13} color={tokens.muted} />}
+            <Text 
+              className="text-ink/80 dark:text-d-ink/80 text-[12.5px] leading-4 flex-1" 
+              numberOfLines={1}
+            >
+              {previewText}
+            </Text>
+          </View>
+        </View>
+
+        {hasMedia && (isImage || isVideo) && resolvedMediaUrl && (
           <Image 
             source={{ uri: resolvedMediaUrl }} 
-            style={{ width: inBubble ? 44 : 46, height: inBubble ? 44 : 46, borderRadius: 6 }} 
+            style={{ width: 40, height: 40, borderRadius: 6, marginRight: 8 }} 
             resizeMode="cover" 
           />
-        </View>
-      )}
-    </Pressable>
+        )}
+
+        {onCancel && (
+          <Pressable onPress={onCancel} className="p-1.5 -mr-1 rounded-full active:bg-black/5 dark:active:bg-white/10" hitSlop={12}>
+            <X size={16} color={tokens.muted} />
+          </Pressable>
+        )}
+      </View>
+    </View>
   );
 }
