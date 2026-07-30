@@ -25,25 +25,29 @@ class MediaController extends Controller
         
         // Derive extension from MIME type or original filename
         $clientExt = strtolower($file->getClientOriginalExtension());
-        $allowedExtensions = ['jpg','jpeg','png','gif','webp','mp4','mov','avi','mp3','ogg','wav','m4a','aac','pdf','doc','docx','xls','xlsx','csv'];
+        $allowedExtensions = ['jpg','jpeg','png','gif','webp','mp4','mov','avi','mkv','webm','3gp','mp3','ogg','wav','m4a','aac','opus','pdf','doc','docx','xls','xlsx','csv','txt'];
         
         $extension = $file->extension() ?: $clientExt;
         if (!in_array($extension, $allowedExtensions)) {
             if (in_array($clientExt, $allowedExtensions)) {
                 $extension = $clientExt;
             } else {
-                return response()->json(['error' => 'Invalid file type'], 422);
+                return response()->json(['error' => "Invalid file type (.$extension)"], 422);
             }
         }
         
         $fileName = Str::uuid() . '.' . $extension;
         
         // Determine type based on mime or extension
-        $mime = $file->getMimeType();
+        $mime = strtolower((string) $file->getMimeType());
         $type = 'document';
-        if (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp'])) $type = 'image';
-        elseif (str_contains($mime, 'video') || in_array($extension, ['mp4','mov','avi'])) $type = 'video';
-        elseif (str_contains($mime, 'audio') || in_array($extension, ['mp3','ogg','wav','m4a','aac'])) $type = 'audio';
+        if (str_contains($mime, 'audio') || in_array($extension, ['mp3','ogg','wav','m4a','aac','opus','3gp'])) {
+            $type = 'audio';
+        } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp'])) {
+            $type = 'image';
+        } elseif (str_contains($mime, 'video') || in_array($extension, ['mp4','mov','avi','mkv','webm'])) {
+            $type = 'video';
+        }
 
         // Store in public disk for easy access (or s3 in production)
         $path = $file->storeAs('mobile/uploads/' . $type, $fileName, 'public');

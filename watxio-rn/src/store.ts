@@ -66,7 +66,7 @@ const getDevMachineIp = () => {
   return '192.168.31.52';
 };
 
-const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
+const defaultBaseUrl = 'https://flow.watxio.com/api';
 
 const state: GlobalState = {
   token: null,
@@ -206,13 +206,6 @@ export const store = {
           }
 
           let activeBaseUrl = defaultBaseUrl;
-          if (__DEV__) {
-            activeBaseUrl = data.baseUrl || defaultBaseUrl;
-            if (activeBaseUrl.includes('flow.watxio.com') || activeBaseUrl.includes('10.111.185.147') || activeBaseUrl.includes('10.0.2.2')) {
-              console.warn('[Session] Overriding stale cached URL with dev default:', defaultBaseUrl);
-              activeBaseUrl = defaultBaseUrl;
-            }
-          }
 
           store.set({
             token: data.token,

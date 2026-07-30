@@ -59,7 +59,7 @@ export function Bubble({
   React.useEffect(() => {
     return () => {
       if (soundRef.current) {
-        soundRef.current.unloadAsync();
+        soundRef.current.unloadAsync().catch(() => {});
       }
     };
   }, []);
@@ -67,7 +67,9 @@ export function Bubble({
   const handleAudioPress = async () => {
     if (isPlaying) {
       if (soundRef.current) {
-        await soundRef.current.pauseAsync();
+        try {
+          await soundRef.current.pauseAsync();
+        } catch (e) {}
         setIsPlaying(false);
       }
       return;
@@ -81,12 +83,12 @@ export function Bubble({
         );
         soundRef.current = sound;
         sound.setOnPlaybackStatusUpdate((status: any) => {
-          if (status.isLoaded) {
+          if (status && status.isLoaded) {
             setIsPlaying(status.isPlaying);
             if (status.positionMillis) setPlaybackPosition(status.positionMillis);
             if (status.durationMillis) setDuration(status.durationMillis);
             if (status.didJustFinish) {
-              soundRef.current?.setPositionAsync(0);
+              soundRef.current?.setPositionAsync(0).catch(() => {});
               setIsPlaying(false);
               setPlaybackPosition(0);
             }
@@ -98,6 +100,7 @@ export function Bubble({
       setIsPlaying(true);
     } catch (e) {
       console.warn('Error playing audio', e);
+      setIsPlaying(false);
     }
   };
 
@@ -108,10 +111,21 @@ export function Bubble({
     : { borderRadius: baseR };
 
   const rawType = (mediaType || '').toLowerCase();
-  const isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
-  const isVideo = rawType === 'video';
-  const isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
-  const isDoc   = rawType === 'document' || rawType === 'file';
+  const urlLower = (resolvedMediaUrl || mediaUrl || '').toLowerCase();
+
+  let isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
+  let isVideo = rawType === 'video';
+  let isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
+  let isDoc   = rawType === 'document' || rawType === 'file';
+
+  if (!isImage && !isVideo && !isAudio && !isDoc && urlLower) {
+    if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|heic)(\?|$)/i)) isImage = true;
+    else if (urlLower.match(/\.(mp4|mov|avi|mkv|3gp|webm)(\?|$)/i)) isVideo = true;
+    else if (urlLower.match(/\.(mp3|m4a|aac|wav|ogg|opus)(\?|$)/i)) isAudio = true;
+    else if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|txt)(\?|$)/i)) isDoc = true;
+    else isImage = true; // default to image display if mediaUrl exists
+  }
+
   const hasMedia = isImage || isVideo || isAudio || isDoc || !!resolvedMediaUrl;
 
   const childText = safeExtractText(children).trim();
@@ -183,15 +197,15 @@ export function Bubble({
         {/* ── Native WhatsApp Image / Video Preview ── */}
         {hasMedia && (isImage || isVideo) && (
           <View className="relative">
-            <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg">
+            <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg active:opacity-90">
               {resolvedMediaUrl ? (
                 <Image
                   source={{ uri: resolvedMediaUrl }}
-                  style={{ width: 250, height: 180 }}
+                  style={{ width: 260, height: 190 }}
                   resizeMode="cover"
                 />
               ) : (
-                <View style={{ width: 250, height: 150 }} className="bg-black/10 dark:bg-white/10 items-center justify-center p-4">
+                <View style={{ width: 260, height: 160 }} className="bg-black/10 dark:bg-white/10 items-center justify-center p-4">
                   {isVideo ? <VideoIcon size={36} color={tokens.muted} /> : <ImageIcon size={36} color={tokens.muted} />}
                   <Text className="text-muted dark:text-d-muted text-xs font-medium mt-2">
                     {isVideo ? 'Video' : 'Photo'}
@@ -201,14 +215,9 @@ export function Bubble({
 
               {/* Video Play Button Overlay */}
               {isVideo && (
-                <View className="absolute inset-0 items-center justify-center bg-black/30">
-                  <View className="w-13 h-13 rounded-full bg-black/60 items-center justify-center border-2 border-white/80 shadow-lg">
-                    <Play size={24} color="#ffffff" fill="#ffffff" style={{ marginLeft: 3 }} />
-                  </View>
-                  {/* Video Duration Badge */}
-                  <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded-full flex-row items-center gap-1">
-                    <Play size={10} color="#fff" fill="#fff" />
-                    <Text className="text-[10.5px] text-white font-medium">0:15</Text>
+                <View className="absolute inset-0 items-center justify-center bg-black/25">
+                  <View className="w-12 h-12 rounded-full bg-black/60 items-center justify-center border border-white/80 shadow-md">
+                    <Play size={22} color="#ffffff" fill="#ffffff" style={{ marginLeft: 3 }} />
                   </View>
                 </View>
               )}

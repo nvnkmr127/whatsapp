@@ -401,7 +401,7 @@ export default function OnboardingScreen({ navigation }: any) {
           {/* Squirclish Logo Container */}
           <View className="w-18 h-18 rounded-[22px] items-center justify-center shadow-lg mt-10 mb-6 overflow-hidden bg-transparent">
             <Image
-              source={require('../assets/applogo.png')}
+              source={require('../assets/app logo.png')}
               style={{ width: 150, height: 72, borderRadius: 22 }}
               resizeMode="cover"
             />
@@ -553,38 +553,6 @@ export default function OnboardingScreen({ navigation }: any) {
                 {loginMode === 'email' ? 'Sign in with phone number instead' : 'Sign in with email & password instead'}
               </Text>
             </Pressable>
-          )}
-
-          {/* Collapsible Server Config Settings (Dev Only) */}
-          {__DEV__ && (
-            <View className="w-full mt-6 border-t border-[#242E2E] pt-4">
-              <Pressable
-                onPress={() => setShowServerConfig(!showServerConfig)}
-                className="flex-row items-center justify-between py-1"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Server size={14} color="#8A9999" />
-                  <Text className="text-xs font-semibold text-gray-500">Server URL Configuration</Text>
-                </View>
-                <ChevronDown size={14} color="#8A9999" style={{ transform: [{ rotate: showServerConfig ? '180deg' : '0deg' }] }} />
-              </Pressable>
-
-              {showServerConfig && (
-                <View className="mt-2.5 bg-[#141A1A] p-3.5 rounded-lg gap-2 border border-[#242E2E]">
-                  <Text className="text-[10px] text-gray-400 leading-relaxed">
-                    Modify the API server base host if you are connecting to a remote staging server, a local network IP address, or custom port.
-                  </Text>
-                  <TextInput
-                    value={serverUrl}
-                    onChangeText={setServerUrl}
-                    placeholder="e.g. http://192.168.1.50:8000/api"
-                    placeholderTextColor="#4C5757"
-                    className="bg-[#0F1515] p-2 text-xs rounded text-white font-mono mt-1 border border-[#242E2E]"
-                    autoCapitalize="none"
-                  />
-                </View>
-              )}
-            </View>
           )}
 
           {/* Footer Text */}

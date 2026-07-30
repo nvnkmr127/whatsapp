@@ -3,7 +3,9 @@ import {
   Modal, View, Pressable, Image, Text, StatusBar,
   ActivityIndicator, Dimensions, StyleSheet,
 } from 'react-native';
-import { X, Play } from 'lucide-react-native';
+import { Video, ResizeMode } from 'expo-av';
+import { X } from 'lucide-react-native';
+import { resolveMediaUrl } from '@/utils/media';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -16,6 +18,7 @@ interface Props {
 
 export function MediaViewer({ visible, uri, type, onClose }: Props) {
   const [loading, setLoading] = useState(true);
+  const resolvedUri = resolveMediaUrl(uri) || uri;
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
@@ -32,7 +35,7 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
             <>
               {loading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
               <Image
-                source={{ uri }}
+                source={{ uri: resolvedUri }}
                 style={styles.image}
                 resizeMode="contain"
                 onLoadEnd={() => setLoading(false)}
@@ -40,29 +43,27 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
             </>
           )}
           {type === 'video' && (
-            <>
+            <View style={styles.image}>
               {loading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
-              <View style={styles.image}>
-                <Image
-                  source={{ uri }}
-                  style={StyleSheet.absoluteFillObject}
-                  resizeMode="contain"
-                  onLoadEnd={() => setLoading(false)}
-                />
-                <View style={styles.playOverlay}>
-                  <View style={styles.playCircle}>
-                    <Play size={32} color="#fff" fill="#fff" />
-                  </View>
-                </View>
-              </View>
-            </>
+              <Video
+                source={{ uri: resolvedUri }}
+                style={styles.image}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+                onLoad={() => setLoading(false)}
+                onError={(err) => {
+                  console.warn('Video playback error:', err);
+                  setLoading(false);
+                }}
+              />
+            </View>
           )}
           {(type === 'audio' || type === 'document') && (
             <View style={styles.docBox}>
               <Text style={styles.docText}>
                 {type === 'audio' ? '🎵' : '📄'}  {uri.split('/').pop() || 'File'}
               </Text>
-              <Text style={styles.docHint}>Open in browser to view</Text>
             </View>
           )}
         </View>

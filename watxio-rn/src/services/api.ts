@@ -25,10 +25,9 @@ const getDevMachineIp = () => {
   return '192.168.31.52';
 };
 
-const defaultBaseUrl = __DEV__ ? `http://${getDevMachineIp()}:8000/api` : `https://flow.watxio.com/api`;
+const defaultBaseUrl = 'https://flow.watxio.com/api';
 
 let apiBaseUrl: string = defaultBaseUrl;
-
 
 export const api = {
   onUnauthorized(callback: () => void) {
@@ -40,10 +39,9 @@ export const api = {
   },
 
   setBaseUrl(url: string) {
-    if (__DEV__ && url) {
-      // Remove trailing slash if present
+    if (url) {
       apiBaseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
-    } else if (!__DEV__) {
+    } else {
       apiBaseUrl = defaultBaseUrl;
     }
   },

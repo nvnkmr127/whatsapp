@@ -18,14 +18,14 @@ export function resolveMediaUrl(rawUrl: string | null | undefined): string | nul
     return `${origin}/${url}`;
   }
 
-  // If in DEV mode and URL points to localhost or 127.0.0.1 (which doesn't resolve on physical Android devices),
-  // replace localhost with the actual dev machine IP from apiBaseUrl
-  if (__DEV__ && (url.includes('localhost') || url.includes('127.0.0.1'))) {
+  // If in DEV mode and URL points to localhost, 127.0.0.1, or 10.0.2.2 (which doesn't resolve on physical Android devices),
+  // replace host with the actual dev machine IP from apiBaseUrl
+  if (__DEV__ && (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('10.0.2.2'))) {
     const originHostMatch = origin.match(/^https?:\/\/([^:/]+)(:\d+)?/);
     if (originHostMatch && originHostMatch[1]) {
       const activeIp = originHostMatch[1];
       const activePort = originHostMatch[2] || '';
-      url = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, `http://${activeIp}${activePort}`);
+      url = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?/, `http://${activeIp}${activePort}`);
     }
   }
 

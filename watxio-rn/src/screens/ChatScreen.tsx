@@ -243,7 +243,7 @@ export default function ChatScreen({ navigation, route }: any) {
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
-          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.media_path || null,
+          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null),
           media_type: (m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (m.media_type || m.metadata?.media_type || (m.media_url ? 'image' : null)),
           metadata: m.metadata || null,
           reply_to_content: replyContent || null,
@@ -390,7 +390,7 @@ export default function ChatScreen({ navigation, route }: any) {
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
-          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.media_path || null,
+          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null),
           media_type: (m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (m.media_type || m.metadata?.media_type || (m.media_url ? 'image' : null)),
           metadata: m.metadata || null,
           reply_to_content: replyContent || null,
@@ -1113,6 +1113,13 @@ export default function ChatScreen({ navigation, route }: any) {
           uploadUri = compressed.uri;
           finalMime = compressed.mimeType;
           fileName = compressed.name;
+        } else if (mediaToUpload.type === 'video') {
+          if (!finalMime || !finalMime.startsWith('video/')) {
+            finalMime = 'video/mp4';
+          }
+          if (!fileName.match(/\.(mp4|mov|avi|mkv|3gp|webm)$/i)) {
+            fileName = `${fileName.replace(/\.[^/.]+$/, '')}.mp4`;
+          }
         } else if (!finalMime || finalMime === 'application/octet-stream') {
           const ext = fileName.split('.').pop()?.toLowerCase();
           if (ext === 'mp4' || ext === 'mov') finalMime = 'video/mp4';
@@ -1129,7 +1136,9 @@ export default function ChatScreen({ navigation, route }: any) {
         try {
           const uploadRes = await api.post('/v1/mobile/media/upload', formData);
           mediaUrl = uploadRes.url;
-          msgType = uploadRes.type; // From backend
+          if (uploadRes.type && uploadRes.type !== 'document') {
+            msgType = uploadRes.type;
+          }
         } catch (uploadErr) {
           console.warn('Media upload failed, using local URI as fallback', uploadErr);
           mediaUrl = uploadUri;
@@ -1501,9 +1510,9 @@ export default function ChatScreen({ navigation, route }: any) {
                             }
                           }
                         }}
-                        onMediaPress={m.media_url && m.media_type ? () => setMediaViewer({
+                        onMediaPress={m.media_url ? () => setMediaViewer({
                           uri: m.media_url!,
-                          type: m.media_type as any,
+                          type: (m.media_type as any) || 'image',
                         }) : undefined}
                       >
                         {displayText}
@@ -1591,33 +1600,35 @@ export default function ChatScreen({ navigation, route }: any) {
               onSendRecording={async () => {
                 setIsRecording(false);
                 let uri: string | null = null;
-                if (recordingRef.current) {
+                const rec = recordingRef.current;
+                recordingRef.current = null;
+
+                if (rec) {
                   try {
-                    await recordingRef.current.stopAndUnloadAsync();
-                    uri = recordingRef.current.getURI();
+                    await rec.stopAndUnloadAsync();
+                    uri = rec.getURI();
                   } catch (e) {
                     console.warn('Failed to stop recording:', e);
                   }
-                  recordingRef.current = null;
                 }
 
                 const duration = recordingSeconds || 1;
                 const timeStr = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
 
-                // Prepend locally
-                setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'sent', media_url: uri, media_type: 'audio' }]);
-
                 if (!uri) {
-                  showDialog('Error', 'Failed to get recording URI.');
+                  showDialog('Error', 'Could not save audio recording.');
                   return;
                 }
+
+                // Prepend locally
+                setMessages((m) => [...m, { kind: 'out', text: `🎙️ Voice message (${timeStr})`, time: 'now', status: 'queued', media_url: uri, media_type: 'audio' }]);
 
                 try {
                   const formData = new FormData();
                   formData.append('file', {
                     uri,
-                    name: 'voice.mp4',
-                    type: 'audio/mp4',
+                    name: 'voice.m4a',
+                    type: 'audio/m4a',
                   } as any);
 
                   const uploadRes = await api.post('/v1/mobile/media/upload', formData);
@@ -1627,7 +1638,9 @@ export default function ChatScreen({ navigation, route }: any) {
                     media_url: uploadRes.url,
                     content: `Voice message (${timeStr})`,
                   });
-                  fetchConversationDetails();
+                  fetchConversationDetailsRef.current(true).catch((e) =>
+                    console.warn('[Voice] fetchConversationDetails failed:', e)
+                  );
                 } catch (err: any) {
                   console.warn('Voice upload api block:', err);
                   showDialog('Failed to Send Voice Note', err.message || 'Upload failed.');
