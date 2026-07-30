@@ -42,7 +42,12 @@ export default function OnboardingScreen({ navigation }: any) {
 
   // Input Fields
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [country, setCountry] = useState({ flag: '🇺🇸', code: '+1' });
+  const [country, setCountry] = useState({
+    name: 'India',
+    code: '+91',
+    flag: '🇮🇳',
+    placeholder: '98765 43210',
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -98,11 +103,15 @@ export default function OnboardingScreen({ navigation }: any) {
   };
 
   const countries = [
-    { name: 'United States', code: '+1', flag: '🇺🇸' },
-    { name: 'United Kingdom', code: '+44', flag: '🇬🇧' },
-    { name: 'India', code: '+91', flag: '🇮🇳' },
-    { name: 'Germany', code: '+49', flag: '🇩🇪' },
-    { name: 'Brazil', code: '+55', flag: '🇧🇷' },
+    { name: 'India', code: '+91', flag: '🇮🇳', placeholder: '98765 43210' },
+    { name: 'United States', code: '+1', flag: '🇺🇸', placeholder: '415 555 0118' },
+    { name: 'United Kingdom', code: '+44', flag: '🇬🇧', placeholder: '7911 123456' },
+    { name: 'United Arab Emirates', code: '+971', flag: '🇦🇪', placeholder: '50 123 4567' },
+    { name: 'Saudi Arabia', code: '+966', flag: '🇸🇦', placeholder: '51 234 5678' },
+    { name: 'Singapore', code: '+65', flag: '🇸🇬', placeholder: '8123 4567' },
+    { name: 'Australia', code: '+61', flag: '🇦🇺', placeholder: '412 345 678' },
+    { name: 'Germany', code: '+49', flag: '🇩🇪', placeholder: '151 23456789' },
+    { name: 'Brazil', code: '+55', flag: '🇧🇷', placeholder: '11 98765-4321' },
   ];
 
   const handleScanQr = async () => {
@@ -475,7 +484,7 @@ export default function OnboardingScreen({ navigation }: any) {
                       <TextInput
                         value={phoneNumber}
                         onChangeText={setPhoneNumber}
-                        placeholder="415 555 0118"
+                        placeholder={country.placeholder || '98765 43210'}
                         placeholderTextColor="#4C5757"
                         keyboardType="phone-pad"
                         className="flex-1 text-sm text-white font-semibold h-full"
@@ -651,9 +660,9 @@ export default function OnboardingScreen({ navigation }: any) {
             <View className="gap-1 mt-1">
               {countries.map((c) => (
                 <Pressable
-                  key={c.code}
+                  key={`${c.name}-${c.code}`}
                   onPress={() => {
-                    setCountry({ flag: c.flag, code: c.code });
+                    setCountry(c);
                     setShowCountryPicker(false);
                   }}
                   className="flex-row items-center gap-3 py-3 px-2.5 rounded-lg active:bg-[#1C2424]"
