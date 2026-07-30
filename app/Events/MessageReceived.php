@@ -72,6 +72,8 @@ class MessageReceived implements ShouldBroadcastNow
                 'reply_to_message' => $this->message->replyTo ? [
                     'content' => $this->message->replyTo->content ?: ucfirst($this->message->replyTo->type),
                     'is_outbound' => $this->message->replyTo->direction === 'outbound',
+                    'media_url' => $this->message->replyTo->full_media_url,
+                    'media_type' => $this->message->replyTo->type,
                 ] : null,
             ],
             'timestamp' => now()->timestamp,

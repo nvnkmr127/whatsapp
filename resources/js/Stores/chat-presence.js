@@ -82,6 +82,8 @@ export default {
                 if (msg) {
                     msg.status = e.message.status;
                     msg.metadata = e.message.metadata;
+                    if (e.message.media_url) msg.media_url = e.message.media_url;
+                    if (e.message.media_type) msg.media_type = e.message.media_type;
                 } else {
                     this.syncLatest();
                 }

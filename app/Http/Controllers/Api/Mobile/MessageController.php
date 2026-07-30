@@ -118,7 +118,11 @@ class MessageController extends Controller
         if ($request->input('reply_to_message_id')) {
             $metadata['reply_to_message_id'] = $request->input('reply_to_message_id');
         }
-        $metadata['user_id'] = $user->id;
+        $rawMediaUrl = $request->input('media_url');
+        $cleanMediaUrl = $rawMediaUrl;
+        if ($rawMediaUrl && preg_match('#^https?://[^/]+/(storage/|public/)?(.*)$#i', $rawMediaUrl, $m)) {
+            $cleanMediaUrl = $m[2];
+        }
 
         $message = Message::create([
             'team_id' => $team->id,
@@ -128,7 +132,8 @@ class MessageController extends Controller
             'type' => $request->input('type', 'text'),
             'content' => $request->input('content'),
             'caption' => $isMedia ? $request->input('content') : null,
-            'media_url' => $request->input('media_url'),
+            'media_url' => $cleanMediaUrl,
+            'media_type' => $isMedia ? $request->input('type') : null,
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
         ]);

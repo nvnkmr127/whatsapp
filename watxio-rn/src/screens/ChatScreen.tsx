@@ -729,12 +729,15 @@ export default function ChatScreen({ navigation, route }: any) {
             }
           } else if (
             payload.event === 'MessageReceived' ||
+            payload.event === '.MessageReceived' ||
             payload.event === 'MessageSent' ||
+            payload.event === '.MessageSent' ||
             payload.event === 'MessageStatusUpdated' ||
             payload.event === '.MessageStatusUpdated' ||
             payload.event === 'App\\Events\\MessageStatusUpdated' ||
             payload.event?.endsWith('MessageStatusUpdated') ||
-            payload.event?.endsWith('MessageReceived')
+            payload.event?.endsWith('MessageReceived') ||
+            payload.event?.endsWith('MessageSent')
           ) {
             console.log(`[WS] Invalidation event received: ${payload.event}`);
             fetchConversationDetailsRef.current(true).catch((e) =>
@@ -1078,6 +1081,8 @@ export default function ChatScreen({ navigation, route }: any) {
       text: displayStr, 
       time: 'now', 
       status: 'queued',
+      media_url: selectedMedia ? selectedMedia.uri : null,
+      media_type: selectedMedia ? selectedMedia.type : null,
       reply_to_content: replyingTo ? safeExtractText(replyingTo.text) || 'Media Message' : null,
       reply_to_id: replyingTo ? replyingTo.id : null,
       reply_to_is_outbound: replyingTo ? replyingTo.kind === 'out' : false,

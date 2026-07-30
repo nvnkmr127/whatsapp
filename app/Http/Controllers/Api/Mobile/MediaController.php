@@ -51,6 +51,7 @@ class MediaController extends Controller
         return response()->json([
             'success' => true,
             'url' => Storage::disk('public')->url($path),
+            'path' => $path,
             'fileName' => $file->getClientOriginalName(),
             'mime' => $mime,
             'size' => $file->getSize(),

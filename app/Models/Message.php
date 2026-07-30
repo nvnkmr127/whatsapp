@@ -67,12 +67,19 @@ class Message extends Model
             return null;
         }
 
-        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://') || str_starts_with($url, 'data:') || str_starts_with($url, 'file://')) {
+        if (str_starts_with($url, 'data:') || str_starts_with($url, 'file://')) {
             return $url;
         }
 
-        // Clean leading storage/public prefixes to avoid double path prefixing
-        $cleanPath = preg_replace('#^/?(storage|public)/#', '', $url);
+        if (preg_match('#^https?://[^/]+/(storage|public)/(.*)$#i', $url, $matches)) {
+            $cleanPath = $matches[2];
+        } elseif (preg_match('#^https?://(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?/(.*)$#i', $url, $matches)) {
+            $cleanPath = preg_replace('#^/?(storage|public)/#i', '', $matches[3]);
+        } elseif (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        } else {
+            $cleanPath = preg_replace('#^/?(storage|public)/#i', '', $url);
+        }
 
         $configuredDisk = config('filesystems.default', 'public');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
