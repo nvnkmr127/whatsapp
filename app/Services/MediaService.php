@@ -32,6 +32,14 @@ class MediaService
         $log = ['media_id' => $mediaId, 'team_id' => $team->id];
 
         $accessToken = $team->whatsapp_access_token;
+        if (! $accessToken) {
+            $accessToken = config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN');
+        }
+        if (! $accessToken) {
+            $accessToken = \App\Models\Team::whereNotNull('whatsapp_access_token')
+                ->where('whatsapp_access_token', '!=', '')
+                ->value('whatsapp_access_token');
+        }
 
         if (! $accessToken) {
             Log::error('Media download failed', $log + ['step' => 'no_access_token']);
@@ -97,10 +105,9 @@ class MediaService
         $filename = Str::random(40).'.'.$extension;
         $path = "whatsapp/{$team->id}/{$filename}";
 
-        // 4. Store. No makeDirectory(): object stores (S3/R2) have no directories,
-        // and the local driver creates them on write anyway — it was two wasted
-        // round-trips that could themselves throw.
-        $disk = config('filesystems.default', 'public');
+        // 4. Store. Web files MUST be written to public disk so they can be served.
+        $configuredDisk = config('filesystems.default', 'public');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
         try {
             // Visibility is left to the disk config. Forcing 'public' here sends an

@@ -25,6 +25,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     hasAttachment: false,
     attachmentName: '',
     attachmentPreview: null,
+    replyingTo: null,
 
     isNearBottom: true,
     unreadBelowCount: 0,
@@ -32,6 +33,11 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
     get canSend() {
         return !!(this.msgBody.trim() || this.hasAttachment);
+    },
+
+    clearReply() {
+        this.replyingTo = null;
+        if (wire) wire.replyToMessageId = null;
     },
 
     // Local state flips instantly so the send button appears while the upload is
@@ -108,15 +114,20 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 this.msgBody = e.detail.body;
                 if (this.$refs.messageInput) this.$refs.messageInput.focus();
             },
+            replyToMessage: (e) => {
+                this.replyingTo = e.detail;
+                if (wire) wire.replyToMessageId = e.detail?.id || null;
+                if (this.$refs.messageInput) this.$refs.messageInput.focus();
+            },
             scrollToId: (e) => {
                 const id = e.detail.id;
                 const el = document.getElementById('message-' + id);
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Highlight exactly like WhatsApp Web
-                    el.classList.add('bg-wa-teal/20', 'dark:bg-wa-teal/30', '-mx-4', 'px-4');
+                    // Highlight smoothly without horizontal margin overflow
+                    el.classList.add('bg-wa-teal/20', 'dark:bg-wa-teal/30', 'ring-2', 'ring-wa-teal/50');
                     setTimeout(() => {
-                        el.classList.remove('bg-wa-teal/20', 'dark:bg-wa-teal/30', '-mx-4', 'px-4');
+                        el.classList.remove('bg-wa-teal/20', 'dark:bg-wa-teal/30', 'ring-2', 'ring-wa-teal/50');
                     }, 1500);
                 }
             },
@@ -140,8 +151,8 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                         this.lightboxOpen = false;
                     } else if (this.showQR) {
                         this.showQR = false;
-                    } else if (wire.replyToMessageId) {
-                        wire.set('replyToMessageId', null);
+                    } else if (this.replyingTo) {
+                        this.clearReply();
                     }
                 }
             },
@@ -153,6 +164,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         window.addEventListener('chat-scroll-bottom', this._boundHandlers.scrollBottom);
         window.addEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
         window.addEventListener('update-message-body', this._boundHandlers.updateBody);
+        window.addEventListener('reply-to-message', this._boundHandlers.replyToMessage);
         window.addEventListener('chat-scroll-to-id', this._boundHandlers.scrollToId);
         window.addEventListener('keydown', this._boundHandlers.keydown);
 
@@ -171,6 +183,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
             window.removeEventListener('chat-scroll-bottom', this._boundHandlers.scrollBottom);
             window.removeEventListener('chat-initial-loaded', this._boundHandlers.initialLoaded);
             window.removeEventListener('update-message-body', this._boundHandlers.updateBody);
+            window.removeEventListener('reply-to-message', this._boundHandlers.replyToMessage);
             window.removeEventListener('chat-scroll-to-id', this._boundHandlers.scrollToId);
             window.removeEventListener('keydown', this._boundHandlers.keydown);
             this._boundHandlers = null;
@@ -326,6 +339,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
             const body = this.msgBody;
             this.msgBody = '';
+            this.clearReply();
             this.$store.chat.sendMessage(body);
         } finally {
             this._submitting = false;

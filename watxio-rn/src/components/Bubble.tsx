@@ -1,12 +1,13 @@
 // src/components/Bubble.tsx — chat bubble (in or out) with WhatsApp native media previews.
 import React from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
-import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle, Download, FileSpreadsheet } from 'lucide-react-native';
+import { View, Text, Image, Pressable, ActivityIndicator } from 'react-native';
+import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle, Download, Camera, Image as ImageIcon, Video as VideoIcon } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useTokens } from '@/theme';
 import { ReplyPreview } from './ReplyPreview';
 import type { MessageStatus, ChatMessage } from '@/types';
 import { safeExtractText } from '@/utils/text';
+import { resolveMediaUrl } from '@/utils/media';
 
 interface Props {
   kind: 'in' | 'out';
@@ -53,6 +54,8 @@ export function Bubble({
   const [duration, setDuration] = React.useState(0);
   const soundRef = React.useRef<Audio.Sound | null>(null);
 
+  const resolvedMediaUrl = resolveMediaUrl(mediaUrl);
+
   React.useEffect(() => {
     return () => {
       if (soundRef.current) {
@@ -71,9 +74,9 @@ export function Bubble({
     }
 
     try {
-      if (!soundRef.current && mediaUrl) {
+      if (!soundRef.current && resolvedMediaUrl) {
         const { sound } = await Audio.Sound.createAsync(
-          { uri: mediaUrl },
+          { uri: resolvedMediaUrl },
           { shouldPlay: true }
         );
         soundRef.current = sound;
@@ -104,11 +107,12 @@ export function Bubble({
         : { borderTopLeftRadius: baseR, borderTopRightRadius: baseR, borderBottomLeftRadius: 4, borderBottomRightRadius: baseR })
     : { borderRadius: baseR };
 
-  const hasMedia = !!mediaUrl && !!mediaType;
-  const isImage = mediaType === 'image';
-  const isVideo = mediaType === 'video';
-  const isAudio = mediaType === 'audio';
-  const isDoc   = mediaType === 'document';
+  const rawType = (mediaType || '').toLowerCase();
+  const isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
+  const isVideo = rawType === 'video';
+  const isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
+  const isDoc   = rawType === 'document' || rawType === 'file';
+  const hasMedia = isImage || isVideo || isAudio || isDoc || !!resolvedMediaUrl;
 
   const childText = safeExtractText(children).trim();
 
@@ -127,8 +131,8 @@ export function Bubble({
 
   // Parse document file details
   const getDocumentInfo = () => {
-    if (!mediaUrl) return { name: 'Document', ext: 'FILE', size: '1.2 MB' };
-    const cleanUrl = mediaUrl.split('?')[0];
+    if (!resolvedMediaUrl && !mediaUrl) return { name: 'Document', ext: 'FILE', size: 'Document' };
+    const cleanUrl = (resolvedMediaUrl || mediaUrl || '').split('?')[0];
     const name = cleanUrl.split('/').pop() || 'Document';
     const ext = name.includes('.') ? name.split('.').pop()?.toUpperCase() || 'FILE' : 'FILE';
     const size = metadata?.file_size ? `${(metadata.file_size / (1024 * 1024)).toFixed(1)} MB` : `${ext} Document`;
@@ -180,11 +184,21 @@ export function Bubble({
         {hasMedia && (isImage || isVideo) && (
           <View className="relative">
             <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg">
-              <Image
-                source={{ uri: mediaUrl! }}
-                style={{ width: 250, height: 180 }}
-                resizeMode="cover"
-              />
+              {resolvedMediaUrl ? (
+                <Image
+                  source={{ uri: resolvedMediaUrl }}
+                  style={{ width: 250, height: 180 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{ width: 250, height: 150 }} className="bg-black/10 dark:bg-white/10 items-center justify-center p-4">
+                  {isVideo ? <VideoIcon size={36} color={tokens.muted} /> : <ImageIcon size={36} color={tokens.muted} />}
+                  <Text className="text-muted dark:text-d-muted text-xs font-medium mt-2">
+                    {isVideo ? 'Video' : 'Photo'}
+                  </Text>
+                </View>
+              )}
+
               {/* Video Play Button Overlay */}
               {isVideo && (
                 <View className="absolute inset-0 items-center justify-center bg-black/30">

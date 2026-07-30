@@ -4,6 +4,7 @@ import { Camera, Video, FileText, Mic, X } from 'lucide-react-native';
 import { useTokens } from '@/theme';
 import type { ChatMessage } from '@/types';
 import { safeExtractText } from '@/utils/text';
+import { resolveMediaUrl } from '@/utils/media';
 
 interface ReplyPreviewProps {
   message: ChatMessage | null | undefined;
@@ -22,11 +23,13 @@ export function ReplyPreview({ message, contactName, onPress, onCancel, inBubble
   const displayName = isOut ? 'You' : (contactName || 'Contact');
   const nameColor = isOut ? (tokens.accent || '#06CF9C') : '#34B7F1';
 
-  const hasMedia = !!message.media_url && !!message.media_type;
-  const isImage = message.media_type === 'image';
-  const isVideo = message.media_type === 'video';
-  const isAudio = message.media_type === 'audio';
-  const isDoc = message.media_type === 'document';
+  const resolvedMediaUrl = resolveMediaUrl(message.media_url);
+  const rawType = (message.media_type || '').toLowerCase();
+  const isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
+  const isVideo = rawType === 'video';
+  const isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
+  const isDoc = rawType === 'document' || rawType === 'file';
+  const hasMedia = isImage || isVideo || isAudio || isDoc || !!resolvedMediaUrl;
 
   let previewText = safeExtractText(message.text);
   if (!previewText && hasMedia) {
@@ -86,10 +89,10 @@ export function ReplyPreview({ message, contactName, onPress, onCancel, inBubble
         </View>
       </View>
 
-      {hasMedia && (isImage || isVideo) && message.media_url && (
+      {hasMedia && (isImage || isVideo) && resolvedMediaUrl && (
         <View className={inBubble ? 'ml-1.5' : 'ml-2'}>
           <Image 
-            source={{ uri: message.media_url }} 
+            source={{ uri: resolvedMediaUrl }} 
             style={{ width: inBubble ? 44 : 46, height: inBubble ? 44 : 46, borderRadius: 6 }} 
             resizeMode="cover" 
           />

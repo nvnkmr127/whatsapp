@@ -36,7 +36,8 @@ class DiagnoseMediaPipeline extends Command
         }
 
         $ok = true;
-        $disk = config('filesystems.default', 'public');
+        $configuredDisk = config('filesystems.default', 'public');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
 
         $this->info("Team #{$team->id}  ·  disk: {$disk}  ·  driver: ".config("filesystems.disks.{$disk}.driver"));
         $this->newLine();
@@ -59,7 +60,11 @@ class DiagnoseMediaPipeline extends Command
 
     private function checkAccessToken(Team $team): bool
     {
-        if (! $team->whatsapp_access_token) {
+        $token = $team->whatsapp_access_token
+            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'))
+            ?: Team::whereNotNull('whatsapp_access_token')->where('whatsapp_access_token', '!=', '')->value('whatsapp_access_token');
+
+        if (! $token) {
             $this->error('✗ access token: missing — every download fails at step one');
 
             return false;

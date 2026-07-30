@@ -36,7 +36,9 @@ class DownloadMediaJobTest extends TestCase
      */
     public function test_a_failed_download_throws_so_the_job_retries(): void
     {
-        Storage::fake(config('filesystems.default'));
+        $configuredDisk = config('filesystems.default');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
+        Storage::fake($disk);
         Http::fake(['graph.facebook.com/*' => Http::response(['error' => 'expired'], 400)]);
 
         $message = $this->inboundImage();
@@ -67,7 +69,8 @@ class DownloadMediaJobTest extends TestCase
     /** The happy path still stores the file and links it. */
     public function test_a_successful_download_links_the_media(): void
     {
-        $disk = config('filesystems.default');
+        $configuredDisk = config('filesystems.default');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
         Storage::fake($disk);
         Http::fake([
             'graph.facebook.com/*' => Http::response(['url' => 'http://media.url/f', 'mime_type' => 'image/jpeg'], 200),

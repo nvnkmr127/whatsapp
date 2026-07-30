@@ -74,16 +74,32 @@
 
             <!-- Media -->
             <template x-if="message.media_url">
-                <div class="mb-3 rounded-lg overflow-hidden border border-white/10">
+                <div class="mb-2 rounded-xl overflow-hidden border border-white/10">
+                    <!-- Image -->
                     <template x-if="message.media_type && message.media_type.startsWith('image')">
-                        <img :src="message.media_url"
-                            class="w-full max-h-80 object-cover cursor-pointer hover:opacity-90 rounded-lg shadow-sm"
-                            loading="lazy"
-                            @click="lightboxImage = message.media_url; lightboxOpen = true">
+                        <div class="relative group/img cursor-pointer rounded-xl overflow-hidden"
+                             @click="lightboxImage = message.media_url; lightboxOpen = true">
+                            <img :src="message.media_url"
+                                class="w-full max-h-80 object-cover rounded-xl shadow-sm transition-transform duration-300 group-hover/img:scale-[1.02]"
+                                loading="lazy">
+                            <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
+                                <div class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center shadow-lg">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
                     </template>
+
+                    <!-- Video -->
                     <template x-if="message.media_type && message.media_type.startsWith('video')">
-                        <video :src="message.media_url" controls class="w-full max-h-80" preload="metadata"></video>
+                        <div class="rounded-xl overflow-hidden bg-black shadow-sm">
+                            <video :src="message.media_url" controls class="w-full max-h-80 rounded-xl" preload="metadata"></video>
+                        </div>
                     </template>
+
+                    <!-- Audio / Voice Note -->
                     <template x-if="message.media_type && message.media_type.startsWith('audio')">
                         <div x-data="{ 
                                     playing: false, 
@@ -93,7 +109,7 @@
                                     bars: [],
                                     init() {
                                         let seed = parseInt(String(message.id).replace(/\D/g, '')) || 1;
-                                        this.bars = Array.from({length: 25}, (_, i) => 30 + ((seed * (i + 3)) % 70));
+                                        this.bars = Array.from({length: 28}, (_, i) => 25 + ((seed * (i + 3)) % 75));
                                     },
                                     toggle() {
                                         if (!this.audio) {
@@ -113,7 +129,7 @@
                                         return min + ':' + (sec < 10 ? '0' : '') + sec;
                                     }
                                 }"
-                            class="flex items-center gap-3 p-3 bg-black/5 dark:bg-black/20 rounded-2xl min-w-[200px]">
+                            class="flex items-center gap-3 p-3 bg-black/5 dark:bg-black/20 rounded-2xl min-w-[220px]">
                             <!-- Play/Pause Button -->
                             <button @click="toggle"
                                 class="w-10 h-10 flex items-center justify-center bg-wa-teal text-white rounded-full shadow-md shrink-0 hover:scale-105 active:scale-95 transition-transform">
@@ -123,30 +139,30 @@
                                     </svg>
                                 </template>
                                 <template x-if="playing">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor"
-                                        stroke-width="1">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                                     </svg>
                                 </template>
                             </button>
 
                             <!-- Waveform Area -->
-                            <div class="flex-1 flex flex-col gap-1">
-                                <div class="flex items-end gap-[2px] h-6">
+                            <div class="flex-1 flex flex-col gap-1.5">
+                                <div class="flex items-end gap-[2px] h-6 cursor-pointer"
+                                     @click="if(audio && duration) { audio.currentTime = ($event.offsetX / $el.clientWidth) * duration; }">
                                     <template x-for="(h, i) in bars" :key="i">
                                         <div class="w-[3px] rounded-full transition-colors duration-200"
-                                            :class="(current/duration) * bars.length >= i ? 'bg-wa-teal' : 'bg-slate-300 dark:bg-slate-700'"
+                                            :class="(current/duration) * bars.length >= i ? (message.is_outbound ? 'bg-white' : 'bg-wa-teal') : 'bg-black/20 dark:bg-white/20'"
                                             :style="'height: ' + h + '%'"></div>
                                     </template>
                                 </div>
-                                <div
-                                    class="flex justify-between items-center text-[9px] font-black uppercase tracking-tighter text-slate-500 dark:text-slate-400">
+                                <div class="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-tight opacity-70">
                                     <span x-text="formatTime(current)">0:00</span>
                                     <span x-text="formatTime(duration)"></span>
                                 </div>
                             </div>
                         </div>
-                        <!-- Transcription -->
+
+                        <!-- Audio Transcription -->
                         <template x-if="message.metadata && message.metadata.transcription">
                             <div class="mt-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800/50">
                                 <div class="flex items-center gap-1.5 mb-1">
@@ -157,49 +173,67 @@
                             </div>
                         </template>
                     </template>
+
+                    <!-- Document / General File -->
                     <template
                         x-if="!message.media_type || (!message.media_type.startsWith('image') && !message.media_type.startsWith('video') && !message.media_type.startsWith('audio'))">
-                        <a :href="message.media_url" target="_blank"
-                            class="flex items-center gap-3 p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span class="font-bold text-xs truncate">Document</span>
+                        <a :href="message.media_url" download target="_blank"
+                            class="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/10 rounded-xl hover:bg-black/10 dark:hover:bg-white/20 transition-all border border-white/10 group/doc">
+                            <div class="w-10 h-10 rounded-lg bg-wa-teal/20 text-wa-teal flex items-center justify-center shrink-0 font-bold text-xs">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold truncate" x-text="message.caption || message.content || 'Document'"></p>
+                                <p class="text-[10px] opacity-70 uppercase font-semibold" x-text="(message.media_type || 'FILE').split('/')[1] || 'FILE'"></p>
+                            </div>
+                            <div class="p-2 rounded-full bg-white/20 text-slate-700 dark:text-slate-200 group-hover/doc:scale-110 transition-transform shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </div>
                         </a>
                     </template>
                 </div>
             </template>
 
-            <!-- Media placeholder: inbound-only, shown while DownloadMediaJob hasn't
-                 populated media_url yet, so a received photo/video is visible instead
-                 of an empty bubble. Outbound media always has media_url at send time.
-                 Once the job exhausts its retries it sets metadata.media_failed, so
-                 this stops claiming a download is still in progress. -->
-            <template x-if="!message.is_outbound && !message.media_url && ['image','video','audio','document','sticker'].includes(message.type)">
-                <div class="mb-3 flex items-center gap-2 p-3 rounded-lg text-xs italic"
+            <!-- Inbound Media Placeholder & Retry State -->
+            <template x-if="!message.media_url && ['image','video','audio','document','sticker'].includes(message.type)">
+                <div class="mb-3 flex items-center gap-3 p-3 rounded-xl border transition-colors"
                     :class="message.metadata?.media_failed
-                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                        : 'bg-black/5 dark:bg-black/20 text-slate-500 dark:text-slate-400'">
+                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
+                        : 'bg-black/5 dark:bg-white/5 border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-300'">
+                    
                     <template x-if="!message.metadata?.media_failed">
-                        <svg aria-hidden="true" class="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 animate-spin text-wa-teal shrink-0" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            <span class="text-xs font-semibold italic" x-text="message.type.charAt(0).toUpperCase() + message.type.slice(1) + ' — downloading…'"></span>
+                        </div>
                     </template>
+
                     <template x-if="message.metadata?.media_failed">
-                        <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                        </svg>
+                        <div class="flex items-center justify-between w-full gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <svg class="w-4 h-4 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                </svg>
+                                <span class="text-xs font-bold truncate" x-text="message.type.charAt(0).toUpperCase() + message.type.slice(1) + ' — download failed'"></span>
+                            </div>
+                            <button @click="$wire.retryMediaDownload(message.id).then(res => { if(res.media_url) { message.media_url = res.media_url; } message.metadata = res.metadata; })"
+                                    class="px-2.5 py-1 text-[11px] font-black uppercase tracking-wider bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-all shrink-0 shadow-sm">
+                                Retry
+                            </button>
+                        </div>
                     </template>
-                    <span x-text="message.type.charAt(0).toUpperCase() + message.type.slice(1)
-                        + (message.metadata?.media_failed ? ' — couldn\'t be downloaded' : ' — downloading…')"></span>
                 </div>
             </template>
 
             <!-- Text -->
-            <template x-if="message.content && message.content !== '[Image]'">
+            <template x-if="message.content && message.content !== '[Image]' && message.content !== '[Video]' && message.content !== '[Audio]'">
                 <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content">
                 </p>
             </template>

@@ -17,8 +17,8 @@ class MediaHandlingTest extends TestCase
 
     public function test_incoming_image_webhook_downloads_and_links_media()
     {
-        // MediaService writes to the configured disk, not hardcoded 'public'.
-        $disk = config('filesystems.default');
+        $configuredDisk = config('filesystems.default');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
         Storage::fake($disk);
         Http::fake([
             'graph.facebook.com/*/12345' => Http::response(['url' => 'http://media.url/file', 'mime_type' => 'image/jpeg'], 200),

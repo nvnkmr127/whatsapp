@@ -4,13 +4,13 @@
 
     <!-- Left Sidebar: Active Channels -->
     <div :class="{ 'hidden': mobilePane !== 'list', 'flex': mobilePane === 'list' }"
-        class="w-full lg:w-80 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 lg:flex flex-col z-10">
+        class="w-full lg:w-80 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 lg:flex flex-col z-10 shrink-0">
         <livewire:chat.conversation-list wire:model="activeConversationId" />
     </div>
 
     <!-- Center: Transmission Window -->
     <div :class="{ 'hidden': mobilePane !== 'messages', 'flex': mobilePane === 'messages' }"
-        class="flex-1 lg:flex flex-col bg-white dark:bg-slate-950 relative z-0">
+        class="flex-1 min-w-0 lg:flex flex-col bg-white dark:bg-slate-950 relative z-0">
         @if($activeConversationId)
             <!-- Instant Loading Placeholder -->
             <div wire:loading wire:target="activeConversationId"

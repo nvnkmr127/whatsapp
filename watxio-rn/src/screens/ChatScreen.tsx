@@ -241,8 +241,8 @@ export default function ChatScreen({ navigation, route }: any) {
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
-          media_url: m.media_url || null,
-          media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
+          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.media_path || null,
+          media_type: (m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (m.media_type || m.metadata?.media_type || (m.media_url ? 'image' : null)),
           metadata: m.metadata || null,
           reply_to_content: replyContent || null,
           reply_to_id: replyId ? (isNaN(Number(replyId)) ? replyId : Number(replyId)) : null,
@@ -388,8 +388,8 @@ export default function ChatScreen({ navigation, route }: any) {
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
-          media_url: m.media_url || null,
-          media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
+          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.media_path || null,
+          media_type: (m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (m.media_type || m.metadata?.media_type || (m.media_url ? 'image' : null)),
           metadata: m.metadata || null,
           reply_to_content: replyContent || null,
           reply_to_id: replyId ? (isNaN(Number(replyId)) ? replyId : Number(replyId)) : null,
@@ -558,7 +558,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
     const performLock = async () => {
       try {
-        const response = await api.post(`/v1/mobile/conversations/${conversationId}/lock`);
+        const response = await api.post(`/v1/mobile/conversations/${conversationId}/lock`, undefined, { 'X-Silent-Errors': 'true' });
         if (!active) return;
 
         if (response.success) {
@@ -582,7 +582,7 @@ export default function ChatScreen({ navigation, route }: any) {
                 onPress: async () => {
                   try {
                     setLoading(true);
-                    const takeoverRes = await api.post(`/v1/mobile/conversations/${conversationId}/takeover`);
+                    const takeoverRes = await api.post(`/v1/mobile/conversations/${conversationId}/takeover`, undefined, { 'X-Silent-Errors': 'true' });
                     if (takeoverRes.success) {
                       setHasLock(true);
                       setLockOwner(null);
@@ -599,9 +599,12 @@ export default function ChatScreen({ navigation, route }: any) {
               }
             ]
           );
+        } else {
+          if (active) setHasLock(true);
         }
       } catch (err) {
-        console.warn('[Lock] Failed to lock:', err);
+        console.warn('[Lock] Failed to lock (timeout/server busy):', err);
+        if (active) setHasLock(true);
       }
     };
 

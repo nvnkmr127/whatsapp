@@ -58,7 +58,8 @@ class Message extends Model
             return $url;
         }
 
-        $disk = config('filesystems.default', 'public');
+        $configuredDisk = config('filesystems.default', 'public');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
         return \Illuminate\Support\Facades\Storage::disk($disk)->url($url);
     }
 

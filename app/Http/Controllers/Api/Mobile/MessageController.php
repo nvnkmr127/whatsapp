@@ -44,9 +44,23 @@ class MessageController extends Controller
                 ];
             }
             unset($data['reply_to']);
+            // Auto-download missing media on demand if media_id exists but media_url was not yet downloaded
+            if (empty($msg->media_url) && !empty($msg->media_id) && $msg->team) {
+                try {
+                    $mediaService = new \App\Services\MediaService();
+                    $path = $mediaService->downloadAndStore($msg->media_id, $msg->team);
+                    if ($path) {
+                        $msg->update(['media_url' => $path]);
+                        $msg->refresh();
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("On-demand media download failed for msg #{$msg->id}: " . $e->getMessage());
+                }
+            }
+
             // Ensure full URL for media
-            if ($msg->media_url) {
-                $data['media_url'] = $msg->full_media_url;
+            if ($msg->media_url || $msg->full_media_url) {
+                $data['media_url'] = $msg->full_media_url ?: $msg->media_url;
             }
             return $data;
         })->values()->toArray();

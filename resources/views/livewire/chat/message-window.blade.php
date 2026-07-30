@@ -522,9 +522,7 @@
                 </div>
             @endif
 
-            <form @submit.prevent="handleSubmit().then(() => { replyingTo = null; })" class="flex-1 flex items-center gap-2 relative"
-                x-data="{ replyingTo: null }" 
-                @reply-to-message.window="replyingTo = $event.detail; $wire.set('replyToMessageId', $event.detail.id)">
+            <form @submit.prevent="handleSubmit()" class="flex-1 flex items-center gap-2 relative">
                 <input type="file" wire:model="newAttachment" class="hidden" x-ref="fileInput"
                     @change="onFilePicked($event.target.files[0])"
                     accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
@@ -544,11 +542,11 @@
                             <div class="bg-slate-50 dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex mx-2">
                                 <div class="w-1.5 bg-[#d95a2b] shrink-0"></div>
                                 <div class="flex-1 p-2.5 flex justify-between items-center">
-                                    <div class="overflow-hidden">
-                                        <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate" x-text="replyingTo.content"></p>
+                                    <div class="overflow-hidden min-w-0 pr-2">
+                                        <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5 truncate" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate" x-text="replyingTo.content || (replyingTo.type ? replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1) : '')"></p>
                                     </div>
-                                    <button type="button" @click="replyingTo = null; $wire.set('replyToMessageId', null)" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                                    <button type="button" @click="clearReply()" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                     </button>
                                 </div>

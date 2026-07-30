@@ -57,21 +57,25 @@ class PersistDomainEvents implements ShouldQueue
 
         $metadata = $eventObj->metadata ?? [];
 
-        SystemEvent::create([
-            'event_id' => $eventObj->eventId ?? $metadata['span_id'] ?? null,
-            'event_type' => class_basename($eventObj),
-            'source' => $eventObj->source(),
-            'category' => $eventObj->category(),
-            'is_signal' => $eventObj->isSignal(),
-            'trace_id' => $metadata['trace_id'] ?? null,
-            'span_id' => $metadata['span_id'] ?? null,
-            'parent_id' => $metadata['parent_id'] ?? null,
-            'team_id' => $metadata['team_id'] ?? null,
-            'actor_id' => $metadata['actor_id'] ?? null,
-            'payload' => $eventObj->payload ?? [],
-            'metadata' => $metadata,
-            'occurred_at' => $eventObj->occurredAt ?? now(),
-        ]);
+        $eventId = $eventObj->eventId ?? $metadata['span_id'] ?? (string) \Illuminate\Support\Str::uuid();
+
+        SystemEvent::firstOrCreate(
+            ['event_id' => $eventId],
+            [
+                'event_type' => class_basename($eventObj),
+                'source' => $eventObj->source(),
+                'category' => $eventObj->category(),
+                'is_signal' => $eventObj->isSignal(),
+                'trace_id' => $metadata['trace_id'] ?? null,
+                'span_id' => $metadata['span_id'] ?? null,
+                'parent_id' => $metadata['parent_id'] ?? null,
+                'team_id' => $metadata['team_id'] ?? null,
+                'actor_id' => $metadata['actor_id'] ?? null,
+                'payload' => $eventObj->payload ?? [],
+                'metadata' => $metadata,
+                'occurred_at' => $eventObj->occurredAt ?? now(),
+            ]
+        );
     }
 
     protected function shouldPersist(DomainEvent $event): bool

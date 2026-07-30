@@ -1140,6 +1140,33 @@ class MessageWindow extends Component
         ];
     }
 
+    #[\Livewire\Attributes\Renderless]
+    public function retryMediaDownload($messageId)
+    {
+        $message = \App\Models\Message::find($messageId);
+        if (! $message || ! $message->media_id) {
+            return ['status' => 'error', 'message' => 'Message or media ID not found'];
+        }
+
+        $meta = is_array($message->metadata) ? $message->metadata : [];
+        unset($meta['media_failed'], $meta['media_failed_reason']);
+        $message->update(['metadata' => $meta]);
+
+        try {
+            \App\Jobs\DownloadMediaJob::dispatchSync($message->id, $message->media_id, $message->team_id);
+            $message->refresh();
+        } catch (\Throwable $e) {
+            \App\Jobs\DownloadMediaJob::dispatch($message->id, $message->media_id, $message->team_id);
+        }
+
+        \App\Events\MessageReceived::dispatch($message);
+
+        return [
+            'status' => 'success',
+            'media_url' => $message->full_media_url,
+            'metadata' => $message->metadata,
+        ];
+    }
 
     public function render()
     {

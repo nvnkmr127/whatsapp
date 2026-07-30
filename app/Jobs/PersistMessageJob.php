@@ -299,7 +299,13 @@ class PersistMessageJob implements ShouldQueue
 
             // A. Download Media
             if ($mediaId) {
-                DownloadMediaJob::dispatch($message->id, $mediaId, $team->id);
+                try {
+                    DownloadMediaJob::dispatchSync($message->id, $mediaId, $team->id);
+                    $message->refresh();
+                } catch (\Throwable $e) {
+                    Log::warning("PersistMessageJob sync download failed for Message #{$message->id}: " . $e->getMessage());
+                    DownloadMediaJob::dispatch($message->id, $mediaId, $team->id);
+                }
             }
 
             // B. Workflows
