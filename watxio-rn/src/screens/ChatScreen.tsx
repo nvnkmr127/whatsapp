@@ -34,6 +34,7 @@ import {
   cacheMessages, cacheMeta,
   loadCachedMessages, loadCachedMeta,
 } from '@/services/chatCache';
+import { safeExtractText } from '@/utils/text';
 
 export default function ChatScreen({ navigation, route }: any) {
   const { tokens } = useTokens();
@@ -117,6 +118,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const [forwardingMsg, setForwardingMsg] = useState<ChatMessage | null>(null);
   const [activeConversations, setActiveConversations] = useState<Conversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<number | string | null>(null);
 
   const { height } = useReanimatedKeyboardAnimation();
   const animatedStyle = useAnimatedStyle(() => {
@@ -223,18 +225,30 @@ export default function ChatScreen({ navigation, route }: any) {
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
         const apiStatus = (m.status || '').toLowerCase();
+
+        const rawReplyContent = m.reply_to_content ?? m.reply_to_message?.content ?? m.metadata?.reply_to_content ?? m.metadata?.reply_to_message?.content ?? m.reply_to_text;
+        const replyContent = safeExtractText(rawReplyContent);
+
+        const replyId = m.reply_to_message_id ?? m.reply_to_id ?? m.metadata?.reply_to_message_id ?? null;
+        const replyIsOutbound = m.reply_to_is_outbound ?? m.reply_to_message?.is_outbound ?? m.metadata?.reply_to_is_outbound ?? false;
+        const replyMediaUrl = m.reply_to_message?.media_url ?? m.reply_to_media_url ?? m.metadata?.reply_to_media_url ?? null;
+        const replyMediaType = m.reply_to_message?.media_type ?? m.reply_to_media_type ?? m.metadata?.reply_to_media_type ?? null;
+
         mapped.push({
           id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
-          text: m.content || '',
+          text: safeExtractText(m.content),
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
           metadata: m.metadata || null,
-          reply_to_content: m.reply_to_content || null,
-          reply_to_id: m.reply_to_message_id || null,
+          reply_to_content: replyContent || null,
+          reply_to_id: replyId ? (isNaN(Number(replyId)) ? replyId : Number(replyId)) : null,
+          reply_to_is_outbound: replyIsOutbound,
+          reply_to_media_url: replyMediaUrl,
+          reply_to_media_type: replyMediaType,
         });
       });
 
@@ -358,18 +372,30 @@ export default function ChatScreen({ navigation, route }: any) {
 
         const msgTime = msgDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
         const apiStatus = (m.status || '').toLowerCase();
+
+        const rawReplyContent = m.reply_to_content ?? m.reply_to_message?.content ?? m.metadata?.reply_to_content ?? m.metadata?.reply_to_message?.content ?? m.reply_to_text;
+        const replyContent = safeExtractText(rawReplyContent);
+
+        const replyId = m.reply_to_message_id ?? m.reply_to_id ?? m.metadata?.reply_to_message_id ?? null;
+        const replyIsOutbound = m.reply_to_is_outbound ?? m.reply_to_message?.is_outbound ?? m.metadata?.reply_to_is_outbound ?? false;
+        const replyMediaUrl = m.reply_to_message?.media_url ?? m.reply_to_media_url ?? m.metadata?.reply_to_media_url ?? null;
+        const replyMediaType = m.reply_to_message?.media_type ?? m.reply_to_media_type ?? m.metadata?.reply_to_media_type ?? null;
+
         mapped.push({
           id: m.id,
           kind: m.direction === 'inbound' ? 'in' : 'out',
-          text: m.content || '',
+          text: safeExtractText(m.content),
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
           media_url: m.media_url || null,
           media_type: m.type && m.type !== 'text' && m.type !== 'template' ? m.type : null,
           metadata: m.metadata || null,
-          reply_to_content: m.reply_to_content || null,
-          reply_to_id: m.reply_to_message_id || null,
+          reply_to_content: replyContent || null,
+          reply_to_id: replyId ? (isNaN(Number(replyId)) ? replyId : Number(replyId)) : null,
+          reply_to_is_outbound: replyIsOutbound,
+          reply_to_media_url: replyMediaUrl,
+          reply_to_media_type: replyMediaType,
         });
       });
 
@@ -1044,8 +1070,11 @@ export default function ChatScreen({ navigation, route }: any) {
       text: displayStr, 
       time: 'now', 
       status: 'queued',
-      reply_to_content: replyingTo ? (replyingTo.text || 'Media Message') : null,
+      reply_to_content: replyingTo ? safeExtractText(replyingTo.text) || 'Media Message' : null,
       reply_to_id: replyingTo ? replyingTo.id : null,
+      reply_to_is_outbound: replyingTo ? replyingTo.kind === 'out' : false,
+      reply_to_media_url: replyingTo ? replyingTo.media_url : null,
+      reply_to_media_type: replyingTo ? replyingTo.media_type : null,
     };
     setMessages((m) => [...m, newMsg]);
     setDraft('');
@@ -1381,12 +1410,15 @@ export default function ChatScreen({ navigation, route }: any) {
                   }
                 }
 
+                const isHighlighted = highlightedMsgId !== null && String(highlightedMsgId) === String(m.id);
+
                 return (
                   <View 
                     key={stableKey} 
                     onLayout={(e) => {
                       if (m.id) messageLayouts.current.set(m.id, e.nativeEvent.layout.y);
                     }}
+                    className={isHighlighted ? 'bg-accent/20 dark:bg-accent/30 rounded-2xl p-1 border border-accent' : ''}
                   >
                     <Swipeable
                       ref={(ref) => {
@@ -1402,6 +1434,7 @@ export default function ChatScreen({ navigation, route }: any) {
                       </View>
                     )}
                     onSwipeableWillOpen={() => {
+                      try { Vibration.vibrate(25); } catch (e) {}
                       setReplyingTo(m);
                       if (m.id) {
                         rowRefs.current.get(m.id)?.close();
@@ -1423,16 +1456,33 @@ export default function ChatScreen({ navigation, route }: any) {
                         mediaUrl={m.media_url}
                         mediaType={m.media_type}
                         metadata={m.metadata}
-                        replyTo={
-                          m.reply_to_id 
-                            ? messages.find(msg => msg.id === m.reply_to_id) || { kind: 'in', text: m.reply_to_content } as ChatMessage
-                            : (m.reply_to_content ? { kind: 'in', text: m.reply_to_content } as ChatMessage : null)
-                        }
+                        contactName={contact.name}
+                        replyTo={(() => {
+                          if (m.reply_to_id) {
+                            const found = messages.find(msg => String(msg.id) === String(m.reply_to_id));
+                            if (found) return found;
+                          }
+                          if (m.reply_to_content || m.reply_to_media_url || m.reply_to_id) {
+                            return {
+                              kind: m.reply_to_is_outbound ? 'out' : 'in',
+                              text: safeExtractText(m.reply_to_content),
+                              media_url: m.reply_to_media_url,
+                              media_type: m.reply_to_media_type,
+                            } as ChatMessage;
+                          }
+                          return null;
+                        })()}
                         onReplyPress={() => {
                           if (m.reply_to_id) {
-                            const yOffset = messageLayouts.current.get(m.reply_to_id);
-                            if (yOffset !== undefined) {
-                              scroller.current?.scrollTo({ y: yOffset - 50, animated: true });
+                            const targetMsg = messages.find(msg => String(msg.id) === String(m.reply_to_id));
+                            const targetId = targetMsg?.id || m.reply_to_id;
+                            if (targetId) {
+                              setHighlightedMsgId(targetId);
+                              setTimeout(() => setHighlightedMsgId(null), 1500);
+                              const yOffset = messageLayouts.current.get(Number(targetId)) ?? messageLayouts.current.get(targetId as any);
+                              if (yOffset !== undefined) {
+                                scroller.current?.scrollTo({ y: Math.max(0, yOffset - 50), animated: true });
+                              }
                             }
                           }
                         }}
@@ -1477,7 +1527,8 @@ export default function ChatScreen({ navigation, route }: any) {
 
           {replyingTo && !isRecording && (
             <ReplyPreview 
-              message={replyingTo} 
+              message={replyingTo}
+              contactName={contact.name}
               onCancel={() => setReplyingTo(null)} 
             />
           )}
@@ -1921,6 +1972,19 @@ export default function ChatScreen({ navigation, route }: any) {
               <View className="items-center pb-2 border-b border-hairline dark:border-d-hairline">
                 <Text className="text-xs text-muted dark:text-d-muted font-bold uppercase tracking-wider">Message Actions</Text>
               </View>
+              <Pressable
+                onPress={() => {
+                  setShowMsgActions(false);
+                  const msg = selectedMsg;
+                  setSelectedMsg(null);
+                  if (msg) {
+                    setReplyingTo(msg);
+                  }
+                }}
+                className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+              >
+                <Text className="text-sm font-semibold text-ink dark:text-d-ink">↩️ Reply to Message</Text>
+              </Pressable>
               <Pressable
                 onPress={async () => {
                   setShowMsgActions(false);

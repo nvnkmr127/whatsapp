@@ -49,16 +49,17 @@ class Message extends Model
 
     public function getFullMediaUrlAttribute()
     {
-        if (!$this->media_url) {
+        if (!array_key_exists('media_url', $this->attributes) || !$this->attributes['media_url']) {
             return null;
         }
 
-        if (str_starts_with($this->media_url, 'http')) {
-            return $this->media_url;
+        $url = $this->attributes['media_url'];
+        if (str_starts_with($url, 'http')) {
+            return $url;
         }
 
         $disk = config('filesystems.default', 'public');
-        return \Illuminate\Support\Facades\Storage::disk($disk)->url($this->media_url);
+        return \Illuminate\Support\Facades\Storage::disk($disk)->url($url);
     }
 
     public function contact()

@@ -18,7 +18,7 @@ class MessageController extends Controller
         $this->authorizeConversation($request->user(), $conversation);
 
         $messages = Message::where('conversation_id', $conversation->id)
-            ->with('replyTo:id,content,direction,type')
+            ->with('replyTo')
             ->latest('id')
             ->cursorPaginate(min((int) $request->input('per_page', 40), 100));
 
@@ -28,14 +28,22 @@ class MessageController extends Controller
         $paginatorArray['data'] = collect($messages->items())->map(function($msg) {
             $data = $msg->toArray();
             $data['is_outbound'] = $msg->direction === 'outbound';
-            if ($msg->replyTo) {
-                $data['reply_to_content'] = $msg->replyTo->content ?: ucfirst($msg->replyTo->type);
-                $data['reply_to_is_outbound'] = $msg->replyTo->direction === 'outbound';
+            if ($msg->relationLoaded('replyTo') && $msg->replyTo) {
+                $reply = $msg->replyTo;
+                $replyContent = $reply->content ?: ucfirst($reply->type);
+                $replyIsOutbound = $reply->direction === 'outbound';
+                $data['reply_to_content'] = $replyContent;
+                $data['reply_to_is_outbound'] = $replyIsOutbound;
+                $data['reply_to_message_id'] = $reply->id;
                 $data['reply_to_message'] = [
-                    'content' => $data['reply_to_content'],
-                    'is_outbound' => $data['reply_to_is_outbound']
+                    'id' => $reply->id,
+                    'content' => $replyContent,
+                    'is_outbound' => $replyIsOutbound,
+                    'media_url' => $reply->full_media_url,
+                    'media_type' => $reply->type,
                 ];
             }
+            unset($data['reply_to']);
             // Ensure full URL for media
             if ($msg->media_url) {
                 $data['media_url'] = $msg->full_media_url;

@@ -1,13 +1,12 @@
-// src/components/Bubble.tsx — chat bubble (in or out) with media support.
-// Borderless, single-fill. Tail style by default to match WhatsApp affordance.
-
+// src/components/Bubble.tsx — chat bubble (in or out) with WhatsApp native media previews.
 import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
-import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle } from 'lucide-react-native';
+import { Check, CheckCheck, Star, Play, Pause, FileText, Mic, Clock, AlertCircle, Download, FileSpreadsheet } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useTokens } from '@/theme';
 import { ReplyPreview } from './ReplyPreview';
 import type { MessageStatus, ChatMessage } from '@/types';
+import { safeExtractText } from '@/utils/text';
 
 interface Props {
   kind: 'in' | 'out';
@@ -21,16 +20,37 @@ interface Props {
   mediaType?: string | null;
   metadata?: any;
   replyTo?: ChatMessage | null;
+  contactName?: string;
   onReplyPress?: () => void;
   onMediaPress?: () => void;
 }
 
-export function Bubble({ kind, children, time, status, variant = 'tail', radius = 18, isStarred, mediaUrl, mediaType, metadata, replyTo, onReplyPress, onMediaPress }: Props) {
+// Simulated waveform heights for native WhatsApp voice note look
+const VOICE_WAVEFORM_BARS = [6, 12, 18, 10, 14, 22, 16, 8, 14, 20, 12, 18, 24, 16, 10, 14, 8, 12];
+
+export function Bubble({
+  kind,
+  children,
+  time,
+  status,
+  variant = 'tail',
+  radius = 18,
+  isStarred,
+  mediaUrl,
+  mediaType,
+  metadata,
+  replyTo,
+  contactName,
+  onReplyPress,
+  onMediaPress,
+}: Props) {
   const { tokens } = useTokens();
   const isOut = kind === 'out';
   const baseR = variant === 'squared' ? Math.min(8, radius * 0.45) : radius;
 
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const [playbackPosition, setPlaybackPosition] = React.useState(0);
+  const [duration, setDuration] = React.useState(0);
   const soundRef = React.useRef<Audio.Sound | null>(null);
 
   React.useEffect(() => {
@@ -60,9 +80,12 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
         sound.setOnPlaybackStatusUpdate((status: any) => {
           if (status.isLoaded) {
             setIsPlaying(status.isPlaying);
+            if (status.positionMillis) setPlaybackPosition(status.positionMillis);
+            if (status.durationMillis) setDuration(status.durationMillis);
             if (status.didJustFinish) {
               soundRef.current?.setPositionAsync(0);
               setIsPlaying(false);
+              setPlaybackPosition(0);
             }
           }
         });
@@ -71,7 +94,7 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
       }
       setIsPlaying(true);
     } catch (e) {
-      console.warn("Error playing audio", e);
+      console.warn('Error playing audio', e);
     }
   };
 
@@ -87,7 +110,7 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
   const isAudio = mediaType === 'audio';
   const isDoc   = mediaType === 'document';
 
-  const childText = children ? String(children).trim() : '';
+  const childText = safeExtractText(children).trim();
 
   let reactionEmoji = null;
   if (metadata?.reaction && typeof metadata.reaction === 'string' && metadata.reaction.trim() !== '') {
@@ -102,90 +125,191 @@ export function Bubble({ kind, children, time, status, variant = 'tail', radius 
     }
   }
 
+  // Parse document file details
+  const getDocumentInfo = () => {
+    if (!mediaUrl) return { name: 'Document', ext: 'FILE', size: '1.2 MB' };
+    const cleanUrl = mediaUrl.split('?')[0];
+    const name = cleanUrl.split('/').pop() || 'Document';
+    const ext = name.includes('.') ? name.split('.').pop()?.toUpperCase() || 'FILE' : 'FILE';
+    const size = metadata?.file_size ? `${(metadata.file_size / (1024 * 1024)).toFixed(1)} MB` : `${ext} Document`;
+    return { name, ext, size };
+  };
+
+  const docInfo = getDocumentInfo();
+
+  // Helper for Status Checkmarks
+  const renderStatusIcon = (colorOverride?: string) => {
+    if (!isOut || !status) return null;
+    const checkColor = colorOverride || (status === 'read' ? '#34B7F1' : tokens.muted);
+    if (status === 'read' || status === 'delivered') {
+      return <CheckCheck size={15} color={checkColor} strokeWidth={2} />;
+    }
+    if (status === 'sent') {
+      return <Check size={15} color={checkColor} strokeWidth={2} />;
+    }
+    if (status === 'failed') {
+      return <AlertCircle size={13} color={tokens.danger} strokeWidth={2} />;
+    }
+    return <Clock size={12} color={checkColor} strokeWidth={2} />;
+  };
+
+  // Format audio seconds display
+  const formatTime = (millis: number) => {
+    const totalSec = Math.floor(millis / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const audioTimeStr = isPlaying || playbackPosition > 0
+    ? formatTime(playbackPosition)
+    : (duration > 0 ? formatTime(duration) : '0:15');
+
   return (
-    <View className={`max-w-[78%] ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
+    <View className={`max-w-[82%] ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
       <View
         className={`overflow-hidden ${isOut ? 'bg-bubble-out dark:bg-d-bubble-out' : 'bg-bubble-in dark:bg-d-bubble-in'}`}
         style={corner}
       >
         {/* Reply Context */}
         {replyTo ? (
-          <ReplyPreview message={replyTo} inBubble={true} onPress={onReplyPress} />
+          <ReplyPreview message={replyTo} contactName={contactName} inBubble={true} onPress={onReplyPress} />
         ) : null}
 
-        {/* Media preview */}
+        {/* ── Native WhatsApp Image / Video Preview ── */}
         {hasMedia && (isImage || isVideo) && (
-          <Pressable onPress={onMediaPress} className="relative">
-            <Image
-              source={{ uri: mediaUrl! }}
-              style={{ width: 220, height: 160 }}
-              resizeMode="cover"
-            />
-            {isVideo && (
-              <View className="absolute inset-0 items-center justify-center">
-                <View className="w-12 h-12 rounded-full bg-black/60 items-center justify-center">
-                  <Play size={22} color="#fff" fill="#fff" />
+          <View className="relative">
+            <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg">
+              <Image
+                source={{ uri: mediaUrl! }}
+                style={{ width: 250, height: 180 }}
+                resizeMode="cover"
+              />
+              {/* Video Play Button Overlay */}
+              {isVideo && (
+                <View className="absolute inset-0 items-center justify-center bg-black/30">
+                  <View className="w-13 h-13 rounded-full bg-black/60 items-center justify-center border-2 border-white/80 shadow-lg">
+                    <Play size={24} color="#ffffff" fill="#ffffff" style={{ marginLeft: 3 }} />
+                  </View>
+                  {/* Video Duration Badge */}
+                  <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded-full flex-row items-center gap-1">
+                    <Play size={10} color="#fff" fill="#fff" />
+                    <Text className="text-[10.5px] text-white font-medium">0:15</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Floating Timestamp when NO caption is present */}
+              {!childText && (
+                <View className="absolute bottom-1.5 right-2 bg-black/50 px-2 py-0.5 rounded-full flex-row items-center gap-1">
+                  {isStarred && <Star size={9} color="#EAB308" fill="#EAB308" style={{ marginRight: 1 }} />}
+                  {time && <Text className="text-white text-[10px] font-medium">{time}</Text>}
+                  {renderStatusIcon('#ffffff')}
+                </View>
+              )}
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── Native WhatsApp Voice Note (Audio) Preview ── */}
+        {hasMedia && isAudio && (
+          <View className="p-2.5 min-w-[230px]">
+            <View className="flex-row items-center gap-3">
+              {/* Play / Pause Circular Button */}
+              <Pressable
+                onPress={handleAudioPress}
+                className="w-11 h-11 rounded-full items-center justify-center shadow-sm"
+                style={{ backgroundColor: tokens.accent }}
+              >
+                {isPlaying ? (
+                  <Pause size={20} color="#FFFFFF" fill="#FFFFFF" />
+                ) : (
+                  <Play size={20} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
+                )}
+              </Pressable>
+
+              {/* Waveform Visualizer & Timer */}
+              <View className="flex-1 min-w-0 justify-center">
+                {/* Audio Waveform Bars */}
+                <View className="flex-row items-center gap-[2.5px] h-7 mb-1 pr-1">
+                  {VOICE_WAVEFORM_BARS.map((h, i) => {
+                    const progress = duration > 0 ? playbackPosition / duration : 0;
+                    const barProgress = i / VOICE_WAVEFORM_BARS.length;
+                    const isPlayed = isPlaying && barProgress <= progress;
+                    return (
+                      <View
+                        key={i}
+                        className="w-[3px] rounded-full"
+                        style={{
+                          height: h,
+                          backgroundColor: isPlayed ? tokens.accent : (isOut ? '#94A3B8' : '#CBD5E1'),
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+
+                {/* Duration & Mic indicator */}
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-1">
+                    <Mic size={12} color={tokens.accent} />
+                    <Text className="text-muted dark:text-d-muted text-[11px] font-medium">{audioTimeStr}</Text>
+                  </View>
                 </View>
               </View>
-            )}
-          </Pressable>
-        )}
-        {hasMedia && isAudio && (
-          <Pressable onPress={handleAudioPress} className="flex-row items-center gap-3 px-3 py-3">
-            <View className="w-9 h-9 rounded-full items-center justify-center" style={{ backgroundColor: tokens.accent + '30' }}>
-              {isPlaying ? (
-                <Pause size={18} color={tokens.accent} fill={tokens.accent} />
-              ) : (
-                <Play size={18} color={tokens.accent} fill={tokens.accent} />
-              )}
             </View>
-            <Text className="text-ink dark:text-d-ink text-sm font-medium">Voice message</Text>
-          </Pressable>
+          </View>
         )}
+
+        {/* ── Native WhatsApp Document Preview ── */}
         {hasMedia && isDoc && (
-          <Pressable onPress={onMediaPress} className="flex-row items-center gap-3 px-3 py-3">
-            <View className="w-9 h-9 rounded-xl items-center justify-center bg-blue-500/20">
-              <FileText size={18} color="#3b82f6" />
+          <Pressable onPress={onMediaPress} className="p-2.5 min-w-[220px]">
+            <View className="bg-black/5 dark:bg-white/10 rounded-lg p-3 flex-row items-center gap-3 border border-hairline dark:border-d-hairline">
+              <View className="w-10 h-11 rounded-md bg-blue-500/20 items-center justify-center border border-blue-500/30">
+                <FileText size={22} color="#3b82f6" />
+                <Text className="text-[8px] font-extrabold text-blue-600 dark:text-blue-400 mt-0.5 uppercase tracking-tighter">
+                  {docInfo.ext.slice(0, 4)}
+                </Text>
+              </View>
+              <View className="flex-1 min-w-0">
+                <Text className="text-ink dark:text-d-ink text-[13.5px] font-semibold" numberOfLines={1}>
+                  {docInfo.name}
+                </Text>
+                <Text className="text-muted dark:text-d-muted text-[11px] font-medium mt-0.5">
+                  {docInfo.size}
+                </Text>
+              </View>
+              <View className="w-8 h-8 rounded-full bg-surface2 dark:bg-d-surface2 items-center justify-center">
+                <Download size={16} color={tokens.ink} />
+              </View>
             </View>
-            <Text className="text-ink dark:text-d-ink text-sm font-medium flex-1" numberOfLines={1}>
-              {(mediaUrl!).split('/').pop() || 'Document'}
-            </Text>
           </Pressable>
         )}
 
-        {/* Text caption / body */}
+        {/* ── Text caption / body ── */}
         {childText ? (
           <View className="py-2 px-3">
-            <Text className="text-ink dark:text-d-ink text-[14px] leading-5 font-normal">{children}</Text>
+            <Text className="text-ink dark:text-d-ink text-[14.5px] leading-5 font-normal">{childText}</Text>
           </View>
         ) : !hasMedia ? (
           <View className="py-2 px-3">
-            <Text className="text-ink dark:text-d-ink text-[14px] leading-5 font-normal">{children}</Text>
+            <Text className="text-ink dark:text-d-ink text-[14.5px] leading-5 font-normal">{childText}</Text>
           </View>
         ) : null}
 
-        {/* Timestamp row */}
-        <View className={`flex-row items-center justify-end gap-1 ${hasMedia ? 'px-2 pb-1.5' : 'px-3 pb-2'}`}>
-          {isStarred ? <Star size={10} color="#EAB308" fill="#EAB308" style={{ marginRight: 2 }} /> : null}
-          {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium">{time}</Text> : null}
-          {isOut && status ? (
-            status === 'read' ? (
-              <CheckCheck size={15} color="#34B7F1" strokeWidth={2} />
-            ) : status === 'delivered' ? (
-              <CheckCheck size={15} color={tokens.muted} strokeWidth={2} />
-            ) : status === 'sent' ? (
-              <Check size={15} color={tokens.muted} strokeWidth={2} />
-            ) : status === 'failed' ? (
-              <AlertCircle size={13} color={tokens.danger} strokeWidth={2} />
-            ) : (
-              <Clock size={12} color={tokens.muted} strokeWidth={2} />
-            )
-          ) : null}
-        </View>
+        {/* ── Standard Timestamp row (when text or document/audio is rendered) ── */}
+        {(!hasMedia || (hasMedia && !isImage && !isVideo) || (hasMedia && (isImage || isVideo) && childText)) && (
+          <View className={`flex-row items-center justify-end gap-1 ${hasMedia ? 'px-2.5 pb-1.5' : 'px-3 pb-2'}`}>
+            {isStarred ? <Star size={10} color="#EAB308" fill="#EAB308" style={{ marginRight: 2 }} /> : null}
+            {time ? <Text className="text-muted dark:text-d-muted text-[10.5px] font-medium">{time}</Text> : null}
+            {renderStatusIcon()}
+          </View>
+        )}
       </View>
 
+      {/* Reaction Emoji Badge */}
       {reactionEmoji ? (
-        <View className={`absolute -bottom-3 ${isOut ? 'right-2' : 'right-2'} bg-surface dark:bg-d-surface rounded-full px-1.5 py-0.5 border border-hairline dark:border-d-hairline z-10`}>
+        <View className={`absolute -bottom-3 ${isOut ? 'right-2' : 'right-2'} bg-surface dark:bg-d-surface rounded-full px-1.5 py-0.5 border border-hairline dark:border-d-hairline z-10 shadow-sm`}>
           <Text style={{ fontSize: 13, lineHeight: 16 }}>{reactionEmoji}</Text>
         </View>
       ) : null}
