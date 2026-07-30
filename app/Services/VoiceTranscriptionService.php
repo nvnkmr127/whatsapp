@@ -27,10 +27,16 @@ class VoiceTranscriptionService
         }
 
         // 2. Prepare File Path
-        // Assuming media_url is a path relative to storage/app/public or similar
-        // We need the absolute path for the AI provider
-        $relativePath = str_replace('/storage/', 'public/', $message->media_url);
-        $absolutePath = storage_path('app/'.$relativePath);
+        $url = trim($message->media_url);
+        $cleanPath = preg_replace('#^/?(storage|public)/#', '', $url);
+        $configuredDisk = config('filesystems.default', 'public');
+        $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
+
+        try {
+            $absolutePath = \Illuminate\Support\Facades\Storage::disk($disk)->path($cleanPath);
+        } catch (\Throwable $e) {
+            $absolutePath = storage_path('app/public/'.$cleanPath);
+        }
 
         if (! file_exists($absolutePath)) {
             Log::error("[Transcription] File not found for Message #{$message->id} at {$absolutePath}");

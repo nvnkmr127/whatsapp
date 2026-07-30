@@ -1038,6 +1038,20 @@ class MessageWindow extends Component
 
         return $messages
             ->map(function ($msg) {
+                // Auto-download missing media on demand if media_id exists but media_url was not yet downloaded
+                if (empty($msg->media_url) && !empty($msg->media_id) && $msg->team) {
+                    try {
+                        $mediaService = new \App\Services\MediaService();
+                        $path = $mediaService->downloadAndStore($msg->media_id, $msg->team);
+                        if ($path) {
+                            $msg->update(['media_url' => $path]);
+                            $msg->refresh();
+                        }
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning("On-demand web media download failed for msg #{$msg->id}: " . $e->getMessage());
+                    }
+                }
+
                 return [
                     'id' => $msg->id,
                     'direction' => $msg->direction,

@@ -53,14 +53,26 @@ class Message extends Model
             return null;
         }
 
-        $url = $this->attributes['media_url'];
-        if (str_starts_with($url, 'http')) {
+        $url = trim($this->attributes['media_url']);
+        if (!$url) {
+            return null;
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://') || str_starts_with($url, 'data:') || str_starts_with($url, 'file://')) {
             return $url;
         }
 
+        // Clean leading storage/public prefixes to avoid double path prefixing
+        $cleanPath = preg_replace('#^/?(storage|public)/#', '', $url);
+
         $configuredDisk = config('filesystems.default', 'public');
         $disk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
-        return \Illuminate\Support\Facades\Storage::disk($disk)->url($url);
+
+        try {
+            return \Illuminate\Support\Facades\Storage::disk($disk)->url($cleanPath);
+        } catch (\Throwable $e) {
+            return asset('storage/' . ltrim($cleanPath, '/'));
+        }
     }
 
     public function contact()
