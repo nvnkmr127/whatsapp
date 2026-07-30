@@ -544,7 +544,7 @@
                                 <div class="flex-1 p-2.5 flex justify-between items-center">
                                     <div class="overflow-hidden min-w-0 pr-2">
                                         <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5 truncate" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate" x-text="replyingTo.content || (replyingTo.type ? replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1) : '')"></p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 whitespace-pre-line break-words leading-snug" x-text="replyingTo.content || (replyingTo.type ? replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1) : '')"></p>
                                     </div>
                                     <button type="button" @click="clearReply()" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
