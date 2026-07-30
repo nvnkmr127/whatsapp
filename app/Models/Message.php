@@ -35,6 +35,9 @@ class Message extends Model
 
     public function getPrettyTimeAttribute()
     {
+        if (!array_key_exists('created_at', $this->attributes) || !$this->attributes['created_at']) {
+            return null;
+        }
         return $this->created_at ? $this->created_at->format('H:i') : null;
     }
 
@@ -43,7 +46,13 @@ class Message extends Model
         if ($value) {
             return $value;
         }
-        $meta = $this->metadata;
+        if (!array_key_exists('metadata', $this->attributes)) {
+            return null;
+        }
+        $meta = $this->attributes['metadata'] ?? null;
+        if (is_string($meta)) {
+            $meta = json_decode($meta, true);
+        }
         return is_array($meta) ? ($meta['reply_to_message_id'] ?? null) : null;
     }
 

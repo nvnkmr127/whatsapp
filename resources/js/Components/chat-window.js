@@ -171,7 +171,9 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         this.viewportHeight = this.$el.clientHeight;
 
         this.$watch('$store.chat.messages', () => {
-            this.scrollToBottom();
+            if (this.isNearBottom) {
+                this.scrollToBottom();
+            }
         });
     },
 
@@ -205,12 +207,7 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
         this.$nextTick(() => {
             doScroll();
             if (typeof requestAnimationFrame !== 'undefined') {
-                requestAnimationFrame(() => {
-                    doScroll();
-                    setTimeout(doScroll, 50);
-                    setTimeout(doScroll, 150);
-                    setTimeout(doScroll, 300);
-                });
+                requestAnimationFrame(doScroll);
             }
         });
     },
@@ -218,19 +215,20 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
     handleScroll(e) {
         const el = e.target;
         this.scrollTop = el.scrollTop;
-        this.isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        this.isNearBottom = distFromBottom < 150;
         if (this.isNearBottom) {
             this.unreadBelowCount = 0;
         }
 
         if (this.scrollTop < 100 && this.$store.chat.messages.length > 0 && !this.$store.chat.loading) {
-            const oldHeight = this.$el.scrollHeight;
-            const oldTop = this.$el.scrollTop;
+            const oldHeight = el.scrollHeight;
+            const oldTop = el.scrollTop;
             this.$store.chat.loadMessages().then(() => {
                 this.$nextTick(() => {
-                    const newHeight = this.$el.scrollHeight;
+                    const newHeight = el.scrollHeight;
                     if (newHeight > oldHeight) {
-                        this.$el.scrollTop = newHeight - oldHeight + oldTop;
+                        el.scrollTop = newHeight - oldHeight + oldTop;
                     }
                 });
             });
@@ -248,13 +246,26 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
 
         const count = this.$store.chat.messages.length;
 
-        if (count < 100) return { start: 0, end: count, top: 0, bottom: 0 };
+        // Render all messages when count < 250 or near bottom to ensure completely stable height
+        if (count < 250 || this.isNearBottom) {
+            return { start: 0, end: count, top: 0, bottom: 0 };
+        }
 
         let start = Math.max(0, this.startIndex - this.buffer);
         let visibleCount = Math.ceil(this.viewportHeight / this.itemHeight) + (2 * this.buffer);
         let end = Math.min(count, start + visibleCount);
 
-        return { start, end, top: start * this.itemHeight, bottom: (count - end) * this.itemHeight };
+        // Lock bottom padding to 0 when near the end of list to prevent layout jitter
+        if (count - end < 15) {
+            end = count;
+        }
+
+        return {
+            start,
+            end,
+            top: start * this.itemHeight,
+            bottom: end === count ? 0 : (count - end) * this.itemHeight
+        };
     },
 
     get visibleMessages() {
