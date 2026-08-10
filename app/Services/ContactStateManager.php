@@ -52,7 +52,7 @@ class ContactStateManager
         $readRate = $this->calculateReadRate($contact);
         $score += $readRate * 10;
 
-        return min($score, 100);
+        return (int) round(min($score, 100));
     }
 
     /**
