@@ -89,17 +89,16 @@ class MediaService
         }
 
         // 2. Download Binary
-        // Meta's media URLs on lookaside.fbsbx.com are short-lived signed URLs.
-        // First try fetching with Bearer token + User-Agent:
-        $binaryResponse = Http::withToken($accessToken)
-            ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+        // Meta CDN URLs (lookaside.fbsbx.com) are pre-signed via query parameters.
+        // Sending an Authorization header to lookaside CDN causes 500 Internal Server Error upon redirect to Meta edge servers.
+        $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
             ->timeout(60)
             ->get($mediaUrl);
 
-        // If CDN returns 500, fallback to fetching without Authorization header
-        // (because Meta CDN signed URLs contain embedded auth signatures in query params, and Authorization header can trigger CDN 500)
+        // Fallback: If clean fetch fails, try with Bearer token header
         if ($binaryResponse->failed()) {
-            $fallbackResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+            $fallbackResponse = Http::withToken($accessToken)
+                ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
                 ->timeout(60)
                 ->get($mediaUrl);
 

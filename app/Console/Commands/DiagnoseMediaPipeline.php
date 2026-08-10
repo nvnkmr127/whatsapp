@@ -162,16 +162,20 @@ class DiagnoseMediaPipeline extends Command
         $this->line('    host: '.parse_url($url, PHP_URL_HOST));
 
         $shapes = [
-            'token + User-Agent (what the code now sends)' => ['User-Agent' => MediaService::USER_AGENT],
-            'token only (the old request that 500d)' => [],
-            'token + curl User-Agent' => ['User-Agent' => 'curl/8.4.0'],
+            'clean GET (no Auth header, pre-signed CDN URL + User-Agent)' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => false],
+            'token + User-Agent' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => true],
+            'token only' => ['headers' => [], 'with_token' => true],
         ];
 
         $anyWorked = false;
 
-        foreach ($shapes as $label => $headers) {
+        foreach ($shapes as $label => $config) {
             try {
-                $res = Http::withToken($team->whatsapp_access_token)->withHeaders($headers)->timeout(60)->get($url);
+                $req = $config['with_token']
+                    ? Http::withToken($team->whatsapp_access_token)->withHeaders($config['headers'])
+                    : Http::withHeaders($config['headers']);
+
+                $res = $req->timeout(60)->get($url);
                 $size = strlen($res->body());
 
                 if ($res->successful()) {
