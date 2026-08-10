@@ -1158,8 +1158,11 @@ class MessageWindow extends Component
     #[\Livewire\Attributes\Renderless]
     public function retryMediaDownload($messageId)
     {
+        \Illuminate\Support\Facades\Log::info("[LIVEWIRE_RETRY_MEDIA] Retry requested for Message #{$messageId}");
+
         $message = \App\Models\Message::find($messageId);
         if (! $message || ! $message->media_id) {
+            \Illuminate\Support\Facades\Log::warning("[LIVEWIRE_RETRY_MEDIA] Message or media ID missing for Message #{$messageId}");
             return ['status' => 'error', 'message' => 'Message or media ID not found'];
         }
 
@@ -1170,8 +1173,29 @@ class MessageWindow extends Component
         try {
             \App\Jobs\DownloadMediaJob::dispatchSync($message->id, $message->media_id, $message->team_id);
             $message->refresh();
+            \Illuminate\Support\Facades\Log::info("[LIVEWIRE_RETRY_MEDIA] Successfully downloaded media for Message #{$messageId}", [
+                'media_url' => $message->full_media_url,
+            ]);
         } catch (\Throwable $e) {
-            \App\Jobs\DownloadMediaJob::dispatch($message->id, $message->media_id, $message->team_id);
+            \Illuminate\Support\Facades\Log::error("[LIVEWIRE_RETRY_MEDIA] Media download failed for Message #{$messageId}", [
+                'error' => $e->getMessage(),
+                'media_id' => $message->media_id,
+                'team_id' => $message->team_id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $meta = is_array($message->metadata) ? $message->metadata : [];
+            $meta['media_failed'] = true;
+            $meta['media_failed_reason'] = $e->getMessage();
+            $message->update(['metadata' => $meta]);
+
+            return [
+                'status' => 'error',
+                'error' => $e->getMessage(),
+                'message' => 'Media download failed: ' . $e->getMessage(),
+                'media_url' => null,
+                'metadata' => $message->fresh()->metadata,
+            ];
         }
 
         \App\Events\MessageReceived::dispatch($message);

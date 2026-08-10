@@ -42,10 +42,14 @@ class MediaService
         }
 
         if (! $accessToken) {
-            Log::error('Media download failed', $log + ['step' => 'no_access_token']);
+            Log::error('Media download failed', $log + ['step' => 'no_access_token', 'reason' => 'No Meta access token found on team, system config, or env']);
 
             return null;
         }
+
+        Log::info('[MEDIA_SERVICE] Attempting Meta media lookup', $log + [
+            'token_source' => $team->whatsapp_access_token ? 'team' : (config('whatsapp.system_access_token') || env('WHATSAPP_ACCESS_TOKEN') ? 'system/env' : 'fallback'),
+        ]);
 
         // 1. Get Media URL
         $response = Http::withToken($accessToken)->get("{$this->baseUrl}/{$mediaId}");
