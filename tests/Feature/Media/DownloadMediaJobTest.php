@@ -74,7 +74,7 @@ class DownloadMediaJobTest extends TestCase
         Storage::fake($disk);
         Http::fake([
             'graph.facebook.com/*' => Http::response(['url' => 'http://media.url/f', 'mime_type' => 'image/jpeg'], 200),
-            'http://media.url/f' => Http::response('binary', 200),
+            'http://media.url/f*' => Http::response('binary', 200),
         ]);
 
         $message = $this->inboundImage();

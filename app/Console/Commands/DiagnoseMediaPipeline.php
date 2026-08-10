@@ -162,6 +162,7 @@ class DiagnoseMediaPipeline extends Command
         $this->line('    host: '.parse_url($url, PHP_URL_HOST));
 
         $shapes = [
+            'access_token in query string (clean GET + User-Agent)' => 'query_token_step',
             'token + allow_redirects=false -> clean CDN GET' => 'redirect_step',
             'clean GET (no Auth header, pre-signed CDN URL + User-Agent)' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => false],
             'token + User-Agent' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => true],
@@ -172,7 +173,16 @@ class DiagnoseMediaPipeline extends Command
 
         foreach ($shapes as $label => $config) {
             try {
-                if ($config === 'redirect_step') {
+                if ($config === 'query_token_step') {
+                    $token = $team->whatsapp_access_token
+                        ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'))
+                        ?: Team::whereNotNull('whatsapp_access_token')->where('whatsapp_access_token', '!=', '')->value('whatsapp_access_token');
+                    $sep = str_contains($url, '?') ? '&' : '?';
+                    $urlWithToken = $url . $sep . 'access_token=' . urlencode((string) $token);
+                    $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
+                        ->timeout(60)
+                        ->get($urlWithToken);
+                } elseif ($config === 'redirect_step') {
                     $init = Http::withToken($team->whatsapp_access_token)
                         ->withHeaders(['User-Agent' => MediaService::USER_AGENT])
                         ->withOptions(['allow_redirects' => false])
