@@ -55,16 +55,17 @@ class MediaService
         $response = Http::withToken($accessToken)->get("{$this->baseUrl}/{$mediaId}");
 
         if ($response->failed()) {
-            $code = $response->json('error.code');
-            $isRateLimit = str_contains($response->body(), 'Application request limit reached') || $code == 4;
-            $isTokenExpired = $code == 190 || str_contains($response->body(), 'OAuthException') || str_contains($response->body(), 'Authentication Error');
+            $code = (int) ($response->json('error.code') ?? 0);
+            $isRateLimit = $code === 4 || str_contains($response->body(), 'Application request limit reached') || str_contains($response->body(), 'request limit reached');
+            $isTokenExpired = in_array($code, [190, 102]) || str_contains($response->body(), 'Invalid OAuth access token') || str_contains($response->body(), 'Session has expired');
 
-            $reason = $isTokenExpired
-                ? 'Meta Access Token is invalid or expired (OAuth Error 190). Please re-authenticate WhatsApp connection.'
-                : ($isRateLimit ? 'Meta API Rate Limit Reached (Code 4)' : 'Meta Media Lookup Failed');
+            $step = $isRateLimit ? 'rate_limit_exceeded' : ($isTokenExpired ? 'token_expired' : 'lookup_failed');
+            $reason = $isRateLimit
+                ? 'Meta API Rate Limit Reached (Code 4 - Transient). Please wait 5 minutes before retrying.'
+                : ($isTokenExpired ? 'Meta Access Token is invalid or expired (OAuth Error 190). Please re-authenticate.' : 'Meta Media Lookup Failed');
 
             Log::error('Media download failed', $log + [
-                'step' => $isTokenExpired ? 'token_expired' : ($isRateLimit ? 'rate_limit_exceeded' : 'lookup_failed'),
+                'step' => $step,
                 'is_rate_limit' => $isRateLimit,
                 'is_token_expired' => $isTokenExpired,
                 'reason' => $reason,
