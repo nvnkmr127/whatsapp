@@ -224,9 +224,13 @@ export function Bubble({
               ) : (
                 <View style={{ width: 260, height: 160 }} className="bg-black/10 dark:bg-white/10 items-center justify-center p-4">
                   {isVideo ? <VideoIcon size={36} color={tokens.muted} /> : <ImageIcon size={36} color={tokens.muted} />}
-                  <Text className="text-muted dark:text-d-muted text-xs font-medium mt-2">
-                    {isVideo ? 'Video' : 'Photo'} {imageError ? '(Tap to view)' : ''}
+                  <Text className="text-muted dark:text-d-muted text-xs font-medium mt-1.5">
+                    {isVideo ? 'Video' : 'Photo'}
                   </Text>
+                  <View className="flex-row items-center gap-1 mt-2 px-3 py-1 bg-surface dark:bg-d-surface rounded-full border border-hairline dark:border-d-hairline shadow-sm">
+                    <Download size={13} color={tokens.accent} />
+                    <Text className="text-[11.5px] font-semibold text-accent dark:text-d-accent">Tap to view / download</Text>
+                  </View>
                 </View>
               )}
 

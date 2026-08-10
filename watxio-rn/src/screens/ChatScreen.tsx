@@ -348,6 +348,24 @@ export default function ChatScreen({ navigation, route }: any) {
   // Keep ref in sync on every render so polling/WS callbacks always call the latest version
   fetchConversationDetailsRef.current = fetchConversationDetails;
 
+  const handleMediaPress = async (m: ChatMessage) => {
+    if (m.media_url) {
+      setMediaViewer({
+        uri: m.media_url,
+        type: (m.media_type as any) || 'image',
+      });
+      return;
+    }
+    try {
+      setIsRefreshing(true);
+      await fetchConversationDetails(true);
+    } catch (err) {
+      console.warn('Failed to fetch media on demand:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const loadEarlierMessages = async () => {
     if (!nextCursor || loadingEarlier) return;
     setLoadingEarlier(true);
@@ -1139,10 +1157,11 @@ export default function ChatScreen({ navigation, route }: any) {
           if (uploadRes.type && uploadRes.type !== 'document') {
             msgType = uploadRes.type;
           }
-        } catch (uploadErr) {
-          console.warn('Media upload failed, using local URI as fallback', uploadErr);
-          mediaUrl = uploadUri;
-          msgType = mediaToUpload.type;
+        } catch (uploadErr: any) {
+          console.warn('Media upload failed:', uploadErr);
+          showDialog('Media Upload Failed', uploadErr?.message || 'Could not upload media to server. Please check your connection or try a smaller file.');
+          setIsSending(false);
+          return;
         }
       }
 
@@ -1510,10 +1529,7 @@ export default function ChatScreen({ navigation, route }: any) {
                             }
                           }
                         }}
-                        onMediaPress={m.media_url ? () => setMediaViewer({
-                          uri: m.media_url!,
-                          type: (m.media_type as any) || 'image',
-                        }) : undefined}
+                        onMediaPress={() => handleMediaPress(m)}
                       >
                         {displayText}
                       </Bubble>

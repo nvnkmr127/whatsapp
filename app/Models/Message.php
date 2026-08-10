@@ -67,7 +67,11 @@ class Message extends Model
             return null;
         }
 
-        if (str_starts_with($url, 'data:') || str_starts_with($url, 'file://')) {
+        if (str_starts_with($url, 'file://')) {
+            return null;
+        }
+
+        if (str_starts_with($url, 'data:')) {
             return $url;
         }
 
