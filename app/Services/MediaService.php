@@ -89,22 +89,35 @@ class MediaService
         }
 
         // 2. Download Binary
-        // Meta CDN URLs (lookaside.fbsbx.com) are pre-signed via query parameters.
-        // Sending an Authorization header to lookaside CDN causes 500 Internal Server Error upon redirect to Meta edge servers.
-        $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+        // lookaside.fbsbx.com requires the OAuth Bearer token to authorize download,
+        // but redirects (302) to CDN edge servers (scontent.xx.fbsbx.com) which fail with
+        // 500 Internal Server Error if the Authorization header is present.
+        // Because both share .fbsbx.com, standard HTTP client redirect forwards the token.
+        // Solution: request with token with allow_redirects=false, then fetch Location clean.
+        $binaryResponse = null;
+
+        $initialResponse = Http::withToken($accessToken)
+            ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+            ->withOptions(['allow_redirects' => false])
             ->timeout(60)
             ->get($mediaUrl);
 
-        // Fallback: If clean fetch fails, try with Bearer token header
-        if ($binaryResponse->failed()) {
-            $fallbackResponse = Http::withToken($accessToken)
-                ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+        if ($initialResponse->redirect()) {
+            $cdnUrl = $initialResponse->header('Location');
+            if ($cdnUrl) {
+                $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+                    ->timeout(60)
+                    ->get($cdnUrl);
+            }
+        } elseif ($initialResponse->successful()) {
+            $binaryResponse = $initialResponse;
+        }
+
+        // Fallback: If token-first fetch failed, attempt clean GET (for pre-signed URLs)
+        if (! $binaryResponse || $binaryResponse->failed()) {
+            $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
                 ->timeout(60)
                 ->get($mediaUrl);
-
-            if ($fallbackResponse->successful()) {
-                $binaryResponse = $fallbackResponse;
-            }
         }
 
         if ($binaryResponse->failed()) {

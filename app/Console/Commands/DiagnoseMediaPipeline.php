@@ -162,6 +162,7 @@ class DiagnoseMediaPipeline extends Command
         $this->line('    host: '.parse_url($url, PHP_URL_HOST));
 
         $shapes = [
+            'token + allow_redirects=false -> clean CDN GET' => 'redirect_step',
             'clean GET (no Auth header, pre-signed CDN URL + User-Agent)' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => false],
             'token + User-Agent' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => true],
             'token only' => ['headers' => [], 'with_token' => true],
@@ -171,11 +172,28 @@ class DiagnoseMediaPipeline extends Command
 
         foreach ($shapes as $label => $config) {
             try {
-                $req = $config['with_token']
-                    ? Http::withToken($team->whatsapp_access_token)->withHeaders($config['headers'])
-                    : Http::withHeaders($config['headers']);
+                if ($config === 'redirect_step') {
+                    $init = Http::withToken($team->whatsapp_access_token)
+                        ->withHeaders(['User-Agent' => MediaService::USER_AGENT])
+                        ->withOptions(['allow_redirects' => false])
+                        ->timeout(60)
+                        ->get($url);
 
-                $res = $req->timeout(60)->get($url);
+                    if ($init->redirect() && ($cdnUrl = $init->header('Location'))) {
+                        $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT])
+                            ->timeout(60)
+                            ->get($cdnUrl);
+                    } else {
+                        $res = $init;
+                    }
+                } else {
+                    $req = $config['with_token']
+                        ? Http::withToken($team->whatsapp_access_token)->withHeaders($config['headers'])
+                        : Http::withHeaders($config['headers']);
+
+                    $res = $req->timeout(60)->get($url);
+                }
+
                 $size = strlen($res->body());
 
                 if ($res->successful()) {
