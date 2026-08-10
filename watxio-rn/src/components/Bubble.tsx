@@ -183,6 +183,9 @@ export function Bubble({
     ? formatTime(playbackPosition)
     : (duration > 0 ? formatTime(duration) : '0:15');
 
+  const [imageError, setImageError] = React.useState(false);
+  const [imageLoading, setImageLoading] = React.useState(true);
+
   return (
     <View className={`max-w-[85%] ${replyTo ? 'min-w-[190px]' : ''} ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
       <View
@@ -198,17 +201,31 @@ export function Bubble({
         {hasMedia && (isImage || isVideo) && (
           <View className="relative">
             <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg active:opacity-90">
-              {resolvedMediaUrl ? (
-                <Image
-                  source={{ uri: resolvedMediaUrl }}
-                  style={{ width: 260, height: 190 }}
-                  resizeMode="cover"
-                />
+              {resolvedMediaUrl && !imageError ? (
+                <View style={{ width: 260, height: 190 }} className="relative bg-black/5 dark:bg-white/5 items-center justify-center">
+                  {imageLoading && (
+                    <View className="absolute inset-0 items-center justify-center bg-black/10 z-10">
+                      <ActivityIndicator size="small" color={tokens.accent} />
+                    </View>
+                  )}
+                  <Image
+                    source={{ uri: resolvedMediaUrl }}
+                    style={{ width: 260, height: 190 }}
+                    resizeMode="cover"
+                    onLoadStart={() => setImageLoading(true)}
+                    onLoadEnd={() => setImageLoading(false)}
+                    onError={(err) => {
+                      console.warn('[Bubble] Image load error for URL:', resolvedMediaUrl, err?.nativeEvent);
+                      setImageError(true);
+                      setImageLoading(false);
+                    }}
+                  />
+                </View>
               ) : (
                 <View style={{ width: 260, height: 160 }} className="bg-black/10 dark:bg-white/10 items-center justify-center p-4">
                   {isVideo ? <VideoIcon size={36} color={tokens.muted} /> : <ImageIcon size={36} color={tokens.muted} />}
                   <Text className="text-muted dark:text-d-muted text-xs font-medium mt-2">
-                    {isVideo ? 'Video' : 'Photo'}
+                    {isVideo ? 'Video' : 'Photo'} {imageError ? '(Tap to view)' : ''}
                   </Text>
                 </View>
               )}

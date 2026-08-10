@@ -20,6 +20,22 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const resolvedUri = resolveMediaUrl(uri) || uri;
 
+  const rawType = (type || '').toLowerCase();
+  const urlLower = (resolvedUri || uri || '').toLowerCase();
+
+  let isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
+  let isVideo = rawType === 'video';
+  let isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
+  let isDoc   = rawType === 'document' || rawType === 'file';
+
+  if (!isImage && !isVideo && !isAudio && !isDoc && urlLower) {
+    if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|heic)(\?|$)/i)) isImage = true;
+    else if (urlLower.match(/\.(mp4|mov|avi|mkv|3gp|webm)(\?|$)/i)) isVideo = true;
+    else if (urlLower.match(/\.(mp3|m4a|aac|wav|ogg|opus)(\?|$)/i)) isAudio = true;
+    else if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|txt)(\?|$)/i)) isDoc = true;
+    else isImage = true;
+  }
+
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <StatusBar hidden />
@@ -31,7 +47,7 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
 
         {/* Content */}
         <View style={styles.content}>
-          {type === 'image' && (
+          {isImage && (
             <>
               {loading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
               <Image
@@ -42,7 +58,7 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
               />
             </>
           )}
-          {type === 'video' && (
+          {isVideo && (
             <View style={styles.image}>
               {loading && <ActivityIndicator color="#fff" size="large" style={StyleSheet.absoluteFillObject} />}
               <Video
@@ -59,10 +75,10 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
               />
             </View>
           )}
-          {(type === 'audio' || type === 'document') && (
+          {(isAudio || isDoc) && (
             <View style={styles.docBox}>
               <Text style={styles.docText}>
-                {type === 'audio' ? '🎵' : '📄'}  {uri.split('/').pop() || 'File'}
+                {isAudio ? '🎵' : '📄'}  {uri.split('/').pop() || 'File'}
               </Text>
             </View>
           )}

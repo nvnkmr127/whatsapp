@@ -61,9 +61,11 @@ class MessageController extends Controller
 
             // Ensure full URL for media
             if ($msg->media_url || $msg->full_media_url) {
+                $data['full_media_url'] = $msg->full_media_url;
                 $data['media_url'] = $msg->full_media_url ?: $msg->media_url;
-            } elseif (in_array($msg->type, ['image', 'video', 'audio', 'document']) && !empty($msg->content)) {
+            } elseif (in_array($msg->type, ['image', 'video', 'audio', 'document', 'photo', 'sticker']) && !empty($msg->content)) {
                 $data['media_url'] = $msg->content;
+                $data['full_media_url'] = $msg->content;
             }
             if (empty($data['media_type']) && $msg->type !== 'text' && $msg->type !== 'template') {
                 $data['media_type'] = $msg->type;
