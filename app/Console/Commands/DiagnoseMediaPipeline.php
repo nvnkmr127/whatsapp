@@ -139,9 +139,13 @@ class DiagnoseMediaPipeline extends Command
         $this->newLine();
         $this->info("Live download probe · media_id={$mediaId}");
 
+        $token = $team->whatsapp_access_token
+            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'))
+            ?: Team::whereNotNull('whatsapp_access_token')->where('whatsapp_access_token', '!=', '')->value('whatsapp_access_token');
+
         $base = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
 
-        $lookup = Http::withToken($team->whatsapp_access_token)->get("{$base}/{$mediaId}");
+        $lookup = Http::withToken($token)->get("{$base}/{$mediaId}");
 
         if ($lookup->failed()) {
             $this->error("  ✗ step 1 lookup: HTTP {$lookup->status()} — ".Str::limit($lookup->body(), 300));
@@ -161,52 +165,48 @@ class DiagnoseMediaPipeline extends Command
 
         $this->line('    host: '.parse_url($url, PHP_URL_HOST));
 
+        $chromeUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+        $curlUa = 'curl/8.4.0';
+
         $shapes = [
-            'access_token in query string (clean GET + User-Agent)' => 'query_token_step',
-            'token + allow_redirects=false -> clean CDN GET' => 'redirect_step',
-            'clean GET (no Auth header, pre-signed CDN URL + User-Agent)' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => false],
-            'token + User-Agent' => ['headers' => ['User-Agent' => MediaService::USER_AGENT], 'with_token' => true],
-            'token only' => ['headers' => [], 'with_token' => true],
+            'Bearer token + Chrome UA (manual 302 redirect)' => ['auth' => "Bearer {$token}", 'ua' => $chromeUa, 'manual' => true],
+            'Bearer token + curl UA (manual 302 redirect)' => ['auth' => "Bearer {$token}", 'ua' => $curlUa, 'manual' => true],
+            'OAuth token + Chrome UA (manual 302 redirect)' => ['auth' => "OAuth {$token}", 'ua' => $chromeUa, 'manual' => true],
+            'Bearer token + Chrome UA (auto 302 redirect)' => ['auth' => "Bearer {$token}", 'ua' => $chromeUa, 'manual' => false],
+            'access_token in query string (clean GET + Chrome UA)' => ['query_token' => true, 'ua' => $chromeUa],
         ];
 
         $anyWorked = false;
 
         foreach ($shapes as $label => $config) {
             try {
-                if ($config === 'query_token_step') {
-                    $token = $team->whatsapp_access_token
-                        ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'))
-                        ?: Team::whereNotNull('whatsapp_access_token')->where('whatsapp_access_token', '!=', '')->value('whatsapp_access_token');
+                if (! empty($config['query_token'])) {
                     $sep = str_contains($url, '?') ? '&' : '?';
                     $urlWithToken = $url . $sep . 'access_token=' . urlencode((string) $token);
-                    $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
+                    $res = Http::withHeaders(['User-Agent' => $config['ua'], 'Accept' => '*/*'])
                         ->timeout(60)
                         ->get($urlWithToken);
-                } elseif ($config === 'redirect_step') {
-                    $init = Http::withToken($team->whatsapp_access_token ?: $token)
-                        ->withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
-                        ->withOptions(['allow_redirects' => false])
-                        ->timeout(60)
-                        ->get($url);
-
-                    $this->line("    [redirect_step init: HTTP {$init->status()}, Location: " . ($init->header('Location') ?: 'none') . "]");
-                    $this->line("    [redirect_step init headers: " . json_encode(array_intersect_key($init->headers(), array_flip(['Content-Type', 'WWW-Authenticate', 'x-fb-debug', 'x-fb-rev']))) . "]");
-                    $this->line("    [redirect_step init body: " . Str::limit($init->body(), 300) . "]");
+                } elseif (! empty($config['manual'])) {
+                    $init = Http::withHeaders([
+                        'Authorization' => $config['auth'],
+                        'User-Agent' => $config['ua'],
+                        'Accept' => '*/*',
+                    ])->withOptions(['allow_redirects' => false])->timeout(60)->get($url);
 
                     if ($init->redirect() && ($cdnUrl = $init->header('Location'))) {
-                        $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
+                        $res = Http::withHeaders(['User-Agent' => $config['ua'], 'Accept' => '*/*'])
                             ->timeout(60)
                             ->get($cdnUrl);
-                        $this->line("    [redirect_step cdn: HTTP {$res->status()}]");
                     } else {
                         $res = $init;
+                        $this->line("    [{$label} init: HTTP {$init->status()}, Location: " . ($init->header('Location') ?: 'none') . ", body: " . Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags($init->body()))), 80) . "]");
                     }
                 } else {
-                    $req = $config['with_token']
-                        ? Http::withToken($team->whatsapp_access_token)->withHeaders($config['headers'])
-                        : Http::withHeaders($config['headers']);
-
-                    $res = $req->timeout(60)->get($url);
+                    $res = Http::withHeaders([
+                        'Authorization' => $config['auth'],
+                        'User-Agent' => $config['ua'],
+                        'Accept' => '*/*',
+                    ])->timeout(60)->get($url);
                 }
 
                 $size = strlen($res->body());
