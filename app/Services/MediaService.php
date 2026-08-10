@@ -55,8 +55,10 @@ class MediaService
         $response = Http::withToken($accessToken)->get("{$this->baseUrl}/{$mediaId}");
 
         if ($response->failed()) {
+            $isRateLimit = str_contains($response->body(), 'Application request limit reached') || $response->json('error.code') == 4;
             Log::error('Media download failed', $log + [
-                'step' => 'lookup_failed',
+                'step' => $isRateLimit ? 'rate_limit_exceeded' : 'lookup_failed',
+                'is_rate_limit' => $isRateLimit,
                 'status' => $response->status(),
                 'body' => Str::limit($response->body(), 500),
             ]);
@@ -77,17 +79,24 @@ class MediaService
         }
 
         // 2. Download Binary
-        // Meta's media URLs are short-lived — if the queue is backed up, this is
-        // where a delayed job dies.
-        //
-        // The User-Agent is required, not cosmetic: Meta's lookaside CDN answers
-        // 500 Internal Server Error to clients it doesn't recognise, and Guzzle's
-        // default "GuzzleHttp/7" is one of them. See `php artisan media:diagnose
-        // --media-id=<id>`, which probes this exact difference.
+        // Meta's media URLs on lookaside.fbsbx.com are short-lived signed URLs.
+        // First try fetching with Bearer token + User-Agent:
         $binaryResponse = Http::withToken($accessToken)
-            ->withHeaders(['User-Agent' => self::USER_AGENT])
+            ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
             ->timeout(60)
             ->get($mediaUrl);
+
+        // If CDN returns 500, fallback to fetching without Authorization header
+        // (because Meta CDN signed URLs contain embedded auth signatures in query params, and Authorization header can trigger CDN 500)
+        if ($binaryResponse->failed()) {
+            $fallbackResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+                ->timeout(60)
+                ->get($mediaUrl);
+
+            if ($fallbackResponse->successful()) {
+                $binaryResponse = $fallbackResponse;
+            }
+        }
 
         if ($binaryResponse->failed()) {
             Log::error('Media download failed', $log + [
