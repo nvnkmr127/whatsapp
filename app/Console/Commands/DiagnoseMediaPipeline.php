@@ -184,15 +184,18 @@ class DiagnoseMediaPipeline extends Command
                         ->get($urlWithToken);
                 } elseif ($config === 'redirect_step') {
                     $init = Http::withToken($team->whatsapp_access_token)
-                        ->withHeaders(['User-Agent' => MediaService::USER_AGENT])
+                        ->withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
                         ->withOptions(['allow_redirects' => false])
                         ->timeout(60)
                         ->get($url);
 
+                    $this->line("    [redirect_step init: HTTP {$init->status()}, Location: " . ($init->header('Location') ?: 'none') . "]");
+
                     if ($init->redirect() && ($cdnUrl = $init->header('Location'))) {
-                        $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT])
+                        $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
                             ->timeout(60)
                             ->get($cdnUrl);
+                        $this->line("    [redirect_step cdn: HTTP {$res->status()}]");
                     } else {
                         $res = $init;
                     }
@@ -210,7 +213,7 @@ class DiagnoseMediaPipeline extends Command
                     $anyWorked = true;
                     $this->line("  <info>✓</info> {$label}: HTTP {$res->status()} · {$size} bytes");
                 } else {
-                    $this->line("  <fg=red>✗</> {$label}: HTTP {$res->status()} · ".Str::limit($res->body(), 120));
+                    $this->line("  <fg=red>✗</> {$label}: HTTP {$res->status()} · ".Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags($res->body()))), 150));
                 }
             } catch (\Throwable $e) {
                 $this->line("  <fg=red>✗</> {$label}: threw — ".Str::limit($e->getMessage(), 120));
