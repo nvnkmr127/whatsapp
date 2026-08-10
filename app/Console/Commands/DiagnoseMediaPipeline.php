@@ -61,11 +61,10 @@ class DiagnoseMediaPipeline extends Command
     private function checkAccessToken(Team $team): bool
     {
         $token = $team->whatsapp_access_token
-            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'))
-            ?: Team::whereNotNull('whatsapp_access_token')->where('whatsapp_access_token', '!=', '')->value('whatsapp_access_token');
+            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'));
 
         if (! $token) {
-            $this->error('✗ access token: missing — every download fails at step one');
+            $this->error("✗ access token: missing for Team #{$team->id} — every download fails at step one");
 
             return false;
         }
@@ -140,8 +139,7 @@ class DiagnoseMediaPipeline extends Command
         $this->info("Live download probe · media_id={$mediaId}");
 
         $token = $team->whatsapp_access_token
-            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'))
-            ?: Team::whereNotNull('whatsapp_access_token')->where('whatsapp_access_token', '!=', '')->value('whatsapp_access_token');
+            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'));
 
         $base = config('whatsapp.base_url', 'https://graph.facebook.com').'/'.config('whatsapp.api_version', 'v21.0');
 
