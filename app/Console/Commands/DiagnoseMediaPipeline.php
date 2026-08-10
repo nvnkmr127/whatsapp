@@ -183,13 +183,15 @@ class DiagnoseMediaPipeline extends Command
                         ->timeout(60)
                         ->get($urlWithToken);
                 } elseif ($config === 'redirect_step') {
-                    $init = Http::withToken($team->whatsapp_access_token)
+                    $init = Http::withToken($team->whatsapp_access_token ?: $token)
                         ->withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])
                         ->withOptions(['allow_redirects' => false])
                         ->timeout(60)
                         ->get($url);
 
                     $this->line("    [redirect_step init: HTTP {$init->status()}, Location: " . ($init->header('Location') ?: 'none') . "]");
+                    $this->line("    [redirect_step init headers: " . json_encode(array_intersect_key($init->headers(), array_flip(['Content-Type', 'WWW-Authenticate', 'x-fb-debug', 'x-fb-rev']))) . "]");
+                    $this->line("    [redirect_step init body: " . Str::limit($init->body(), 300) . "]");
 
                     if ($init->redirect() && ($cdnUrl = $init->header('Location'))) {
                         $res = Http::withHeaders(['User-Agent' => MediaService::USER_AGENT, 'Accept' => '*/*'])

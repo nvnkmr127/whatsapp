@@ -89,29 +89,32 @@ class MediaService
         }
 
         // 2. Download Binary
-        // Meta's lookaside endpoint (lookaside.fbsbx.com) requires authentication to redirect to CDN.
-        // Sending an Authorization: Bearer header to lookaside causes 500 Internal Server Error when forwarded to edge CDN nodes.
-        // Solution: Pass access_token as query parameter so lookaside authenticates & 302 redirects to CDN cleanly.
-        $sep = str_contains($mediaUrl, '?') ? '&' : '?';
-        $downloadUrl = $mediaUrl . $sep . 'access_token=' . urlencode($accessToken);
+        // Meta's lookaside endpoint (lookaside.fbsbx.com) requires OAuth Bearer authorization to grant download,
+        // but 302 redirects to CDN edge nodes (scontent.xx.fbsbx.com) which fail with 500 if Authorization header is forwarded.
+        // Solution: Send Bearer token to lookaside with allow_redirects=false, then fetch Location CDN URL cleanly.
+        $binaryResponse = null;
 
-        $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+        $initialResponse = Http::withToken($accessToken)
+            ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+            ->withOptions(['allow_redirects' => false])
             ->timeout(60)
-            ->get($downloadUrl);
+            ->get($mediaUrl);
 
-        // Fallback 1: Manual 302 redirect with Authorization token header
-        if ($binaryResponse->failed()) {
-            $initialResponse = Http::withToken($accessToken)
-                ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
-                ->withOptions(['allow_redirects' => false])
+        if ($initialResponse->redirect() && ($cdnUrl = $initialResponse->header('Location'))) {
+            $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
                 ->timeout(60)
-                ->get($mediaUrl);
+                ->get($cdnUrl);
+        } elseif ($initialResponse->successful()) {
+            $binaryResponse = $initialResponse;
+        }
 
-            if ($initialResponse->redirect() && ($cdnUrl = $initialResponse->header('Location'))) {
-                $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
-                    ->timeout(60)
-                    ->get($cdnUrl);
-            }
+        // Fallback 1: access_token query param
+        if (! $binaryResponse || $binaryResponse->failed()) {
+            $sep = str_contains($mediaUrl, '?') ? '&' : '?';
+            $downloadUrl = $mediaUrl . $sep . 'access_token=' . urlencode($accessToken);
+            $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
+                ->timeout(60)
+                ->get($downloadUrl);
         }
 
         // Fallback 2: Clean GET (for pre-signed CDN URLs without auth requirement)
