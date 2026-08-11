@@ -175,6 +175,10 @@ export default (wire, conversationId, teamId, userId, showTransferModal, showInt
                 this.scrollToBottom();
             }
         });
+
+        // The store fired chat-initial-loaded during init() above, before the
+        // listener was attached, so land on the latest message here on mount.
+        this.$nextTick(() => this.scrollToBottom());
     },
 
     destroy() {

@@ -31,24 +31,19 @@ class MediaService
         // sees "no path returned".
         $log = ['media_id' => $mediaId, 'team_id' => $team->id];
 
-        $accessToken = $team->whatsapp_access_token;
-        if (! $accessToken) {
-            $accessToken = config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN');
-        }
-        if (! $accessToken) {
-            $accessToken = \App\Models\Team::whereNotNull('whatsapp_access_token')
-                ->where('whatsapp_access_token', '!=', '')
-                ->value('whatsapp_access_token');
-        }
+        // Only this team's token, or a single system token. Never another team's —
+        // a different WABA's token 500s on download and crosses tenant boundaries.
+        $accessToken = $team->whatsapp_access_token
+            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'));
 
         if (! $accessToken) {
-            Log::error('Media download failed', $log + ['step' => 'no_access_token', 'reason' => 'No Meta access token found on team, system config, or env']);
+            Log::error('Media download failed', $log + ['step' => 'no_access_token', 'reason' => 'No Meta access token on team or system config']);
 
             return null;
         }
 
         Log::info('[MEDIA_SERVICE] Attempting Meta media lookup', $log + [
-            'token_source' => $team->whatsapp_access_token ? 'team' : (config('whatsapp.system_access_token') || env('WHATSAPP_ACCESS_TOKEN') ? 'system/env' : 'fallback'),
+            'token_source' => $team->whatsapp_access_token ? 'team' : 'system/env',
         ]);
 
         // 1. Get Media URL
@@ -88,41 +83,12 @@ class MediaService
             return null;
         }
 
-        // 2. Download Binary
-        // Meta's lookaside endpoint (lookaside.fbsbx.com) requires OAuth Bearer authorization to grant download,
-        // but 302 redirects to CDN edge nodes (scontent.xx.fbsbx.com) which fail with 500 if Authorization header is forwarded.
-        // Solution: Send Bearer token to lookaside with allow_redirects=false, then fetch Location CDN URL cleanly.
-        $binaryResponse = null;
-
-        $initialResponse = Http::withToken($accessToken)
-            ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
-            ->withOptions(['allow_redirects' => false])
+        // 2. Download the binary. Meta's documented method: Bearer token on the
+        // lookaside URL; Guzzle follows the 302 to the CDN edge node on its own.
+        $binaryResponse = Http::withToken($accessToken)
+            ->withHeaders(['User-Agent' => self::USER_AGENT])
             ->timeout(60)
             ->get($mediaUrl);
-
-        if ($initialResponse->redirect() && ($cdnUrl = $initialResponse->header('Location'))) {
-            $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
-                ->timeout(60)
-                ->get($cdnUrl);
-        } elseif ($initialResponse->successful()) {
-            $binaryResponse = $initialResponse;
-        }
-
-        // Fallback 1: access_token query param
-        if (! $binaryResponse || $binaryResponse->failed()) {
-            $sep = str_contains($mediaUrl, '?') ? '&' : '?';
-            $downloadUrl = $mediaUrl . $sep . 'access_token=' . urlencode($accessToken);
-            $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
-                ->timeout(60)
-                ->get($downloadUrl);
-        }
-
-        // Fallback 2: Clean GET (for pre-signed CDN URLs without auth requirement)
-        if ($binaryResponse->failed()) {
-            $binaryResponse = Http::withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'])
-                ->timeout(60)
-                ->get($mediaUrl);
-        }
 
         if ($binaryResponse->failed()) {
             Log::error('Media download failed', $log + [
@@ -183,6 +149,9 @@ class MediaService
 
     protected function guessExtension($mime)
     {
+        // WhatsApp voice notes arrive as "audio/ogg; codecs=opus" — drop the params.
+        $mime = trim(explode(';', (string) $mime)[0]);
+
         $map = [
             'image/jpeg' => 'jpg',
             'image/png' => 'png',

@@ -43,6 +43,7 @@ class DiagnoseMediaPipeline extends Command
         $this->newLine();
 
         $ok = $this->checkAccessToken($team) && $ok;
+        $ok = $this->checkTokenGrants($team) && $ok;
         $ok = $this->checkDiskWritable($disk) && $ok;
         $ok = $this->checkPublicUrl($disk) && $ok;
 
@@ -72,6 +73,66 @@ class DiagnoseMediaPipeline extends Command
         $this->line('<info>✓</info> access token: present');
 
         return true;
+    }
+
+    /**
+     * Metadata reads (GET /{media-id}) work at a lower access tier than the actual
+     * blob fetch from lookaside, so a token can be "present" and valid for lookup
+     * yet 500 every download. These are the two grants that cause "metadata 200,
+     * binary 500": a token missing whatsapp_business_messaging / from the wrong
+     * app, or a WABA no app is subscribed to.
+     */
+    private function checkTokenGrants(Team $team): bool
+    {
+        $token = $team->whatsapp_access_token
+            ?: (config('whatsapp.system_access_token') ?: env('WHATSAPP_ACCESS_TOKEN'));
+
+        $appId = config('whatsapp.app_id');
+        $appSecret = config('whatsapp.app_secret');
+        $graph = config('whatsapp.base_url', 'https://graph.facebook.com');
+        $base = $graph.'/'.config('whatsapp.api_version', 'v21.0');
+
+        $ok = true;
+
+        // 1. Token: is it valid, from our app, and does it carry the media scope?
+        if ($appId && $appSecret) {
+            $debug = Http::get("{$graph}/debug_token", [
+                'input_token' => $token,
+                'access_token' => "{$appId}|{$appSecret}",
+            ])->json('data') ?? [];
+            $scopes = $debug['scopes'] ?? [];
+
+            if (! ($debug['is_valid'] ?? false)) {
+                $this->error('✗ token: debug_token reports INVALID — re-authenticate this team.');
+                $ok = false;
+            } elseif ((string) ($debug['app_id'] ?? '') !== (string) $appId) {
+                $this->error("✗ token: issued for app {$debug['app_id']}, but this server is app {$appId} — media download will 500.");
+                $ok = false;
+            } elseif (! in_array('whatsapp_business_messaging', $scopes, true)) {
+                $this->error('✗ token: missing scope `whatsapp_business_messaging` — metadata works but the media blob fetch 500s. Grant Advanced Access to this permission.');
+                $ok = false;
+            } else {
+                $this->line('<info>✓</info> token grants: valid · app '.$debug['app_id'].' · has whatsapp_business_messaging');
+            }
+        } else {
+            $this->warn('  (skipped token scope check: whatsapp.app_id / app_secret not configured)');
+        }
+
+        // 2. WABA: is any app subscribed? An empty list means inbound media 500s.
+        if ($team->whatsapp_business_account_id) {
+            $subs = Http::withToken($token)
+                ->get("{$base}/{$team->whatsapp_business_account_id}/subscribed_apps")
+                ->json('data');
+
+            if (is_array($subs) && count($subs) === 0) {
+                $this->error('✗ WABA subscription: no app subscribed to this WABA — re-run webhook subscription.');
+                $ok = false;
+            } elseif (is_array($subs)) {
+                $this->line('<info>✓</info> WABA subscription: '.count($subs).' app(s) subscribed');
+            }
+        }
+
+        return $ok;
     }
 
     private function checkDiskWritable(string $disk): bool
@@ -129,9 +190,8 @@ class DiagnoseMediaPipeline extends Command
     }
 
     /**
-     * Reproduces DownloadMediaJob's two HTTP calls against a real media id, then
-     * retries the binary fetch under different request shapes. A 500 from the CDN
-     * that clears with one header change is a client problem, not Meta being down.
+     * Reproduces DownloadMediaJob's two HTTP calls against a real media id. If the
+     * documented download fails, the status says whether it is us or Meta.
      */
     private function probeLiveDownload(Team $team, string $mediaId): bool
     {
@@ -163,69 +223,24 @@ class DiagnoseMediaPipeline extends Command
 
         $this->line('    host: '.parse_url($url, PHP_URL_HOST));
 
-        $chromeUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-        $curlUa = 'curl/8.4.0';
+        // Step 2: the documented download — Bearer token, Guzzle follows the 302 to the CDN.
+        $res = Http::withToken($token)
+            ->withHeaders(['User-Agent' => MediaService::USER_AGENT])
+            ->timeout(60)
+            ->get($url);
 
-        $shapes = [
-            'Bearer token + Chrome UA (manual 302 redirect)' => ['auth' => "Bearer {$token}", 'ua' => $chromeUa, 'manual' => true],
-            'Bearer token + curl UA (manual 302 redirect)' => ['auth' => "Bearer {$token}", 'ua' => $curlUa, 'manual' => true],
-            'OAuth token + Chrome UA (manual 302 redirect)' => ['auth' => "OAuth {$token}", 'ua' => $chromeUa, 'manual' => true],
-            'Bearer token + Chrome UA (auto 302 redirect)' => ['auth' => "Bearer {$token}", 'ua' => $chromeUa, 'manual' => false],
-            'access_token in query string (clean GET + Chrome UA)' => ['query_token' => true, 'ua' => $chromeUa],
-        ];
+        if ($res->successful()) {
+            $this->line("  <info>✓</info> step 2 download: HTTP {$res->status()} · ".strlen($res->body()).' bytes');
 
-        $anyWorked = false;
-
-        foreach ($shapes as $label => $config) {
-            try {
-                if (! empty($config['query_token'])) {
-                    $sep = str_contains($url, '?') ? '&' : '?';
-                    $urlWithToken = $url . $sep . 'access_token=' . urlencode((string) $token);
-                    $res = Http::withHeaders(['User-Agent' => $config['ua'], 'Accept' => '*/*'])
-                        ->timeout(60)
-                        ->get($urlWithToken);
-                } elseif (! empty($config['manual'])) {
-                    $init = Http::withHeaders([
-                        'Authorization' => $config['auth'],
-                        'User-Agent' => $config['ua'],
-                        'Accept' => '*/*',
-                    ])->withOptions(['allow_redirects' => false])->timeout(60)->get($url);
-
-                    if ($init->redirect() && ($cdnUrl = $init->header('Location'))) {
-                        $res = Http::withHeaders(['User-Agent' => $config['ua'], 'Accept' => '*/*'])
-                            ->timeout(60)
-                            ->get($cdnUrl);
-                    } else {
-                        $res = $init;
-                        $this->line("    [{$label} init: HTTP {$init->status()}, Location: " . ($init->header('Location') ?: 'none') . ", body: " . Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags($init->body()))), 80) . "]");
-                    }
-                } else {
-                    $res = Http::withHeaders([
-                        'Authorization' => $config['auth'],
-                        'User-Agent' => $config['ua'],
-                        'Accept' => '*/*',
-                    ])->timeout(60)->get($url);
-                }
-
-                $size = strlen($res->body());
-
-                if ($res->successful()) {
-                    $anyWorked = true;
-                    $this->line("  <info>✓</info> {$label}: HTTP {$res->status()} · {$size} bytes");
-                } else {
-                    $this->line("  <fg=red>✗</> {$label}: HTTP {$res->status()} · ".Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags($res->body()))), 150));
-                }
-            } catch (\Throwable $e) {
-                $this->line("  <fg=red>✗</> {$label}: threw — ".Str::limit($e->getMessage(), 120));
-            }
+            return true;
         }
 
-        $this->newLine();
-        $this->line($anyWorked
-            ? '  At least one shape works — the download is fixable from our side.'
-            : '  <comment>No shape worked. The URL may have expired (they are short-lived: re-run with a fresh media id), or Meta is genuinely erroring.</comment>');
+        $this->error("  ✗ step 2 download: HTTP {$res->status()} · ".Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags($res->body()))), 150));
+        $this->line(in_array($res->status(), [401, 403], true)
+            ? '    Token is not authorized to download this media — check the WABA is subscribed to this app.'
+            : '    Meta returned a server error on a valid token/URL — retry, or the media object is broken on Meta’s side.');
 
-        return $anyWorked;
+        return false;
     }
 
     private function reportStuckMessages(Team $team): void

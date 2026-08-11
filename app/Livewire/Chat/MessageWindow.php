@@ -1039,18 +1039,14 @@ class MessageWindow extends Component
         return $messages
             ->map(function ($msg) {
                 $team = $msg->relationLoaded('team') ? $msg->team : ($this->conversation?->team ?? \Illuminate\Support\Facades\Auth::user()?->currentTeam);
-                // Auto-download missing media on demand if media_id exists but media_url was not yet downloaded
-                if (empty($msg->media_url) && !empty($msg->media_id) && $team) {
-                    try {
-                        $mediaService = new \App\Services\MediaService();
-                        $path = $mediaService->downloadAndStore($msg->media_id, $team);
-                        if ($path) {
-                            $msg->update(['media_url' => $path]);
-                            $msg->refresh();
-                        }
-                    } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::warning("On-demand web media download failed for msg #{$msg->id}: " . $e->getMessage());
-                    }
+                // Media is fetched by the queued DownloadMediaJob on receipt. If it's
+                // still missing here, re-queue it — but never download inline: this runs
+                // inside the chat-render request and a Meta call (up to 60s each) would
+                // block the whole page. Skip messages that already gave up so polling
+                // doesn't re-queue them forever; the realtime event updates the bubble.
+                if (empty($msg->media_url) && ! empty($msg->media_id) && $team
+                    && ! ($msg->metadata['media_failed'] ?? false)) {
+                    \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
                 }
 
                 return [

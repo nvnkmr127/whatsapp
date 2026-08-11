@@ -234,13 +234,13 @@
 
             <!-- Text -->
             <template x-if="message.content && message.content !== '[Image]' && message.content !== '[Video]' && message.content !== '[Audio]'">
-                <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed" x-text="message.content">
+                <p class="text-xs sm:text-sm font-medium whitespace-pre-wrap break-words leading-relaxed" x-text="message.content">
                 </p>
             </template>
 
             <!-- Caption -->
             <template x-if="message.caption && !message.content">
-                <p class="text-xs font-bold italic opacity-80 mt-1" x-text="message.caption"></p>
+                <p class="text-xs font-bold italic opacity-80 mt-1 whitespace-pre-wrap break-words" x-text="message.caption"></p>
             </template>
 
             <!-- Metadata -->
