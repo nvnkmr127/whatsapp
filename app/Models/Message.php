@@ -91,7 +91,25 @@ class Message extends Model
 
         $cleanPath = ltrim($cleanPath, '/');
 
-        // Determine base origin
+        // Remote disks (R2/S3): the file lives in the bucket, not on this web
+        // server's /storage/ path, so a local "{origin}/storage/..." URL 403s.
+        // Sign a short-lived URL — works whether the bucket is public or private,
+        // so customer media (which can include ID documents) stays non-public.
+        $configuredDisk = config('filesystems.default', 'public');
+        $remoteDisk = ($configuredDisk === 'local') ? 'public' : $configuredDisk;
+        if (config("filesystems.disks.{$remoteDisk}.driver") === 's3') {
+            try {
+                return \Illuminate\Support\Facades\Storage::disk($remoteDisk)->temporaryUrl($cleanPath, now()->addHours(6));
+            } catch (\Throwable $e) {
+                try {
+                    return \Illuminate\Support\Facades\Storage::disk($remoteDisk)->url($cleanPath);
+                } catch (\Throwable $e2) {
+                    return null;
+                }
+            }
+        }
+
+        // Local public disk: serve via the app origin's /storage/ symlink.
         $origin = null;
         if (request() && request()->hasHeader('X-Forwarded-Host')) {
             $proto = request()->header('X-Forwarded-Proto', 'https');
