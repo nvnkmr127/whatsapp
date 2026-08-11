@@ -796,7 +796,7 @@
     <x-app-modal wire:model="lightboxOpen" maxWidth="7xl">
         <div class="relative bg-black h-full min-h-[500px] flex items-center justify-center"
              x-data="{ imgError: false }" x-effect="if (lightboxOpen) imgError = false">
-            <img x-show="lightboxImage && !imgError" :src="lightboxImage" @error="imgError = true"
+            <img x-show="lightboxImage && !imgError" :src="lightboxImage" x-on:error="imgError = true"
                 class="max-h-[90vh] max-w-[95vw] object-contain shadow-2xl rounded-lg">
             <div x-show="!lightboxImage || imgError" class="text-center text-slate-400 px-8 py-16">
                 <svg class="w-12 h-12 mx-auto opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
