@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Pressable, Image, Text, StatusBar,
-  ActivityIndicator, Dimensions, StyleSheet,
+  ActivityIndicator, Dimensions, StyleSheet, Linking, Share,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
-import { X } from 'lucide-react-native';
+import { X, Download, Share2 } from 'lucide-react-native';
 import { resolveMediaUrl } from '@/utils/media';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -36,16 +36,57 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
     else isImage = true;
   }
 
+  const handleDownload = async () => {
+    try {
+      if (resolvedUri) {
+        await Linking.openURL(resolvedUri);
+      }
+    } catch (e) {
+      console.warn('Cannot open media URL:', e);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      if (resolvedUri) {
+        await Share.share({
+          url: resolvedUri,
+          message: resolvedUri,
+          title: 'Shared Media File',
+        });
+      }
+    } catch (e) {
+      console.warn('Error sharing media:', e);
+    }
+  };
+
+  const fileName = uri ? uri.split('/').pop()?.split('?')[0] || 'Media File' : 'Media File';
+
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <StatusBar hidden />
       <View style={styles.backdrop}>
-        {/* Close button */}
-        <Pressable onPress={onClose} style={styles.closeBtn}>
-          <X size={24} color="#fff" />
-        </Pressable>
+        {/* Top Header Controls Bar */}
+        <View style={styles.headerBar}>
+          <Pressable onPress={onClose} style={styles.iconBtn}>
+            <X size={22} color="#fff" />
+          </Pressable>
+          
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {fileName}
+          </Text>
 
-        {/* Content */}
+          <View style={styles.headerActions}>
+            <Pressable onPress={handleShare} style={styles.iconBtn}>
+              <Share2 size={20} color="#fff" />
+            </Pressable>
+            <Pressable onPress={handleDownload} style={styles.iconBtn}>
+              <Download size={20} color="#fff" />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Content View */}
         <View style={styles.content}>
           {isImage && (
             <>
@@ -78,8 +119,12 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
           {(isAudio || isDoc) && (
             <View style={styles.docBox}>
               <Text style={styles.docText}>
-                {isAudio ? '🎵' : '📄'}  {uri.split('/').pop() || 'File'}
+                {isAudio ? '🎵' : '📄'}  {fileName}
               </Text>
+              <Pressable onPress={handleDownload} style={styles.downloadBtn}>
+                <Download size={18} color="#fff" />
+                <Text style={styles.downloadBtnText}>Open / Download File</Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -89,13 +134,19 @@ export function MediaViewer({ visible, uri, type, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
-  closeBtn:    { position: 'absolute', top: 52, right: 20, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 8 },
-  content:     { width: SW, height: SH * 0.85, justifyContent: 'center', alignItems: 'center' },
-  image:       { width: SW, height: SH * 0.85, justifyContent: 'center', alignItems: 'center' },
-  playOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' },
-  playCircle:  { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  docBox:      { padding: 24, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, alignItems: 'center', gap: 8 },
-  docText:     { color: '#fff', fontSize: 16, fontWeight: '600' },
-  docHint:     { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.96)', justifyContent: 'center', alignItems: 'center' },
+  headerBar: {
+    position: 'absolute', top: 44, left: 0, right: 0, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10, backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  headerTitle: { flex: 1, color: '#ffffff', fontSize: 15, fontWeight: '600', marginHorizontal: 12 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBtn: { padding: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)' },
+  content: { width: SW, height: SH * 0.85, justifyContent: 'center', alignItems: 'center', marginTop: 40 },
+  image: { width: SW, height: SH * 0.82, justifyContent: 'center', alignItems: 'center' },
+  docBox: { padding: 28, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, alignItems: 'center', gap: 16, maxWidth: '85%' },
+  docText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  downloadBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#10B981', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 24 },
+  downloadBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

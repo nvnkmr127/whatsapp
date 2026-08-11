@@ -535,22 +535,17 @@
                     </svg>
                 </button>
 
-                <!-- Input Field -->
-                <div class="flex-1 relative group">
+                <!-- Input Field Container Box -->
+                <div class="flex-1 relative group bg-slate-50 dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-wa-teal/20 focus-within:border-wa-teal/50">
                     <template x-if="replyingTo">
-                        <div class="absolute bottom-full left-0 mb-3 w-full z-10">
-                            <div class="bg-slate-50 dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex mx-2">
-                                <div class="w-1.5 bg-[#d95a2b] shrink-0"></div>
-                                <div class="flex-1 p-2.5 flex justify-between items-center">
-                                    <div class="overflow-hidden min-w-0 pr-2">
-                                        <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5 truncate" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 whitespace-pre-line break-words leading-snug" x-text="replyingTo.content || (replyingTo.type ? replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1) : '')"></p>
-                                    </div>
-                                    <button type="button" @click="clearReply()" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                    </button>
-                                </div>
+                        <div class="mb-2 p-2.5 bg-slate-200/60 dark:bg-slate-900/60 rounded-xl border-l-4 border-[#d95a2b] flex justify-between items-center transition-all">
+                            <div class="overflow-hidden min-w-0 pr-2">
+                                <p class="text-[13px] font-semibold text-[#d95a2b] mb-0.5 truncate" x-text="replyingTo.is_outbound ? 'You' : {{ \Illuminate\Support\Js::from($conversation->contact->name ?? $conversation->contact->phone_number) }}"></p>
+                                <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 whitespace-pre-line break-words leading-snug" x-text="replyingTo.content || (replyingTo.type ? replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1) : '')"></p>
                             </div>
+                            <button type="button" @click="clearReply()" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
                         </div>
                     </template>
                     <template x-if="isNoteMode">
@@ -560,11 +555,11 @@
                         </div>
                     </template>
                     <!-- Formatting Toolbar -->
-                    <div class="flex items-center gap-1 mb-1 px-3">
-                        <button type="button" @click="applyFormat('*')" class="px-2 py-0.5 text-xs font-black bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Bold (*text*)') }}">B</button>
-                        <button type="button" @click="applyFormat('_')" class="px-2 py-0.5 text-xs italic font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Italic (_text_)') }}">I</button>
-                        <button type="button" @click="applyFormat('~')" class="px-2 py-0.5 text-xs line-through font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Strikethrough (~text~)') }}">S</button>
-                        <button type="button" @click="applyFormat('`')" class="px-2 py-0.5 text-xs font-mono bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Code (`text`)') }}">&lt;/&gt;</button>
+                    <div class="flex items-center gap-1 mb-1 px-1">
+                        <button type="button" @click="applyFormat('*')" class="px-2 py-0.5 text-xs font-black bg-slate-200/50 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Bold (*text*)') }}">B</button>
+                        <button type="button" @click="applyFormat('_')" class="px-2 py-0.5 text-xs italic font-bold bg-slate-200/50 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Italic (_text_)') }}">I</button>
+                        <button type="button" @click="applyFormat('~')" class="px-2 py-0.5 text-xs line-through font-bold bg-slate-200/50 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Strikethrough (~text~)') }}">S</button>
+                        <button type="button" @click="applyFormat('`')" class="px-2 py-0.5 text-xs font-mono bg-slate-200/50 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition-colors" title="{{ __('Code (`text`)') }}">&lt;/&gt;</button>
                     </div>
 
                     <textarea x-model="msgBody" @keydown.enter="if (!$event.shiftKey && !showQR) { $event.preventDefault(); handleSubmit(); }" x-ref="messageInput"
@@ -572,11 +567,11 @@
                         @keyup="checkQR(); $store.chat.whisperTyping({{ \Illuminate\Support\Js::from(auth()->user()->name ?? 'Agent') }}); $store.chat.requestLock()"
                         placeholder="{{ __('Type a message (or / for templates)...') }}" rows="1"
                         :disabled="$store.chat.isLockedForMe()" :class="[
-                                                        $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-wa-teal/20 group-hover:bg-slate-100 dark:group-hover:bg-slate-700/50',
-                                                        isNoteMode ? 'bg-amber-50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
+                                                        $store.chat.isLockedForMe() ? 'opacity-50 cursor-not-allowed bg-slate-100' : 'bg-transparent',
+                                                        isNoteMode ? 'bg-amber-50/50 dark:bg-amber-900/10 focus:ring-amber-200' : ''
                                                     ]"
-                        class="w-full py-4 px-6 border-none rounded-[2rem] text-sm font-medium placeholder-slate-400 dark:placeholder-slate-600 resize-none max-h-40 transition-all"
-                        style="min-height: 56px;"></textarea>
+                        class="w-full py-2 px-3 border-none text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500 resize-none max-h-40 focus:outline-none focus:ring-0"
+                        style="min-height: 42px;"></textarea>
 
                     <!-- Quick Replies Popover -->
                     <div x-show="showQR" @click.away="showQR = false" x-transition x-cloak

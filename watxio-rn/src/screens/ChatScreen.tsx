@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, Platform, Animated, Pressable, Keyboard, BackHandler,
-  Modal, FlatList, ActivityIndicator, Image, Vibration, TextInput
+  Modal, FlatList, ActivityIndicator, Image, Vibration, TextInput, Linking, Share
 } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -1572,14 +1572,6 @@ export default function ChatScreen({ navigation, route }: any) {
             </View>
           )}
 
-          {replyingTo && !isRecording && (
-            <ReplyPreview 
-              message={replyingTo}
-              contactName={contact.name}
-              onCancel={() => setReplyingTo(null)} 
-            />
-          )}
-
           {isWithin24Hours ? (
             <Composer
               value={draft}
@@ -1587,6 +1579,9 @@ export default function ChatScreen({ navigation, route }: any) {
               onSend={send}
               onAttach={() => setShowAttachmentMenu(true)}
               hasMedia={!!selectedMedia}
+              replyingTo={replyingTo}
+              contactName={contact.name}
+              onCancelReply={() => setReplyingTo(null)}
               isRecording={isRecording}
               recordingSeconds={recordingSeconds}
               onStartRecording={async () => {
@@ -2036,6 +2031,46 @@ export default function ChatScreen({ navigation, route }: any) {
               >
                 <Text className="text-sm font-semibold text-ink dark:text-d-ink">↩️ Reply to Message</Text>
               </Pressable>
+
+              {selectedMsg?.media_url ? (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      setShowMsgActions(false);
+                      const msg = selectedMsg;
+                      setSelectedMsg(null);
+                      if (msg && msg.media_url) {
+                        setMediaViewer({
+                          uri: msg.media_url,
+                          type: (msg.media_type || 'image') as any,
+                        });
+                      }
+                    }}
+                    className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+                  >
+                    <Text className="text-sm font-semibold text-ink dark:text-d-ink">🔍 View / Open Media</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={async () => {
+                      setShowMsgActions(false);
+                      const msg = selectedMsg;
+                      setSelectedMsg(null);
+                      if (msg && msg.media_url) {
+                        const targetUrl = resolveMediaUrl(msg.media_url) || msg.media_url;
+                        try {
+                          await Linking.openURL(targetUrl);
+                        } catch (e) {
+                          showDialog('Open Failed', 'Could not open media URL.');
+                        }
+                      }
+                    }}
+                    className="py-3.5 px-2 active:bg-surface2 dark:active:bg-d-surface2 rounded-md"
+                  >
+                    <Text className="text-sm font-semibold text-ink dark:text-d-ink">📥 Download / Save Media</Text>
+                  </Pressable>
+                </>
+              ) : null}
               <Pressable
                 onPress={async () => {
                   setShowMsgActions(false);
