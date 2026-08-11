@@ -113,17 +113,17 @@ export function Bubble({
   const rawType = (mediaType || '').toLowerCase();
   const urlLower = (resolvedMediaUrl || mediaUrl || '').toLowerCase();
 
-  let isImage = rawType === 'image' || rawType === 'photo' || rawType === 'sticker';
-  let isVideo = rawType === 'video';
-  let isAudio = rawType === 'audio' || rawType === 'voice' || rawType === 'ptt';
-  let isDoc   = rawType === 'document' || rawType === 'file';
+  let isImage = rawType.startsWith('image') || rawType === 'photo' || rawType === 'sticker';
+  let isVideo = rawType.startsWith('video');
+  let isAudio = rawType.startsWith('audio') || rawType === 'voice' || rawType === 'ptt';
+  let isDoc   = rawType.startsWith('application') || rawType.startsWith('text') || rawType === 'document' || rawType === 'file';
 
   if (!isImage && !isVideo && !isAudio && !isDoc && urlLower) {
     if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|heic)(\?|$)/i)) isImage = true;
     else if (urlLower.match(/\.(mp4|mov|avi|mkv|3gp|webm)(\?|$)/i)) isVideo = true;
     else if (urlLower.match(/\.(mp3|m4a|aac|wav|ogg|opus)(\?|$)/i)) isAudio = true;
     else if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|txt)(\?|$)/i)) isDoc = true;
-    else isImage = true; // default to image display if mediaUrl exists
+    else if (resolvedMediaUrl || mediaUrl) isImage = true; // default to image display if mediaUrl exists
   }
 
   const hasMedia = isImage || isVideo || isAudio || isDoc || !!resolvedMediaUrl;

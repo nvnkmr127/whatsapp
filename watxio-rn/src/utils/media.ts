@@ -6,6 +6,11 @@ export function resolveMediaUrl(rawUrl: string | null | undefined): string | nul
   let url = String(rawUrl).trim();
   if (!url) return null;
 
+  // 1. Data URIs or local device file URIs
+  if (url.startsWith('data:') || url.startsWith('file://')) {
+    return url;
+  }
+
   // Get active API base URL (e.g. "http://192.168.31.52:8000/api" or "https://flow.watxio.com/api")
   const apiBaseUrl = api.getBaseUrl();
   const origin = apiBaseUrl.replace(/\/api\/?$/, ''); // e.g. "http://192.168.31.52:8000" or "https://flow.watxio.com"
@@ -14,10 +19,8 @@ export function resolveMediaUrl(rawUrl: string | null | undefined): string | nul
   const originHostMatch = origin.match(/^https?:\/\/([^/]+)/);
   const activeHostAndPort = originHostMatch ? originHostMatch[1] : '';
 
-  // 1. Data URIs or file scheme
-  if (url.startsWith('data:') || url.startsWith('file://')) {
-    return url;
-  }
+  // Clean redundant /public/ prefixes if present
+  url = url.replace(/\/public\/storage\//g, '/storage/').replace(/\/public\/whatsapp\//g, '/whatsapp/');
 
   // 2. Absolute HTTP/HTTPS URLs
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -46,4 +49,5 @@ export function resolveMediaUrl(rawUrl: string | null | undefined): string | nul
 
   return `${origin}${path}`;
 }
+
 

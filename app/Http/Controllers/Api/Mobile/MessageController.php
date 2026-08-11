@@ -53,9 +53,12 @@ class MessageController extends Controller
                     if ($path) {
                         $msg->update(['media_url' => $path]);
                         $msg->refresh();
+                    } else {
+                        \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
                     }
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning("On-demand media download failed for msg #{$msg->id}: " . $e->getMessage());
+                    \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
                 }
             }
 
@@ -67,8 +70,8 @@ class MessageController extends Controller
                 $data['media_url'] = $msg->content;
                 $data['full_media_url'] = $msg->content;
             }
-            if (empty($data['media_type']) && $msg->type !== 'text' && $msg->type !== 'template') {
-                $data['media_type'] = $msg->type;
+            if (empty($data['media_type'])) {
+                $data['media_type'] = $msg->media_type ?: ($msg->type !== 'text' && $msg->type !== 'template' ? $msg->type : null);
             }
             return $data;
         })->values()->toArray();
@@ -169,8 +172,12 @@ class MessageController extends Controller
                 'is_outbound' => $data['reply_to_is_outbound']
             ];
         }
-        if ($message->media_url) {
-            $data['media_url'] = $message->full_media_url;
+        if ($message->media_url || $message->full_media_url) {
+            $data['full_media_url'] = $message->full_media_url;
+            $data['media_url'] = $message->full_media_url ?: $message->media_url;
+        }
+        if (empty($data['media_type'])) {
+            $data['media_type'] = $message->media_type ?: ($message->type !== 'text' && $message->type !== 'template' ? $message->type : null);
         }
 
         return response()->json([

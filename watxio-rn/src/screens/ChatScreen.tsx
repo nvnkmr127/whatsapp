@@ -233,8 +233,11 @@ export default function ChatScreen({ navigation, route }: any) {
 
         const replyId = m.reply_to_message_id ?? m.reply_to_id ?? m.metadata?.reply_to_message_id ?? null;
         const replyIsOutbound = m.reply_to_is_outbound ?? m.reply_to_message?.is_outbound ?? m.metadata?.reply_to_is_outbound ?? false;
-        const replyMediaUrl = m.reply_to_message?.media_url ?? m.reply_to_media_url ?? m.metadata?.reply_to_media_url ?? null;
+        const replyMediaUrl = m.reply_to_message?.full_media_url ?? m.reply_to_message?.media_url ?? m.reply_to_media_url ?? m.metadata?.reply_to_media_url ?? null;
         const replyMediaType = m.reply_to_message?.media_type ?? m.reply_to_media_type ?? m.metadata?.reply_to_media_type ?? null;
+
+        const rawMediaUrl = m.full_media_url || m.media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null);
+        const rawMediaType = m.media_type || m.metadata?.media_type || ((m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (rawMediaUrl ? 'image' : null));
 
         mapped.push({
           id: m.id,
@@ -243,8 +246,8 @@ export default function ChatScreen({ navigation, route }: any) {
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
-          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null),
-          media_type: (m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (m.media_type || m.metadata?.media_type || (m.media_url ? 'image' : null)),
+          media_url: rawMediaUrl,
+          media_type: rawMediaType,
           metadata: m.metadata || null,
           reply_to_content: replyContent || null,
           reply_to_id: replyId ? (isNaN(Number(replyId)) ? replyId : Number(replyId)) : null,
@@ -398,8 +401,11 @@ export default function ChatScreen({ navigation, route }: any) {
 
         const replyId = m.reply_to_message_id ?? m.reply_to_id ?? m.metadata?.reply_to_message_id ?? null;
         const replyIsOutbound = m.reply_to_is_outbound ?? m.reply_to_message?.is_outbound ?? m.metadata?.reply_to_is_outbound ?? false;
-        const replyMediaUrl = m.reply_to_message?.media_url ?? m.reply_to_media_url ?? m.metadata?.reply_to_media_url ?? null;
+        const replyMediaUrl = m.reply_to_message?.full_media_url ?? m.reply_to_message?.media_url ?? m.reply_to_media_url ?? m.metadata?.reply_to_media_url ?? null;
         const replyMediaType = m.reply_to_message?.media_type ?? m.reply_to_media_type ?? m.metadata?.reply_to_media_type ?? null;
+
+        const rawMediaUrl = m.full_media_url || m.media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null);
+        const rawMediaType = m.media_type || m.metadata?.media_type || ((m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (rawMediaUrl ? 'image' : null));
 
         mapped.push({
           id: m.id,
@@ -408,8 +414,8 @@ export default function ChatScreen({ navigation, route }: any) {
           time: msgTime,
           status: apiStatus === 'read' || apiStatus === 'seen' ? 'read' : apiStatus === 'delivered' ? 'delivered' : apiStatus === 'failed' ? 'failed' : apiStatus === 'sent' ? 'sent' : 'queued',
           isStarred: !!m.is_starred,
-          media_url: m.media_url || m.full_media_url || m.metadata?.media_url || m.metadata?.file_path || m.media_path || (m.type && m.type !== 'text' && m.type !== 'template' && m.content && (m.content.startsWith('http://') || m.content.startsWith('https://') || m.content.startsWith('/storage/') || m.content.startsWith('storage/')) ? m.content : null),
-          media_type: (m.type && m.type !== 'text' && m.type !== 'template') ? m.type : (m.media_type || m.metadata?.media_type || (m.media_url ? 'image' : null)),
+          media_url: rawMediaUrl,
+          media_type: rawMediaType,
           metadata: m.metadata || null,
           reply_to_content: replyContent || null,
           reply_to_id: replyId ? (isNaN(Number(replyId)) ? replyId : Number(replyId)) : null,
