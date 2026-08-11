@@ -52,9 +52,16 @@ class MediaController extends Controller
         // Store in public disk for easy access (or s3 in production)
         $path = $file->storeAs('mobile/uploads/' . $type, $fileName, 'public');
 
+        $origin = request()->getSchemeAndHttpHost();
+        if (str_contains($origin, 'localhost') || str_contains($origin, '127.0.0.1')) {
+            $fullUrl = Storage::disk('public')->url($path);
+        } else {
+            $fullUrl = rtrim($origin, '/') . '/storage/' . ltrim($path, '/');
+        }
+
         return response()->json([
             'success' => true,
-            'url' => Storage::disk('public')->url($path),
+            'url' => $fullUrl,
             'path' => $path,
             'fileName' => $file->getClientOriginalName(),
             'mime' => $mime,
