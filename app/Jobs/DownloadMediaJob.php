@@ -22,9 +22,9 @@ class DownloadMediaJob implements ShouldQueue
 
     public $teamId;
 
-    public $tries = 3;
+    public $tries = 30;
 
-    public $backoff = [30, 60, 120];
+    public $backoff = [120, 300, 600];
 
     public function __construct($messageId, $mediaId, $teamId)
     {
@@ -33,8 +33,27 @@ class DownloadMediaJob implements ShouldQueue
         $this->teamId = $teamId;
     }
 
+    /**
+     * Hard stop so rate-limit back-offs can't retry forever. An hour is longer
+     * than Meta's #4 window usually lasts, and bounds genuinely-dead media too.
+     */
+    public function retryUntil()
+    {
+        return now()->addHour();
+    }
+
     public function handle(): void
     {
+        // If Meta recently returned #4 (app rate limit), MediaService set a shared
+        // cooldown. Back off WITHOUT calling the API — otherwise every retry is
+        // another call that keeps the limit pinned. release() re-queues for later.
+        $cooldownUntil = \Illuminate\Support\Facades\Cache::get('meta_media_cooldown_until');
+        if ($cooldownUntil && $cooldownUntil > now()->getTimestamp()) {
+            $this->release(min(900, max(60, $cooldownUntil - now()->getTimestamp())));
+
+            return;
+        }
+
         $message = Message::find($this->messageId);
         $team = Team::find($this->teamId);
 

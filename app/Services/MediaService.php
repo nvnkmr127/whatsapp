@@ -68,6 +68,13 @@ class MediaService
                 'body' => Str::limit($response->body(), 500),
             ]);
 
+            // Meta's #4 app-level limit is transient but resets slowly. Set a shared
+            // cooldown so DownloadMediaJob backs every download off instead of each
+            // retry making another call and keeping the limit pinned (a feedback loop).
+            if ($isRateLimit) {
+                \Illuminate\Support\Facades\Cache::put('meta_media_cooldown_until', now()->addMinutes(10)->getTimestamp(), now()->addMinutes(11));
+            }
+
             return null;
         }
 

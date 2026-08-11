@@ -21,16 +21,6 @@ class FCMTokenController extends Controller
 
         $user = $request->user();
 
-        \Illuminate\Support\Facades\Log::info('FCM [1/3] Token registration received', [
-            'user_id'      => $user->id,
-            'user_email'   => $user->email,
-            'platform'     => $request->platform,
-            'device_id'    => $request->device_id,
-            'token_length' => strlen($request->token),
-            'token_prefix' => substr($request->token, 0, 30),
-            'token_suffix' => substr($request->token, -15),
-        ]);
-
         // Update or Create
         $fcmToken = UserFcmToken::updateOrCreate(
             ['token' => $request->token],
@@ -45,15 +35,6 @@ class FCMTokenController extends Controller
                 ],
             ]
         );
-
-        \Illuminate\Support\Facades\Log::info('FCM [2/3] Token saved to DB', [
-            'db_id'       => $fcmToken->id,
-            'was_created' => $fcmToken->wasRecentlyCreated,
-            'user_id'     => $fcmToken->user_id,
-        ]);
-
-        $tokenCount = UserFcmToken::where('user_id', $user->id)->count();
-        \Illuminate\Support\Facades\Log::info("FCM [3/3] User {$user->id} now has {$tokenCount} registered token(s)");
 
         return response()->json([
             'success' => true,

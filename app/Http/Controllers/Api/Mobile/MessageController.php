@@ -92,12 +92,6 @@ class MessageController extends Controller
     {
         $this->authorizeConversation($request->user(), $conversation);
 
-        \Log::info('[MOBILE_API_MESSAGE_STORE] Incoming request', [
-            'conversation_id' => $conversation->id,
-            'user_id' => $request->user()?->id,
-            'input' => $request->all(),
-        ]);
-
         $request->validate([
             'type' => 'required|in:text,image,document,video,audio,template',
             'content' => $request->input('type') === 'text' ? 'required|string' : 'nullable|string',
@@ -147,12 +141,6 @@ class MessageController extends Controller
             'media_type' => $isMedia ? $request->input('type') : null,
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
-        ]);
-
-        \Log::info('[MOBILE_API_MESSAGE_STORE] Message created and queued', [
-            'message_id' => $message->id,
-            'type' => $message->type,
-            'status' => $message->status,
         ]);
 
         // Dispatch Job asynchronously (do not block the HTTP response)
@@ -272,8 +260,6 @@ class MessageController extends Controller
         $conversation = $message->conversation;
         $this->authorizeConversation($request->user(), $conversation);
 
-        \Log::info('Reaction requested', ['message_id' => $message->id, 'emoji' => $request->emoji, 'whatsapp_message_id' => $message->whatsapp_message_id]);
-
         if ($message->whatsapp_message_id) {
             $waService = app(\App\Services\WhatsAppService::class);
             $payload = [
@@ -288,10 +274,8 @@ class MessageController extends Controller
             ];
             
             try {
-                \Log::info('Sending reaction to WhatsApp', ['payload' => $payload]);
                 $response = $waService->sendRaw($conversation->team, $payload);
-                \Log::info('WhatsApp reaction response', ['response' => $response]);
-                
+
                 if (isset($response['error'])) {
                     \Log::error('Failed to send WhatsApp reaction', ['error' => $response['error'], 'message_id' => $message->id]);
                     return response()->json(['success' => false, 'error' => 'Failed to send reaction to WhatsApp.'], 500);
