@@ -45,21 +45,13 @@ class MessageController extends Controller
             }
             unset($data['reply_to']);
             $team = $msg->relationLoaded('team') ? $msg->team : ($conversation->team ?? $request->user()?->currentTeam);
-            // Auto-download missing media on demand if media_id exists but media_url was not yet downloaded
-            if (empty($msg->media_url) && !empty($msg->media_id) && $team) {
-                try {
-                    $mediaService = new \App\Services\MediaService();
-                    $path = $mediaService->downloadAndStore($msg->media_id, $team);
-                    if ($path) {
-                        $msg->update(['media_url' => $path]);
-                        $msg->refresh();
-                    } else {
-                        \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
-                    }
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning("On-demand media download failed for msg #{$msg->id}: " . $e->getMessage());
-                    \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
-                }
+            // Media is fetched by the queued DownloadMediaJob — never download inline:
+            // a Meta call blocks this request, and when many messages are missing it
+            // hammers the API (rate limit). Skip messages that already gave up so
+            // every load doesn't re-queue them forever.
+            if (empty($msg->media_url) && !empty($msg->media_id) && $team
+                && !($msg->metadata['media_failed'] ?? false)) {
+                \App\Jobs\DownloadMediaJob::dispatch($msg->id, $msg->media_id, $team->id);
             }
 
             // Ensure full URL for media
