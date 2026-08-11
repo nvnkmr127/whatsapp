@@ -183,14 +183,6 @@ export function Bubble({
     ? formatTime(playbackPosition)
     : (duration > 0 ? formatTime(duration) : '0:15');
 
-  const [imageError, setImageError] = React.useState(false);
-  const [imageLoading, setImageLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    setImageError(false);
-    setImageLoading(true);
-  }, [resolvedMediaUrl]);
-
   return (
     <View className={`max-w-[85%] ${replyTo ? 'min-w-[190px]' : ''} ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
       <View
@@ -205,43 +197,13 @@ export function Bubble({
         {/* ── Native WhatsApp Image / Video Preview ── */}
         {hasMedia && (isImage || isVideo) && (
           <View className="relative">
-            <Pressable
-              onPress={() => {
-                if (imageError) setImageError(false);
-                onMediaPress?.();
-              }}
-              className="relative overflow-hidden rounded-t-lg active:opacity-90"
-            >
+            <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg active:opacity-90">
               {resolvedMediaUrl ? (
-                <View style={{ width: 260, height: 190 }} className="relative bg-black/10 dark:bg-white/10 items-center justify-center">
-                  {imageLoading && (
-                    <View className="absolute inset-0 items-center justify-center bg-black/20 z-10">
-                      <ActivityIndicator size="small" color={tokens.accent} />
-                    </View>
-                  )}
-                  {imageError ? (
-                    <View className="absolute inset-0 items-center justify-center p-4 bg-black/30 z-20">
-                      {isVideo ? <VideoIcon size={32} color="#ffffff" /> : <ImageIcon size={32} color="#ffffff" />}
-                      <Text className="text-white text-xs font-medium mt-1">
-                        {isVideo ? 'Video' : 'Photo'}
-                      </Text>
-                      <View className="flex-row items-center gap-1 mt-1.5 px-2.5 py-1 bg-black/60 rounded-full border border-white/40 shadow-sm">
-                        <Download size={12} color="#ffffff" />
-                        <Text className="text-[11px] font-semibold text-white">Tap to retry / view</Text>
-                      </View>
-                    </View>
-                  ) : null}
+                <View style={{ width: 260, height: 190 }} className="relative bg-black/5 dark:bg-white/5 items-center justify-center">
                   <Image
                     source={{ uri: resolvedMediaUrl }}
                     style={{ width: 260, height: 190 }}
                     resizeMode="cover"
-                    onLoadStart={() => setImageLoading(true)}
-                    onLoadEnd={() => setImageLoading(false)}
-                    onError={(err) => {
-                      console.warn('[Bubble] Image load error for URL:', resolvedMediaUrl, err?.nativeEvent);
-                      setImageError(true);
-                      setImageLoading(false);
-                    }}
                   />
                 </View>
               ) : (
