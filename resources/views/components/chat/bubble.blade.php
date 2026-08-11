@@ -78,7 +78,7 @@
                     <!-- Image -->
                     <template x-if="message.media_type && message.media_type.startsWith('image')">
                         <div class="relative group/img cursor-pointer rounded-xl overflow-hidden"
-                             @click="lightboxImage = message.media_url; lightboxOpen = true">
+                             @click="if (message.media_url) { lightboxImage = message.media_url; lightboxOpen = true }">
                             <img :src="message.media_url"
                                 class="w-full max-h-80 object-cover rounded-xl shadow-sm transition-transform duration-300 group-hover/img:scale-[1.02]"
                                 loading="lazy">

@@ -794,9 +794,17 @@
 
     <!-- Lightbox Modal -->
     <x-app-modal wire:model="lightboxOpen" maxWidth="7xl">
-        <div class="relative bg-black h-full min-h-[500px] flex items-center justify-center">
-            <img :src="lightboxImage"
+        <div class="relative bg-black h-full min-h-[500px] flex items-center justify-center"
+             x-data="{ imgError: false }" x-effect="if (lightboxOpen) imgError = false">
+            <img x-show="lightboxImage && !imgError" :src="lightboxImage" @error="imgError = true"
                 class="max-h-[90vh] max-w-[95vw] object-contain shadow-2xl rounded-lg">
+            <div x-show="!lightboxImage || imgError" class="text-center text-slate-400 px-8 py-16">
+                <svg class="w-12 h-12 mx-auto opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <p class="text-sm font-bold mt-3">{{ __('Image unavailable') }}</p>
+                <p class="text-xs text-slate-500 mt-1">{{ __("This media hasn't downloaded yet.") }}</p>
+            </div>
         </div>
     </x-app-modal>
 
