@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Chat;
 
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -30,12 +31,12 @@ class ChatDashboard extends Component
         }
     }
 
-    // NOTE: no #[On('conversationSelected')] handler here on purpose. The list's
-    // #[Modelable] $activeConversationId already syncs the selection to this parent
-    // and re-renders it (mounting the message-window). Handling the event here too
-    // fired a second render/roundtrip that re-morphed the just-mounted window and
-    // left it half-initialized on first open (a full reload had no double-update, so
-    // it "worked after reload"). The browser event still drives the mobile-pane JS.
+    #[On('conversationSelected')]
+    public function loadConversation($id)
+    {
+        $this->activeConversationId = $id;
+        $this->validateActiveConversation();
+    }
 
     public function render()
     {

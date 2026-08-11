@@ -51,8 +51,9 @@
         </div>
     </div>
 
+    @script
     <script>
-        document.addEventListener('livewire:initialized', () => {
+        {
             let sdkInitialized = false;
             const appId = '{{ config("services.facebook.client_id") }}';
 
@@ -107,6 +108,7 @@
                     return_scopes: true
                 });
             };
-        });
+        }
     </script>
+    @endscript
 </div>

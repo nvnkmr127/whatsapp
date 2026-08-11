@@ -428,8 +428,9 @@
     @endif
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @script
     <script>
-        document.addEventListener('livewire:initialized', () => {
+        {
             const trendCtx = document.getElementById('eventTrendChart').getContext('2d');
             const distCtx = document.getElementById('eventDistributionChart').getContext('2d');
             let trendChart, distChart;
@@ -556,10 +557,11 @@
 
             initCharts();
 
-            Livewire.on('refreshCharts', (event) => {
+            $wire.on('refreshCharts', (event) => {
                 const data = Array.isArray(event) ? event[0] : event;
                 initCharts(data.chartData, data.distData);
             });
-        });
+        }
     </script>
+    @endscript
 </div>

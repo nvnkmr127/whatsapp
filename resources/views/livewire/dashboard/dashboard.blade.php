@@ -276,8 +276,9 @@
     </div>
 </div>
 
+@script
 <script>
-    document.addEventListener('livewire:initialized', () => {
+    {
         let chart = null;
 
         const normalizeChartData = (data) => {
@@ -399,9 +400,10 @@
         }
         initChart(initialChartData);
 
-        Livewire.on('chartDataUpdated', (data) => {
+        $wire.on('chartDataUpdated', (data) => {
             if (Array.isArray(data)) data = data[0];
             initChart(data);
         });
-    });
+    }
 </script>
+@endscript

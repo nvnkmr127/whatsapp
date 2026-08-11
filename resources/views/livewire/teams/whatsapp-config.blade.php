@@ -1537,8 +1537,9 @@
 </div><!-- End Main Card -->
 @endif
 
+@script
 <script>
-    document.addEventListener('livewire:initialized', () => {
+    {
         let sdkInitialized = false;
 
         const checkHttps = () => {
@@ -1645,6 +1646,7 @@
         }
 
         checkHttps();
-    });
+    }
 </script>
+@endscript
 </div>

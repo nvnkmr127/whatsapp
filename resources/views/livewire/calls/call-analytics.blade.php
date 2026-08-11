@@ -192,8 +192,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @script
     <script>
-        document.addEventListener('livewire:initialized', () => {
+        {
             const costCtx = document.getElementById('costVelocityChart').getContext('2d');
             const outcomeCtx = document.getElementById('outcomeIndexChart').getContext('2d');
             let costChart, outcomeChart;
@@ -357,7 +358,8 @@
             }
 
             initCharts();
-            Livewire.on('refreshCharts', () => initCharts());
-        });
+            $wire.on('refreshCharts', () => initCharts());
+        }
     </script>
+    @endscript
 </div>
