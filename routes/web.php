@@ -326,6 +326,35 @@ Route::get('/l/{code}', [App\Http\Controllers\ShortLinkController::class, 'redir
 // Embed Routes (Publicly accessible but Token protected internally)
 Route::get('/embed/chat', [\App\Http\Controllers\EmbedController::class, 'show'])->name('embed.chat');
 
+// Storage Media Fallback Route — ensures media files are served with correct headers even if storage symlink is missing or bypassed
+Route::get('/storage/{path}', function ($path) {
+    $cleanPath = ltrim(str_replace('..', '', $path), '/');
+    $diskName = config('filesystems.default', 'public');
+    if ($diskName === 'local') {
+        $diskName = 'public';
+    }
+
+    $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
+
+    if (! $disk->exists($cleanPath)) {
+        abort(404, 'Media file not found');
+    }
+
+    $mimeType = $disk->mimeType($cleanPath) ?: 'application/octet-stream';
+    $stream = $disk->readStream($cleanPath);
+
+    return response()->stream(function () use ($stream) {
+        if (is_resource($stream)) {
+            fpassthru($stream);
+            fclose($stream);
+        }
+    }, 200, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000',
+        'Accept-Ranges' => 'bytes',
+    ]);
+})->where('path', '.*');
+
 /**
  * Local Development Routes
  * -------------------------------------------------------------------------

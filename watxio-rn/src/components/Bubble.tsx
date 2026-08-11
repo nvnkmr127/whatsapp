@@ -212,13 +212,25 @@ export function Bubble({
               }}
               className="relative overflow-hidden rounded-t-lg active:opacity-90"
             >
-              {resolvedMediaUrl && !imageError ? (
-                <View style={{ width: 260, height: 190 }} className="relative bg-black/5 dark:bg-white/5 items-center justify-center">
+              {resolvedMediaUrl ? (
+                <View style={{ width: 260, height: 190 }} className="relative bg-black/10 dark:bg-white/10 items-center justify-center">
                   {imageLoading && (
-                    <View className="absolute inset-0 items-center justify-center bg-black/10 z-10">
+                    <View className="absolute inset-0 items-center justify-center bg-black/20 z-10">
                       <ActivityIndicator size="small" color={tokens.accent} />
                     </View>
                   )}
+                  {imageError ? (
+                    <View className="absolute inset-0 items-center justify-center p-4 bg-black/30 z-20">
+                      {isVideo ? <VideoIcon size={32} color="#ffffff" /> : <ImageIcon size={32} color="#ffffff" />}
+                      <Text className="text-white text-xs font-medium mt-1">
+                        {isVideo ? 'Video' : 'Photo'}
+                      </Text>
+                      <View className="flex-row items-center gap-1 mt-1.5 px-2.5 py-1 bg-black/60 rounded-full border border-white/40 shadow-sm">
+                        <Download size={12} color="#ffffff" />
+                        <Text className="text-[11px] font-semibold text-white">Tap to retry / view</Text>
+                      </View>
+                    </View>
+                  ) : null}
                   <Image
                     source={{ uri: resolvedMediaUrl }}
                     style={{ width: 260, height: 190 }}
