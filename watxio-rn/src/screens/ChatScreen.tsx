@@ -23,6 +23,7 @@ import { IconButton } from '@/components/Button';
 import { Composer } from '@/components/PhoneBubbleBar';
 import { CustomDialog } from '@/components/Dialog';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { resolveMediaUrl } from '@/utils/media';
 import { ChatSkeleton } from '@/components/ChatSkeleton';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ReplyPreview } from '@/components/ReplyPreview';
@@ -354,7 +355,7 @@ export default function ChatScreen({ navigation, route }: any) {
   const handleMediaPress = async (m: ChatMessage) => {
     if (m.media_url) {
       setMediaViewer({
-        uri: m.media_url,
+        uri: resolveMediaUrl(m.media_url) || m.media_url,
         type: (m.media_type as any) || 'image',
       });
       return;

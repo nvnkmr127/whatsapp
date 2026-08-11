@@ -19,8 +19,11 @@ export function resolveMediaUrl(rawUrl: string | null | undefined): string | nul
   const originHostMatch = origin.match(/^https?:\/\/([^/]+)/);
   const activeHostAndPort = originHostMatch ? originHostMatch[1] : '';
 
-  // Clean redundant /public/ prefixes if present
-  url = url.replace(/\/public\/storage\//g, '/storage/').replace(/\/public\/whatsapp\//g, '/whatsapp/');
+  // Clean redundant /public/ or public/ from url
+  url = url.replace(/(\/)?storage\/public\//g, '$1storage/')
+           .replace(/(\/)?public\/storage\//g, '$1storage/')
+           .replace(/^public\//g, '')
+           .replace(/\/public\//g, '/');
 
   // 2. Absolute HTTP/HTTPS URLs
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -38,16 +41,18 @@ export function resolveMediaUrl(rawUrl: string | null | undefined): string | nul
     return url;
   }
 
-  // 3. Relative paths (e.g. "whatsapp/1/abc.jpg", "/whatsapp/1/abc.jpg", "storage/whatsapp/1/abc.jpg")
-  let path = url.startsWith('/') ? url : `/${url}`;
-
-  if (path.startsWith('/whatsapp/')) {
-    path = `/storage${path}`;
-  } else if (!path.startsWith('/storage/')) {
-    path = `/storage${path}`;
+  // 3. Relative paths (e.g. "whatsapp/1/abc.jpg", "/whatsapp/1/abc.jpg", "public/whatsapp/1/abc.jpg", "storage/whatsapp/1/abc.jpg")
+  let cleanPath = url.replace(/^\/?(storage|public)\//i, '');
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
   }
 
-  return `${origin}${path}`;
+  if (!cleanPath.startsWith('/storage/')) {
+    cleanPath = `/storage${cleanPath}`;
+  }
+
+  return `${origin}${cleanPath}`;
 }
+
 
 

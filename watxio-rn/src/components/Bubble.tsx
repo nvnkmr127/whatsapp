@@ -186,6 +186,11 @@ export function Bubble({
   const [imageError, setImageError] = React.useState(false);
   const [imageLoading, setImageLoading] = React.useState(true);
 
+  React.useEffect(() => {
+    setImageError(false);
+    setImageLoading(true);
+  }, [resolvedMediaUrl]);
+
   return (
     <View className={`max-w-[85%] ${replyTo ? 'min-w-[190px]' : ''} ${isOut ? 'self-end' : 'self-start'} ${reactionEmoji ? 'mb-3' : ''} relative`}>
       <View
@@ -200,7 +205,13 @@ export function Bubble({
         {/* ── Native WhatsApp Image / Video Preview ── */}
         {hasMedia && (isImage || isVideo) && (
           <View className="relative">
-            <Pressable onPress={onMediaPress} className="relative overflow-hidden rounded-t-lg active:opacity-90">
+            <Pressable
+              onPress={() => {
+                if (imageError) setImageError(false);
+                onMediaPress?.();
+              }}
+              className="relative overflow-hidden rounded-t-lg active:opacity-90"
+            >
               {resolvedMediaUrl && !imageError ? (
                 <View style={{ width: 260, height: 190 }} className="relative bg-black/5 dark:bg-white/5 items-center justify-center">
                   {imageLoading && (
