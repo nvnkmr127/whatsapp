@@ -136,12 +136,22 @@ export default {
         const index = this.messages.findIndex(m => m.id === id);
         if (index === -1) return;
 
-        const body = this.messages[index].content;
+        const isTemp = typeof id === 'string' && id.startsWith('temp_');
         this.messages[index].status = 'sending';
 
         try {
             const wire = this._wire || this.wire;
-            const result = await wire.call('sendMessageJson', body, id);
+            let result;
+
+            if (isTemp) {
+                const body = this.messages[index].content;
+                if (!body) {
+                    throw new Error('Message body is empty');
+                }
+                result = await wire.call('sendMessageJson', body, id);
+            } else {
+                result = await wire.call('retryMessage', id);
+            }
 
             if (result.status === 'error') {
                 throw new Error(result.message);

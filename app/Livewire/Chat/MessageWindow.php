@@ -1152,6 +1152,41 @@ class MessageWindow extends Component
     }
 
     #[\Livewire\Attributes\Renderless]
+    public function retryMessage($messageId)
+    {
+        if (! $this->conversation && $this->conversationId) {
+            $this->loadConversation();
+        }
+
+        if (! $this->conversation) {
+            return ['status' => 'error', 'message' => 'Conversation not found. Please refresh the page.'];
+        }
+
+        $message = \App\Models\Message::where('id', $messageId)
+            ->where('conversation_id', $this->conversation->id)
+            ->first();
+
+        if (! $message) {
+            return ['status' => 'error', 'message' => 'Message not found'];
+        }
+
+        $message->update([
+            'status' => 'queued',
+            'error_message' => null,
+        ]);
+
+        \App\Jobs\SendMessageJob::dispatch($message);
+
+        $message->refresh();
+
+        return [
+            'id' => $message->id,
+            'status' => $message->status,
+            'error_message' => $message->error_message,
+        ];
+    }
+
+    #[\Livewire\Attributes\Renderless]
     public function retryMediaDownload($messageId)
     {
         \Illuminate\Support\Facades\Log::info("[LIVEWIRE_RETRY_MEDIA] Retry requested for Message #{$messageId}");
