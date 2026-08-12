@@ -25,7 +25,7 @@ class MediaController extends Controller
         
         // Derive extension from MIME type or original filename
         $clientExt = strtolower($file->getClientOriginalExtension());
-        $allowedExtensions = ['jpg','jpeg','png','gif','webp','mp4','mov','avi','mkv','webm','3gp','mp3','ogg','wav','m4a','aac','opus','pdf','doc','docx','xls','xlsx','csv','txt'];
+        $allowedExtensions = ['jpg','jpeg','png','gif','webp','heic','heif','mp4','mov','avi','mkv','webm','3gp','mp3','ogg','wav','m4a','aac','opus','pdf','doc','docx','xls','xlsx','csv','txt'];
         
         $extension = $file->extension() ?: $clientExt;
         if (!in_array($extension, $allowedExtensions)) {
@@ -43,7 +43,7 @@ class MediaController extends Controller
         $type = 'document';
         if (str_contains($mime, 'audio') || in_array($extension, ['mp3','ogg','wav','m4a','aac','opus','3gp'])) {
             $type = 'audio';
-        } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp'])) {
+        } elseif (str_contains($mime, 'image') || in_array($extension, ['jpg','jpeg','png','gif','webp','heic','heif'])) {
             $type = 'image';
         } elseif (str_contains($mime, 'video') || in_array($extension, ['mp4','mov','avi','mkv','webm'])) {
             $type = 'video';

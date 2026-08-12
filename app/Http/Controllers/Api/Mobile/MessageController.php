@@ -111,14 +111,19 @@ class MessageController extends Controller
 
         $isMedia = in_array($request->type, ['image', 'document', 'video', 'audio']);
 
+        $replyToId = $request->input('reply_to_message_id');
         $metadata = [];
-        if ($request->input('reply_to_message_id')) {
-            $metadata['reply_to_message_id'] = $request->input('reply_to_message_id');
+        if ($replyToId) {
+            $metadata['reply_to_message_id'] = $replyToId;
         }
+
         $rawMediaUrl = $request->input('media_url');
         $cleanMediaUrl = $rawMediaUrl;
-        if ($rawMediaUrl && preg_match('#^https?://[^/]+/(storage/|public/)?(.*)$#i', $rawMediaUrl, $m)) {
-            $cleanMediaUrl = $m[2];
+        if ($rawMediaUrl) {
+            $cleanMediaUrl = preg_replace('#^https?://[^/]+/#i', '', $rawMediaUrl);
+            $cleanMediaUrl = preg_replace('#^/?(storage|public)/#i', '', $cleanMediaUrl);
+            $cleanMediaUrl = strtok($cleanMediaUrl, '?');
+            $cleanMediaUrl = ltrim($cleanMediaUrl, '/');
         }
 
         $message = Message::create([
@@ -130,16 +135,27 @@ class MessageController extends Controller
             'content' => $request->input('content'),
             'caption' => $isMedia ? $request->input('content') : null,
             'media_url' => $cleanMediaUrl,
-            'media_type' => $isMedia ? $request->input('type') : null,
+            'media_type' => $isMedia ? ($request->input('type') === 'image' ? 'image/jpeg' : $request->input('type')) : null,
+            'reply_to_message_id' => $replyToId,
             'metadata' => empty($metadata) ? null : $metadata,
             'status' => 'queued',
         ]);
 
-        // Dispatch Job asynchronously (do not block the HTTP response)
-        \App\Jobs\SendMessageJob::dispatch($message);
-
-        // Load relationships
+        // Load relationships before dispatching SendMessageJob
         $message->load(['contact', 'replyTo']);
+
+        try {
+            \App\Jobs\SendMessageJob::dispatch($message);
+        } catch (\Throwable $e) {
+            \Log::error('[MOBILE_API_MESSAGE_STORE] SendMessageJob dispatch failed: ' . $e->getMessage(), [
+                'message_id' => $message->id,
+                'error' => $e->getMessage(),
+            ]);
+            $message->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+            ]);
+        }
         
         $data = $message->toArray();
         $data['is_outbound'] = $message->direction === 'outbound';
