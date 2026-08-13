@@ -230,6 +230,18 @@ class WhatsAppService
     {
         $this->verifyReadyToSend();
 
+        if (empty($link)) {
+            $errMsg = 'Cannot send media message: Media URL (link) is empty or null.';
+            if ($existingMessage) {
+                $existingMessage->update([
+                    'status' => 'failed',
+                    'error_message' => $errMsg,
+                ]);
+            }
+            Log::error("WhatsAppService::sendMedia failed for {$to}: {$errMsg}");
+            throw new \Exception($errMsg);
+        }
+
         // Find contact to check policy
         $contact = $this->getOrCreateContact($to);
 

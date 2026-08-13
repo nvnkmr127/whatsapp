@@ -74,7 +74,7 @@ class SendMessageJob
                 $this->templateName = $message->metadata['template_name'] ?? $message->metadata['template_id'] ?? null;
                 $this->content = $message->metadata['variables'] ?? [];
             } elseif (in_array($message->type, ['image', 'video', 'audio', 'document'])) {
-                $this->content = $message->full_media_url;
+                $this->content = $message->full_media_url ?: $message->media_url;
             } else {
                 $this->content = $message->content;
             }
@@ -193,6 +193,11 @@ class SendMessageJob
                     $existingMessage
                 );
             } elseif (in_array($this->type, ['image', 'video', 'audio', 'document'])) {
+                if (empty($this->content)) {
+                    $this->markMessageFailed("Cannot send media message: Media URL is empty or null. Check file storage.");
+                    return;
+                }
+
                 $response = $waService->sendMedia(
                     $this->phone,
                     $this->type,

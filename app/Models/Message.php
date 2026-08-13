@@ -104,7 +104,8 @@ class Message extends Model
                 try {
                     return \Illuminate\Support\Facades\Storage::disk($remoteDisk)->url($cleanPath);
                 } catch (\Throwable $e2) {
-                    return null;
+                    $origin = config('app.url') ? rtrim(config('app.url'), '/') : '';
+                    return $origin ? "{$origin}/storage/{$cleanPath}" : asset('storage/' . $cleanPath);
                 }
             }
         }
